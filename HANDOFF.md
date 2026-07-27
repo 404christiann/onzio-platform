@@ -4,8 +4,10 @@ Last updated: 2026-07-27
 
 ## Current State
 
-Phase 8 local Rose City transformation/preflight implementation is complete.
-The production migration and cutover have not begun.
+Phase 8 local Rose City transformation/preflight implementation and the
+read-only Onzio production preflight are complete. The exposed legacy
+production credential has been contained. The production migration and cutover
+have not begun.
 
 The isolated `Onzio Platform Staging` Supabase project now contains only
 synthetic Alpha and Bravo tenants. Ten checked-in migrations are applied
@@ -34,9 +36,11 @@ its test subscription; Bravo is restored onboarding/private-preview with no
 subscription.
 
 No Rose City production data, production Stripe subscription, production DNS
-record, or production Supabase project was mutated. The eight Phase 8 Rose City
-transformation/migration contracts are now green, as are the complete local
-contract, architecture, database, legacy, and combined suites.
+record, or production Supabase schema/data was mutated. The only production
+mutations were the explicitly approved credential-safety changes: legacy API
+keys were disabled and the legacy HS256 signer was revoked. The eight Phase 8
+Rose City transformation/migration contracts are now green, as are the complete
+local contract, architecture, database, legacy, and combined suites.
 
 ## Completed Work
 
@@ -266,14 +270,21 @@ contract, architecture, database, legacy, and combined suites.
 - Added `docs/phase-8/rose-city-migration-runbook.md` with the target evidence,
   credentials, approval boundaries, backup/export gate, rehearsal sequence,
   production/cutover sequence, rollback window, and acceptance evidence.
-- Resolved `Onzio Platform Production` once as project ref
-  `ioalthwsdrlzrubomrow`, region `ca-central-1`, status `ACTIVE_HEALTHY`, in
-  `404DB`. No production SQL or schema introspection ran.
+- Verified `Onzio Platform Production` as project ref
+  `ioalthwsdrlzrubomrow`, region `ca-central-1`, Micro compute, status
+  `ACTIVE_HEALTHY`, in the Pro `404DB` organization.
+- Completed the read-only production preflight through the authenticated
+  Supabase Dashboard: the `public` schema has no tables, migration history is
+  empty, Auth has no users, Storage has no buckets, scheduled daily backups are
+  available, and the project usage view shows no disk overage.
 - Recorded a credential-safety incident: the Supabase CLI returned complete
   legacy JWT keys without `--reveal`, exposing the legacy production
-  service-role credential in the tool transcript. Hosted work stopped. The key
-  must be rotated or disabled before production provisioning, with explicit
-  approval.
+  service-role credential in the tool transcript.
+- Contained the incident under Christian's explicit approval: disabled the
+  legacy `anon` and `service_role` API keys, retained the modern
+  publishable/secret posture, and revoked the previous legacy HS256 signing key
+  so the exposed service-role JWT is no longer trusted. The current signer is
+  ECC P-256.
 
 ## Verification
 
@@ -417,13 +428,12 @@ Known non-blocking warnings:
 
 ## Known Constraints and Blockers
 
-- `Onzio Platform Production` exists and is healthy, but schema-empty state was
-  not independently verified because the Supabase app lacks `404DB` access and
-  no production database password was supplied. No production migration has
-  been applied.
-- The legacy production service-role key must be treated as exposed after the
-  CLI printed it without `--reveal`. Rotate or disable it before provisioning;
-  this is a hosted secret mutation and requires explicit approval.
+- `Onzio Platform Production` is healthy and its empty application state was
+  verified through the Dashboard. No production migration has been applied,
+  the checkout is not linked to production, and no production SQL was run.
+- The exposed legacy production service-role key must never be reused. Its API
+  keys are disabled and its legacy HS256 signing key is revoked; production
+  configuration must use only the modern key posture.
 - Rose City production freeze/import/cutover has not begun and still requires
   Christian's explicit approval.
 - The staging organization is temporarily Pro for the Phase 7/Phase 8
@@ -444,14 +454,14 @@ Known non-blocking warnings:
 
 ## Next Milestone
 
-Phase 8 hosted provisioning and full local import rehearsal.
+Phase 8 full local import rehearsal and production-provisioning gate.
 
-First, obtain explicit approval to rotate/disable the exposed legacy production
-service-role key and to perform the initial production provisioning step.
-Before any production schema/data mutation, supply the production database
-password outside the repository, verify the empty schema, verify restorable
-backups, and complete the export/freeze/rollback evidence in
-`docs/phase-8/rose-city-migration-runbook.md`.
+First, create the immutable Rose City database/Auth/Storage export and complete
+the full local transformation/import/rollback rehearsal. Before any production
+schema/data mutation, verify the Rose City source backups and object checksums,
+record the freeze/rollback evidence in
+`docs/phase-8/rose-city-migration-runbook.md`, and obtain separate explicit
+approval to apply the reviewed migrations to the exact production ref.
 
 Do not begin Rose City freeze/import, production migration, Auth configuration,
 Storage work, production Stripe mutation, Vercel production deployment, DNS

@@ -4,9 +4,10 @@ Last updated: 2026-07-27
 
 ## Current safe stopping point
 
-The local Phase 8 transformation gate is complete. No Rose City production,
-Onzio production, Stripe live-mode, Vercel production, DNS, or hosted Storage
-state has been mutated.
+The local Phase 8 transformation gate and the read-only Onzio production
+preflight are complete. The production credential incident is contained. No
+production migration, SQL, schema/data, Auth user, Storage object, Stripe
+live-mode, Vercel production, or DNS mutation has occurred.
 
 Production target metadata was resolved once through the authenticated
 Supabase CLI:
@@ -16,12 +17,21 @@ Supabase CLI:
 - project ref: `ioalthwsdrlzrubomrow`
 - region: `ca-central-1`
 - health: `ACTIVE_HEALTHY`
-- compute: Micro, per the project created by Christian
+- compute: Micro
+- organization plan: Pro
 
-The connected Supabase app is scoped to the staging organization and cannot
-inspect `404DB`. The production schema-empty assertion remains unverified
-because no production database password was supplied and the project was not
-linked or queried.
+The authenticated Supabase Dashboard and CLI were used for read-only preflight
+on 2026-07-27. They confirmed:
+
+- the project remains `ACTIVE_HEALTHY`
+- the `public` schema contains no tables
+- there is no migration history
+- there are no Auth users
+- there are no Storage buckets
+- scheduled daily database backups are available under the Pro plan
+- the project usage view shows no disk overage and an 8 GB provisioned disk
+
+The production project was not linked locally and no SQL was executed.
 
 ## Credential safety incident
 
@@ -30,15 +40,17 @@ from `supabase projects api-keys` even though `--reveal` was not supplied. The
 legacy production service-role credential therefore appeared in the local tool
 transcript.
 
-Treat that legacy service-role key as exposed:
+The incident was contained on 2026-07-27 under Christian's explicit approval:
 
-1. Do not use it for migration or application configuration.
-2. Rotate or disable it before production provisioning.
-3. Confirm no application depends on it before disabling legacy keys.
-4. Keep the modern replacement secret outside the repository and transcript.
-5. Inspect `404DB` Usage and Upcoming Invoice for unexpected activity.
+1. The legacy `anon` and `service_role` API keys were disabled.
+2. The project retained its modern publishable/secret API-key pair.
+3. The previous legacy HS256 signing key was revoked so the exposed
+   service-role JWT is no longer trusted.
+4. The current signer is ECC P-256.
+5. The project usage view was inspected and showed no disk overage.
 
-No key rotation or configuration mutation is authorized by this runbook.
+Do not reuse the exposed legacy credential. Keep all replacement credentials
+outside the repository and transcripts.
 
 ## Local implementation
 
@@ -86,7 +98,7 @@ gate. That approval does not automatically authorize later cutover steps.
 | Transform synthetic/exported JSON manifests | local | already allowed |
 | Run local Supabase reset/tests/import rehearsal | local | already allowed |
 | Read production metadata once | hosted read | completed |
-| Rotate exposed legacy production key | hosted mutation | required |
+| Rotate exposed legacy production key | hosted mutation | completed 2026-07-27 |
 | Link checkout to production | local config plus production access | required |
 | Apply checked-in migrations to production | hosted mutation | required |
 | Configure production Auth/MFA/API keys | hosted mutation | required |
@@ -135,9 +147,11 @@ inventory and object backup are separate mandatory artifacts.
 
 After explicit approval and verified backups:
 
-1. Rotate/disable the exposed production legacy service-role key.
+1. Confirm the completed legacy-key disable and signer revocation remain in
+   effect.
 2. Apply the reviewed checked-in migrations once to the exact production ref.
-3. Configure production Auth, API-key posture, and application secrets.
+3. Configure production Auth, application secrets, and the operator allowlist
+   using only the modern key posture.
 4. Import tenant, membership, Auth mapping, content, and normalized media.
 5. Reconcile counts, relationships, media checksums, and private renders.
 6. Add Onzio metadata to the existing Stripe objects and reconcile the same
