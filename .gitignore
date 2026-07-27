@@ -1,0 +1,14 @@
+node_modules/
+.next/
+coverage/
+.env
+.env.local
+.env.test
+.DS_Store
+**/.DS_Store
+tsconfig.tsbuildinfo
+*.swp
+output/
+tmp/
+supabase/.temp/
+supabase/.branches/

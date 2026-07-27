@@ -1,0 +1,300 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'D-DIN Condensed';
+  src: url('/fonts/d-din-condensed/D-DINCondensed.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'D-DIN Condensed';
+  src: url('/fonts/d-din-condensed/D-DINCondensed-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-LightItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-RegularItalic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-MediumItalic.otf') format('opentype');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-Bold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-Bold.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-BoldItalic.otf') format('opentype');
+  font-weight: 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LEMON MILK';
+  src: url('/fonts/lemon-milk/LEMONMILK-BoldItalic.otf') format('opentype');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  /* Brand Colors */
+  --color-white: #FFFFFF;
+  --color-black: #141414;
+  --color-green: #1B4D3E;
+  --color-green-dark: #163d31;
+  --color-green-light: #246655;
+  --color-red: #E7001B;
+  --color-red-dark: #9e1123;
+  --color-gray-light: #F5F5F5;
+  --color-gray-mid: #9A9A9A;
+
+  /* Typography */
+  --font-display: 'LEMON MILK', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-lemon-milk: 'LEMON MILK', sans-serif;
+  --font-din-condensed: 'D-DIN Condensed', sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-white);
+    color: var(--color-black);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-style: italic;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    border: none;
+  }
+
+  section {
+    display: block;
+    margin: 0;
+    padding: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-lemon-milk {
+    font-family: var(--font-lemon-milk);
+  }
+
+  .font-din-condensed {
+    font-family: var(--font-din-condensed);
+  }
+
+  .text-green {
+    color: var(--color-green);
+  }
+
+  .text-red-brand {
+    color: var(--color-red);
+  }
+
+  .bg-green {
+    background-color: var(--color-green);
+  }
+
+  .bg-red-brand {
+    background-color: var(--color-red);
+  }
+
+  .sponsor-carousel-section {
+    overflow: hidden;
+    border-block: 1px solid rgba(255, 255, 255, 0.08);
+    padding: clamp(2.5rem, 5vw, 4rem) 1.5rem;
+    color: var(--color-white);
+    text-align: center;
+  }
+
+  .sponsor-carousel-section--compact {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    padding: 2rem 0;
+  }
+
+  .sponsor-carousel-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .sponsor-carousel-eyebrow {
+    color: rgba(255, 255, 255, 0.62);
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .sponsor-carousel-marquee {
+    margin: 1.75rem -1.5rem 0;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+
+  .sponsor-carousel-track {
+    display: flex;
+    width: max-content;
+    align-items: center;
+    gap: 4rem;
+    animation: sponsor-carousel-scroll 32s linear infinite;
+  }
+
+  .sponsor-carousel-logo {
+    display: flex;
+    height: 5rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @keyframes sponsor-carousel-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sponsor-carousel-track {
+      animation: none;
+    }
+  }
+
+  /* Cinematic section spacing */
+  .section-padding {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+
+  @media (min-width: 768px) {
+    .section-padding {
+      padding-top: 9rem;
+      padding-bottom: 9rem;
+    }
+  }
+}

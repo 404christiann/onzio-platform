@@ -1,0 +1,377 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { useClubBranding } from "@/components/ClubBrandingProvider";
+import { SHOW_SHOP_HERO } from "@/lib/site-flags";
+import { imageDeliveryProps } from "@/lib/image-delivery";
+import { useClubContext } from "@/components/ClubContextProvider";
+
+const LOGO_BASE =
+  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logos_v2`;
+
+const affiliationLogos = [
+  {
+    colorSrc: `${LOGO_BASE}/US%20Soccer%20logo%20color.png`,
+    whiteSrc: `${LOGO_BASE}/US%20Soccer%20logo%20white.png`,
+    alt: "US Soccer",
+    className: "h-7 w-7 sm:h-10 sm:w-10",
+    sizes: "(max-width: 639px) 28px, 40px",
+  },
+  {
+    colorSrc: `${LOGO_BASE}/FIFA%20logo%20color.png`,
+    whiteSrc: `${LOGO_BASE}/FIFA%20logo%20white.png`,
+    alt: "FIFA",
+    className: "h-7 w-11 sm:h-10 sm:w-16",
+    sizes: "(max-width: 639px) 44px, 64px",
+  },
+  {
+    colorSrc: `${LOGO_BASE}/Lamar%20Hunt%20U.S.%20Open%20Cup%20color.png`,
+    whiteSrc: `${LOGO_BASE}/Lamar%20Hunt%20U.S.%20Open%20Cup%20white.png`,
+    alt: "Lamar Hunt U.S. Open Cup",
+    className: "h-7 w-7 sm:h-10 sm:w-10",
+    sizes: "(max-width: 639px) 28px, 40px",
+  },
+  {
+    colorSrc: `${LOGO_BASE}/UPSL%20logo%20color.png`,
+    whiteSrc: `${LOGO_BASE}/UPSL%20logo%20white.png`,
+    alt: "UPSL",
+    className: "h-7 w-7 sm:h-10 sm:w-10",
+    sizes: "(max-width: 639px) 28px, 40px",
+  },
+];
+
+type NavLink = {
+  label: string;
+  // Omitted for parent items that are hover/tap-only triggers with no page
+  // of their own — "Club" exists purely to reveal its dropdown children.
+  href?: string;
+  children?: { label: string; href: string }[];
+};
+
+const navLinks: NavLink[] = [
+  { label: "Home", href: "/" },
+  { label: "Roster", href: "/roster" },
+  {
+    label: "Club",
+    children: [
+      { label: "About Club", href: "/club/about" },
+      { label: "Club Logo", href: "/club/logo" },
+    ],
+  },
+  { label: "Schedule", href: "/schedule" },
+  { label: "Shop", href: "/shop" },
+];
+
+function isLinkActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function isNavItemActive(pathname: string, link: NavLink) {
+  if (link.href) return isLinkActive(pathname, link.href);
+  return link.children?.some((child) => pathname === child.href) ?? false;
+}
+
+export default function Nav() {
+  const club = useClubContext();
+  const { clubLogoUrl } = useClubBranding();
+  const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+    setExpandedMobileLink(null);
+  }, [pathname]);
+
+  // Transparent nav only on desktop for shop (mobile shop hero is compact, not full-bleed)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // /club/logo is a full-page dark infographic — the nav stays in its
+  // transparent/white-text state throughout, since it never needs to
+  // contrast against a light background there.
+  const isAlwaysTransparentPage = pathname === "/club/logo";
+  const isDarkHeroPage = pathname === "/" || (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
+  const isHero = isAlwaysTransparentPage || (isDarkHeroPage && !scrolled);
+
+  return (
+    <header
+      ref={navRef}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isHero
+          ? "bg-transparent"
+          : "bg-white/95 backdrop-blur-sm shadow-sm"
+      }`}
+    >
+      <nav className="max-w-7xl mx-auto px-6 lg:px-10 flex items-center justify-between h-24 sm:h-28">
+        {/* Logo row */}
+        <div className="flex min-w-0 flex-shrink-0 items-center gap-2 sm:gap-3">
+          <Link href="/" className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center sm:h-24 sm:w-24" aria-label={`${club.name} Home`}>
+            {clubLogoUrl ? (
+              <Image
+                src={clubLogoUrl}
+                alt={club.name}
+                fill
+                className="object-contain transition-all duration-300"
+                sizes="(max-width: 639px) 64px, 96px"
+                priority
+                {...imageDeliveryProps("club-logo")}
+              />
+            ) : (
+              <span className="font-display text-xl font-black uppercase text-current">
+                {club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}
+              </span>
+            )}
+          </Link>
+
+          {club.slug === "rose-city" && <>
+            <div
+              className="flex-shrink-0"
+              style={{ width: "1px", height: "28px", backgroundColor: isHero ? "rgba(255,255,255,0.3)" : "rgba(20,20,20,0.15)" }}
+            />
+
+            <div className="flex items-center gap-1 sm:gap-2">
+              {affiliationLogos.map((logo) => (
+                <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
+                  <Image
+                    src={isHero ? logo.whiteSrc : logo.colorSrc}
+                    alt={logo.alt}
+                    fill
+                    className="object-contain transition-all duration-300"
+                    sizes={logo.sizes}
+                    priority
+                    {...imageDeliveryProps("small-graphic")}
+                  />
+                </div>
+              ))}
+            </div>
+          </>}
+        </div>
+
+        {/* Desktop Links */}
+        <ul className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => {
+            const isActive = isNavItemActive(pathname, link);
+            const triggerClassName =
+              "font-body text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
+            const triggerStyle = {
+              color: isActive
+                ? isHero
+                  ? "#ffffff"
+                  : "var(--color-red)"
+                : isHero
+                ? "rgba(255,255,255,0.85)"
+                : "var(--color-black)",
+            };
+            const triggerContent = (
+              <>
+                {link.label}
+                {link.children && (
+                  <svg
+                    width="9"
+                    height="9"
+                    viewBox="0 0 10 10"
+                    fill="none"
+                    className="transition-transform duration-200 group-hover:rotate-180"
+                    style={{ opacity: isHero ? 0.85 : 0.55 }}
+                  >
+                    <path
+                      d="M2 3.5L5 6.5L8 3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+                {/* Active / hover underline */}
+                <span
+                  className={`absolute -bottom-1 left-0 h-0.5 transition-all duration-300 ${
+                    isActive ? "w-full" : "w-0 group-hover/link:w-full"
+                  }`}
+                  style={{ backgroundColor: isHero ? "var(--color-red)" : "var(--color-black)" }}
+                />
+              </>
+            );
+            return (
+              <li key={link.label} className="relative group">
+                {link.href ? (
+                  <Link href={link.href} className={triggerClassName} style={triggerStyle}>
+                    {triggerContent}
+                  </Link>
+                ) : (
+                  <span className={`${triggerClassName} cursor-default`} style={triggerStyle}>
+                    {triggerContent}
+                  </span>
+                )}
+
+                {/* Dropdown — mirrors the nav's own transparent/opaque state */}
+                {link.children && (
+                  <div className="absolute left-1/2 top-full w-max -translate-x-1/2 pt-3 opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
+                    <div
+                      className="overflow-hidden rounded-lg"
+                      style={{
+                        backgroundColor: isHero ? "rgba(20,20,20,0.82)" : "#ffffff",
+                        backdropFilter: isHero ? "blur(10px)" : undefined,
+                        WebkitBackdropFilter: isHero ? "blur(10px)" : undefined,
+                        border: isHero
+                          ? "1px solid rgba(255,255,255,0.14)"
+                          : "1px solid rgba(20,20,20,0.08)",
+                        boxShadow: isHero
+                          ? "0 16px 32px rgba(0,0,0,0.4)"
+                          : "0 16px 32px rgba(20,20,20,0.12)",
+                      }}
+                    >
+                      {link.children.map((child) => {
+                        const isChildActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            className={`block px-5 py-3 font-body text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${
+                              isHero
+                                ? isChildActive
+                                  ? "text-white"
+                                  : "text-white/80 hover:text-white"
+                                : isChildActive
+                                ? "text-[var(--color-red)]"
+                                : "text-[var(--color-black)] hover:text-[var(--color-red)]"
+                            }`}
+                          >
+                            {child.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Mobile Hamburger */}
+        <button
+          className="md:hidden flex flex-col gap-1.5 p-2"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Toggle menu"
+        >
+          <span className={`block w-6 h-0.5 transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-2" : ""}`}
+            style={{ backgroundColor: isHero ? "#ffffff" : "var(--color-black)" }} />
+          <span className={`block w-6 h-0.5 transition-all duration-300 ${menuOpen ? "opacity-0 scale-x-0" : ""}`}
+            style={{ backgroundColor: isHero ? "#ffffff" : "var(--color-black)" }} />
+          <span className={`block w-6 h-0.5 transition-all duration-300 origin-center ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`}
+            style={{ backgroundColor: isHero ? "#ffffff" : "var(--color-black)" }} />
+        </button>
+      </nav>
+
+      {/* Mobile Menu Drawer */}
+      <div
+        className={`md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
+          menuOpen ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <ul className="flex flex-col px-8 py-6 gap-6">
+          {navLinks.map((link) => {
+            const isActive = isNavItemActive(pathname, link);
+            const isExpanded = expandedMobileLink === link.label;
+            const labelClassName = `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
+              isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
+            }`;
+            const chevron = (
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 10 10"
+                fill="none"
+                className={`transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                style={{ color: "var(--color-black)", opacity: 0.55 }}
+              >
+                <path
+                  d="M2 3.5L5 6.5L8 3.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            );
+            return (
+              <li key={link.label}>
+                {link.href ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <Link href={link.href} className={labelClassName}>
+                      {link.label}
+                    </Link>
+                    {link.children && (
+                      <button
+                        type="button"
+                        aria-label={isExpanded ? `Collapse ${link.label} menu` : `Expand ${link.label} menu`}
+                        onClick={() => setExpandedMobileLink(isExpanded ? null : link.label)}
+                        className="p-2 -mr-2"
+                      >
+                        {chevron}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    aria-expanded={isExpanded}
+                    onClick={() => setExpandedMobileLink(isExpanded ? null : link.label)}
+                    className="flex items-center justify-between gap-3 w-full text-left"
+                  >
+                    <span className={labelClassName}>{link.label}</span>
+                    {chevron}
+                  </button>
+                )}
+
+                {link.children && (
+                  <ul
+                    className={`overflow-hidden transition-all duration-300 ${
+                      isExpanded ? "max-h-40 opacity-100 mt-3" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    {link.children.map((child) => {
+                      const isChildActive = pathname === child.href;
+                      return (
+                        <li key={child.href}>
+                          <Link
+                            href={child.href}
+                            className={`font-body text-sm font-semibold tracking-widest uppercase block py-2 pl-4 border-l-2 ${
+                              isChildActive
+                                ? "text-[var(--color-red)] border-[var(--color-red)]"
+                                : "text-[var(--color-black)]/70 border-[var(--color-black)]/15"
+                            }`}
+                          >
+                            {child.label}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </header>
+  );
+}

@@ -1,0 +1,124 @@
+.feedback {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 300;
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  padding: 0.65rem 1rem 0.65rem 0.75rem;
+  background: rgba(20, 20, 20, 0.94);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.32);
+  color: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+  animation: enter 180ms ease-out both;
+}
+
+.saving {
+  border-color: rgba(231, 0, 27, 0.28);
+}
+
+.success {
+  border-color: rgba(34, 197, 94, 0.24);
+  animation: successLife 3s ease both;
+}
+
+.spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  border-top-color: #e7001b;
+  border-radius: 9999px;
+  animation: spin 700ms linear infinite;
+}
+
+.check {
+  display: flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.14);
+  color: rgb(74, 222, 128);
+}
+
+.check path {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  animation: drawCheck 280ms 80ms ease-out forwards;
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes drawCheck {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes successLife {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  8%,
+  82% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.99);
+  }
+}
+
+@media (max-width: 639px) {
+  .feedback {
+    right: 1rem;
+    bottom: 1rem;
+    left: 1rem;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback,
+  .success,
+  .spinner,
+  .check path {
+    animation: none;
+  }
+
+  .check path {
+    stroke-dashoffset: 0;
+  }
+}
