@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { NextRequest } from "next/server";
 import { clubs, domains, USER_IDS } from "../fixtures/entities";
 import { expectContractError, loadContract } from "../helpers/contract";
 
@@ -23,6 +24,7 @@ type GetClubContext = (input: {
   hostname: string;
   userId?: string | null;
 }) => Promise<Record<string, unknown>>;
+type Middleware = (request: NextRequest) => Promise<Response>;
 
 describe("hostname normalization contract", () => {
   const validCases = [
@@ -69,6 +71,21 @@ describe("hostname normalization contract", () => {
 });
 
 describe("tenant route resolution contract", () => {
+  it("lets the signature-verified Stripe webhook bypass tenant host routing", async () => {
+    const middleware = await loadContract<Middleware>(
+      "@/middleware",
+      "middleware",
+    );
+    const response = await middleware(
+      new NextRequest(
+        "https://onzio-platform-git-staging-team.vercel.app/api/stripe/webhook",
+        { method: "POST" },
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
   it("resolves a verified primary domain", async () => {
     const resolveTenantRoute = await loadContract<ResolveTenantRoute>(
       "@/lib/tenant-routing",

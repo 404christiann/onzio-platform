@@ -1757,6 +1757,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      resolve_verified_tenant: {
+        Args: { p_environment: string; p_hostname: string }
+        Returns: {
+          id: string
+          lifecycle: string
+          public_access: string
+          slug: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

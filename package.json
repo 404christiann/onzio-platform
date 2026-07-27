@@ -20,6 +20,7 @@
     "media:cleanup": "tsx scripts/cleanup-staging-media.ts",
     "media:smoke": "tsx scripts/smoke-media-pipeline.ts",
     "operator:smoke": "tsx scripts/smoke-operator-workflows.ts",
+    "staging:provision": "tsx scripts/provision-phase-7-staging.ts",
     "test:watch": "vitest"
   },
   "dependencies": {

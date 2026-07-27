@@ -33,7 +33,12 @@ function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
 
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/_clubs/")) return notFound();
-  const isAdminRequest = request.nextUrl.pathname.startsWith("/admin/");
+  if (request.nextUrl.pathname === "/api/stripe/webhook") {
+    return NextResponse.next({ request });
+  }
+  const isAdminRequest =
+    request.nextUrl.pathname === "/admin" ||
+    request.nextUrl.pathname.startsWith("/admin/");
   const isBillingRequest =
     request.nextUrl.pathname === "/admin/payments" ||
     request.nextUrl.pathname === "/api/stripe/checkout" ||
@@ -103,11 +108,12 @@ export async function middleware(request: NextRequest) {
         "club_id, clubs!inner(id, slug, lifecycle, public_access)",
       )
       .eq("hostname", hostname)
+      .eq("environment", process.env.ONZIO_ENVIRONMENT!)
       .eq("active", true)
       .not("verified_at", "is", null)
       .maybeSingle();
     const clubValue = domain?.clubs;
-    const club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as
+    let club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as
       | {
           id: string;
           slug: string;
@@ -116,6 +122,15 @@ export async function middleware(request: NextRequest) {
         }
       | null
       | undefined;
+    if (!club && (isAdminRequest || isBillingRequest)) {
+      const { data: resolved } = await onzio
+        .rpc("resolve_verified_tenant", {
+          p_hostname: hostname,
+          p_environment: process.env.ONZIO_ENVIRONMENT!,
+        })
+        .maybeSingle();
+      club = resolved as typeof club;
+    }
     if (club) {
       tenant = {
         id: club.id,
