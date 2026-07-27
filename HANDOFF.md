@@ -4,7 +4,8 @@ Last updated: 2026-07-27
 
 ## Current State
 
-Phase 7 — protected staging — is complete.
+Phase 8 local Rose City transformation/preflight implementation is complete.
+The production migration and cutover have not begun.
 
 The isolated `Onzio Platform Staging` Supabase project now contains only
 synthetic Alpha and Bravo tenants. Ten checked-in migrations are applied
@@ -33,8 +34,9 @@ its test subscription; Bravo is restored onboarding/private-preview with no
 subscription.
 
 No Rose City production data, production Stripe subscription, production DNS
-record, or production Supabase project was mutated. The only intentional test
-failures remain the eight Phase 8 Rose City transformation/migration contracts.
+record, or production Supabase project was mutated. The eight Phase 8 Rose City
+transformation/migration contracts are now green, as are the complete local
+contract, architecture, database, legacy, and combined suites.
 
 ## Completed Work
 
@@ -247,6 +249,32 @@ failures remain the eight Phase 8 Rose City transformation/migration contracts.
   The media cleanup verifier now scopes destructive cleanup to its unique
   synthetic club prefix.
 
+### Phase 8 — local Rose City migration gate
+
+- Added `lib/migration/rose-city-transform.ts` as a pure, deterministic
+  preflight and transformation boundary with no hosted or filesystem writes.
+- Added tenant-key injection, snake-case relationship mapping, real duplicate
+  detection, tenant relationship validation, declared row-count reconciliation,
+  media availability/corruption/checksum checks, and traversal-safe media paths.
+- Added deterministic UUID-versioned `onzio-media` plans that never use
+  Supabase runtime Image Transformations and preserve transparent-graphic
+  extension behavior when declared.
+- Preserved the existing Rose City Stripe subscription ID in the transformed
+  result and added a stable source digest for idempotent replay verification.
+- Added five regressions that prove real malformed manifests fail without
+  relying only on the original contract simulation flags.
+- Added `docs/phase-8/rose-city-migration-runbook.md` with the target evidence,
+  credentials, approval boundaries, backup/export gate, rehearsal sequence,
+  production/cutover sequence, rollback window, and acceptance evidence.
+- Resolved `Onzio Platform Production` once as project ref
+  `ioalthwsdrlzrubomrow`, region `ca-central-1`, status `ACTIVE_HEALTHY`, in
+  `404DB`. No production SQL or schema introspection ran.
+- Recorded a credential-safety incident: the Supabase CLI returned complete
+  legacy JWT keys without `--reveal`, exposing the legacy production
+  service-role credential in the tool transcript. Hosted work stopped. The key
+  must be rotated or disabled before production provisioning, with explicit
+  approval.
+
 ## Verification
 
 ### Phase 6 green gates
@@ -344,6 +372,41 @@ Hosted staging verification:
 - Supabase security advisor reports no warnings; four intentional
   `rls_enabled_no_policy` informational notices remain
 
+### Phase 8 local gate — 2026-07-27
+
+```text
+npx vitest run tests/contracts/provisioning-migration.test.ts \
+  tests/contracts/rose-city-transform-regressions.test.ts
+  23/23 passed
+
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run test:contracts
+  142/142 passed
+
+npm run test:architecture
+  16/16 passed
+
+npm run test:db
+  46/46 passed across 5 files
+
+npm test (with loopback-only local Supabase values)
+  447/447 passed across 35 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run lint
+  passed with seven pre-existing legacy warnings
+
+npm run build
+  passed with loopback-only Supabase values; 23 static pages generated
+```
+
 No test was deleted, skipped, marked todo, loosened, or broadly mocked.
 
 Known non-blocking warnings:
@@ -354,8 +417,13 @@ Known non-blocking warnings:
 
 ## Known Constraints and Blockers
 
-- The dedicated Onzio production Supabase project remains a Phase 8
-  prerequisite and has not been provisioned.
+- `Onzio Platform Production` exists and is healthy, but schema-empty state was
+  not independently verified because the Supabase app lacks `404DB` access and
+  no production database password was supplied. No production migration has
+  been applied.
+- The legacy production service-role key must be treated as exposed after the
+  CLI printed it without `--reveal`. Rotate or disable it before provisioning;
+  this is a hosted secret mutation and requires explicit approval.
 - Rose City production freeze/import/cutover has not begun and still requires
   Christian's explicit approval.
 - The staging organization is temporarily Pro for the Phase 7/Phase 8
@@ -376,16 +444,19 @@ Known non-blocking warnings:
 
 ## Next Milestone
 
-Phase 8 — Rose City transformation and migration.
+Phase 8 hosted provisioning and full local import rehearsal.
 
-Before implementation, read the Phase 8 plan and eight intentional-red
-contracts, provision the dedicated Onzio production Supabase project, and
-prepare the backup/freeze/rollback evidence. Do not start the production
-freeze, import, Stripe subscription migration, DNS work, or cutover until
-Christian explicitly authorizes that workflow.
+First, obtain explicit approval to rotate/disable the exposed legacy production
+service-role key and to perform the initial production provisioning step.
+Before any production schema/data mutation, supply the production database
+password outside the repository, verify the empty schema, verify restorable
+backups, and complete the export/freeze/rollback evidence in
+`docs/phase-8/rose-city-migration-runbook.md`.
 
-Do not begin Rose City import, production Stripe mutation, DNS work, or cutover
-without explicit approval.
+Do not begin Rose City freeze/import, production migration, Auth configuration,
+Storage work, production Stripe mutation, Vercel production deployment, DNS
+work, webhook cutover, organization downgrade, or project deletion without the
+applicable explicit approval.
 
 ## Working Commands
 
