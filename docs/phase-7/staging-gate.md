@@ -39,11 +39,13 @@ Record identifiers that are safe to retain. Never record secret values.
 | Supabase staging organization | Separate staging organization | `Onzio Staging` (`udlsrxgfpkqjaridfxnz`); temporarily Pro for the migration month |
 | Supabase staging project | Project name/ref, plan, region | `Onzio Platform Staging` (`fxefqnoqxbezeccjvrsw`); active/healthy; `us-west-2`; temporarily Pro |
 | Applied database schema | Migration list and schema lint | Seven checked-in Phase 2–6 migrations applied without seed; local/remote ledger matches; hosted `onzio,onzio_private` lint clean |
+| Supabase runtime keys | New key types only; legacy keys disabled | Publishable/secret key types retained outside the repository; management API verified legacy keys disabled on 2026-07-27 |
 | Synthetic tenants | Alpha/Bravo IDs and staging domains | Pending |
 | Staging Auth users | Operator, Alpha owner/admin, Bravo owner/admin | Pending |
 | Stripe Starter Price | Test-mode Price ID | `price_1Tw6sHK6WajTkwHYRQumSWcM`; active, USD 65/month |
 | Stripe Pro Price | Test-mode Price ID | `price_1Tw6rrK6WajTkwHYF7SuHHli`; active, USD 99.99/month |
 | Stripe Customer Portal | Test-mode configuration ID | `bpc_1Tw73SK6WajTkwHYgoLJ1tpN`; active/default; payment methods, invoices, cancellation, and Starter/Pro switching enabled |
+| Stripe runtime key | Test-mode replacement stored outside repository | Pending rotation after pre-deployment credential-handling incident |
 | Stripe webhook | Test endpoint ID and enabled event allowlist | Pending |
 | Vercel project/deployment | Project ID and deployment URL | Pending |
 | Deployment protection | Protection mode and authenticated probe | Pending |

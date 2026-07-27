@@ -249,6 +249,13 @@ cannot begin until Supabase, Stripe, and Vercel account access is available.
   Phase 2–6 migrations without `supabase/seed.sql`.
 - Verified all seven local and hosted migration versions match and hosted
   `onzio` plus `onzio_private` schema lint reports no errors.
+- Disabled the hosted project's legacy `anon` and `service_role` API keys after
+  a pre-deployment credential-handling incident and verified the management API
+  reports `enabled: false`. Staging runtime credentials now use only the newer
+  publishable and secret key types stored outside the repository.
+- Connected the Stripe plugin to the `Onzio` test account
+  (`acct_1TvPQyK6WajTkwHY`). The exposed CLI test key and default test secret
+  must be rotated before either is placed in Vercel.
 
 ## Verification
 
@@ -350,8 +357,10 @@ Known non-blocking warnings:
   `404christiann's projects` dashboard is available through Christian's
   approved Chrome session. This checkout has no `.vercel` link yet.
 - Stripe test-mode Starter/Pro Prices and Customer Portal configuration are
-  ready. The staging webhook cannot be created or exercised until the protected
-  Vercel deployment URL exists.
+  ready, and the connected Stripe plugin resolves to the expected `Onzio`
+  account. Key rotation is required before deployment; the staging webhook
+  cannot be created or exercised until the protected Vercel deployment URL
+  exists.
 - Hosted operator execution must configure the exact actor UUID allowlist in
   `ONZIO_OPERATOR_USER_IDS`; no operator application UI or route exists.
 - `npm run test:db` and full database-inclusive tests need JWT-shaped local
@@ -369,17 +378,19 @@ Begin Phase 7 — protected staging gate.
 Use `docs/phase-7/staging-gate.md` as the authoritative execution and evidence
 record.
 
-1. Import `404christiann/onzio-platform` into Vercel from the now-populated
+1. Rotate the exposed Stripe test-mode default secret and CLI restricted key,
+   then retain only the replacement staging credential outside the repository.
+2. Import `404christiann/onzio-platform` into Vercel from the now-populated
    `main` branch and configure Deployment Protection before inviting testers.
-2. Configure the hosted Supabase API/Auth settings using the protected staging
+3. Configure the hosted Supabase API/Auth settings using the protected staging
    URL, then provision synthetic Alpha and Bravo identities through the audited
    operator workflow.
-3. Create the Stripe test-mode staging webhook after the protected deployment
+4. Create the Stripe test-mode staging webhook after the protected deployment
    URL exists.
-4. Deploy the protected Vercel staging environment with synthetic clubs only.
-5. Exercise Checkout, Portal, retries, out-of-order events, tier changes,
+5. Deploy the protected Vercel staging environment with synthetic clubs only.
+6. Exercise Checkout, Portal, retries, out-of-order events, tier changes,
    grace/suspension, archive/reactivation, and rollback end to end.
-6. Re-run domain/cache, MFA/role, media, and tenant-isolation acceptance
+7. Re-run domain/cache, MFA/role, media, and tenant-isolation acceptance
    scenarios before authorizing any production migration.
 
 Do not begin Rose City import, production Stripe mutation, DNS work, or cutover
