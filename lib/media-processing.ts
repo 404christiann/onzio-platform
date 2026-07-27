@@ -10,6 +10,7 @@ import { failContract } from "@/lib/contract-error";
 import { validateMediaUpload, type MediaKind } from "@/lib/media-validation";
 import {
   buildStoragePath,
+  isUuid,
   parseStoragePath,
   type MediaSurface,
 } from "@/lib/storage-path";
@@ -527,9 +528,13 @@ type StorageListEntry = {
 
 export async function cleanupAbandonedStagingMedia(input?: {
   olderThan?: Date;
+  clubId?: string;
 }): Promise<{ inspected: number; removed: number; failed: number }> {
   const service = createServiceRoleClient();
   const bucket = service.storage.from("onzio-upload-staging");
+  if (input?.clubId && !isUuid(input.clubId)) {
+    failContract("INVALID_CLUB_ID");
+  }
   const olderThan =
     input?.olderThan ?? new Date(Date.now() - 24 * 60 * 60 * 1000);
   let inspected = 0;
@@ -583,7 +588,7 @@ export async function cleanupAbandonedStagingMedia(input?: {
     }
   }
 
-  await walk("", 0);
+  await walk(input?.clubId?.toLowerCase() ?? "", input?.clubId ? 1 : 0);
   return { inspected, removed, failed };
 }
 

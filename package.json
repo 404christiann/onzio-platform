@@ -21,6 +21,10 @@
     "media:smoke": "tsx scripts/smoke-media-pipeline.ts",
     "operator:smoke": "tsx scripts/smoke-operator-workflows.ts",
     "staging:provision": "tsx scripts/provision-phase-7-staging.ts",
+    "staging:verify:auth": "tsx scripts/verify-phase-7-hosted-auth.ts",
+    "staging:verify:lifecycle": "tsx scripts/verify-phase-7-lifecycle.ts",
+    "staging:verify:media": "tsx scripts/verify-phase-7-media.ts",
+    "staging:verify:stripe": "tsx scripts/verify-phase-7-stripe-webhook.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
