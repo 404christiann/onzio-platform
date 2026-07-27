@@ -340,12 +340,15 @@ Known non-blocking warnings:
 
 ## Known Constraints and Blockers
 
-- This directory is not currently a Git repository.
+- Initialized this directory as a Git repository and published `main` to
+  `git@github.com:404christiann/onzio-platform.git`; initial platform commit
+  `14addff` is available to Vercel's GitHub importer.
 - The dedicated Supabase staging project is provisioned, linked, and migrated.
 - The dedicated Onzio production Supabase project remains a Phase 8
   prerequisite and has not been provisioned.
-- The Vercel connector has no signed-in team, and this checkout has no
-  `.vercel` or hosted Supabase link.
+- The Vercel connector still reports no team, but the authenticated
+  `404christiann's projects` dashboard is available through Christian's
+  approved Chrome session. This checkout has no `.vercel` link yet.
 - Stripe test-mode Starter/Pro Prices and Customer Portal configuration are
   ready. The staging webhook cannot be created or exercised until the protected
   Vercel deployment URL exists.
@@ -366,8 +369,8 @@ Begin Phase 7 — protected staging gate.
 Use `docs/phase-7/staging-gate.md` as the authoritative execution and evidence
 record.
 
-1. Authenticate the Vercel connector, create/link the staging project, and
-   configure Deployment Protection before inviting testers.
+1. Import `404christiann/onzio-platform` into Vercel from the now-populated
+   `main` branch and configure Deployment Protection before inviting testers.
 2. Configure the hosted Supabase API/Auth settings using the protected staging
    URL, then provision synthetic Alpha and Bravo identities through the audited
    operator workflow.
