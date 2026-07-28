@@ -10,6 +10,10 @@ const loginPage = readFileSync(
   resolve(process.cwd(), "app/admin/login/page.tsx"),
   "utf8",
 );
+const updatePasswordPage = readFileSync(
+  resolve(process.cwd(), "app/admin/update-password/page.tsx"),
+  "utf8",
+);
 const middleware = readFileSync(
   resolve(process.cwd(), "middleware.ts"),
   "utf8",
@@ -50,5 +54,31 @@ describe("prefetch-resistant password recovery", () => {
     expect(middleware).toContain(
       'request.nextUrl.pathname !== "/admin/recover"',
     );
+  });
+
+  it("requires an enrolled MFA factor before a recovery password update", () => {
+    expect(updatePasswordPage).toContain(
+      "supabase.auth.mfa.getAuthenticatorAssuranceLevel",
+    );
+    expect(updatePasswordPage).toContain(
+      'assurance.nextLevel === "aal2"',
+    );
+    expect(updatePasswordPage).toContain(
+      'assurance.currentLevel !== "aal2"',
+    );
+    expect(updatePasswordPage).toContain("supabase.auth.mfa.listFactors");
+    expect(updatePasswordPage).toContain("supabase.auth.mfa.challenge");
+    expect(updatePasswordPage).toContain("supabase.auth.mfa.verify");
+    expect(updatePasswordPage.indexOf("supabase.auth.mfa.verify")).toBeLessThan(
+      updatePasswordPage.indexOf("supabase.auth.updateUser"),
+    );
+  });
+
+  it("uses a mobile-friendly authenticator input during recovery", () => {
+    expect(updatePasswordPage).toContain('id="recovery-mfa-code"');
+    expect(updatePasswordPage).toContain('inputMode="numeric"');
+    expect(updatePasswordPage).toContain('autoComplete="one-time-code"');
+    expect(updatePasswordPage).toContain('pattern="[0-9]{6}"');
+    expect(updatePasswordPage).toContain("maxLength={6}");
   });
 });
