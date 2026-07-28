@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createAuthEmailCallbackUrl } from "@/lib/auth-email-callback";
 import { createClient } from "@/lib/supabase-browser";
 
 type MfaStep = {
@@ -16,6 +17,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [mfa, setMfa] = useState<MfaStep | null>(null);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoverySent, setRecoverySent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +28,10 @@ export default function LoginPage() {
       setError("Enter your password, then complete MFA to continue.");
     } else if (reason === "not_authorized") {
       setError("This account is not an active administrator for this club.");
+    } else if (reason === "invalid_auth_link") {
+      setError(
+        "This invitation or recovery link is invalid or expired. Request a new link.",
+      );
     }
   }, [searchParams]);
 
@@ -76,6 +83,28 @@ export default function LoginPage() {
     } catch (loginError) {
       setError(
         loginError instanceof Error ? loginError.message : "Unable to sign in",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRecovery(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const supabase = createClient();
+      const redirectTo = createAuthEmailCallbackUrl(window.location.origin);
+      const { error: recoveryError } =
+        await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (recoveryError) throw recoveryError;
+      setRecoverySent(true);
+    } catch (recoveryError) {
+      setError(
+        recoveryError instanceof Error
+          ? recoveryError.message
+          : "Unable to send a password recovery email",
       );
     } finally {
       setLoading(false);
@@ -159,6 +188,58 @@ export default function LoginPage() {
               {loading ? "Verifying…" : "Verify MFA"}
             </button>
           </form>
+        ) : recoveryMode ? (
+          recoverySent ? (
+            <div className="mt-8 space-y-5">
+              <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+                Check your email for a secure password-reset link. You can
+                close this page after the email arrives.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoveryMode(false);
+                  setRecoverySent(false);
+                  setError(null);
+                }}
+                className="w-full rounded-lg border border-white/15 py-3 font-display text-sm font-bold uppercase tracking-widest"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleRecovery} className="mt-8 space-y-4">
+              <label className="block text-sm font-semibold" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-lg bg-red-600 py-3 font-display font-black uppercase tracking-widest disabled:opacity-50"
+              >
+                {loading ? "Sending…" : "Send reset link"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRecoveryMode(false);
+                  setError(null);
+                }}
+                className="w-full py-2 text-sm text-white/60 hover:text-white"
+              >
+                Back to sign in
+              </button>
+            </form>
+          )
         ) : (
           <form onSubmit={handleLogin} className="mt-8 space-y-4">
             <label className="block text-sm font-semibold" htmlFor="email">
@@ -191,6 +272,16 @@ export default function LoginPage() {
               className="w-full rounded-lg bg-red-600 py-3 font-display font-black uppercase tracking-widest disabled:opacity-50"
             >
               {loading ? "Signing in…" : "Continue"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRecoveryMode(true);
+                setError(null);
+              }}
+              className="w-full py-2 text-sm text-white/60 hover:text-white"
+            >
+              Forgot your password?
             </button>
           </form>
         )}
