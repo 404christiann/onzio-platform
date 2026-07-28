@@ -14,6 +14,10 @@ const updatePasswordPage = readFileSync(
   resolve(process.cwd(), "app/admin/update-password/page.tsx"),
   "utf8",
 );
+const browserClient = readFileSync(
+  resolve(process.cwd(), "lib/supabase-browser.ts"),
+  "utf8",
+);
 const middleware = readFileSync(
   resolve(process.cwd(), "middleware.ts"),
   "utf8",
@@ -80,5 +84,15 @@ describe("prefetch-resistant password recovery", () => {
     expect(updatePasswordPage).toContain('autoComplete="one-time-code"');
     expect(updatePasswordPage).toContain('pattern="[0-9]{6}"');
     expect(updatePasswordPage).toContain("maxLength={6}");
+  });
+
+  it("reuses one browser Auth client across recovery steps", () => {
+    expect(browserClient).toContain(
+      "let browserClient: BrowserSupabaseClient | undefined",
+    );
+    expect(browserClient).toContain(
+      "browserClient ??= createBrowserSupabaseClient",
+    );
+    expect(browserClient).toContain("return browserClient");
   });
 });
