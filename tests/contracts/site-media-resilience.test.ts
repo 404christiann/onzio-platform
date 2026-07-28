@@ -45,4 +45,10 @@ describe("site-wide media resilience", () => {
       'label="Shop photography unavailable"',
     );
   });
+
+  it("eagerly loads animated sponsor logos before they move into view", () => {
+    expect(source("components/SponsorCarousel.tsx")).toContain(
+      'loading="eager"',
+    );
+  });
 });

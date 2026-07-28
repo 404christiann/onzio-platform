@@ -30,8 +30,12 @@ async function scrollThroughPage(page: Page) {
   });
 }
 
-async function expectHealthyMedia(page: Page, route: string) {
-  const images = page.locator("img[data-critical-image='true']");
+async function expectHealthyMedia(
+  page: Page,
+  route: string,
+  selector = "img[data-critical-image='true']",
+) {
+  const images = page.locator(selector).filter({ visible: true });
   await expect
     .poll(() => images.count(), {
       message: `Expected ${route} to render at least one critical image.`,
@@ -42,20 +46,31 @@ async function expectHealthyMedia(page: Page, route: string) {
     .poll(
       () =>
         images.evaluateAll((elements) =>
-          elements.every(
-            (element) =>
-              element instanceof HTMLImageElement &&
-              element.complete &&
-              element.naturalWidth > 0 &&
-              !element.currentSrc.includes("/_next/image") &&
-              !element.currentSrc.includes("/storage/v1/render/image/"),
-          ),
+          elements
+            .filter(
+              (element) =>
+                !(element instanceof HTMLImageElement) ||
+                !element.complete ||
+                element.naturalWidth <= 0 ||
+                element.currentSrc.includes("/_next/image") ||
+                element.currentSrc.includes("/storage/v1/render/image/"),
+            )
+            .map((element) => {
+              const image = element as HTMLImageElement;
+              return {
+                alt: image.alt,
+                attempt: image.dataset.imageDeliveryAttempt ?? null,
+                complete: image.complete,
+                currentSrc: image.currentSrc,
+                naturalWidth: image.naturalWidth,
+              };
+            }),
         ),
       {
         message: `Expected every critical image on ${route} to load directly.`,
       },
     )
-    .toBe(true);
+    .toEqual([]);
 
   await expect(page.locator("[data-image-fallback='true']")).toHaveCount(0);
 }
@@ -71,7 +86,11 @@ test("every public route renders direct healthy images", async ({ page }) => {
   const playerCard = page.locator("[data-roster-player-card='true']").first();
   await expect(playerCard).toBeVisible();
   await playerCard.click();
-  await expectHealthyMedia(page, "/roster player modal");
+  await expectHealthyMedia(
+    page,
+    "/roster player modal",
+    "img[data-roster-modal-image='true']",
+  );
 });
 
 test("source failures render deliberate fallbacks without broken-image chrome", async ({
