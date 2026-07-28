@@ -17,6 +17,15 @@ const UNOPTIMIZED_KINDS = new Set<ImageDeliveryKind>([
   "small-graphic",
 ]);
 
+const ORIGIN_FALLBACK_KINDS = new Set<ImageDeliveryKind>(["roster-photo"]);
+
+export type ImageDeliveryMode =
+  | "vercel-optimized"
+  | "vercel-optimized-with-origin-fallback"
+  | "unoptimized";
+
+export type ResilientImageAttempt = "optimized" | "raw" | "failed";
+
 export function imageDeliveryProps(kind: ImageDeliveryKind): {
   unoptimized?: true;
 } {
@@ -25,10 +34,20 @@ export function imageDeliveryProps(kind: ImageDeliveryKind): {
 
 export function getImageDeliveryMode(
   kind: string,
-): "vercel-optimized" | "unoptimized" {
-  return UNOPTIMIZED_KINDS.has(kind as ImageDeliveryKind)
-    ? "unoptimized"
+): ImageDeliveryMode {
+  if (UNOPTIMIZED_KINDS.has(kind as ImageDeliveryKind)) {
+    return "unoptimized";
+  }
+  return ORIGIN_FALLBACK_KINDS.has(kind as ImageDeliveryKind)
+    ? "vercel-optimized-with-origin-fallback"
     : "vercel-optimized";
+}
+
+export function nextImageDeliveryAttempt(
+  attempt: ResilientImageAttempt,
+): ResilientImageAttempt {
+  if (attempt === "optimized") return "raw";
+  return "failed";
 }
 
 export function assertAllowedImageUrl(url: string): string {

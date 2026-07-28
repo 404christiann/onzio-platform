@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
 import PlayerModal from "@/components/PlayerModal";
 import NationalityFlag from "@/components/NationalityFlag";
+import ResilientImage from "@/components/ResilientImage";
 import { getRosterImageSrc, isRosterPlaceholderLogo } from "@/lib/roster-images";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 
@@ -20,10 +20,16 @@ export default function PlayerCard({ player, seasonLabel }: { player: Player; se
   const gk = isGK(stats);
   const isPlaceholderLogo = isRosterPlaceholderLogo(player.image);
   const imageSrc = getRosterImageSrc(player.image, clubLogoUrl);
+  const playerInitials = player.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3);
 
   return (
     <>
       <div
+        data-roster-player-card="true"
         className="relative overflow-hidden cursor-pointer group"
         style={{ backgroundColor: "var(--color-white)", aspectRatio: "3/4" }}
         onMouseEnter={() => setHovered(true)}
@@ -31,12 +37,26 @@ export default function PlayerCard({ player, seasonLabel }: { player: Player; se
         onClick={() => setModalOpen(true)}
       >
         {/* Player photo */}
-        <Image
+        <ResilientImage
           src={imageSrc}
           alt={player.name}
           fill
           className={`${isPlaceholderLogo ? "object-contain object-top" : "object-cover object-center"} transition-transform duration-500 md:group-hover:scale-105`}
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+          data-roster-card-image="true"
+          fallback={
+            <div
+              className="absolute inset-0 flex items-center justify-center font-display text-5xl font-black"
+              style={{
+                backgroundColor: "rgba(20,20,20,0.06)",
+                color: "rgba(20,20,20,0.24)",
+              }}
+              role="img"
+              aria-label={`${player.name} photo unavailable`}
+            >
+              {playerInitials}
+            </div>
+          }
         />
 
         {/* Always-visible gradient + info at bottom */}

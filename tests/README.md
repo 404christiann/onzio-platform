@@ -14,6 +14,10 @@ Commands:
 - `npm run test:contracts` — TypeScript behavior contracts
 - `npm run test:db` — local Supabase/RLS contracts
 - `npm run test:architecture` — static architecture contracts
+- `ROSTER_MEDIA_BASE_URL=https://www.rosecityfutbolclub.com npm run test:browser:roster`
+  — desktop and iPhone-width public roster check that forces the Vercel image
+  optimizer to return HTTP 402 and requires every card/modal image to retain a
+  positive rendered `naturalWidth` through raw-origin fallback
 
 The database suite accepts only loopback Supabase URLs. Stripe fixtures accept
 only test-mode keys and events.

@@ -454,6 +454,12 @@ Use `unoptimized` for:
 - opponent crests
 - other small graphics
 
+Roster portraits use optimized-first delivery with a fail-safe retry against
+the same immutable raw `onzio-media` object URL. If both the optimizer and raw
+origin fail, the UI renders a deliberate initials placeholder instead of
+leaving broken-image chrome. The raw retry never uses Supabase runtime Image
+Transformations.
+
 Initial Next image configuration:
 
 ```ts
@@ -733,6 +739,10 @@ If acceptance fails, restore domain routing while admin writes remain frozen.
 - abandoned staging cleanup
 - no Supabase Image Transformation URLs
 - Vercel optimization only for large photos
+- optimized roster requests recover from HTTP 402 through the raw immutable
+  object URL
+- desktop and mobile browser checks require rendered roster images with a
+  positive `naturalWidth`
 
 ### Required migration scenarios
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Staff } from "@/lib/data";
+import ResilientImage from "@/components/ResilientImage";
 import StaffModal from "@/components/StaffModal";
 import NationalityFlag from "@/components/NationalityFlag";
 
@@ -27,12 +27,26 @@ export default function StaffCard({ member }: { member: Staff }) {
       >
         {/* Photo */}
         <div className="absolute inset-0 overflow-hidden">
-          <Image
+          <ResilientImage
             src={member.image}
             alt={member.name}
             fill
             className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            data-roster-card-image="true"
+            fallback={
+              <div
+                className="absolute inset-0 flex items-center justify-center font-display text-5xl font-black"
+                style={{
+                  backgroundColor: "rgba(20,20,20,0.06)",
+                  color: "rgba(20,20,20,0.24)",
+                }}
+                role="img"
+                aria-label={`${member.name} photo unavailable`}
+              >
+                {member.initials}
+              </div>
+            }
           />
         </div>
 

@@ -34,7 +34,13 @@ type NormalizeGraphic = (
 ) => Promise<{ bytes: Buffer; format: string; hasAlpha: boolean; metadataStripped: boolean }>;
 type GetImageDeliveryMode = (
   kind: string,
-) => "vercel-optimized" | "unoptimized";
+) =>
+  | "vercel-optimized"
+  | "vercel-optimized-with-origin-fallback"
+  | "unoptimized";
+type NextImageDeliveryAttempt = (
+  attempt: "optimized" | "raw" | "failed",
+) => "optimized" | "raw" | "failed";
 type AssertAllowedImageUrl = (url: string) => string;
 type FinalizeMediaUpload = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
@@ -202,7 +208,7 @@ describe("media processing contract", () => {
 describe("media finalization and delivery contract", () => {
   it.each([
     ["hero-photo", "vercel-optimized"],
-    ["roster-photo", "vercel-optimized"],
+    ["roster-photo", "vercel-optimized-with-origin-fallback"],
     ["shop-photo", "vercel-optimized"],
     ["club-logo", "unoptimized"],
     ["flag", "unoptimized"],
@@ -214,6 +220,18 @@ describe("media finalization and delivery contract", () => {
       "getImageDeliveryMode",
     );
     expect(getImageDeliveryMode(kind)).toBe(expected);
+  });
+
+  it("falls back from Vercel once, then fails closed", async () => {
+    const nextImageDeliveryAttempt =
+      await loadContract<NextImageDeliveryAttempt>(
+        "@/lib/image-delivery",
+        "nextImageDeliveryAttempt",
+      );
+
+    expect(nextImageDeliveryAttempt("optimized")).toBe("raw");
+    expect(nextImageDeliveryAttempt("raw")).toBe("failed");
+    expect(nextImageDeliveryAttempt("failed")).toBe("failed");
   });
 
   it("rejects Supabase transformation URLs", async () => {

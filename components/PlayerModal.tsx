@@ -105,6 +105,7 @@ export default function PlayerModal({ player, onClose, seasonLabel = "Current Se
                 alt={player.name}
                 fill
                 unoptimized
+                data-roster-modal-image="true"
                 className={`${isPlaceholderLogo ? "object-contain" : "object-cover"} object-top transition-opacity duration-300`}
                 sizes="(max-width: 768px) 100vw, 480px"
                 onError={() => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogPanel, DialogBackdrop } from "@headlessui/react";
-import Image from "next/image";
+import ResilientImage from "@/components/ResilientImage";
 import { Staff } from "@/lib/data";
 import NationalityFlag from "@/components/NationalityFlag";
 
@@ -45,12 +45,26 @@ export default function StaffModal({ member, onClose }: Props) {
             className="relative flex-shrink-0 w-full h-[340px] md:h-[400px] rounded-t-2xl overflow-hidden"
             style={{ WebkitTransform: "translateZ(0)" }}
           >
-            <Image
+            <ResilientImage
               src={member.image}
               alt={member.name}
               fill
               className="object-cover object-top"
               sizes="(max-width: 768px) 100vw, 480px"
+              data-roster-modal-image="true"
+              fallback={
+                <div
+                  className="absolute inset-0 flex items-center justify-center font-display text-6xl font-black"
+                  style={{
+                    backgroundColor: "rgba(20,20,20,0.06)",
+                    color: "rgba(20,20,20,0.24)",
+                  }}
+                  role="img"
+                  aria-label={`${member.name} photo unavailable`}
+                >
+                  {member.initials}
+                </div>
+              }
             />
             <div
               className="absolute inset-0"

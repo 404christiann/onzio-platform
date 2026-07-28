@@ -13,6 +13,7 @@
     "test:contracts": "vitest run tests/contracts",
     "test:db": "SUPABASE_LOCAL=1 vitest run tests/database",
     "test:architecture": "vitest run tests/architecture",
+    "test:browser:roster": "playwright test --config=playwright.roster.config.ts",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local --schema onzio > lib/database.generated.ts",
@@ -44,6 +45,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "1.57.0",
     "@types/node": "^20",
     "@types/pngjs": "^6.0.5",
     "@types/react": "^19",
