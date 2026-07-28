@@ -30,9 +30,21 @@ export default function PlayerModal({ player, onClose, seasonLabel = "Current Se
   ];
   // Open on the first action photo if one exists, otherwise the profile shot
   const [photoIdx, setPhotoIdx] = useState(player.actionPhotos?.length ? 1 : 0);
-  const hasMultiple = allPhotos.length > 1;
+  const [failedPhotoSrcs, setFailedPhotoSrcs] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const visiblePhotos = allPhotos.filter((src) => !failedPhotoSrcs.has(src));
+  const safePhotoIdx =
+    visiblePhotos.length === 0 ? 0 : photoIdx % visiblePhotos.length;
+  const currentPhotoSrc = visiblePhotos[safePhotoIdx];
+  const hasMultiple = visiblePhotos.length > 1;
   const isPlaceholderLogo =
-    photoIdx === 0 && isRosterPlaceholderLogo(player.image);
+    currentPhotoSrc === allPhotos[0] && isRosterPlaceholderLogo(player.image);
+  const playerInitials = player.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3);
 
   // Preload all photos as soon as the modal mounts so navigation is instant
   useEffect(() => {
@@ -42,8 +54,15 @@ export default function PlayerModal({ player, onClose, seasonLabel = "Current Se
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function prev() { setPhotoIdx((i) => (i - 1 + allPhotos.length) % allPhotos.length); }
-  function next() { setPhotoIdx((i) => (i + 1) % allPhotos.length); }
+  function prev() {
+    setPhotoIdx(
+      (index) =>
+        (index - 1 + visiblePhotos.length) % visiblePhotos.length,
+    );
+  }
+  function next() {
+    setPhotoIdx((index) => (index + 1) % visiblePhotos.length);
+  }
 
   return (
     <Dialog open={true} onClose={onClose} className="relative z-[100]">
@@ -79,14 +98,36 @@ export default function PlayerModal({ player, onClose, seasonLabel = "Current Se
             style={{ WebkitTransform: "translateZ(0)" }}
           >
             {/* Current photo */}
-            <Image
-              key={allPhotos[photoIdx]}
-              src={allPhotos[photoIdx]}
-              alt={player.name}
-              fill
-              className={`${isPlaceholderLogo ? "object-contain" : "object-cover"} object-top transition-opacity duration-300`}
-              sizes="(max-width: 768px) 100vw, 480px"
-            />
+            {currentPhotoSrc ? (
+              <Image
+                key={currentPhotoSrc}
+                src={currentPhotoSrc}
+                alt={player.name}
+                fill
+                unoptimized
+                className={`${isPlaceholderLogo ? "object-contain" : "object-cover"} object-top transition-opacity duration-300`}
+                sizes="(max-width: 768px) 100vw, 480px"
+                onError={() => {
+                  setFailedPhotoSrcs((currentSrcs) => {
+                    if (currentSrcs.has(currentPhotoSrc)) return currentSrcs;
+                    const nextSrcs = new Set(currentSrcs);
+                    nextSrcs.add(currentPhotoSrc);
+                    return nextSrcs;
+                  });
+                }}
+              />
+            ) : (
+              <div
+                className="absolute inset-0 flex items-center justify-center font-display text-6xl font-black"
+                style={{
+                  backgroundColor: "rgba(20,20,20,0.08)",
+                  color: "rgba(20,20,20,0.28)",
+                }}
+                aria-label={`${player.name} photo unavailable`}
+              >
+                {playerInitials}
+              </div>
+            )}
             <div
               className="absolute inset-0"
               style={{ background: "linear-gradient(to top, rgba(255,255,255,1) 0%, rgba(255,255,255,0.84) 12%, rgba(255,255,255,0.35) 24%, transparent 40%)" }}
@@ -143,7 +184,7 @@ export default function PlayerModal({ player, onClose, seasonLabel = "Current Se
 
                 {/* Dot indicators */}
                 <div className="absolute bottom-3 right-4 flex gap-1.5 items-center">
-                  {allPhotos.map((_, i) => (
+                  {visiblePhotos.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setPhotoIdx(i)}

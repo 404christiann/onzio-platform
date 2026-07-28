@@ -21,15 +21,22 @@ export default function PhotoSlideshow() {
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState<number | null>(null);
   const [slides, setSlides] = useState<DBHomepageSlideshowPhoto[]>([]);
+  const [failedSlideIds, setFailedSlideIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [seasonLabel, setSeasonLabel] = useState(
     DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS.season_label,
   );
   const sectionRef = useRef<HTMLElement>(null);
+  const visibleSlides = slides.filter((slide) => !failedSlideIds.has(slide.id));
+  const safeCurrent =
+    visibleSlides.length === 0 ? 0 : current % visibleSlides.length;
 
   useEffect(() => {
     fetchHomepageContent(clubId)
       .then(({ slideshowPhotos, slideshowSettings }) => {
         setSlides(slideshowPhotos);
+        setFailedSlideIds(new Set());
         setSeasonLabel(slideshowSettings.season_label);
         setCurrent(0);
         setPrev(null);
@@ -43,18 +50,18 @@ export default function PhotoSlideshow() {
 
   // Auto-advance
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (visibleSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setPrev(current);
-      setCurrent((c) => (c + 1) % slides.length);
+      setPrev(safeCurrent);
+      setCurrent((index) => (index + 1) % visibleSlides.length);
     }, SLIDE_DURATION);
     return () => clearInterval(timer);
-  }, [current, slides.length]);
+  }, [safeCurrent, visibleSlides.length]);
 
   // Scroll reveal
   useEffect(() => {
     const section = sectionRef.current;
-    if (slides.length === 0 || !section) return;
+    if (visibleSlides.length === 0 || !section) return;
 
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -72,9 +79,9 @@ export default function PhotoSlideshow() {
       );
     }, section);
     return () => ctx.revert();
-  }, [slides.length]);
+  }, [visibleSlides.length]);
 
-  if (slides.length === 0) return null;
+  if (visibleSlides.length === 0) return null;
 
   return (
     <section
@@ -83,11 +90,11 @@ export default function PhotoSlideshow() {
       style={{ height: "85vh", minHeight: "560px", opacity: 0, display: "block", margin: 0, padding: 0 }}
     >
       {/* Images */}
-      {slides.map((slide, i) => (
+      {visibleSlides.map((slide, i) => (
         <div
           key={slide.id}
           className="absolute inset-0 transition-opacity duration-1000"
-          style={{ opacity: i === current ? 1 : 0 }}
+          style={{ opacity: i === safeCurrent ? 1 : 0 }}
         >
           <Image
             src={slide.url}
@@ -96,6 +103,14 @@ export default function PhotoSlideshow() {
             unoptimized
             className="object-cover object-center"
             sizes="100vw"
+            onError={() => {
+              setFailedSlideIds((currentIds) => {
+                if (currentIds.has(slide.id)) return currentIds;
+                const nextIds = new Set(currentIds);
+                nextIds.add(slide.id);
+                return nextIds;
+              });
+            }}
           />
         </div>
       ))}
@@ -114,24 +129,24 @@ export default function PhotoSlideshow() {
         className="absolute bottom-8 right-8 flex items-center gap-4"
         style={{ zIndex: 2 }}
       >
-        {slides.length > 1 && (
+        {visibleSlides.length > 1 && (
           <>
             <span
               className="font-display text-white/60 text-sm tracking-widest"
             >
-              {String(current + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+              {String(safeCurrent + 1).padStart(2, "0")} / {String(visibleSlides.length).padStart(2, "0")}
             </span>
             <div className="flex gap-1.5">
-              {slides.map((slide, i) => (
+              {visibleSlides.map((slide, i) => (
                 <button
                   key={slide.id}
-                  onClick={() => { setPrev(current); setCurrent(i); }}
+                  onClick={() => { setPrev(safeCurrent); setCurrent(i); }}
                   className="transition-all duration-300"
                   style={{
-                    width: i === current ? "2rem" : "0.5rem",
+                    width: i === safeCurrent ? "2rem" : "0.5rem",
                     height: "2px",
                     backgroundColor:
-                      i === current ? "var(--color-red)" : "rgba(255,255,255,0.4)",
+                      i === safeCurrent ? "var(--color-red)" : "rgba(255,255,255,0.4)",
                     border: "none",
                     cursor: "pointer",
                   }}

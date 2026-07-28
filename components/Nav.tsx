@@ -156,6 +156,12 @@ export default function Nav() {
                     className="object-contain transition-all duration-300"
                     sizes={logo.sizes}
                     priority
+                    onError={(event) => {
+                      if (event.currentTarget.dataset.fallbackApplied === "true") return;
+                      event.currentTarget.dataset.fallbackApplied = "true";
+                      event.currentTarget.srcset = "";
+                      event.currentTarget.src = isHero ? logo.colorSrc : logo.whiteSrc;
+                    }}
                     {...imageDeliveryProps("small-graphic")}
                   />
                 </div>
