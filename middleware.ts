@@ -168,6 +168,7 @@ export async function middleware(request: NextRequest) {
     !isBillingRequest &&
     request.nextUrl.pathname !== "/admin/login" &&
     request.nextUrl.pathname !== "/admin/auth/callback" &&
+    request.nextUrl.pathname !== "/admin/recover" &&
     request.nextUrl.pathname !== "/admin/update-password"
   ) {
     return NextResponse.redirect(

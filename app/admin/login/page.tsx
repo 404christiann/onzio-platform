@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createAuthEmailCallbackUrl } from "@/lib/auth-email-callback";
@@ -192,9 +193,15 @@ export default function LoginPage() {
           recoverySent ? (
             <div className="mt-8 space-y-5">
               <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-                Check your email for a secure password-reset link. You can
-                close this page after the email arrives.
+                Check your email for a six-digit recovery code, then enter it
+                on the secure recovery page.
               </p>
+              <Link
+                href="/admin/recover"
+                className="block w-full rounded-lg bg-red-600 py-3 text-center font-display text-sm font-black uppercase tracking-widest"
+              >
+                Enter recovery code
+              </Link>
               <button
                 type="button"
                 onClick={() => {
