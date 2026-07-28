@@ -50,7 +50,7 @@ Preserve these decisions unless Christian explicitly changes them:
 - Seven-day public-site grace after paid access ends
 - Indefinite archival instead of normal hard deletion
 - No Supabase runtime Image Transformations
-- Versioned media paths and selective Vercel optimization
+- Versioned normalized media paths served directly without runtime optimization
 - Rose City is the first production tenant and its subscription migrates in place
 
 ## Test-Driven Implementation Rules
@@ -105,7 +105,8 @@ npm test
 - Reject SVG and executable formats in v1.
 - Normalize photographs and graphics according to the architecture plan.
 - Publish with UUID-versioned paths and immutable caching.
-- Optimize large photographs through Vercel; leave small graphics unoptimized.
+- Serve normalized photographs and graphics directly. Runtime image optimizer
+  availability or quota must never be required for media to render.
 
 ## Rose City Migration Rules
 

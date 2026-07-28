@@ -9,44 +9,27 @@ export type ImageDeliveryKind =
   | "opponent-crest"
   | "small-graphic";
 
-const UNOPTIMIZED_KINDS = new Set<ImageDeliveryKind>([
-  "club-logo",
-  "flag",
-  "sponsor-logo",
-  "opponent-crest",
-  "small-graphic",
-]);
+export type ImageDeliveryMode = "unoptimized";
 
-const ORIGIN_FALLBACK_KINDS = new Set<ImageDeliveryKind>(["roster-photo"]);
-
-export type ImageDeliveryMode =
-  | "vercel-optimized"
-  | "vercel-optimized-with-origin-fallback"
-  | "unoptimized";
-
-export type ResilientImageAttempt = "optimized" | "raw" | "failed";
+export type ResilientImageAttempt = "raw" | "failed";
 
 export function imageDeliveryProps(kind: ImageDeliveryKind): {
-  unoptimized?: true;
+  unoptimized: true;
 } {
-  return UNOPTIMIZED_KINDS.has(kind) ? { unoptimized: true } : {};
+  void kind;
+  return { unoptimized: true };
 }
 
 export function getImageDeliveryMode(
   kind: string,
 ): ImageDeliveryMode {
-  if (UNOPTIMIZED_KINDS.has(kind as ImageDeliveryKind)) {
-    return "unoptimized";
-  }
-  return ORIGIN_FALLBACK_KINDS.has(kind as ImageDeliveryKind)
-    ? "vercel-optimized-with-origin-fallback"
-    : "vercel-optimized";
+  void kind;
+  return "unoptimized";
 }
 
 export function nextImageDeliveryAttempt(
-  attempt: ResilientImageAttempt,
+  _attempt: ResilientImageAttempt,
 ): ResilientImageAttempt {
-  if (attempt === "optimized") return "raw";
   return "failed";
 }
 

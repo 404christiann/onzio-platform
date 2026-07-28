@@ -2,7 +2,7 @@
 
 import { useClubId } from "@/components/ClubContextProvider";
 
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";

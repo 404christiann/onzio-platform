@@ -60,6 +60,8 @@ export default function StaffModal({ member, onClose }: Props) {
                     color: "rgba(20,20,20,0.24)",
                   }}
                   role="img"
+                  data-image-fallback="true"
+                  data-image-fallback-variant="person"
                   aria-label={`${member.name} photo unavailable`}
                 >
                   {member.initials}

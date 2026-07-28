@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { useMemo, useState } from "react";
 import type { DBLeagueStandingRow, DBLeagueStandingsSettings } from "@/lib/db-types";
 import {

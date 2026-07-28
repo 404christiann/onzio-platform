@@ -1,8 +1,9 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { useEffect, useMemo, useState } from "react";
 import { kitPhotoDisplayMode } from "@/lib/shop-kit";
+import ImageFallback from "@/components/ImageFallback";
 
 const AUTO_ADVANCE_MS = 4500;
 const FADE_TRANSITION_MS = 900;
@@ -61,7 +62,16 @@ export default function KitImageGrid({
     setActiveSlide(0);
   }, [activeSlide, visiblePhotos.length]);
 
-  if (visiblePhotos.length === 0) return null;
+  if (visiblePhotos.length === 0) {
+    return (
+      <div className="relative h-full w-full">
+        <ImageFallback
+          label="Shop photography unavailable"
+          variant="shop"
+        />
+      </div>
+    );
+  }
 
   if (displayMode === "static") {
     const photo = visiblePhotos[0];
@@ -70,6 +80,7 @@ export default function KitImageGrid({
         <Image
           src={photo.url}
           alt={photo.alt}
+          fallbackVariant="shop"
           fill
           className="object-contain object-bottom"
           sizes={sizes}
@@ -105,6 +116,7 @@ export default function KitImageGrid({
             <Image
               src={photo.url}
               alt={photo.alt}
+              fallbackVariant="shop"
               fill
               className="object-contain object-bottom"
               sizes={sizes}

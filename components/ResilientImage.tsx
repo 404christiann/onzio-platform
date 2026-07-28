@@ -6,9 +6,14 @@ import {
   nextImageDeliveryAttempt,
   type ResilientImageAttempt,
 } from "@/lib/image-delivery";
+import ImageFallback, {
+  type ImageFallbackVariant,
+} from "@/components/ImageFallback";
 
-type Props = Omit<ImageProps, "onError" | "unoptimized"> & {
-  fallback: ReactNode;
+type Props = Omit<ImageProps, "onError"> & {
+  fallback?: ReactNode;
+  fallbackVariant?: ImageFallbackVariant;
+  onError?: ImageProps["onError"];
 };
 
 export default function ResilientImage({
@@ -35,26 +40,43 @@ export default function ResilientImage({
 
 function ResilientImageAttempt({
   fallback,
+  fallbackVariant = "photo",
   src,
   alt,
+  onError,
   ...imageProps
 }: Props) {
   const [attempt, setAttempt] =
-    useState<ResilientImageAttempt>("optimized");
+    useState<ResilientImageAttempt>("raw");
 
   if (attempt === "failed") {
-    return <>{fallback}</>;
+    if (fallback !== undefined) return <>{fallback}</>;
+    if (!alt) return null;
+    return (
+      <ImageFallback
+        label={`${alt} unavailable`}
+        variant={fallbackVariant}
+        fill={imageProps.fill === true}
+        width={typeof imageProps.width === "number" ? imageProps.width : undefined}
+        height={typeof imageProps.height === "number" ? imageProps.height : undefined}
+      />
+    );
   }
 
   return (
     <Image
       {...imageProps}
-      key={attempt}
       src={src}
       alt={alt}
-      unoptimized={attempt === "raw"}
+      unoptimized
+      data-critical-image={alt ? "true" : undefined}
       data-image-delivery-attempt={attempt}
-      onError={() => setAttempt(nextImageDeliveryAttempt(attempt))}
+      onError={(event) => {
+        const failedSource = event.currentTarget.src;
+        onError?.(event);
+        if (event.currentTarget.src !== failedSource) return;
+        setAttempt(nextImageDeliveryAttempt(attempt));
+      }}
     />
   );
 }

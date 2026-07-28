@@ -34,13 +34,10 @@ type NormalizeGraphic = (
 ) => Promise<{ bytes: Buffer; format: string; hasAlpha: boolean; metadataStripped: boolean }>;
 type GetImageDeliveryMode = (
   kind: string,
-) =>
-  | "vercel-optimized"
-  | "vercel-optimized-with-origin-fallback"
-  | "unoptimized";
+) => "unoptimized";
 type NextImageDeliveryAttempt = (
-  attempt: "optimized" | "raw" | "failed",
-) => "optimized" | "raw" | "failed";
+  attempt: "raw" | "failed",
+) => "raw" | "failed";
 type AssertAllowedImageUrl = (url: string) => string;
 type FinalizeMediaUpload = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
@@ -207,9 +204,9 @@ describe("media processing contract", () => {
 
 describe("media finalization and delivery contract", () => {
   it.each([
-    ["hero-photo", "vercel-optimized"],
-    ["roster-photo", "vercel-optimized-with-origin-fallback"],
-    ["shop-photo", "vercel-optimized"],
+    ["hero-photo", "unoptimized"],
+    ["roster-photo", "unoptimized"],
+    ["shop-photo", "unoptimized"],
     ["club-logo", "unoptimized"],
     ["flag", "unoptimized"],
     ["sponsor-logo", "unoptimized"],
@@ -222,14 +219,13 @@ describe("media finalization and delivery contract", () => {
     expect(getImageDeliveryMode(kind)).toBe(expected);
   });
 
-  it("falls back from Vercel once, then fails closed", async () => {
+  it("fails closed after the raw normalized origin fails", async () => {
     const nextImageDeliveryAttempt =
       await loadContract<NextImageDeliveryAttempt>(
         "@/lib/image-delivery",
         "nextImageDeliveryAttempt",
       );
 
-    expect(nextImageDeliveryAttempt("optimized")).toBe("raw");
     expect(nextImageDeliveryAttempt("raw")).toBe("failed");
     expect(nextImageDeliveryAttempt("failed")).toBe("failed");
   });

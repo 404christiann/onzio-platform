@@ -1,4 +1,4 @@
-name: Public roster media smoke
+name: Public site media smoke
 
 on:
   workflow_dispatch:
@@ -9,11 +9,11 @@ permissions:
   contents: read
 
 jobs:
-  verify-roster-media:
+  verify-site-media:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      ROSTER_MEDIA_BASE_URL: https://www.rosecityfutbolclub.com
+      SITE_MEDIA_BASE_URL: https://www.rosecityfutbolclub.com
 
     steps:
       - name: Check out repository
@@ -31,5 +31,5 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Verify desktop and mobile roster media
-        run: npm run test:browser:roster
+      - name: Verify desktop and mobile site media
+        run: npx playwright test --config=playwright.site-media.config.ts

@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createAuthEmailCallbackUrl } from "@/lib/auth-email-callback";
 import { createClient } from "@/lib/supabase-browser";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 
 type MfaStep = {
   factorId: string;
@@ -157,11 +158,11 @@ export default function LoginPage() {
             {mfa.qrCode && (
               <div className="rounded-xl bg-white p-4 text-center">
                 {/* Supabase returns a local data URI for this enrollment QR. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <ResilientNativeImage
                   src={mfa.qrCode}
                   alt="Scan this MFA enrollment code"
                   className="mx-auto h-48 w-48"
+                  fallbackVariant="logo"
                 />
                 <p className="mt-3 text-xs text-black/70">
                   Scan once with your authenticator app, then enter its code.

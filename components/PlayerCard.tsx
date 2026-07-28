@@ -52,6 +52,8 @@ export default function PlayerCard({ player, seasonLabel }: { player: Player; se
                 color: "rgba(20,20,20,0.24)",
               }}
               role="img"
+              data-image-fallback="true"
+              data-image-fallback-variant="person"
               aria-label={`${player.name} photo unavailable`}
             >
               {playerInitials}

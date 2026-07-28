@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { usePathname } from "next/navigation";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { SHOW_SHOP_HERO } from "@/lib/site-flags";

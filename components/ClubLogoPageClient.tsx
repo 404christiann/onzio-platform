@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { DBClubLogoPageContent } from "@/lib/db-types";
@@ -82,6 +82,7 @@ export default function ClubLogoPageClient({
           <Image
             src={content.annotated_image_url}
             alt={`${club.name} crest annotation`}
+            fallbackVariant="logo"
             fill
             className="object-contain"
             sizes="(max-width: 640px) 100vw, 576px"
@@ -102,6 +103,7 @@ export default function ClubLogoPageClient({
               <Image
                 src={feature.patch_url}
                 alt={`${feature.title} patch`}
+                fallbackVariant="logo"
                 fill
                 className="object-contain"
                 style={{ transform: `scale(${PATCH_SCALE})` }}
@@ -124,6 +126,7 @@ export default function ClubLogoPageClient({
                   <Image
                     src={feature.icon_url}
                     alt=""
+                    fallbackVariant="logo"
                     fill
                     className="object-contain"
                     style={{ transform: `scale(${feature.icon_scale})` }}
@@ -152,6 +155,7 @@ export default function ClubLogoPageClient({
           <Image
             src={content.map_image_url}
             alt={`${club.name} home map`}
+            fallbackVariant="logo"
             fill
             className="object-contain"
             sizes="384px"
@@ -170,6 +174,7 @@ export default function ClubLogoPageClient({
             <Image
               src={card.image_url}
               alt={`${card.label} brand color`}
+              fallbackVariant="logo"
               fill
               className="object-contain"
               sizes="(max-width: 640px) 31vw, 220px"

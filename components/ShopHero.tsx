@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 
 const SLIDES = [
   "/images/shop/shoppic1.jpeg",

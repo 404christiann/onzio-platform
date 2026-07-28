@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 

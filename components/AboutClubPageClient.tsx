@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -93,6 +93,7 @@ export default function AboutClubPageClient({
             <Image
               src={content.feature_image_url}
               alt={`${club.name} about page feature`}
+              fallbackVariant="photo"
               fill
               sizes="(max-width: 768px) 100vw, 420px"
               className="object-cover"

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 
 const NAV_ITEMS = [

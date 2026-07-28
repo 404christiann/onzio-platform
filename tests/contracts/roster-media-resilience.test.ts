@@ -7,12 +7,11 @@ function source(path: string): string {
 }
 
 describe("roster media resilience", () => {
-  it("retries optimized images from the raw origin without looping", () => {
+  it("serves the raw origin and replaces a failed source without looping", () => {
     const component = source("components/ResilientImage.tsx");
 
     expect(component).toContain("nextImageDeliveryAttempt");
-    expect(component).toContain('useState<ResilientImageAttempt>("optimized")');
-    expect(component).toContain('attempt === "raw"');
+    expect(component).toContain('useState<ResilientImageAttempt>("raw")');
     expect(component).toContain('attempt === "failed"');
     expect(component).toContain("fallback");
     expect(component).toContain("onError");

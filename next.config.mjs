@@ -13,6 +13,10 @@ const configuredOnzioMediaPattern = configuredSupabaseUrl
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Onzio publishes normalized, immutable assets. Serve those source files
+    // directly so an image-optimization quota or service outage cannot remove
+    // photography from the site.
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/Aboutassets/**" },
       { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/about-page/**" },

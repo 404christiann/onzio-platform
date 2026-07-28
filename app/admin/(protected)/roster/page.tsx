@@ -11,6 +11,7 @@ import { createClient } from "@/lib/admin-client";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } from "@/lib/roster-images";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 // ── Nationalities ─────────────────────────────
 
 const NATIONALITIES = [
@@ -545,9 +546,10 @@ function PlayerPositionGroup({
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0"
                           style={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)" }}>
-                          <img
+                          <ResilientNativeImage
                             src={getRosterImageSrc(p.photo_url, clubLogoUrl)}
                             alt={p.name}
+                            fallbackVariant="person"
                             className={`w-full h-full ${isRosterPlaceholderLogo(p.photo_url) ? "object-contain" : "object-cover"}`}
                           />
                         </div>
@@ -769,7 +771,7 @@ function StaffTab() {
                       <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
                         style={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)" }}>
                         {s.photo_url
-                          ? <img src={s.photo_url} alt={s.name} className="w-full h-full object-cover" />
+                          ? <ResilientNativeImage src={s.photo_url} alt={s.name} fallbackVariant="person" className="w-full h-full object-cover" />
                           : <span className="font-display font-black text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{s.initials}</span>
                         }
                       </div>
@@ -1060,9 +1062,10 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
       <div className="flex flex-wrap gap-2 mb-3">
         {photos.map((photo) => (
           <div key={photo.id} className="relative group" style={{ width: 72, height: 72 }}>
-            <img
+            <ResilientNativeImage
               src={photo.url}
               alt="Action photo"
+              fallbackVariant="person"
               className="w-full h-full object-cover rounded-lg"
               style={{ border: "1px solid rgba(255,255,255,0.08)" }}
             />
@@ -1163,9 +1166,10 @@ function PlayerFormFields({
       <div className="flex items-center gap-4">
         <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
           style={{ backgroundColor: "#0e0e0e", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <img
+          <ResilientNativeImage
             src={preview}
             alt="preview"
+            fallbackVariant="person"
             className={`w-full h-full ${previewIsClubLogo ? "object-contain" : "object-cover"}`}
           />
         </div>
@@ -1313,7 +1317,7 @@ function StaffFormFields({
         <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
           style={{ backgroundColor: "#0e0e0e", border: "1px solid rgba(255,255,255,0.08)" }}>
           {preview
-            ? <img src={preview} alt="preview" className="w-full h-full object-cover" />
+            ? <ResilientNativeImage src={preview} alt="preview" fallbackVariant="person" className="w-full h-full object-cover" />
             : <span className="font-display font-black text-lg" style={{ color: "rgba(255,255,255,0.2)" }}>
                 {form.initials || "?"}
               </span>

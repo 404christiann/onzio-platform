@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { useEffect, useState } from "react";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 

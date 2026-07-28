@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { DBHomepageSlideshowPhoto } from "@/lib/db-types";
@@ -11,6 +11,7 @@ import {
 } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import { useClubId } from "@/components/ClubContextProvider";
+import ImageFallback from "@/components/ImageFallback";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -81,7 +82,20 @@ export default function PhotoSlideshow() {
     return () => ctx.revert();
   }, [visibleSlides.length]);
 
-  if (visibleSlides.length === 0) return null;
+  if (visibleSlides.length === 0) {
+    if (slides.length === 0) return null;
+    return (
+      <section
+        className="relative min-h-[560px] w-full overflow-hidden"
+        style={{ height: "85vh", backgroundColor: "#141414" }}
+      >
+        <ImageFallback
+          label="Club slideshow unavailable"
+          variant="photo"
+        />
+      </section>
+    );
+  }
 
   return (
     <section

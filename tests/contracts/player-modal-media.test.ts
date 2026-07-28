@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 describe("player modal media delivery", () => {
-  it("bypasses the unavailable Vercel optimizer for carousel photos", () => {
+  it("serves carousel photos directly from the raw source", () => {
     const source = readFileSync(
       resolve(process.cwd(), "components/PlayerModal.tsx"),
       "utf8",

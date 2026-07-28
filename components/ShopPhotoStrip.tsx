@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import type { DBShopCarouselPhoto } from "@/lib/db-types";
 import { photoStripDisplayMode, photoStripPhotoAlt } from "@/lib/shop-photo-strip";
 
@@ -31,6 +31,7 @@ export default function ShopPhotoStrip({ photos }: ShopPhotoStripProps) {
             <Image
               src={photo.url}
               alt={photoStripPhotoAlt(i, photos.length)}
+              fallbackVariant="shop"
               fill
               sizes={photos.length === 1 ? "67vw" : photos.length === 2 || photos.length === 4 ? "50vw" : "33vw"}
               className="object-cover object-center"
@@ -50,6 +51,7 @@ export default function ShopPhotoStrip({ photos }: ShopPhotoStripProps) {
               <Image
                 src={photo.url}
                 alt={photoStripPhotoAlt(i, photos.length)}
+                fallbackVariant="shop"
                 fill
                 sizes={`(min-width: 1280px) 207px, ${Math.ceil(100 / photos.length)}vw`}
                 className="object-cover object-center"

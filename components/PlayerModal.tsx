@@ -1,7 +1,7 @@
 "use client";
 
 import { Dialog, DialogPanel, DialogBackdrop } from "@headlessui/react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { useState, useEffect } from "react";
 import { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
 import NationalityFlag from "@/components/NationalityFlag";
@@ -125,6 +125,9 @@ export default function PlayerModal({ player, onClose, seasonLabel = "Current Se
                   color: "rgba(20,20,20,0.28)",
                 }}
                 aria-label={`${player.name} photo unavailable`}
+                role="img"
+                data-image-fallback="true"
+                data-image-fallback-variant="person"
               >
                 {playerInitials}
               </div>
