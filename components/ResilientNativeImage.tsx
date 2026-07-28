@@ -16,6 +16,19 @@ type Props = ImgHTMLAttributes<HTMLImageElement> & {
 };
 
 export default function ResilientNativeImage({
+  src,
+  ...props
+}: Props) {
+  return (
+    <ResilientNativeImageAttempt
+      key={typeof src === "string" ? src : ""}
+      src={src}
+      {...props}
+    />
+  );
+}
+
+function ResilientNativeImageAttempt({
   alt = "",
   fallback,
   fallbackVariant = "photo",
