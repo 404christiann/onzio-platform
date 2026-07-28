@@ -193,8 +193,8 @@ export default function LoginPage() {
           recoverySent ? (
             <div className="mt-8 space-y-5">
               <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-                Check your email for a six-digit recovery code, then enter it
-                on the secure recovery page.
+                Check your email for a recovery code, then enter it on the
+                secure recovery page.
               </p>
               <Link
                 href="/admin/recover"

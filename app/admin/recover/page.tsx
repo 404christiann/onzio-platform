@@ -5,6 +5,9 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 
+const MIN_RECOVERY_CODE_LENGTH = 6;
+const MAX_RECOVERY_CODE_LENGTH = 10;
+
 export default function RecoverPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -47,7 +50,7 @@ export default function RecoverPasswordPage() {
           Enter recovery code
         </h1>
         <p className="mt-3 text-sm leading-6 text-white/50">
-          Enter the administrator email and the six-digit code from the newest
+          Enter the administrator email and the recovery code from the newest
           password-reset email.
         </p>
 
@@ -69,7 +72,7 @@ export default function RecoverPasswordPage() {
             className="block text-sm font-semibold"
             htmlFor="recovery-code"
           >
-            Six-digit recovery code
+            Recovery code
           </label>
           <input
             id="recovery-code"
@@ -77,11 +80,16 @@ export default function RecoverPasswordPage() {
             inputMode="numeric"
             autoComplete="one-time-code"
             required
-            pattern="[0-9]{6}"
-            maxLength={6}
+            pattern={`[0-9]{${MIN_RECOVERY_CODE_LENGTH},${MAX_RECOVERY_CODE_LENGTH}}`}
+            minLength={MIN_RECOVERY_CODE_LENGTH}
+            maxLength={MAX_RECOVERY_CODE_LENGTH}
             value={token}
             onChange={(event) =>
-              setToken(event.target.value.replace(/\D/g, "").slice(0, 6))
+              setToken(
+                event.target.value
+                  .replace(/\D/g, "")
+                  .slice(0, MAX_RECOVERY_CODE_LENGTH),
+              )
             }
             className="w-full rounded-lg border border-white/10 bg-black px-4 py-3 text-center font-mono text-2xl tracking-[0.35em] text-white outline-none focus:border-red-500"
           />

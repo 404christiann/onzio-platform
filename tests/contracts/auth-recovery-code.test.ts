@@ -30,17 +30,20 @@ describe("prefetch-resistant password recovery", () => {
     expect(recoveryPage).toContain("router.refresh()");
   });
 
-  it("uses a mobile-friendly six-digit code input", () => {
+  it("uses a mobile-friendly code input that accepts configured OTP lengths", () => {
     expect(recoveryPage).toContain('inputMode="numeric"');
     expect(recoveryPage).toContain('autoComplete="one-time-code"');
-    expect(recoveryPage).toContain('pattern="[0-9]{6}"');
-    expect(recoveryPage).toContain("maxLength={6}");
+    expect(recoveryPage).toContain("MIN_RECOVERY_CODE_LENGTH = 6");
+    expect(recoveryPage).toContain("MAX_RECOVERY_CODE_LENGTH = 10");
+    expect(recoveryPage).toContain("minLength={MIN_RECOVERY_CODE_LENGTH}");
+    expect(recoveryPage).toContain("maxLength={MAX_RECOVERY_CODE_LENGTH}");
+    expect(recoveryPage).toContain(".slice(0, MAX_RECOVERY_CODE_LENGTH)");
   });
 
   it("routes successful reset requests to code entry", () => {
     expect(loginPage).toContain('href="/admin/recover"');
     expect(loginPage).toContain("Enter recovery code");
-    expect(loginPage).toContain("six-digit recovery code");
+    expect(loginPage).toContain("Check your email for a recovery code");
   });
 
   it("keeps recovery code entry available during billing restrictions", () => {
