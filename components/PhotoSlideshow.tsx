@@ -53,23 +53,26 @@ export default function PhotoSlideshow() {
 
   // Scroll reveal
   useEffect(() => {
+    const section = sectionRef.current;
+    if (slides.length === 0 || !section) return;
+
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        sectionRef.current,
+        section,
         { opacity: 0 },
         {
           opacity: 1,
           duration: 1,
           ease: "power2.out",
           scrollTrigger: {
-            trigger: sectionRef.current,
+            trigger: section,
             start: "top 85%",
           },
         }
       );
-    }, sectionRef);
+    }, section);
     return () => ctx.revert();
-  }, []);
+  }, [slides.length]);
 
   if (slides.length === 0) return null;
 
@@ -90,6 +93,7 @@ export default function PhotoSlideshow() {
             src={slide.url}
             alt={slide.alt}
             fill
+            unoptimized
             className="object-cover object-center"
             sizes="100vw"
           />

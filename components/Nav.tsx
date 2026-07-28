@@ -9,34 +9,34 @@ import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
 
-const LOGO_BASE =
-  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logos_v2`;
+const MIGRATED_LOGO_BASE =
+  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/branding`;
 
 const affiliationLogos = [
   {
-    colorSrc: `${LOGO_BASE}/US%20Soccer%20logo%20color.png`,
-    whiteSrc: `${LOGO_BASE}/US%20Soccer%20logo%20white.png`,
+    colorSrc: `${MIGRATED_LOGO_BASE}/e6567f14-dd84-5bc2-9ad5-feba2bb7ebcd.webp`,
+    whiteSrc: `${MIGRATED_LOGO_BASE}/9e07acc2-58e7-57e9-8cb3-6e3e6c6f62ab.webp`,
     alt: "US Soccer",
     className: "h-7 w-7 sm:h-10 sm:w-10",
     sizes: "(max-width: 639px) 28px, 40px",
   },
   {
-    colorSrc: `${LOGO_BASE}/FIFA%20logo%20color.png`,
-    whiteSrc: `${LOGO_BASE}/FIFA%20logo%20white.png`,
+    colorSrc: `${MIGRATED_LOGO_BASE}/156cf559-3506-54d2-b76d-fe1467a38ecb.webp`,
+    whiteSrc: `${MIGRATED_LOGO_BASE}/372c1717-8e41-523c-9e77-10619c84510a.webp`,
     alt: "FIFA",
     className: "h-7 w-11 sm:h-10 sm:w-16",
     sizes: "(max-width: 639px) 44px, 64px",
   },
   {
-    colorSrc: `${LOGO_BASE}/Lamar%20Hunt%20U.S.%20Open%20Cup%20color.png`,
-    whiteSrc: `${LOGO_BASE}/Lamar%20Hunt%20U.S.%20Open%20Cup%20white.png`,
+    colorSrc: `${MIGRATED_LOGO_BASE}/ac5777e3-e529-5c35-a661-e215bc56fc17.webp`,
+    whiteSrc: `${MIGRATED_LOGO_BASE}/56f60999-1821-566e-8769-f2b472d652e4.webp`,
     alt: "Lamar Hunt U.S. Open Cup",
     className: "h-7 w-7 sm:h-10 sm:w-10",
     sizes: "(max-width: 639px) 28px, 40px",
   },
   {
-    colorSrc: `${LOGO_BASE}/UPSL%20logo%20color.png`,
-    whiteSrc: `${LOGO_BASE}/UPSL%20logo%20white.png`,
+    colorSrc: `${MIGRATED_LOGO_BASE}/84a9350a-be9e-50ae-bc78-f197288c2bfb.webp`,
+    whiteSrc: `${MIGRATED_LOGO_BASE}/39d5d7ca-17f1-54a7-8310-645128d401ce.webp`,
     alt: "UPSL",
     className: "h-7 w-7 sm:h-10 sm:w-10",
     sizes: "(max-width: 639px) 28px, 40px",
