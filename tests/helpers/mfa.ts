@@ -24,7 +24,7 @@ function decodeBase32(value: string): Buffer {
   return Buffer.from(bytes);
 }
 
-function currentTotp(secret: string): string {
+export function currentTotp(secret: string): string {
   const counter = Math.floor(Date.now() / 30_000);
   const counterBytes = Buffer.alloc(8);
   counterBytes.writeBigUInt64BE(BigInt(counter));

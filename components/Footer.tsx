@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";

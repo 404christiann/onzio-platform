@@ -1,6 +1,8 @@
 node_modules/
 .next/
 coverage/
+playwright-report/
+test-results/
 .env
 .env.local
 .env.test
@@ -12,3 +14,4 @@ output/
 tmp/
 supabase/.temp/
 supabase/.branches/
+.vercel

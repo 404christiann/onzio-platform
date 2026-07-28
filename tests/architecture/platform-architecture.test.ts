@@ -35,9 +35,10 @@ async function sourceFiles(root: string): Promise<string[]> {
 }
 
 describe("Next image architecture contract", () => {
-  it("uses the default Next/Vercel loader and no Supabase loader file", async () => {
+  it("globally bypasses runtime optimization and has no Supabase loader file", async () => {
     const config = await requireFile("next.config.mjs");
     expect(config).not.toMatch(/\bloader\s*:/);
+    expect(config).toMatch(/\bunoptimized\s*:\s*true/);
     await expect(
       access(resolve(ROOT, "supabase-image-loader.js")),
     ).rejects.toThrow();
@@ -50,7 +51,7 @@ describe("Next image architecture contract", () => {
     expect(config).not.toMatch(/hostname:\s*["']\*["']/);
   });
 
-  it("uses the approved widths, qualities, and 31-day TTL", async () => {
+  it("retains the approved source allowlist and image metadata settings", async () => {
     const config = await requireFile("next.config.mjs");
     expect(config).toMatch(
       /deviceSizes\s*:\s*\[\s*640,\s*828,\s*1080,\s*1440,\s*1920\s*\]/,
@@ -92,6 +93,52 @@ describe("Next image architecture contract", () => {
       expect(registry).toContain(kind);
     }
     expect(registry).toContain("unoptimized");
+  });
+
+  it("routes application images through resilient components", async () => {
+    const files = (
+      await Promise.all(
+        ["app", "components"].map((root) => sourceFiles(root)),
+      )
+    ).flat();
+    const directNextImageAllowlist = new Set([
+      "components/NationalityFlag.tsx",
+      "components/ResilientImage.tsx",
+    ]);
+    const directNativeImageAllowlist = new Set([
+      "components/ResilientNativeImage.tsx",
+    ]);
+    const directNextImages: string[] = [];
+    const directNativeImages: string[] = [];
+
+    for (const path of files.filter((file) => file.endsWith(".tsx"))) {
+      const contents = await readFile(resolve(ROOT, path), "utf8");
+      if (
+        /from\s+["']next\/image["']/.test(contents) &&
+        !directNextImageAllowlist.has(path)
+      ) {
+        directNextImages.push(path);
+      }
+      if (
+        /<img\b/.test(contents) &&
+        !directNativeImageAllowlist.has(path)
+      ) {
+        directNativeImages.push(path);
+      }
+    }
+
+    expect(directNextImages).toEqual([]);
+    expect(directNativeImages).toEqual([]);
+  });
+
+  it("keeps automatic upload normalization in the secure media boundary", async () => {
+    const adminClient = await requireFile("lib/admin-client.ts");
+    const processor = await requireFile("lib/media-processing.ts");
+    expect(adminClient).toContain("/api/admin/media/authorize");
+    expect(adminClient).toContain("/api/admin/media/finalize");
+    expect(processor).toContain("validateMediaUpload");
+    expect(processor).toContain("normalizePhoto");
+    expect(processor).toContain("normalizeGraphic");
   });
 });
 

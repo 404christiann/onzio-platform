@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { useClubContext } from "@/components/ClubContextProvider";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 
 export default function Hero() {
   const club = useClubContext();
@@ -83,9 +84,10 @@ export default function Hero() {
       <div className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
         {/* Poster shown until the video element is created client-side */}
         {!videoMounted && (
-          <img
+          <ResilientNativeImage
             src="/images/hero-poster.jpg"
             alt=""
+            hideOnError
             style={{
               position: "absolute",
               top: "50%",

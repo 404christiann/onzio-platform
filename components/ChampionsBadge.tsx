@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -62,6 +62,7 @@ export default function ChampionsBadge() {
             <Image
               src="/images/home/trophy.png"
               alt="UPSL Championship Trophy"
+              fallbackVariant="trophy"
               fill
               className="object-contain"
               sizes="(max-width: 767px) 100vw, (max-width: 1280px) 52vw, 700px"

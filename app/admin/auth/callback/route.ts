@@ -1,15 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  parseEmailOtpType,
+  resolveAuthCallbackDestination,
+} from "@/lib/auth-email-callback";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
-  const type = searchParams.get("type");
+  const type = parseEmailOtpType(searchParams.get("type"));
+  const requestedNext = searchParams.get("next");
+  const next = resolveAuthCallbackDestination({ type, requestedNext });
 
-  // Handle PKCE magic link (token_hash flow)
+  // Hosted Auth templates send token hashes to this server-side boundary.
   if (token_hash && type) {
-    const response = NextResponse.redirect(`${origin}/admin`);
+    const response = NextResponse.redirect(`${origin}${next}`);
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,13 +32,16 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as "magiclink" | "email" });
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type,
+    });
     if (!error) return response;
   }
 
   // Handle OAuth / email code flow
   if (code) {
-    const response = NextResponse.redirect(`${origin}/admin`);
+    const response = NextResponse.redirect(`${origin}${next}`);
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,5 +62,7 @@ export async function GET(request: NextRequest) {
     if (!error) return response;
   }
 
-  return NextResponse.redirect(`${origin}/admin/login`);
+  return NextResponse.redirect(
+    `${origin}/admin/login?error=invalid_auth_link`,
+  );
 }

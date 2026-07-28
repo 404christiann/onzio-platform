@@ -9,26 +9,28 @@ export type ImageDeliveryKind =
   | "opponent-crest"
   | "small-graphic";
 
-const UNOPTIMIZED_KINDS = new Set<ImageDeliveryKind>([
-  "club-logo",
-  "flag",
-  "sponsor-logo",
-  "opponent-crest",
-  "small-graphic",
-]);
+export type ImageDeliveryMode = "unoptimized";
+
+export type ResilientImageAttempt = "raw" | "failed";
 
 export function imageDeliveryProps(kind: ImageDeliveryKind): {
-  unoptimized?: true;
+  unoptimized: true;
 } {
-  return UNOPTIMIZED_KINDS.has(kind) ? { unoptimized: true } : {};
+  void kind;
+  return { unoptimized: true };
 }
 
 export function getImageDeliveryMode(
   kind: string,
-): "vercel-optimized" | "unoptimized" {
-  return UNOPTIMIZED_KINDS.has(kind as ImageDeliveryKind)
-    ? "unoptimized"
-    : "vercel-optimized";
+): ImageDeliveryMode {
+  void kind;
+  return "unoptimized";
+}
+
+export function nextImageDeliveryAttempt(
+  _attempt: ResilientImageAttempt,
+): ResilientImageAttempt {
+  return "failed";
 }
 
 export function assertAllowedImageUrl(url: string): string {

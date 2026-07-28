@@ -28,6 +28,42 @@ afterEach(async () => {
 });
 
 describe("authenticated tenant RLS contract", () => {
+  it("resolves private-preview admin hosts without exposing tenant rows", async () => {
+    const directClub = await clients.anon
+      .from("clubs")
+      .select("id")
+      .eq("id", CLUB_IDS.bravo);
+    const directDomain = await clients.anon
+      .from("club_domains")
+      .select("club_id")
+      .eq("hostname", "bravo-onzio.vercel.app");
+    expect(directClub.data).toEqual([]);
+    expect(directDomain.data).toEqual([]);
+
+    const resolved = await clients.anon.rpc("resolve_verified_tenant", {
+      p_hostname: "BRAVO-ONZIO.VERCEL.APP.",
+      p_environment: "production",
+    });
+    expect(resolved.error?.message).toBeUndefined();
+    expect(resolved.data).toEqual([
+      {
+        id: CLUB_IDS.bravo,
+        slug: "bravo",
+        lifecycle: "onboarding",
+        public_access: "preview",
+      },
+    ]);
+
+    const wrongEnvironment = await clients.anon.rpc(
+      "resolve_verified_tenant",
+      {
+        p_hostname: "bravo-onzio.vercel.app",
+        p_environment: "staging",
+      },
+    );
+    expect(wrongEnvironment.data).toEqual([]);
+  });
+
   it("allows AAL2 member writes only inside the member's club", async () => {
     const session = await createAal2LocalClient({
       email: "owner-aal2@alpha.local",

@@ -25,11 +25,8 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install application dependencies
+      - name: Install dependencies
         run: npm ci
-
-      - name: Install pinned browser test runtime
-        run: npm install --no-save --ignore-scripts @playwright/test@1.57.0
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium

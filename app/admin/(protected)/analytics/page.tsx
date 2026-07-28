@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
 import { fetchRoster, fetchPlayerMatchTrend, PlayerMatchTrendPoint } from "@/lib/queries";
 import { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 
 Chart.register(...registerables);
 
@@ -146,7 +147,7 @@ export default function AnalyticsPage() {
                 >
                   <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 48, height: 48, border: `2px solid ${active ? RED : "transparent"}` }}>
                     {p.image ? (
-                      <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                      <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center font-display font-black" style={{ backgroundColor: active ? RED : "rgba(255,255,255,0.08)", color: active ? "#fff" : "rgba(255,255,255,0.45)", fontSize: "0.75rem" }}>
                         {initials(p.name)}
@@ -181,7 +182,7 @@ export default function AnalyticsPage() {
                 >
                   <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 48, height: 48, border: `2px solid ${active ? RED : "rgba(255,255,255,0.08)"}` }}>
                     {p.image ? (
-                      <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                      <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center font-display font-black" style={{ backgroundColor: active ? RED : "rgba(255,255,255,0.08)", color: active ? "#fff" : "rgba(255,255,255,0.45)", fontSize: "0.75rem" }}>
                         {initials(p.name)}
@@ -367,7 +368,7 @@ function PlayerDashboard({
       >
         <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 96, height: 96, border: `2px solid ${RED}` }}>
           {player.image ? (
-            <img src={player.image} alt={player.name} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+            <ResilientNativeImage src={player.image} alt={player.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
           ) : (
             <div className="w-full h-full flex items-center justify-center font-display font-black text-white" style={{ backgroundColor: RED, fontSize: "1.5rem" }}>
               {initials(player.name)}

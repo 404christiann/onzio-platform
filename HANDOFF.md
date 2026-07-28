@@ -4,42 +4,43 @@ Last updated: 2026-07-27
 
 ## Current State
 
-Phase 6 — Stripe billing — is complete. Phase 7 hosted staging is in progress
-and has not passed yet.
+Phase 8 local Rose City transformation/preflight implementation and the
+read-only Onzio production preflight are complete. The exposed legacy
+production credential has been contained. The production migration and cutover
+have not begun.
 
-Onzio now has strict environment-scoped Starter/Pro Price mapping,
-first-subscription Checkout, existing-subscriber Customer Portal routing, and
-owner-only billing authorization derived from the verified tenant, AAL2
-session, and active membership. Customers, Checkout Sessions, and
-Subscriptions carry club/environment metadata, and return URLs use the
-verified primary domain.
+The isolated `Onzio Platform Staging` Supabase project now contains only
+synthetic Alpha and Bravo tenants. Ten checked-in migrations are applied
+without the local seed, modern publishable/secret keys replace disabled legacy
+keys, leaked-password protection and TOTP MFA are enabled, and the exposed
+`onzio` schema remains separated from private security helpers. Supabase's
+security advisor has no warnings; its four remaining informational notices
+describe intentionally policy-free internal/write-only tables.
 
-The Node webhook verifies the raw body, retrieves canonical Stripe
-subscription and customer state, validates tenant/environment/customer/
-subscription/price ownership, and applies the immutable event ledger,
-subscription projection, club tier, lifecycle, and runtime access in one
-database transaction. Duplicate, stale, foreign, mismatched, unknown-price,
-obsolete, and race-conflicting events fail closed.
+The protected `onzio-platform-staging` Vercel project serves the `staging`
+branch behind Vercel Authentication. Preview-scoped variables contain only
+staging Supabase and Stripe test-mode values. Alpha and Bravo have separate
+verified staging domains, and unknown or cross-tenant hosts fail closed.
 
-Runtime access is clock-driven rather than webhook-timing-dependent:
-onboarding/no-subscription clubs remain in private preview, active/trialing/
-past-due subscriptions are live, terminal subscriptions move through the
-seven-day public grace window, and expired/archived clubs suspend. Content
-writes and admin routes become billing-only after paid access ends.
+The real Stripe test path is exercised end to end: owner Checkout created an
+active Starter subscription, the staging webhook projected it, Customer Portal
+opened for the owner, and Starter→Pro→Starter changes projected correctly.
+Duplicate, stale, foreign-environment, customer-metadata, and unknown-price
+events failed closed.
 
-The Phase 6 gate is green: all 24 Stripe contracts, the Stripe architecture
-sentinel, and six new database billing regressions pass. The only remaining
-intentional failures are eight Phase 8 Rose City transformation/migration
-contracts.
+Hosted verification covers AAL1/AAL2, roles, membership revocation, tenant RLS,
+HTML/RSC cache isolation, Starter/Pro entitlements, media normalization and
+rejection, retry and cleanup, paid/grace/suspended lifecycle states, archive,
+reactivation, and atomic rollback. Alpha is restored active/live/Starter with
+its test subscription; Bravo is restored onboarding/private-preview with no
+subscription.
 
-No hosted Supabase project, Stripe object, Rose City production data, DNS
-record, Vercel deployment, or production credential was changed.
-
-The Phase 7 local preflight was re-verified on 2026-07-27. A production build
-passes with loopback-only Supabase and inert test-shaped Stripe configuration,
-the database/type/architecture/legacy gates remain green, and the full suite
-retains only the eight intentional Phase 8 migration failures. The hosted gate
-cannot begin until Supabase, Stripe, and Vercel account access is available.
+No Rose City production data, production Stripe subscription, production DNS
+record, or production Supabase schema/data was mutated. The only production
+mutations were the explicitly approved credential-safety changes: legacy API
+keys were disabled and the legacy HS256 signer was revoked. The eight Phase 8
+Rose City transformation/migration contracts are now green, as are the complete
+local contract, architecture, database, legacy, and combined suites.
 
 ## Completed Work
 
@@ -220,42 +221,70 @@ cannot begin until Supabase, Stripe, and Vercel account access is available.
   identifies the already-applied event, and Rose City reconciliation carries
   Rose City tenant metadata while preserving the existing subscription ID.
 
-### Phase 7 — protected staging gate (in progress)
+### Phase 7 — protected staging gate
 
-- Added `docs/phase-7/staging-gate.md` as the operational acceptance record.
-- Defined hard isolation preconditions, the hosted-resource evidence record,
-  provisioning order, end-to-end acceptance matrix, and completion decision.
-- Re-ran the complete local readiness baseline without hosted credentials.
-- Confirmed this checkout is not linked to Vercel or hosted Supabase and
-  contains no staging environment file.
-- Confirmed the Vercel connector has no signed-in team and this checkout has no
-  Vercel link.
-- Reused the existing active Stripe test-mode Starter ($65/month) and Pro
-  ($99.99/month) Prices and verified both are recurring and non-live.
-- Enabled price switching for only those two Prices in the existing default
-  test-mode Customer Portal while preserving cancellation-at-period-end and
-  no-proration behavior.
-- Authenticated the Supabase CLI and created the dedicated `Onzio Staging`
-  organization (`udlsrxgfpkqjaridfxnz`) to keep staging separate from Rose City
-  and future production.
-- Confirmed `Onzio Platform Staging` (`fxefqnoqxbezeccjvrsw`) is active and
-  healthy in `us-west-2`.
-- The staging organization is temporarily upgraded for the Phase 7/Phase 8
-  migration month. This is an operational exception, not a change to the
-  steady-state architecture decision to use Free staging.
-- Linked this checkout to `fxefqnoqxbezeccjvrsw` using a database password
-  stored in macOS Keychain rather than a repository environment file.
-- Reviewed the hosted migration dry-run and applied exactly the seven checked-in
-  Phase 2–6 migrations without `supabase/seed.sql`.
-- Verified all seven local and hosted migration versions match and hosted
-  `onzio` plus `onzio_private` schema lint reports no errors.
-- Disabled the hosted project's legacy `anon` and `service_role` API keys after
-  a pre-deployment credential-handling incident and verified the management API
-  reports `enabled: false`. Staging runtime credentials now use only the newer
-  publishable and secret key types stored outside the repository.
-- Connected the Stripe plugin to the `Onzio` test account
-  (`acct_1TvPQyK6WajTkwHY`). The exposed CLI test key and default test secret
-  must be rotated before either is placed in Vercel.
+- Added `docs/phase-7/staging-gate.md` and completed every hosted-resource and
+  acceptance row with staging-only evidence.
+- Created the separate `Onzio Staging` organization
+  (`udlsrxgfpkqjaridfxnz`) and `Onzio Platform Staging` project
+  (`fxefqnoqxbezeccjvrsw`) in `us-west-2`.
+- Linked the checkout using a Keychain-held database password and applied ten
+  checked-in Phase 2–7 migrations without `supabase/seed.sql`.
+- Added a minimal private-preview resolver, exact webhook routing bypass, and
+  empty-search-path/revoked-execution hardening for hosted runtime functions.
+- Disabled legacy `anon`/`service_role` API keys, retained modern
+  publishable/secret keys outside the repository, enabled leaked-password
+  protection, and kept TOTP enrollment/verification enabled.
+- Added a guarded `npm run staging:provision` workflow and provisioned the
+  operator plus synthetic Alpha/Bravo owner/admin identities with verified
+  domains, memberships, audit records, and TOTP AAL2 factors.
+- Linked the Vercel project `onzio-platform-staging`
+  (`prj_I362ysmh9cse5cRxnL7db4dOhsEs`) to GitHub, scoped all staging values to
+  the `staging` Preview branch, and enabled Vercel Authentication.
+- Deployed the protected staging application and mapped the Alpha/Bravo aliases
+  to the verified `staging` branch deployment.
+- Rotated the Stripe test secret, retained it outside the repository, and
+  configured test Starter/Pro Prices, Customer Portal, and webhook
+  `we_1TxrnaK6WajTkwHYtFEvCEo8` with the exact seven-event allowlist.
+- Created and paid a real test Checkout, projected subscription
+  `sub_1TxsLTK6WajTkwHYEUjdWeNR`, verified Portal and Starter/Pro switching,
+  then restored Alpha to active/live/Starter.
+- Added reusable hosted auth, Stripe, media, and lifecycle verifier scripts.
+  The media cleanup verifier now scopes destructive cleanup to its unique
+  synthetic club prefix.
+
+### Phase 8 — local Rose City migration gate
+
+- Added `lib/migration/rose-city-transform.ts` as a pure, deterministic
+  preflight and transformation boundary with no hosted or filesystem writes.
+- Added tenant-key injection, snake-case relationship mapping, real duplicate
+  detection, tenant relationship validation, declared row-count reconciliation,
+  media availability/corruption/checksum checks, and traversal-safe media paths.
+- Added deterministic UUID-versioned `onzio-media` plans that never use
+  Supabase runtime Image Transformations and preserve transparent-graphic
+  extension behavior when declared.
+- Preserved the existing Rose City Stripe subscription ID in the transformed
+  result and added a stable source digest for idempotent replay verification.
+- Added five regressions that prove real malformed manifests fail without
+  relying only on the original contract simulation flags.
+- Added `docs/phase-8/rose-city-migration-runbook.md` with the target evidence,
+  credentials, approval boundaries, backup/export gate, rehearsal sequence,
+  production/cutover sequence, rollback window, and acceptance evidence.
+- Verified `Onzio Platform Production` as project ref
+  `ioalthwsdrlzrubomrow`, region `ca-central-1`, Micro compute, status
+  `ACTIVE_HEALTHY`, in the Pro `404DB` organization.
+- Completed the read-only production preflight through the authenticated
+  Supabase Dashboard: the `public` schema has no tables, migration history is
+  empty, Auth has no users, Storage has no buckets, scheduled daily backups are
+  available, and the project usage view shows no disk overage.
+- Recorded a credential-safety incident: the Supabase CLI returned complete
+  legacy JWT keys without `--reveal`, exposing the legacy production
+  service-role credential in the tool transcript.
+- Contained the incident under Christian's explicit approval: disabled the
+  legacy `anon` and `service_role` API keys, retained the modern
+  publishable/secret posture, and revoked the previous legacy HS256 signing key
+  so the exposed service-role JWT is no longer trusted. The current signer is
+  ECC P-256.
 
 ## Verification
 
@@ -291,20 +320,20 @@ supabase db lint --local --schema onzio,onzio_private
 
 ```text
 npm run test:contracts
-  128 passed, 8 intentional failures, 136 total
+  129 passed, 8 intentional failures, 137 total
 
 npm run test:architecture
   16/16 passed
 
 npm test (with local Supabase test values)
-  432 passed, 8 intentional failures, 440 total
+  434 passed, 8 intentional failures, 442 total
 ```
 
 The remaining failures are assigned to later phases:
 
 - eight Rose City transformation/migration contracts (Phase 8)
 
-### Phase 7 local preflight — 2026-07-27
+### Phase 7 final gate — 2026-07-27
 
 ```text
 npx tsc --noEmit --pretty false --incremental false
@@ -314,16 +343,16 @@ npm run test:architecture
   16/16 passed
 
 npm run test:db
-  45/45 passed across 5 files
+  46/46 passed across 5 files
 
 npm run test:legacy
   243/243 passed across 20 files
 
 npm run test:contracts
-  128 passed, 8 intentional Phase 8 failures, 136 total
+  129 passed, 8 intentional Phase 8 failures, 137 total
 
 npm test (with loopback-only local Supabase values)
-  432 passed, 8 intentional Phase 8 failures, 440 total
+  434 passed, 8 intentional Phase 8 failures, 442 total
 
 npm run db:types:check
   generated definitions match the local schema
@@ -334,10 +363,62 @@ npm run lint
 npm run build
   passed with loopback-only Supabase and inert test-shaped Stripe values;
   23 static pages generated
+
+supabase db lint --linked --schema onzio,onzio_private
+  no schema errors
 ```
 
-No test was deleted, skipped, marked todo, loosened, or broadly mocked. Two
-contradictory Phase 6 fixtures were corrected with Christian's approval.
+Hosted staging verification:
+
+- `phase7.hosted_auth_verified`: AAL1/AAL2, four tenant sessions, RLS/cache
+  isolation, roles, Starter entitlement, Portal, and immediate revocation pass
+- `phase7.hosted_media_verified`: normalization, rejection, idempotency,
+  retirement, and scoped abandoned-staging cleanup pass
+- `phase7.hosted_stripe_verified`: duplicate, stale, environment, customer, and
+  Price boundaries pass
+- `phase7.hosted_lifecycle_verified`: retry, grace, suspension, archive,
+  reactivation, and rollback pass
+- real Stripe test Checkout, webhook projection, Customer Portal, and
+  Starter→Pro→Starter projection pass
+- Supabase security advisor reports no warnings; four intentional
+  `rls_enabled_no_policy` informational notices remain
+
+### Phase 8 local gate — 2026-07-27
+
+```text
+npx vitest run tests/contracts/provisioning-migration.test.ts \
+  tests/contracts/rose-city-transform-regressions.test.ts
+  23/23 passed
+
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run test:contracts
+  142/142 passed
+
+npm run test:architecture
+  16/16 passed
+
+npm run test:db
+  46/46 passed across 5 files
+
+npm test (with loopback-only local Supabase values)
+  447/447 passed across 35 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run lint
+  passed with seven pre-existing legacy warnings
+
+npm run build
+  passed with loopback-only Supabase values; 23 static pages generated
+```
+
+No test was deleted, skipped, marked todo, loosened, or broadly mocked.
 
 Known non-blocking warnings:
 
@@ -347,20 +428,20 @@ Known non-blocking warnings:
 
 ## Known Constraints and Blockers
 
-- Initialized this directory as a Git repository and published `main` to
-  `git@github.com:404christiann/onzio-platform.git`; initial platform commit
-  `14addff` is available to Vercel's GitHub importer.
-- The dedicated Supabase staging project is provisioned, linked, and migrated.
-- The dedicated Onzio production Supabase project remains a Phase 8
-  prerequisite and has not been provisioned.
-- The Vercel connector still reports no team, but the authenticated
-  `404christiann's projects` dashboard is available through Christian's
-  approved Chrome session. This checkout has no `.vercel` link yet.
-- Stripe test-mode Starter/Pro Prices and Customer Portal configuration are
-  ready, and the connected Stripe plugin resolves to the expected `Onzio`
-  account. Key rotation is required before deployment; the staging webhook
-  cannot be created or exercised until the protected Vercel deployment URL
-  exists.
+- `Onzio Platform Production` is healthy and its empty application state was
+  verified through the Dashboard. No production migration has been applied,
+  the checkout is not linked to production, and no production SQL was run.
+- The exposed legacy production service-role key must never be reused. Its API
+  keys are disabled and its legacy HS256 signing key is revoked; production
+  configuration must use only the modern key posture.
+- Rose City production freeze/import/cutover has not begun and still requires
+  Christian's explicit approval.
+- The staging organization is temporarily Pro for the Phase 7/Phase 8
+  migration month; the architectural steady state remains Free staging after
+  the migration rollback window.
+- The Vercel staging project's Production scope is intentionally unused.
+  Staging secrets exist only on the protected `staging` Preview branch, so
+  `main` must not be treated as the hosted staging target.
 - Hosted operator execution must configure the exact actor UUID allowlist in
   `ONZIO_OPERATOR_USER_IDS`; no operator application UI or route exists.
 - `npm run test:db` and full database-inclusive tests need JWT-shaped local
@@ -373,28 +454,19 @@ Known non-blocking warnings:
 
 ## Next Milestone
 
-Begin Phase 7 — protected staging gate.
+Phase 8 full local import rehearsal and production-provisioning gate.
 
-Use `docs/phase-7/staging-gate.md` as the authoritative execution and evidence
-record.
+First, create the immutable Rose City database/Auth/Storage export and complete
+the full local transformation/import/rollback rehearsal. Before any production
+schema/data mutation, verify the Rose City source backups and object checksums,
+record the freeze/rollback evidence in
+`docs/phase-8/rose-city-migration-runbook.md`, and obtain separate explicit
+approval to apply the reviewed migrations to the exact production ref.
 
-1. Rotate the exposed Stripe test-mode default secret and CLI restricted key,
-   then retain only the replacement staging credential outside the repository.
-2. Import `404christiann/onzio-platform` into Vercel from the now-populated
-   `main` branch and configure Deployment Protection before inviting testers.
-3. Configure the hosted Supabase API/Auth settings using the protected staging
-   URL, then provision synthetic Alpha and Bravo identities through the audited
-   operator workflow.
-4. Create the Stripe test-mode staging webhook after the protected deployment
-   URL exists.
-5. Deploy the protected Vercel staging environment with synthetic clubs only.
-6. Exercise Checkout, Portal, retries, out-of-order events, tier changes,
-   grace/suspension, archive/reactivation, and rollback end to end.
-7. Re-run domain/cache, MFA/role, media, and tenant-isolation acceptance
-   scenarios before authorizing any production migration.
-
-Do not begin Rose City import, production Stripe mutation, DNS work, or cutover
-without explicit approval.
+Do not begin Rose City freeze/import, production migration, Auth configuration,
+Storage work, production Stripe mutation, Vercel production deployment, DNS
+work, webhook cutover, organization downgrade, or project deletion without the
+applicable explicit approval.
 
 ## Working Commands
 

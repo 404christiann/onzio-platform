@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 
 // Portrait-oriented player photos — better suited for mobile
 const SLIDES = [

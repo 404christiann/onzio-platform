@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 
 const NAV_ITEMS = [
@@ -172,6 +172,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       .catch(() => setIsBillingAdmin(false));
   }, []);
 
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sidebarOpen]);
+
   const navItems = NAV_ITEMS.filter((item) => item.href !== "/admin/payments" || isBillingAdmin);
 
   async function handleSignOut() {
@@ -192,12 +202,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           className="fixed inset-0 z-20 lg:hidden"
           style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
           onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full z-30 flex flex-col lg:translate-x-0 lg:static lg:flex ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        id="admin-sidebar"
+        className={`fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] flex-col lg:static lg:flex lg:min-h-screen lg:h-auto lg:max-h-none lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{
           width: 280,
           backgroundColor: "#141414",
@@ -228,7 +240,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 py-4 px-3 flex flex-col gap-1">
+        <nav
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 px-3 flex flex-col gap-1"
+          style={{ WebkitOverflowScrolling: "touch" }}
+          aria-label="Admin navigation"
+        >
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -253,7 +269,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         {/* User + sign out */}
         <div
           className="px-4 py-4 flex-shrink-0"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          style={{
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+          }}
         >
           {userEmail && (
             <p
@@ -284,7 +303,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           className="lg:hidden flex items-center gap-4 px-5 py-4 flex-shrink-0"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", backgroundColor: "#141414" }}
         >
-          <button onClick={() => setSidebarOpen(true)} style={{ color: "rgba(255,255,255,0.6)" }}>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            style={{ color: "rgba(255,255,255,0.6)" }}
+            aria-label="Open admin navigation"
+            aria-controls="admin-sidebar"
+            aria-expanded={sidebarOpen}
+          >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>

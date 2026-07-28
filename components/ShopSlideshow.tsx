@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
+import Image from "@/components/ResilientImage";
 
 interface Props {
   images: string[];
@@ -41,6 +41,7 @@ export default function ShopSlideshow({ images }: Props) {
           <Image
             src={src}
             alt={`Shop image ${i + 1}`}
+            fallbackVariant="shop"
             fill
             className="object-contain object-center"
             sizes="(max-width: 768px) 100vw, 60vw"
