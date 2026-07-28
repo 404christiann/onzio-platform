@@ -1,0 +1,38 @@
+name: Public site media smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 15 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-site-media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE_MEDIA_BASE_URL: https://www.rosecityfutbolclub.com
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Install pinned browser test runtime
+        run: npm install --no-save --ignore-scripts @playwright/test@1.57.0
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify desktop and mobile site media
+        run: npx playwright test --config=playwright.site-media.config.ts
