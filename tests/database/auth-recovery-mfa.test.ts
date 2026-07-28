@@ -8,7 +8,7 @@ import { currentTotp } from "../helpers/mfa";
 const nodeWebSocket =
   WebSocket as unknown as typeof globalThis.WebSocket;
 
-describe("password recovery with an enrolled MFA factor", () => {
+describe("password recovery and MFA", () => {
   let cleanup: (() => Promise<void>) | undefined;
 
   afterEach(async () => {
@@ -109,5 +109,84 @@ describe("password recovery with an enrolled MFA factor", () => {
       password: updatedPassword,
     });
     expect(updated.error).toBeNull();
+  });
+
+  it("lets a first-time administrator set a password before enrolling MFA", async () => {
+    const { supabaseUrl } = assertSafeTestEnvironment();
+    const anonKey = process.env.SUPABASE_TEST_ANON_KEY!;
+    const serviceKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY!;
+    const sharedOptions = {
+      auth: { persistSession: false, autoRefreshToken: false },
+      realtime: { transport: nodeWebSocket },
+    } as const;
+    const service = createClient(supabaseUrl, serviceKey, sharedOptions);
+    const email = `recovery-first-mfa-${randomUUID()}@onzio.local`;
+    const initialPassword = `local-initial-${randomUUID()}`;
+    const updatedPassword = `local-updated-${randomUUID()}`;
+
+    const created = await service.auth.admin.createUser({
+      email,
+      password: initialPassword,
+      email_confirm: true,
+    });
+    if (created.error) throw created.error;
+    cleanup = async () => {
+      await service.auth.admin.deleteUser(created.data.user.id);
+    };
+
+    const link = await service.auth.admin.generateLink({
+      type: "recovery",
+      email,
+    });
+    if (link.error) throw link.error;
+
+    const recoveryClient = createClient(supabaseUrl, anonKey, sharedOptions);
+    const recovered = await recoveryClient.auth.verifyOtp({
+      email,
+      token: link.data.properties.email_otp,
+      type: "recovery",
+    });
+    if (recovered.error) throw recovered.error;
+
+    const recoveryAssurance =
+      await recoveryClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (recoveryAssurance.error) throw recoveryAssurance.error;
+    expect(recoveryAssurance.data.currentLevel).toBe("aal1");
+    expect(recoveryAssurance.data.nextLevel).toBe("aal1");
+
+    const updated = await recoveryClient.auth.updateUser({
+      password: updatedPassword,
+    });
+    expect(updated.error).toBeNull();
+    await recoveryClient.auth.signOut();
+
+    const signInClient = createClient(supabaseUrl, anonKey, sharedOptions);
+    const signIn = await signInClient.auth.signInWithPassword({
+      email,
+      password: updatedPassword,
+    });
+    if (signIn.error) throw signIn.error;
+
+    const signedInAssurance =
+      await signInClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (signedInAssurance.error) throw signedInAssurance.error;
+    expect(signedInAssurance.data.currentLevel).toBe("aal1");
+    expect(signedInAssurance.data.nextLevel).toBe("aal1");
+
+    const enrollment = await signInClient.auth.mfa.enroll({
+      factorType: "totp",
+      friendlyName: `first-admin-${randomUUID()}`,
+    });
+    if (enrollment.error) throw enrollment.error;
+    const verified = await signInClient.auth.mfa.challengeAndVerify({
+      factorId: enrollment.data.id,
+      code: currentTotp(enrollment.data.totp.secret),
+    });
+    if (verified.error) throw verified.error;
+
+    const elevatedAssurance =
+      await signInClient.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (elevatedAssurance.error) throw elevatedAssurance.error;
+    expect(elevatedAssurance.data.currentLevel).toBe("aal2");
   });
 });
