@@ -4,6 +4,37 @@ Last updated: 2026-07-28
 
 ## Current State
 
+Phase 8 operational closeout was executed under Christian's explicit approval
+on 2026-07-28 and verified at `2026-07-29T01:37:37Z`.
+
+- The immutable final frozen export at
+  `/Users/christianalcala/Downloads/onzio-migration-private/rose-city-final-freeze-2026-07-27T2234Z-v2`
+  remains the off-repository recovery record. All 586 ledger checksums pass.
+  Its complete manifest records 24 tables, 209 rows, 14 Storage buckets, 557
+  objects, 1,728,725,700 Storage bytes, three minimized Auth users, zero
+  production mutations, and a passed secret scan.
+- Legacy Vercel project `rose-city-website`
+  (`prj_lMYzzUcUxR1iFwYTQZW71OYsgbv5`) was permanently deleted. Its immutable
+  deployment now returns HTTP 410 and its final
+  `rcfc-soccer-website.vercel.app` alias returns HTTP 404.
+- Legacy Supabase project `Rose City Website`
+  (`nsgtkwqkbyxkiwrhzsje`, East US) was permanently deleted. Its Supabase
+  hostname no longer resolves.
+- Current Onzio production was excluded from both deletions.
+  `https://onzio-rcfc.vercel.app` still returns HTTP 200 and current production
+  Supabase ref `ioalthwsdrlzrubomrow` remains reachable.
+- The Rose City no-edit content freeze that began at
+  `2026-07-27T22:34:39Z` is formally released as of
+  `2026-07-29T01:37:37Z`. Christian Javier Alcala is the recorded
+  administrator and this closeout record is the release notice; no email was
+  sent.
+- A daily abandoned-staging-media cleanup is defined for `10:00 UTC` in
+  `vercel.json` at `/api/cron/media-cleanup`. The route requires Vercel's
+  `CRON_SECRET`, reports incomplete cleanup as HTTP 500, and exposes no provider
+  error details. A fresh sensitive `CRON_SECRET` is configured for Production
+  only. The cron is not active until an explicitly approved production
+  deployment installs the checked-in schedule.
+
 Under Christian's explicit approval,
 `info@rosecityfutbolclub.com` was permanently removed from Onzio production
 authentication. Before deletion it had one active Rose City owner membership,
@@ -1269,9 +1300,9 @@ Known non-blocking warnings:
   keys are disabled and its legacy HS256 signing key is revoked; production
   configuration must use only the modern key posture.
 - The rollback observation period is complete and is not a Phase 8 blocker.
-  Formal release of the Rose City content freeze remains an explicit
-  operational decision. Christian Javier Alcala is the recorded administrator,
-  and `christianjavieralcala@gmail.com` is the sole active production
+  The content freeze was formally released at `2026-07-29T01:37:37Z`.
+  Christian Javier Alcala is the recorded administrator, and
+  `christianjavieralcala@gmail.com` is the sole active production
   owner/operator. `info@rosecityfutbolclub.com` was permanently removed; do
   not restore it or add `calcala1@berkeley.edu`.
 - The authoritative final frozen export and two cutover plans are immutable
@@ -1310,11 +1341,13 @@ Known non-blocking warnings:
 - `npm run test:db` and full database-inclusive tests need JWT-shaped local
   `ANON_KEY` and `SERVICE_ROLE_KEY` values mapped into the
   `SUPABASE_TEST_*` variables.
-- Scheduling `npm run media:cleanup` in a hosted environment and configuring
-  its cadence/alerting remain approval-gated operational work.
-- A final read-only record of the legacy Rose City Vercel and Supabase
-  resources, followed by any retention, downgrade, or retirement decision,
-  requires Christian's fresh explicit approval.
+- The abandoned-media cron source, daily cadence, failure response, and
+  Production-only `CRON_SECRET` are prepared. Vercel will not activate the
+  schedule until a future approved production deployment includes
+  `vercel.json`.
+- The final legacy inventory is recorded and both legacy Rose City Vercel and
+  Supabase projects are permanently deleted. Recovery now depends on the
+  restricted off-repository frozen export; there is no hosted rollback target.
 - The development-only ESLint 8 dependency-chain findings remain until the
   planned framework/lint-tooling migration.
 
@@ -1328,17 +1361,9 @@ authenticated private preview. Verify owner invitation/recovery, password,
 mandatory MFA, tenant isolation, content/media, and subscription projection
 before any public-domain attachment.
 
-Before Phase 9 execution, Christian must separately decide whether to:
-
-- record a final read-only export/inventory of the legacy Rose City Vercel and
-  Supabase resources
-- retain, downgrade, or retire those legacy resources
-- formally release the Rose City content freeze
-- schedule the abandoned-media cleanup job
-
-No production deployment, database or Storage mutation, Stripe change,
-DNS/domain change, email send, credential change, or hosted Auth/SMTP setting
-change is authorized by this repository closeout.
+Before the next production deployment, review and activate the checked-in
+abandoned-media cron schedule. No `main` merge or production deployment was
+authorized by this operational closeout.
 
 ## Historical Phase 8 closeout chronology
 

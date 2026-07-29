@@ -24,13 +24,72 @@ image-origin-outage modes. The `main` and `staging` deployed file trees are
 identical; the focused domain commits are `10559e5` on `main` and `7c85567` on
 `staging`.
 
-The 7–14 day rollback observation period is no longer a Phase 8 blocker.
-Formal release of the content freeze and retirement or downgrade of legacy
-resources remain separate operational decisions requiring Christian's fresh
-explicit approval. The one-time production import command is permanently
-retired and fails before reading credentials, plans, or identity inputs.
-Historical cutover values remain in the repository only as immutable audit
-evidence.
+The 7–14 day rollback observation period is complete. Under Christian's final
+explicit approval, the content freeze was released at
+`2026-07-29T01:37:37Z`, legacy Vercel project `rose-city-website`
+(`prj_lMYzzUcUxR1iFwYTQZW71OYsgbv5`) was permanently deleted, and legacy
+Supabase project `Rose City Website` (`nsgtkwqkbyxkiwrhzsje`) was permanently
+deleted. There is no hosted rollback target. Recovery depends on the restricted
+off-repository final frozen export.
+
+The one-time production import command is permanently retired and fails before
+reading credentials, plans, or identity inputs. Historical cutover values
+remain in the repository only as immutable audit evidence.
+
+## Operational closeout evidence — 2026-07-28
+
+The final frozen package at
+`/Users/christianalcala/Downloads/onzio-migration-private/rose-city-final-freeze-2026-07-27T2234Z-v2`
+was validated immediately before deletion:
+
+- all 586 entries in `checksums.sha256` pass
+- manifest status: `complete`
+- final frozen cutover artifact: true
+- source project: `nsgtkwqkbyxkiwrhzsje`
+- database: 24/24 tables and 209 rows
+- Storage: 14 buckets, 557 objects, and 1,728,725,700 bytes
+- Auth: three minimized users
+- production mutations during export: zero
+- export secret scan: passed with zero hits
+
+Final non-secret hosted inventory:
+
+- Vercel team: `404christiann's projects` (Hobby)
+- Vercel project: `rose-city-website`
+- Vercel project ID: `prj_lMYzzUcUxR1iFwYTQZW71OYsgbv5`
+- final immutable deployment:
+  `rose-city-website-lb8jlqe33-404christianns-projects.vercel.app`
+- final Vercel alias: `rcfc-soccer-website.vercel.app`
+- former Rose City custom domains: already absent
+- Supabase organization: `404DB` (Pro)
+- Supabase project: `Rose City Website`
+- Supabase ref: `nsgtkwqkbyxkiwrhzsje`
+- Supabase region: `us-east-1`, East US (North Virginia)
+
+Post-deletion verification:
+
+- immutable legacy Vercel deployment: HTTP 410
+- final legacy Vercel alias: HTTP 404
+- legacy Supabase hostname: no longer resolves
+- current `https://onzio-rcfc.vercel.app`: HTTP 200
+- current Supabase ref `ioalthwsdrlzrubomrow`: reachable and excluded from
+  deletion
+
+The abandoned-media schedule is prepared in the repository:
+
+- route: `GET /api/cron/media-cleanup`
+- cadence: daily at `10:00 UTC`
+- authentication: exact `Authorization: Bearer $CRON_SECRET`
+- Production-only sensitive `CRON_SECRET`: configured in Vercel without
+  recording its value
+- cleanup threshold: staging objects older than 24 hours
+- failure signal: HTTP 500 for incomplete or failed cleanup
+- dry-run evidence: the Phase 7 hosted media verifier previously removed only
+  its scoped synthetic abandoned object
+- rollback: remove the `vercel.json` cron entry and route in a reviewed
+  deployment; existing media data is not recreated automatically
+- activation: pending a separately approved production deployment because
+  Vercel installs cron schedules only from production deployments
 
 ## Historical cutover and incident record
 
@@ -494,10 +553,11 @@ Keep all credentials outside Git and chat transcripts.
 
 Production provisioning/import, preserved Stripe billing projection,
 Production environment configuration, Vercel deployment, Rose City domain
-cutover, and webhook cutover were approved and executed on 2026-07-27.
-Christian must separately approve release of the freeze, legacy resource
-decommissioning/downgrade, project deletion, organization billing mutations,
-abandoned-media cleanup scheduling, or a new final legacy-resource export.
+cutover, and webhook cutover were approved and executed on 2026-07-27. The
+final legacy inventory, permanent project deletions, content-freeze release,
+cron source schedule, and Production-only cron credential were approved and
+completed on 2026-07-28. Activating the cron still requires a separately
+approved production deployment.
 
 | Action | Local/hosted | Approval |
 | --- | --- | --- |
@@ -516,10 +576,11 @@ abandoned-media cleanup scheduling, or a new final legacy-resource export.
 | Preserve/configure Stripe webhook destination | live billing mutation | completed 2026-07-27 |
 | Deploy no-domain production validation target | hosted mutation | completed 2026-07-27 |
 | Attach/change Rose City domains or DNS | hosted mutation | completed 2026-07-27 |
-| Record a final legacy Vercel/Supabase export | hosted reads and egress | fresh explicit approval required |
-| Release the Rose City content freeze | production operation | fresh explicit approval required |
-| Schedule the abandoned-media cleanup job | hosted operational mutation | fresh explicit approval required |
-| Delete or downgrade any project/organization | destructive/billing mutation | final explicit approval |
+| Validate and record the final legacy Vercel/Supabase export | hosted reads plus local verification | completed 2026-07-28 |
+| Release the Rose City content freeze | production operation | completed 2026-07-28 |
+| Prepare the abandoned-media cleanup cron and credential | source plus hosted configuration | completed 2026-07-28 |
+| Activate the abandoned-media cron | production deployment | fresh explicit approval required |
+| Permanently delete the exact legacy Vercel and Supabase projects | destructive hosted mutation | completed 2026-07-28 |
 
 ## Backup and export gate
 
@@ -658,14 +719,13 @@ is:
 
 At this historical checkpoint, the safe stopping point was rollback-window
 observation and the no-edit freeze remained active. That observation period is
-now complete and is not a Phase 8 blocker. Releasing the freeze or
-decommissioning/downgrading legacy production resources still requires
-separate explicit approval.
+complete. The later operational closeout above records the formal freeze
+release and permanent deletion of both legacy hosted projects.
 
-## Approval-gated operational closeout
+## Completed operational closeout
 
-Prepare these actions in this order, but execute none of them without a new
-explicit approval:
+Christian supplied final explicit approval, and the actions were completed in
+this order:
 
 1. Record a final read-only inventory/export of the legacy Rose City Vercel
    project/deployment and Supabase project, including identifiers, current
@@ -675,17 +735,17 @@ explicit approval:
    production tenant, Auth callbacks, Stripe webhook, and public monitoring
    still use only `onzio-rcfc.vercel.app`.
 3. Decide whether to retain, downgrade, or retire each legacy Vercel and
-   Supabase resource. Record recovery consequences before any destructive or
-   billing-changing action.
+   Supabase resource. Both were selected for permanent deletion; recovery now
+   depends on the restricted frozen export.
 4. Formally release the Rose City content freeze and notify the administrator
-   of the exact release time.
-5. Schedule `npm run media:cleanup` in a hosted environment with the intended
-   credentials, cadence, alerting, and dry-run/rollback evidence.
+   at `2026-07-29T01:37:37Z`.
+5. Add the authenticated daily media-cleanup cron source and configure its
+   Production-only credential. Activation remains pending the next approved
+   production deployment.
 
-Any production deployment, database or Storage mutation, Stripe change,
-DNS/domain change, Auth or SMTP setting change, credential change, or email
-send remains separately approval-gated. The retired production importer is not
-an approved mechanism for any of these actions.
+No application deployment, database or Storage mutation, Stripe change,
+DNS/domain change, Auth or SMTP setting change, or email send occurred during
+this closeout. The retired production importer was not used.
 
 ## Acceptance evidence
 
@@ -700,5 +760,5 @@ an approved mechanism for any of these actions.
 - no `/storage/v1/render/image/` URL or Supabase image loader exists
 - `404DB` Usage and Upcoming Invoice show no unexpected growth
 
-Project deletion is outside this runbook. Rose City remains read-only for the
-rollback window, and deletion requires separate final approval.
+The legacy projects are deleted and the content freeze is released. Historical
+rollback instructions below are retained as audit evidence only.
