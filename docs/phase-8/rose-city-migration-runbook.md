@@ -75,7 +75,7 @@ Post-deletion verification:
 - current Supabase ref `ioalthwsdrlzrubomrow`: reachable and excluded from
   deletion
 
-The abandoned-media schedule is prepared in the repository:
+The abandoned-media schedule is active in production:
 
 - route: `GET /api/cron/media-cleanup`
 - cadence: daily at `10:00 UTC`
@@ -88,14 +88,14 @@ The abandoned-media schedule is prepared in the repository:
   its scoped synthetic abandoned object
 - rollback: remove the `vercel.json` cron entry and route in a reviewed
   deployment; existing media data is not recreated automatically
-- activation: pending a separately approved production deployment because
-  Vercel installs cron schedules only from production deployments
+- activation: completed under separate production-deployment approval
 - staging evidence: commit `7910d44` built successfully as ready Preview
   `onzio-rcfc-185ofdb7v-404christianns-projects.vercel.app`
-- production isolation: production still runs commit `10559e5` on deployment
-  `dpl_6QBiJ2CAN6opoNQJqVuxU3Q1YbrG`
-- activation evidence: Vercel's Cron Jobs feature is enabled, but the dashboard
-  remains in its initial setup state with no installed jobs
+- production evidence: commit `a5ad8a0` is Ready on deployment
+  `dpl_CVAdyYykHK47z6LdsYxmf9znWUqf`
+- activation evidence: Vercel Cron Jobs is enabled and shows
+  `/api/cron/media-cleanup` with `0 10 * * *`; the public site returns HTTP
+  200 and the route returns JSON HTTP 401 without authorization
 
 ## Historical cutover and incident record
 
@@ -550,7 +550,8 @@ Keep all credentials outside Git and chat transcripts.
 - existing Stripe customer, subscription, Price, and webhook identifiers;
   read-only inventory complete
 - dedicated least-privilege restricted live Stripe runtime key installed;
-  actual new webhook signing secret remains pending
+  the new webhook signing secret was pending at this historical checkpoint and
+  was completed later in the cutover
 - explicit operator UUID allowlist for production; completed
 - named Rose City admin contact for cutover coordination; Christian Javier
   Alcala recorded
@@ -562,8 +563,9 @@ Production environment configuration, Vercel deployment, Rose City domain
 cutover, and webhook cutover were approved and executed on 2026-07-27. The
 final legacy inventory, permanent project deletions, content-freeze release,
 cron source schedule, and Production-only cron credential were approved and
-completed on 2026-07-28. Activating the cron still requires a separately
-approved production deployment.
+completed on 2026-07-28. Christian separately approved the production
+activation; corrected deployment `dpl_CVAdyYykHK47z6LdsYxmf9znWUqf` is Ready
+and the schedule is installed.
 
 | Action | Local/hosted | Approval |
 | --- | --- | --- |
@@ -585,7 +587,7 @@ approved production deployment.
 | Validate and record the final legacy Vercel/Supabase export | hosted reads plus local verification | completed 2026-07-28 |
 | Release the Rose City content freeze | production operation | completed 2026-07-28 |
 | Prepare the abandoned-media cleanup cron and credential | source plus hosted configuration | completed 2026-07-28 |
-| Activate the abandoned-media cron | production deployment | fresh explicit approval required |
+| Activate the abandoned-media cron | production deployment | completed 2026-07-28 |
 | Permanently delete the exact legacy Vercel and Supabase projects | destructive hosted mutation | completed 2026-07-28 |
 
 ## Backup and export gate
@@ -746,12 +748,29 @@ this order:
 4. Formally release the Rose City content freeze and notify the administrator
    at `2026-07-29T01:37:37Z`.
 5. Add the authenticated daily media-cleanup cron source and configure its
-   Production-only credential. Activation remains pending the next approved
-   production deployment.
+   Production-only credential.
+6. Under separate explicit approval, deploy the cron to production. The first
+   deployment exposed a pre-handler `sharp`/libvips runtime failure; isolate
+   cleanup into the sharp-free `lib/media-cleanup.ts` boundary, redeploy, and
+   verify the corrected production route and schedule.
 
-No application deployment, database or Storage mutation, Stripe change,
-DNS/domain change, Auth or SMTP setting change, or email send occurred during
-this closeout. The retired production importer was not used.
+The operational retirement itself made no application deployment, database or
+Storage mutation, Stripe change, DNS/domain change, Auth or SMTP setting
+change, or email send. The later separately approved cron activation deployed
+only the scheduled application source and runtime fix. It did not manually
+invoke cleanup or mutate the database, Storage, Stripe, DNS, Auth, SMTP, or
+email state. The retired production importer was not used.
+
+Cron activation evidence recorded at `2026-07-29T02:03:06Z`:
+
+- current Ready production commit: `a5ad8a0`
+- current Ready production deployment:
+  `dpl_CVAdyYykHK47z6LdsYxmf9znWUqf`
+- public site: HTTP 200 at `https://onzio-rcfc.vercel.app`
+- unauthenticated `/api/cron/media-cleanup`: JSON HTTP 401
+- Vercel Cron Jobs: enabled, `/api/cron/media-cleanup`, `0 10 * * *`
+  (`10:00 UTC`, with the Hobby one-hour execution window)
+- no manual authorized cleanup invocation was performed
 
 ## Acceptance evidence
 

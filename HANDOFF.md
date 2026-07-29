@@ -32,13 +32,25 @@ on 2026-07-28 and verified at `2026-07-29T01:37:37Z`.
   `vercel.json` at `/api/cron/media-cleanup`. The route requires Vercel's
   `CRON_SECRET`, reports incomplete cleanup as HTTP 500, and exposes no provider
   error details. A fresh sensitive `CRON_SECRET` is configured for Production
-  only. The cron is not active until an explicitly approved production
-  deployment installs the checked-in schedule.
-- Vercel built staging commit `7910d44` successfully as ready Preview
-  `onzio-rcfc-185ofdb7v-404christianns-projects.vercel.app`. The Cron Jobs
-  feature is enabled, but its dashboard still shows the initial setup state
-  with no installed jobs. Production remains unchanged at commit `10559e5` and
-  deployment `dpl_6QBiJ2CAN6opoNQJqVuxU3Q1YbrG`.
+  only. Vercel Cron Jobs is enabled and shows the installed path with schedule
+  `0 10 * * *` (`10:00 UTC`; Hobby execution has a one-hour window).
+- The approved production activation first deployed commit `5bd6baa`. Live
+  verification caught a pre-handler HTTP 500 because its cron bundle loaded
+  `sharp` and the deployment lacked a loadable Linux libvips binary. Commit
+  `a5ad8a0` moved cleanup into a sharp-free privileged module and added a
+  regression contract. Ready production deployment
+  `dpl_CVAdyYykHK47z6LdsYxmf9znWUqf` now serves
+  `https://onzio-rcfc.vercel.app`: the site returns HTTP 200 and an
+  unauthenticated cron request returns JSON HTTP 401.
+- Activation verification on the corrected tree passed: 7/7 focused cron
+  contracts, standalone TypeScript, 189/189 contracts, 18/18 architecture,
+  48/48 isolated local database tests, 498/498 complete tests, lint, and the
+  production build with 25 generated pages. Lint/build reported only the three
+  pre-existing analytics hook warnings. After reconciling the production
+  evidence back onto `staging`, the final branch-wide gate passed standalone
+  TypeScript, 206/206 contracts, 18/18 architecture, 48/48 isolated local
+  database tests, 524/524 complete tests, lint, and the same 25-page production
+  build.
 
 Under Christian's explicit approval,
 `info@rosecityfutbolclub.com` was permanently removed from Onzio production
@@ -1346,10 +1358,10 @@ Known non-blocking warnings:
 - `npm run test:db` and full database-inclusive tests need JWT-shaped local
   `ANON_KEY` and `SERVICE_ROLE_KEY` values mapped into the
   `SUPABASE_TEST_*` variables.
-- The abandoned-media cron source, daily cadence, failure response, and
-  Production-only `CRON_SECRET` are prepared. Vercel will not activate the
-  schedule until a future approved production deployment includes
-  `vercel.json`.
+- The abandoned-media cron is active in Vercel with the checked-in daily
+  cadence, authenticated failure behavior, Production-only `CRON_SECRET`, and
+  a sharp-free runtime boundary. Its first automatic execution remains normal
+  ongoing operations evidence, not a Phase 8 blocker.
 - The final legacy inventory is recorded and both legacy Rose City Vercel and
   Supabase projects are permanently deleted. Recovery now depends on the
   restricted off-repository frozen export; there is no hosted rollback target.
@@ -1366,9 +1378,8 @@ authenticated private preview. Verify owner invitation/recovery, password,
 mandatory MFA, tenant isolation, content/media, and subscription projection
 before any public-domain attachment.
 
-Before the next production deployment, review and activate the checked-in
-abandoned-media cron schedule. No `main` merge or production deployment was
-authorized by this operational closeout.
+Phase 8 has no remaining operational blocker. Continue to require fresh
+approval for future production deployments or hosted mutations.
 
 ## Historical Phase 8 closeout chronology
 
