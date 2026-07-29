@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useClubContext } from "@/components/ClubContextProvider";
 import { getFlagUrl } from "@/lib/flags";
 
 interface NationalityFlagProps {
@@ -15,7 +16,8 @@ export default function NationalityFlag({
   width = 34,
   className = "",
 }: NationalityFlagProps) {
-  const src = getFlagUrl(nationality);
+  const club = useClubContext();
+  const src = getFlagUrl(nationality, club.slug);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
