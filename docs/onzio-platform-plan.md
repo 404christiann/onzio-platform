@@ -17,7 +17,7 @@ The platform uses:
 - a seven-day public-site grace period after paid access ends
 - indefinite archival for returning clubs
 - Supabase Storage without Supabase Image Transformations
-- selective Vercel optimization for large photographs
+- normalized immutable images served directly without runtime optimization
 
 Rose City will become the first production tenant after the platform passes the staging gate. Its existing Stripe subscription will migrate in place.
 
@@ -29,6 +29,8 @@ Rose City will become the first production tenant after the platform passes the 
 - **Billing:** existing Stripe account, one subscription per club
 - **Rose City:** full tenant migration, including data, storage, admins, domain, and billing
 - **Authentication:** email/password plus mandatory MFA for owners and admins
+- **Authentication email:** Supabase Auth through Resend SMTP from one
+  Onzio-owned authentication subdomain
 - **Membership:** managed only by an Onzio operator in v1
 - **Publishing:** admin saves become publicly visible immediately
 - **Billing self-service:** owners use Stripe Customer Portal
@@ -274,6 +276,52 @@ MFA recovery requires manual operator identity verification and creates an audit
 
 There is no club-managed invitation UI or self-service signup in v1.
 
+### Transactional authentication email
+
+Supabase Auth sends invitations, password recovery, secure email-change, and
+other authentication messages through Resend SMTP. The built-in Supabase email
+provider is development-only and must not be used for production delivery.
+
+The shared production sender is:
+
+```text
+Onzio Accounts <no-reply@auth.onziofutbol.com>
+```
+
+`auth.onziofutbol.com` is an Onzio-owned sending subdomain, not a club website
+domain. Christian confirmed that he owns `onziofutbol.com` and does not own
+`onzio.com`. Configure SPF, DKIM, and DMARC for the owned subdomain without
+changing a club's DNS or mail service. Production and staging use separate
+scoped Resend credentials and distinct sender addresses on the same verified
+subdomain. Secrets live only in the corresponding Supabase Auth SMTP
+configuration and never in client code, Git, logs, or chat transcripts.
+
+Every club keeps its own verified website domain. Invitation links derive from
+that club's verified primary domain and return through
+`/admin/auth/callback`. Recovery email presents the Supabase recovery code and
+links to `/admin/recover`; after explicit code verification, the authenticated
+session continues to `/admin/update-password`. The shared sender does not
+weaken tenant resolution or permit a caller-provided redirect.
+
+Initial templates are concise, security-only, and Onzio-branded. They do not
+contain marketing content, user-supplied HTML, or an unverified club identity.
+Users may belong to multiple clubs, so tenant-specific sender domains or
+template branding are not inferred from Auth user metadata. If per-club email
+branding becomes a product requirement, implement it later through a
+server-controlled Supabase Send Email Auth Hook using verified tenant data.
+
+Keep authentication and marketing delivery separate. Do not use the Auth
+sending subdomain for newsletters, match alerts, promotions, or fan email.
+
+Custom SMTP begins at Supabase's default 30-email-per-hour project limit.
+Retain the per-user password-recovery cooldown and return a friendly retry
+message for HTTP 429 responses. Do not raise the project-wide limit until
+delivery, bounce, complaint, abuse, and onboarding-burst evidence justifies it;
+add CAPTCHA before materially increasing the public recovery allowance.
+
+The detailed rollout, verification, cost, approval, and rollback gates are in
+`docs/phase-8/resend-smtp-rollout.md`.
+
 ## Server Mutation Boundary
 
 Admin pages use validated Server Actions or route handlers.
@@ -322,7 +370,10 @@ Stripe is the billing source of truth; Supabase stores a local projection for fa
 - Existing subscribers are sent to Customer Portal.
 - Owners may update payment methods, view invoices, change Starter/Pro, and cancel.
 - Admins cannot access billing.
-- Only configured Starter and Pro Price IDs are accepted.
+- Checkout offers only the configured standard Starter and Pro Price IDs.
+- Existing subscriptions may use explicitly configured grandfathered Pro Price
+  IDs. Those aliases map to Pro during canonical webhook reconciliation but
+  are never offered to new Checkout sessions.
 - Client-provided price IDs or tiers are never trusted.
 
 Attach the following metadata to Customers, Checkout Sessions, and Subscriptions:
@@ -361,6 +412,9 @@ Once paid access ends, admin access is restricted to billing. Public suspension 
 ### Rose City subscription
 
 Rose City’s existing Stripe customer and subscription remain intact.
+Its existing Pro Price may remain grandfathered through the narrow
+`STRIPE_PRICE_IDS_PRO_GRANDFATHERED` allowlist while the standard Pro Price is
+used for new clubs. Unknown or overlapping Price IDs fail closed.
 
 During migration:
 
@@ -438,31 +492,27 @@ No platform page may request:
 /storage/v1/render/image/
 ```
 
-Use the default Next/Vercel loader for:
+Serve every normalized photograph and graphic directly from its immutable
+source URL. Set Next image delivery to `unoptimized: true` globally so a
+runtime optimizer quota or service outage cannot remove imagery from the site.
+The exact Supabase origin allowlist remains enforced.
 
-- hero photography
-- slideshows
-- roster portraits
-- shop photography
-- About-page photography
+Every critical public and admin image surface must replace origin failures with
+an intentional, layout-preserving fallback:
 
-Use `unoptimized` for:
+- player and staff photography uses initials
+- shop, About, slideshow, and trophy photography uses a branded unavailable
+  panel
+- logos and crests use a neutral mark or monogram
+- purely decorative images may hide without collapsing surrounding layout
 
-- club logos
-- flags
-- sponsor logos
-- opponent crests
-- other small graphics
-
-Roster portraits use optimized-first delivery with a fail-safe retry against
-the same immutable raw `onzio-media` object URL. If both the optimizer and raw
-origin fail, the UI renders a deliberate initials placeholder instead of
-leaving broken-image chrome. The raw retry never uses Supabase runtime Image
-Transformations.
+Normal-health monitoring treats any unexpected fallback as a failure. Separate
+source-failure tests require those fallbacks and prohibit broken-image chrome.
 
 Initial Next image configuration:
 
 ```ts
+unoptimized: true
 deviceSizes: [640, 828, 1080, 1440, 1920]
 imageSizes: [32, 48, 64, 96, 128, 256, 384]
 qualities: [70, 80]
@@ -477,16 +527,15 @@ Restrict `remotePatterns` to the exact Onzio Supabase host and:
 
 Monitor:
 
-- Vercel transformations
-- image cache reads and writes
 - Supabase storage and cached egress
 - asset count and bytes per club
 - failed processing
 - abandoned staging objects
+- unexpected public fallbacks and failed image requests
 
-Create spend notifications at 50%, 80%, and 100% of the monthly image budget.
-
-If runtime optimization becomes expensive, generate responsive variants during upload. Do not return to Supabase runtime transformations.
+If direct-delivery bandwidth or page weight becomes expensive, generate
+responsive variants during upload. Do not return to Supabase runtime
+transformations or make a runtime optimizer a rendering dependency.
 
 ## Provisioning, Archival, and Purge
 
@@ -592,7 +641,7 @@ Gate:
 - Implement validation and Sharp normalization.
 - Implement `media_assets`.
 - Replace Supabase transformation URLs.
-- Configure selective Vercel optimization.
+- Configure direct delivery of normalized immutable images.
 - Add retry, replacement, and cleanup behavior.
 - Add usage monitoring.
 
@@ -600,8 +649,9 @@ Gate:
 
 - media contracts become green
 - static scan finds no Supabase transformation URL
-- large photographs are responsive
-- small graphics remain unoptimized
+- every image bypasses runtime optimization
+- large photographs remain bounded by upload normalization
+- source failures render deliberate fallbacks without broken-image chrome
 
 ### Phase 5 — Authentication and operator workflows
 
@@ -674,6 +724,29 @@ Keep the legacy deployment and database unchanged and read-only through the roll
 
 If acceptance fails, restore domain routing while admin writes remain frozen.
 
+### Phase 8 closeout — production authentication email
+
+- Verify `auth.onziofutbol.com` in Resend with isolated SPF, DKIM, and DMARC
+  records.
+- Create separate least-privilege staging and production SMTP credentials.
+- Configure and verify staging Supabase Auth SMTP first.
+- Configure production Supabase Auth SMTP only after staging invitation,
+  recovery, callback, password, and MFA acceptance passes.
+- Verify Rose City owner recovery from an address outside the Supabase
+  organization team.
+- Keep the initial Supabase custom-SMTP rate limit at 30 emails per hour and
+  verify friendly cooldown/rate-limit behavior.
+- Record delivery evidence without recording links, tokens, SMTP credentials,
+  or full message bodies.
+
+Gate:
+
+- Auth email reaches non-team recipients through Resend
+- invitation and recovery links return to the verified tenant domain
+- expired, reused, forged, and cross-tenant redirects fail closed
+- successful password recovery still requires password sign-in plus MFA
+- bounce/complaint visibility and an SMTP rollback procedure are verified
+
 ### Phase 9 — New club rollout
 
 - Provision through audited operator tooling.
@@ -681,6 +754,7 @@ If acceptance fails, restore domain routing while admin writes remain frozen.
 - Verify owner access and MFA.
 - Verify content and media.
 - Confirm subscription state.
+- Verify owner invitation and password recovery through Resend.
 - Attach and verify domains.
 - Launch publicly only after all gates pass.
 
@@ -696,6 +770,14 @@ If acceptance fails, restore domain routing while admin writes remain frozen.
 - Preview, suspended, and archived clubs do not render publicly.
 - AAL1 sessions cannot access admin.
 - Removed users lose access.
+- Auth email uses the Onzio authentication subdomain rather than a club or
+  marketing sending domain.
+- Invitation and recovery email reaches an approved non-team recipient.
+- Invitation links return only to the verified tenant callback; recovery uses
+  the verified tenant `/admin/recover` and password-update routes.
+- Reused, expired, forged, and caller-supplied recovery redirects fail closed.
+- Auth-email rate limits produce a safe retry response without revealing
+  whether an arbitrary address exists.
 - Admins cannot access billing.
 - Starter users cannot mutate Pro-only features.
 - Direct Supabase requests remain constrained by RLS and database constraints.
@@ -738,11 +820,12 @@ If acceptance fails, restore domain routing while admin writes remain frozen.
 - replacement cleanup failure
 - abandoned staging cleanup
 - no Supabase Image Transformation URLs
-- Vercel optimization only for large photos
-- optimized roster requests recover from HTTP 402 through the raw immutable
-  object URL
-- desktop and mobile browser checks require rendered roster images with a
-  positive `naturalWidth`
+- no request depends on `/_next/image`
+- desktop and mobile browser checks cover every public image surface and
+  require direct URLs with positive `naturalWidth`
+- unexpected fallbacks fail normal-health checks
+- simulated local and Supabase source failures render deliberate fallbacks
+  without broken-image chrome
 
 ### Required migration scenarios
 

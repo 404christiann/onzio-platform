@@ -40,6 +40,7 @@ ADMIN_ALLOWED_EMAILS
 STRIPE_SECRET_KEY
 STRIPE_PRICE_ID_STARTER
 STRIPE_PRICE_ID_PRO
+STRIPE_PRICE_IDS_PRO_GRANDFATHERED
 STRIPE_WEBHOOK_SECRET
 FORCE_PUBLIC_SITE_ONLINE
 ```
@@ -50,7 +51,10 @@ compatibility source and are not authoritative for Onzio billing.
 
 `ONZIO_ENVIRONMENT=staging` requires Stripe test mode. Production requires
 Stripe live mode. Configure distinct Starter and Pro recurring Price IDs for
-each environment.
+each environment. `STRIPE_PRICE_IDS_PRO_GRANDFATHERED` is an optional
+comma-separated allowlist for existing Pro subscriptions only. Checkout never
+uses those aliases, and they must not overlap the standard Starter or Pro
+Price.
 
 For local hostname routing, use `alpha.localhost:3000` or another verified
 seeded subdomain. Bare `localhost` is rejected unless development explicitly
@@ -149,3 +153,10 @@ node scripts/introspect-rose-city.mjs /path/to/rose-city/.env.local --compact
 It accepts only the known Rose City Supabase hostname and performs `GET`/`HEAD`
 requests. It must remain read-only. Do not add row export, mutation, Auth
 management, SQL execution, or Storage object deletion to this script.
+
+## Rose City migration replay
+
+Rose City migration planning, import, reset, and replay are local-only. The
+historical `migration:import:rose-city:production` command is retained as an
+explicit fail-closed tombstone after the accepted cutover; it has no
+credential, Supabase client, SQL execution, or Storage mutation path.
