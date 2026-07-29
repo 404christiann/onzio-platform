@@ -90,6 +90,12 @@ The abandoned-media schedule is prepared in the repository:
   deployment; existing media data is not recreated automatically
 - activation: pending a separately approved production deployment because
   Vercel installs cron schedules only from production deployments
+- staging evidence: commit `7910d44` built successfully as ready Preview
+  `onzio-rcfc-185ofdb7v-404christianns-projects.vercel.app`
+- production isolation: production still runs commit `10559e5` on deployment
+  `dpl_6QBiJ2CAN6opoNQJqVuxU3Q1YbrG`
+- activation evidence: Vercel's Cron Jobs feature is enabled, but the dashboard
+  remains in its initial setup state with no installed jobs
 
 ## Historical cutover and incident record
 

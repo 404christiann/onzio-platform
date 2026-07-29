@@ -34,6 +34,11 @@ on 2026-07-28 and verified at `2026-07-29T01:37:37Z`.
   error details. A fresh sensitive `CRON_SECRET` is configured for Production
   only. The cron is not active until an explicitly approved production
   deployment installs the checked-in schedule.
+- Vercel built staging commit `7910d44` successfully as ready Preview
+  `onzio-rcfc-185ofdb7v-404christianns-projects.vercel.app`. The Cron Jobs
+  feature is enabled, but its dashboard still shows the initial setup state
+  with no installed jobs. Production remains unchanged at commit `10559e5` and
+  deployment `dpl_6QBiJ2CAN6opoNQJqVuxU3Q1YbrG`.
 
 Under Christian's explicit approval,
 `info@rosecityfutbolclub.com` was permanently removed from Onzio production
