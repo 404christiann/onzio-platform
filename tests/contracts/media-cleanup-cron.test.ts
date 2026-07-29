@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/lib/media-processing", () => ({
+vi.mock("@/lib/media-cleanup", () => ({
   cleanupAbandonedStagingMedia: vi.fn(),
 }));
 
 import { GET } from "@/app/api/cron/media-cleanup/route";
-import { cleanupAbandonedStagingMedia } from "@/lib/media-processing";
+import { cleanupAbandonedStagingMedia } from "@/lib/media-cleanup";
 
 const originalCronSecret = process.env.CRON_SECRET;
 const cleanup = vi.mocked(cleanupAbandonedStagingMedia);
@@ -39,6 +39,21 @@ describe("abandoned media cleanup cron", () => {
       path: "/api/cron/media-cleanup",
       schedule: "0 10 * * *",
     });
+  });
+
+  it("keeps the cron entrypoint independent from sharp", () => {
+    const routeSource = readFileSync(
+      resolve(process.cwd(), "app/api/cron/media-cleanup/route.ts"),
+      "utf8",
+    );
+    const cleanupSource = readFileSync(
+      resolve(process.cwd(), "lib/media-cleanup.ts"),
+      "utf8",
+    );
+
+    expect(routeSource).toContain('from "@/lib/media-cleanup"');
+    expect(routeSource).not.toContain('from "@/lib/media-processing"');
+    expect(cleanupSource).not.toMatch(/from ["']sharp["']/);
   });
 
   it("fails closed when CRON_SECRET is missing", async () => {
