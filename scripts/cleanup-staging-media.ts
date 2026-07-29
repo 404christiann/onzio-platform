@@ -1,4 +1,4 @@
-import { cleanupAbandonedStagingMedia } from "../lib/media-processing";
+import { cleanupAbandonedStagingMedia } from "../lib/media-cleanup";
 
 async function main() {
   const result = await cleanupAbandonedStagingMedia();

@@ -152,6 +152,7 @@ describe("tenant and privileged-boundary architecture contract", () => {
       "lib/club-access.ts",
       "lib/club-features.ts",
       "lib/stripe-event-routing.ts",
+      "lib/media-cleanup.ts",
       "lib/media-processing.ts",
     ];
     for (const path of required) {
@@ -169,6 +170,7 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^app\/api\/stripe\/webhook\//,
       /^lib\/operator\//,
       /^lib\/migration\//,
+      /^lib\/media-cleanup\.ts$/,
       /^lib\/media-processing\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
     ];

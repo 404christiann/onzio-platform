@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cleanupAbandonedStagingMedia } from "@/lib/media-processing";
+import { cleanupAbandonedStagingMedia } from "@/lib/media-cleanup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

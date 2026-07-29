@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { PNG } from "pngjs";
 import sharp from "sharp";
 import { ContractError } from "@/lib/contract-error";
+import { cleanupAbandonedStagingMedia } from "@/lib/media-cleanup";
 import {
-  cleanupAbandonedStagingMedia,
   publishAuthorizedMedia,
   retirePublishedMedia,
   type MediaAuthorization,
