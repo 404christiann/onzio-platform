@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient as createAuthClient } from "@/lib/supabase-browser";
+import { withoutClientTenantIdentity } from "@/lib/admin-payload";
 
 type Filter = {
   kind: "eq" | "neq" | "gt" | "in";
@@ -69,7 +70,11 @@ function attachMediaReferences(
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return value;
     }
-    const row = { ...(value as Record<string, unknown>) };
+    const row = withoutClientTenantIdentity(
+      value as Record<string, unknown>,
+    );
+    // Select responses include the server-resolved tenant key. Never echo it
+    // back from a browser mutation; the admin route injects the verified club.
     for (const { source, asset } of fields) {
       const sourceValue = row[source];
       if (typeof sourceValue !== "string") continue;
