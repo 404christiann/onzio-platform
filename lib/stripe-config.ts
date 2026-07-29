@@ -1,6 +1,18 @@
 import { failContract } from "@/lib/contract-error";
+import { parseGrandfatheredProPriceIds } from "@/lib/stripe-tiers";
 
 export type OnzioEnvironment = "staging" | "production";
+
+function isStripeKeyForEnvironment(
+  secretKey: string,
+  environment: OnzioEnvironment,
+): boolean {
+  const mode = environment === "production" ? "live" : "test";
+  return (
+    secretKey.startsWith(`sk_${mode}_`) ||
+    secretKey.startsWith(`rk_${mode}_`)
+  );
+}
 
 function required(name: string): string {
   const value = process.env[name]?.trim();
@@ -18,10 +30,7 @@ export function getStripeRuntimeConfig() {
   }
 
   const secretKey = required("STRIPE_SECRET_KEY");
-  if (
-    (environment === "staging" && !secretKey.startsWith("sk_test_")) ||
-    (environment === "production" && !secretKey.startsWith("sk_live_"))
-  ) {
+  if (!isStripeKeyForEnvironment(secretKey, environment)) {
     failContract(
       "STRIPE_MODE_MISMATCH",
       "Stripe key mode does not match ONZIO_ENVIRONMENT.",
@@ -33,6 +42,9 @@ export function getStripeRuntimeConfig() {
     ledgerEnvironment: environment === "production" ? "production" : "test",
     starterPriceId: required("STRIPE_PRICE_ID_STARTER"),
     proPriceId: required("STRIPE_PRICE_ID_PRO"),
+    grandfatheredProPriceIds: parseGrandfatheredProPriceIds(
+      process.env.STRIPE_PRICE_IDS_PRO_GRANDFATHERED,
+    ),
     webhookSecret: required("STRIPE_WEBHOOK_SECRET"),
   } as const;
 }

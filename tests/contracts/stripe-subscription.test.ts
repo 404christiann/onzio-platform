@@ -9,7 +9,10 @@ import {
 import { expectContractError, loadContract } from "../helpers/contract";
 
 type PriceIdForTier = (tier: "starter" | "pro") => string;
-type TierForPriceId = (priceId: string) => "starter" | "pro";
+type TierForPriceId = (
+  priceId: string,
+  config?: Record<string, unknown>,
+) => "starter" | "pro";
 type BuildCheckoutDecision = (input: Record<string, unknown>) => {
   destination: "checkout" | "portal";
   metadata?: Record<string, string>;
@@ -68,6 +71,52 @@ describe("Stripe tier and checkout contract", () => {
     );
     expect(tierForPriceId(priceId)).toBe(tier);
   });
+
+  it("accepts an explicitly allowlisted grandfathered Pro price", async () => {
+    const tierForPriceId = await loadContract<TierForPriceId>(
+      "@/lib/stripe-tiers",
+      "tierForPriceId",
+    );
+    expect(
+      tierForPriceId("price_rose_city_grandfathered", {
+        ...stripeConfig,
+        grandfatheredProPriceIds: ["price_rose_city_grandfathered"],
+      }),
+    ).toBe("pro");
+  });
+
+  it("never offers a grandfathered Pro price to new Checkout", async () => {
+    const priceIdForTier = await loadContract<
+      (
+        tier: "starter" | "pro",
+        config?: Record<string, unknown>,
+      ) => string
+    >("@/lib/stripe-tiers", "priceIdForTier");
+    expect(
+      priceIdForTier("pro", {
+        ...stripeConfig,
+        grandfatheredProPriceIds: ["price_rose_city_grandfathered"],
+      }),
+    ).toBe(STRIPE_IDS.proPrice);
+  });
+
+  it.each([STRIPE_IDS.starterPrice, STRIPE_IDS.proPrice])(
+    "rejects a grandfathered alias that collides with %s",
+    async (priceId) => {
+      const tierForPriceId = await loadContract<TierForPriceId>(
+        "@/lib/stripe-tiers",
+        "tierForPriceId",
+      );
+      await expectContractError(
+        () =>
+          tierForPriceId(priceId, {
+            ...stripeConfig,
+            grandfatheredProPriceIds: [priceId],
+          }),
+        "STRIPE_PRICE_CONFIGURATION_INVALID",
+      );
+    },
+  );
 
   it("rejects an unknown price", async () => {
     const tierForPriceId = await loadContract<TierForPriceId>(
@@ -131,6 +180,41 @@ describe("Stripe webhook state contract", () => {
       clubId: clubs.alpha.id,
       customerId: STRIPE_IDS.alphaCustomer,
       subscriptionId: STRIPE_IDS.currentSubscription,
+      tier: "pro",
+    });
+  });
+
+  it("projects an allowlisted grandfathered Pro subscription in place", async () => {
+    const grandfatheredPriceId = "price_rose_city_grandfathered";
+    const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
+      "@/lib/stripe-event-routing",
+      "resolveStripeEvent",
+    );
+    await expect(
+      resolveStripeEvent(
+        stripeEvent(
+          { id: "evt_rose_city_grandfathered" },
+          {
+            items: {
+              data: [
+                {
+                  price: { id: grandfatheredPriceId },
+                  current_period_end: 1788134400,
+                },
+              ],
+            },
+          },
+        ),
+        currentState,
+        {
+          ...stripeConfig,
+          grandfatheredProPriceIds: [grandfatheredPriceId],
+        },
+      ),
+    ).resolves.toMatchObject({
+      action: "apply",
+      subscriptionId: STRIPE_IDS.currentSubscription,
+      priceId: grandfatheredPriceId,
       tier: "pro",
     });
   });
