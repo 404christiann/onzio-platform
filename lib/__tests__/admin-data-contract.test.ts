@@ -15,6 +15,24 @@ describe("admin data request contract", () => {
     ).toBe(true);
   });
 
+  it("accepts editable homepage hero content as a homepage mutation", () => {
+    expect(
+      adminDataRequestSchema.safeParse({
+        table: "homepage_hero_content",
+        operation: "upsert",
+        payload: {
+          headline_line_one: "Capital City.",
+          headline_line_two: "Roar as One.",
+          intro: "Semi-pro soccer built for Columbus.",
+          primary_cta_label: "Next match",
+          primary_cta_href: "/schedule",
+          secondary_cta_label: "Meet the squad",
+          secondary_cta_href: "/roster",
+        },
+      }).success,
+    ).toBe(true);
+  });
+
   it.each(["club_id", "clubId"])(
     "rejects client-controlled tenant field %s",
     (field) => {

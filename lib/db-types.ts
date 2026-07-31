@@ -106,10 +106,11 @@ export type DBGoalkeeperMatchStats = {
 };
 
 export type ShopKitSurface = "home" | "shop";
-export type ShopKitVariant = "home" | "away";
+export type ShopKitVariant = "home" | "third" | "away";
 
 export type DBShopKitSection = {
-  id: number;
+  id: string;
+  club_id?: string;
   surface: ShopKitSurface;
   kit_variant: ShopKitVariant;
   eyebrow: string;
@@ -167,6 +168,19 @@ export type DBHomepageSlideshowPhoto = {
 export type DBHomepageSlideshowSettings = {
   id: number;
   season_label: string;
+  updated_at: string;
+};
+
+export type DBHomepageHeroContent = {
+  id: number;
+  eyebrow: string;
+  headline_line_one: string;
+  headline_line_two: string;
+  intro: string;
+  primary_cta_label: string;
+  primary_cta_href: string;
+  secondary_cta_label: string;
+  secondary_cta_href: string;
   updated_at: string;
 };
 
@@ -244,6 +258,9 @@ export type DBBehindTheRoseSection = {
 export type DBSiteBranding = {
   id: number;
   club_logo_path: string;
+  club_logo_asset_id: string | null;
+  inverse_logo_path: string;
+  inverse_logo_asset_id: string | null;
   updated_at: string;
 };
 

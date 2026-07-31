@@ -57,6 +57,7 @@ export type Staff = {
 };
 
 export type Fixture = {
+  id?: string;
   date: string;
   opponent: string;
   opponentShortName?: string | null;

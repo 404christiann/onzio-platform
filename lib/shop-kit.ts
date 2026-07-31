@@ -1,3 +1,5 @@
+import type { ShopKitSurface, ShopKitVariant } from "@/lib/db-types";
+
 /** Splits raw admin title text into display lines. */
 export function titleLines(title: string): string[] {
   return title.split("\n");
@@ -57,11 +59,10 @@ export function kitPhotoDisplayMode(count: number): "static" | "slideshow" {
 }
 
 export function shopKitSectionId(
-  surface: "home" | "shop",
-  variant: "home" | "away",
-): number {
-  if (surface === "home") return variant === "home" ? 1 : 3;
-  return variant === "home" ? 2 : 4;
+  surface: ShopKitSurface,
+  variant: ShopKitVariant,
+): string {
+  return `draft-${surface}-${variant}`;
 }
 
 export type DraftKitPhoto = {

@@ -43,6 +43,27 @@ const affiliationLogos = [
   },
 ];
 
+const lionsLocalAffiliations = [
+  {
+    src: "/images/logo/affiliations/us-soccer-color.png",
+    alt: "US Soccer",
+    className: "h-8 w-8",
+    sizes: "32px",
+  },
+  {
+    src: "/images/logo/affiliations/fifa-color.png",
+    alt: "FIFA",
+    className: "h-8 w-14",
+    sizes: "56px",
+  },
+  {
+    src: "/images/logo/affiliations/upsl-color.png",
+    alt: "UPSL",
+    className: "h-8 w-8",
+    sizes: "32px",
+  },
+];
+
 type NavLink = {
   label: string;
   // Omitted for parent items that are hover/tap-only triggers with no page
@@ -61,6 +82,13 @@ const navLinks: NavLink[] = [
       { label: "Club Logo", href: "/club/logo" },
     ],
   },
+  { label: "Schedule", href: "/schedule" },
+  { label: "Shop", href: "/shop" },
+];
+
+const lionsNavLinks: NavLink[] = [
+  { label: "Home", href: "/" },
+  { label: "Roster", href: "/roster" },
   { label: "Schedule", href: "/schedule" },
   { label: "Shop", href: "/shop" },
 ];
@@ -109,6 +137,90 @@ export default function Nav() {
   const isAlwaysTransparentPage = pathname === "/club/logo";
   const isDarkHeroPage = pathname === "/" || (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
   const isHero = isAlwaysTransparentPage || (isDarkHeroPage && !scrolled);
+
+  if (club.presentationTemplateKey === "clubhouse@1") {
+    const isHomeTop = pathname === "/" && !scrolled;
+    return (
+      <header
+        ref={navRef}
+        className="clubhouse-site-header"
+        data-home={pathname === "/"}
+        data-scrolled={scrolled}
+        data-brand-visible={!isHomeTop || menuOpen}
+      >
+        <Link
+          href="/"
+          className="clubhouse-brand-lockup"
+          aria-label={`${club.name} Home`}
+        >
+          {clubLogoUrl ? (
+            <Image
+              src={clubLogoUrl}
+              alt={club.name}
+              width={82}
+              height={82}
+              priority
+              {...imageDeliveryProps("club-logo")}
+            />
+          ) : (
+            <span>{club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}</span>
+          )}
+        </Link>
+        <div className="clubhouse-affiliation-lockup" aria-label="Club affiliations">
+          <span aria-hidden="true" />
+          <div>
+            {lionsLocalAffiliations.map((logo) => (
+              <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
+                <Image
+                  src={logo.src}
+                  alt={logo.alt}
+                  fill
+                  className="object-contain"
+                  sizes={logo.sizes}
+                  {...imageDeliveryProps("small-graphic")}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <nav className="clubhouse-desktop-nav" aria-label="Primary navigation">
+          {lionsNavLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href ?? "/"}
+              data-active={link.href ? isLinkActive(pathname, link.href) : false}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="clubhouse-header-actions">
+          <button
+            type="button"
+            className="clubhouse-menu-button"
+            onClick={() => setMenuOpen((value) => !value)}
+            aria-expanded={menuOpen}
+            aria-label="Toggle menu"
+          >
+            <span />
+            <span />
+          </button>
+        </div>
+        {menuOpen && (
+          <div className="clubhouse-mobile-menu">
+            <div>
+              {lionsNavLinks.map((link, index) => (
+                <Link key={link.href} href={link.href ?? "/"}>
+                  <small>{String(index + 1).padStart(2, "0")}</small>
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </header>
+    );
+  }
 
   return (
     <header

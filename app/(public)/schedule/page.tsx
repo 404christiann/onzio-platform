@@ -8,7 +8,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import FixtureRow from "@/components/FixtureRow";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,6 +54,11 @@ function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
 }
 
 export default function SchedulePage() {
+  const club = useClubContext();
+  return club.presentationTemplateKey === "clubhouse@1" ? <ClubhouseSchedulePage /> : <LegacySchedulePage />;
+}
+
+function LegacySchedulePage() {
   const clubId = useClubId();
   const heroRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);

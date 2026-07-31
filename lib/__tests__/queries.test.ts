@@ -165,6 +165,7 @@ describe('fetchClubBranding', () => {
 
     await expect(fetchClubBranding()).resolves.toEqual({
       logoPath: 'club-branding/new-crest.png',
+      inverseLogoPath: '',
     })
     expect(mockFrom).toHaveBeenCalledWith('site_branding')
     expect(q.eq).toHaveBeenCalledWith('id', 1)
@@ -175,6 +176,7 @@ describe('fetchClubBranding', () => {
 
     await expect(fetchClubBranding()).resolves.toEqual({
       logoPath: 'Rose City FC Patch Color.png',
+      inverseLogoPath: '',
     })
   })
 
@@ -472,9 +474,11 @@ describe('fetchSchedule sponsor mapping', () => {
     }))
 
     await expect(fetchSchedule()).resolves.toEqual([{
+      id: 'match-sponsored',
       date: '2027-03-10',
       time: '19:00',
       opponent: 'Pasadena Athletic',
+      opponentShortName: undefined,
       opponentLogoUrl: 'opponent.png',
       competition: null,
       sponsorName: 'Tepito Coffee',
@@ -483,6 +487,8 @@ describe('fetchSchedule sponsor mapping', () => {
       home: true,
       venue: 'Rose City Stadium',
       address: undefined,
+      city: undefined,
+      state: undefined,
       roseCityScore: 2,
       opponentScore: 1,
     }])

@@ -117,6 +117,7 @@ type PurchaseCardTextField = keyof ShopPurchaseDetailCard;
 
 const KIT_VARIANTS: Array<{ id: ShopKitVariant; label: string }> = [
   { id: "home", label: "Home Kit" },
+  { id: "third", label: "Third Kit" },
   { id: "away", label: "Away Kit" },
 ];
 
@@ -383,14 +384,14 @@ export default function AdminShopPage() {
       const supabase = createClient();
       const { error: sectionError } = await supabase
         .from("shop_kit_section")
-        .upsert([{
-          id: shopKitSectionId(selectedSurface, activeKitVariant),
-          surface: selectedSurface,
-          kit_variant: activeKitVariant,
+        .update({
           ...fields,
           bullet_points: cleanedBulletPoints,
           updated_at: new Date().toISOString(),
-        }]);
+        })
+        .eq("club_id", clubId)
+        .eq("surface", selectedSurface)
+        .eq("kit_variant", activeKitVariant);
       if (sectionError) throw new Error(sectionError.message);
 
       const { toDelete, toInsert, toUpdate } = diffShopKitPhotos(

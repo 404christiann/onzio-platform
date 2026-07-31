@@ -47,6 +47,7 @@ describe("planned schema contract", () => {
     "audit_events",
     "club_exports",
     "site_branding",
+    "homepage_hero_content",
     "players",
     "matches",
     "seasons",
@@ -137,6 +138,12 @@ describe("anonymous RLS contract", () => {
     await expectAllowed(
       clients.anon
         .from("site_branding")
+        .select("*")
+        .eq("club_id", CLUB_IDS.alpha),
+    );
+    await expectAllowed(
+      clients.anon
+        .from("homepage_hero_content")
         .select("*")
         .eq("club_id", CLUB_IDS.alpha),
     );

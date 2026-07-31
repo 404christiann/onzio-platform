@@ -1,11 +1,25 @@
 import type {
   DBBehindTheRoseSection,
+  DBHomepageHeroContent,
   DBHomepageSlideshowSettings,
   DBHomepageSlideshowPhoto,
 } from "@/lib/db-types";
 import { onzioMediaStoragePathFromPublicUrl } from "@/lib/media-url";
 
 export const MAX_HOMEPAGE_SLIDESHOW_PHOTOS = 6;
+
+export const DEFAULT_HOMEPAGE_HERO_CONTENT: DBHomepageHeroContent = {
+  id: 1,
+  eyebrow: "",
+  headline_line_one: "Rose City FC",
+  headline_line_two: "",
+  intro: "",
+  primary_cta_label: "Team Store",
+  primary_cta_href: "/shop",
+  secondary_cta_label: "Meet the Squad",
+  secondary_cta_href: "/roster",
+  updated_at: "",
+};
 
 export const DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS: DBHomepageSlideshowSettings = {
   id: 1,

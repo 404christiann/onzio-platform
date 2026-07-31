@@ -12,6 +12,7 @@ const configuredOnzioMediaPattern = configuredSupabaseUrl
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  devIndicators: false,
   images: {
     // Onzio publishes normalized, immutable assets. Serve those source files
     // directly so an image-optimization quota or service outage cannot remove

@@ -20,7 +20,7 @@ const footerLinks = [
 export default function Footer() {
   const club = useClubContext();
   const clubId = club.id;
-  const { clubLogoUrl } = useClubBranding();
+  const { clubLogoUrl, inverseLogoUrl } = useClubBranding();
   const [partners, setPartners] = useState<DBSiteSponsorLogo[]>([]);
   const [socialLinks, setSocialLinks] =
     useState<DBSiteSocialLink[]>([]);
@@ -39,6 +39,67 @@ export default function Footer() {
         setSocialLinks([]);
       });
   }, [clubId]);
+
+  if (club.presentationTemplateKey === "clubhouse@1") {
+    const visiblePartners = partners.length > 0
+      ? partners
+      : [
+          { id: "local-1", name: "Highbank Credit Union" },
+          { id: "local-2", name: "Short North Roasters" },
+          { id: "local-3", name: "Olentangy Physical Therapy" },
+        ];
+
+    return (
+      <footer className="clubhouse-site-footer">
+        <div className="clubhouse-footer-partners">
+          <span className="clubhouse-eyebrow">Proud partners</span>
+          <div>
+            {visiblePartners.map((partner) => (
+              <span key={partner.id}>{partner.name}</span>
+            ))}
+          </div>
+        </div>
+        <div className="clubhouse-footer-bottom">
+          <Link href="/" className="clubhouse-footer-brand" aria-label={`${club.name} Home`}>
+            {(inverseLogoUrl || clubLogoUrl) && (
+              <Image
+                src={inverseLogoUrl || clubLogoUrl}
+                alt={club.name}
+                width={46}
+                height={46}
+                {...imageDeliveryProps("club-logo")}
+              />
+            )}
+            <span>{club.name}</span>
+          </Link>
+          <ul>
+            {footerLinks
+              .filter((link) => link.label !== "Club")
+              .map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href}>{link.label}</Link>
+                </li>
+              ))}
+          </ul>
+          <div className="clubhouse-footer-socials">
+            {socialLinks.map((social) => (
+              <a
+                key={social.label}
+                href={social.href}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {social.label}
+              </a>
+            ))}
+          </div>
+        </div>
+        <p className="clubhouse-footer-copy">
+          © {new Date().getFullYear()} {club.name}. All rights reserved.
+        </p>
+      </footer>
+    );
+  }
 
   return (
     <footer

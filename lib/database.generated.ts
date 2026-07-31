@@ -571,6 +571,53 @@ export type Database = {
           },
         ]
       }
+      homepage_hero_content: {
+        Row: {
+          club_id: string
+          eyebrow: string
+          headline_line_one: string
+          headline_line_two: string
+          intro: string
+          primary_cta_href: string
+          primary_cta_label: string
+          secondary_cta_href: string
+          secondary_cta_label: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          eyebrow?: string
+          headline_line_one?: string
+          headline_line_two?: string
+          intro?: string
+          primary_cta_href?: string
+          primary_cta_label?: string
+          secondary_cta_href?: string
+          secondary_cta_label?: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          eyebrow?: string
+          headline_line_one?: string
+          headline_line_two?: string
+          intro?: string
+          primary_cta_href?: string
+          primary_cta_label?: string
+          secondary_cta_href?: string
+          secondary_cta_label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homepage_hero_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       homepage_slideshow_photos: {
         Row: {
           alt: string
@@ -1259,6 +1306,160 @@ export type Database = {
           },
         ]
       }
+      presentation_documents: {
+        Row: {
+          club_id: string
+          configuration: Json
+          configuration_digest: string
+          created_at: string
+          created_by: string
+          id: string
+          schema_version: number
+          template_id: string
+          template_version: number
+          version: number
+        }
+        Insert: {
+          club_id: string
+          configuration: Json
+          configuration_digest: string
+          created_at?: string
+          created_by: string
+          id?: string
+          schema_version: number
+          template_id: string
+          template_version: number
+          version: number
+        }
+        Update: {
+          club_id?: string
+          configuration?: Json
+          configuration_digest?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          schema_version?: number
+          template_id?: string
+          template_version?: number
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_documents_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presentation_publications: {
+        Row: {
+          action: string
+          club_id: string
+          created_at: string
+          created_by: string
+          id: string
+          next_configuration_digest: string
+          next_document_id: string
+          override_reason: string | null
+          previous_document_id: string | null
+          validation_result: Json
+        }
+        Insert: {
+          action: string
+          club_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          next_configuration_digest: string
+          next_document_id: string
+          override_reason?: string | null
+          previous_document_id?: string | null
+          validation_result: Json
+        }
+        Update: {
+          action?: string
+          club_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          next_configuration_digest?: string
+          next_document_id?: string
+          override_reason?: string | null
+          previous_document_id?: string | null
+          validation_result?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_publications_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presentation_publications_next_fkey"
+            columns: ["club_id", "next_document_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_documents"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "presentation_publications_previous_fkey"
+            columns: ["club_id", "previous_document_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_documents"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      presentation_state: {
+        Row: {
+          club_id: string
+          draft_document_id: string | null
+          published_document_id: string | null
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          club_id: string
+          draft_document_id?: string | null
+          published_document_id?: string | null
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          club_id?: string
+          draft_document_id?: string | null
+          published_document_id?: string | null
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presentation_state_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presentation_state_draft_fkey"
+            columns: ["club_id", "draft_document_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_documents"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "presentation_state_published_fkey"
+            columns: ["club_id", "published_document_id"]
+            isOneToOne: false
+            referencedRelation: "presentation_documents"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
           active: boolean
@@ -1492,18 +1693,24 @@ export type Database = {
           club_id: string
           club_logo_asset_id: string | null
           club_logo_path: string
+          inverse_logo_asset_id: string | null
+          inverse_logo_path: string
           updated_at: string
         }
         Insert: {
           club_id: string
           club_logo_asset_id?: string | null
           club_logo_path?: string
+          inverse_logo_asset_id?: string | null
+          inverse_logo_path?: string
           updated_at?: string
         }
         Update: {
           club_id?: string
           club_logo_asset_id?: string | null
           club_logo_path?: string
+          inverse_logo_asset_id?: string | null
+          inverse_logo_path?: string
           updated_at?: string
         }
         Relationships: [
@@ -1520,6 +1727,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "clubs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_branding_club_id_inverse_logo_asset_id_fkey"
+            columns: ["club_id", "inverse_logo_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
           },
         ]
       }

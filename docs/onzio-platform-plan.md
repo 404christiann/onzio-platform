@@ -12,14 +12,16 @@ The platform uses:
 - the existing Stripe account with tenant-aware metadata and webhooks
 - password authentication with mandatory MFA for every owner and admin
 - operator-only club provisioning and membership management
-- immediate content publishing, with no draft workflow in v1
+- immediate club-content publishing, with operator-managed draft/publish
+  versions for presentation configuration only
 - private preview access until a subscription becomes active
 - a seven-day public-site grace period after paid access ends
 - indefinite archival for returning clubs
 - Supabase Storage without Supabase Image Transformations
 - normalized immutable images served directly without runtime optimization
 
-Rose City will become the first production tenant after the platform passes the staging gate. Its existing Stripe subscription will migrate in place.
+Rose City is the first production tenant. Its existing Stripe subscription was
+migrated in place.
 
 ## Locked Decisions
 
@@ -32,14 +34,16 @@ Rose City will become the first production tenant after the platform passes the 
 - **Authentication email:** Supabase Auth through Resend SMTP from one
   Onzio-owned authentication subdomain
 - **Membership:** managed only by an Onzio operator in v1
-- **Publishing:** admin saves become publicly visible immediately
+- **Publishing:** club-content saves become publicly visible immediately;
+  presentation configuration uses operator-only draft/publish versions
 - **Billing self-service:** owners use Stripe Customer Portal
 - **Pre-payment behavior:** authenticated preview only
 - **Payment lapse:** seven-day public grace after paid access ends
 - **Offboarding:** archive indefinitely; hard purge is a separate operator procedure
 - **Media:** public assets may remain cached after archival
 - **Image processing:** never use Supabase runtime Image Transformations
-- **Non-goals:** no self-service signup, AWS, drafts, dual-write migration, or immediate hard deletion
+- **Non-goals:** no self-service signup, AWS, club-content drafts, dual-write
+  migration, or immediate hard deletion
 
 ## Core Architecture
 
@@ -118,6 +122,13 @@ Immutable webhook event ledger used for idempotency and replay protection.
 
 Content records reference media assets rather than treating arbitrary URLs as authoritative.
 
+#### Homepage content singletons
+
+Editable homepage content is tenant-scoped and immediately published in v1.
+The first section uses `homepage_hero_content` keyed by `club_id` for
+headline, intro, and CTA copy. It follows the same public-read and
+MFA-protected admin-mutation rules as slideshow and other homepage tables.
+
 #### `audit_events`
 
 Append-only records containing:
@@ -194,7 +205,11 @@ Anonymous users may never read:
 - operational or migration records
 - onboarding, suspended, or archived tenant content
 
-Published content is intentionally public and may be enumerated across live clubs. Private or draft content is outside v1.
+Published club content is intentionally public and may be enumerated across
+live clubs. Private or draft club content is outside v1. Operator-managed
+presentation drafts are a separate protected configuration boundary described
+in `docs/phase-9/presentation-system-plan.md`; anonymous reads may resolve only
+the current published presentation document.
 
 ### Authenticated reads and writes
 
@@ -747,13 +762,58 @@ Gate:
 - successful password recovery still requires password sign-in plus MFA
 - bounce/complaint visibility and an SMTP rollback procedure are verified
 
-### Phase 9 — New club rollout
+### Phase 9 — Versioned presentation system
+
+Implement the approved presentation architecture in
+`docs/phase-9/presentation-system-plan.md`.
+
+- Make `onzio-platform` the source of truth for the shared presentation
+  package, schema, registries, readiness evaluator, and operator builder.
+- Extract Rose City with visual parity as neutral template `cinematic@1`.
+- Extract the approved Deportivo visual system as neutral template
+  `heritage@1`.
+- Store immutable presentation documents with draft and published pointers
+  while keeping club content in normalized tables.
+- Use semantic theme tokens and curated font packs.
+- Allow operators to compose registered sections and navigation.
+- Keep Stripe entitlement, enabled modules, section placement, and content
+  readiness distinct.
+- Enforce provenance and prohibit placeholders/sample content in production.
+
+Gate:
+
+- both templates pass approved desktop/mobile visual parity
+- draft, preview, publish, rollback, template switching, RLS, and tenant
+  isolation pass
+- Rose City continues rendering and operating without tenant-specific
+  presentation special cases
+
+### Phase 10 — Prospect automation
+
+- Normalize intake and record explicit provenance.
+- Recommend a template with reasons and allow operator override.
+- Generate a self-contained, pinned, Pro-first sales artifact.
+- Begin with the Starter/Pro selector expanded and keep both query states
+  shareable.
+- Use only operator-approved placeholders and label them as sample.
+- Produce a desktop/mobile validation and review package.
+- Never publish an artifact or import production data without explicit
+  operator approval.
+- Reject sample, unresolved, or placeholder-backed production imports.
+
+Gate:
+
+- generated artifacts remain sample-only and isolated from production
+- Starter and Pro pass in both directions on desktop and mobile
+- provenance and publication approval are machine-enforced
+
+### Phase 11 — New club rollout
 
 - Provision through audited operator tooling.
 - Keep each tenant in authenticated preview.
 - Verify owner access and MFA.
-- Verify content and media.
-- Confirm subscription state.
+- Verify content, media, and the approved published presentation.
+- Confirm subscription state and customer editing entitlements.
 - Verify owner invitation and password recovery through Resend.
 - Attach and verify domains.
 - Launch publicly only after all gates pass.

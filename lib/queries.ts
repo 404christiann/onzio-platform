@@ -12,6 +12,7 @@ import {
   ShopKitSurface,
   ShopKitVariant,
   DBShopCarouselPhoto,
+  DBHomepageHeroContent,
   DBHomepageSlideshowPhoto,
   DBHomepageSlideshowSettings,
   DBBehindTheRoseSection,
@@ -27,6 +28,7 @@ import { DEFAULT_CLUB_LOGO_PATH } from "@/lib/club-branding";
 import { coerceRating } from "@/lib/db-utils";
 import {
   DEFAULT_BEHIND_THE_ROSE_SECTION,
+  DEFAULT_HOMEPAGE_HERO_CONTENT,
   DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS,
   DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS,
 } from "@/lib/homepage-content";
@@ -97,7 +99,7 @@ function mapStaff(row: DBStaff): Staff {
 
 function mapFixture(row: DBMatch): Fixture {
   return {
-    date: row.date, time: row.time, opponent: row.opponent,
+    id: row.id, date: row.date, time: row.time, opponent: row.opponent,
     opponentShortName: row.opponent_short_name,
     opponentLogoUrl: row.opponent_logo_url, competition: row.competition,
     sponsorName: row.sponsor_name, sponsorLogoUrl: row.sponsor_logo_url,
@@ -149,9 +151,11 @@ export type ShopKitContent = {
 
 export type ClubBranding = {
   logoPath: string;
+  inverseLogoPath: string;
 };
 
 export type HomepageContent = {
+  hero: DBHomepageHeroContent;
   slideshowPhotos: DBHomepageSlideshowPhoto[];
   slideshowSettings: DBHomepageSlideshowSettings;
   behindTheRose: DBBehindTheRoseSection;
@@ -195,7 +199,7 @@ export async function fetchClubBranding(clubId?: string): Promise<ClubBranding> 
   const tenantId = requireClubId(clubId);
   const query = supabase
     .from("site_branding")
-    .select("club_id, club_logo_path, club_logo_asset_id, updated_at");
+    .select("club_id, club_logo_path, club_logo_asset_id, inverse_logo_path, inverse_logo_asset_id, updated_at");
   const { data, error } = await (
     clubId ? query.eq("club_id", tenantId) : query.eq("id", 1)
   ).limit(1);
@@ -204,9 +208,13 @@ export async function fetchClubBranding(clubId?: string): Promise<ClubBranding> 
   return {
     logoPath: await resolveMediaStoragePath(
       tenantId,
-      (row as unknown as { club_logo_asset_id?: string | null } | null)
-        ?.club_logo_asset_id,
+      row?.club_logo_asset_id,
       row?.club_logo_path?.trim() || (clubId ? "" : DEFAULT_CLUB_LOGO_PATH),
+    ),
+    inverseLogoPath: await resolveMediaStoragePath(
+      tenantId,
+      row?.inverse_logo_asset_id,
+      row?.inverse_logo_path?.trim() || "",
     ),
   };
 }
@@ -253,16 +261,17 @@ export async function fetchShopKitContent(
   };
 }
 
-/** Fetches the home and away kit presentations for a public surface. */
+/** Fetches each configured kit presentation for a public surface. */
 export async function fetchShopKitVariants(
   surface: ShopKitSurface = "home",
   clubId?: string,
 ): Promise<Record<ShopKitVariant, ShopKitContent>> {
-  const [home, away] = await Promise.all([
+  const [home, third, away] = await Promise.all([
     fetchShopKitContent(surface, "home", clubId),
+    fetchShopKitContent(surface, "third", clubId),
     fetchShopKitContent(surface, "away", clubId),
   ]);
-  return { home, away };
+  return { home, third, away };
 }
 
 /** Fetches the editable purchase details section for the shop page. */
@@ -299,11 +308,16 @@ export async function fetchShopCarouselPhotos(
   )) as unknown as DBShopCarouselPhoto[];
 }
 
-/** Fetches admin-managed homepage slideshow photos and Behind the Rose content. */
+/** Fetches admin-managed homepage hero, slideshow, and Behind the Rose content. */
 export async function fetchHomepageContent(clubId?: string): Promise<HomepageContent> {
   const tenantId = requireClubId(clubId);
   const tenantScoped = Boolean(clubId);
-  const [slideshowResult, settingsResult, behindTheRoseResult] = await Promise.all([
+  const [heroResult, slideshowResult, settingsResult, behindTheRoseResult] = await Promise.all([
+    supabase
+      .from("homepage_hero_content")
+      .select("*")
+      .eq("club_id", tenantId)
+      .limit(1),
     supabase
       .from("homepage_slideshow_photos")
       .select("*")
@@ -345,6 +359,11 @@ export async function fetchHomepageContent(clubId?: string): Promise<HomepageCon
           : DEFAULT_BEHIND_THE_ROSE_SECTION);
 
   return {
+    hero:
+      heroResult.error || !heroResult.data
+        ? DEFAULT_HOMEPAGE_HERO_CONTENT
+        : ((heroResult.data ?? []) as DBHomepageHeroContent[])[0] ??
+          DEFAULT_HOMEPAGE_HERO_CONTENT,
     slideshowPhotos,
     slideshowSettings,
     behindTheRose,
@@ -630,6 +649,28 @@ export async function fetchStaff(clubId?: string): Promise<Staff[]> {
   return (rows as unknown as DBStaff[]).map(mapStaff);
 }
 
+/** Fetches one active roster player with current-season stats. */
+export async function fetchPlayerProfile(
+  playerId: string,
+  clubId?: string,
+): Promise<{ player: Player; seasonLabel: string; seasonId: string } | null> {
+  const roster = await fetchRoster(undefined, clubId);
+  const player = [
+    ...roster.goalkeepers,
+    ...roster.defenders,
+    ...roster.midfielders,
+    ...roster.forwards,
+  ].find((candidate) => candidate.id === playerId);
+
+  return player
+    ? {
+        player,
+        seasonLabel: roster.seasonLabel,
+        seasonId: roster.seasonId,
+      }
+    : null;
+}
+
 /**
  * Fetches per-match stats for a single player as a flat MatchLogRow[],
  * filtered to the given season. Powers the scatter plot, stacked bar,
@@ -736,4 +777,28 @@ export async function fetchSchedule(seasonId?: string, clubId?: string): Promise
     const kb = `${b.date}T${b.time ?? "00:00"}`;
     return ka < kb ? -1 : ka > kb ? 1 : 0;
   });
+}
+
+/** Fetches one tenant-owned match by its stable row ID. */
+export async function fetchFixtureById(
+  fixtureId: string,
+  clubId?: string,
+): Promise<Fixture | null> {
+  const tenantId = requireClubId(clubId);
+  const { data, error } = await supabase
+    .from("matches")
+    .select("*")
+    .eq("club_id", tenantId)
+    .eq("id", fixtureId)
+    .maybeSingle();
+  if (error) throw new Error(`fetchFixtureById: ${error.message}`);
+  const rows = await resolveMediaReferences(
+    data ? [data as Record<string, unknown>] : [],
+    tenantId,
+    [
+      { assetId: "opponent_logo_asset_id", url: "opponent_logo_url" },
+      { assetId: "sponsor_logo_asset_id", url: "sponsor_logo_url" },
+    ],
+  );
+  return rows[0] ? mapFixture(rows[0] as unknown as DBMatch) : null;
 }

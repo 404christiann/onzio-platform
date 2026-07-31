@@ -1,8 +1,787 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-07-28
+Last updated: 2026-07-31
 
 ## Current State
+
+The Lions mockup conversion `/goal` is complete locally. The current Lions
+public site uses the reusable published `clubhouse@1` presentation-template
+boundary, editable Onzio content rows, Onzio media paths, the imported
+homepage slideshow, inverse crest, and the three-jersey shop collection from
+the mockup. No hosted project was mutated.
+
+Final Lions roster QA and commit-packaging checkpoint:
+
+- Updated the reusable Clubhouse roster cards so every Lions player and staff
+  card renders its editable `nationality` value as an inline flag. Lions uses
+  the already-installed bundled flag-icon set, avoiding the legacy shared
+  `flags` bucket; Rose City continues using its migrated tenant-scoped
+  `onzio-media` flag paths.
+- Lions player cards are now presentational `<article>` elements with no link,
+  button, profile hint, click navigation, or modal behavior. Staff cards are
+  likewise non-interactive. The existing player-detail route remains available
+  as a reusable registered route but is no longer exposed from Lions roster
+  cards.
+- Added focused contracts for player/staff flag rendering, deterministic Lions
+  nationality rows, non-interactive Clubhouse cards, and the prohibition on
+  legacy flag-bucket URLs.
+- Added a reusable Lions Playwright roster acceptance check. Desktop 1440 x
+  900 and mobile 390 x 844 both passed with 32/32 player flags and 6/6 staff
+  flags visible, zero player/staff card links or buttons, no click-triggered
+  route or dialog change, no broken images, no old source/transform/Next image
+  URLs, no horizontal overflow, no framework overlay, and no browser console
+  or page errors.
+- Final screenshots are outside the repository under
+  `/Users/christianalcala/.codex/visualizations/2026/07/31/019fb9b8-8288-79a2-8ac9-f3572133c148/`
+  as `lions-roster-final-desktop.png` and
+  `lions-roster-final-mobile.png`.
+- Final verification passed `npx tsc --noEmit`, 223/223 contracts, 18/18
+  architecture tests, 53/53 local database tests, 548/548 complete tests,
+  `npm run db:types:check`, local `onzio`/`onzio_private` schema lint,
+  `npm run lint`, `git diff --check`, the two-view Playwright roster gate, and
+  the production build with 25 generated pages. Lint/build retain only the
+  same three pre-existing analytics `react-hooks/exhaustive-deps` warnings.
+- No Diverse FC file or asset was changed or copied. No hosted Supabase,
+  Storage, Vercel, Stripe, DNS/domain, Auth/SMTP, email, credential, source
+  Lions object, or Rose City production resource was mutated.
+- No final local Lions implementation blocker is known. Hosted publication and
+  infrastructure remain outside scope and continue to require explicit
+  approval.
+
+Latest `/goal` progress:
+
+- Verified the mockup red jersey source object read-only at
+  `https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/red-jersey-transparent.png`
+  and copied it into the organized local asset folder as
+  `/Users/christianalcala/Downloads/lionsFCAssets/Jersey/red-jersey-transparent.png`.
+  The local file is PNG RGBA, 1402 x 1122, SHA256
+  `4583de144d47b3a328eaebad5f69ad0d5ed4be7d59affed8f64eebdb2d2ad81c`.
+- Added migration
+  `supabase/migrations/20260730020818_phase9_shop_third_kit_variant.sql`,
+  expanding `shop_kit_section`, `shop_kit_photos`, and
+  `shop_carousel_photos` `kit_variant` constraints to
+  `home|third|away`.
+- Updated the Lions media planner/importer and checked-in
+  `docs/phase-9/lions-media-import-plan.json` for all 10 organized assets:
+  two crests, five slideshow photos, and three jerseys.
+- Local Lions import now creates 10 `media_assets`, 5 homepage slideshow
+  photos, 3 shop kit photos, 3 shop carousel photos, 13 ready content links,
+  0 blocked content links, 10 source checksums, 10 normalized checksums, and
+  14 tenant-scoped media relationships.
+- Restored the homepage kit copy to the three-color mockup direction and
+  renders Blue, Red, and White jerseys on the homepage and shop page.
+- Updated the admin shop editor to expose Home, Third, and Away kit tabs while
+  preserving the tenant request boundary and avoiding direct `club_id` payload
+  acceptance in admin schemas.
+- Removed the last direct `next/image` usage from the Clubhouse public routes
+  so public images flow through the resilient image component contract.
+- Updated the Clubhouse homepage display headings and roster page after
+  re-checking the live `soccer-platform-mockups.vercel.app` reference. The
+  reference uses Geist with tight negative display tracking
+  (`letter-spacing` around `-0.055em`) and the roster surface uses the mockup's
+  `roster-page`, `roster-filter-bar`, `player-card`, and `staff-card` layout
+  rather than the earlier Onzio hero/overview roster layout.
+- Added migration
+  `supabase/migrations/20260730015524_phase9_site_branding_inverse_logo.sql`
+  with `site_branding.inverse_logo_path` and `inverse_logo_asset_id`, including
+  a composite `(club_id, inverse_logo_asset_id)` FK to `media_assets`.
+- Regenerated `lib/database.generated.ts` from the local schema and updated
+  `DBSiteBranding`, `fetchClubBranding`, and `ClubBrandingProvider` to expose
+  both the primary crest and inverse crest.
+- Updated the Lions media dry-run planner and checked-in
+  `docs/phase-9/lions-media-import-plan.json` so `crest-white.png` is a ready
+  `site_branding` content link instead of a blocked secondary-branding gap.
+  The plan now reports 11 ready links, 0 blocked links, and hosted mutations 0.
+- Updated `npm run migration:import:lions-media:local` to upsert the Lions
+  white crest into `site_branding.inverse_logo_*` and reconcile it as a
+  tenant-scoped media relationship. Reconciliation now proves 12 linked media
+  relationships.
+- Updated the Clubhouse footer and admin branding preview to prefer the
+  inverse crest on dark backgrounds, falling back to the primary crest when a
+  tenant has no inverse crest.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed. The only source-project access was read-only
+  public object verification/download of the red jersey.
+
+Verification for the completed Lions mockup conversion:
+
+- `npm run db:reset` passed locally and applied
+  `20260730015524_phase9_site_branding_inverse_logo.sql` and
+  `20260730020818_phase9_shop_third_kit_variant.sql`.
+- `npm run db:types` regenerated `lib/database.generated.ts` from the local
+  schema.
+- `npm run migration:plan:lions-media -- ... --dry-run` regenerated the local
+  plan with 10 assets, 13 ready content links, 0 blocked content links, and
+  `hostedMutations: 0`.
+- `npm run migration:import:lions-media:local` passed twice after reset. The
+  final two idempotency runs both reused all 10 uploaded objects and reconciled
+  10 media assets, 5 slideshow photos, 3 shop kit photos, 3 shop carousel
+  photos, 13 ready links, 0 blocked links, 14 relationships, zero forbidden URL
+  references, and `hostedMutations: 0`.
+- Direct local Postgres verification confirmed the Lions `site_branding` row
+  has both primary and inverse Onzio media paths and both media asset IDs.
+- Playwright verification at `http://lions.localhost:3002/` and
+  `http://lions.localhost:3002/shop` confirmed the footer uses the inverse
+  crest asset `2eea11ef-0658-5633-9a59-74d570f300d6`, the homepage renders
+  three kit products and "Three colors" / "Red Jersey" copy, the shop renders
+  three product cards for Blue, Red, and White jerseys, no
+  preview/sample/admin-preview copy, no old source URLs, no Supabase transform
+  or `/_next/image` URLs, no broken visible images, and no horizontal overflow
+  on desktop and mobile.
+- Screenshots were saved outside the repo as
+  `lions-clubhouse-third-kit-home-desktop.png`,
+  `lions-clubhouse-third-kit-home-mobile.png`,
+  `lions-clubhouse-third-kit-shop-desktop.png`, and
+  `lions-clubhouse-third-kit-shop-mobile.png`.
+- Playwright comparison against
+  `https://soccer-platform-mockups.vercel.app/roster` and local
+  `http://lions.localhost:3004/roster` confirmed the local roster now uses the
+  mockup roster classes, Geist typography, 4 roster groups, player/staff card
+  layout, no old source URLs, no image transforms, no broken visible images,
+  and no horizontal overflow on desktop and mobile. Screenshots were saved as
+  `live-mockup-roster-desktop.png`, `local-onzio-roster-desktop.png`, and
+  `local-onzio-roster-mobile.png`.
+- `npx tsc --noEmit` passed.
+- `npx vitest run tests/contracts/lions-media-import-plan.test.ts tests/contracts/lions-media-local-import.test.ts`
+  passed 7/7.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- `npm run test:contracts` passed 220/220.
+- `npm run test:architecture` passed 18/18.
+- `npm run test:db` passed 53/53.
+- `SUPABASE_TEST_*` loopback env `npm test` passed 544/544.
+- Production build with loopback Supabase env passed.
+
+Updated remaining `/goal` work:
+
+- No remaining `/goal` implementation work is known for the local Lions mockup
+  conversion. Production/hosted import, publication, DNS, Stripe, SMTP, and
+  Rose City migration work remain outside this goal and still require explicit
+  approval.
+
+Previous `/goal` progress:
+
+- Added the two remaining `soccerPlatformMockups` detail surfaces as reusable
+  Onzio-backed Clubhouse routes:
+  `/roster/[playerId]` and `/schedule/[fixtureId]`, with tenant re-exports at
+  `/_clubs/[slug]/roster/[playerId]` and
+  `/_clubs/[slug]/schedule/[fixtureId]`.
+- Updated tenant middleware to rewrite public dynamic UUID paths for roster
+  profiles and schedule match areas while preserving the tenant request
+  boundary.
+- Added `components/ClubhousePlayerProfilePage.tsx`, backed by editable
+  Onzio `players`, active-season player stats, and player match-trend rows.
+  Roster cards now link to stable player UUID detail paths.
+- Added `components/ClubhouseMatchAreaPage.tsx`, backed by editable Onzio
+  `matches` rows and media-resolved opponent/sponsor references. Schedule
+  cards now link to stable match UUID detail paths while keeping directions as
+  a secondary action.
+- Carried `matches.id` through the public `Fixture` query mapping and added
+  focused `fetchPlayerProfile` / `fetchFixtureById` helpers.
+- Added a contract assertion that local Lions import rows expose UUID-safe
+  player and match route params.
+- Route inventory against `soccerPlatformMockups` is now covered by Onzio Pro
+  equivalents: home, roster, roster detail, schedule, schedule detail, shop
+  for mockup store, club/about for mockup club, sponsors, staff redirect, and
+  stats.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for the detail-route checkpoint:
+
+- `npx tsc --noEmit` passed.
+- `npx vitest run tests/contracts/lions-media-local-import.test.ts` passed
+  4/4.
+- `npm run migration:import:lions-media:local` passed locally with
+  uploaded 0/reused 9 assets, 32 players, 4 matches, 1 published
+  `clubhouse@1` presentation document/state/publication, zero forbidden URL
+  references, and `hostedMutations: 0`.
+- Playwright verification discovered real detail links from `/roster` and
+  `/schedule`, then confirmed `/roster/{player_uuid}` and
+  `/schedule/{match_uuid}` on desktop and mobile with no preview/sample/admin
+  copy, no old `ydvggllbrswfchgjhjhr` URLs, no Supabase transform or
+  `/_next/image` URLs, no broken visible images, no horizontal overflow, and
+  visible profile/stats/match-info/back-link content.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-clubhouse-player-detail-desktop.png`,
+  `lions-clubhouse-player-detail-mobile.png`,
+  `lions-clubhouse-match-detail-desktop.png`, and
+  `lions-clubhouse-match-detail-mobile.png`.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- `npm run test:contracts` passed 220/220.
+- `npm run test:db` passed 53/53.
+- Production build with loopback Supabase env passed and now includes
+  `/_clubs/[slug]/roster/[playerId]`, `/_clubs/[slug]/schedule/[fixtureId]`,
+  `/roster/[playerId]`, and `/schedule/[fixtureId]`.
+
+Previous `/goal` progress:
+
+- Added standalone Lions Pro public routes from the mockup:
+  `/sponsors`, `/stats`, and `/staff`. Middleware now exposes these tenant
+  paths and the `/_clubs/[slug]/*` re-export files are in place.
+- Added `components/ClubhouseSponsorsPage.tsx`, backed by editable
+  `site_sponsor_logos` rows. It renders the mockup-style "Backing the badge /
+  Building the city" hero plus Title/Premier/Club partner tiers. The current
+  Lions local rows map 1 title partner, 2 premier partners, and 3 club
+  partners from the existing carousel/footer placements.
+- Added `components/ClubhouseStatsPage.tsx`, backed by existing Onzio
+  `fetchRoster` season-stat rows and `fetchSchedule` match rows. It renders the
+  mockup-style "Form / Measured" hero, record/goals/clean-sheet overview, and a
+  sortable player-leaders table. The mobile table was tightened after screenshot
+  review so all columns fit in the viewport without horizontal scrolling.
+- Added `/staff` as a redirect to `/roster#staff`, matching the mockup product
+  behavior while preserving the roster page as the editable staff presentation
+  surface.
+- Playwright verification at `http://lions.localhost:3002/sponsors` confirmed
+  6 sponsor cards across Title/Premier/Club tiers on desktop and mobile, no
+  preview/sample/admin-preview copy, no old `ydvggllbrswfchgjhjhr` source URLs,
+  no Supabase transform or `/_next/image` URLs, no broken visible images, and
+  no horizontal overflow.
+- Playwright verification at `http://lions.localhost:3002/stats` confirmed the
+  Form/Measured hero, 4 overview tiles, 18 player-leader rows on desktop and
+  mobile, no preview/sample/admin-preview copy, no old source/transform URLs,
+  no broken visible images, and no horizontal overflow.
+- Playwright verification at `http://lions.localhost:3002/staff` confirmed a
+  redirect to `http://lions.localhost:3002/roster#staff`.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-clubhouse-sponsors-desktop.png`,
+  `lions-clubhouse-sponsors-mobile.png`,
+  `lions-clubhouse-stats-desktop.png`, and
+  `lions-clubhouse-stats-mobile.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for the standalone Pro route checkpoint:
+
+- `npx tsc --noEmit` passed.
+- `npm run test:contracts` passed 220/220.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and now includes
+  `/_clubs/[slug]/sponsors`, `/_clubs/[slug]/staff`,
+  `/_clubs/[slug]/stats`, `/sponsors`, `/staff`, and `/stats`.
+
+Updated remaining `/goal` work:
+
+- Replace remaining `club.slug === "lions"` rendering gates with true
+  presentation-template resolution at the tenant request boundary so
+  `clubhouse@1` becomes a reusable selected presentation template instead of a
+  tenant-name branch.
+- Decide whether to add a schema field for a secondary/dark crest and whether
+  Christian wants to supply the missing red jersey asset for exact three-kit
+  parity.
+
+- Added `components/ClubhouseAboutPage.tsx` and routed only the Lions tenant
+  through it from `/_clubs/[slug]/club/about` (and therefore
+  `http://lions.localhost:3002/club/about` through tenant routing). The route
+  uses existing editable Onzio `about_page_content` and `site_sponsor_logos`
+  rows, rendering the mockup-style interior hero, manifesto/founding mark,
+  mission quote, values/proof section, partner strip, and CTA. Rose City
+  continues to use the legacy `AboutClubPageClient`.
+- The mockup's disabled concept contact form and "messages are not sent" copy
+  were intentionally not carried over.
+- Playwright verification at `http://lions.localhost:3002/club/about`
+  confirmed the route renders the Columbus hero, Lions story, 3 editable value
+  rows, 3 carousel partner rows, no preview/sample/admin-preview/contact-demo
+  copy, no old `ydvggllbrswfchgjhjhr` source URLs, no Supabase transform or
+  `/_next/image` URLs, no broken visible images, and no horizontal overflow on
+  desktop or mobile. The mobile hero type was tightened after screenshot review
+  so the headline no longer clips.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-clubhouse-about-desktop.png` and
+  `lions-clubhouse-about-mobile.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for the about checkpoint:
+
+- `npx tsc --noEmit` passed.
+- `npm run test:contracts` passed 220/220.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with the same analytics hook warnings.
+
+Updated remaining `/goal` work:
+
+- Add standalone sponsors/staff/stats public routes after confirming the
+  platform route/entitlement/data contracts. Roster now includes technical
+  staff and about/home/footer include sponsors, but standalone mockup routes are
+  not yet added.
+- Replace remaining `club.slug === "lions"` rendering gates with true
+  presentation-template resolution at the tenant request boundary.
+- Decide whether to add a schema field for a secondary/dark crest and whether
+  Christian wants to supply the missing red jersey asset for exact three-kit
+  parity.
+
+- Added deterministic Lions roster/staff rows to the local-only Lions importer.
+  `npm run migration:import:lions-media:local` now upserts 32 editable
+  `players`, 28 `player_season_stats`, 4 `goalkeeper_season_stats`, and 6
+  `staff` rows derived from the Lions mockup config, without adding schema and
+  without hosted mutations.
+- Added `components/ClubhouseRosterPage.tsx` and routed only the Lions tenant
+  through it from `/roster`. The route uses existing Onzio `fetchRoster` and
+  `fetchStaff` data, rendering a mockup-style dark hero, roster overview,
+  grouped navy/red player cards, and technical staff cards. Rose City continues
+  to use the legacy roster page.
+- Updated the Lions local import contract so roster/staff counts are part of
+  deterministic row generation and reconciliation.
+- Local import reconciliation passed with `uploaded: 0`, `reused: 9`,
+  9 media assets, 5 slideshow rows, 2 kit rows, 4 matches, 32 players,
+  28 field stat rows, 4 goalkeeper stat rows, 6 staff rows, 6 sponsor rows,
+  zero forbidden URL references, and `hostedMutations: 0`.
+- Playwright verification at `http://lions.localhost:3002/roster` confirmed
+  the route renders 32 player cards and 6 staff cards on desktop and mobile,
+  with Goalkeepers/Defenders/Midfielders/Forwards/Technical Staff groups, no
+  preview/sample/admin-preview copy, no old `ydvggllbrswfchgjhjhr` source URLs,
+  no Supabase transform or `/_next/image` URLs, no broken visible images, and
+  no horizontal overflow.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-clubhouse-roster-desktop.png` and
+  `lions-clubhouse-roster-mobile.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for the roster checkpoint:
+
+- `npx vitest run tests/contracts/lions-media-local-import.test.ts` passed 4/4.
+- `npx tsc --noEmit` passed.
+- `npm run test:contracts` passed 220/220.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with the same analytics hook warnings.
+
+Updated remaining `/goal` work:
+
+- Convert club/about to the mockup `ClubScreen` composition using existing
+  editable about/story rows.
+- Add sponsors/staff/stats public routes only after confirming the platform
+  route/entitlement/data contracts for those surfaces; roster now includes
+  technical staff, but `/staff` as a standalone mockup route is not yet added.
+- Replace remaining `club.slug === "lions"` rendering gates with true
+  presentation-template resolution at the tenant request boundary.
+- Decide whether to add a schema field for a secondary/dark crest and whether
+  Christian wants to supply the missing red jersey asset for exact three-kit
+  parity.
+
+- Added `components/ClubhouseSchedulePage.tsx` and routed only the Lions tenant
+  through it from `/schedule`. It uses existing Onzio `seasons` and `matches`
+  rows, with the mockup-style schedule hero, status filters, month rail, and
+  match cards. Rose City continues to use the legacy schedule page.
+- Added `components/ClubhouseShopPage.tsx` and routed only the Lions tenant
+  through it from `/shop`. It uses existing editable Onzio shop kit rows/media,
+  with the mockup-style store campaign, featured kit, catalog cards, service
+  strip, and product modal. The public mockup's "Concept preview" purchase
+  copy was intentionally not carried over.
+- Cleared the generated `.next` cache during verification after the dev server
+  hit stale missing vendor chunks. No source files were removed by that cleanup.
+- Playwright verification at `http://lions.localhost:3002/schedule` confirmed
+  the route renders the `clubhouse` schedule surface, 2 match cards, 8 visible
+  positive-dimension images on desktop, no broken visible images, no old source
+  URLs, no Supabase transform or `/_next/image` URLs, no preview/sample/admin
+  preview copy, and no horizontal overflow.
+- Playwright verification at `http://lions.localhost:3002/shop` confirmed the
+  route renders the `clubhouse` store surface, 2 kit cards, 8 visible
+  positive-dimension images on desktop, no broken visible images, no old source
+  URLs, no Supabase transform or `/_next/image` URLs, no preview/sample/admin
+  preview copy, and no horizontal overflow.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-clubhouse-schedule-desktop-final.png` and
+  `lions-clubhouse-shop-desktop-final.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for the latest route checkpoint:
+
+- `npx tsc --noEmit` passed.
+- `npm run test:contracts` passed 220/220.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with the existing Supabase Edge-runtime warning and the same analytics hook
+  warnings.
+
+Updated remaining `/goal` work:
+
+- Convert Lions roster/profile next. The current local Lions importer does not
+  seed a full roster/staff dataset yet, so route parity will need either a
+  Lions roster/staff content import from the mockup config into editable Onzio
+  rows or a polished empty-state route until real club data is supplied.
+- Convert club/about to the mockup `ClubScreen` composition using existing
+  editable about/story rows.
+- Add sponsors/staff/stats public routes only after confirming the platform
+  route/entitlement/data contracts for those surfaces; avoid publishing
+  sample-only analytics or staff content as production club content.
+- Replace remaining `club.slug === "lions"` rendering gates with true
+  presentation-template resolution at the tenant request boundary.
+- Decide whether to add a schema field for a secondary/dark crest and whether
+  Christian wants to supply the missing red jersey asset for exact three-kit
+  parity.
+
+- Added `clubhouse@1` to `packages/presentation/index.ts`, including the
+  Geist font pack, Lions mockup-derived homepage sections
+  (`clubhouse.hero`, `clubhouse.slideshow`, `clubhouse.kits`,
+  `clubhouse.partners`), Pro route/module support for staff/stats/profiles,
+  and readiness logic that recommends `clubhouse@1` for clubs with a modest
+  approved photo set.
+- Added a pinned `clubhouse@1` contract document in
+  `tests/contracts/presentation-system.test.ts` so the Lions mockup-derived
+  template cannot regress into an unregistered tenant branch.
+- Renamed the public Lions homepage extraction to
+  `components/ClubhouseHomePage.tsx` and renamed the scoped CSS/classes from
+  `lfc-*` to reusable `clubhouse-*` names while keeping Lions routed through
+  this renderer locally.
+- Converted the non-Rose-City homepage slideshow to the mockup's class-based
+  matchday slideshow structure and styling, using the 5 imported Onzio
+  slideshow assets and removing the extra season label that made it drift from
+  the reference mockup.
+- Kept the public site free of `Interactive concept preview`, `sample content
+  only`, and public `Admin preview` copy. The local dev-only Next indicator is
+  disabled through `devIndicators: false` in `next.config.mjs`; the Vercel
+  analytics script is now production-only to avoid a local false 404.
+- Final Playwright desktop/mobile verification at
+  `http://lions.localhost:3002/` confirmed the hero starts at `top: 0`, fills
+  the full viewport on desktop and mobile, the matchday slideshow renders
+  full-width, there is no horizontal overflow, all visible images have positive
+  natural dimensions, no old `ydvggllbrswfchgjhjhr`, Supabase transform, or
+  `/_next/image` URLs render, and no preview/sample/admin-preview text appears.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-clubhouse-desktop-final-2.png` and
+  `lions-clubhouse-mobile-final-2.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for this `/goal` checkpoint:
+
+- `npm run migration:import:lions-media:local` passed idempotently with
+  `uploaded: 0`, `reused: 9`, 9 media assets, 5 slideshow rows, 2 kit rows,
+  11 relationships, zero forbidden URL references, and `hostedMutations: 0`.
+- `npx tsc --noEmit` passed.
+- `npx vitest run tests/contracts/presentation-system.test.ts tests/contracts/homepage-slideshow.test.ts tests/contracts/lions-media-local-import.test.ts`
+  passed 13/13.
+- `npm run test:contracts` passed 220/220.
+- `npm run test:architecture` passed 18/18.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with the existing Supabase Edge-runtime warning and the same analytics hook
+  warnings.
+
+Remaining `/goal` work:
+
+- Convert the rest of the Lions public experience route-by-route from the
+  mockup into editable Onzio-backed surfaces: roster/profile, schedule,
+  store, club/about, sponsors, staff, and stats where data support exists.
+- Replace the remaining `club.slug === "lions"` routing gates with an actual
+  published presentation/template selection once the renderer integration
+  resolves presentation documents at the tenant boundary.
+- Decide whether to add a schema field for a secondary/dark crest and whether
+  Christian wants to supply the missing red jersey asset for exact three-kit
+  parity.
+- Run local DB/full-suite/build verification after the remaining routes are
+  ported.
+
+The local Lions homepage now uses `soccerPlatformMockups`
+(`/Users/christianalcala/Downloads/onzioMockups`) as the visual source of
+truth, with the extraction kept tenant-gated and editable through existing
+Onzio data surfaces.
+
+- Added `components/LionsProspectHomePage.tsx` and routed only `club.slug ===
+  "lions"` through the mockup homepage order: hero, next match, matchday
+  slideshow, kit collection, club story, and partners. Rose City keeps the
+  existing homepage composition.
+- Added Lions-only header/footer branches in `components/Nav.tsx` and
+  `components/Footer.tsx` matching the mockup's crest-first, compact
+  Home/Roster/Schedule/Shop navigation and typography-based partner/footer
+  treatment.
+- Added scoped `lfc-*` visual styles in `styles/globals.css` for the
+  mockup-style next-match stage, kit runway, story section, partners, header,
+  footer, and responsive mobile behavior.
+- Updated the local-only Lions importer so the same idempotent command now
+  seeds editable presentation rows for the mockup extraction: 2 seasons,
+  4 matches, homepage hero copy, 5 slideshow photos, 2 jersey media rows,
+  about/story content, 6 partner names, and social links.
+- Updated `components/PhotoSlideshow.tsx` so the Lions/prospect slideshow is
+  visible by default instead of relying on the legacy Rose City scroll reveal;
+  Rose City still keeps the legacy reveal behavior.
+- The local importer reconciliation now proves 9 media assets, 1 homepage hero
+  row, 5 slideshow rows, 2 shop kit photos, 2 shop carousel photos, 4 matches,
+  6 sponsor rows, 11 media relationships, zero old source/transform/Next image
+  URLs, and `hostedMutations: 0`.
+- Final desktop/mobile Playwright verification at
+  `http://lions.localhost:3002/` confirmed hero, next match, slideshow, kit,
+  story, and partners all render; no League Standings/Behind the Rose leakage;
+  and zero `ydvggllbrswfchgjhjhr`, Supabase transform, or `/_next/image` URLs.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-mockup-extraction-desktop-final.png` and
+  `lions-mockup-extraction-mobile-final.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for this soccerPlatformMockups extraction:
+
+- `npm run migration:import:lions-media:local` passed idempotently with
+  `uploaded: 0`, `reused: 9`, and `hostedMutations: 0`.
+- `npx tsc --noEmit` passed.
+- `npx vitest run tests/contracts/homepage-slideshow.test.ts tests/contracts/lions-media-local-import.test.ts`
+  passed 6/6.
+- `npm run test:contracts` passed 219/219.
+- `npm test` passed 542/542 when run with loopback Supabase test env.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with only the same analytics hook warnings.
+
+Remaining visible/content gap:
+
+- The liked mockup has a third red jersey card, but Christian's organized
+  `lionsFCAssets` folder currently contains only blue and white jerseys. Add
+  `red-jersey-transparent.png` to the organized source folder and extend the
+  import plan/kit rendering when true three-kit parity is required.
+
+The LionsFC homepage first section now matches the prospect-template direction
+locally while keeping content editable and preserving the legacy Rose City
+video hero.
+
+- Added the tenant-scoped `onzio.homepage_hero_content` table in
+  `supabase/migrations/20260729223334_phase9_homepage_hero_content.sql`,
+  with explicit grants, RLS policies, audit trigger, and updated-at trigger.
+  The table stores first-section headline, intro, and CTA copy. It is a
+  homepage feature surface: anonymous users can read it only for publicly
+  accessible clubs, and authenticated mutations remain behind the existing
+  tenant/MFA/admin authorization path.
+- Registered `homepage_hero_content` in the admin data contract and singleton
+  handling, added a Hero tab to `/admin/homepage`, and updated
+  `fetchHomepageContent` so public/admin homepage queries return hero,
+  slideshow, and Behind the Rose content together.
+- Updated `components/Hero.tsx` so Rose City keeps the existing video hero,
+  while non-Rose-City tenants render a crest-led prospect-style first section
+  using tenant colors, imported crest media, editable hero copy, and editable
+  CTA labels/links.
+- Seeded Lions locally with the prospect-template copy:
+  `Capital City.` / `Roar as One.`, intro copy for Columbus, and CTAs to
+  `/schedule` and `/roster`.
+- Re-ran the local-only Lions importer after a loopback Supabase reset. The
+  second idempotency run reported `uploaded: 0`, `reused: 9`, 9 media assets,
+  1 homepage hero row, 5 slideshow rows, 2 shop kit photo rows, 2 shop carousel
+  rows, zero forbidden old source/transform URLs, and `hostedMutations: 0`.
+- Local visual verification used a dev server on port 3002 with
+  `ONZIO_LOCAL_TENANT_SLUG=lions`. Desktop verification of
+  `http://lions.localhost:3002/` found the Lions first-section copy, 9 visible
+  local `onzio-media` images, and zero `ydvggllbrswfchgjhjhr`, Supabase
+  transform, or `/_next/image` URLs.
+- Mobile verification at 390×844 confirmed the headline and CTAs fit inside
+  the viewport with no horizontal overflow, the Lions crest hero renders, and
+  old/transform/Next image URL counts remain zero.
+- Updated screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-homepage-hero-updated.png` and
+  `lions-homepage-hero-updated-mobile.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for this Lions editable hero pass:
+
+- `npm run db:reset` passed against local loopback Supabase.
+- `npm run db:types` passed and regenerated `lib/database.generated.ts`.
+- `npm run migration:import:lions-media:local` passed twice; the second run
+  proved idempotency with all 9 objects reused.
+- `npx vitest run tests/contracts/lions-media-local-import.test.ts lib/__tests__/admin-data-contract.test.ts`
+  passed 9/9.
+- `npx tsc --noEmit` passed.
+- `npm run test:contracts` passed 219/219.
+- `npm run test:architecture` passed 18/18.
+- Focused `tests/database/schema-rls.test.ts` passed 27/27.
+- `npm run test:db` passed 52/52.
+- `npm test` passed 542/542.
+- `npm run db:types:check` passed.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with only the same analytics hook warnings.
+
+Safest next step:
+
+- Review the local Lions homepage at `http://lions.localhost:3002/`; if the
+  first-section direction is approved, continue by adding the remaining
+  Lions editable content rows for schedule, roster, about/story, sponsors, and
+  standings using the same local-only import/reconciliation pattern.
+
+The local-only LionsFC tenant/media import is implemented and verified against
+loopback Supabase with no hosted mutation.
+
+- Added local import/reconciliation logic in
+  `lib/migration/lions-media-local-import.ts` and CLI
+  `scripts/import-lions-media-local.ts`, exposed as
+  `npm run migration:import:lions-media:local`.
+- The importer consumes the checked-in Lions dry-run manifest and Christian's
+  organized local source folder at `/Users/christianalcala/Downloads/lionsFCAssets`.
+  It requires `--execute-local --confirm-local` internally through the npm
+  script, maps Supabase CLI loopback env values, refuses non-loopback Supabase
+  URLs, and performs no hosted actions.
+- Local Lions tenant identity:
+  `9d292f0a-6f93-54b1-b21c-ce2d0af3afa7`, slug `lions`, hostname
+  `lions.localhost`, `active`/`live`, Pro tier, with a local-only active
+  subscription projection so anonymous public rendering is allowed by existing
+  runtime-access/RLS contracts.
+- Local import behavior:
+  re-reads all 9 organized source assets, verifies source checksums, re-runs
+  validation/normalization, verifies normalized checksums, uploads or reuses
+  immutable objects in local `onzio-media`, upserts `media_assets`, and links
+  `site_branding`, 5 `homepage_slideshow_photos`, 2 `shop_kit_photos`, and
+  2 `shop_carousel_photos`.
+- `crest-white.png` remains imported as a published branding media asset but
+  intentionally unlinked because no supported secondary/dark crest schema field
+  exists yet.
+- `npm run migration:import:lions-media:local` was run twice successfully. The
+  second run reported `uploaded: 0`, `reused: 9`, 9 media assets, 5 slideshow
+  rows, 2 shop kit photo rows, 2 shop carousel rows, 10 linked relationships,
+  zero forbidden old source/transform URLs, and `hostedMutations: 0`.
+- Local visual verification used a dev server on port 3001 with
+  `ONZIO_LOCAL_TENANT_SLUG=lions`. Curl with `Host: lions.localhost:3001`
+  returned HTTP 200 and `x-onzio-cache-tenant:
+  9d292f0a-6f93-54b1-b21c-ce2d0af3afa7`.
+- Playwright verified `http://lions.localhost:3001/` rendered 8 visible
+  local `onzio-media` images, including the crest and 5 slideshow photos, with
+  zero old `ydvggllbrswfchgjhjhr`, Supabase transform, or `/_next/image` URLs.
+- Playwright verified `http://lions.localhost:3001/shop` rendered 6 visible
+  local `onzio-media` images for the default home kit. Clicking the Away tab
+  rendered 4 visible instances of the white jersey object
+  `7ea389f3-97d6-57da-8a53-5256c043168e.webp`, with zero forbidden URLs.
+- Screenshots were saved outside the repo under
+  `/Users/christianalcala/.codex/visualizations/2026/07/29/019fafbe-a623-7d60-b690-b173ec29304c/`
+  as `lions-homepage.png`, `lions-shop.png`, and `lions-shop-away.png`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, email, or source
+  Lions object was changed.
+
+Verification for this local Lions import pass:
+
+- `npx tsc --noEmit` passed.
+- `npx vitest run tests/contracts/lions-media-import-plan.test.ts tests/contracts/lions-media-local-import.test.ts`
+  passed 7/7.
+- `npm run test:contracts` passed 219/219.
+- `npm run test:architecture` passed 18/18.
+- First local DB/full-suite runs hit transient local Supabase Auth MFA
+  challenge failures in `tests/database/authenticated-rls.test.ts`; rerunning
+  the focused file passed 5/5, `npm run test:db` passed 51/51, and `npm test`
+  passed 540/540.
+- `npm run lint` passed with the same three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with only the same analytics hook warnings.
+
+Safest next step:
+
+- Add explicit schema/support for a secondary or dark crest field if
+  `crest-white.png` should be used by templates/navigation/footer, then build
+  a staging importer using the same manifest/reconciliation pattern behind
+  fresh explicit approval for any hosted tenant provisioning, Storage uploads,
+  database writes, deployment, Stripe, DNS, Auth/SMTP, credential, or email
+  action.
+
+The first LionsFC Phase 9 media-import planning pass is complete locally with
+no hosted mutation.
+
+- Added a dry-run-only Lions media planner at
+  `lib/migration/lions-media-plan.ts` plus CLI wrapper
+  `scripts/plan-lions-media-import.ts`, exposed as
+  `npm run migration:plan:lions-media`.
+- Generated the checked-in planning artifact
+  `docs/phase-9/lions-media-import-plan.json` from Christian's organized local
+  asset folder under `/Users/christianalcala/Downloads/lionsFCAssets`
+  (`Logos`, `Jersey`, and `Slideshow`).
+- The artifact inventories the supplied `ydvggllbrswfchgjhjhr` source project,
+  `assets` bucket, and `onzioMockupsAssets` prefix in read-only form; records
+  byte size, detected MIME, dimensions, alpha, source checksum, normalized
+  output metadata, destination UUID paths, and content-link intent.
+- The dry run planned 9 media assets, 10 ready content links, 1 blocked content
+  link, 4,195,648 source bytes, 853,838 normalized bytes, zero checksum
+  mismatches, zero hosted mutations, and plan digest
+  `09a050d11f6df4383c7a9358da53b95099292426be5388c31467db9c5d69524b`.
+- The planning-only Lions tenant UUID used in the artifact is
+  `9d292f0a-6f93-54b1-b21c-ce2d0af3afa7`. This is not a provisioned hosted
+  tenant and must be replaced or explicitly accepted during a future approved
+  non-production provisioning step.
+- Reusable existing media capabilities: `buildStoragePath`, `parseStoragePath`,
+  `validateMediaUpload`, `normalizePhoto`, `normalizeGraphic`,
+  signed upload authorization, private staging/public media buckets,
+  immutable `media_assets`, cleanup queue, and raw public object URL delivery.
+- Current schema/API gaps for Lions import: `site_branding` supports only
+  `club_logo_asset_id`, so `crest-white.png` has no supported secondary/dark
+  logo field; and `publishAuthorizedMedia` publishes `media_assets` but does
+  not transactionally link assets into branding, slideshow, or shop content
+  tables. The organized `Jersey` folder contains two jerseys, so the dry-run
+  plan maps blue as `home` and white as `away`.
+- No hosted Supabase project, Storage bucket/object, Vercel deployment,
+  Stripe object, DNS/domain, Auth/SMTP setting, credential, or email was
+  changed. The source Lions objects were not deleted.
+
+Verification for this Lions planning pass:
+
+- `npx vitest run tests/contracts/lions-media-import-plan.test.ts` passed 3/3.
+- `npx tsc --noEmit` passed.
+- `npm run test:contracts` passed 215/215.
+- `npm run test:architecture` passed 18/18.
+- `npm run lint` passed with the three pre-existing analytics
+  `react-hooks/exhaustive-deps` warnings.
+- Initial plain `npm test` / `npm run test:db` failed because local Supabase
+  test credentials were not mapped and the sandbox blocked Supabase CLI
+  telemetry/env writes. After `npm run db:reset` and rerunning with loopback
+  `supabase status -o env` values mapped into `SUPABASE_TEST_*`, the local DB
+  suite passed 51/51 and the full suite passed 536/536.
+- Production build with loopback Supabase env passed and generated 25 pages,
+  with only the same three analytics hook warnings.
+
+Safest next step:
+
+- Decide whether to add explicit schema support for a secondary/dark crest
+  before implementing the actual importer. After that, provision or identify a
+  Lions tenant in an approved non-production environment, then build the
+  importer against the existing private
+  staging/validation/normalization/publication boundary. Any hosted source
+  read with credentials, destination tenant provisioning, Storage upload,
+  database write, deployment, Stripe, DNS, Auth/SMTP, credential, or email
+  action still requires fresh explicit approval.
+
+Phase 9.1 through 9.3 have started locally with no hosted or production
+mutation.
+
+- Added checked-in baseline inventories for Rose City `cinematic@1` and the
+  read-only local Deportivo Olimpico snapshot `heritage@1` under
+  `docs/phase-9/baselines/`.
+- Added the internal `packages/presentation` boundary with schema parsing,
+  neutral template registrations, section/route/module/font registries,
+  semantic theme validation, production provenance rejection, template
+  compatibility switching, readiness recommendations, and operator override
+  records.
+- Added the local Phase 9 migration
+  `supabase/migrations/20260729040045_phase9_presentation_system.sql` for
+  immutable `presentation_documents`, `presentation_state`, and append-only
+  `presentation_publications`, including composite tenant pointers, public
+  published-only document reads, member protected reads, service-role write
+  boundary, immutable triggers, and generated database types.
+- Local Supabase was reset only against the loopback development instance.
+  No hosted Supabase, Vercel, Stripe, DNS/domain, Auth, email, credential, or
+  production setting was changed.
 
 Phase 8 operational closeout was executed under Christian's explicit approval
 on 2026-07-28 and verified at `2026-07-29T01:37:37Z`.
@@ -945,7 +1724,68 @@ contract, architecture, database, legacy, and combined suites.
   callback. The one-time code was exposed during troubleshooting and will not
   be reused; no password changed.
 
+### Phase 9 — versioned presentation system
+
+- Added Phase 9.1 baseline evidence for the current Rose City cinematic public
+  renderer and the approved local Deportivo heritage snapshot.
+- Added Phase 9.2 presentation package contracts and implementation for
+  document schema parsing, registered templates, registered sections, routes,
+  modules, curated font packs, semantic theme contrast checks, production
+  provenance gating, deterministic validation, compatibility switching, photo
+  readiness recommendations, and operator override records.
+- Added Phase 9.3 local database contracts and migration for immutable
+  presentation documents, draft/published state pointers, append-only
+  publication history, composite tenant foreign keys, public published-only
+  reads, protected member reads, service-role writes, and immutable triggers.
+- Regenerated `lib/database.generated.ts` from the local schema after the
+  migration was applied through `npm run db:reset`.
+
 ## Verification
+
+### Phase 9 local checkpoint — 2026-07-29
+
+```text
+npx vitest run tests/contracts/presentation-system.test.ts
+  6/6 passed
+
+/bin/zsh -lc 'eval "$(supabase status -o env 2>/dev/null)"; \
+  SUPABASE_TEST_URL="$API_URL" \
+  SUPABASE_TEST_ANON_KEY="$ANON_KEY" \
+  SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+  npx vitest run tests/database/presentation-system.test.ts'
+  3/3 passed
+
+npm run test:contracts
+  212/212 passed
+
+npm run test:architecture
+  18/18 passed
+
+/bin/zsh -lc 'eval "$(supabase status -o env 2>/dev/null)"; \
+  SUPABASE_TEST_URL="$API_URL" \
+  SUPABASE_TEST_ANON_KEY="$ANON_KEY" \
+  SUPABASE_TEST_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+  npm run test:db'
+  51/51 passed
+
+npm run db:types:check
+  generated definitions match the local schema
+
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+```
+
+Notes:
+
+- `npm run db:reset` applied all checked-in migrations including
+  `20260729040045_phase9_presentation_system.sql` against local Supabase only.
+- Supabase CLI reported installed version `2.109.1`; its changelog currently
+  advertises `2.110.0` as available, but no upgrade was performed.
+- The CLI continues to print the existing Bun AVX warning during local
+  Supabase commands.
 
 ### Phase 6 green gates
 
@@ -1370,16 +2210,21 @@ Known non-blocking warnings:
 
 ## Next Milestone
 
-Phase 9 — new club rollout.
+Continue Phase 9 with 9.4 — `cinematic@1` extraction.
 
-Recommended first task: create the Phase 9 launch checklist and provision the
-first approved new club through the audited operator workflow into
-authenticated private preview. Verify owner invitation/recovery, password,
-mandatory MFA, tenant isolation, content/media, and subscription projection
-before any public-domain attachment.
+Next exact step: move the current Rose City public composition behind the
+neutral `cinematic@1` renderer in `packages/presentation`, replace
+Rose City-specific presentation conditionals with registered template behavior,
+bind the renderer to the existing normalized tenant content/media queries, and
+capture desktop/mobile parity evidence before claiming visual preservation.
 
-Phase 8 has no remaining operational blocker. Continue to require fresh
-approval for future production deployments or hosted mutations.
+Then proceed to 9.5 only after Rose City desktop/mobile visual parity, route
+behavior, admin behavior, media resilience, accessibility, contracts,
+architecture, local database checks, TypeScript, lint, and build remain green.
+
+Prospect automation remains Phase 10. The first new club rollout remains
+Phase 11. Continue to require fresh approval for any production deployment or
+hosted mutation.
 
 ## Historical Phase 8 closeout chronology
 

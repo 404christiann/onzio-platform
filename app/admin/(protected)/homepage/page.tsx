@@ -8,11 +8,13 @@ import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import type {
   DBBehindTheRoseSection,
+  DBHomepageHeroContent,
   DBHomepageSlideshowPhoto,
 } from "@/lib/db-types";
 import {
   canAddHomepageSlideshowPhoto,
   DEFAULT_BEHIND_THE_ROSE_SECTION,
+  DEFAULT_HOMEPAGE_HERO_CONTENT,
   DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS,
   DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS,
   diffHomepageSlideshowPhotos,
@@ -24,7 +26,18 @@ import {
 import { fetchHomepageContent } from "@/lib/queries";
 import { createClient } from "@/lib/admin-client";
 
-type AdminTab = "slideshow" | "behind";
+type AdminTab = "hero" | "slideshow" | "behind";
+
+type HeroFields = {
+  eyebrow: string;
+  headline_line_one: string;
+  headline_line_two: string;
+  intro: string;
+  primary_cta_label: string;
+  primary_cta_href: string;
+  secondary_cta_label: string;
+  secondary_cta_href: string;
+};
 
 type SlideshowFields = {
   season_label: string;
@@ -56,6 +69,17 @@ const EMPTY_SLIDESHOW_FIELDS: SlideshowFields = {
   season_label: DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS.season_label,
 };
 
+const EMPTY_HERO_FIELDS: HeroFields = {
+  eyebrow: DEFAULT_HOMEPAGE_HERO_CONTENT.eyebrow,
+  headline_line_one: DEFAULT_HOMEPAGE_HERO_CONTENT.headline_line_one,
+  headline_line_two: DEFAULT_HOMEPAGE_HERO_CONTENT.headline_line_two,
+  intro: DEFAULT_HOMEPAGE_HERO_CONTENT.intro,
+  primary_cta_label: DEFAULT_HOMEPAGE_HERO_CONTENT.primary_cta_label,
+  primary_cta_href: DEFAULT_HOMEPAGE_HERO_CONTENT.primary_cta_href,
+  secondary_cta_label: DEFAULT_HOMEPAGE_HERO_CONTENT.secondary_cta_label,
+  secondary_cta_href: DEFAULT_HOMEPAGE_HERO_CONTENT.secondary_cta_href,
+};
+
 const inputStyle: CSSProperties = {
   width: "100%",
   backgroundColor: "rgba(255,255,255,0.04)",
@@ -76,6 +100,19 @@ function behindSectionToFields(section: DBBehindTheRoseSection): BehindFields {
     video_url: section.video_url,
     video_title: section.video_title,
     caption: section.caption,
+  };
+}
+
+function heroContentToFields(hero: DBHomepageHeroContent): HeroFields {
+  return {
+    eyebrow: hero.eyebrow,
+    headline_line_one: hero.headline_line_one,
+    headline_line_two: hero.headline_line_two,
+    intro: hero.intro,
+    primary_cta_label: hero.primary_cta_label,
+    primary_cta_href: hero.primary_cta_href,
+    secondary_cta_label: hero.secondary_cta_label,
+    secondary_cta_href: hero.secondary_cta_href,
   };
 }
 
@@ -102,7 +139,7 @@ async function deleteHomepageStorageUrls(urls: string[]): Promise<void> {
 
 export default function AdminHomepagePage() {
   const clubId = useClubId();
-  const [activeTab, setActiveTab] = useState<AdminTab>("slideshow");
+  const [activeTab, setActiveTab] = useState<AdminTab>("hero");
   const [draftPhotos, setDraftPhotos] = useState<DraftHomepagePhoto[]>(
     DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS.map((photo) => ({
       id: photo.id,
@@ -116,6 +153,7 @@ export default function AdminHomepagePage() {
   const [slideshowFields, setSlideshowFields] = useState<SlideshowFields>(
     EMPTY_SLIDESHOW_FIELDS,
   );
+  const [heroFields, setHeroFields] = useState<HeroFields>(EMPTY_HERO_FIELDS);
   const [behindFields, setBehindFields] = useState<BehindFields>(EMPTY_BEHIND_FIELDS);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -129,7 +167,7 @@ export default function AdminHomepagePage() {
     setLoading(true);
     setError(null);
     fetchHomepageContent(clubId)
-      .then(({ slideshowPhotos, slideshowSettings, behindTheRose }) => {
+      .then(({ hero, slideshowPhotos, slideshowSettings, behindTheRose }) => {
         setOriginalPhotos(slideshowPhotos);
         setDraftPhotos(
           slideshowPhotos.map((photo) => ({
@@ -139,6 +177,7 @@ export default function AdminHomepagePage() {
           })),
         );
         setSlideshowFields({ season_label: slideshowSettings.season_label });
+        setHeroFields(heroContentToFields(hero));
         setBehindFields(behindSectionToFields(behindTheRose));
         setDirty(false);
       })
@@ -155,6 +194,11 @@ export default function AdminHomepagePage() {
 
   function setBehindField(field: TextBehindField, value: string) {
     setBehindFields((current) => ({ ...current, [field]: value }));
+    markDirty();
+  }
+
+  function setHeroField(field: keyof HeroFields, value: string) {
+    setHeroFields((current) => ({ ...current, [field]: value }));
     markDirty();
   }
 
@@ -227,6 +271,16 @@ export default function AdminHomepagePage() {
   }
 
   async function handleSave() {
+    const cleanedHeroFields = {
+      eyebrow: heroFields.eyebrow.trim(),
+      headline_line_one: heroFields.headline_line_one.trim(),
+      headline_line_two: heroFields.headline_line_two.trim(),
+      intro: heroFields.intro.trim(),
+      primary_cta_label: heroFields.primary_cta_label.trim(),
+      primary_cta_href: heroFields.primary_cta_href.trim(),
+      secondary_cta_label: heroFields.secondary_cta_label.trim(),
+      secondary_cta_href: heroFields.secondary_cta_href.trim(),
+    };
     const cleanedBehindFields = {
       ...behindFields,
       eyebrow: behindFields.eyebrow.trim(),
@@ -247,6 +301,14 @@ export default function AdminHomepagePage() {
     setSaved(false);
     try {
       const supabase = createClient();
+      const { error: heroError } = await supabase
+        .from("homepage_hero_content")
+        .upsert([{
+          ...cleanedHeroFields,
+          updated_at: new Date().toISOString(),
+        }]);
+      if (heroError) throw new Error(heroError.message);
+
       const { error: slideshowSettingsError } = await supabase
         .from("homepage_slideshow_settings")
         .upsert([{
@@ -296,6 +358,7 @@ export default function AdminHomepagePage() {
       await deleteHomepageStorageUrls(toDelete.map((photo) => photo.url));
 
       const fresh = await fetchHomepageContent(clubId);
+      setHeroFields(heroContentToFields(fresh.hero));
       setOriginalPhotos(fresh.slideshowPhotos);
       setDraftPhotos(
         fresh.slideshowPhotos.map((photo) => ({
@@ -356,6 +419,7 @@ export default function AdminHomepagePage() {
           >
             <div className="mb-4 flex gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
               {[
+                { id: "hero" as const, label: "Hero", count: null },
                 { id: "slideshow" as const, label: "Slideshow", count: `${draftPhotos.length}/${MAX_HOMEPAGE_SLIDESHOW_PHOTOS}` },
                 { id: "behind" as const, label: "Behind the Rose", count: null },
               ].map((tab) => {
@@ -382,6 +446,70 @@ export default function AdminHomepagePage() {
                 );
               })}
             </div>
+
+            {activeTab === "hero" && (
+              <div className="space-y-4">
+                <Field label="Eyebrow">
+                  <input
+                    value={heroFields.eyebrow}
+                    onChange={(event) => setHeroField("eyebrow", event.target.value)}
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="Headline Line One">
+                  <input
+                    value={heroFields.headline_line_one}
+                    onChange={(event) => setHeroField("headline_line_one", event.target.value)}
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="Headline Line Two">
+                  <input
+                    value={heroFields.headline_line_two}
+                    onChange={(event) => setHeroField("headline_line_two", event.target.value)}
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="Intro">
+                  <textarea
+                    value={heroFields.intro}
+                    onChange={(event) => setHeroField("intro", event.target.value)}
+                    rows={4}
+                    style={{ ...inputStyle, resize: "vertical" }}
+                  />
+                </Field>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Primary Button">
+                    <input
+                      value={heroFields.primary_cta_label}
+                      onChange={(event) => setHeroField("primary_cta_label", event.target.value)}
+                      style={inputStyle}
+                    />
+                  </Field>
+                  <Field label="Primary Link">
+                    <input
+                      value={heroFields.primary_cta_href}
+                      onChange={(event) => setHeroField("primary_cta_href", event.target.value)}
+                      style={inputStyle}
+                    />
+                  </Field>
+                  <Field label="Secondary Button">
+                    <input
+                      value={heroFields.secondary_cta_label}
+                      onChange={(event) => setHeroField("secondary_cta_label", event.target.value)}
+                      style={inputStyle}
+                    />
+                  </Field>
+                  <Field label="Secondary Link">
+                    <input
+                      value={heroFields.secondary_cta_href}
+                      onChange={(event) => setHeroField("secondary_cta_href", event.target.value)}
+                      style={inputStyle}
+                    />
+                  </Field>
+                </div>
+              </div>
+            )}
 
             {activeTab === "slideshow" && (
               <div>
@@ -621,6 +749,31 @@ export default function AdminHomepagePage() {
               >
                 Homepage Preview
               </p>
+            </div>
+
+            <div
+              className="mb-6 overflow-hidden rounded-lg p-5 sm:p-7"
+              style={{
+                background: "linear-gradient(132deg, #1B2958 0%, #1B2958 48%, #AD3234 142%)",
+                border: "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {heroFields.eyebrow && (
+                <p className="font-display mb-3 text-xs font-bold uppercase tracking-widest text-white/60">
+                  {heroFields.eyebrow}
+                </p>
+              )}
+              <h2 className="font-display text-3xl font-black not-italic uppercase leading-none text-white sm:text-5xl">
+                <span className="block">{heroFields.headline_line_one || "Homepage hero"}</span>
+                {heroFields.headline_line_two && (
+                  <span className="block text-[#F0F0F0]">{heroFields.headline_line_two}</span>
+                )}
+              </h2>
+              {heroFields.intro && (
+                <p className="font-body mt-4 max-w-xl text-sm leading-relaxed text-white/70">
+                  {heroFields.intro}
+                </p>
+              )}
             </div>
 
             <div className="overflow-hidden rounded-lg" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>

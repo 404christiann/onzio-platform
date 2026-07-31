@@ -18,6 +18,8 @@ import { useOptionalClubContext } from "@/components/ClubContextProvider";
 type ClubBrandingContextValue = {
   clubLogoPath: string;
   clubLogoUrl: string;
+  inverseLogoPath: string;
+  inverseLogoUrl: string;
   setClubLogoPath: (path: string) => void;
   refreshClubBranding: () => Promise<void>;
 };
@@ -33,12 +35,14 @@ export function ClubBrandingProvider({
   const [logoPath, setLogoPath] = useState(
     club ? "" : DEFAULT_CLUB_LOGO_PATH,
   );
+  const [inverseLogoPath, setInverseLogoPath] = useState("");
 
   const refreshClubBranding = useCallback(async () => {
     try {
       if (!club) return;
       const branding = await fetchClubBranding(club.id);
       setLogoPath(branding.logoPath);
+      setInverseLogoPath(branding.inverseLogoPath);
     } catch (error) {
       console.error("ClubBrandingProvider:", error);
     }
@@ -52,10 +56,12 @@ export function ClubBrandingProvider({
     () => ({
       clubLogoPath: logoPath,
       clubLogoUrl: clubLogoUrl(logoPath),
+      inverseLogoPath,
+      inverseLogoUrl: clubLogoUrl(inverseLogoPath || logoPath),
       setClubLogoPath: setLogoPath,
       refreshClubBranding,
     }),
-    [logoPath, refreshClubBranding],
+    [inverseLogoPath, logoPath, refreshClubBranding],
   );
 
   return (

@@ -1,5 +1,9 @@
 import { failContract } from "@/lib/contract-error";
 import { normalizeHostname } from "@/lib/tenant";
+import {
+  parsePresentationDocument,
+  templateKey,
+} from "@/packages/presentation";
 
 export type ClubContext = {
   id: string;
@@ -10,6 +14,9 @@ export type ClubContext = {
   publicAccess: "preview" | "live" | "grace" | "suspended";
   tier: "starter" | "pro";
   role: "owner" | "admin" | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  presentationTemplateKey: "cinematic@1" | "heritage@1" | "clubhouse@1" | null;
 };
 
 const TEST_CONTEXTS = {
@@ -21,6 +28,8 @@ const TEST_CONTEXTS = {
     lifecycle: "active",
     publicAccess: "live",
     tier: "pro",
+    primaryColor: "#111111",
+    secondaryColor: "#E7001B",
   },
   "bravo-onzio.vercel.app": {
     id: "22222222-2222-4222-8222-222222222222",
@@ -30,6 +39,8 @@ const TEST_CONTEXTS = {
     lifecycle: "onboarding",
     publicAccess: "preview",
     tier: "starter",
+    primaryColor: "#222222",
+    secondaryColor: "#666666",
   },
 } as const;
 
@@ -56,7 +67,7 @@ async function getDatabaseContext(
   const { data: domain, error } = await onzio
     .from("club_domains")
     .select(
-      "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, tier)",
+      "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, tier, primary_color, secondary_color)",
     )
     .eq("hostname", hostname)
     .eq("active", true)
@@ -72,6 +83,8 @@ async function getDatabaseContext(
     lifecycle: ClubContext["lifecycle"];
     public_access: ClubContext["publicAccess"];
     tier: ClubContext["tier"];
+    primary_color: string | null;
+    secondary_color: string | null;
   };
 
   const { data: primary } = await onzio
@@ -97,6 +110,10 @@ async function getDatabaseContext(
     }
   }
 
+  const presentationTemplateKey = await resolvePublishedPresentationTemplateKey(
+    onzio,
+    club.id,
+  );
   return {
     id: club.id,
     slug: club.slug,
@@ -106,7 +123,42 @@ async function getDatabaseContext(
     publicAccess: club.public_access,
     tier: club.tier,
     role,
+    primaryColor: club.primary_color,
+    secondaryColor: club.secondary_color,
+    presentationTemplateKey,
   };
+}
+
+async function resolvePublishedPresentationTemplateKey(
+  onzio: ReturnType<Awaited<ReturnType<typeof import("@/lib/supabase-server").createClient>>["schema"]>,
+  clubId: string,
+): Promise<ClubContext["presentationTemplateKey"]> {
+  const { data: state } = await onzio
+    .from("presentation_state")
+    .select("published_document_id")
+    .eq("club_id", clubId)
+    .maybeSingle();
+  let query = onzio
+    .from("presentation_documents")
+    .select("configuration")
+    .eq("club_id", clubId);
+  if (state?.published_document_id) {
+    query = query.eq("id", state.published_document_id);
+  } else {
+    query = query.order("version", { ascending: false }).limit(1);
+  }
+  const { data } = await query.maybeSingle();
+  if (!data?.configuration) {
+    return null;
+  }
+  try {
+    const document = parsePresentationDocument(data.configuration, {
+      surface: "production",
+    });
+    return templateKey(document.template);
+  } catch {
+    return null;
+  }
 }
 
 export async function getClubContextBySlug(
@@ -121,7 +173,7 @@ export async function getClubContextBySlug(
   const onzio = supabase.schema("onzio");
   const { data: club, error } = await onzio
     .from("clubs")
-    .select("id, slug, name, lifecycle, public_access, tier")
+    .select("id, slug, name, lifecycle, public_access, tier, primary_color, secondary_color")
     .eq("slug", slug)
     .maybeSingle();
   if (error || !club) failContract("UNKNOWN_TENANT");
@@ -150,6 +202,10 @@ export async function getClubContextBySlug(
     }
   }
 
+  const presentationTemplateKey = await resolvePublishedPresentationTemplateKey(
+    onzio,
+    club.id,
+  );
   return {
     id: club.id,
     slug: club.slug,
@@ -159,6 +215,9 @@ export async function getClubContextBySlug(
     publicAccess: club.public_access as ClubContext["publicAccess"],
     tier: club.tier as ClubContext["tier"],
     role,
+    primaryColor: club.primary_color,
+    secondaryColor: club.secondary_color,
+    presentationTemplateKey,
   };
 }
 
@@ -174,6 +233,7 @@ export async function getClubContext(input: {
     return {
       ...club,
       role: input.userId ? TEST_ROLES[club.id]?.[input.userId] ?? null : null,
+      presentationTemplateKey: null,
     };
   }
 

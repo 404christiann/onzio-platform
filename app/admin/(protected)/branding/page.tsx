@@ -28,7 +28,7 @@ function fileExtension(file: File): string {
 
 export default function BrandingPage() {
   const clubId = useClubId();
-  const { clubLogoPath, clubLogoUrl, setClubLogoPath } = useClubBranding();
+  const { clubLogoPath, clubLogoUrl, inverseLogoUrl, setClubLogoPath } = useClubBranding();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
@@ -166,7 +166,7 @@ export default function BrandingPage() {
           Branding
         </h1>
         <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-white/40">
-          Upload one club logo here. Saving it updates the logo across the public website and admin portal.
+          Manage the club crest used across the public website and admin portal. Clubs can also carry an inverse crest for dark presentation surfaces.
         </p>
       </div>
 
@@ -250,7 +250,7 @@ export default function BrandingPage() {
             </div>
             <div className="flex aspect-square items-center justify-center bg-[#141414] p-5">
               <div className="relative h-full w-full">
-                <Image src={previewUrl} alt="Logo on a dark background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
+                <Image src={inverseLogoUrl || previewUrl} alt="Logo on a dark background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
               </div>
             </div>
           </div>

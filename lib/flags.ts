@@ -1,5 +1,3 @@
-const FLAG_BUCKET_URL =
-  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/flags`;
 const ROSE_CITY_FLAG_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/flags`;
 
@@ -20,6 +18,21 @@ const FLAG_FILES: Record<string, string> = {
   "🇸🇻": "ElSalvador.png",
 };
 
+const FLAG_COUNTRY_CODES: Record<string, string> = {
+  American: "us",
+  Cameroonian: "cm",
+  Guatemalan: "gt",
+  Japanese: "jp",
+  Mexican: "mx",
+  Salvadoran: "sv",
+  "🇺🇸": "us",
+  "🇨🇲": "cm",
+  "🇬🇹": "gt",
+  "🇯🇵": "jp",
+  "🇲🇽": "mx",
+  "🇸🇻": "sv",
+};
+
 const ROSE_CITY_MIGRATED_FLAG_FILES: Record<string, string> = {
   "USA.png": "def61117-0b21-5ffb-b25b-05158cf77a9a.webp",
   "Cameroon.png": "8cd36b7e-a878-5f53-8818-286991b8d83c.webp",
@@ -35,12 +48,14 @@ export function getFlagUrl(
 ): string | null {
   const filename = FLAG_FILES[nationality.trim()];
 
-  if (!filename) return null;
-  if (clubSlug === "rose-city") {
-    const migratedFilename = ROSE_CITY_MIGRATED_FLAG_FILES[filename];
-    return migratedFilename
-      ? `${ROSE_CITY_FLAG_BASE}/${migratedFilename}`
-      : null;
-  }
-  return `${FLAG_BUCKET_URL}/${encodeURIComponent(filename)}`;
+  if (!filename || clubSlug !== "rose-city") return null;
+
+  const migratedFilename = ROSE_CITY_MIGRATED_FLAG_FILES[filename];
+  return migratedFilename
+    ? `${ROSE_CITY_FLAG_BASE}/${migratedFilename}`
+    : null;
+}
+
+export function getFlagCountryCode(nationality: string): string | null {
+  return FLAG_COUNTRY_CODES[nationality.trim()] ?? null;
 }

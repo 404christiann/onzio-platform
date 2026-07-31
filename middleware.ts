@@ -7,10 +7,21 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/roster",
   "/schedule",
   "/shop",
+  "/sponsors",
+  "/staff",
+  "/stats",
   "/club/about",
   "/club/logo",
   "/club-logo",
 ]);
+
+function isPublicTenantPath(pathname: string): boolean {
+  if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
+  return (
+    /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
+    /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname)
+  );
+}
 
 type ResolvedTenant = {
   id: string;
@@ -185,7 +196,7 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-onzio-club-slug", tenant.slug);
   if (user) requestHeaders.set("x-onzio-user-id", user.id);
 
-  if (PUBLIC_TENANT_PATHS.has(request.nextUrl.pathname)) {
+  if (isPublicTenantPath(request.nextUrl.pathname)) {
     const target = request.nextUrl.clone();
     target.pathname = `/_clubs/${tenant.slug}${request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname}`;
     const rewritten = NextResponse.rewrite(target, {

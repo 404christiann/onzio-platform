@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { getFlagUrl } from "@/lib/flags";
+import { getFlagCountryCode, getFlagUrl } from "@/lib/flags";
 
 interface NationalityFlagProps {
   nationality: string;
@@ -17,12 +17,29 @@ export default function NationalityFlag({
   className = "",
 }: NationalityFlagProps) {
   const club = useClubContext();
-  const src = getFlagUrl(nationality, club.slug);
+  const usesMigratedFlagMedia = club.slug === "rose-city";
+  const src = usesMigratedFlagMedia
+    ? getFlagUrl(nationality, club.slug)
+    : null;
+  const countryCode = usesMigratedFlagMedia
+    ? null
+    : getFlagCountryCode(nationality);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     setFailed(false);
   }, [src]);
+
+  if (countryCode) {
+    return (
+      <span
+        role="img"
+        aria-label={`${nationality} flag`}
+        className={`fi fi-${countryCode} inline-block flex-shrink-0 overflow-hidden rounded-[3px] ${className}`}
+        style={{ width, height: Math.round(width * (432 / 741)) }}
+      />
+    );
+  }
 
   if (!src || failed) return null;
 

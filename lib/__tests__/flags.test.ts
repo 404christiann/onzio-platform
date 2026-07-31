@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFlagUrl } from "@/lib/flags";
+import { getFlagCountryCode, getFlagUrl } from "@/lib/flags";
 
 describe("getFlagUrl", () => {
   it("uses the migrated Rose City media asset instead of the legacy flags bucket", () => {
@@ -12,5 +12,12 @@ describe("getFlagUrl", () => {
 
   it("fails closed for an unmapped Rose City nationality", () => {
     expect(getFlagUrl("Spanish", "rose-city")).toBeNull();
+  });
+
+  it("uses bundled country codes for non-Rose-City clubs", () => {
+    expect(getFlagCountryCode("American")).toBe("us");
+    expect(getFlagCountryCode("🇺🇸")).toBe("us");
+    expect(getFlagCountryCode("Unknown")).toBeNull();
+    expect(getFlagUrl("American", "lions")).toBeNull();
   });
 });
