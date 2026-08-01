@@ -170,6 +170,23 @@ values
     'starter',
     '#222222',
     '#FFFFFF'
+  ),
+  -- Charlie is the only Starter club that is also active and publicly live.
+  -- That combination did not exist before DCFC-201: Alpha and Lions are Pro,
+  -- and Bravo is Starter but onboarding/preview, so `can_read_club` rejects it
+  -- before tier is ever consulted. Without Charlie, no test can exercise
+  -- anonymous public reads at Starter tier -- which is exactly the blind spot
+  -- that let PF-002 go unnoticed. Do not change its tier, lifecycle, or
+  -- public_access without reading docs/platform-findings.md first.
+  (
+    '33333333-3333-4333-8333-333333333333',
+    'charlie',
+    'Charlie Athletic',
+    'active',
+    'live',
+    'starter',
+    '#333333',
+    '#FFFFFF'
   )
 on conflict (id) do update
 set

@@ -18,18 +18,12 @@ const nextConfig = {
     // directly so an image-optimization quota or service outage cannot remove
     // photography from the site.
     unoptimized: true,
+    // The legacy Rose City project's buckets were removed here when that
+    // Supabase project was permanently deleted in the Phase 8 closeout — its
+    // hostname no longer resolves, so the entries could only ever allow a
+    // request that fails. The live project is supplied from the environment
+    // above. See PF-005/PF-006 in docs/platform-findings.md.
     remotePatterns: [
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/Aboutassets/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/about-page/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/flags/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/homepage/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/logos_v2/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/opponent-logos/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/roster/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/shop/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/sponsors/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/standings/**" },
-      { protocol: "https", hostname: "nsgtkwqkbyxkiwrhzsje.supabase.co", pathname: "/storage/v1/object/public/onzio-media/**" },
       ...(configuredOnzioMediaPattern ? [configuredOnzioMediaPattern] : []),
     ],
     deviceSizes: [640, 828, 1080, 1440, 1920],

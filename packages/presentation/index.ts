@@ -1,8 +1,12 @@
 import { z } from "zod";
 
 export type PresentationSurface = "mockup" | "operator_preview" | "production";
-export type TemplateKey = "cinematic@1" | "heritage@1" | "clubhouse@1";
-export type TemplateId = "cinematic" | "heritage" | "clubhouse";
+export type TemplateKey =
+  | "cinematic@1"
+  | "heritage@1"
+  | "clubhouse@1"
+  | "academy@1";
+export type TemplateId = "cinematic" | "heritage" | "clubhouse" | "academy";
 export type ProvenanceStatus =
   | "verified_public_source"
   | "club_supplied"
@@ -65,7 +69,7 @@ const sectionSchema = z.object({
 const documentSchema = z.object({
   schemaVersion: z.literal(1),
   template: z.object({
-    id: z.enum(["cinematic", "heritage", "clubhouse"]),
+    id: z.enum(["cinematic", "heritage", "clubhouse", "academy"]),
     version: z.literal(1),
   }),
   fontPack: z.string(),
@@ -134,7 +138,7 @@ export type ProvenancedValue<T> = Omit<
 export type SectionRegistration = {
   type: string;
   version: 1;
-  scope: "shared" | "cinematic" | "heritage" | "clubhouse";
+  scope: "shared" | "cinematic" | "heritage" | "clubhouse" | "academy";
   contentDomain: string;
   compatibleTemplates: TemplateKey[];
   requiredModule: string | null;
@@ -231,6 +235,13 @@ export const fontPacks: Record<string, FontPackRegistration> = {
     displayName: "Geist",
     compatibleTemplates: ["clubhouse@1"],
   },
+  // DCFC-D104: no existing pack matched the approved academy@1 type stack --
+  // Montserrat headings, Inter body/UI, DM Sans desktop navigation.
+  "montserrat-inter-dmsans": {
+    key: "montserrat-inter-dmsans",
+    displayName: "Montserrat + Inter + DM Sans",
+    compatibleTemplates: ["academy@1"],
+  },
 } as const;
 
 export const routeRegistry = {
@@ -245,6 +256,8 @@ export const routeRegistry = {
   standings: { path: "/standings" },
   stats: { path: "/stats" },
   tryouts: { path: "/tryouts" },
+  programs: { path: "/programs" },
+  contact: { path: "/contact" },
 } as const;
 
 export const moduleRegistry = {
@@ -259,6 +272,12 @@ export const moduleRegistry = {
   expandedProfiles: { entitlement: "pro" },
   seasons: { entitlement: "pro" },
   tryouts: { entitlement: "pro" },
+  // DCFC-D108: Programs is Pro-only, Contact is Starter-accessible. These must
+  // stay in agreement with the onzio_private.club_has_feature allowlist -- see
+  // the entitlement-agreement contract in
+  // tests/contracts/diverse-city-domains.test.ts.
+  programs: { entitlement: "pro" },
+  contact: { entitlement: "starter" },
   analytics: { entitlement: "pro" },
 } as const;
 
@@ -268,7 +287,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "shared",
     contentDomain: "matches",
-    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1"],
+    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1"],
     requiredModule: "schedule",
     requiredEntitlement: "starter",
     cardinality: "single",
@@ -280,7 +299,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "shared",
     contentDomain: "about",
-    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1"],
+    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1"],
     requiredModule: null,
     requiredEntitlement: null,
     cardinality: "single",
@@ -345,6 +364,72 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     requiredEntitlement: null,
     cardinality: "single",
     emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  // academy@1 sections (DCFC-203). Each maps to a content domain that already
+  // exists -- no section is registered against a domain the schema cannot
+  // supply. Deliberately excluded: a video-backed hero, because the approved
+  // video capability (DCFC-D105, Bunny.net Stream) is not built; and the
+  // Special Olympics registration carousel, whose generalization to "any
+  // program" DOMAIN-DESIGN.md explicitly leaves undecided.
+  "academy.hero": {
+    type: "academy.hero",
+    version: 1,
+    scope: "academy",
+    contentDomain: "homepage_hero_content",
+    compatibleTemplates: ["academy@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "academy.kit-feature": {
+    type: "academy.kit-feature",
+    version: 1,
+    scope: "academy",
+    contentDomain: "shop_kit_section",
+    compatibleTemplates: ["academy@1"],
+    requiredModule: "store",
+    requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "academy.partners": {
+    type: "academy.partners",
+    version: 1,
+    scope: "academy",
+    contentDomain: "site_sponsor_logos",
+    compatibleTemplates: ["academy@1"],
+    requiredModule: "sponsors",
+    requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "academy.standings": {
+    type: "academy.standings",
+    version: 1,
+    scope: "academy",
+    contentDomain: "league_standings",
+    compatibleTemplates: ["academy@1"],
+    requiredModule: "standings",
+    requiredEntitlement: "pro",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "academy.programs-pathway": {
+    type: "academy.programs-pathway",
+    version: 1,
+    scope: "academy",
+    contentDomain: "programs",
+    compatibleTemplates: ["academy@1"],
+    requiredModule: "programs",
+    requiredEntitlement: "pro",
+    cardinality: "single",
+    emptyBehavior: "hide",
     productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
   },
   "clubhouse.slideshow": {
@@ -498,6 +583,62 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "expandedProfiles",
       "seasons",
       "analytics",
+      "affiliations",
+    ],
+  },
+  // DCFC-D104: the approved Diverse City visual does not map to cinematic@1,
+  // so it becomes its own neutral reusable template following the clubhouse@1
+  // extraction precedent. It is a platform template, not a Diverse City one --
+  // any club may be assigned it.
+  "academy@1": {
+    id: "academy",
+    version: 1,
+    key: "academy@1",
+    displayName: "Academy",
+    originNote:
+      "Based on the approved Diverse City FC prospect visual system (pinned snapshot 5bbdfa3).",
+    defaultFontPack: "montserrat-inter-dmsans",
+    compatibleFontPacks: ["montserrat-inter-dmsans", "bebas-inter"],
+    defaultSections: [
+      "academy.hero",
+      "academy.kit-feature",
+      "shared.next-match",
+      "shared.history",
+      "academy.partners",
+      "academy.standings",
+      "academy.programs-pathway",
+    ],
+    supportedSections: [
+      "academy.hero",
+      "academy.kit-feature",
+      "shared.next-match",
+      "shared.history",
+      "academy.partners",
+      "academy.standings",
+      "academy.programs-pathway",
+    ],
+    defaultRoutes: ["home", "roster", "schedule", "club", "programs", "store", "contact"],
+    supportedRoutes: [
+      "home",
+      "roster",
+      "schedule",
+      "club",
+      "programs",
+      "store",
+      "sponsors",
+      "standings",
+      "tryouts",
+      "contact",
+    ],
+    supportedModules: [
+      "roster",
+      "schedule",
+      "store",
+      "sponsors",
+      "standings",
+      "programs",
+      "tryouts",
+      "contact",
       "affiliations",
     ],
   },

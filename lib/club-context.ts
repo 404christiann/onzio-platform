@@ -3,6 +3,7 @@ import { normalizeHostname } from "@/lib/tenant";
 import {
   parsePresentationDocument,
   templateKey,
+  type TemplateKey,
 } from "@/packages/presentation";
 
 export type ClubContext = {
@@ -16,7 +17,9 @@ export type ClubContext = {
   role: "owner" | "admin" | null;
   primaryColor: string | null;
   secondaryColor: string | null;
-  presentationTemplateKey: "cinematic@1" | "heritage@1" | "clubhouse@1" | null;
+  // Derived from the presentation package rather than restated, so registering
+  // a new template cannot leave this union silently stale.
+  presentationTemplateKey: TemplateKey | null;
 };
 
 const TEST_CONTEXTS = {

@@ -434,6 +434,83 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_page_content: {
+        Row: {
+          club_id: string
+          eyebrow: string
+          headline: string
+          hero_media_asset_id: string | null
+          intro: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          eyebrow?: string
+          headline?: string
+          hero_media_asset_id?: string | null
+          intro?: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          eyebrow?: string
+          headline?: string
+          hero_media_asset_id?: string | null
+          intro?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_page_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_page_content_club_id_hero_media_asset_id_fkey"
+            columns: ["club_id", "hero_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      contact_profile: {
+        Row: {
+          club_id: string
+          hours: string
+          public_email: string
+          public_phone: string
+          service_area: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          hours?: string
+          public_email?: string
+          public_phone?: string
+          service_area?: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          hours?: string
+          public_email?: string
+          public_phone?: string
+          service_area?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_profile_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       goalkeeper_match_stats: {
         Row: {
           clean_sheets: number
@@ -1460,6 +1537,91 @@ export type Database = {
           },
         ]
       }
+      programs: {
+        Row: {
+          body: string
+          club_id: string
+          created_at: string
+          detail_media_asset_id: string | null
+          display_title: string
+          external_cta_href: string
+          external_cta_label: string
+          hero_media_asset_id: string | null
+          highlights: Json
+          id: string
+          kicker: string
+          layout_variant: string
+          nav_label: string
+          slug: string
+          sort_order: number
+          status: string
+          summary: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          club_id: string
+          created_at?: string
+          detail_media_asset_id?: string | null
+          display_title: string
+          external_cta_href?: string
+          external_cta_label?: string
+          hero_media_asset_id?: string | null
+          highlights?: Json
+          id?: string
+          kicker?: string
+          layout_variant?: string
+          nav_label?: string
+          slug: string
+          sort_order?: number
+          status?: string
+          summary?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          club_id?: string
+          created_at?: string
+          detail_media_asset_id?: string | null
+          display_title?: string
+          external_cta_href?: string
+          external_cta_label?: string
+          hero_media_asset_id?: string | null
+          highlights?: Json
+          id?: string
+          kicker?: string
+          layout_variant?: string
+          nav_label?: string
+          slug?: string
+          sort_order?: number
+          status?: string
+          summary?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programs_club_id_detail_media_asset_id_fkey"
+            columns: ["club_id", "detail_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "programs_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programs_club_id_hero_media_asset_id_fkey"
+            columns: ["club_id", "hero_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
           active: boolean
@@ -1930,6 +2092,97 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clubs"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      tryouts: {
+        Row: {
+          closed_message: string
+          club_id: string
+          cost_text: string
+          created_at: string
+          cta_label: string
+          eligibility_copy: string
+          event_date: string | null
+          eyebrow: string
+          headline: string
+          hero_media_asset_id: string | null
+          id: string
+          intro: string
+          location: string
+          preparation_copy: string
+          program_id: string | null
+          registration_href: string
+          sort_order: number
+          status: string
+          updated_at: string
+          what_to_expect_copy: string
+        }
+        Insert: {
+          closed_message?: string
+          club_id: string
+          cost_text?: string
+          created_at?: string
+          cta_label?: string
+          eligibility_copy?: string
+          event_date?: string | null
+          eyebrow?: string
+          headline?: string
+          hero_media_asset_id?: string | null
+          id?: string
+          intro?: string
+          location?: string
+          preparation_copy?: string
+          program_id?: string | null
+          registration_href?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          what_to_expect_copy?: string
+        }
+        Update: {
+          closed_message?: string
+          club_id?: string
+          cost_text?: string
+          created_at?: string
+          cta_label?: string
+          eligibility_copy?: string
+          event_date?: string | null
+          eyebrow?: string
+          headline?: string
+          hero_media_asset_id?: string | null
+          id?: string
+          intro?: string
+          location?: string
+          preparation_copy?: string
+          program_id?: string | null
+          registration_href?: string
+          sort_order?: number
+          status?: string
+          updated_at?: string
+          what_to_expect_copy?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tryouts_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tryouts_club_id_hero_media_asset_id_fkey"
+            columns: ["club_id", "hero_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "tryouts_club_id_program_id_fkey"
+            columns: ["club_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["club_id", "id"]
           },
         ]
       }

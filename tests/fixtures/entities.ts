@@ -1,6 +1,7 @@
 export const CLUB_IDS = {
   alpha: "11111111-1111-4111-8111-111111111111",
   bravo: "22222222-2222-4222-8222-222222222222",
+  charlie: "33333333-3333-4333-8333-333333333333",
 } as const;
 
 export const USER_IDS = {
@@ -29,6 +30,18 @@ export const clubs = {
     primaryDomain: "bravo-onzio.vercel.app",
     lifecycle: "onboarding",
     publicAccess: "preview",
+    tier: "starter",
+  },
+  // The only Starter club that is also active and publicly live. Exists so
+  // anonymous public reads can be tested at Starter tier -- see the comment on
+  // this row in supabase/seed.sql.
+  charlie: {
+    id: CLUB_IDS.charlie,
+    slug: "charlie",
+    name: "Charlie Athletic",
+    primaryDomain: "charlie-onzio.vercel.app",
+    lifecycle: "active",
+    publicAccess: "live",
     tier: "starter",
   },
 } as const;

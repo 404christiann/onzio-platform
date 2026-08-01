@@ -4,6 +4,8 @@ export const ADMIN_TABLE_FEATURES = {
   about_page_content: "about",
   behind_the_rose_section: "homepage",
   club_logo_page_content: "about",
+  contact_page_content: "contact",
+  contact_profile: "contact",
   goalkeeper_match_stats: "roster",
   goalkeeper_season_stats: "roster",
   homepage_hero_content: "homepage",
@@ -16,6 +18,7 @@ export const ADMIN_TABLE_FEATURES = {
   player_photos: "roster",
   player_season_stats: "roster",
   players: "roster",
+  programs: "programs",
   seasons: "roster",
   shop_carousel_photos: "shop",
   shop_kit_photos: "shop",
@@ -25,6 +28,7 @@ export const ADMIN_TABLE_FEATURES = {
   site_social_links: "branding",
   site_sponsor_logos: "branding",
   staff: "roster",
+  tryouts: "tryouts",
 } as const;
 
 export type AdminTable = keyof typeof ADMIN_TABLE_FEATURES;
@@ -131,6 +135,8 @@ export const SINGLETON_TABLES = new Set<AdminTable>([
   "about_page_content",
   "behind_the_rose_section",
   "club_logo_page_content",
+  "contact_page_content",
+  "contact_profile",
   "homepage_hero_content",
   "homepage_slideshow_settings",
   "league_standings_settings",

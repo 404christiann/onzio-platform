@@ -42,6 +42,8 @@ migrated in place.
 - **Offboarding:** archive indefinitely; hard purge is a separate operator procedure
 - **Media:** public assets may remain cached after archival
 - **Image processing:** never use Supabase runtime Image Transformations
+- **Video:** tenant video is delivered through Bunny.net Stream, a
+  third-party video CDN; never transcoded in-house on Vercel or Supabase
 - **Non-goals:** no self-service signup, AWS, club-content drafts, dual-write
   migration, or immediate hard deletion
 
@@ -187,6 +189,46 @@ Generate Supabase TypeScript types from migrations. CI fails when generated type
 Enable RLS on every exposed table in the migration that creates it.
 
 Do not apply a blanket policy to all content. Define policies per table, operation, role, lifecycle, and tier.
+
+### How tier entitlement actually works
+
+Documented 2026-08-01 (`PF-003`). This mechanism was previously implicit, and
+its two surprises caused real near-misses — read this before adding any
+tenant content table.
+
+Tier is enforced by `onzio_private.club_has_feature(club_id, feature)`, which
+resolves true when either the club is Pro **or** the feature name appears in a
+**hardcoded Starter allowlist** inside the function body:
+
+```sql
+club.tier = 'pro'
+or p_feature in ('branding', 'roster', 'schedule', 'homepage', 'about', 'contact')
+```
+
+Two consequences that are not obvious from the call sites:
+
+1. **Any feature string not in that list is Pro-only by default.** There is no
+   registration step and no error for an unknown name — inventing a new
+   feature string silently makes the feature Pro-only.
+2. **`can_read_feature` gates anonymous public reads, not just admin writes.**
+   It is `can_read_club(club_id) AND club_has_feature(club_id, feature)`. So a
+   feature name that is unintentionally Pro-only does not raise an error for
+   Starter clubs — their public page simply renders with no rows. The failure
+   mode is a blank section, not a crash.
+
+When adding a tenant content table, decide its tier deliberately, add the
+feature string to the allowlist if it must be Starter-accessible, and register
+the table in `ADMIN_TABLE_FEATURES` (`lib/admin-data-contract.ts`) — a table
+missing from that map cannot be written through the admin boundary regardless
+of its RLS. Any edit to `club_has_feature` must preserve its definer rights,
+empty search path, stable volatility, and fully qualified relations.
+
+Note that tier entitlement is currently encoded independently in this
+allowlist, in `ADMIN_TABLE_FEATURES`, and in `packages/presentation`'s
+`moduleRegistry`, with known disagreements recorded as `PF-002` in
+`docs/platform-findings.md`. A contract in
+`tests/contracts/diverse-city-domains.test.ts` holds the three in agreement
+for every feature except those documented contradictions.
 
 ### Public reads
 
@@ -552,6 +594,76 @@ If direct-delivery bandwidth or page weight becomes expensive, generate
 responsive variants during upload. Do not return to Supabase runtime
 transformations or make a runtime optimizer a rendering dependency.
 
+## Video Pipeline
+
+Accepted 2026-07-31 (`DCFC-D105`) as part of the Diverse City FC epic. Video
+is a distinct capability from the photograph/graphic pipeline above and does
+not reuse it.
+
+### Decision
+
+- Tenant video (hero background clips, story/reel sections, and similar) is
+  delivered through a third-party video CDN, **Bunny.net Stream**, not
+  transcoded or streamed in-house.
+- Onzio never runs video encoding inside Vercel serverless functions.
+  Encoding video is CPU/memory/time-intensive in a way that does not fit the
+  serverless request/response model — the same class of constraint that
+  previously required moving Sharp/libvips-dependent work out of
+  request-serving code paths for images, except heavier. Vercel and Supabase
+  Storage bandwidth pricing is also uncompetitive against a purpose-built
+  video CDN once video is a real workload (Supabase Storage egress is
+  $0.09/GB uncached; Vercel Blob transfer is $0.05/GB; Bunny.net Stream
+  bandwidth is $0.01/GB with free standard H.264 encoding), so self-hosting
+  raw video files through the existing image-style pipeline is rejected on
+  both engineering-fit and cost grounds, not preference alone.
+- This does **not** extend or replace the existing `behind_the_rose_section`
+  YouTube-embed pattern (`lib/homepage-content.ts`'s
+  `normalizeYouTubeEmbedUrl()`), which remains valid for tenants that prefer
+  a standard YouTube player embed for a documentary-style content section.
+  Bunny.net Stream is for tenants that need a true full-bleed, autoplaying,
+  branded background video, which an iframe embed cannot do cleanly.
+- Rose City's existing homepage hero video is a hardcoded,
+  `club.slug === "rose-city"` legacy special case in `components/Hero.tsx`
+  (a raw Supabase Storage URL baked into the component), not a reusable
+  capability. This pipeline does not retrofit Rose City; migrating Rose
+  City's hero onto the new capability is a separate, explicitly
+  future decision, not authorized by this amendment.
+
+### Upload and delivery flow (high level; exact limits are Phase 2 detail)
+
+1. AAL2 admin requests upload authorization for a video field, the same
+   membership/lifecycle/tier/surface checks as the photograph flow.
+2. The browser or server uploads the source file to Bunny.net Stream via its
+   API (not through Supabase Storage staging).
+3. Bunny.net Stream performs standard H.264 encoding (free tier) and
+   generates a poster/thumbnail.
+4. Onzio stores the returned video identifier/playback URL and poster
+   reference on the owning content row (e.g. a `video_asset_ref`-style
+   column), not in `onzio.media_assets` — Bunny-hosted video is a distinct
+   reference type from Supabase-hosted `media_assets` rows and must not be
+   conflated with the image pipeline's tenant-safe composite foreign keys.
+5. Public pages request video directly from Bunny.net's delivery URL;
+   Vercel/Next.js never proxies or transforms video.
+6. Replacing a club's video re-runs the same flow and updates the reference;
+   old Bunny.net assets are deleted analogous to the image pipeline's
+   replacement-then-cleanup order (update the reference first, then remove
+   the old asset).
+
+### Explicitly deferred to `DCFC-201`/`DCFC-202`
+
+- Accepted file formats, maximum file size, maximum duration, and dimension
+  limits (the video-equivalent of the photograph pipeline's 15MB/6000px
+  rules).
+- Whether poster images are club-uploaded or Bunny-auto-extracted by
+  default.
+- Whether Bunny.net API credentials are a single Onzio-wide account (billing
+  consolidated at the operator level) or provisioned per-tenant — default
+  to a single Onzio-wide account unless a concrete reason emerges to
+  isolate per tenant, consistent with the platform's one-shared-deployment
+  posture elsewhere.
+- Monitoring: whether video delivery failures get the same deliberate
+  layout-preserving fallback treatment already required for images.
+
 ## Provisioning, Archival, and Purge
 
 ### Provisioning
@@ -785,8 +897,28 @@ Gate:
 - both templates pass approved desktop/mobile visual parity
 - draft, preview, publish, rollback, template switching, RLS, and tenant
   isolation pass
-- Rose City continues rendering and operating without tenant-specific
-  presentation special cases
+- New tenants render entirely through published presentation-template
+  resolution, with no tenant-identity branches. `clubhouse@1` (Lions) is the
+  worked precedent: it resolves via
+  `club.presentationTemplateKey === "clubhouse@1"`, never a club slug.
+- Rose City continues rendering and operating correctly, but **retains six
+  documented legacy `club.slug === "rose-city"` branches** that predate the
+  presentation system and have not been extracted. This is the honest
+  achieved scope of Phase 9, corrected on 2026-08-01 — the gate previously
+  claimed Rose City had no tenant-specific presentation special cases, which
+  was not true. The remaining branches are enumerated with a per-branch
+  extractability assessment in `docs/platform-findings.md` (`PF-001`).
+  Extracting them is deliberately deferred: one is blocked on unbuilt video
+  infrastructure (`PF-005`), one is a clean template extraction, and three
+  require new normalized content domains. A seventh occurrence — the dead
+  `ShopHero` branch in `app/(public)/shop/page.tsx`, unreachable because
+  `SHOW_SHOP_HERO` is the constant `false` — was removed on 2026-08-01
+  rather than documented, since it rendered for no club at all.
+
+  This gate does **not** license adding new slug branches. Rose City's are
+  a documented legacy debt with a named register entry; new tenants,
+  including Diverse City, must define a neutral reusable template or
+  registered template capability instead.
 
 ### Phase 10 — Prospect automation
 

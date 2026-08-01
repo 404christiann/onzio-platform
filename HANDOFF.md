@@ -2,7 +2,273 @@
 
 Last updated: 2026-07-31
 
+## Open Platform Findings
+
+`docs/platform-findings.md` is the durable register of platform-wide issues
+that have been verified but not fixed. Read it before working in the areas it
+names. As of 2026-08-01 it holds three open findings and three resolved. No
+open finding affects a live site.
+
+- **PF-005 and PF-006** — **resolved 2026-08-01, together.** Rose City's
+  homepage hero video pointed at the legacy Supabase project
+  `nsgtkwqkbyxkiwrhzsje`, permanently deleted during the Phase 8 closeout,
+  so the hero had silently been showing only its static poster. Christian
+  chose to remove the dead video and keep the poster as the intended hero;
+  the source file remains recoverable from the frozen export if video is
+  ever wanted back. PF-006 — that nothing checked whether code still
+  referenced deleted infrastructure — is closed by a new architecture
+  contract, `references no permanently deleted Supabase project`, which on
+  its first run immediately caught eleven further dead `remotePatterns`
+  entries in `next.config.mjs`. Full detail, including a behavior bug caught
+  mid-change, is in the register.
+- **PF-001** — **resolved 2026-08-01.** Phase 9's gate claimed Rose City
+  rendered without tenant-specific presentation special cases; it did not.
+  Investigation found the original entry undercounted (seven occurrences,
+  not six — it missed `lib/flags.ts:51`) and wrongly described the branches
+  as working, since `Hero.tsx`'s gated content is dead (PF-005). Per
+  Christian's decision the gate was amended to state its true achieved
+  scope, and the one dead branch — `ShopHero` in
+  `app/(public)/shop/page.tsx`, unreachable because `SHOW_SHOP_HERO` is the
+  constant `false` — was deleted. Six documented legacy branches remain, now
+  recorded as debt in the plan rather than contradicted by it. Extraction
+  was deliberately not undertaken: it is not one refactor but a deletion, a
+  blocked branch, one clean template extraction, and three new content
+  domains.
+- **PF-002** — three parallel entitlement sources of truth
+  (`club_has_feature`, `ADMIN_TABLE_FEATURES`, `moduleRegistry`), with
+  confirmed `shop` and `seasons` contradictions. Latent: needs a club that is
+  both Starter tier and publicly live, which no seeded club currently is.
+- **PF-003** — the tier/feature entitlement mechanism is undocumented in the
+  platform plan, which is why PF-002-class bugs keep nearly shipping.
+- **PF-004** — the Bunny.net video reference deliberately deviates from the
+  "content records reference media assets" principle; recorded for
+  visibility, revisit in `DCFC-202`.
+
+None of these are authorized to be fixed without their own scoped approval.
+
 ## Current State
+
+The Diverse City FC Phase 0-3 planning packet is complete and ready for
+Christian's review under `docs/phase-11/diverse-city/`. It defines the
+agent-neutral epic, accepted and open decisions, initial route/content matrix,
+visual acceptance contract, 14 dependency-scoped work packages, and a shared
+status ledger. `AGENTS.md` and the new root `CLAUDE.md` now require every agent
+to record package status, completed work, files changed, verification,
+blockers, and the exact next step before ending. This checkpoint changed no
+product code and mutated no hosted Supabase, Storage, Vercel, Stripe, DNS,
+Auth, Resend, email, or club resource.
+
+The packet does not start a production Phase 11 rollout or authorize work
+beyond local Phase 0-3 preparation.
+
+`DCFC-001` (Contact visual specification) is `complete`. Claude Code added
+`/contact` to the isolated Diverse City snapshot
+(`/Users/christianalcala/Downloads/onzioProspects/diverse-city-fc/site`) using
+the club's real, already-verified email/phone/social destinations from
+`lib/site-data.ts` plus original headline/intro copy. `npm run typecheck` and
+`npm run build` passed in the snapshot, and local desktop/mobile browser
+checks found no console errors, broken images, or horizontal overflow.
+Christian reviewed the page, asked for the location line to drop its
+"— Chicago Area" suffix (now just "Schaumburg, Illinois"), and then approved
+it in full. Decision `DCFC-D101` is now accepted and recorded in
+`DECISIONS.md`.
+
+`DCFC-002` (Tryouts) is `complete`, approved by Christian on 2026-07-31.
+Claude Code added `/tryouts` with a status-aware hero
+(`upcoming`/`open`/`closed`; shipped as `upcoming`, the honest current
+state), an external registration CTA that reuses the same already-approved
+temporary destination as the existing Special Olympics program page, and
+honest "TBA" placeholders for location and cost — no registration fact was
+invented. The CTA fails closed to a `mailto:` contact link when closed or
+when no URL is set (both verified by temporarily toggling). Per Christian's
+explicit direction, the primary nav was restructured: "Schedule" is now a
+dropdown (Fixtures + Tryouts, mirroring the existing Programs dropdown
+pattern via a shared generic open/close state), and "Contact" was added to
+the primary nav after Store (previously footer-only), in addition to new
+footer links. Christian's first review pass asked for the eyebrow/status
+badge/"Take the field." headline line to be removed (headline is now the
+single line "Join Diverse City FC," no trailing period), the Age Groups card
+removed (row is now Location and Cost only), the Schedule/Programs dropdown
+panels tightened (a fixed `min-w-64` was leaving large empty space for short
+labels), the hero-to-cards vertical gap tightened (two paddings were
+stacking), and the Location/Cost block realigned so it shrinks to its own
+content on desktop instead of stretching across the full section width.
+`npm run typecheck` passed throughout; `npm run build` passed after clearing
+a stale `.next` cache caused by running build concurrently with the dev
+server (a tooling artifact, not an application defect). Local desktop/mobile
+browser checks confirmed every revision, no overflow, no console errors, no
+broken images. Decision `DCFC-D102` is partially resolved: the CTA label,
+temporary registration URL, navigation placement, and visual layout are
+approved; the underlying age group/eligibility/date/location/cost facts
+remain open, and `DCFC-D103` (single vs. multiple tryout events) remains
+explicitly deferred to Phase 1. Full history is in
+`docs/phase-11/diverse-city/STATUS.md`.
+
+`DCFC-003` (visual freeze and approval) is `complete`. Claude Code gathered
+every item on `VISUAL-ACCEPTANCE.md`'s evidence checklist for both routes
+(HTTP 200, no console errors, no overflow at 1440x900/390px, positive image
+dimensions, real-keyboard focus reaching a visible native outline, every
+nav/footer link verified, external links confirmed as no-data-submission
+anchors, and `noindex, nofollow` verified via both the response header and
+page meta) and, with Christian's explicit approval, created one local git
+commit in the snapshot repository —
+`a0f9f0c201e7d0e54b821c22f8c60159798f7477`. Two honest gaps were recorded
+rather than silently resolved: no FAQ content exists for Tryouts (none was
+supplied), and there was no dedicated Dates detail card (dates were
+acknowledged only in the intro paragraph's prose). Christian then asked for
+the Dates gap to be closed: Claude Code added a dedicated Date detail card
+(`TBA`, honest placeholder) alongside Location and Cost, and, with Christian's
+explicit approval, created a second local commit —
+`5bbdfa33d59163b218bbd33745f9cfd4a66d379f`, now the approved commit of
+record. The snapshot repo has no configured remote; neither commit was or
+could be pushed. Full evidence is in
+`docs/phase-11/diverse-city/VISUAL-ACCEPTANCE.md`.
+
+`DCFC-101` (field-level content and asset inventory) is `complete`. Claude
+Code expanded `CONTENT-MATRIX.md` to field-level coverage for every route in
+the pinned commit, reading the actual rendered source of each route rather
+than assuming, and computing real `sha256` checksums for every referenced
+media asset instead of leaving them as placeholders. The pass also documented
+which Rose-City-inherited files/components are dead code not wired to any
+current Diverse City route, so they aren't mistaken for the live content
+source later. Two findings were flagged as needing Christian's explicit
+confirmation — neither was invented or changed by this pass, both already
+existed in the approved snapshot: (1) `DiverseLeagueStandings.tsx` hardcodes
+a specific 10-row UPSL standings table with real-named opponent clubs and no
+documented provenance, and (2) a "conference championships and national-stage
+appearances" claim is repeated verbatim on both the About page and the Men's
+Teams program page with no documented provenance. Both are now resolved:
+Christian confirmed on 2026-07-31 that standings will be an admin-editable
+domain (not a one-time import — the current table is placeholder/seed data
+pending that admin capability), and that the championships claim needs no
+further resolution right now. Full detail is in
+`docs/phase-11/diverse-city/CONTENT-MATRIX.md`.
+
+`DCFC-102` (reusable platform gap analysis) is `complete`. Claude Code
+compared the approved specification against the actual current state of
+`onzio-platform` — real schema, registries, and admin routes, not the
+architecture plan's prose — and wrote the comparison to a new
+`PLATFORM-GAP-ANALYSIS.md`. Notable findings: standings/homepage/About/Shop/
+Sponsors/Roster/Branding all have existing tables and admin editors already
+(directly matching Christian's standings confirmation above); dropdown
+navigation and generic URL-protocol validation already exist platform-wide
+with no new code needed; `tryouts` already has a registered route and
+Pro-tier module entry but no schema, section type, or admin editor yet;
+Programs and Contact are true gaps needing everything built from scratch;
+and video capability is a genuine open question — the existing
+YouTube-embed pattern doesn't cover Diverse City's self-hosted MP4 videos,
+which is exactly what decision `DCFC-D105` needs to resolve. No club-specific
+conditionals were proposed as a substitute for real reusable capability.
+`DCFC-103` (lock content and presentation architecture) is now eligible, but
+needs Christian's input on `DCFC-D104` (template mapping) and `DCFC-D105`
+(video direction) before it can close. No hosted Supabase, Storage, Vercel,
+Stripe, DNS, email, or production resource was mutated.
+
+`DCFC-103` (lock content and presentation architecture) is `complete`,
+approved by Christian on 2026-07-31 as decision `DCFC-D109`. **This closes
+Phase 1 of the epic.** Its two deliverables are the normalized domain design
+in `docs/phase-11/diverse-city/DOMAIN-DESIGN.md` (`onzio.programs`,
+`onzio.contact_profile`, `onzio.contact_page_content`, `onzio.tryouts`) and
+the new "Video Pipeline" section in `docs/onzio-platform-plan.md` recording
+the Bunny.net Stream decision. Before approval, each of the design's
+load-bearing claims was re-verified against real migration source rather
+than the draft's own assertions — the `club_has_feature` Starter allowlist,
+the pre-existing `onzio.site_social_links` table, `media_assets.surface`
+being regex-constrained free-form rather than an enum, the absence of any
+existing email/phone column, and the `homepage_hero_content` singleton
+shape all confirmed. Two fixes were applied at Christian's direction:
+`EPIC.md`'s pinned snapshot commit was corrected from the pre-`DCFC-003`
+`08f7b53c…` to the approved `5bbdfa33…`, and an explicit column-constraint
+policy was added to the design so `DCFC-202` is not left deciding lengths
+and URL shapes ad-hoc while writing SQL. Writing that policy caught a real
+latent bug: `homepage_hero_content` constrains CTA hrefs to internal paths
+only (`^/[-A-Za-z0-9_/?#=&%.]*$`), and copying that pattern onto
+`programs.external_cta_href` or `tryouts.registration_href` would have
+rejected every external registration URL those columns exist to hold —
+failing only when a club first saved a real partner link. Those columns now
+mirror the `''`/local-path/`http:`/`https:`/`mailto:` allowlist already
+enforced in `lib/admin-data-contract.ts`. No migration was written or
+applied, no application code or test changed, and the isolated snapshot
+repository was read but not modified (still clean at `5bbdfa3`).
+`DCFC-201` (red contracts) is now `ready` but deliberately unassigned and
+unstarted — eligibility is not authorization. No hosted Supabase, Storage,
+Vercel, Stripe, DNS, email, or production resource was mutated.
+
+`DCFC-201` (red contracts) is `complete` as of 2026-08-01, opening Phase 2.
+It added 32 focused contracts across `tests/contracts/diverse-city-domains.test.ts`
+and `tests/database/diverse-city-domains.test.ts` — 27 intentionally red, 5
+green where they lock existing correct behavior. **The suite is now
+deliberately red: `npm test` reports 27 failures, all in those two files.**
+They describe the schema, RLS, tier gating, and presentation registrations
+that `DCFC-202` and `DCFC-203` must build; per `AGENTS.md` they must not be
+skipped, weakened, mocked, or satisfied with placeholder tables. All 549
+previously-passing tests still pass (554 now, including the 5 new green
+ones), so nothing regressed.
+
+The package also seeded club `charlie` — Starter, active, and publicly live.
+That combination existed nowhere before: Alpha and Lions are Pro, and Bravo
+is Starter but onboarding/preview, so `can_read_club` rejects it before tier
+is ever consulted. Without it the `DCFC-D108` tier coverage could not be
+written, and it is the same gap that kept PF-002 invisible to the suite.
+Eight database contracts were also caught passing as false greens — they
+asserted only that an operation was rejected, and a missing table is itself a
+rejection — so every negative assertion now names the specific PostgREST or
+Postgres error code it expects (`42501` for a denial, `23514` for a check
+violation, never `PGRST205`).
+
+`DCFC-202` (schema, RLS, types, audit) is `complete` as of 2026-08-01.
+`supabase/migrations/20260801120000_phase11_diverse_city_domains.sql` creates
+`onzio.programs`, `onzio.contact_profile`, `onzio.contact_page_content`, and
+`onzio.tryouts` exactly as `DOMAIN-DESIGN.md` specifies — composite
+`(club_id, id)` uniqueness and tenant-safe composite foreign keys (including
+`tryouts (club_id, program_id)` → `programs`, so a tryout cannot reference
+another club's program), the approved column-length and href constraints, RLS
+with four policies per table, audit and updated-at triggers, and
+`(club_id, sort_order, …)` indexes. `club_has_feature` was additively extended
+with `'contact'` per `DCFC-D108` while reproducing every security attribute of
+the original definition. All four tables are registered in
+`ADMIN_TABLE_FEATURES`, both contact tables in `SINGLETON_TABLES`, and
+`lib/database.generated.ts` is regenerated.
+
+All 17 database contracts pass, including the `DCFC-D108` tier behavior: an
+anonymous reader of the Starter club `charlie` can read `contact_*` but gets
+nothing from `programs`/`tryouts`, while the same reads succeed for a Pro
+club.
+
+**Suite status corrected 2026-08-01: the suite is GREEN, 581/581 across 57
+files** — not the 3 intentional failures previously recorded here. Those three
+(`academy@1` template, `programs`/`contact` routes, module entitlements) now
+pass because `DCFC-203` implementation work was done in the working tree
+**without a completion record**.
+
+**`DCFC-203` is `in_progress`, not complete.** A 2026-08-01 audit verified the
+registry work is real and good — `academy@1` with a `montserrat-inter-dmsans`
+font pack and five `academy.*` sections mapping 1:1 onto `CONTENT-MATRIX.md`'s
+homepage inventory, plus the `programs`/`contact` routes and `DCFC-D108`
+entitlements — but found two gaps its own contracts do not cover:
+
+1. **No pinned `academy@1` document contract.** `cinematic@1` and
+   `clubhouse@1` each have one in
+   `tests/contracts/presentation-system.test.ts`; `academy@1` does not, so
+   nothing proves an `academy@1` document actually validates.
+2. **A reachable font-pack bug.** `academy@1.compatibleFontPacks` includes
+   `bebas-inter`, but `fontPacks["bebas-inter"].compatibleTemplates` omits
+   `academy@1`. Template switching keeps the font pack by reading one list
+   (`index.ts:839`) and validation then rejects the document by reading the
+   other (`index.ts:701`), so `switchTemplate` emits a document that fails its
+   own validation. Only `academy@1` is affected; the other three templates are
+   bidirectionally consistent.
+
+Full evidence, reproduction, and the recommended fix direction are in the
+2026-08-01 audit record in `docs/phase-11/diverse-city/STATUS.md`.
+
+`DCFC-202` also closed **PF-003** — `docs/onzio-platform-plan.md` now
+documents the tier-entitlement mechanism under Row-Level Security: the
+hardcoded Starter allowlist, Pro-by-default for unlisted feature names, and
+the fact that `can_read_feature` gates anonymous public reads so the failure
+mode is a blank page rather than an error. **PF-004** remains open and was
+not actionable in this package — it concerns the Bunny.net video reference
+column, which this migration does not add.
 
 The Lions mockup conversion `/goal` is complete locally. The current Lions
 public site uses the reusable published `clubhouse@1` presentation-template
@@ -2210,21 +2476,15 @@ Known non-blocking warnings:
 
 ## Next Milestone
 
-Continue Phase 9 with 9.4 — `cinematic@1` extraction.
+Review `docs/phase-11/diverse-city/EPIC.md`, resolve or provide the inputs for
+`DCFC-D101` and `DCFC-D102`, then assign the local snapshot work packages
+`DCFC-001` and `DCFC-002`. Each assigned agent must update
+`docs/phase-11/diverse-city/STATUS.md` before ending its work.
 
-Next exact step: move the current Rose City public composition behind the
-neutral `cinematic@1` renderer in `packages/presentation`, replace
-Rose City-specific presentation conditionals with registered template behavior,
-bind the renderer to the existing normalized tenant content/media queries, and
-capture desktop/mobile parity evidence before claiming visual preservation.
-
-Then proceed to 9.5 only after Rose City desktop/mobile visual parity, route
-behavior, admin behavior, media resilience, accessibility, contracts,
-architecture, local database checks, TypeScript, lint, and build remain green.
-
-Prospect automation remains Phase 10. The first new club rollout remains
-Phase 11. Continue to require fresh approval for any production deployment or
-hosted mutation.
+This is preparatory work for a future first-new-club rollout. It does not
+bypass the platform's presentation, prospect-automation, staging, billing,
+domain, or production acceptance gates. Continue to require fresh approval for
+every hosted mutation, publication, and production action.
 
 ## Historical Phase 8 closeout chronology
 

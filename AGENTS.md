@@ -122,6 +122,12 @@ npm test
 After meaningful work:
 
 - update `HANDOFF.md` with completed work, verification, blockers, and the next step
+- when working from a scoped epic or work package, update its status ledger
+  before ending the turn; record the package ID, status, completed work, files
+  changed, verification, blockers, and exact next step so another agent can
+  resume without reconstructing the work
+- never mark a work package complete unless its required acceptance evidence
+  is recorded; use `blocked` or `in_progress` honestly when work remains
 - update the architecture plan only when architecture changes
 - update this file only when stable repository-wide agent instructions change
 - do not use `AGENTS.md` as a chronological activity log

@@ -5,6 +5,22 @@ import { describe, expect, it } from "vitest";
 const ROOT = process.cwd();
 const IMPLEMENTATION_ROOTS = ["app", "lib", "components"];
 
+// Supabase projects that have been permanently deleted. Nothing that runs may
+// reference them: the hostnames no longer resolve, so a reference is a request
+// that can only ever fail. Add an entry here whenever a project is
+// decommissioned — deleting the infrastructure is not the same as removing the
+// code that asks for it, and only this contract checks the second half.
+const DECOMMISSIONED_SUPABASE_HOSTS = [
+  // Legacy "Rose City Website" project, deleted during the Phase 8 closeout.
+  "nsgtkwqkbyxkiwrhzsje.supabase.co",
+];
+
+// Files that record a decommissioned host as historical provenance rather than
+// fetching from it. These document where already-migrated data came from.
+const DECOMMISSIONED_HOST_PROVENANCE_ALLOWLIST = new Set([
+  "lib/migration/rose-city-plan.ts",
+]);
+
 async function requireFile(path: string): Promise<string> {
   const absolute = resolve(ROOT, path);
   try {
@@ -77,6 +93,28 @@ describe("Next image architecture contract", () => {
       const contents = await readFile(resolve(ROOT, path), "utf8");
       if (contents.includes("/storage/v1/render/image/")) {
         violations.push(relative(ROOT, resolve(ROOT, path)));
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("references no permanently deleted Supabase project", async () => {
+    const files = (
+      await Promise.all(
+        IMPLEMENTATION_ROOTS.map((root) => sourceFiles(root)),
+      )
+    ).flat();
+    files.push("next.config.mjs");
+
+    const violations: string[] = [];
+    for (const path of files) {
+      const relativePath = relative(ROOT, resolve(ROOT, path));
+      if (DECOMMISSIONED_HOST_PROVENANCE_ALLOWLIST.has(relativePath)) continue;
+      const contents = await readFile(resolve(ROOT, path), "utf8");
+      for (const host of DECOMMISSIONED_SUPABASE_HOSTS) {
+        if (contents.includes(host)) {
+          violations.push(`${relativePath} references ${host}`);
+        }
       }
     }
     expect(violations).toEqual([]);

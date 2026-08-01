@@ -14,13 +14,8 @@ export default function Hero() {
   const branding = useClubBranding();
   const usesLegacyRoseCityHero = club.slug === "rose-city";
   const ctaRef   = useRef<HTMLDivElement>(null);
-  const videoRef  = useRef<HTMLVideoElement>(null);
   const hasAnimated = useRef(false);
-  const [videoMounted, setVideoMounted] = useState(false);
   const [heroContent, setHeroContent] = useState(DEFAULT_HOMEPAGE_HERO_CONTENT);
-
-  // Render video only client-side — iOS Safari ignores autoplay on SSR-rendered video elements
-  useEffect(() => { setVideoMounted(true); }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,56 +44,6 @@ export default function Hero() {
       { y: 0, opacity: 1, duration: 0.9, ease: "power3.out", delay: 0.8 }
     );
   }, []);
-
-  // iOS Safari autoplay: muted + playsInline is not enough on a cold page load
-  // because the browser hasn't seen a user gesture yet. Strategy:
-  //   1. Try .play() immediately — works on client-side navigation & most browsers.
-  //   2. If rejected, register a one-shot touchstart listener so the video
-  //      starts the instant the user first touches the screen (scroll, tap, anything).
-  //   3. Also retry on canplay/loadeddata for slow connections.
-  useEffect(() => {
-    if (!usesLegacyRoseCityHero) return;
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.muted = true;
-
-    let unlocked = false;
-
-    const playVideo = () => {
-      if (!video.paused) return;
-      video.play().catch(() => {});
-    };
-
-    const onFirstTouch = () => {
-      if (unlocked) return;
-      unlocked = true;
-      playVideo();
-      document.removeEventListener("touchstart", onFirstTouch);
-    };
-
-    const tryPlay = () => {
-      video.play().catch(() => {
-        // Autoplay blocked — wait for first user touch
-        document.addEventListener("touchstart", onFirstTouch, { once: true });
-      });
-    };
-
-    video.load();
-    tryPlay();
-    video.addEventListener("canplay", playVideo);
-    video.addEventListener("loadeddata", playVideo);
-
-    const onVisibility = () => { if (!document.hidden) playVideo(); };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      video.removeEventListener("canplay", playVideo);
-      video.removeEventListener("loadeddata", playVideo);
-      document.removeEventListener("visibilitychange", onVisibility);
-      document.removeEventListener("touchstart", onFirstTouch);
-    };
-  }, [usesLegacyRoseCityHero, videoMounted]);
 
   if (club.presentationTemplateKey === "clubhouse@1") {
     const headlineOne = heroContent.headline_line_one.trim() || club.name;
@@ -220,11 +165,12 @@ export default function Hero() {
 
   return (
     <section className="relative h-screen min-h-[600px] w-full overflow-hidden md:h-[50vh] md:min-h-[380px]">
-      {/* Background video — rendered client-side only so iOS Safari treats it as a
-          fresh element and respects the muted autoplay policy */}
+      {/* Static hero background. The legacy hardcoded video source lived on a
+          Supabase project that was permanently deleted in the Phase 8 closeout,
+          so the poster is now the hero image rather than a placeholder for a
+          clip that can never load. See PF-005 in docs/platform-findings.md. */}
       <div className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
-        {/* Poster shown until the video element is created client-side */}
-        {!videoMounted && (
+        {usesLegacyRoseCityHero && (
           <ResilientNativeImage
             src="/images/hero-poster.jpg"
             alt=""
@@ -239,31 +185,6 @@ export default function Hero() {
               minHeight: "100%",
               transform: "translate(-50%, -50%)",
               objectFit: "cover",
-            }}
-          />
-        )}
-        {videoMounted && usesLegacyRoseCityHero && (
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            poster="/images/hero-poster.jpg"
-            src="https://nsgtkwqkbyxkiwrhzsje.supabase.co/storage/v1/object/public/videos/Pan_Bench_Land_ready.mp4"
-            onCanPlay={() => { videoRef.current?.play().catch(() => {}); }}
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              width: "177.78vh",
-              height: "56.25vw",
-              minWidth: "100%",
-              minHeight: "100%",
-              transform: "translate(-50%, -50%)",
-              objectFit: "cover",
-              pointerEvents: "none",
             }}
           />
         )}
