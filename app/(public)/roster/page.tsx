@@ -123,6 +123,7 @@ function LegacyRosterPage() {
     : [];
 
   const seasonLabel = roster?.seasonLabel ?? "";
+  const hasRosterContent = groups.some((group) => group.players.length > 0) || staffList.length > 0;
 
   return (
     <div style={{ backgroundColor: "var(--color-white)" }}>
@@ -177,13 +178,22 @@ function LegacyRosterPage() {
 
           {/* Player groups */}
           <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-10">
-            {groups.map((g) => (
+            {!hasRosterContent ? (
+              <div className="border-y border-black/10 py-14 text-center">
+                <h2 className="font-display text-2xl font-black uppercase text-[var(--color-black)]">
+                  Roster coming soon
+                </h2>
+                <p className="mx-auto mt-3 max-w-xl font-body text-[var(--color-gray-mid)]">
+                  Official player and staff details have not been published yet.
+                </p>
+              </div>
+            ) : groups.map((g) => (
               <RosterGroup key={g.label} label={g.label} players={g.players} seasonLabel={seasonLabel} />
             ))}
           </div>
 
           {/* Technical Staff */}
-          <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-24">
+          {hasRosterContent && <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-24">
             <div ref={staffRef} style={{ opacity: 0 }}>
               <div className="flex items-center gap-4 mb-8">
                 <h2
@@ -207,7 +217,7 @@ function LegacyRosterPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </div>}
         </>
       )}
     </div>

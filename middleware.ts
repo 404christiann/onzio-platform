@@ -13,13 +13,20 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/club/about",
   "/club/logo",
   "/club-logo",
+  "/programs",
+  "/contact",
+  "/tryouts",
 ]);
+
+const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
+const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);
 
 function isPublicTenantPath(pathname: string): boolean {
   if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
   return (
     /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
-    /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname)
+    /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
+    PROGRAM_DETAIL_PATH.test(pathname)
   );
 }
 
@@ -43,7 +50,6 @@ function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
 }
 
 export async function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname.startsWith("/_clubs/")) return notFound();
   if (request.nextUrl.pathname === "/api/stripe/webhook") {
     return NextResponse.next({ request });
   }
@@ -158,6 +164,10 @@ export async function middleware(request: NextRequest) {
   ) {
     return notFound();
   }
+  if (request.nextUrl.pathname.startsWith("/_clubs/")) {
+    const internalSlug = request.nextUrl.pathname.split("/")[2] ?? "";
+    if (internalSlug !== tenant.slug) return notFound();
+  }
 
   const { data: runtimeAccess, error: runtimeAccessError } = await onzio.rpc(
     "get_club_runtime_access",
@@ -198,6 +208,11 @@ export async function middleware(request: NextRequest) {
 
   if (isPublicTenantPath(request.nextUrl.pathname)) {
     const target = request.nextUrl.clone();
+    // Preserve the already-normalized tenant hostname. In local development,
+    // Next may expose request.nextUrl with a localhost origin even when the
+    // verified Host header is a tenant subdomain; rewriting that origin would
+    // re-enter middleware as a direct internal route and fail closed.
+    target.hostname = hostname;
     target.pathname = `/_clubs/${tenant.slug}${request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname}`;
     const rewritten = NextResponse.rewrite(target, {
       request: { headers: requestHeaders },

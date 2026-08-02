@@ -4,6 +4,19 @@
 //  from lib/data.ts via lib/queries.ts instead.
 // ─────────────────────────────────────────────
 
+import type { Tables } from "@/lib/database.generated";
+
+export type DBProgram = Tables<{ schema: "onzio" }, "programs">;
+export type DBContactProfile = Tables<
+  { schema: "onzio" },
+  "contact_profile"
+>;
+export type DBContactPageContent = Tables<
+  { schema: "onzio" },
+  "contact_page_content"
+>;
+export type DBTryout = Tables<{ schema: "onzio" }, "tryouts">;
+
 export type DBPlayer = {
   id: string;
   number: number;

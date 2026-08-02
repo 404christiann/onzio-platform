@@ -223,7 +223,12 @@ export const fontPacks: Record<string, FontPackRegistration> = {
   "bebas-inter": {
     key: "bebas-inter",
     displayName: "Bebas Neue + Inter",
-    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1"],
+    compatibleTemplates: [
+      "cinematic@1",
+      "heritage@1",
+      "clubhouse@1",
+      "academy@1",
+    ],
   },
   "archivo-sora": {
     key: "archivo-sora",

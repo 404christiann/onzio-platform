@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { isAllowedPublicHref } from "@/lib/public-link";
+import {
+  isValidPublicEmail,
+  isValidPublicPhone,
+} from "@/lib/contact-admin";
 
 export const ADMIN_TABLE_FEATURES = {
   about_page_content: "about",
@@ -60,9 +65,7 @@ const row = z
       if (
         typeof fieldValue === "string" &&
         /(?:url|href|link)$/.test(key) &&
-        fieldValue !== "" &&
-        !fieldValue.startsWith("/") &&
-        !/^(?:https?:|mailto:)/i.test(fieldValue)
+        !isAllowedPublicHref(fieldValue)
       ) {
         context.addIssue({
           code: "custom",
@@ -98,36 +101,196 @@ const row = z
     }
   });
 
+const uuid = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  );
+const nullableUuid = uuid.nullable();
+const optionalText = (maximum: number) => z.string().max(maximum).optional();
+const externalHref = z
+  .string()
+  .max(2_048)
+  .refine(isAllowedPublicHref, {
+    message: "URL fields require http, https, mailto, or a local path",
+  })
+  .optional();
+
+const programMutation = z
+  .object({
+    id: uuid.optional(),
+    slug: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z][a-z0-9-]*$/)
+      .optional(),
+    nav_label: optionalText(40),
+    display_title: z.string().min(1).max(120).optional(),
+    kicker: optionalText(80),
+    summary: optionalText(320),
+    body: optionalText(6_000),
+    highlights: z.array(z.string().max(320)).max(200).optional(),
+    layout_variant: z.enum(["statement_band", "detail_focus"]).optional(),
+    hero_media_asset_id: nullableUuid.optional(),
+    detail_media_asset_id: nullableUuid.optional(),
+    external_cta_label: optionalText(40),
+    external_cta_href: externalHref,
+    status: z.enum(["active", "hidden"]).optional(),
+    sort_order: z.number().int().optional(),
+  })
+  .strict();
+
+const contactProfileMutation = z
+  .object({
+    public_email: z
+      .string()
+      .max(254)
+      .refine(isValidPublicEmail, {
+        message: "Public email must be empty or a valid email address",
+      })
+      .optional(),
+    public_phone: z
+      .string()
+      .max(40)
+      .refine(isValidPublicPhone, {
+        message: "Public phone must be empty or a valid telephone number",
+      })
+      .optional(),
+    service_area: optionalText(120),
+    hours: optionalText(200),
+  })
+  .strict();
+
+const contactPageMutation = z
+  .object({
+    eyebrow: optionalText(80),
+    headline: optionalText(80),
+    intro: optionalText(320),
+    hero_media_asset_id: nullableUuid.optional(),
+  })
+  .strict();
+
+const tryoutMutation = z
+  .object({
+    id: uuid.optional(),
+    program_id: nullableUuid.optional(),
+    status: z.enum(["upcoming", "open", "closed"]).optional(),
+    eyebrow: optionalText(80),
+    headline: optionalText(80),
+    intro: optionalText(320),
+    hero_media_asset_id: nullableUuid.optional(),
+    eligibility_copy: optionalText(2_000),
+    what_to_expect_copy: optionalText(2_000),
+    preparation_copy: optionalText(2_000),
+    event_date: z
+      .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()])
+      .optional(),
+    location: optionalText(160),
+    cost_text: optionalText(120),
+    cta_label: optionalText(40),
+    registration_href: externalHref,
+    closed_message: optionalText(320),
+    sort_order: z.number().int().optional(),
+  })
+  .strict();
+
+const NEW_DOMAIN_MUTATION_SCHEMAS = {
+  programs: programMutation,
+  contact_profile: contactProfileMutation,
+  contact_page_content: contactPageMutation,
+  tryouts: tryoutMutation,
+} as const;
+
 const filter = z.object({
   kind: z.enum(["eq", "neq", "gt", "in"]),
   column: identifier,
   value: jsonValue,
 });
 
-export const adminDataRequestSchema = z.object({
-  table: z.enum(
-    Object.keys(ADMIN_TABLE_FEATURES) as [AdminTable, ...AdminTable[]],
-  ),
-  operation: z.enum(["select", "insert", "update", "upsert", "delete"]),
-  columns: z.string().max(2_000).default("*"),
-  payload: z.union([row, z.array(row).max(500)]).optional(),
-  filters: z.array(filter).max(20).default([]),
-  order: z
-    .object({
-      column: identifier,
-      ascending: z.boolean().default(true),
-    })
-    .optional(),
-  limit: z.number().int().positive().max(1_000).optional(),
-  single: z.enum(["single", "maybeSingle"]).optional(),
-  count: z.enum(["exact"]).optional(),
-  head: z.boolean().optional(),
-  onConflict: z
-    .string()
-    .regex(/^[a-z0-9_,]+$/)
-    .max(200)
-    .optional(),
-});
+export const adminDataRequestSchema = z
+  .object({
+    table: z.enum(
+      Object.keys(ADMIN_TABLE_FEATURES) as [AdminTable, ...AdminTable[]],
+    ),
+    operation: z.enum(["select", "insert", "update", "upsert", "delete"]),
+    columns: z.string().max(2_000).default("*"),
+    payload: z.union([row, z.array(row).max(500)]).optional(),
+    filters: z.array(filter).max(20).default([]),
+    order: z
+      .object({
+        column: identifier,
+        ascending: z.boolean().default(true),
+      })
+      .optional(),
+    limit: z.number().int().positive().max(1_000).optional(),
+    single: z.enum(["single", "maybeSingle"]).optional(),
+    count: z.enum(["exact"]).optional(),
+    head: z.boolean().optional(),
+    onConflict: z
+      .string()
+      .regex(/^[a-z0-9_,]+$/)
+      .max(200)
+      .optional(),
+  })
+  .superRefine((request, context) => {
+    const schema = NEW_DOMAIN_MUTATION_SCHEMAS[
+      request.table as keyof typeof NEW_DOMAIN_MUTATION_SCHEMAS
+    ];
+    const isMutation = ["insert", "update", "upsert"].includes(
+      request.operation,
+    );
+    if (!schema || !isMutation) return;
+
+    if (!request.payload) {
+      context.addIssue({
+        code: "custom",
+        path: ["payload"],
+        message: `${request.table} ${request.operation} requires a payload`,
+      });
+      return;
+    }
+
+    const rows = Array.isArray(request.payload)
+      ? request.payload
+      : [request.payload];
+    if (rows.length === 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["payload"],
+        message: `${request.table} ${request.operation} requires at least one row`,
+      });
+      return;
+    }
+
+    rows.forEach((payload, index) => {
+      const parsed = schema.safeParse(payload);
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          context.addIssue({
+            code: "custom",
+            path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), ...issue.path],
+            message: issue.message,
+          });
+        }
+      }
+
+      if (
+        request.table === "programs" &&
+        (request.operation === "insert" || request.operation === "upsert")
+      ) {
+        for (const field of ["slug", "display_title"] as const) {
+          if (!(field in payload)) {
+            context.addIssue({
+              code: "custom",
+              path: ["payload", field],
+              message: `Program ${request.operation} requires ${field}`,
+            });
+          }
+        }
+      }
+    });
+  });
 
 export type AdminDataRequest = z.infer<typeof adminDataRequestSchema>;
 

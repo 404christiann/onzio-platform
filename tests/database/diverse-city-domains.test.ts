@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { CLUB_IDS } from "../fixtures/entities";
+import { expectPostgrestError } from "../helpers/database-security";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -74,10 +75,11 @@ describe("Diverse City domain schema (DCFC-202 target)", () => {
       club_id: CLUB_IDS.bravo,
       program_id: program?.id,
     });
-    expect(
+    expectPostgrestError(
       crossTenant.error,
-      "a tryout must not be able to reference another club's program",
-    ).not.toBeNull();
+      "23503",
+      "cross-tenant tryout-to-program relationship",
+    );
 
     await clients.service
       .from("programs")
@@ -125,15 +127,47 @@ describe("Diverse City domain tier gating (DCFC-D108)", () => {
   it.each(CONTACT_TABLES)(
     "allows an anonymous read of onzio.%s for a Starter club",
     async (table) => {
-      const { error } = await clients.anon
+      const { data: existing, error: existingError } = await clients.service
         .from(table)
-        .select("club_id")
-        .eq("club_id", CLUB_IDS.charlie);
-      expect(
-        error?.message,
-        "Contact is Starter-accessible; can_read_feature gates anonymous " +
-          "public reads, so a Starter club's contact page must not render empty",
-      ).toBeUndefined();
+        .select("*")
+        .eq("club_id", CLUB_IDS.charlie)
+        .maybeSingle();
+      expect(existingError?.message).toBeUndefined();
+
+      const fixture =
+        table === "contact_profile"
+          ? {
+              club_id: CLUB_IDS.charlie,
+              service_area: "DCFC-204 Starter read fixture",
+            }
+          : {
+              club_id: CLUB_IDS.charlie,
+              headline: "DCFC-204 Starter read fixture",
+            };
+
+      try {
+        const write = await (clients.service.from(table) as any).upsert(fixture);
+        expect(write.error?.message).toBeUndefined();
+
+        const { data, error } = await clients.anon
+          .from(table)
+          .select("club_id")
+          .eq("club_id", CLUB_IDS.charlie);
+        expect(
+          error?.message,
+          "Contact is Starter-accessible; can_read_feature gates anonymous " +
+            "public reads, so a Starter club's contact page must not render empty",
+        ).toBeUndefined();
+        expect(data).toEqual([{ club_id: CLUB_IDS.charlie }]);
+      } finally {
+        await clients.service
+          .from(table)
+          .delete()
+          .eq("club_id", CLUB_IDS.charlie);
+        if (existing) {
+          await (clients.service.from(table) as any).insert(existing);
+        }
+      }
     },
   );
 

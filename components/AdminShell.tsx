@@ -1,13 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
+import { useClubContext } from "@/components/ClubContextProvider";
+import { clubHasFeature } from "@/lib/club-features";
 
-const NAV_ITEMS = [
+type AdminNavItem = {
+  label: string;
+  href: string;
+  icon: ReactNode;
+  feature?: string;
+};
+
+const NAV_ITEMS: AdminNavItem[] = [
   {
     label: "Dashboard",
     href: "/admin",
@@ -28,6 +37,39 @@ const NAV_ITEMS = [
         <path d="M3 11l9-8 9 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         <path d="M5 10v10h14V10" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
         <path d="M9 20v-6h6v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Programs",
+    href: "/admin/programs",
+    feature: "programs",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M5 4h14v16H5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Contact",
+    href: "/admin/contact",
+    feature: "contact",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M4 5h16v14H4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M4 7l8 6 8-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Tryouts",
+    href: "/admin/tryouts",
+    feature: "tryouts",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M7 3v3M17 3v3M4 8h16v12H4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 12h3M13 12h3M8 16h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
       </svg>
     ),
   },
@@ -156,6 +198,7 @@ const NAV_ITEMS = [
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
+  const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -182,7 +225,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     };
   }, [sidebarOpen]);
 
-  const navItems = NAV_ITEMS.filter((item) => item.href !== "/admin/payments" || isBillingAdmin);
+  const navItems = NAV_ITEMS.filter(
+    (item) =>
+      (!item.feature || clubHasFeature(club.tier, item.feature)) &&
+      (item.href !== "/admin/payments" || isBillingAdmin),
+  );
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -222,16 +269,22 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           className="flex items-center gap-3 px-5 py-5 flex-shrink-0"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <Image
-            src={clubLogoUrl}
-            alt="Rose City FC"
-            width={36}
-            height={36}
-            className="rounded-full flex-shrink-0"
-          />
+          {clubLogoUrl ? (
+            <Image
+              src={clubLogoUrl}
+              alt={club.name}
+              width={36}
+              height={36}
+              className="rounded-full flex-shrink-0"
+            />
+          ) : (
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-white/15 font-display text-xs font-black uppercase text-white">
+              {club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}
+            </span>
+          )}
           <div>
             <p className="font-display font-black uppercase text-white leading-none" style={{ fontSize: "0.8rem", letterSpacing: "0.1em" }}>
-              Rose City
+              {club.name}
             </p>
             <p className="font-display text-xs uppercase mt-0.5" style={{ color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em" }}>
               Admin

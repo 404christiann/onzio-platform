@@ -1,12 +1,12 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-07-31
+Last updated: 2026-08-02
 
 ## Open Platform Findings
 
 `docs/platform-findings.md` is the durable register of platform-wide issues
 that have been verified but not fixed. Read it before working in the areas it
-names. As of 2026-08-01 it holds three open findings and three resolved. No
+names. As of 2026-08-01 it holds two open findings and five resolved. No
 open finding affects a live site.
 
 - **PF-005 and PF-006** — **resolved 2026-08-01, together.** Rose City's
@@ -34,19 +34,191 @@ open finding affects a live site.
   was deliberately not undertaken: it is not one refactor but a deletion, a
   blocked branch, one clean template extraction, and three new content
   domains.
-- **PF-002** — three parallel entitlement sources of truth
-  (`club_has_feature`, `ADMIN_TABLE_FEATURES`, `moduleRegistry`), with
-  confirmed `shop` and `seasons` contradictions. Latent: needs a club that is
-  both Starter tier and publicly live, which no seeded club currently is.
-- **PF-003** — the tier/feature entitlement mechanism is undocumented in the
-  platform plan, which is why PF-002-class bugs keep nearly shipping.
+- **PF-007** — **resolved 2026-08-01.** Hardened all 21 false-green-prone
+  database security scenarios: exact Postgres/PostgREST/Storage signatures
+  replace generic non-null errors, private reads no longer swallow query
+  failures, and rejected audit writes must prove their own denial. Shared
+  assertions fail explicitly on `PGRST204`/`PGRST205`, focused contracts pin
+  that behavior, and an architecture guard prevents the weak patterns from
+  returning. A deliberate misspelled-column mutation turned the real denial
+  test red with `[TEST AUTHORING ERROR] ... PGRST204`, proving the original
+  false-green route is closed. Current full suite: 588/588 across 59 files.
+- **PF-002** — five parallel entitlement sources of truth
+  (`club_has_feature`, `ADMIN_TABLE_FEATURES`, `moduleRegistry`, and
+  `STARTER_FEATURES`, plus Storage surface-policy mapping), with confirmed
+  unresolved `shop` and `seasons` contradictions. `DCFC-204` fixed the Contact
+  application disagreement; `DCFC-301` fixed a reachable Programs Storage
+  fallback bypass; `DCFC-302` now explicitly maps Contact Storage to the
+  Contact entitlement instead of depending on the Branding fallback. PF-002
+  remains open.
+- **PF-003** — **resolved 2026-08-01 in DCFC-202.** The platform plan now
+  documents the tier/feature entitlement mechanism and its public-read effect.
 - **PF-004** — the Bunny.net video reference deliberately deviates from the
-  "content records reference media assets" principle; recorded for
-  visibility, revisit in `DCFC-202`.
+  "content records reference media assets" principle. Bunny is outside the
+  current Phase 5 goal and must return only as a separately scoped reusable,
+  tenant-safe platform capability; no Diverse City-specific branch is
+  permitted.
 
-None of these are authorized to be fixed without their own scoped approval.
+The remaining open findings are not authorized to be fixed without their own
+scoped approval.
 
 ## Current State
+
+The unbudgeted Phase 5 goal for `DCFC-EPIC-002` remains active. `DCFC-501` is
+complete as of 2026-08-02 after separately approved staging remediation and a
+full read-only acceptance re-run. The exact Supabase staging project is
+healthy on the Free plan. A restricted, out-of-Git role/schema/data backup was
+captured; its permissions, sizes, and SHA-256 evidence are in
+`docs/phase-11/diverse-city/DCFC-501-REMEDIATION-PLAN.md`.
+
+The approved history-only repair replaced hosted Phase 7 execution timestamps
+`20260727171934`, `20260727174125`, and `20260727174503` with canonical
+versions `20260727171658`, `20260727174006`, and `20260727175200`. It did not
+execute or reverse schema SQL. The linked ledger now aligns all ten canonical
+Phase 1-7 versions, linked schema lint is clean, and a dry run lists exactly
+the ten reviewed Phase 9/11 migrations reserved for `DCFC-502`. All 32 hosted
+`onzio` tables have RLS; `onzio` is exposed through the Data API while
+`onzio_private` is not, and the private schema has no browser table grants or
+`PUBLIC` routine grants.
+
+TOTP, the 15-minute AAL1 enforcement policy, custom staging SMTP, staging-only
+Auth URLs, and rate limits are attested. Christian accepted the Free-plan
+staging exceptions for leaked-password screening and downloadable daily
+backups with the documented protected/noindex, staging-identity, mandatory-
+admin-TOTP, and restricted-manual-backup controls. Alpha/Bravo remain unchanged:
+two clubs, two domains, five memberships, four orphaned media rows, 45 audit
+events, zero cleanup rows, two empty Storage buckets, and no Storage objects.
+
+Vercel project `prj_I362ysmh9cse5cRxnL7db4dOhsEs` remains the shared
+`onzio-rcfc` project. All non-custom-domain deployments are protected,
+Git-fork protection is enabled, and exactly one replacement automation bypass
+remains with `isEnvVar=true`. The enabled test webhook
+`we_1TxrnaK6WajTkwHYtFEvCEo8` now targets the existing protected staging alias,
+is still test mode, and retains its exact seven-event allowlist. The initial
+replacement attempt used the approved rollback path after Vercel required the
+environment-variable designation; the old Stripe URL was restored and the
+unused replacement revoked before the corrected atomic rotation. No secret
+was recorded. The historical staging deployment remains behind the intended
+Phase 5 source; changing it belongs to `DCFC-502`.
+
+Bunny.net is explicitly outside Phase 5 and unauthorized by this goal. Diverse
+City stays on the approved crest-led hero with the vertical video story hidden.
+Do not access Bunny credentials, create a library, upload video, add provider
+references, or implement a Diverse City-specific video branch. Bunny must be
+a separate reusable tenant-safe capability. If launch requires video, scope
+that capability after Phase 5 and before Phase 6 acceptance; otherwise finish
+and stabilize the production rollout before integrating Bunny.
+
+`docs/phase-11/diverse-city/DCFC-501-REMEDIATION-PLAN.md` records the exact
+approval, execution, rollback, backup, verification, and hosted-mutation
+evidence. That approval is exhausted. Christian subsequently authorized a
+review of the accumulated Phase 5 source, all local release gates, one scoped
+release commit, and a push to Git `staging`, but expressly excluded deployment
+and all `DCFC-502` execution. Review and local verification passed. The exact
+tenant inputs, ten migrations, operator boundary, rollback, exclusions, and
+future approval language are prepared in
+`docs/phase-11/diverse-city/DCFC-502-APPROVAL-PACKET.md`.
+
+The Vercel project serves the Git `staging` branch and creates a deployment on
+push. The positive push authorization therefore conflicts with the narrower
+no-deployment boundary. The single release commit may exist locally, but it
+must not be pushed until Christian authorizes the resulting protected staging
+deployment as part of `DCFC-502` or supplies an approved non-deploying Git-ref
+path. Do not change Vercel Git/ignored-build settings, create then cancel a
+deployment, or otherwise work around the boundary. Stop again before
+`DCFC-503`; no approval rolls forward.
+
+The current release-preparation checkpoint adds one local Git commit and zero
+pushes or hosted mutations. Its complete local evidence is recorded in
+`docs/phase-11/diverse-city/STATUS.md`: reset through all 20 migrations,
+TypeScript, 310/310 contracts, 20/20 architecture, 78/78 database, 662/662 full
+suite, generated types, clean schema lint, deterministic plan/rehearsal,
+production build, lint, and four desktop/mobile Playwright checks. The optional
+`agent-browser` executable was unavailable, so the dedicated repository
+Playwright suites supplied the browser evidence.
+
+DCFC-501 hosted mutations: six Supabase migration-history status changes;
+five successful Vercel mutations across the rolled-back and final rotations,
+with one rejected revoke producing no state change; and three Stripe test
+webhook URL mutations including rollback and final update. Hosted schema/data,
+tenant, deployment, environment variables, Storage, Auth/email, DNS,
+production, live Stripe, Bunny.net, commit, and push mutations were zero.
+
+The earlier unbudgeted Phase 4-only goal for `DCFC-EPIC-002` completed as of
+2026-08-01. `DCFC-401` through `DCFC-404` locked the approved production
+content/provenance dispositions, all 42 source-media dispositions and ten
+retained rights-confirmed assets, the non-video crest-led hero/hidden-story
+treatment, deterministic loopback import/reset/replay, and the final local
+rollout-input manifest. The goal stopped before `DCFC-501`; no staging system
+or hosted credential was inspected, no Class 3 action occurred, and no commit
+or push was created.
+
+The checked-in local plan is pinned to snapshot commit
+`5bbdfa33d59163b218bbd33745f9cfd4a66d379f`. Independent planner runs produce
+semantic digest `63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36`
+and identical JSON file SHA-256
+`87efae9701f6e1fa4653a55f2687206f3370306bd900d83ee30352849b78702b`.
+The clean-stack loopback rehearsal imported ten normalized media assets, four
+Programs, approved About/Contact/Shop/Elsa's Bakery content, and one published
+`academy@1` document while importing zero Tryouts, players, staff, matches, or
+standings. Idempotent import and tenant-scoped reset/replay reproduced state
+digest `b595fc81773ed47bd4d4976d45f533e1e1494ad4089514ac6c5567e27fc4376d`;
+the reset removed ten objects and only the Diverse City local tenant, and
+Alpha/Bravo isolation remained intact.
+
+Reusable tenant-safe fixes prevent explicit tenants from inheriting Rose City
+About/Shop/Sponsor defaults, add deliberate Roster/Schedule empty states, and
+render Academy sponsor rows without a club-slug branch. Middleware preserves
+the verified tenant hostname through rewrites and permits only a matching
+internal slug, while the client navigation normalizes rewritten paths to avoid
+hydration drift. Final local acceptance is green: a from-scratch database
+reset; TypeScript; 662/662 tests across 68 files; matching generated DB types;
+clean local `onzio`/`onzio_private` schema lint; production build and lint with
+only the three pre-existing Analytics hook warnings; and 2/2 Playwright
+scenarios covering desktop/mobile public routes plus protected AAL2 admin.
+
+`docs/phase-11/diverse-city/ROLLOUT-INPUT-APPROVAL-MANIFEST.md` was the final
+Phase 4 boundary. `DCFC-D118` explicitly deferred unsupplied hosted inputs
+rather than inventing them: exact staging/production hostnames and DNS
+ownership, safe owner/admin identity references, live Pro billing identifiers,
+launch window/rollback authority/observation duration, and indexing approval.
+That historical block was later superseded only for the separately authorized
+read-only `DCFC-501` preflight described above; identity, production, billing,
+DNS, launch, and indexing deferrals remain in force.
+
+`DCFC-304` (local admin-to-public acceptance) is `complete` as of 2026-08-01,
+closing Phase 3 and the local Phase 0-3 Diverse City epic scope. Reusable
+Academy Programs overview/detail, Contact, and structured Tryouts routes now
+resolve the verified server-side tenant and existing normalized public queries;
+middleware covers the exact paths and validated Program slugs; editable
+Program labels populate Academy navigation; and the approved Academy footer
+paths are present. Empty or unpublished content fails closed, logistics render
+honestly as TBA, external registration stays a disclosed no-data-collection
+anchor, and no club-slug conditional was added.
+
+The package also closes the last Academy persistence gap: migration
+`20260802023000_dcfc_304_academy_presentation_template.sql` allows the already
+registered `academy@1` template in `presentation_documents`, and the local-only
+seed publishes a valid Academy document with visibly distinct synthetic Alpha
+and Bravo content. A real AAL2 database test updates all three Alpha domains,
+reads those changes through the anonymous public query layer, and proves Bravo
+rows remain present but inaccessible. Presentation tests restore the published
+seed pointer after mutation so the full suite no longer changes later browser
+acceptance state.
+
+Final acceptance is green: fresh local reset; TypeScript; 304/304 contracts;
+20/20 architecture; 78/78 real local database tests; 656/656 complete tests
+across 66 files; generated database type check; clean local
+`onzio`/`onzio_private` schema lint; production build with all
+canonical and tenant-runtime routes; lint with only the three pre-existing
+Analytics hook warnings; and clean diff checks. Repeatable Playwright evidence
+passed 2/2 across 1440×900 and 390×844 for all public paths and MFA-protected
+Programs/Contact/Tryouts admin pages, including tenant isolation, TBA/external
+CTA behavior, no runtime image transforms, no broken images or framework
+overlay, and no horizontal overflow. That check also fixed the shared admin
+shell's hardcoded Rose City label and empty initial logo source; admin chrome
+now uses the resolved club name with an initials fallback. Hosted mutation
+count is zero; every Database/Auth/Storage interaction was loopback-only.
 
 The Diverse City FC Phase 0-3 planning packet is complete and ready for
 Christian's review under `docs/phase-11/diverse-city/`. It defines the
@@ -235,32 +407,164 @@ anonymous reader of the Starter club `charlie` can read `contact_*` but gets
 nothing from `programs`/`tryouts`, while the same reads succeed for a Pro
 club.
 
-**Suite status corrected 2026-08-01: the suite is GREEN, 581/581 across 57
-files** — not the 3 intentional failures previously recorded here. Those three
-(`academy@1` template, `programs`/`contact` routes, module entitlements) now
-pass because `DCFC-203` implementation work was done in the working tree
-**without a completion record**.
+`DCFC-203` (presentation routes, modules, and sections) is `complete` as of
+2026-08-01. The previously unrecorded registry implementation remains intact:
+neutral reusable `academy@1`, its `montserrat-inter-dmsans` primary font pack,
+five `academy.*` sections plus the two shared homepage sections, the
+`programs`/`contact` routes, and the `DCFC-D108` module entitlements. The audit's
+two uncovered gaps are now closed:
 
-**`DCFC-203` is `in_progress`, not complete.** A 2026-08-01 audit verified the
-registry work is real and good — `academy@1` with a `montserrat-inter-dmsans`
-font pack and five `academy.*` sections mapping 1:1 onto `CONTENT-MATRIX.md`'s
-homepage inventory, plus the `programs`/`contact` routes and `DCFC-D108`
-entitlements — but found two gaps its own contracts do not cover:
+- `tests/contracts/presentation-system.test.ts` pins a complete `academy@1`
+  document through production-surface parsing, matching the existing
+  `cinematic@1` and `clubhouse@1` precedent.
+- Per approved decision `DCFC-D110`, `bebas-inter` now lists `academy@1` as a
+  compatible template, preserving it as the universal fallback pack. A new
+  generic contract asserts every template/font-pack compatibility edge in
+  both directions so the two registries cannot drift silently again.
 
-1. **No pinned `academy@1` document contract.** `cinematic@1` and
-   `clubhouse@1` each have one in
-   `tests/contracts/presentation-system.test.ts`; `academy@1` does not, so
-   nothing proves an `academy@1` document actually validates.
-2. **A reachable font-pack bug.** `academy@1.compatibleFontPacks` includes
-   `bebas-inter`, but `fontPacks["bebas-inter"].compatibleTemplates` omits
-   `academy@1`. Template switching keeps the font pack by reading one list
-   (`index.ts:839`) and validation then rejects the document by reading the
-   other (`index.ts:701`), so `switchTemplate` emits a document that fails its
-   own validation. Only `academy@1` is affected; the other three templates are
-   bidirectionally consistent.
+The new agreement contract was first run against the audited implementation
+and failed on exactly the `academy@1`/`bebas-inter` mismatch before the fix.
+Final verification is green: focused presentation contracts 9/9, TypeScript
+clean, contracts 240/240, architecture 19/19, local database 70/70, and the
+complete loopback-mapped suite 583/583 across 57 files. Lint passed with only
+the three pre-existing analytics hook warnings, and `git diff --check` passed.
+`DCFC-204` was subsequently completed as the final Phase 2 package; its current
+evidence is recorded below. No hosted resource was mutated.
 
-Full evidence, reproduction, and the recommended fix direction are in the
-2026-08-01 audit record in `docs/phase-11/diverse-city/STATUS.md`.
+`PF-007` (database security-test hardening) is `complete` as of 2026-08-01.
+The original register estimate of roughly twelve weak assertions was expanded
+to the full reachable surface: 19 denial scenarios accepting any error, one
+private-ledger read swallowing query errors, and one ignored rejected-write
+result. `tests/helpers/database-security.ts` now enforces exact database and
+Storage signatures and treats `PGRST204`/`PGRST205` as test-authoring errors.
+All affected database tests use the helper or explicit success-plus-empty-row
+assertions, focused helper contracts pin the failure semantics, and a new
+architecture test scans the database suite for reintroduced generic denial
+patterns. A temporary misspelled-column mutation failed on the exact
+`PGRST204` route that used to pass, then was restored. Final verification:
+TypeScript clean; contracts 244/244; architecture 20/20; local database 70/70;
+full loopback-mapped suite 588/588 across 59 files; lint passed with only the
+three pre-existing analytics warnings; `git diff --check` clean. No hosted
+resource was mutated. `DCFC-204` was then assigned separately and completed as
+recorded below.
+
+`DCFC-204` (typed domain queries and protected mutations) is `complete` as of
+2026-08-01, closing the Phase 2 gate. Generated database row aliases now feed
+typed Programs, Contact, and Tryouts public mappings with explicit verified
+tenant filters, active/visible behavior, media resolution, and fail-closed
+errors. External actions share a strict URL/href normalizer; unsafe Program
+CTAs disappear, while unsafe or closed Tryouts registration falls back only to
+the tenant's validated public email. Strict table-specific Zod schemas now
+protect all four Phase 2 tables behind the existing admin route's server-side
+user, AAL2, tenant, membership, lifecycle, entitlement, payload, and `club_id`
+checks. Phase 3 UI remains unstarted.
+
+The red-first run failed 12 of 18 new contracts and exposed two meaningful
+false-green routes. First, application authorization had a fourth entitlement
+source, `STARTER_FEATURES`, that omitted Contact and denied a legitimate
+Starter Contact mutation even though the database and presentation registries
+allowed it; Contact is aligned there and PF-002 records that then-known fourth
+source.
+Second, the old Starter Contact RLS test asserted only that no query error
+occurred, so an empty result passed. Seeded Charlie had no active subscription
+and therefore was not actually publicly readable. The test now inserts and
+requires exact tenant rows, and the local seed supplies the active Starter
+subscription that the platform contract requires.
+
+Final verification: focused query/mutation coverage 81/81; focused Diverse
+City database coverage 20/20; local reset, generated-type check, and schema
+lint passed;
+TypeScript clean; contracts 267/267; architecture 20/20; local database 73/73;
+full loopback-mapped suite 614/614 across 61 files; production build passed;
+lint has only the three pre-existing analytics hook warnings; diff check clean.
+No hosted resource was mutated. At that checkpoint `DCFC-301`, `DCFC-302`, and
+`DCFC-303` were eligible but unstarted; `DCFC-301` was subsequently assigned
+and completed as recorded below.
+
+`DCFC-301` (Programs admin) is `complete` as of 2026-08-01. The new protected
+`/admin/programs` surface provides the approved list/create/edit/reorder/media
+workflow: every Programs text field, ordered highlights, layout variant,
+active/hidden state, hero/detail media reference, and external CTA is editable.
+It includes responsive list/editor composition, unsaved-change protection,
+strict validation, and complete loading, empty, upload, success, and error
+states. Programs appears in admin navigation only for Pro tenants, and a
+manually reached Starter route fails closed before loading content. All reads
+and writes use the server-mediated admin client; browser payloads never carry
+authoritative tenant identity.
+
+The secure media workflow uncovered and closed a real fifth entitlement-source
+bug. Once `programs` became an accepted media surface, a direct AAL2 Storage
+upload for a Starter club succeeded because the Phase 2 staging policy mapped
+every surface except Shop and Standings to Starter-accessible Branding. The
+application authorize route already denied the request, but Storage RLS—the
+final boundary—did not. Migration
+`20260802013518_dcfc_301_programs_media_entitlement.sql` explicitly maps the
+Programs path segment to the Pro-only Programs feature for staging
+insert/select/delete. A real local contract is pinned to Pro success and exact
+Starter 403 denial, and PF-002 now records all five entitlement sources.
+
+Final verification: focused Programs/query/media/admin coverage 78/78;
+authenticated RLS/Storage coverage 6/6; from-scratch local database reset;
+generated types and schema lint clean; TypeScript clean; contracts 276/276;
+architecture 20/20; database 74/74; full loopback suite 624/624 across 62
+files; production build includes `/admin/programs`; lint has only the three
+pre-existing analytics hook warnings; diff check clean. No hosted resource was
+mutated. `DCFC-302` and `DCFC-303` remain ready and unstarted; assign exactly
+one next.
+
+`DCFC-302` (Contact admin) is `complete` as of 2026-08-01. The protected
+`/admin/contact` surface makes the approved ownership boundary visible and
+enforceable: email, phone, service area, and optional hours are edited as
+canonical shared club data, while eyebrow, headline, introduction, and hero
+media are edited as Contact-page-only presentation. Social destinations stay
+in the existing Branding editor and are linked from Contact rather than
+duplicated. Shared client/server validation accepts empty states and valid
+email/international telephone destinations while rejecting unsafe protocol
+text. The page persists through the server-mediated admin client without a
+client-supplied `club_id`, and no public form, message persistence, or
+participant-data collection was added.
+
+Contact hero uploads now use the secure authorize/stage/finalize pipeline.
+Migration `20260802020000_dcfc_302_contact_media_entitlement.sql` explicitly
+maps the Contact staging path to the Starter-accessible Contact feature at
+Storage RLS instead of inheriting the generic Branding fallback. Local AAL2
+evidence proves a Starter admin can write both Contact singletons and upload
+Contact media.
+
+Final verification: focused Contact/query contracts 32/32; from-scratch local
+database reset; generated types and schema lint clean; TypeScript clean;
+contracts 286/286; architecture 20/20; database 75/75; full loopback suite
+635/635 across 63 files; production build includes `/admin/contact`; lint has
+only the three pre-existing analytics hook warnings; diff check clean. No
+hosted resource was mutated. `DCFC-303` remains ready and unstarted;
+`DCFC-304` remains blocked on it.
+
+`DCFC-303` (Tryouts admin) is `complete` as of 2026-08-01. The protected
+`/admin/tryouts` surface provides a reusable multi-event list/create/edit/
+reorder workflow with optional Program association, upcoming/open/closed
+status, the complete approved content model, honest date/location/cost TBA
+states, hero media, closed-state messaging, and externally hosted registration
+CTA content. Missing registration destinations remain valid fail-closed
+content; unsafe destinations and malformed dates are rejected before mutation.
+The approved `DCFC-D102` no-FAQ decision is preserved, and strict regression
+coverage rejects participant, payment, waiver, medical, registration-record,
+and FAQ payload fields. All persistence remains server-mediated without a
+browser-supplied tenant identity.
+
+Tryouts hero uploads now use the secure authorize/stage/finalize pipeline.
+Migration `20260802021531_dcfc_303_tryouts_media_entitlement.sql` explicitly
+maps the Tryouts Storage path to the Pro-only Tryouts feature at the final RLS
+boundary. Local AAL2 evidence proves Pro event CRUD/reorder and Tryouts media
+success, exact Starter content and Storage denial, cross-tenant denial, and
+database URL-constraint enforcement.
+
+Final verification: focused Tryouts/query contracts 35/35; from-scratch local
+database reset; focused real database coverage 29/29; generated types and
+schema lint clean; TypeScript clean; contracts 297/297; architecture 20/20;
+database 77/77; full loopback suite 648/648 across 64 files; production build
+includes `/admin/tryouts`; lint has only the three pre-existing Analytics hook
+warnings; migration history and diff checks are clean. No hosted resource was
+mutated. `DCFC-304` is now eligible but remains unstarted.
 
 `DCFC-202` also closed **PF-003** — `docs/onzio-platform-plan.md` now
 documents the tier-entitlement mechanism under Row-Level Security: the
@@ -2476,10 +2780,16 @@ Known non-blocking warnings:
 
 ## Next Milestone
 
-Review `docs/phase-11/diverse-city/EPIC.md`, resolve or provide the inputs for
-`DCFC-D101` and `DCFC-D102`, then assign the local snapshot work packages
-`DCFC-001` and `DCFC-002`. Each assigned agent must update
-`docs/phase-11/diverse-city/STATUS.md` before ending its work.
+`DCFC-401` through `DCFC-501` are complete. One reviewed Phase 5 release commit
+is prepared locally, and `DCFC-502-APPROVAL-PACKET.md` is ready. The exact next
+step is for Christian to resolve the `staging` push/deployment boundary and, if
+desired, give the fresh exact `DCFC-502` approval naming the full release SHA,
+ten migrations, staging targets, tenant slug/name/hostname, protected
+deployment, and privately resolved operator actor. Only then push/deploy, apply
+the allowlisted migrations, and provision one private Starter/onboarding/
+preview Diverse City tenant. Stop before `DCFC-503`. No content/media import,
+invitation/email, Stripe, DNS, production, Bunny.net, or Phase 6 work is
+authorized.
 
 This is preparatory work for a future first-new-club rollout. It does not
 bypass the platform's presentation, prospect-automation, staging, billing,

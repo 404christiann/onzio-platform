@@ -8,6 +8,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { fetchPrograms, type ProgramContent } from "@/lib/queries";
 
 const MIGRATED_LOGO_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/branding`;
@@ -93,6 +94,31 @@ const lionsNavLinks: NavLink[] = [
   { label: "Shop", href: "/shop" },
 ];
 
+function academyNavLinks(programs: ProgramContent[]): NavLink[] {
+  return [
+    { label: "Home", href: "/" },
+    { label: "About", href: "/club/about" },
+    { label: "Roster", href: "/roster" },
+    {
+      label: "Schedule",
+      href: "/schedule",
+      children: [
+        { label: "Fixtures", href: "/schedule" },
+        { label: "Tryouts", href: "/tryouts" },
+      ],
+    },
+    {
+      label: "Programs", href: "/programs",
+      children: programs.map((program) => ({
+        label: program.navLabel || program.displayTitle,
+        href: `/programs/${program.slug}`,
+      })),
+    },
+    { label: "Store", href: "/shop" },
+    { label: "Contact", href: "/contact" },
+  ];
+}
+
 function isLinkActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -105,10 +131,12 @@ function isNavItemActive(pathname: string, link: NavLink) {
 export default function Nav() {
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
-  const pathname = usePathname();
+  const rewrittenPathname = usePathname();
+  const pathname = rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
+  const [academyPrograms, setAcademyPrograms] = useState<ProgramContent[]>([]);
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -121,6 +149,19 @@ export default function Nav() {
     setMenuOpen(false);
     setExpandedMobileLink(null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (club.presentationTemplateKey !== "academy@1") {
+      setAcademyPrograms([]);
+      return;
+    }
+    fetchPrograms(club.id)
+      .then(setAcademyPrograms)
+      .catch((error) => {
+        console.error("Academy navigation programs:", error);
+        setAcademyPrograms([]);
+      });
+  }, [club.id, club.presentationTemplateKey]);
 
   // Transparent nav only on desktop for shop (mobile shop hero is compact, not full-bleed)
   const [isMobile, setIsMobile] = useState(false);
@@ -137,6 +178,9 @@ export default function Nav() {
   const isAlwaysTransparentPage = pathname === "/club/logo";
   const isDarkHeroPage = pathname === "/" || (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
   const isHero = isAlwaysTransparentPage || (isDarkHeroPage && !scrolled);
+  const activeNavLinks = club.presentationTemplateKey === "academy@1"
+    ? academyNavLinks(academyPrograms)
+    : navLinks;
 
   if (club.presentationTemplateKey === "clubhouse@1") {
     const isHomeTop = pathname === "/" && !scrolled;
@@ -284,7 +328,7 @@ export default function Nav() {
 
         {/* Desktop Links */}
         <ul className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => {
+          {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const triggerClassName =
               "font-body text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
@@ -406,7 +450,7 @@ export default function Nav() {
         }`}
       >
         <ul className="flex flex-col px-8 py-6 gap-6">
-          {navLinks.map((link) => {
+          {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const isExpanded = expandedMobileLink === link.label;
             const labelClassName = `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${

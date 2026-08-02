@@ -2,9 +2,13 @@
 
 Epic ID: `DCFC-EPIC-001`
 
-Status: `ready_for_review`
+Status: `complete`
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
+
+Post-`DCFC-304` staging-to-production work is separately proposed in
+`ROLLOUT-EPIC.md`. Completion of this epic does not approve that packet or any
+rollout package.
 
 ## Outcome
 

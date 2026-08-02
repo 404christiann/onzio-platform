@@ -1,0 +1,208 @@
+# Diverse City FC Protected Staging Acceptance
+
+Epic: `DCFC-EPIC-002`
+
+Status: `dcfc_501_complete`
+
+Last updated: 2026-08-02
+
+This checklist is the evidence surface for `DCFC-501`–`DCFC-603`. It is not
+authorization to inspect or mutate staging. Each package retains its action
+class and separate approval boundary from `ROLLOUT-WORK-PACKAGES.md`.
+
+## Preflight Resource Record (`DCFC-501`)
+
+Record safe identifiers only; never record secrets.
+
+| Resource | Required evidence | Result/evidence |
+| --- | --- | --- |
+| Supabase | Exact staging organization/project ref, region, health, plan/capacity | **Pass, re-attested 2026-08-02:** `Onzio Staging` (`udlsrxgfpkqjaridfxnz`), Free plan; `Onzio Platform Staging` (`fxefqnoqxbezeccjvrsw`), `us-west-2` / West US (Oregon), healthy `nano`. Dashboard sample: 6/60 connections, 2% CPU, 3% disk, and 49% RAM. Free staging has no downloadable daily backups; Christian accepted the restricted manual-backup replacement for this gate. |
+| Schema | Local/remote migration ledgers match; no local seed applied remotely | **Pass:** the approved history-only six-version repair replaced the three verified Phase 7 execution timestamps with the three canonical versions without running schema SQL. The linked ledger now aligns all ten canonical Phase 1-7 versions. `supabase db push --linked --dry-run` lists exactly the ten reviewed Phase 9/11 files reserved for `DCFC-502`; no push or seed ran. Linked `onzio,onzio_private` lint is clean. All 32 current `onzio` tables have RLS; all 15 current security-definer functions have an empty search path. |
+| Keys/API | Modern staging-only key posture; `onzio` exposed, `onzio_private` unexposed | **Pass:** the Data API is enabled; exposed schemas are `graphql_public`, `onzio`, and `public`, while `onzio_private` is excluded. The modern default publishable key is active, and the legacy JWT keys remain disabled. `onzio_private` has zero browser table grants and zero `PUBLIC` routine grants. No key value was copied or recorded. |
+| Auth/email | TOTP, leaked-password protection, AAL1 policy, staging SMTP sender/rate limits | **Pass with accepted Free-plan exception:** TOTP is enabled; enhanced MFA terminates an unverified AAL1 session after 15 minutes. Access tokens expire after 3600 seconds; compromised-refresh-token detection is enabled with a 10-second reuse interval. Custom SMTP is enabled at `smtp.resend.com:465` as `Onzio Staging <staging@auth.onziofutbol.com>`, with a 60-second per-user interval and 30-email/hour project limit. Site and three redirect URLs are staging-only. Leaked-password screening remains unavailable on Free and was explicitly accepted with the protected/noindex, staging-identity, and mandatory-admin-TOTP controls. No email was sent. Dashboard navigation incidentally rendered identity fields; no identity was used, copied, or recorded. |
+| Existing tenants | Alpha/Bravo IDs, domains, lifecycle/tier, owners/admins, content baseline | **Pass:** Alpha `362f4276-0e0b-4c6a-989d-3e59713c1d9f`, Starter/active/live at `alpha-onzio-staging.vercel.app`, has three active memberships. Bravo `fae51a8d-63b5-468c-bb7a-6e2b31d90035`, Starter/onboarding/preview at `bravo-onzio-staging.vercel.app`, has two. Database baseline: two clubs, two domains, five memberships, four explicitly `orphaned` media rows, 45 audit events. Both Storage buckets have zero objects, matching the orphaned cleanup state. No owner/admin identity was recorded. |
+| Vercel | Exact project, protected staging branch/deployment, Preview-only env-name inventory | **Pass for `DCFC-501`:** project `prj_I362ysmh9cse5cRxnL7db4dOhsEs` resolves as `onzio-rcfc`. All non-custom-domain deployments remain protected, Git-fork protection is enabled, and final readback shows exactly one replacement automation bypass with `isEnvVar=true`. Header and query probes reached the application and returned HTTP `400 INVALID_SIGNATURE`, not a Vercel Authentication redirect. The historical ready deployment and stable/Alpha/Bravo aliases remain unchanged. Its older commit is the explicitly recorded release delta for `DCFC-502`, not authorization to deploy it during `DCFC-501`. No environment value or bypass secret was recorded. |
+| Stripe | Test mode, existing Starter/Pro Prices, Portal, webhook/event allowlist | **Pass:** the recorded Starter (`$65/month`) and Pro (`$99.99/month`) Prices and test Portal remain unchanged. Enabled test webhook `we_1TxrnaK6WajTkwHYtFEvCEo8` now targets the existing protected staging alias at `/api/stripe/webhook`, includes the replacement bypass, remains `livemode=false`, and retains exactly the seven approved events. No signing secret or bypass value was recorded. |
+| Monitoring | Runtime logs, media cleanup boundary, current alert/monitor posture | **Pass:** the final last-24-hour read contained 26 API entries (25 HTTP 200, one expected protected 401), one Auth HTTP 200 info entry, three Storage entries, and 33 Postgres entries. The only two Postgres errors were this acceptance pass's read-only misspelled-column queries and were immediately corrected; no runtime error signal remained. Dashboard overview showed 12 requests in the prior hour with no visible service warning/error. Both Storage buckets remain empty and cleanup queue remains zero. Existing performance-advisor items are informational/pre-existing and are not a staging-capacity stop. |
+| Rollback | Prior deployment, schema/tenant backup/export, cleanup owner | **Pass:** prior ready deployment `dpl_GJbEfRwSagF6gNt2ESqwPSxZuzua` remains identifiable. The fresh restricted backup at `/Users/christianalcala/Downloads/onzio-migration-private/diverse-city-staging-phase5-2026-08-02T161244Z` contains non-empty mode-`0600` role/schema/data dumps under a mode-`0700` directory; exact sizes and SHA-256 values are recorded in `DCFC-501-REMEDIATION-PLAN.md`. Christian Alcala remains cleanup/rollback owner. |
+
+Preflight stop conditions:
+
+- [ ] Any resource cannot be proven staging-only.
+- [ ] Production or live Stripe credentials appear in Preview scope.
+- [ ] Staging migrations drift from reviewed repository migrations.
+- [ ] Vercel Deployment Protection is absent or bypass scope is unclear.
+- [ ] Alpha or Bravo baseline is unknown or already inconsistent.
+- [ ] Capacity/quota cannot safely support the tenant and planned media.
+
+All `DCFC-501` preflight stop conditions are clear. `DCFC-501` is complete.
+The ten pending migrations, stale deployment, and tenant absence are the
+explicitly enumerated `DCFC-502` work; this record does not authorize applying,
+deploying, or provisioning them.
+
+## Remediation Approval Gate
+
+`DCFC-501-REMEDIATION-PLAN.md` records the exact targets, verified migration
+mapping, Free-plan decisions, backup destination boundary, atomic bypass/test
+webhook sequence, rollback, stop conditions, hosted-mutation ceiling, and
+approval language. Christian approved it on 2026-08-02, it completed, and its
+authorization is exhausted. It did not authorize any `DCFC-502` action.
+
+## Provisioning and Release (`DCFC-502`)
+
+Prepared inputs, the ten-migration allowlist, exact boundary, rollback, and
+approval language are in `DCFC-502-APPROVAL-PACKET.md`. Nothing in that packet
+is executed or authorized. The release commit may be created locally under the
+2026-08-02 preparation approval, but the push is withheld because this
+repository's Vercel integration deploys `staging` on push while deployment was
+expressly excluded. Leave every acceptance item unchecked until a fresh exact
+`DCFC-502` approval resolves that boundary and the hosted evidence exists.
+
+- [ ] Fresh package approval names the exact Supabase ref, Vercel project,
+  release commit, migrations, tenant slug/name, hostname, and operator actor.
+- [ ] Pre-change migration, deployment, tenant/domain, and log evidence saved.
+- [ ] Only reviewed checked-in migrations are applied; `supabase/seed.sql` is
+  never run against hosted staging.
+- [ ] Exact release commit is deployed from `staging` and remains protected.
+- [ ] Diverse City is provisioned exactly once through audited operator
+  tooling.
+- [ ] Lifecycle is `onboarding`; public access is `preview`; tier remains the
+  operator workflow's pre-billing Starter default.
+- [ ] Staging domain is active, verified, tenant-specific, and non-indexed.
+- [ ] Unknown/unverified/cross-tenant hosts fail closed with `no-store` and
+  `noindex` behavior.
+- [ ] Audit event and tenant/domain rows reconcile.
+- [ ] No content/media, invitation, email, Stripe object, live domain, or
+  production resource changed.
+
+## Content, Media, and Presentation (`DCFC-503`)
+
+- [ ] Fresh package approval names the exact immutable plan digest and tenant.
+- [ ] Imported content matches only accepted/hide dispositions from
+  `CONTENT-MEDIA-READINESS.md`.
+- [ ] No preview-only player/staff/fixture/standings/shop/sponsor value or
+  temporary Google registration URL is present.
+- [ ] No registration, payment, waiver, medical, signature, participant, or
+  eligibility-document record/table/path is introduced.
+- [ ] All external registration URLs are approved public content and validate
+  to the expected HTTPS host.
+- [ ] Source/normalized/uploaded/reused/object/asset/reference/checksum totals
+  reconcile.
+- [ ] All media references remain tenant-composite and use UUID-versioned raw
+  `onzio-media` URLs.
+- [ ] No Supabase runtime Image Transformation or `/_next/image` URL appears.
+- [ ] Staging input is removed after finalization; failed cleanup is queued and
+  scoped.
+- [ ] A production-valid immutable `academy@1` document is assigned/published;
+  its digest, routes, modules, font pack, and sections match the manifest.
+- [ ] Video-backed sections follow the recorded `DCFC-D114` disposition; no
+  unimplemented Bunny reference is present.
+- [ ] Identical replay is idempotent and changes no approved row/object count.
+
+## Identity, Email, and MFA (`DCFC-504`)
+
+- [ ] Approved owner/admin recipients and roles are stored outside Git.
+- [ ] Existing Auth identity reuse vs. new identity creation is decided before
+  provisioning; no duplicate user is created.
+- [ ] Each send has explicit approval and only one current action is delivered.
+- [ ] Provider evidence records message ID/status and recipient domain only;
+  no body, code, token, or URL is captured.
+- [ ] Invitation/recovery callback uses only the verified staging tenant host.
+- [ ] Expired, reused, forged, unsupported, and caller-supplied redirects fail
+  closed.
+- [ ] Password setup/recovery succeeds; password values are never recorded.
+- [ ] AAL1 cannot load protected admin or mutate content.
+- [ ] Each owner/admin enrolls or verifies TOTP and reaches AAL2; Contact and
+  other Starter-accessible protected areas work while Pro-only Programs/
+  Tryouts remain unavailable before `DCFC-601` billing projection.
+- [ ] Admin cannot access billing; owner can reach billing flow.
+- [ ] Membership removal/revocation behavior is proven safely or inherited
+  from a current generic staging gate with directly applicable evidence.
+- [ ] Final users, memberships, sessions, factors, and audit-event counts match
+  the approved identity manifest.
+
+## Public and Admin Acceptance (`DCFC-602`)
+
+Run at 1440×900 desktop and 390×844 mobile.
+
+- [ ] `/`, `/club/about`, and every approved visible core route return the
+  intended Diverse City presentation.
+- [ ] `/programs` and every approved visible Program slug render exact staged
+  content; hidden/unknown slugs fail closed.
+- [ ] `/contact` renders current approved destinations and no submission form.
+- [ ] `/tryouts` renders only approved events; absent registration fails closed
+  and external registration is disclosed as third-party.
+- [ ] Navigation/footer contain only approved visible routes and destinations.
+- [ ] Typography, spacing, crop/aspect, section order, responsive stacking,
+  interaction, focus, reduced-motion, empty/error states, and contrast match
+  the accepted visual/production disposition.
+- [ ] No horizontal overflow, framework overlay, console/page error, broken
+  image, unexpected fallback, or unavailable route exists.
+- [ ] Every visible image has positive natural dimensions and a raw immutable
+  object URL.
+- [ ] Public and admin responses retain `noindex, nofollow` in headers and
+  metadata.
+- [ ] Programs, Contact, and Tryouts editors load at AAL2 on both viewports.
+- [ ] Approved edit/read/restore probes reach the anonymous public query layer
+  and final before/after content/presentation digests match.
+- [ ] Loading, empty, validation, upload, success, error, retry, and unsaved-
+  change states are checked on affected admin workflows.
+
+## Alpha/Bravo/Diverse City Isolation (`DCFC-602`)
+
+- [ ] Each hostname resolves to exactly one tenant and emits a distinct
+  tenant/cache identity.
+- [ ] HTML, RSC, metadata, route params, navigation, media, and presentation
+  documents never cross tenants.
+- [ ] Alpha, Bravo, and Diverse City cannot read private rows belonging to one
+  another.
+- [ ] Each AAL2 identity can write only its own tenant and cannot reference
+  another tenant's Program/media/content ID.
+- [ ] Composite foreign keys reject cross-tenant Program, Tryouts, and media
+  relationships with the exact expected signature.
+- [ ] Starter/Pro differences remain correct: Contact Starter-accessible;
+  Programs/Tryouts Pro-only.
+- [ ] Direct Storage staging paths enforce the correct surface entitlement and
+  tenant ID.
+- [ ] Unknown, spoofed, inactive, preview-cross-host, and malformed host/origin/
+  path/return URL cases fail closed.
+- [ ] Temporary probe values, memberships, sessions, factors, media, and
+  presentation pointers are restored and reconciled.
+
+## Stripe Test and Lifecycle (`DCFC-601`)
+
+- [ ] Existing test Pro Price, Portal, webhook, key mode, and environment
+  metadata are reverified; no Price is created or changed.
+- [ ] Owner starts the first Checkout through the application; admin is denied;
+  pre-billing Starter state becomes Pro only through canonical projection.
+- [ ] Checkout creates exactly one test Customer/subscription with correct
+  `onzio_club_id` and `onzio_environment=staging` metadata.
+- [ ] Canonical webhook projection writes one applied ledger row and Pro
+  entitlement/runtime state.
+- [ ] Duplicate and stale events are idempotently rejected.
+- [ ] Foreign environment/customer/tenant and unknown Price fail closed.
+- [ ] Portal opens for the owner; no unapproved tier/cancel/payment change is
+  made.
+- [ ] `past_due`, paid-through, terminal, grace, suspension, archive, and
+  reactivation behavior matches the architecture using disposable/scoped test
+  state.
+- [ ] Failed projection leaves no partial runtime or billing state.
+- [ ] Final staging tenant/subscription/lifecycle state is explicitly chosen,
+  restored, and reconciled.
+
+## Final Staging Gate (`DCFC-603`)
+
+- [ ] Every package completion record includes files/evidence, blockers, exact
+  next step, rollback result, and hosted mutation counts by provider.
+- [ ] Full release verification is current: TypeScript, contracts,
+  architecture, loopback database, complete suite, generated types, schema
+  lint, lint, build, and diff checks.
+- [ ] Staging runtime logs contain no unresolved authorization, tenant, cache,
+  media, Auth/email, billing, or unhandled application error.
+- [ ] All temporary acceptance mutations are restored and counts/digests match.
+- [ ] Deployment Protection and `noindex, nofollow` remain active.
+- [ ] No production, live Stripe, public DNS, Bunny, or indexing mutation
+  occurred.
+- [ ] Christian explicitly accepts or rejects the staging gate.
+- [ ] Rejection names the blocking package and rollback; acceptance makes
+  `DCFC-701` eligible but does not start it.

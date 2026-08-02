@@ -17,6 +17,16 @@ const footerLinks = [
   { label: "Shop", href: "/shop" },
 ];
 
+const academyFooterLinks = [
+  { label: "Club", href: "/club/about" },
+  { label: "Programs", href: "/programs" },
+  { label: "Roster", href: "/roster" },
+  { label: "Schedule", href: "/schedule" },
+  { label: "Sponsors", href: "/sponsors" },
+  { label: "Contact", href: "/contact" },
+  { label: "Tryouts", href: "/tryouts" },
+];
+
 export default function Footer() {
   const club = useClubContext();
   const clubId = club.id;
@@ -24,6 +34,9 @@ export default function Footer() {
   const [partners, setPartners] = useState<DBSiteSponsorLogo[]>([]);
   const [socialLinks, setSocialLinks] =
     useState<DBSiteSocialLink[]>([]);
+  const activeFooterLinks = club.presentationTemplateKey === "academy@1"
+    ? academyFooterLinks
+    : footerLinks;
 
   useEffect(() => {
     fetchSiteSponsorLogos("footer", clubId)
@@ -154,7 +167,7 @@ export default function Footer() {
 
         {/* Nav Links */}
         <ul className="flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          {footerLinks.map((link) => (
+          {activeFooterLinks.map((link) => (
             <li key={link.href}>
               {link.href.startsWith("mailto:") ? (
                 <a

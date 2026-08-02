@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { CLUB_IDS } from "../fixtures/entities";
 import { validTransparentPng } from "../fixtures/media";
 import {
+  expectPostgrestError,
+  expectStorageError,
+} from "../helpers/database-security";
+import {
   createLocalClients,
   requirePlannedDatabase,
   type LocalClients,
@@ -37,16 +41,32 @@ describe("storage isolation contract", () => {
         validTransparentPng(),
         { contentType: "image/png" },
       );
-    expect(error).not.toBeNull();
+    expectStorageError(
+      error,
+      {
+        statusCode: "403",
+        message: "new row violates row-level security policy",
+      },
+      "anonymous staging upload",
+    );
   });
 
   it("rejects malformed public-media paths", async () => {
+    const { data: bucket, error: bucketError } =
+      await clients.service.storage.getBucket("onzio-media");
+    expect(bucketError?.message).toBeUndefined();
+    expect(bucket).toMatchObject({ name: "onzio-media", public: true });
+
     const { error } = await clients.anon.storage
       .from("onzio-media")
       .upload("../bravo/attacker.png", validTransparentPng(), {
         contentType: "image/png",
       });
-    expect(error).not.toBeNull();
+    expectStorageError(
+      error,
+      { statusCode: "404", message: "Bucket not found" },
+      "malformed public-media path",
+    );
   });
 
   it("rejects unsupported SVG uploads", async () => {
@@ -57,7 +77,14 @@ describe("storage isolation contract", () => {
         Buffer.from("<svg/>"),
         { contentType: "image/svg+xml" },
       );
-    expect(error).not.toBeNull();
+    expectStorageError(
+      error,
+      {
+        statusCode: "415",
+        message: "mime type image/svg+xml is not supported",
+      },
+      "unsupported SVG upload",
+    );
   });
 });
 
@@ -99,15 +126,20 @@ describe("database audit contract", () => {
       .from("audit_events")
       .delete()
       .eq("club_id", CLUB_IDS.alpha);
-    expect(update.error).not.toBeNull();
-    expect(deletion.error).not.toBeNull();
+    expectPostgrestError(update.error, "42501", "anonymous audit update");
+    expectPostgrestError(deletion.error, "42501", "anonymous audit deletion");
   });
 
   it("does not record rejected writes as successful events", async () => {
-    await clients.anon.from("site_branding").insert({
+    const rejected = await clients.anon.from("site_branding").insert({
       club_id: CLUB_IDS.bravo,
       club_logo_path: "rejected/logo.png",
     });
+    expectPostgrestError(
+      rejected.error,
+      "42501",
+      "rejected write audit probe",
+    );
 
     const { data, error } = await clients.service
       .from("audit_events")

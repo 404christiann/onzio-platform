@@ -62,6 +62,19 @@ export const DEFAULT_ABOUT_PAGE_CONTENT: DBAboutPageContent = {
   updated_at: "",
 };
 
+export const EMPTY_ABOUT_PAGE_CONTENT: DBAboutPageContent = {
+  id: 0,
+  hero_title: "About",
+  story_paragraphs: [],
+  feature_image_url: "",
+  values_heading: "",
+  values: [],
+  closing_text: "",
+  closing_cta_label: "",
+  closing_cta_href: "",
+  updated_at: "",
+};
+
 export const DEFAULT_CLUB_LOGO_FEATURES: ClubLogoFeature[] = [
   {
     title: "The Name",

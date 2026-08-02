@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { expectPostgrestError } from "../helpers/database-security";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -182,7 +183,11 @@ describe("Stripe billing database contract", () => {
       "apply_stripe_projection",
       conflicting,
     );
-    expect(result.error).not.toBeNull();
+    expectPostgrestError(
+      result.error,
+      "23505",
+      "conflicting Stripe customer projection",
+    );
 
     const { data: event } = await clients.service
       .from("stripe_events")
@@ -234,7 +239,11 @@ describe("Stripe billing database contract", () => {
       "apply_stripe_projection",
       projectionArgs(clubId),
     );
-    expect(result.error).not.toBeNull();
+    expectPostgrestError(
+      result.error,
+      "42501",
+      "anonymous Stripe projection RPC",
+    );
   });
 
   it("keeps applied Stripe ledger rows immutable outside the private RPC", async () => {
@@ -249,6 +258,10 @@ describe("Stripe billing database contract", () => {
       .from("stripe_events")
       .update({ outcome: "rejected", rejection_code: "FORGED" })
       .eq("id", args.p_event_id);
-    expect(mutation.error).not.toBeNull();
+    expectPostgrestError(
+      mutation.error,
+      "42501",
+      "direct service-role Stripe ledger update",
+    );
   });
 });

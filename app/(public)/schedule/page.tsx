@@ -190,7 +190,16 @@ function LegacySchedulePage() {
 
             {/* Rows */}
             <div style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
-              {fixtures.map((fixture, i) => (
+              {fixtures.length === 0 ? (
+                <div className="px-6 py-14 text-center">
+                  <h2 className="font-display text-2xl font-black uppercase text-[var(--color-black)]">
+                    Schedule coming soon
+                  </h2>
+                  <p className="mx-auto mt-3 max-w-xl font-body text-[var(--color-gray-mid)]">
+                    No official fixtures have been published yet.
+                  </p>
+                </div>
+              ) : fixtures.map((fixture, i) => (
                 <FixtureRow
                   key={i}
                   fixture={fixture}
@@ -202,12 +211,12 @@ function LegacySchedulePage() {
             </div>
 
             {/* Footer note */}
-            <p
+            {fixtures.length > 0 && <p
               className="font-display font-bold text-sm tracking-widest uppercase text-center mt-10 px-6"
               style={{ color: "var(--color-black)" }}
             >
               Match details and venues are subject to change.
-            </p>
+            </p>}
           </div>
         </>
       )}

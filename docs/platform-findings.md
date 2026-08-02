@@ -1,16 +1,14 @@
 # Onzio Platform — Open Findings Register
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
 
 This file tracks known platform-wide issues that have been **identified and
 verified but not fixed**. It exists so findings discovered during scoped
 epic work are not lost when that epic closes.
 
-As of 2026-08-01, `PF-001`, `PF-005`, and `PF-006` are resolved. Four
-findings remain open — `PF-002`, `PF-003`, `PF-004`, and `PF-007` — all
-latent or documentary. None affects a live site. `PF-002` and `PF-003` are
-scheduled into `DCFC-202`; `PF-004` is revisited there too. `PF-007` is
-unscheduled and needs its own approval.
+As of 2026-08-01, `PF-001`, `PF-003`, `PF-005`, `PF-006`, and `PF-007` are
+resolved. Two findings remain open — `PF-002` and `PF-004` — both latent or
+documentary. None affects a live site.
 
 Rules for this file:
 
@@ -180,12 +178,12 @@ should be scoped per-branch rather than taken as one commitment.
   resolving `PF-005` first or in the same change.
 - **Owner:** unassigned.
 
-### PF-002 — Three parallel entitlement sources of truth, two of which contradict
+### PF-002 — Five parallel entitlement sources of truth, two of which contradict
 
 - **Severity:** latent bug with a specific trigger. Nothing currently breaks
   (see trigger condition), but it will misbehave for the first affected
   club, and the failure mode is silent.
-- **Evidence:** entitlement is independently encoded in three places with
+- **Evidence:** entitlement is independently encoded in five places with
   no test or type tying them together:
   1. `onzio_private.club_has_feature`
      (`supabase/migrations/20260726000100_phase2_foundation.sql:301`) —
@@ -197,6 +195,34 @@ should be scoped per-branch rather than taken as one commitment.
      in the allowlist above.
   3. `moduleRegistry` (`packages/presentation/index.ts:250`) — maps module →
      `entitlement`.
+  4. `STARTER_FEATURES` (`lib/club-features.ts`) — application authorization
+     allowlist used by `authorizeMutation` before protected admin data writes.
+  5. The `storage.objects` staging policies
+     (`supabase/migrations/20260726000300_phase2_security.sql`) — independently
+     map upload-path surfaces to feature strings, with unknown surfaces falling
+     back to Starter-accessible `branding`.
+
+  `DCFC-204` exposed a third reachable disagreement while adding a positive
+  Starter Contact mutation contract: the database and presentation registries
+  allowed Contact at Starter, but `STARTER_FEATURES` omitted `contact`, so the
+  application boundary returned `FEATURE_NOT_INCLUDED`. That omission was
+  corrected within `DCFC-204`; the unresolved Shop and Seasons contradictions
+  below remain outside that package.
+
+  `DCFC-301` then exposed the fifth source when `programs` became a valid media
+  surface: the application route correctly denied Starter Programs uploads,
+  but direct Storage upload succeeded because the policy's fallback evaluated
+  the path as `branding`. Migration
+  `20260802013518_dcfc_301_programs_media_entitlement.sql` now maps `programs`
+  explicitly, and a real AAL2 Storage contract pins Pro success plus Starter
+  403 denial. The broader duplicated-source problem remains open.
+
+  `DCFC-302` made the Starter-accessible `contact` hero a valid media surface.
+  Migration `20260802020000_dcfc_302_contact_media_entitlement.sql` names the
+  `contact` → `contact` mapping explicitly instead of depending on the legacy
+  Starter Branding fallback. A direct AAL2 Storage contract pins successful
+  Contact upload for a Starter club. This does not add a sixth source; it makes
+  Contact's entry in the existing fifth source explicit and reviewable.
 
   Two confirmed contradictions:
 
@@ -208,25 +234,25 @@ should be scoped per-branch rather than taken as one commitment.
   (`standings` and `sponsors` were checked and are consistent.)
 - **Trigger condition:** requires a club that is simultaneously
   `tier = 'starter'` **and** `lifecycle = 'active'` / `public_access =
-  'live'`. The only Starter club in `supabase/seed.sql` (Bravo,
-  `22222222-…`) is `onboarding`/`preview`, so `can_read_club` blocks its
-  public reads before tier is ever consulted — which is why existing tests
-  do not catch this.
+  'live'`. The local seed now includes Charlie as an active/live Starter
+  fixture, added during `DCFC-204`, so new agreement contracts can exercise
+  this trigger directly. No hosted tenant is currently known to hit it.
 - **Why it matters:** `can_read_feature` gates **anonymous public reads**,
   not just admin writes, so the failure mode is a silently blank public page
   rather than an error. This is the same root cause that nearly produced a
   broken Starter-tier Contact page during `DCFC-103` (see `DCFC-D108`).
 - **Suggested resolution:** establish a single source of truth for
-  entitlement and derive the other two from it, or — at minimum — add a
-  contract test asserting the three stay in agreement. Any change to
+  entitlement and derive the other four from it, or — at minimum — add a
+  contract test asserting all five stay in agreement. Any change to
   `club_has_feature` must preserve `security definer`,
   `set search_path = ''`, `stable`, and fully-qualified relations per
   `AGENTS.md`.
-- **Owner:** unassigned. Note that `DCFC-202` will already be modifying
-  `club_has_feature` (adding `'contact'` per `DCFC-D108`), so that package
-  is a natural place to also add the agreement test — but fixing the
-  underlying `shop`/`seasons` contradictions is out of that package's scope
-  and should not be silently folded in.
+- **Owner:** unassigned. `DCFC-202` added `'contact'` to
+  `club_has_feature`, `DCFC-204` aligned `STARTER_FEATURES`, and `DCFC-301`
+  aligned the Programs Storage surface. `DCFC-302` explicitly aligned the
+  Contact Storage surface. Fixing the underlying `shop`/`seasons`
+  contradictions remains outside those packages and must not be silently
+  folded into unrelated work.
 
 ### PF-003 — The tier/feature entitlement mechanism is undocumented in the platform plan
 
@@ -280,41 +306,46 @@ should be scoped per-branch rather than taken as one commitment.
 - **Owner:** revisit during `DCFC-202` when the video reference column is
   actually designed.
 
-### PF-007 — RLS denial tests assert only that "an error happened", so a typo silently disables them
-
-- **Severity:** latent test-quality weakness on the security boundary. The
-  assertions are believed correct today; the danger is that they cannot tell
-  a real authorization denial from an unrelated failure, so they can silently
-  stop testing anything.
-- **Evidence:** roughly twelve assertions across `tests/database/` check a
-  denial with only `expect(error).not.toBeNull()`, including the shared
-  helper at `tests/database/schema-rls.test.ts:16` (`expectDenied`), plus
-  `storage-audit.test.ts:40/49/60/102/103`,
-  `authenticated-rls.test.ts:90/128/159/195`, and
-  `stripe-billing.test.ts:185/237`. Verified against PostgREST on
-  2026-08-01: a payload containing a misspelled column returns
-  `{"code":"PGRST204"}` — **and returns it for the `service_role` key too**,
-  which bypasses RLS entirely. So a test whose payload drifts out of sync
-  with the schema keeps passing while the RLS path is never reached.
-- **Trigger condition:** any column rename, table rename, or payload typo in
-  a denial test. No failure is produced; the test simply stops proving
-  anything. This is the same defect class caught inside `DCFC-201` before
-  those contracts landed, where a missing table (`PGRST205`) was satisfying
-  eight "operation was rejected" assertions.
-- **Why it matters more here than elsewhere:** these tests are the evidence
-  that tenant isolation works. In a shared-table multi-tenant design that is
-  the boundary with the largest blast radius, and the one place where a test
-  that quietly stops testing is most expensive.
-- **Suggested resolution:** tighten `expectDenied` to assert the specific
-  denial codes — `42501` for a permission/grant denial, `PGRST116` where a
-  policy filters the row — and explicitly treat `PGRST204`/`PGRST205` as a
-  test-authoring error rather than a pass. Then update the call sites that do
-  not use the helper. Mechanical and bounded, but it edits about a dozen
-  security assertions, so it deserves its own scoped approval rather than
-  being folded into a delivery package.
-- **Owner:** unassigned. Not in `DCFC-202`'s scope.
-
 ## Resolved
+
+### PF-007 — resolved 2026-08-01
+
+The original audit understated the surface. A complete scan found 19 denial
+scenarios that accepted any non-null error (14 direct assertions plus five
+call sites behind the shared `expectDenied` helper), one private-ledger read
+that converted any query error into an empty successful result, and one
+rejected write whose result was ignored before checking the audit ledger — 21
+false-green-prone scenarios in total.
+
+- Added `tests/helpers/database-security.ts` with strict database and Storage
+  assertions. Database checks require the exact Postgres/PostgREST code and
+  fail explicitly on `PGRST204` (missing/misspelled column) or `PGRST205`
+  (missing table) as test-authoring errors. Storage checks require both the
+  observed HTTP-shaped status code and the expected rejection message.
+- Replaced every generic denial assertion with its observed local signature:
+  `42501` for grant, RLS, and RPC denials; `23503` for composite tenant foreign
+  keys; `23505` for uniqueness conflicts; Storage `403` for RLS, `415` for
+  unsupported SVG MIME, and `404` for the malformed public-media request.
+  Private reads now assert query success plus an empty result, or the exact
+  `42501` denial where the table intentionally has no browser grant. The
+  rejected audit probe now asserts its own denial before checking that no
+  success event exists.
+- Added focused contracts proving `PGRST204`/`PGRST205` are rejected and a
+  database-test architecture guard that scans every `tests/database/*.test.ts`
+  file for generic non-null error assertions or query errors converted into
+  empty results. This prevents the weak pattern from returning silently.
+- Mutation evidence: temporarily misspelled `club_logo_path` in a real
+  anonymous denial test. The focused test turned red with
+  `[TEST AUTHORING ERROR] ... received PGRST204` before the original column was
+  restored. This is the exact mutation that the pre-fix assertion would have
+  accepted as green.
+- Verification: focused affected database files 64/64; contracts 244/244;
+  architecture 20/20; complete loopback database suite 70/70; TypeScript
+  clean; complete loopback-mapped suite 588/588 across 59 files. Lint passed
+  with only the three pre-existing analytics hook warnings, and
+  `git diff --check` passed. No test was skipped, weakened, deleted, or mocked.
+- Hosted mutations: none. All Supabase and Storage evidence came from the
+  loopback local development stack.
 
 ### PF-005 and PF-006 — resolved together 2026-08-01
 

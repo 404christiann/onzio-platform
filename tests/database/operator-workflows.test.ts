@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { USER_IDS } from "../fixtures/entities";
+import { expectPostgrestError } from "../helpers/database-security";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -17,7 +18,8 @@ beforeEach(async () => {
 describe("operator workflow database contract", () => {
   it("keeps verified export records private from browser roles", async () => {
     const { data, error } = await clients.anon.from("club_exports").select("*");
-    expect(error === null ? data : []).toEqual([]);
+    expectPostgrestError(error, "42501", "anonymous export-ledger read");
+    expect(data).toBeNull();
 
     const insert = await clients.anon.from("club_exports").insert({
       id: `forged_${randomUUID()}`,
@@ -29,7 +31,11 @@ describe("operator workflow database contract", () => {
       storage_reference: "forged",
       created_by: USER_IDS.ownerAal2,
     });
-    expect(insert.error).not.toBeNull();
+    expectPostgrestError(
+      insert.error,
+      "42501",
+      "anonymous export-ledger insert",
+    );
   });
 
   it("preserves immutable audit and Stripe ledgers outside purged tenant data", async () => {

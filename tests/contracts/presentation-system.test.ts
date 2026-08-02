@@ -205,6 +205,95 @@ function validClubhouseDocument() {
   };
 }
 
+function validAcademyDocument() {
+  return {
+    ...validCinematicDocument(),
+    template: { id: "academy", version: 1 },
+    fontPack: "montserrat-inter-dmsans",
+    modules: {
+      roster: true,
+      schedule: true,
+      store: true,
+      sponsors: true,
+      standings: true,
+      programs: true,
+      tryouts: true,
+      contact: true,
+      affiliations: true,
+    },
+    homepage: {
+      sections: [
+        {
+          id: "hero-main",
+          type: "academy.hero",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "kit-feature",
+          type: "academy.kit-feature",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "next-match",
+          type: "shared.next-match",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "club-story",
+          type: "shared.history",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "partners",
+          type: "academy.partners",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "standings",
+          type: "academy.standings",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "programs-pathway",
+          type: "academy.programs-pathway",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+      ],
+    },
+    navigation: {
+      groups: [
+        {
+          id: "main",
+          label: null,
+          routes: [
+            "home",
+            "roster",
+            "schedule",
+            "club",
+            "programs",
+            "store",
+            "contact",
+          ],
+        },
+      ],
+    },
+  };
+}
+
 describe("Phase 9.1 presentation baselines", () => {
   it("records reviewable Rose City and Deportivo baseline inventories", async () => {
     const roseCity = await readFile(
@@ -261,6 +350,64 @@ describe("Phase 9.2 presentation schema and registries", () => {
       "schedule",
       "store",
     ]);
+  });
+
+  it("accepts a pinned academy document for the Diverse City-derived Pro template", async () => {
+    const { parsePresentationDocument } = await loadPresentation();
+    const parsed = parsePresentationDocument(validAcademyDocument(), {
+      surface: "production",
+    });
+
+    expect(parsed.template).toEqual({ id: "academy", version: 1 });
+    expect(parsed.fontPack).toBe("montserrat-inter-dmsans");
+    expect(parsed.homepage.sections.map((section) => section.type)).toEqual([
+      "academy.hero",
+      "academy.kit-feature",
+      "shared.next-match",
+      "shared.history",
+      "academy.partners",
+      "academy.standings",
+      "academy.programs-pathway",
+    ]);
+    expect(parsed.navigation.groups[0]?.routes).toEqual([
+      "home",
+      "roster",
+      "schedule",
+      "club",
+      "programs",
+      "store",
+      "contact",
+    ]);
+  });
+
+  it("keeps template and font-pack compatibility registrations bidirectionally consistent", async () => {
+    const { fontPacks, templateRegistry } = await loadPresentation();
+
+    for (const [templateKey, template] of Object.entries(templateRegistry)) {
+      for (const fontPackKey of template.compatibleFontPacks) {
+        expect(
+          fontPacks[fontPackKey],
+          `${templateKey} references the unregistered font pack ${fontPackKey}`,
+        ).toBeDefined();
+        expect(
+          fontPacks[fontPackKey]?.compatibleTemplates,
+          `${templateKey} accepts ${fontPackKey}, but ${fontPackKey} does not accept ${templateKey}`,
+        ).toContain(templateKey);
+      }
+    }
+
+    for (const [fontPackKey, fontPack] of Object.entries(fontPacks)) {
+      for (const templateKey of fontPack.compatibleTemplates) {
+        expect(
+          templateRegistry[templateKey],
+          `${fontPackKey} references the unregistered template ${templateKey}`,
+        ).toBeDefined();
+        expect(
+          templateRegistry[templateKey]?.compatibleFontPacks,
+          `${fontPackKey} accepts ${templateKey}, but ${templateKey} does not accept ${fontPackKey}`,
+        ).toContain(fontPackKey);
+      }
+    }
   });
 
   it("fails closed for unknown template, section, route, module, and font keys", async () => {

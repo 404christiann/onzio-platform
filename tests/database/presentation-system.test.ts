@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import {
   createLocalClients,
@@ -7,6 +7,11 @@ import {
 } from "../helpers/supabase";
 
 let clients: LocalClients;
+let originalAlphaState: {
+  draft_document_id: string | null;
+  published_document_id: string | null;
+  updated_by: string;
+} | null = null;
 let versionCounter = Math.floor(Date.now() % 1_000_000);
 
 function nextPresentationVersion() {
@@ -79,9 +84,30 @@ function presentationConfiguration(templateId: "cinematic" | "heritage" | "clubh
   };
 }
 
+beforeAll(async () => {
+  clients = createLocalClients();
+  await requirePlannedDatabase(clients.service);
+  const state = await clients.service
+    .from("presentation_state")
+    .select("draft_document_id, published_document_id, updated_by")
+    .eq("club_id", CLUB_IDS.alpha)
+    .maybeSingle();
+  expect(state.error?.message).toBeUndefined();
+  originalAlphaState = state.data;
+});
+
 beforeEach(async () => {
   clients = createLocalClients();
   await requirePlannedDatabase(clients.service);
+});
+
+afterEach(async () => {
+  if (!originalAlphaState) return;
+  const restored = await clients.service.from("presentation_state").upsert({
+    club_id: CLUB_IDS.alpha,
+    ...originalAlphaState,
+  });
+  expect(restored.error?.message).toBeUndefined();
 });
 
 describe("Phase 9.3 presentation persistence and RLS", () => {

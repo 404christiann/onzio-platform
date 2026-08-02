@@ -221,17 +221,20 @@ const MEDIA_BUCKETS: Record<
 > = {
   "about-page": { surface: "about", kind: "photo" },
   Aboutassets: { surface: "about", kind: "graphic" },
+  contact: { surface: "contact", kind: "photo" },
   flags: { surface: "roster", kind: "graphic" },
   homepage: { surface: "homepage", kind: "photo" },
   logos: { surface: "branding", kind: "graphic" },
   logos_v2: { surface: "branding", kind: "graphic" },
   "opponent-logos": { surface: "schedule", kind: "graphic" },
   "player-action-photos": { surface: "roster", kind: "photo" },
+  programs: { surface: "programs", kind: "photo" },
   "roster-images": { surface: "roster", kind: "photo" },
   shop: { surface: "shop", kind: "photo" },
   sponsors: { surface: "branding", kind: "graphic" },
   "staff-images": { surface: "roster", kind: "photo" },
   standings: { surface: "standings", kind: "graphic" },
+  tryouts: { surface: "tryouts", kind: "photo" },
 };
 
 function mediaError(code: string, message = code) {

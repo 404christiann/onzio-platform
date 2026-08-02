@@ -22,6 +22,10 @@ import {
   DBSiteSocialLink,
   DBLeagueStandingRow,
   DBLeagueStandingsSettings,
+  DBProgram,
+  DBContactProfile,
+  DBContactPageContent,
+  DBTryout,
   SponsorLogoPlacement,
 } from "@/lib/db-types";
 import { DEFAULT_CLUB_LOGO_PATH } from "@/lib/club-branding";
@@ -40,6 +44,7 @@ import { normalizeShopPurchaseDetails } from "@/lib/shop-purchase-details";
 import { defaultSponsorLogosForPlacement } from "@/lib/sponsor-content";
 import {
   DEFAULT_ABOUT_PAGE_CONTENT,
+  EMPTY_ABOUT_PAGE_CONTENT,
   DEFAULT_CLUB_LOGO_PAGE_CONTENT,
   normalizeAboutValues,
   normalizeClubLogoColorCards,
@@ -58,6 +63,7 @@ import {
   resolveMediaReferences,
   resolveMediaStoragePath,
 } from "@/lib/media-assets";
+import { normalizePublicHref } from "@/lib/public-link";
 
 const TEST_CLUB_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -166,8 +172,303 @@ export type AboutClubContent = {
   logo: DBClubLogoPageContent;
 };
 
+export type ProgramContent = {
+  id: string;
+  slug: string;
+  navLabel: string;
+  displayTitle: string;
+  kicker: string;
+  summary: string;
+  body: string;
+  highlights: string[];
+  layoutVariant: "statement_band" | "detail_focus";
+  heroMediaUrl: string;
+  detailMediaUrl: string;
+  externalCta: { label: string; href: string } | null;
+  sortOrder: number;
+};
+
+export type ContactContent = {
+  profile: {
+    publicEmail: string;
+    publicPhone: string;
+    serviceArea: string;
+    hours: string;
+  } | null;
+  page: {
+    eyebrow: string;
+    headline: string;
+    intro: string;
+    heroMediaUrl: string;
+  } | null;
+  socialLinks: DBSiteSocialLink[];
+};
+
+export type TryoutAction =
+  | { kind: "registration"; label: string; href: string }
+  | { kind: "contact"; label: "Contact the club"; href: string };
+
+export type TryoutContent = {
+  id: string;
+  programId: string | null;
+  status: "upcoming" | "open" | "closed";
+  eyebrow: string;
+  headline: string;
+  intro: string;
+  heroMediaUrl: string;
+  eligibilityCopy: string;
+  whatToExpectCopy: string;
+  preparationCopy: string;
+  eventDate: string | null;
+  location: string;
+  costText: string;
+  closedMessage: string;
+  sortOrder: number;
+  action: TryoutAction | null;
+};
+
+type HydratedProgram = DBProgram & {
+  hero_media_url?: string;
+  detail_media_url?: string;
+};
+
+type HydratedContactPage = DBContactPageContent & {
+  hero_media_url?: string;
+};
+
+type HydratedTryout = DBTryout & {
+  hero_media_url?: string;
+};
+
+const CLUB_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PUBLIC_EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+function requireVerifiedClubId(clubId: string): string {
+  if (!CLUB_ID_PATTERN.test(clubId)) {
+    throw new Error("Public domain query requires a verified clubId UUID");
+  }
+  return clubId;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
+function mapProgram(row: HydratedProgram): ProgramContent {
+  const href = normalizePublicHref(row.external_cta_href);
+  const label = row.external_cta_label.trim();
+  return {
+    id: row.id,
+    slug: row.slug,
+    navLabel: row.nav_label,
+    displayTitle: row.display_title,
+    kicker: row.kicker,
+    summary: row.summary,
+    body: row.body,
+    highlights: stringArray(row.highlights),
+    layoutVariant:
+      row.layout_variant === "detail_focus" ? "detail_focus" : "statement_band",
+    heroMediaUrl: row.hero_media_url ?? "",
+    detailMediaUrl: row.detail_media_url ?? "",
+    externalCta: href && label ? { label, href } : null,
+    sortOrder: row.sort_order,
+  };
+}
+
+function contactHref(email: unknown): string {
+  if (
+    typeof email !== "string" ||
+    email !== email.trim() ||
+    !PUBLIC_EMAIL_PATTERN.test(email)
+  ) {
+    return "";
+  }
+  return `mailto:${email}`;
+}
+
+function mapTryout(row: HydratedTryout, email: unknown): TryoutContent {
+  const registrationHref = normalizePublicHref(row.registration_href);
+  const registrationLabel = row.cta_label.trim();
+  const fallbackHref = contactHref(email);
+  const action: TryoutAction | null =
+    row.status !== "closed" && registrationHref && registrationLabel
+      ? {
+          kind: "registration",
+          label: registrationLabel,
+          href: registrationHref,
+        }
+      : fallbackHref
+        ? {
+            kind: "contact",
+            label: "Contact the club",
+            href: fallbackHref,
+          }
+        : null;
+
+  return {
+    id: row.id,
+    programId: row.program_id,
+    status:
+      row.status === "open" || row.status === "closed"
+        ? row.status
+        : "upcoming",
+    eyebrow: row.eyebrow,
+    headline: row.headline,
+    intro: row.intro,
+    heroMediaUrl: row.hero_media_url ?? "",
+    eligibilityCopy: row.eligibility_copy,
+    whatToExpectCopy: row.what_to_expect_copy,
+    preparationCopy: row.preparation_copy,
+    eventDate: row.event_date,
+    location: row.location,
+    costText: row.cost_text,
+    closedMessage: row.closed_message,
+    sortOrder: row.sort_order,
+    action,
+  };
+}
+
 
 // ── Queries ───────────────────────────────────────────────────
+
+/** Fetches active Programs content for one already-verified tenant. */
+export async function fetchPrograms(clubId: string): Promise<ProgramContent[]> {
+  const tenantId = requireVerifiedClubId(clubId);
+  const { data, error } = await supabase
+    .from("programs")
+    .select("*")
+    .eq("club_id", tenantId)
+    .eq("status", "active")
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(`fetchPrograms: ${error.message}`);
+
+  const rows = await resolveMediaReferences(
+    (data ?? []) as DBProgram[],
+    tenantId,
+    [
+      { assetId: "hero_media_asset_id", url: "hero_media_url" },
+      { assetId: "detail_media_asset_id", url: "detail_media_url" },
+    ],
+  );
+  return (rows as HydratedProgram[]).map(mapProgram);
+}
+
+/** Fetches one active Program by tenant-scoped slug, or null when unavailable. */
+export async function fetchProgramBySlug(
+  clubId: string,
+  slug: string,
+): Promise<ProgramContent | null> {
+  const tenantId = requireVerifiedClubId(clubId);
+  if (!/^[a-z][a-z0-9-]*$/.test(slug)) return null;
+
+  const { data, error } = await supabase
+    .from("programs")
+    .select("*")
+    .eq("club_id", tenantId)
+    .eq("slug", slug)
+    .eq("status", "active")
+    .limit(1);
+  if (error) throw new Error(`fetchProgramBySlug: ${error.message}`);
+  const rows = await resolveMediaReferences(
+    (data ?? []) as DBProgram[],
+    tenantId,
+    [
+      { assetId: "hero_media_asset_id", url: "hero_media_url" },
+      { assetId: "detail_media_asset_id", url: "detail_media_url" },
+    ],
+  );
+  const row = (rows as HydratedProgram[])[0];
+  return row ? mapProgram(row) : null;
+}
+
+/** Fetches canonical Contact data, page copy, and shared social destinations. */
+export async function fetchContactContent(
+  clubId: string,
+): Promise<ContactContent> {
+  const tenantId = requireVerifiedClubId(clubId);
+  const [profileResult, pageResult, socialResult] = await Promise.all([
+    supabase
+      .from("contact_profile")
+      .select("*")
+      .eq("club_id", tenantId)
+      .limit(1),
+    supabase
+      .from("contact_page_content")
+      .select("*")
+      .eq("club_id", tenantId)
+      .limit(1),
+    supabase
+      .from("site_social_links")
+      .select("*")
+      .eq("club_id", tenantId)
+      .order("sort_order", { ascending: true }),
+  ]);
+  const error = profileResult.error ?? pageResult.error ?? socialResult.error;
+  if (error) throw new Error(`fetchContactContent: ${error.message}`);
+
+  const profile = ((profileResult.data ?? []) as DBContactProfile[])[0] ?? null;
+  const hydratedPages = await resolveMediaReferences(
+    (pageResult.data ?? []) as DBContactPageContent[],
+    tenantId,
+    [{ assetId: "hero_media_asset_id", url: "hero_media_url" }],
+  );
+  const page = (hydratedPages as HydratedContactPage[])[0] ?? null;
+  const socialLinks = ((socialResult.data ?? []) as DBSiteSocialLink[])
+    .map((link) => ({ ...link, href: normalizePublicHref(link.href) }))
+    .filter((link) => link.href !== "");
+
+  return {
+    profile: profile
+      ? {
+          publicEmail: profile.public_email,
+          publicPhone: profile.public_phone,
+          serviceArea: profile.service_area,
+          hours: profile.hours,
+        }
+      : null,
+    page: page
+      ? {
+          eyebrow: page.eyebrow,
+          headline: page.headline,
+          intro: page.intro,
+          heroMediaUrl: page.hero_media_url ?? "",
+        }
+      : null,
+    socialLinks,
+  };
+}
+
+/** Fetches ordered Tryouts and derives a safe registration/contact action. */
+export async function fetchTryouts(clubId: string): Promise<TryoutContent[]> {
+  const tenantId = requireVerifiedClubId(clubId);
+  const [tryoutsResult, contactResult] = await Promise.all([
+    supabase
+      .from("tryouts")
+      .select("*")
+      .eq("club_id", tenantId)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("contact_profile")
+      .select("public_email")
+      .eq("club_id", tenantId)
+      .limit(1),
+  ]);
+  const error = tryoutsResult.error ?? contactResult.error;
+  if (error) throw new Error(`fetchTryouts: ${error.message}`);
+
+  const rows = await resolveMediaReferences(
+    (tryoutsResult.data ?? []) as DBTryout[],
+    tenantId,
+    [{ assetId: "hero_media_asset_id", url: "hero_media_url" }],
+  );
+  const email = (
+    (contactResult.data ?? []) as Pick<DBContactProfile, "public_email">[]
+  )[0]?.public_email;
+  return (rows as HydratedTryout[]).map((row) => mapTryout(row, email));
+}
 
 /** Returns all seasons ordered newest first. */
 export async function fetchSeasons(clubId?: string): Promise<DBSeason[]> {
@@ -285,7 +586,7 @@ export async function fetchShopPurchaseDetails(clubId?: string): Promise<DBShopP
   ).limit(1);
   if (error) throw new Error(`fetchShopPurchaseDetails: ${error.message}`);
   const row = ((data ?? []) as DBShopPurchaseDetails[])[0] ?? null;
-  return normalizeShopPurchaseDetails(row);
+  return normalizeShopPurchaseDetails(row, { legacyFallback: !clubId });
 }
 
 /** Fetches the ordered shop-page photo row for one shop kit variant. */
@@ -415,7 +716,9 @@ export async function fetchAboutClubContent(clubId?: string): Promise<AboutClubC
           story_paragraphs: normalizeStoryParagraphs(rawAbout.story_paragraphs),
           values: normalizeAboutValues(rawAbout.values),
         }
-      : DEFAULT_ABOUT_PAGE_CONTENT,
+      : clubId
+        ? EMPTY_ABOUT_PAGE_CONTENT
+        : DEFAULT_ABOUT_PAGE_CONTENT,
     logo: rawLogo
       ? {
           ...rawLogo,

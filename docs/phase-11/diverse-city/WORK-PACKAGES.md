@@ -1,6 +1,10 @@
 # Diverse City FC Work Packages
 
-Last updated: 2026-07-31
+Last updated: 2026-08-01
+
+This file ends at `DCFC-304`. Proposed post-local rollout packages are defined
+separately in `ROLLOUT-WORK-PACKAGES.md`; none is authorized or started by
+completing this file.
 
 ## Status Values
 
