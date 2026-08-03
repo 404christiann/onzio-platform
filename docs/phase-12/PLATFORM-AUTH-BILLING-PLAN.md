@@ -460,8 +460,14 @@ Outcomes, rationale, and evidence are in `docs/phase-12/DECISIONS.md`.
   timebox proved unavailable on Free staging. `PLAT-D016` was accepted and
   superseded the same day.
 
-Tracked in `DECISIONS.md` in their place: one open verification —
-whether Vercel notifies on a failed cron for this account, since `PLAT-D019`
-escalates by returning non-200 — and one implementation obligation, that
-`PLAT-D014`'s explicit unknown-address message must be produced by mapping
-Supabase's generic `Signups not allowed for otp` error in the application.
+Both verification tasks opened in their place are now also resolved: session
+`timebox` / `inactivity_timeout` are Pro-and-above (closed by `PLAT-D021`), and
+Vercel records cron failures without notifying (closed by `PLAT-D022`).
+
+What remains tracked in `DECISIONS.md` is not a decision but two `PLAT-101`
+implementation obligations found by probe: `PLAT-D014`'s explicit
+unknown-address message must be produced by mapping Supabase's generic
+`Signups not allowed for otp` error in the application, and the stock Magic Link
+template emits a link with no six-digit code, so altering it to `{{ .Token }}`
+is a hard prerequisite. Plus one proposed-but-unauthorized scope item: extending
+`PLAT-D022`'s heartbeat to the existing `/api/cron/media-cleanup`.

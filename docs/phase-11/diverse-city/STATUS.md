@@ -125,6 +125,60 @@ unassigned and unapproved.
 
 ## Completion Records
 
+### 2026-08-03 — PLAT-D022 accepted; cron alerting closes the last open item — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). Continuation of the same design review. Class 1,
+documentation only. Hosted-mutation count: zero.
+
+Christian confirmed that Vercel records cron invocations without sending native
+notifications for an individual cron failure or non-200 — native alerting covers
+deployment failures and broad error-rate anomalies only. `PLAT-D019`'s
+escalation was therefore a pull, and the delivery half of the reconciliation
+question was not genuinely closed.
+
+The review then found that neither of the obvious fixes covers the failure that
+matters most. An in-handler webhook push and a log-drain 5xx rule both alert only
+on runs that happen. **Silence — a dropped `vercel.json` entry, a rotated
+`CRON_SECRET`, a platform fault — produces no signal at all**, and because this
+same cron carries `PLAT-D006`'s suspension work, silent non-execution means
+grace warnings never send and overdue customers never suspend while
+reconciliation quietly stops.
+
+`PLAT-D022` accepts a heartbeat / dead-man's-switch: ping on a clean run, signal
+failure explicitly, and let the monitor alert on both a reported failure and a
+missing ping. One outbound fetch and one secret; no SDK, no log drain. The
+third-party dependency is accepted and recorded, on the grounds that its failure
+mode is a spurious or missed alert and never a broken customer path — unlike
+making email load-bearing for authentication, which is the objection that sank
+an emailed digest in `PLAT-D019`.
+
+Recorded as proposed but **not authorized**: `/api/cron/media-cleanup` has had
+this same blind spot since Phase 8 and would benefit from the same heartbeat,
+but it is Phase 8 infrastructure and `PLAT-102`'s permitted actions name only
+the new lifecycle cron. Extending it needs an explicit scope widening or its own
+package, and was deliberately not assumed.
+
+Both verification tasks opened earlier in this review are now closed —
+`timebox` availability by `PLAT-D021`, Vercel cron notification by `PLAT-D022`.
+No open decision or verification remains against `PLAT-EPIC-001`.
+
+Files changed: `docs/phase-12/DECISIONS.md` (`PLAT-D022`, scope note, risk row,
+open item resolved, Acceptance Record);
+`docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md` (Open Items closed out); this file
+and `HANDOFF.md`.
+
+Verification: `git status --short` clean after commit; `git diff --check` clean.
+No application code, schema, or test changed.
+
+Blockers: unchanged. Push still withheld; `PLAT-101` still unauthorized and
+unstarted. What remains before `PLAT-101` can be assigned is its package
+approval and three inputs: the operator user-ID list, the exact unknown-address
+message, and the transactional sending domain.
+
+Exact next step: unchanged. Do not start `DCFC-601`; do not push.
+
+Hosted-mutation count: zero.
+
 ### 2026-08-03 — PLAT-D016 superseded by PLAT-D021; session age moves to the platform — Claude Code (Opus 5)
 
 Agent: Claude Code (Opus 5). Continuation of the design review below, same

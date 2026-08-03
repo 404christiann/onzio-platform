@@ -96,14 +96,24 @@ without binding the caller to a verified session — the gap is now a
 requirement, not a recommendation. Operator scripts will sign in with TOTP
 rather than relying on the service-role key plus a known operator UUID.
 
-Carried forward: one open verification — whether Vercel notifies on a failed
-cron for this account, which decides whether `PLAT-D019`'s alert is a push or a
-pull — and two implementation obligations for `PLAT-101`, both found by probe
-rather than by reading: `PLAT-D014`'s explicit "no account for that address"
-message must be produced by mapping Supabase's generic `Signups not allowed for
-otp` error in the application, and the stock Magic Link template emits a link
-with no six-digit code, confirming the template change is a hard prerequisite
-rather than a nicety.
+**Cron alerting was a pull, and the fix had to cover silence.** Vercel records
+cron invocations but sends no native notification for an individual cron failure
+or non-200, so `PLAT-D019`'s escalation reached nobody. Neither an in-handler
+webhook nor a log-drain 5xx rule fixes the worse case: a cron that stops firing
+emits no signal at all, which would silently disable `PLAT-D006`'s suspension
+warnings as well as reconciliation. `PLAT-D022` accepts a heartbeat /
+dead-man's-switch — ping on a clean run, signal failure explicitly, alert on
+both a reported failure and a missing ping. Proposed but **not authorized**:
+`/api/cron/media-cleanup` has the same blind spot from Phase 8, but it is
+outside `PLAT-102`'s named scope and needs its own widening or package.
+
+**No open decision or verification remains against `PLAT-EPIC-001`.** What is
+left is two `PLAT-101` implementation obligations, both found by probe rather
+than by reading: `PLAT-D014`'s explicit "no account for that address" message
+must be produced by mapping Supabase's generic `Signups not allowed for otp`
+error in the application, and the stock Magic Link template emits a link with no
+six-digit code, confirming the template change is a hard prerequisite rather
+than a nicety.
 
 Flagged and deliberately not fixed, because it is `PLAT-101`'s deliverable:
 `assertOperator()` in `lib/operator/shared.ts` checks only that a
