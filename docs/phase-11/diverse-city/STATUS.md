@@ -10,7 +10,17 @@ Rollout epic status: `phase_5_complete`
 
 Last updated: 2026-08-02
 
-Current assignment: `DCFC-504` and Phase 5 are complete. Christian recovered
+Current assignment: `PLAT-EPIC-001` prerequisites `P1` and `P2` are complete as
+of 2026-08-03 (Claude Code, Opus 5). The Phase 5 worktree is committed locally
+on `staging`, and `PLAT-D001`–`PLAT-D014` are promoted into
+`docs/phase-12/DECISIONS.md`. No push was created: the `staging` branch triggers
+a protected Vercel deployment, which is Class 3 and unapproved. Hosted-mutation
+count: zero. The exact next step is Christian's sign-off on the `PLAT-101`
+privilege classification table and on the promoted decisions; `PLAT-101` cannot
+be assigned before both. `DCFC-601` remains unstarted and is `PLAT-103`'s
+scope to respecify.
+
+Prior assignment: `DCFC-504` and Phase 5 are complete. Christian recovered
 the browser-saved password privately, enrolled exactly one TOTP factor, reached
 AAL2, and loaded the protected Diverse City admin. Contact loaded at the
 Starter boundary, Programs and Tryouts remained Pro-gated, and the owner-only
@@ -111,6 +121,100 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-EPIC-001 prerequisites P1 and P2 — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). Assignment: `PLAT-EPIC-001` prerequisites `P1`
+(commit the outstanding worktree) and `P2` (promote the decisions) only.
+Status: both complete. `PLAT-101` was not started.
+
+Completed work — `P1`. The eleven outstanding files from `DCFC-502`,
+`DCFC-503`, and `DCFC-504` are committed locally on `staging` in four
+package-grouped commits, followed by the `P2` commit:
+
+- `65e54fe` — Close DCFC-502 staging release and tenant provisioning.
+- `6d08634` — Add the DCFC-503 staging content and media importer.
+- `c92a038` — Add the operator-issued club invitation workflow for DCFC-504.
+- `02beb1b` — Record Phase 5 acceptance for DCFC-502 through DCFC-504.
+- `427e19d` — Promote PLAT-D001 through PLAT-D014 into a governed decision log.
+
+`HANDOFF.md`, `STAGING-ACCEPTANCE.md`, and `STATUS.md` are shared Phase 5
+ledgers whose content spans all three packages and could not be split per
+package without inventing intermediate document states, so they land together
+in `02beb1b` after the per-package commits. The commit recording this entry is
+reported outside itself; a commit cannot contain its own SHA.
+
+Completed work — `P2`. `docs/phase-12/DECISIONS.md` is a new platform-wide
+decision log, kept separate from this Diverse City log because these decisions
+change every tenant. It records all fourteen decisions with rationale
+preserved, `PLAT-D006` and `PLAT-D012` as explicit accepted risks in an
+Accepted Risk Register alongside the other four, the deferred and rejected
+options (passkeys, SMS, magic links, OAuth, admin-locked-but-site-up) each with
+a reopen condition, the five package-level open items, and the relationships to
+`PF-002`, `DCFC-601`/`DCFC-602`, and the two `AGENTS.md` invariants acceptance
+would change. Every entry is `promoted_awaiting_acceptance` with an empty
+Acceptance Record: the plan's Authorization Notice and this log's decision rules
+both hold that promotion is not acceptance, and no dated approval exists.
+
+Files changed: `docs/phase-12/DECISIONS.md` (new);
+`docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md` (P1/P2 marked complete, decision
+table pointed at the new log); `docs/phase-11/diverse-city/STATUS.md` and
+`HANDOFF.md` (this record). No application code, schema, test, DCFC package
+definition, `DCFC-601`, or `DCFC-602` was modified.
+
+Verification: `git status --short` clean after the final commit;
+`git diff --check` clean; `npx tsc --noEmit` exit 0 against the committed tree;
+`git log --oneline` shows the five commits above on `staging` ahead of
+`8e3cde2`. Tests were not run — this assignment changed no code or test.
+
+Blockers. The push is deliberately withheld: `staging` triggers a protected
+Vercel deployment, a Class 3 action this assignment prohibits. Local `staging`
+is now six commits ahead of the deployed release commit `8e3cde2` — the five
+listed above plus the commit carrying this record — so the repository and the
+running staging deployment have diverged until a separately approved push. `PLAT-101` is gated on Christian's sign-off of the privilege
+classification table and on moving `PLAT-D012`, `PLAT-D013`, and `PLAT-D014` to
+`accepted`; `PLAT-102` additionally needs `PLAT-D003`, `PLAT-D004`, and
+`PLAT-D006`–`PLAT-D011` accepted.
+
+Also recorded during `DCFC-504` closeout and left as-is: one
+`STAGING-ACCEPTANCE.md` acceptance item under Identity, Email, and MFA remains
+unchecked — expired, reused, forged, unsupported, and caller-supplied redirects
+were not proven to fail closed. It is a real gap in the `DCFC-504` evidence, not
+an oversight in this assignment, and it overlaps `PLAT-101`'s sign-in rewrite.
+
+Flagged, not fixed — operator authorization (`PLAT-101`'s deliverable). Reading
+`lib/operator/shared.ts` confirmed the plan's concern and found it understated:
+
+- `assertOperator(actorId)` checks only that `actorId` appears in
+  `ONZIO_OPERATOR_USER_IDS`. There is no AAL check, no session lookup, and no
+  binding between `actorId` and the authenticated caller — `actorId` is an
+  ordinary function argument. The env allowlist proves which IDs are
+  privileged, never that the caller holds one.
+- Every operator function reaches the database through
+  `createServiceRoleClient()`, so RLS — the platform's stated final
+  authorization boundary — is not in the path at all.
+- What actually keeps this safe today is that no `app/` route imports
+  `lib/operator/*`. The only callers are `scripts/*` and `tests/*`. The
+  secondary gate, `assertDirectOperatorInvocation()`, tests a caller-supplied
+  `invokedFromApplicationRoute` boolean, which an application route would have
+  to set truthfully against its own interest.
+- `PLAT-101` proposes generalizing this workflow so a club owner can add an
+  `admin`, which necessarily gives an application route a path into this
+  module. That change converts the current gap from theoretical to reachable
+  and should be treated as the package's first-order design problem, not a
+  follow-on.
+- `isContractSimulation()` returns a fully successful fabricated result
+  whenever `NODE_ENV === "test"` and no client is injected. Contract tests
+  therefore assert the shape of operator success without exercising any
+  authorization; only the loopback database tests do. Worth pinning
+  deliberately when `PLAT-101` proves the gate.
+
+Exact next step: present the `PLAT-101` privilege classification table and the
+five open items to Christian for sign-off or amendment. Do not assign
+`PLAT-101`, do not start `DCFC-601`, and do not push.
+
+Hosted-mutation count: zero. No Supabase, Vercel, Stripe, Auth, email, Storage,
+DNS, or Bunny.net action of any kind occurred; both prerequisites were local.
 
 ### 2026-08-02 — DCFC-504 accepted; Phase 5 complete — Codex
 

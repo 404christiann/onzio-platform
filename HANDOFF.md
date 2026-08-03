@@ -1,6 +1,77 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
+
+## Latest Work — PLAT-EPIC-001 prerequisites P1 and P2
+
+Agent: Claude Code (Opus 5), 2026-08-03. Assignment: prerequisites `P1` and
+`P2` of `docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md` only. Both are complete.
+`PLAT-101` was not started. Hosted-mutation count: **zero** — no Supabase,
+Vercel, Stripe, Auth, email, Storage, DNS, or Bunny.net action of any kind.
+
+`P1` — the outstanding `DCFC-502`/`503`/`504` worktree is committed locally on
+`staging` in four package-grouped commits, plus the `P2` commit:
+
+- `65e54fe` Close DCFC-502 staging release and tenant provisioning
+- `6d08634` Add the DCFC-503 staging content and media importer
+- `c92a038` Add the operator-issued club invitation workflow for DCFC-504
+- `02beb1b` Record Phase 5 acceptance for DCFC-502 through DCFC-504
+- `427e19d` Promote PLAT-D001 through PLAT-D014 into a governed decision log
+
+`HANDOFF.md`, `STAGING-ACCEPTANCE.md`, and `STATUS.md` are shared Phase 5
+ledgers spanning all three packages; splitting them per package would have
+required inventing intermediate document states, so they land together in
+`02beb1b`.
+
+**No push was created, and this is the one thing to know before resuming.** The
+`staging` branch triggers a protected Vercel deployment, which is Class 3 and
+not approved by this assignment. Local `staging` is now six commits ahead of
+release commit `8e3cde2` — the five listed above plus the commit carrying this
+handoff record — and `8e3cde2` is what the running protected staging deployment
+serves. The repository and the deployment have diverged until a
+separately approved push. Nothing in those commits changes application
+behaviour — they are documentation plus a staging-only importer, an
+operator-only invitation module reachable from no route, and its tests — so the
+divergence is a bookkeeping risk, not a runtime one.
+
+`P2` — `docs/phase-12/DECISIONS.md` is a new platform-wide decision log,
+separate from the Diverse City tenant log because these decisions change every
+tenant. It records `PLAT-D001`–`PLAT-D014` with rationale preserved, `PLAT-D006`
+(automated suspension can take a paying customer's site offline) and
+`PLAT-D012` (inbox access equals club content access) as explicit accepted
+risks in an Accepted Risk Register with the other four, the deferred and
+rejected options (passkeys, SMS, magic links, OAuth, admin-locked-but-site-up)
+each with a reopen condition, and the five package-level open items.
+
+**Promotion is not acceptance.** Every entry is
+`promoted_awaiting_acceptance` with an empty Acceptance Record; no dated
+approval from Christian exists. `PLAT-101` requires `PLAT-D012`, `PLAT-D013`,
+and `PLAT-D014` accepted plus a signed privilege classification table;
+`PLAT-102` additionally requires `PLAT-D003`, `PLAT-D004`, and
+`PLAT-D006`–`PLAT-D011`.
+
+Flagged and deliberately not fixed, because it is `PLAT-101`'s deliverable:
+`assertOperator()` in `lib/operator/shared.ts` checks only that a
+caller-supplied `actorId` appears in `ONZIO_OPERATOR_USER_IDS` — no AAL check,
+no session lookup, and no binding between that argument and the authenticated
+caller — while every operator function reaches the database through
+`createServiceRoleClient()` and so bypasses RLS entirely. What keeps this safe
+today is that no `app/` route imports `lib/operator/*`; the only callers are
+scripts and tests. `PLAT-101` proposes letting a club owner add an `admin`,
+which gives an application route a path into this module and makes the gap
+reachable. Full detail, including the `isContractSimulation()` fabricated-success
+path in contract tests, is in
+`docs/phase-11/diverse-city/STATUS.md`.
+
+Verification: `git status --short` clean after the final commit;
+`git diff --check` clean; `npx tsc --noEmit` exit 0; `git log --oneline`
+confirms the five commits above. Tests were not run — this assignment changed
+no application code, schema, or test.
+
+Exact next step: Christian signs off on or amends the `PLAT-101` privilege
+classification table and the five open items, and accepts (or amends) the
+promoted decisions. Only then may `PLAT-101` be assigned. `DCFC-601` remains
+unstarted and must not be started; it is `PLAT-103`'s scope to respecify.
 
 ## Open Platform Findings
 
