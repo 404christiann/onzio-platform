@@ -205,10 +205,14 @@ This closes `PLAT-101`'s sign-off gate. It does not assign or authorize
   checks only membership of `ONZIO_OPERATOR_USER_IDS`, and operator functions
   use `createServiceRoleClient()`, which bypasses RLS. This is the highest-value
   gate in the system and must be proven, not assumed.
-- **Sessions:** asymmetric — long for club accounts (weeks), short for operator
-  accounts (hours). Confirm whether AAL2 survives session refresh without
-  re-prompting, since that determines whether operator re-auth is per-session or
-  per-refresh.
+- **Sessions:** ~~asymmetric — long for club accounts (weeks), short for operator
+  accounts (hours)~~ — **superseded 2026-08-03.** Supabase exposes session length
+  only project-wide, so this is not configurable as written. Replaced by
+  `PLAT-D016` (30-day timebox, no inactivity timeout, project-wide) plus
+  `PLAT-D015` (application-layer 2-hour maximum age on operator `aal2`, read
+  from the JWT's `amr` TOTP timestamp). AAL2 **does** survive session refresh —
+  proven, not assumed — so operator re-auth is per-session, which is why
+  `PLAT-D015` is required. Evidence is in `docs/phase-12/DECISIONS.md`.
 - **Invitations:** generalize the server-only invitation and membership workflow
   built during `DCFC-504` so a club owner can add an `admin`, including
   server-side creation of the Auth user (required, because
@@ -432,14 +436,25 @@ having been modelled on Rose City. Serving multi-team academies requires:
 
 ## Open Items
 
-Package-level detail, not design forks. To be settled inside the packages.
-Current status is tracked in `docs/phase-12/DECISIONS.md`.
+**All five closed on 2026-08-03.** They were worked through in a structured
+design review that probed the loopback stack and the live local schema rather
+than reasoning from this document — and three of the five turned out not to be
+package-level detail at all, because this plan's framing of them was wrong.
+Outcomes, rationale, and evidence are in `docs/phase-12/DECISIONS.md`.
 
-- ~~Grace warning schedule~~ — **settled 2026-08-03:** day 7 and day 17 of the
-  20-day window, accepted as proposed.
-- Final form of `club_has_feature` — a lifecycle-and-kind check, or removal with
-  callers repointed at `can_read_club` / `can_mutate_content`.
-- Reconciliation report cadence and delivery.
-- Whether AAL2 survives session refresh, which determines operator re-auth
-  frequency.
-- Exact session durations for club and operator accounts.
+- ~~Grace warning schedule~~ — **settled:** day 7 and day 17 of the 20-day
+  window, as proposed.
+- ~~Final form of `club_has_feature`~~ — **settled by `PLAT-D018`.** The fork
+  posed here was a false choice: 115 policies call `can_read_feature` /
+  `can_mutate_feature` and none call `club_has_feature` directly.
+- ~~Reconciliation report cadence and delivery~~ — **settled by `PLAT-D019`
+  and `PLAT-D020`.**
+- ~~Whether AAL2 survives session refresh~~ — **proven: it does.** Operator
+  re-auth is per-session.
+- ~~Exact session durations~~ — **settled by `PLAT-D015` and `PLAT-D016`,**
+  after the asymmetric framing proved unimplementable.
+
+Two verification tasks were opened in their place, tracked in
+`DECISIONS.md`: whether session `timebox` / `inactivity_timeout` are available
+on Supabase Free (staging is Free, production is Pro), and whether Vercel
+notifies on a failed cron for this account.

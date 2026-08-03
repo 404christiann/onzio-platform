@@ -125,6 +125,80 @@ unassigned and unapproved.
 
 ## Completion Records
 
+### 2026-08-03 — Five open PLAT items closed; PLAT-D015–D020 accepted — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). A structured design review of the four remaining
+open items (plus the grace schedule already settled). Class 1 and loopback-only
+Class 2: three throwaway probe users on local Supabase, all deleted; read-only
+queries against the live local schema. Hosted-mutation count: zero. `PLAT-101`
+was not started and no application code, schema, or test was changed.
+
+Three of the four items turned out to be mis-framed in the plan, and the review
+found this by probing rather than by reasoning from the document:
+
+- **AAL2 survives session refresh — proven, not decided.** `auth.sessions.aal`
+  is session-level; across two refreshes past the 10s reuse interval, with token
+  strings and `iat`/`exp` advancing, `aal` stayed `aal2` and `amr` kept
+  `password` + `totp` on one session id. Operator re-auth is therefore
+  per-session, making session lifetime the only bound on privileged access.
+- **Asymmetric session durations are not configurable.** `timebox` and
+  `inactivity_timeout` map to project-wide GoTrue env settings; there is no
+  per-user or per-role duration and both account types share one `auth.users`.
+  `PLAT-101`'s "weeks for club, hours for operator" cannot be built as written.
+- **`club_has_feature` has no direct policy callers.** 115 policies across 29
+  tables call `can_read_feature` / `can_mutate_feature`; zero call
+  `club_has_feature`. The fork `PLAT-102` posed was a false choice.
+- **The application has no outbound email capability.** Resend is wired only as
+  Auth's SMTP provider, so an emailed reconciliation report is a new dependency
+  rather than a scheduling choice.
+
+Two further findings made `PLAT-D015` cheap: `amr[totp].timestamp` is stable
+across refresh while `iat` moves, giving a session-age input as a plain JWT
+claim; and in-place TOTP re-verification advances that timestamp on the same
+session, so step-up costs one code with no sign-out.
+
+Christian decided each item against stated alternatives. Accepted as
+`PLAT-D015`–`PLAT-D020` in `docs/phase-12/DECISIONS.md`: a 2-hour
+application-layer maximum age on operator `aal2`; a project-wide 30-day timebox
+with no inactivity timeout; `assertOperator()` taking a verified session rather
+than a caller-supplied `actorId`, with operator scripts signing in via TOTP;
+deletion of `club_has_feature` by collapsing the two wrappers while retaining
+the unused feature parameter as the re-tiering seam; reconciliation folded into
+the daily lifecycle cron as exception-only with a non-200 escalation; and two
+independent flags so the `PLAT-D006` kill switch stops the suspension write
+without stopping reconciliation.
+
+`PLAT-D017` is the notable one for this ledger: it converts the previously
+flagged operator-authorization gap from a recommendation into a requirement.
+The 2-hour rule reads the caller's `amr` claim, which is unobtainable from the
+current `assertOperator(actorId: string)` signature, so `PLAT-101` cannot ship
+the session rule without also binding the caller to a verified session.
+
+Files changed: `docs/phase-12/DECISIONS.md` (six decisions, an Empirical
+Findings section, open items re-statused, Acceptance Record);
+`docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md` (Open Items closed, the
+`PLAT-101` Sessions bullet corrected as superseded); this file and `HANDOFF.md`.
+
+Verification: `git status --short` clean after commit; `git diff --check` clean;
+probe scratch directory removed. Tests were not run — no code changed.
+
+Blockers: unchanged. The push is still withheld. `PLAT-101` still requires its
+own package approval and three remaining inputs (the operator user-ID list, the
+exact unknown-address message, and the transactional sending domain); session
+durations are no longer among them.
+
+Two new verification tasks, neither a decision: whether session `timebox` /
+`inactivity_timeout` are available on Supabase Free, since staging is Free and
+`PLAT-101`'s acceptance criterion assumes they are configurable there; and
+whether Vercel notifies on a failed cron for this account, since `PLAT-D019`
+escalates by returning non-200.
+
+Exact next step: unchanged — `PLAT-101` may be assigned once Christian issues
+its package approval and supplies the three remaining inputs. Do not start
+`DCFC-601`; do not push.
+
+Hosted-mutation count: zero.
+
 ### 2026-08-03 — PLAT decisions accepted; classification table signed — Claude Code (Opus 5)
 
 Agent: Claude Code (Opus 5). Recorded immediately after the `P1`/`P2` entry

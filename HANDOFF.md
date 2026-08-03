@@ -58,9 +58,42 @@ package.
 **Acceptance is not package authorization.** Per the plan's Authorization
 Notice, `PLAT-101`, `PLAT-102`, and `PLAT-103` each still need their own
 approval naming the package ID and exact target environment. `PLAT-101`'s
-decision and sign-off gates are closed; it still needs that approval plus four
-inputs — the operator user-ID list, the exact unknown-address message, the club
-and operator session durations, and the transactional sending domain.
+decision and sign-off gates are closed; it still needs that approval plus three
+inputs — the operator user-ID list, the exact unknown-address message, and the
+transactional sending domain.
+
+### The five open items are closed — and three were mis-framed
+
+A design review on 2026-08-03 worked through all five, probing the loopback
+stack and the live local schema rather than reasoning from the plan.
+`PLAT-D015`–`PLAT-D020` record the outcomes. Read
+`docs/phase-12/DECISIONS.md` — its Empirical Findings section is the evidence,
+and three findings contradict the plan text:
+
+- **AAL2 survives session refresh** (proven). Operator re-auth is per-session,
+  so session lifetime was the only bound on privileged access.
+- **Asymmetric session durations are not configurable.** `timebox` and
+  `inactivity_timeout` are project-wide GoTrue settings; there is no per-role
+  duration. `PLAT-101`'s "weeks for club, hours for operator" is superseded by
+  a project-wide 30-day timebox (`PLAT-D016`) plus a 2-hour application-layer
+  maximum age on operator `aal2` read from the JWT's `amr` TOTP timestamp
+  (`PLAT-D015`).
+- **No policy calls `club_has_feature` directly** — 115 policies across 29
+  tables call the two wrappers instead — so `PLAT-102`'s fork was a false
+  choice. `PLAT-D018` deletes the function by collapsing the wrappers, with
+  zero policy churn.
+
+**`PLAT-D017` changes the standing of the flagged operator gap.** The 2-hour
+rule reads the caller's `amr` claim, which cannot be obtained from
+`assertOperator(actorId: string)`. So `PLAT-101` cannot ship the session rule
+without binding the caller to a verified session — the gap is now a
+requirement, not a recommendation. Operator scripts will sign in with TOTP
+rather than relying on the service-role key plus a known operator UUID.
+
+Two verification tasks replace the closed items, neither a decision: whether
+session `timebox` / `inactivity_timeout` exist on Supabase Free (staging is
+Free, production is Pro), and whether Vercel notifies on a failed cron for this
+account, since `PLAT-D019` escalates by returning non-200.
 
 Flagged and deliberately not fixed, because it is `PLAT-101`'s deliverable:
 `assertOperator()` in `lib/operator/shared.ts` checks only that a
