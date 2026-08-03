@@ -13,12 +13,15 @@ Last updated: 2026-08-02
 Current assignment: `PLAT-EPIC-001` prerequisites `P1` and `P2` are complete as
 of 2026-08-03 (Claude Code, Opus 5). The Phase 5 worktree is committed locally
 on `staging`, and `PLAT-D001`–`PLAT-D014` are promoted into
-`docs/phase-12/DECISIONS.md`. No push was created: the `staging` branch triggers
-a protected Vercel deployment, which is Class 3 and unapproved. Hosted-mutation
-count: zero. The exact next step is Christian's sign-off on the `PLAT-101`
-privilege classification table and on the promoted decisions; `PLAT-101` cannot
-be assigned before both. `DCFC-601` remains unstarted and is `PLAT-103`'s
-scope to respecify.
+`docs/phase-12/DECISIONS.md`. Christian then accepted all fourteen decisions
+unamended and signed off the `PLAT-101` privilege classification table on
+2026-08-03, and settled the grace-warning schedule at day 7 and day 17. No push
+was created: the `staging` branch triggers a protected Vercel deployment, which
+is Class 3 and unapproved. Hosted-mutation count: zero. `PLAT-101`'s decision
+and sign-off gates are now closed, but the package is **not** authorized — it
+still needs its own approval naming the package ID and target environment, plus
+four required inputs. `DCFC-601` remains unstarted and is `PLAT-103`'s scope to
+respecify.
 
 Prior assignment: `DCFC-504` and Phase 5 are complete. Christian recovered
 the browser-saved password privately, enrolled exactly one TOTP factor, reached
@@ -121,6 +124,57 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT decisions accepted; classification table signed — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). Recorded immediately after the `P1`/`P2` entry
+below, in the same session.
+
+Christian accepted `PLAT-D001`–`PLAT-D014` as a set, unamended, and signed off
+the `PLAT-101` privilege classification table unamended. Acceptance of
+`PLAT-D006` and `PLAT-D012` accepted their stated risks: an automated path from
+a webhook or cron fault to a paying customer's public site going dark, and
+inbox access equalling club content access. The classification table's "Add or
+remove `admin` members — Club owner — aal1" row had been explicitly flagged
+before sign-off — under `PLAT-D012` an owner's inbox is then sufficient to mint
+another `admin`, and that row is what gives an application route a path into the
+operator module — and Christian reaffirmed the table as written. That row stands
+at `aal1` deliberately, and the accepted risk is now recorded in the Accepted
+Risk Register.
+
+Of the five open items, only the grace-warning schedule was settled: day 7 and
+day 17 of the 20-day window, accepted as proposed. The other four were not,
+because no concrete value was on offer to approve. `club_has_feature`'s final
+form is a genuine fork; the reconciliation report has no proposed cadence or
+channel; the exact session durations are unset with only the asymmetric shape
+agreed; and whether AAL2 survives session refresh is an empirical determination
+about Supabase Auth, not a choice anyone can approve. All four remain open
+against their owning package.
+
+Files changed: `docs/phase-12/DECISIONS.md` (all fourteen statuses to
+`accepted`, dated Acceptance Record covering the decisions, the table sign-off
+and the grace schedule, Accepted Risk Register dated with the new
+owner-inbox-adds-admin row, open items re-statused);
+`docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md` (decisions marked accepted,
+classification table marked signed with the flagged row's disposition,
+`PLAT-101` and `PLAT-102` dependency lines updated, grace schedule settled in
+both the required-inputs and open-items lists); this file and `HANDOFF.md`.
+
+Verification: `git status --short` clean after commit; `git diff --check` clean.
+No application code, schema, test, DCFC package definition, `DCFC-601`, or
+`DCFC-602` was modified.
+
+Blockers: unchanged. The push remains withheld. `PLAT-101` is **not** authorized
+by this acceptance — per the plan's Authorization Notice each package needs its
+own approval naming the package ID and exact target environment, and `PLAT-101`
+additionally still needs four inputs: the operator user-ID list, the exact
+unknown-address message, the club and operator session durations, and the
+transactional sending domain.
+
+Exact next step: `PLAT-101` may be assigned once Christian issues its package
+approval and supplies those four inputs. Do not start `DCFC-601`; do not push.
+
+Hosted-mutation count: zero.
 
 ### 2026-08-03 — PLAT-EPIC-001 prerequisites P1 and P2 — Claude Code (Opus 5)
 

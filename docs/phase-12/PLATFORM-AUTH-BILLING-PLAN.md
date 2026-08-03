@@ -60,10 +60,16 @@ Unchanged from `DCFC-EPIC-002`:
 ## Decisions
 
 Promoted into the governed platform decision log at `docs/phase-12/DECISIONS.md`
-on 2026-08-03, satisfying prerequisite `P2`. Promotion is not acceptance: every
-entry there is `promoted_awaiting_acceptance` until Christian's dated approval
-is recorded in that file's Acceptance Record. The table below remains the
-originating statement of each decision.
+on 2026-08-03, satisfying prerequisite `P2`, and **accepted by Christian the
+same day** — all fourteen unamended, including the risks explicitly accepted in
+`PLAT-D006` and `PLAT-D012`. The dated record is in that file's Acceptance
+Record; it governs. The table below remains the originating statement of each
+decision.
+
+Acceptance settles the decision dependencies of `PLAT-101` and `PLAT-102`. It
+does not authorize either package: per the Authorization Notice above, each
+still requires its own explicit approval naming the package ID and the exact
+target environment.
 
 Each records what was decided and the rationale, including risks explicitly
 accepted.
@@ -133,8 +139,12 @@ acceptance recorded in that file before either is assigned.
 - **Action class:** Class 2 for design, implementation, and local verification;
   a single narrow Class 3 to apply the migration and Auth configuration to
   staging.
-- **Dependencies:** P1 and P2 complete. `PLAT-D012`, `PLAT-D013`, `PLAT-D014`
-  accepted. Sign-off on the privilege classification table below.
+- **Dependencies:** **all satisfied as of 2026-08-03.** P1 and P2 complete;
+  `PLAT-D012`, `PLAT-D013`, and `PLAT-D014` accepted; the privilege
+  classification table below signed off. What remains before assignment is the
+  package approval itself plus the required inputs listed below — the operator
+  user-ID list, the exact unknown-address message, the session durations, and
+  the transactional sending domain.
 - **Permitted actions:** local schema and policy changes; deletion of the
   password subsystem; Auth email template changes; session-duration
   configuration; loopback-only database and Auth execution; contract, database,
@@ -146,7 +156,19 @@ acceptance recorded in that file before either is assigned.
   operator user-ID list; confirmation of the explicit unknown-address message;
   chosen session durations; the sending domain for transactional mail.
 
-### Privilege classification — requires sign-off
+### Privilege classification — signed off 2026-08-03
+
+Christian signed off on this table unamended on 2026-08-03. The sign-off was
+given after the "Add or remove `admin` members — Club owner — aal1" row was
+flagged as the one worth the hardest look: under `PLAT-D012` an owner's inbox
+is then sufficient to mint another `admin`, and that row is what gives an
+application route a path into the operator module. Christian reaffirmed the
+table as written, so the row stands at `aal1` deliberately and the added
+`admin` gains content edits only. The accepted risk is recorded in the
+Accepted Risk Register in `docs/phase-12/DECISIONS.md`.
+
+This closes `PLAT-101`'s sign-off gate. It does not assign or authorize
+`PLAT-101`.
 
 | Action | Actor | Level |
 | --- | --- | --- |
@@ -241,7 +263,9 @@ acceptance recorded in that file before either is assigned.
   Class 3 to apply the migration and backfill staging.
 - **Dependencies:** `PLAT-101` complete, because both packages rewrite the same
   policies and this one must be written against `PLAT-101`'s finished state.
-  `PLAT-D003`, `PLAT-D004`, `PLAT-D006`–`PLAT-D011` accepted.
+  `PLAT-D003`, `PLAT-D004`, and `PLAT-D006`–`PLAT-D011` were accepted on
+  2026-08-03, so only the `PLAT-101` dependency and this package's own approval
+  remain.
 - **Permitted actions:** schema migration; deletion of tier and entitlement
   code; the lifecycle cron; webhook projection changes; Checkout changes;
   Portal configuration; contract and database test changes; the enumerated
@@ -252,8 +276,8 @@ acceptance recorded in that file before either is assigned.
   ACH support (`PLAT-D011`).
 - **Required inputs and approvals:** the Diverse City price and interval
   ($65/month per `PLAT-D008`); the test-mode Price to use for rehearsal; the
-  `kind` assignment for all four existing tenants; grace-warning schedule;
-  Portal capability set.
+  `kind` assignment for all four existing tenants; Portal capability set. The
+  grace-warning schedule is settled — day 7 and day 17, accepted 2026-08-03.
 
 ### Scope detail
 
@@ -409,8 +433,10 @@ having been modelled on Rose City. Serving multi-team academies requires:
 ## Open Items
 
 Package-level detail, not design forks. To be settled inside the packages.
+Current status is tracked in `docs/phase-12/DECISIONS.md`.
 
-- Grace warning schedule — proposed day 7 and day 17 of the 20-day window.
+- ~~Grace warning schedule~~ — **settled 2026-08-03:** day 7 and day 17 of the
+  20-day window, accepted as proposed.
 - Final form of `club_has_feature` — a lifecycle-and-kind check, or removal with
   callers repointed at `can_read_club` / `can_mutate_content`.
 - Reconciliation report cadence and delivery.

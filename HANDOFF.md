@@ -43,12 +43,24 @@ risks in an Accepted Risk Register with the other four, the deferred and
 rejected options (passkeys, SMS, magic links, OAuth, admin-locked-but-site-up)
 each with a reopen condition, and the five package-level open items.
 
-**Promotion is not acceptance.** Every entry is
-`promoted_awaiting_acceptance` with an empty Acceptance Record; no dated
-approval from Christian exists. `PLAT-101` requires `PLAT-D012`, `PLAT-D013`,
-and `PLAT-D014` accepted plus a signed privilege classification table;
-`PLAT-102` additionally requires `PLAT-D003`, `PLAT-D004`, and
-`PLAT-D006`–`PLAT-D011`.
+**Accepted 2026-08-03.** Christian accepted all fourteen decisions unamended
+and signed off the `PLAT-101` privilege classification table unamended, in the
+same session. Accepting `PLAT-D006` and `PLAT-D012` accepted their stated
+risks. The classification table's "Add or remove `admin` members — Club owner —
+aal1" row was flagged before sign-off, because under `PLAT-D012` an owner's
+inbox is then sufficient to mint another `admin` and that row is what gives an
+application route a path into the operator module; Christian reaffirmed the
+table as written, so the row stands at `aal1` deliberately. Of the five open
+items only the grace-warning schedule was settled — day 7 and day 17. The other
+four had no concrete value on offer and remain open against their owning
+package.
+
+**Acceptance is not package authorization.** Per the plan's Authorization
+Notice, `PLAT-101`, `PLAT-102`, and `PLAT-103` each still need their own
+approval naming the package ID and exact target environment. `PLAT-101`'s
+decision and sign-off gates are closed; it still needs that approval plus four
+inputs — the operator user-ID list, the exact unknown-address message, the club
+and operator session durations, and the transactional sending domain.
 
 Flagged and deliberately not fixed, because it is `PLAT-101`'s deliverable:
 `assertOperator()` in `lib/operator/shared.ts` checks only that a
@@ -68,10 +80,10 @@ Verification: `git status --short` clean after the final commit;
 confirms the five commits above. Tests were not run — this assignment changed
 no application code, schema, or test.
 
-Exact next step: Christian signs off on or amends the `PLAT-101` privilege
-classification table and the five open items, and accepts (or amends) the
-promoted decisions. Only then may `PLAT-101` be assigned. `DCFC-601` remains
-unstarted and must not be started; it is `PLAT-103`'s scope to respecify.
+Exact next step: `PLAT-101` may be assigned once Christian issues its package
+approval and supplies the four required inputs above. `DCFC-601` remains
+unstarted and must not be started; it is `PLAT-103`'s scope to respecify. The
+push remains withheld pending its own approval.
 
 ## Open Platform Findings
 
