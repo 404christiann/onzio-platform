@@ -139,20 +139,16 @@ loopback acceptance, rollback/forward rehearsal, and full verification suite are
 complete. Staging Auth now uses six-digit codes with 86,400-second expiry and a
 code-only Onzio template; migrations `20260803192838` and `20260803192943` are
 applied and verified. No application push/deploy was authorized or performed,
-so hosted application acceptance remains pending. The operator account must
-also enroll TOTP privately before hosted operator acceptance. The first
-approved enrollment attempt stopped safely because `.env.local` targets local
-Supabase; the corrected helper now pins exact staging and accepts only a
-low-privilege publishable/legacy-anon key. A second attempt exposed Supabase's
-Node-before-22 Realtime transport requirement; the helper now supplies the
-already-pinned `ws` transport and reaches the operator-email prompt under Node
-20. Christian then approved one existing staging Auth user as the operator. The
-helper now keeps that hosted UUID in a dedicated ignored staging-enrollment
-variable while preserving the local test operator, and Vercel Preview branch
-`staging`'s sensitive runtime allowlist was updated without deploying. No email,
-session, or factor was created during the correction, so the private rerun and
-the required multi-provider delivery matrix remain open. Exact evidence and
-next steps are in `HANDOFF.md` and the Phase 11 status ledger.
+so hosted application acceptance remains pending. The operator TOTP requirement
+is satisfied: Christian approved one existing staging Auth user, the helper
+keeps that hosted UUID in a dedicated ignored staging-enrollment variable while
+preserving the local test operator, and Vercel Preview branch `staging`'s
+sensitive runtime allowlist was updated without deploying. The private helper
+run authenticated the approved account, found an existing verified TOTP factor,
+and correctly added nothing; a targeted aggregate confirmed exactly one
+verified TOTP factor and zero unresolved or other factors. The required
+multi-provider delivery matrix remains open. Exact evidence and next steps are
+in `HANDOFF.md` and the Phase 11 status ledger.
 
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator
@@ -174,10 +170,11 @@ next steps are in `HANDOFF.md` and the Phase 11 status ledger.
 - **Required inputs and approvals:** **all supplied; package approval received
   2026-08-03 for `fxefqnoqxbezeccjvrsw`.**
   - Signed classification table — signed unamended, see above.
-  - Operator user-ID list — already configured as `ONZIO_OPERATOR_USER_IDS` in
-    `.env.local` and the Vercel staging environment, and exercised during
-    `DCFC-502`/`DCFC-504`. The value stays outside Git per `DCFC-D113`. That
-    account must have TOTP enrolled, which `PLAT-D017` now makes load-bearing.
+  - Operator user-ID list — the ignored local enrollment configuration uses
+    `ONZIO_STAGING_OPERATOR_USER_IDS`; Vercel Preview branch `staging` uses the
+    runtime `ONZIO_OPERATOR_USER_IDS`. Both values stay outside Git per
+    `DCFC-D113`. The approved hosted account has exactly one verified TOTP
+    factor and no unresolved or other factors, satisfying `PLAT-D017`.
   - Explicit unknown-address message — pinned verbatim by `PLAT-D023`.
   - Session durations — settled by `PLAT-D015` and `PLAT-D021`; no longer a
     configuration input, since enforcement moved into the platform.

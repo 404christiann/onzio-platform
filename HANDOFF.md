@@ -9,9 +9,8 @@ staging project `fxefqnoqxbezeccjvrsw`. The package is **in progress**, not
 complete: local implementation and the approved staging schema/Auth boundary
 are complete. The implementation is committed locally as `009d284`
 (`Implement PLAT-101 passwordless admin access`), but no application
-push/deploy was authorized, the operator
-identity still needs private TOTP enrollment, and Yahoo/AOL/ISP-hosted delivery
-evidence remains open.
+push/deploy was authorized. The approved operator identity now has exactly one
+verified TOTP factor; Yahoo/AOL/ISP-hosted delivery evidence remains open.
 
 ### Next agent — start here
 
@@ -142,8 +141,11 @@ intentionally does not return sensitive values (`decrypted: false`, empty via
 `env run`), so hosted evidence is the successful single-variable PATCH plus
 exact key/Preview/branch/sensitive scope and a fresh update timestamp. No email,
 session, or TOTP factor was created during this correction. The private
-enrollment rerun remains the exact next step. No email address, UUID, key, code,
-token, or factor is recorded here.
+enrollment rerun then authenticated the approved account and found a verified
+TOTP factor already present, so it correctly added nothing. A targeted aggregate
+confirmed exactly one verified TOTP factor, zero unresolved TOTP factors, and
+zero other factors. The TOTP requirement is satisfied. No email address, UUID,
+key, code, token, or factor identifier is recorded here.
 
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 
@@ -168,11 +170,10 @@ now-inapplicable leaked-password warning, plus four pre-existing policyless
 privileged tables. No package data was mutated.
 
 Exact next step: obtain a separate approval for pushing `staging` and triggering
-the protected Vercel deployment; Christian privately enrolls TOTP on the
-configured operator account; then run hosted owner/admin/operator and
+the protected Vercel deployment; then run hosted owner/admin/operator and
 multi-provider delivery acceptance. No secret, code, address, token, or factor
-was recorded. After the operator-identity correction commit, `staging` is 17 commits
-ahead of `origin/staging`; none are pushed. Do not push now. Do not start
+identifier was recorded. After the TOTP acceptance-record commit, `staging` is
+18 commits ahead of `origin/staging`; none are pushed. Do not push now. Do not start
 `PLAT-102`, `DCFC-601`, or
 `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC `p=none` is a
 separate DNS approval.
