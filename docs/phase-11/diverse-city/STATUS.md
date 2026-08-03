@@ -125,6 +125,59 @@ unassigned and unapproved.
 
 ## Completion Records
 
+### 2026-08-03 — PLAT-101 inputs all supplied; only its approval remains — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). Class 1, documentation only, plus read-only public
+DNS lookups. Hosted-mutation count: zero. `PLAT-101` was not started.
+
+All three outstanding `PLAT-101` inputs are now settled. Two already existed and
+needed only confirmation:
+
+- **Operator user ID** — already configured as `ONZIO_OPERATOR_USER_IDS` in
+  `.env.local` and the Vercel staging environment, and exercised during
+  `DCFC-502`/`DCFC-504`. Presence was confirmed without reading or recording the
+  value; it stays outside Git per `DCFC-D113`. Note for `PLAT-101`: that account
+  must have TOTP enrolled, which `PLAT-D017` makes load-bearing rather than
+  optional. The operator identity is already distinct from the Diverse City
+  owner, since `DCFC-504` removed the synthetic owner membership.
+- **Transactional sending domain** — `auth.onziofutbol.com`, established in
+  Phase 8 and reused unchanged. Verified live by public DNS lookup on
+  2026-08-03: DKIM resolves at `resend._domainkey.auth`, SPF at `send.auth`
+  (`v=spf1 include:amazonses.com ~all`), and the bounce MX at
+  `feedback-smtp.us-east-1.amazonses.com`. All correct for Resend.
+
+The third was a real decision and is now `PLAT-D023`: the unknown-address
+response text is pinned verbatim, routing to `onziofutbol@gmail.com`. Christian
+chose that address after being told it would be published on a public error page
+and would attract scraping, and that a domain mailbox would read as more
+legitimate. Recorded as his decision with the trade-off noted, not re-argued. It
+does not affect authentication deliverability, which flows through Resend.
+
+One new item opened, not a blocker: **DMARC on `onziofutbol.com` is `p=none`** —
+present but monitor-only. Acceptable while email is a convenience; weaker once
+email is the sole authentication path. Tightening to `p=quarantine` is a DNS
+change needing its own approval and is tracked separately from `PLAT-101`.
+
+`PLAT-101` now has every gate satisfied — P1, P2, the signed classification
+table, all decision dependencies accepted, and all required inputs supplied.
+**The only thing still missing is the package approval itself**, which per the
+plan's Authorization Notice must name the package ID and the exact target
+environment. It has not been given and `PLAT-101` has not been started.
+
+Files changed: `docs/phase-12/DECISIONS.md` (`PLAT-D023` and its pinned text,
+open items updated, Acceptance Record); `PLATFORM-AUTH-BILLING-PLAN.md`
+(`PLAT-101` required inputs marked supplied); this file and `HANDOFF.md`.
+
+Verification: `git status --short` clean after commit; `git diff --check` clean.
+No application code, schema, or test changed. No secret or identity value was
+read into the transcript or written to Git.
+
+Exact next step: Christian issues the `PLAT-101` package approval naming the
+target environment. Until then, do not start `PLAT-101`, do not start
+`DCFC-601`, and do not push.
+
+Hosted-mutation count: zero.
+
 ### 2026-08-03 — PLAT-D022 accepted; cron alerting closes the last open item — Claude Code (Opus 5)
 
 Agent: Claude Code (Opus 5). Continuation of the same design review. Class 1,

@@ -107,13 +107,49 @@ both a reported failure and a missing ping. Proposed but **not authorized**:
 `/api/cron/media-cleanup` has the same blind spot from Phase 8, but it is
 outside `PLAT-102`'s named scope and needs its own widening or package.
 
-**No open decision or verification remains against `PLAT-EPIC-001`.** What is
-left is two `PLAT-101` implementation obligations, both found by probe rather
-than by reading: `PLAT-D014`'s explicit "no account for that address" message
-must be produced by mapping Supabase's generic `Signups not allowed for otp`
-error in the application, and the stock Magic Link template emits a link with no
-six-digit code, confirming the template change is a hard prerequisite rather
-than a nicety.
+**No open decision, verification, or input remains against `PLAT-EPIC-001`.**
+One `PLAT-101` implementation obligation stands, found by probe rather than by
+reading: the stock Magic Link template emits a link with no six-digit code, so
+altering it to `{{ .Token }}` is a hard prerequisite, not a nicety.
+
+## Next agent — start here
+
+`PLAT-101` has **every gate satisfied except its own package approval.** Do not
+start it without one. Per the plan's Authorization Notice each package requires
+an explicit approval naming the package ID and the exact target environment; no
+approval rolls forward.
+
+**Inputs, all supplied as of 2026-08-03:**
+
+| Input | Status |
+| --- | --- |
+| Signed privilege classification table | Signed unamended 2026-08-03 |
+| Operator user-ID list | Already set as `ONZIO_OPERATOR_USER_IDS` in `.env.local` and Vercel staging; used in `DCFC-502`/`504`. Stays outside Git per `DCFC-D113`. **That account must have TOTP enrolled** — `PLAT-D017` makes it load-bearing |
+| Unknown-address message | Pinned verbatim in `PLAT-D023`, routing to `onziofutbol@gmail.com`. Implement exactly; wording changes need a new decision |
+| Session durations | No longer a config input — `PLAT-D015` / `PLAT-D021` moved enforcement into the platform |
+| Transactional sending domain | `auth.onziofutbol.com`, reused from Phase 8. DKIM, SPF, and bounce MX verified live 2026-08-03 |
+
+**Read before touching anything:** `docs/phase-12/DECISIONS.md`. Its Empirical
+Findings section is the evidence base, and several entries contradict
+`PLATFORM-AUTH-BILLING-PLAN.md`'s own text — the plan has been annotated where
+superseded, but the decision log governs. In particular do not re-derive session
+handling from the plan's "asymmetric sessions" bullet; it is superseded twice
+over.
+
+**Standing prohibitions, none lifted:**
+
+- **Do not push.** Local `staging` is 11 commits ahead of release commit
+  `8e3cde2`, which is what the protected staging deployment serves. Pushing
+  triggers a protected Vercel deployment — Class 3, unapproved.
+- **Do not start `DCFC-601` or `DCFC-602`.** They are `PLAT-103`'s scope to
+  respecify and cannot be executed as written.
+- **Do not extend the `PLAT-D022` heartbeat to `/api/cron/media-cleanup`**
+  without a scope widening; it is proposed, not authorized.
+- No hosted mutation of any kind without an approval naming it.
+
+**Open, separate from `PLAT-101`:** DMARC on `onziofutbol.com` is `p=none`,
+monitor-only. Worth tightening to `p=quarantine` now that email is the sole
+authentication path, but it is a DNS change needing its own approval.
 
 Flagged and deliberately not fixed, because it is `PLAT-101`'s deliverable:
 `assertOperator()` in `lib/operator/shared.ts` checks only that a

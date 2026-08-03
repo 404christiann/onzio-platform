@@ -72,6 +72,22 @@ infrastructure and `PLAT-102`'s permitted actions name only the new lifecycle
 cron. Extending it requires either an explicit widening of `PLAT-102`'s scope or
 its own small package. It is recorded here as proposed, not authorized.
 
+| PLAT-D023 | accepted | The `PLAT-D014` unknown-address response is **explicit, names no account, and routes to `onziofutbol@gmail.com`**. Exact text is pinned below. | `shouldCreateUser: false` returns only the generic `Signups not allowed for otp`, so this text is application-side error mapping and must be written down rather than left to implementation. Explicitness is the point: a vague "check your email" for an address that will never receive one is exactly what stalled `DCFC-504`, where Supabase returned HTTP 200, sent nothing, and neither the recipient nor the operator could tell why. The address is a personal Gmail rather than a domain mailbox; accepted deliberately at one operator, with the known cost that it is published on a public error page and will attract scraping. It does not affect authentication deliverability, which flows through Resend on `auth.onziofutbol.com`. |
+
+**Pinned text for `PLAT-D023`.** `PLAT-101` implements this verbatim; wording
+changes need a new decision.
+
+> **No account for that address**
+>
+> We couldn't find an Onzio account for **{email}**.
+>
+> Onzio accounts are set up by us — there's no signup. If your club is new, or
+> you're using a different address than the one we set up for you, that's
+> usually the reason.
+>
+> Double-check the address, or email us at **onziofutbol@gmail.com** and we'll
+> sort it out.
+
 ## Accepted Risk Register
 
 Accepting the sourcing decision accepts the risk. Risks sourced from a package
@@ -141,7 +157,8 @@ place; neither is a decision.
 | Whether AAL2 survives session refresh | `PLAT-101` | **Resolved 2026-08-03 — proven, not decided** | AAL2 survives refresh. Operator re-authentication is therefore per-session, never per-refresh, which is what makes `PLAT-D015` necessary. Evidence in Empirical Findings |
 | Exact session durations for club and operator accounts | `PLAT-101` | **Settled 2026-08-03** | Resolved by `PLAT-D015` and `PLAT-D016`, after the original asymmetric framing was found to be unimplementable via Auth configuration |
 | ~~are `timebox` / `inactivity_timeout` available on Supabase Free?~~ | `PLAT-101` | **Resolved 2026-08-03 — no, Pro and above** | Confirmed by Christian. `PLAT-D016` was therefore unconfigurable and unrehearsable on Free staging, and orphaned besides — no package could apply it. Superseded by `PLAT-D021`, which enforces session age from the `amr` claim and depends on no plan tier |
-| **New:** `PLAT-D014`'s explicit unknown-address message is application work | `PLAT-101` | Open — implementation note | `shouldCreateUser: false` returns the generic `Signups not allowed for otp`, not an addressable message. The explicit "no account for that address" text plus contact route must be produced by mapping that error in the application; it is not something Supabase supplies |
+| ~~`PLAT-D014`'s explicit unknown-address message is application work~~ | `PLAT-101` | **Settled 2026-08-03** | Text and contact route pinned by `PLAT-D023`. Remains application-side error mapping; Supabase supplies only the generic `Signups not allowed for otp` |
+| **New:** DMARC on `onziofutbol.com` is `p=none` | separate small task | Open — hardening | Verified live 2026-08-03: DKIM (`resend._domainkey.auth`), SPF (`send.auth`, `v=spf1 include:amazonses.com ~all`), and bounce MX all resolve correctly; DMARC exists at the root but only monitors. Acceptable while email is a convenience, weaker once email is the sole authentication path. Tightening to `p=quarantine` is a DNS change needing its own approval and is **not** a `PLAT-101` blocker |
 | ~~does Vercel notify on a failed cron for this account?~~ | `PLAT-102` | **Resolved 2026-08-03 — no, it records only** | Confirmed by Christian. Vercel logs cron invocations to the Logs and Cron tabs; native notifications cover deployment failures and broad error-rate anomalies, but there is no native push or webhook for an individual cron failure or non-200. `PLAT-D019`'s escalation was therefore a pull. Closed by `PLAT-D022`, which also covers the non-execution case neither option addressed |
 
 ## Empirical Findings
@@ -169,6 +186,7 @@ system was touched.
 | `PLAT-D001`–`PLAT-D014` | 2026-08-03 | Christian | Approved as a set, in session, after the fourteen decisions and their rationale were presented for sign-off or amendment following `P2` promotion. No decision was amended. Acceptance of `PLAT-D006` and `PLAT-D012` accepted their stated risks. |
 | Privilege classification table (`PLAT-101`) | 2026-08-03 | Christian | Signed off unamended, in session, as presented in the `PLAT-101` section of `PLATFORM-AUTH-BILLING-PLAN.md`. Sign-off was given after the agent flagged the "Add or remove `admin` members — Club owner — aal1" row as the one row worth the hardest look, because under `PLAT-D012` inbox access to an owner's email is then sufficient to mint another admin, and because that row is what gives an application route a path into the operator module. Christian reaffirmed the table as written; the row stands at `aal1` deliberately. |
 | Open item — grace warning schedule | 2026-08-03 | Christian | The proposed day 7 and day 17 of the 20-day window, accepted as proposed. `PLAT-102` implements it. |
+| `PLAT-D023` | 2026-08-03 | Christian | Christian supplied `onziofutbol@gmail.com` as the contact route after being told the address would be published on a public error page and that a domain mailbox would read as more legitimate. He chose the Gmail address; the trade-off is recorded in the decision rather than re-argued. |
 | `PLAT-D022` | 2026-08-03 | Christian | Accepted after Christian confirmed Vercel records cron failures without notifying, which left `PLAT-D019`'s escalation as a pull. Chosen over an in-handler webhook push and over a log drain, because only a heartbeat detects a cron that stops firing — the failure mode that would silently disable `PLAT-D006`'s suspension warnings as well as reconciliation. |
 | `PLAT-D021` | 2026-08-03 | Christian | Accepted after Christian confirmed that Supabase session `timebox` / `inactivity_timeout` are Pro-and-above, which invalidated the premise of `PLAT-D016` the same day. Chosen over accepting a third Free-plan staging exception, and over upgrading staging to Pro (an `AGENTS.md` invariant change). Verified before recording: an email-OTP sign-in produces a stable `amr` timestamp, so the club bound is buildable on the mechanism `PLAT-D015` already needs. |
 | `PLAT-D015`–`PLAT-D020` | 2026-08-03 | Christian | Decided one at a time in a structured design review of the four remaining open items, later the same day. Each was chosen against stated alternatives and their costs. The review ran probes against the loopback stack and queries against the live local schema rather than reasoning from the plan; results are in Empirical Findings. Three of the six were forced by findings that contradicted the plan's own framing: `PLAT-D015`/`PLAT-D016` because asymmetric session durations are not configurable, `PLAT-D017` because the session rule cannot be built on the current `assertOperator` signature, and `PLAT-D018` because no policy calls `club_has_feature` directly. `PLAT-D020` resolves a collision the review found between `PLAT-D019` and the `PLAT-D006` kill-switch mitigation. |

@@ -152,9 +152,20 @@ acceptance recorded in that file before either is assigned.
 - **Prohibited actions:** production access; any entitlement, tier, or pricing
   change (those belong to `PLAT-102`); Stripe changes; DNS; Bunny.net; public
   launch; commit or push beyond what the approval names.
-- **Required inputs and approvals:** the signed classification table; the
-  operator user-ID list; confirmation of the explicit unknown-address message;
-  chosen session durations; the sending domain for transactional mail.
+- **Required inputs and approvals:** **all supplied as of 2026-08-03. Only the
+  package approval itself remains.**
+  - Signed classification table — signed unamended, see above.
+  - Operator user-ID list — already configured as `ONZIO_OPERATOR_USER_IDS` in
+    `.env.local` and the Vercel staging environment, and exercised during
+    `DCFC-502`/`DCFC-504`. The value stays outside Git per `DCFC-D113`. That
+    account must have TOTP enrolled, which `PLAT-D017` now makes load-bearing.
+  - Explicit unknown-address message — pinned verbatim by `PLAT-D023`.
+  - Session durations — settled by `PLAT-D015` and `PLAT-D021`; no longer a
+    configuration input, since enforcement moved into the platform.
+  - Transactional sending domain — `auth.onziofutbol.com`, established in
+    Phase 8 and reused. DKIM, SPF, and bounce MX verified live on 2026-08-03.
+    DMARC is `p=none`; tightening it is tracked separately and does not block
+    this package.
 
 ### Privilege classification — signed off 2026-08-03
 
