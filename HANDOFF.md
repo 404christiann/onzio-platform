@@ -100,20 +100,26 @@ clean TypeScript. No Auth configuration, hosted mutation, commit, or push.
 **Operator TOTP enrollment-helper follow-up, 2026-08-03:** The previously
 documented `npm run operator:enroll-totp` command did not yet exist when
 Christian first tried it. The repository now provides the guarded interactive
-helper in `scripts/enroll-operator-totp.ts`. It loads `.env.local`, refuses any
-host except exact staging project `fxefqnoqxbezeccjvrsw`, requires an
-interactive TTY and typed project confirmation before sending email, signs in
-with a six-digit email code, binds the verified JWT user to
+helper in `scripts/enroll-operator-totp.ts`. Christian's first approved private
+run stopped before client creation because `.env.local` correctly targets the
+local Supabase stack rather than hosted staging; it sent no email and created
+no session or factor. The helper now pins the client URL to exact staging
+project `fxefqnoqxbezeccjvrsw`, requires an interactive TTY and typed project
+confirmation, then reads `ONZIO_OPERATOR_SUPABASE_PUBLISHABLE_KEY` or privately
+prompts for staging's low-privilege Publishable key. It accepts a verified
+legacy `anon` key for compatibility and rejects secret/service-role keys. It
+then signs in with a six-digit email code, binds the verified JWT user to
 `ONZIO_OPERATOR_USER_IDS`, refuses existing verified or unresolved unverified
 TOTP state, stores the enrollment QR only in a mode-0600 temporary file, opens
 it locally on macOS, verifies exactly one factor and AAL2, signs out, and removes
-the temporary file. It never uses the service-role key. A red-first contract
-failed 1/12 before the helper existed and passes 12/12 afterward; the complete
-suite passes 672/672 across 71 files, TypeScript and `git diff --check` pass,
-and a non-interactive command smoke stops at the TTY guard before client
-creation. The helper has not been run interactively: zero staging email, Auth
-session, factor, or other hosted mutation occurred. Exact approval naming the
-staging project is still required before Christian runs it privately.
+the temporary file. It never uses the service-role key. Red-first contract
+checks failed before both the original helper and the local-environment
+correction; the focused file passes 12/12 and TypeScript passes. A real TTY
+smoke reached the exact-project prompt and deliberately cancelled there. The
+complete loopback-backed suite passes 672/672 across 71 files and
+`git diff --check` passes. The approved enrollment is still pending Christian's
+private rerun: zero staging email, Auth session, factor, or other hosted
+mutation occurred in either stopped attempt.
 
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 

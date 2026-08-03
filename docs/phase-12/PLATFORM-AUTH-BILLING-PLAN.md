@@ -140,9 +140,13 @@ complete. Staging Auth now uses six-digit codes with 86,400-second expiry and a
 code-only Onzio template; migrations `20260803192838` and `20260803192943` are
 applied and verified. No application push/deploy was authorized or performed,
 so hosted application acceptance remains pending. The operator account must
-also enroll TOTP privately before hosted operator acceptance, and the required
-multi-provider delivery matrix remains open. Exact evidence and next steps are
-in `HANDOFF.md` and the Phase 11 status ledger.
+also enroll TOTP privately before hosted operator acceptance. The first
+approved enrollment attempt stopped safely because `.env.local` targets local
+Supabase; the corrected helper now pins exact staging and accepts only a
+low-privilege publishable/legacy-anon key. No email, session, or factor was
+created, so the private rerun and the required multi-provider delivery matrix
+remain open. Exact evidence and next steps are in `HANDOFF.md` and the Phase 11
+status ledger.
 
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator

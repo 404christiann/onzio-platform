@@ -4,12 +4,13 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
-import { createInterface } from "node:readline/promises";
+import { createInterface, type Interface } from "node:readline/promises";
 import { loadEnvConfig } from "@next/env";
 import { createClient } from "@supabase/supabase-js";
 
 const EXPECTED_PROJECT_REF = "fxefqnoqxbezeccjvrsw";
 const EXPECTED_HOSTNAME = `${EXPECTED_PROJECT_REF}.supabase.co`;
+const EXPECTED_URL = `https://${EXPECTED_HOSTNAME}`;
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
@@ -17,13 +18,50 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
-function assertExactStagingProject(url: string): void {
-  const parsed = new URL(url);
-  if (parsed.protocol !== "https:" || parsed.hostname !== EXPECTED_HOSTNAME) {
+function assertPublicClientKey(key: string): string {
+  if (key.startsWith("sb_secret_")) {
+    throw new Error("Refusing to use a Supabase secret key for TOTP enrollment");
+  }
+  if (key.startsWith("sb_publishable_")) return key;
+
+  try {
+    const [, encodedPayload] = key.split(".");
+    if (!encodedPayload) throw new Error("Missing JWT payload");
+    const payload = JSON.parse(
+      Buffer.from(encodedPayload, "base64url").toString("utf8"),
+    ) as { role?: unknown };
+    if (payload.role !== "anon") {
+      throw new Error("Legacy key is not an anon key");
+    }
+    return key;
+  } catch {
     throw new Error(
-      `Refusing TOTP enrollment outside Supabase staging project ${EXPECTED_PROJECT_REF}`,
+      "ONZIO_OPERATOR_SUPABASE_PUBLISHABLE_KEY must be a publishable or legacy anon key; never use a secret or service-role key",
     );
   }
+}
+
+async function operatorPublicClientKey(prompt: Interface): Promise<string> {
+  const dedicated = process.env.ONZIO_OPERATOR_SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (dedicated) return assertPublicClientKey(dedicated);
+
+  const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (configuredUrl) {
+    const parsed = new URL(configuredUrl);
+    if (parsed.protocol === "https:" && parsed.hostname === EXPECTED_HOSTNAME) {
+      const existing =
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+        process.env.SUPABASE_ANON_KEY?.trim();
+      if (existing) return assertPublicClientKey(existing);
+    }
+  }
+
+  stdout.write(
+    "The app environment targets local Supabase. In staging, open Settings > API Keys and copy only the Publishable key. Never use a Secret or service_role key.\n",
+  );
+  const entered = (await prompt.question("Staging publishable key: ")).trim();
+  return assertPublicClientKey(entered);
 }
 
 function operatorUserIds(): Set<string> {
@@ -69,20 +107,8 @@ async function main(): Promise<void> {
     throw new Error("Operator TOTP enrollment requires an interactive terminal");
   }
 
-  const url = requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL");
-  assertExactStagingProject(url);
-  const anonKey =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
-    requiredEnvironment("SUPABASE_ANON_KEY");
-  const allowedUserIds = operatorUserIds();
-  const auth = createClient(url, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  }).auth;
   const prompt = createInterface({ input: stdin, output: stdout });
+  let auth: ReturnType<typeof createClient>["auth"] | null = null;
   let temporaryDirectory: string | null = null;
   let enrolledFactorId: string | null = null;
   let enrollmentVerified = false;
@@ -97,6 +123,16 @@ async function main(): Promise<void> {
     if (confirmation !== EXPECTED_PROJECT_REF) {
       throw new Error("Staging project confirmation did not match");
     }
+
+    const publicClientKey = await operatorPublicClientKey(prompt);
+    const allowedUserIds = operatorUserIds();
+    auth = createClient(EXPECTED_URL, publicClientKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    }).auth;
 
     const email = (await prompt.question("Operator email: ")).trim().toLowerCase();
     const requested = await auth.signInWithOtp({
@@ -178,7 +214,7 @@ async function main(): Promise<void> {
     enrollmentVerified = true;
     stdout.write("Operator TOTP enrollment verified at AAL2.\n");
   } finally {
-    if (enrolledFactorId && !enrollmentVerified) {
+    if (auth && enrolledFactorId && !enrollmentVerified) {
       const cleanup = await auth.mfa.unenroll({ factorId: enrolledFactorId });
       if (cleanup.error) {
         stdout.write(
@@ -186,7 +222,7 @@ async function main(): Promise<void> {
         );
       }
     }
-    await auth.signOut({ scope: "local" });
+    await auth?.signOut({ scope: "local" });
     if (temporaryDirectory) {
       await rm(temporaryDirectory, { recursive: true, force: true });
     }

@@ -73,6 +73,10 @@ describe("PLAT-101 passwordless authentication contract", () => {
     const enrollment = read("scripts/enroll-operator-totp.ts");
     expect(enrollment).toContain("loadEnvConfig");
     expect(enrollment).toContain("fxefqnoqxbezeccjvrsw");
+    expect(enrollment).toContain("ONZIO_OPERATOR_SUPABASE_PUBLISHABLE_KEY");
+    expect(enrollment).toContain("Staging publishable key");
+    expect(enrollment).toContain('payload.role !== "anon"');
+    expect(enrollment).toContain('key.startsWith("sb_secret_")');
     expect(enrollment).toContain("stdin.isTTY");
     expect(enrollment).toContain("ONZIO_OPERATOR_USER_IDS");
     expect(enrollment).toContain("shouldCreateUser: false");
