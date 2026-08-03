@@ -6,6 +6,7 @@ import {
   getOperatorClient,
   isContractSimulation,
   operatorNow,
+  operatorAccessTokenSchema,
   parseOperatorInput,
   type OperatorDependencies,
   uuidSchema,
@@ -14,7 +15,7 @@ import {
 
 const archiveSchema = z.object({
   clubId: uuidSchema,
-  actorId: uuidSchema,
+  operatorAccessToken: operatorAccessTokenSchema,
   reason: z.string().trim().min(1).max(500).optional(),
   invokedFromApplicationRoute: z.boolean().optional(),
 });
@@ -27,6 +28,10 @@ export async function archiveClub(
   const dependencies = rawInput.dependencies;
   const input = parseOperatorInput(archiveSchema, rawInput);
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
 
   if (isContractSimulation(dependencies)) {
     return {
@@ -41,7 +46,6 @@ export async function archiveClub(
     };
   }
 
-  assertOperator(input.actorId);
   const client = getOperatorClient(dependencies);
   const { data: club, error: clubError } = await client
     .schema("onzio")
@@ -92,7 +96,7 @@ export async function archiveClub(
 
     try {
       await writeOperatorAudit(client, {
-        actorId: input.actorId,
+        actorId,
         clubId: input.clubId,
         operation: "archive",
         resourceType: "club",

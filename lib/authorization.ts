@@ -45,8 +45,6 @@ export async function authorizeAdminAccess(input: AuthorizationInput): Promise<{
   ) {
     failContract("CLUB_INACTIVE");
   }
-  if (input.aal !== "aal2") failContract("MFA_REQUIRED");
-
   const membership = membershipForClub(input);
   if (!membership) failContract("MEMBERSHIP_REQUIRED");
   if (membership.status !== "active") failContract("MEMBERSHIP_INACTIVE");

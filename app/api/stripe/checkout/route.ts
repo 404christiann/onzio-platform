@@ -68,6 +68,7 @@ export async function POST(request: Request) {
     }
 
     const metadata = decision.metadata!;
+    if (!user.email) throw new ContractError("AUTHENTICATION_REQUIRED");
     const customer = await stripe.customers.create(
       {
         email: user.email,

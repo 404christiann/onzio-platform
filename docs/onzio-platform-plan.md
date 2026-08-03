@@ -10,8 +10,9 @@ The platform uses:
 - a dedicated Supabase Pro production project
 - a separate Supabase Free staging project with synthetic data
 - the existing Stripe account with tenant-aware metadata and webhooks
-- password authentication with mandatory MFA for every owner and admin
-- operator-only club provisioning and membership management
+- passwordless email-code authentication for club owners and admins
+- mandatory TOTP/AAL2 for operators only
+- operator-only club provisioning and owner transfer; owners may manage admins
 - immediate club-content publishing, with operator-managed draft/publish
   versions for presentation configuration only
 - private preview access until a subscription becomes active
@@ -30,7 +31,7 @@ migrated in place.
 - **Hosting:** one Vercel project and deployment serving every tenant domain
 - **Billing:** existing Stripe account, one subscription per club
 - **Rose City:** full tenant migration, including data, storage, admins, domain, and billing
-- **Authentication:** email/password plus mandatory MFA for owners and admins
+- **Authentication:** passwordless email codes for owners/admins; operator TOTP
 - **Authentication email:** Supabase Auth through Resend SMTP from one
   Onzio-owned authentication subdomain
 - **Membership:** managed only by an Onzio operator in v1
@@ -298,7 +299,7 @@ The internal tenant path ensures HTML, RSC, metadata, and route caches cannot co
 
 Unknown, unverified, suspended, and archived hosts fail closed.
 
-Authentication, password-reset, Checkout, Portal, and callback URLs derive from the verified primary domain—not directly from a request-provided origin.
+Authentication, Checkout, Portal, and callback URLs derive from the verified primary domain—not directly from a request-provided origin.
 
 ### Club context
 
@@ -321,22 +322,28 @@ Admin mutation payloads never contain an authoritative `club_id`. The server der
 
 ## Authentication and Authorization
 
-- Use Supabase email/password authentication.
-- Require AAL2/MFA before every protected admin page and action.
-- Provision users through operator-issued password setup invitations.
-- Re-check membership, tenant lifecycle, and MFA on every protected server action.
+- Use Supabase passwordless email-code authentication for club accounts.
+- Disable self-service signup; sign-in uses `shouldCreateUser: false` and maps
+  unknown addresses to the governed explicit support message.
+- Bound club sessions to 30 days from the earliest valid JWT `amr` timestamp in
+  both application authorization and RLS.
+- Require verified TOTP/AAL2 for operator actions, and reject operator TOTP
+  assertions older than two hours.
+- Provision owners through operator tooling; owners may add or remove `admin`
+  memberships through the tenant-bound server route.
+- Re-check membership, tenant lifecycle, role, and session age on every
+  protected server action.
 - Derive the user’s role for the current club only; do not reuse a role from another membership.
 - Removed memberships lose access immediately.
 - Archived clubs reject existing admin sessions and writes.
 
-MFA recovery requires manual operator identity verification and creates an audit event.
-
-There is no club-managed invitation UI or self-service signup in v1.
+Operator TOTP recovery requires manual operator identity verification and an
+audit event. There is no self-service signup or owner-transfer UI in v1.
 
 ### Transactional authentication email
 
-Supabase Auth sends invitations, password recovery, secure email-change, and
-other authentication messages through Resend SMTP. The built-in Supabase email
+Supabase Auth sends email codes, invitations, secure email-change, and other
+authentication messages through Resend SMTP. The built-in Supabase email
 provider is development-only and must not be used for production delivery.
 
 The shared production sender is:
@@ -353,12 +360,10 @@ scoped Resend credentials and distinct sender addresses on the same verified
 subdomain. Secrets live only in the corresponding Supabase Auth SMTP
 configuration and never in client code, Git, logs, or chat transcripts.
 
-Every club keeps its own verified website domain. Invitation links derive from
-that club's verified primary domain and return through
-`/admin/auth/callback`. Recovery email presents the Supabase recovery code and
-links to `/admin/recover`; after explicit code verification, the authenticated
-session continues to `/admin/update-password`. The shared sender does not
-weaken tenant resolution or permit a caller-provided redirect.
+Every club keeps its own verified website domain. Club sign-in is a six-digit
+code flow with the code first in the subject and no magic-link button. The
+shared sender does not weaken tenant resolution or permit a caller-provided
+redirect.
 
 Initial templates are concise, security-only, and Onzio-branded. They do not
 contain marketing content, user-supplied HTML, or an unverified club identity.
@@ -371,7 +376,7 @@ Keep authentication and marketing delivery separate. Do not use the Auth
 sending subdomain for newsletters, match alerts, promotions, or fan email.
 
 Custom SMTP begins at Supabase's default 30-email-per-hour project limit.
-Retain the per-user password-recovery cooldown and return a friendly retry
+Retain the per-user email-code cooldown and return a friendly retry
 message for HTTP 429 responses. Do not raise the project-wide limit until
 delivery, bounce, complaint, abuse, and onboarding-burst evidence justifies it;
 add CAPTCHA before materially increasing the public recovery allowance.
@@ -387,7 +392,8 @@ For every mutation:
 
 1. Resolve the verified tenant.
 2. Authenticate the user.
-3. Require AAL2.
+3. Require a fresh club session, or fresh operator TOTP/AAL2 for an operator
+   action.
 4. Verify active membership and required role.
 5. Verify club lifecycle.
 6. Verify feature entitlement.
@@ -782,12 +788,12 @@ Gate:
 
 ### Phase 5 — Authentication and operator workflows
 
-- Add email/password setup.
-- Add mandatory MFA.
+- Add passwordless club email-code sign-in.
+- Add mandatory operator TOTP/AAL2.
 - Add role and lifecycle enforcement.
 - Add operator provisioning.
 - Add archive/reactivate/purge tooling.
-- Add MFA recovery audit flow.
+- Add operator TOTP recovery audit flow.
 
 Gate:
 
@@ -818,7 +824,7 @@ Deploy a protected Vercel staging environment against:
 Exercise:
 
 - domains and cache isolation
-- password setup and MFA
+- club email-code sign-in and operator TOTP
 - role enforcement
 - uploads and image processing
 - Checkout and Portal
@@ -871,7 +877,8 @@ Gate:
 - Auth email reaches non-team recipients through Resend
 - invitation and recovery links return to the verified tenant domain
 - expired, reused, forged, and cross-tenant redirects fail closed
-- successful password recovery still requires password sign-in plus MFA
+- club sign-in succeeds by code without a password; operator actions still
+  require fresh TOTP/AAL2
 - bounce/complaint visibility and an SMTP rollback procedure are verified
 
 ### Phase 9 — Versioned presentation system
@@ -943,10 +950,10 @@ Gate:
 
 - Provision through audited operator tooling.
 - Keep each tenant in authenticated preview.
-- Verify owner access and MFA.
+- Verify owner email-code access and operator TOTP boundaries.
 - Verify content, media, and the approved published presentation.
 - Confirm subscription state and customer editing entitlements.
-- Verify owner invitation and password recovery through Resend.
+- Verify owner/admin email-code delivery through Resend.
 - Attach and verify domains.
 - Launch publicly only after all gates pass.
 
@@ -960,14 +967,13 @@ Gate:
 - Forged club IDs, hosts, origins, headers, paths, and return URLs fail closed.
 - Anonymous users see only live tier-enabled content.
 - Preview, suspended, and archived clubs do not render publicly.
-- AAL1 sessions cannot access admin.
+- AAL1 club sessions may access only their tenant-scoped authorized admin
+  surfaces; stale sessions and nonmembers fail closed.
 - Removed users lose access.
 - Auth email uses the Onzio authentication subdomain rather than a club or
   marketing sending domain.
-- Invitation and recovery email reaches an approved non-team recipient.
-- Invitation links return only to the verified tenant callback; recovery uses
-  the verified tenant `/admin/recover` and password-update routes.
-- Reused, expired, forged, and caller-supplied recovery redirects fail closed.
+- Email-code delivery reaches approved non-team recipients.
+- Reused, expired, forged, and caller-supplied codes/redirects fail closed.
 - Auth-email rate limits produce a safe retry response without revealing
   whether an arbitrary address exists.
 - Admins cannot access billing.

@@ -21,11 +21,24 @@ port = 54323
 
 [auth]
 enabled = true
+enable_signup = false
 site_url = "http://alpha.localhost:3000"
 additional_redirect_urls = [
   "http://alpha.localhost:3000/admin/auth/callback",
   "http://bravo.localhost:3000/admin/auth/callback"
 ]
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+max_frequency = "1m"
+otp_length = 6
+otp_expiry = 86400
+
+[auth.email.template.magic_link]
+subject = "{{ .Token }} is your Onzio sign-in code"
+content_path = "./supabase/templates/magic_link.html"
 
 [auth.mfa.totp]
 enroll_enabled = true

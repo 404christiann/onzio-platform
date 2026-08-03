@@ -87,6 +87,35 @@
     font-family: var(--font-din-condensed);
   }
 
+  .admin-nav-scrollbar {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-width: thin;
+  }
+
+  .admin-nav-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .admin-nav-scrollbar::-webkit-scrollbar-track,
+  .admin-nav-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  .admin-nav-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+  }
+
+  .admin-nav-scrollbar:hover::-webkit-scrollbar-thumb,
+  .admin-nav-scrollbar:focus-visible::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.36);
+  }
+
+  .admin-nav-scrollbar:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, 0.16);
+    outline-offset: -1px;
+  }
+
   .text-green {
     color: var(--color-green);
   }

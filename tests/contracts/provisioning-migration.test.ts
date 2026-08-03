@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clubs, USER_IDS } from "../fixtures/entities";
 import { expectContractError, loadContract } from "../helpers/contract";
 
@@ -8,13 +8,28 @@ type ReactivateClub = (input: Record<string, unknown>) => Promise<Record<string,
 type PurgeClub = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
 type TransformRoseCity = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
+const OPERATOR_TOKEN = "verified-operator-token";
+const operatorDependencies = {
+  now: () => new Date("2026-08-03T18:00:00Z"),
+  verifyOperatorAccessToken: async () => ({
+    sub: USER_IDS.ownerAal2,
+    aal: "aal2",
+    amr: [{ method: "totp", timestamp: 1785780000 }],
+  }),
+};
+
+beforeEach(() => {
+  vi.stubEnv("ONZIO_OPERATOR_USER_IDS", USER_IDS.ownerAal2);
+});
+
 describe("operator provisioning contract", () => {
   const request = {
     slug: "charlie",
     name: "Charlie Athletic",
     primaryDomain: "charlie-onzio.vercel.app",
     ownerEmail: "owner@charlie.example",
-    actorId: USER_IDS.ownerAal2,
+    operatorAccessToken: OPERATOR_TOKEN,
+    dependencies: operatorDependencies,
   };
 
   it("creates the onboarding tenant atomically", async () => {
@@ -77,7 +92,11 @@ describe("archive, reactivate, and purge contract", () => {
       "archiveClub",
     );
     await expect(
-      archiveClub({ clubId: clubs.alpha.id, actorId: USER_IDS.ownerAal2 }),
+      archiveClub({
+        clubId: clubs.alpha.id,
+        operatorAccessToken: OPERATOR_TOKEN,
+        dependencies: operatorDependencies,
+      }),
     ).resolves.toMatchObject({
       lifecycle: "archived",
       domainsDetached: true,
@@ -97,7 +116,8 @@ describe("archive, reactivate, and purge contract", () => {
     await expect(
       reactivateClub({
         clubId: clubs.alpha.id,
-        actorId: USER_IDS.ownerAal2,
+        operatorAccessToken: OPERATOR_TOKEN,
+        dependencies: operatorDependencies,
       }),
     ).resolves.toMatchObject({
       clubId: clubs.alpha.id,
@@ -119,8 +139,10 @@ describe("archive, reactivate, and purge contract", () => {
       () =>
         purgeClub({
           clubId: clubs.alpha.id,
+          operatorAccessToken: OPERATOR_TOKEN,
           exportId: "export_123",
           confirmation: clubs.alpha.slug,
+          dependencies: operatorDependencies,
           ...override,
         }),
       code,

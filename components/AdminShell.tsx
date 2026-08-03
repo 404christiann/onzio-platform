@@ -14,6 +14,7 @@ type AdminNavItem = {
   href: string;
   icon: ReactNode;
   feature?: string;
+  ownerOnly?: boolean;
 };
 
 const NAV_ITEMS: AdminNavItem[] = [
@@ -184,6 +185,17 @@ const NAV_ITEMS: AdminNavItem[] = [
     ),
   },
   {
+    label: "Team access",
+    href: "/admin/members",
+    ownerOnly: true,
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="2"/>
+        <path d="M3 20v-2a4 4 0 014-4h4a4 4 0 014 4v2M16 11h5M18.5 8.5v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
     label: "Payments",
     href: "/admin/payments",
     icon: (
@@ -228,6 +240,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const navItems = NAV_ITEMS.filter(
     (item) =>
       (!item.feature || clubHasFeature(club.tier, item.feature)) &&
+      (!item.ownerOnly || club.role === "owner") &&
       (item.href !== "/admin/payments" || isBillingAdmin),
   );
 
@@ -256,7 +269,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Sidebar */}
       <aside
         id="admin-sidebar"
-        className={`fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] flex-col lg:static lg:flex lg:min-h-screen lg:h-auto lg:max-h-none lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        className={`fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] flex-col overflow-hidden lg:sticky lg:top-0 lg:inset-y-auto lg:flex lg:h-screen lg:h-[100dvh] lg:max-h-screen lg:max-h-[100dvh] lg:self-start lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{
           width: 280,
           backgroundColor: "#141414",
@@ -294,9 +307,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         {/* Nav links */}
         <nav
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 px-3 flex flex-col gap-1"
-          style={{ WebkitOverflowScrolling: "touch" }}
+          className="admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y py-4 px-3 flex flex-col gap-1"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            scrollbarGutter: "stable",
+          }}
           aria-label="Admin navigation"
+          tabIndex={0}
         >
           {navItems.map((item) => (
             <Link

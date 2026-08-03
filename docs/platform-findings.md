@@ -1,6 +1,6 @@
 # Onzio Platform — Open Findings Register
 
-Last updated: 2026-08-01
+Last updated: 2026-08-03
 
 This file tracks known platform-wide issues that have been **identified and
 verified but not fixed**. It exists so findings discovered during scoped
@@ -307,6 +307,20 @@ should be scoped per-branch rather than taken as one commitment.
   actually designed.
 
 ## Resolved
+
+### PLAT-101 — Free-plan leaked-password exception retired
+
+- **Resolved:** 2026-08-03 in `PLAT-101`.
+- **Prior posture:** staging could not enable Supabase leaked-password
+  protection on the Free plan, so `DCFC-504` accepted an exception mitigated by
+  mandatory TOTP for every club admin.
+- **Resolution:** club owner/admin password, recovery, and password-update paths
+  were deleted. Club accounts now authenticate with a six-digit email code and
+  a 30-day AMR-age boundary; only operators retain TOTP/AAL2, with a two-hour
+  TOTP-age limit. Leaked-password screening therefore protects no reachable
+  club authentication path and is no longer an applicable exception.
+- **Hosted state:** staging Auth and schema are updated, but the application
+  implementation is not deployed because no push was authorized.
 
 ### PF-007 — resolved 2026-08-01
 

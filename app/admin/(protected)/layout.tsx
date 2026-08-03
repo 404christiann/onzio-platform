@@ -1,7 +1,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
+import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
+import { ContractError } from "@/lib/contract-error";
 import { createClient } from "@/lib/supabase-server";
 
 export default async function ProtectedLayout({
@@ -10,21 +12,21 @@ export default async function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/admin/login");
-
-  const { data: assurance } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (assurance?.currentLevel !== "aal2") {
-    redirect("/admin/login?error=mfa_required");
+  let userId: string;
+  try {
+    ({ userId } = await requireFreshClubSession(supabase));
+  } catch (error) {
+    if (error instanceof ContractError && error.code === "SESSION_EXPIRED") {
+      await supabase.auth.signOut();
+      redirect("/admin/login?error=session_expired");
+    }
+    redirect("/admin/login");
   }
 
   const requestHeaders = await headers();
   const club = await getClubContext({
     hostname: requestHeaders.get("host") ?? "",
-    userId: user.id,
+    userId,
   }).catch(() => null);
   if (
     !club ||

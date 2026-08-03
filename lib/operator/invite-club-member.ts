@@ -7,6 +7,7 @@ import {
   emailSchema,
   getOperatorClient,
   isContractSimulation,
+  operatorAccessTokenSchema,
   parseOperatorInput,
   type OperatorDependencies,
   uuidSchema,
@@ -15,7 +16,7 @@ import {
 
 const inviteClubMemberSchema = z.object({
   clubId: uuidSchema,
-  actorId: uuidSchema,
+  operatorAccessToken: operatorAccessTokenSchema,
   email: emailSchema,
   role: z.enum(["owner", "admin"]),
   environment: z.enum(["staging", "production"]),
@@ -79,6 +80,10 @@ export async function inviteClubMember(rawInput: InviteClubMemberInput) {
   const dependencies = rawInput.dependencies;
   const input = parseOperatorInput(inviteClubMemberSchema, rawInput);
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
 
   if (isContractSimulation(dependencies)) {
     const hostname = dependencies?.verifiedPrimaryHostname ?? "club.example";
@@ -90,13 +95,12 @@ export async function inviteClubMember(rawInput: InviteClubMemberInput) {
         `https://${hostname}`,
       ).toString(),
       authUserCreated: true,
-      invitationRequested: true,
+      codeSent: true,
       membershipActive: true,
       audited: true,
     };
   }
 
-  assertOperator(input.actorId);
   dependencies?.onStage?.("operator_authorized");
   const client = getOperatorClient(dependencies);
   dependencies?.onStage?.("client_ready");
@@ -109,21 +113,22 @@ export async function inviteClubMember(rawInput: InviteClubMemberInput) {
   );
   dependencies?.onStage?.("callback_verified");
 
-  dependencies?.onStage?.("invitation_request_started");
+  dependencies?.onStage?.("identity_creation_started");
   const { data: invitation, error: invitationError } =
-    await client.auth.admin.inviteUserByEmail(input.email, {
-      redirectTo: callbackUrl,
+    await client.auth.admin.createUser({
+      email: input.email,
+      email_confirm: true,
     });
   if (invitationError || !invitation.user) {
     failContract("AUTH_INVITATION_FAILED", invitationError?.message);
   }
-  dependencies?.onStage?.("invitation_created");
+  dependencies?.onStage?.("identity_created");
 
   const invitedUserId = invitation.user.id;
   try {
     await addClubMembership({
       clubId: input.clubId,
-      actorId: input.actorId,
+      operatorAccessToken: input.operatorAccessToken,
       userId: invitedUserId,
       userEmail: input.email,
       role: input.role,
@@ -131,8 +136,15 @@ export async function inviteClubMember(rawInput: InviteClubMemberInput) {
     });
     dependencies?.onStage?.("membership_active");
 
+    const code = await client.auth.signInWithOtp({
+      email: input.email,
+      options: { shouldCreateUser: false },
+    });
+    if (code.error) failContract("AUTH_CODE_DELIVERY_FAILED", code.error.message);
+    dependencies?.onStage?.("code_sent");
+
     await writeOperatorAudit(client, {
-      actorId: input.actorId,
+      actorId,
       clubId: input.clubId,
       operation: "identity_invited",
       resourceType: "auth_user",
@@ -160,7 +172,7 @@ export async function inviteClubMember(rawInput: InviteClubMemberInput) {
     }
     try {
       await writeOperatorAudit(client, {
-        actorId: input.actorId,
+        actorId,
         clubId: input.clubId,
         operation: "identity_invitation_rolled_back",
         resourceType: "auth_user",
@@ -182,7 +194,7 @@ export async function inviteClubMember(rawInput: InviteClubMemberInput) {
     role: input.role,
     callbackUrl,
     authUserCreated: true,
-    invitationRequested: true,
+    codeSent: true,
     membershipActive: true,
     audited: true,
   };

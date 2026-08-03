@@ -9,6 +9,7 @@ import {
   getOperatorClient,
   isContractSimulation,
   mapDatabaseConflict,
+  operatorAccessTokenSchema,
   operatorNow,
   parseOperatorInput,
   slugSchema,
@@ -22,7 +23,7 @@ const provisionSchema = z.object({
   name: z.string().trim().min(1).max(120),
   primaryDomain: z.string().min(1).max(253),
   ownerEmail: emailSchema,
-  actorId: uuidSchema,
+  operatorAccessToken: operatorAccessTokenSchema,
   existingAuthUserId: uuidSchema.optional(),
   environment: z.enum(["staging", "production"]).optional(),
   redirectTo: z.string().url().optional(),
@@ -39,7 +40,6 @@ export type ProvisionClubInput = z.input<typeof provisionSchema> & {
 type CreatedAuthUser = {
   id: string;
   created: boolean;
-  actionLink?: string;
 };
 
 async function resolveOwner(
@@ -58,10 +58,9 @@ async function resolveOwner(
     return { id: data.user.id, created: false };
   }
 
-  const { data, error } = await client.auth.admin.generateLink({
-    type: "invite",
+  const { data, error } = await client.auth.admin.createUser({
     email: input.ownerEmail,
-    options: input.redirectTo ? { redirectTo: input.redirectTo } : undefined,
+    email_confirm: true,
   });
   if (error || !data.user) {
     failContract("AUTH_PROVISIONING_FAILED", error?.message);
@@ -69,7 +68,6 @@ async function resolveOwner(
   return {
     id: data.user.id,
     created: true,
-    actionLink: data.properties?.action_link,
   };
 }
 
@@ -103,6 +101,10 @@ export async function provisionClub(rawInput: ProvisionClubInput) {
   const dependencies = rawInput.dependencies;
   const input = parseOperatorInput(provisionSchema, rawInput);
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
   const hostname = normalizeHostname(input.primaryDomain);
 
   if (input.existingSlug) failContract("SLUG_CONFLICT");
@@ -136,7 +138,6 @@ export async function provisionClub(rawInput: ProvisionClubInput) {
     };
   }
 
-  assertOperator(input.actorId);
   const client = getOperatorClient(dependencies);
   const clubId = randomUUID();
   const now = operatorNow(dependencies).toISOString();
@@ -183,8 +184,16 @@ export async function provisionClub(rawInput: ProvisionClubInput) {
       failContract("PROVISIONING_ROLLED_BACK", membershipInsert.error.message);
     }
 
+    const code = await client.auth.signInWithOtp({
+      email: input.ownerEmail,
+      options: { shouldCreateUser: false },
+    });
+    if (code.error) {
+      failContract("AUTH_CODE_DELIVERY_FAILED", code.error.message);
+    }
+
     await writeOperatorAudit(client, {
-      actorId: input.actorId,
+      actorId,
       clubId,
       operation: "provision",
       resourceType: "club",
@@ -210,7 +219,7 @@ export async function provisionClub(rawInput: ProvisionClubInput) {
         role: "owner" as const,
         userId: authUser.id,
         authUserCreated: authUser.created,
-        ...(authUser.actionLink ? { passwordSetupLink: authUser.actionLink } : {}),
+        codeSent: true,
       },
       public: false,
       committed: true,

@@ -1,5 +1,6 @@
 import { config as loadEnv } from "dotenv";
 import { inviteClubMember } from "@/lib/operator/invite-club-member";
+import { acquireOperatorAccessToken } from "@/scripts/operator-session";
 
 loadEnv({ path: ".env.local", quiet: true });
 
@@ -15,7 +16,7 @@ function required(name: string): string {
   return value;
 }
 
-function assertTarget(): string {
+function assertTarget(): void {
   if (process.argv[2] !== CONFIRMATION) {
     throw new Error(`Confirmation must equal ${CONFIRMATION}`);
   }
@@ -36,7 +37,6 @@ function assertTarget(): string {
   if (actorIds.length !== 1) {
     throw new Error("Exactly one staging operator actor must be configured");
   }
-  return actorIds[0];
 }
 
 async function readPrivateEmail(): Promise<string> {
@@ -73,13 +73,15 @@ async function readPrivateEmail(): Promise<string> {
 
 async function main() {
   process.stderr.write(`${JSON.stringify({ stage: "runner_started" })}\n`);
-  const actorId = assertTarget();
+  assertTarget();
   process.stderr.write(`${JSON.stringify({ stage: "target_verified" })}\n`);
+  const operatorAccessToken = await acquireOperatorAccessToken();
+  process.stderr.write(`${JSON.stringify({ stage: "operator_authorized" })}\n`);
   const email = await readPrivateEmail();
   process.stderr.write(`${JSON.stringify({ stage: "private_recipient_loaded" })}\n`);
   const result = await inviteClubMember({
     clubId: TARGET_CLUB_ID,
-    actorId,
+    operatorAccessToken,
     email,
     role: "owner",
     environment: "staging",
@@ -100,7 +102,7 @@ async function main() {
       role: result.role,
       callbackUrl: result.callbackUrl,
       authUserCreated: result.authUserCreated,
-      invitationRequested: result.invitationRequested,
+      codeSent: result.codeSent,
       membershipActive: result.membershipActive,
       audited: result.audited,
     }) + "\n",

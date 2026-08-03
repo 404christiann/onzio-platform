@@ -188,9 +188,7 @@ export async function middleware(request: NextRequest) {
     (runtimeAccess === "grace" || runtimeAccess === "suspended") &&
     !isBillingRequest &&
     request.nextUrl.pathname !== "/admin/login" &&
-    request.nextUrl.pathname !== "/admin/auth/callback" &&
-    request.nextUrl.pathname !== "/admin/recover" &&
-    request.nextUrl.pathname !== "/admin/update-password"
+    request.nextUrl.pathname !== "/admin/auth/callback"
   ) {
     return NextResponse.redirect(
       new URL("/admin/payments", request.url),

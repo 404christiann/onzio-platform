@@ -133,6 +133,17 @@ acceptance recorded in that file before either is assigned.
 
 ## PLAT-101 — Admin auth simplification
 
+**Execution status — in progress, 2026-08-03.** Christian approved `PLAT-101`
+for Supabase staging project `fxefqnoqxbezeccjvrsw`. The local implementation,
+loopback acceptance, rollback/forward rehearsal, and full verification suite are
+complete. Staging Auth now uses six-digit codes with 86,400-second expiry and a
+code-only Onzio template; migrations `20260803192838` and `20260803192943` are
+applied and verified. No application push/deploy was authorized or performed,
+so hosted application acceptance remains pending. The operator account must
+also enroll TOTP privately before hosted operator acceptance, and the required
+multi-provider delivery matrix remains open. Exact evidence and next steps are
+in `HANDOFF.md` and the Phase 11 status ledger.
+
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator
   actions, and require TOTP on operator accounts.
@@ -141,10 +152,8 @@ acceptance recorded in that file before either is assigned.
   staging.
 - **Dependencies:** **all satisfied as of 2026-08-03.** P1 and P2 complete;
   `PLAT-D012`, `PLAT-D013`, and `PLAT-D014` accepted; the privilege
-  classification table below signed off. What remains before assignment is the
-  package approval itself plus the required inputs listed below — the operator
-  user-ID list, the exact unknown-address message, the session durations, and
-  the transactional sending domain.
+  classification table below signed off. The package was approved for the exact
+  staging project on 2026-08-03; all required inputs were already supplied.
 - **Permitted actions:** local schema and policy changes; deletion of the
   password subsystem; Auth email template changes; session-duration
   configuration; loopback-only database and Auth execution; contract, database,
@@ -152,8 +161,8 @@ acceptance recorded in that file before either is assigned.
 - **Prohibited actions:** production access; any entitlement, tier, or pricing
   change (those belong to `PLAT-102`); Stripe changes; DNS; Bunny.net; public
   launch; commit or push beyond what the approval names.
-- **Required inputs and approvals:** **all supplied as of 2026-08-03. Only the
-  package approval itself remains.**
+- **Required inputs and approvals:** **all supplied; package approval received
+  2026-08-03 for `fxefqnoqxbezeccjvrsw`.**
   - Signed classification table — signed unamended, see above.
   - Operator user-ID list — already configured as `ONZIO_OPERATOR_USER_IDS` in
     `.env.local` and the Vercel staging environment, and exercised during
@@ -178,8 +187,8 @@ table as written, so the row stands at `aal1` deliberately and the added
 `admin` gains content edits only. The accepted risk is recorded in the
 Accepted Risk Register in `docs/phase-12/DECISIONS.md`.
 
-This closes `PLAT-101`'s sign-off gate. It does not assign or authorize
-`PLAT-101`.
+This closed `PLAT-101`'s sign-off gate. The later exact staging approval is
+recorded in the execution status above.
 
 | Action | Actor | Level |
 | --- | --- | --- |
@@ -246,21 +255,24 @@ This closes `PLAT-101`'s sign-off gate. It does not assign or authorize
   proven; a club admin completes first sign-in and a returning sign-in with no
   password and no second factor; an unrecognized address receives the explicit
   message and no Auth user is created; an operator action is refused below AAL2;
-  operator TOTP is enrolled and required; club sessions persist across the
-  configured window while operator sessions expire within theirs; an owner adds
+  operator TOTP is enrolled and required; club sessions are rejected after 30
+  days while operator TOTP assertions are rejected after two hours; an owner adds
   an `admin` who then signs in successfully; no password code path remains
   reachable; the full suite is green.
 - **Verification commands/evidence:** `git status --short`; `git diff --check`;
   `npx tsc --noEmit`; `npm run db:reset` from scratch; the complete loopback
-  suite (current baseline 662/662 across 68 files); architecture tests; generated
+  suite (completed baseline 669/669 across 71 files); architecture tests; generated
   database-type check; `supabase db lint` on `onzio,onzio_private`; `npm run
   build`; desktop and mobile Playwright evidence for sign-in and protected admin;
   a negative contract proving `shouldCreateUser: false`; a negative contract
   proving operator refusal at aal1; delivery evidence per provider without
-  recording any code or secret.
+  recording any code or secret. Completed locally: 314/314 contracts, 20/20
+  architecture, 81/81 database, two Playwright scenarios, TypeScript, build,
+  database lint, generated types, clean reset, and rollback/forward rehearsal.
+  The multi-provider hosted delivery evidence remains open.
 - **Rollback expectations:** the migration must ship with a reviewed down path
   restoring `is_aal2()` on club-facing policies. Auth configuration changes
-  (template, expiry, session duration) must be recorded with prior values so
+  (template and expiry) must be recorded with prior values so
   they can be restored exactly. Existing enrolled factors are retained, not
   deleted, so rollback does not lock anyone out.
 - **Exact hosted-mutation boundary:** staging Supabase schema and Auth

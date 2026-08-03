@@ -41,7 +41,11 @@ export function currentTotp(secret: string): string {
   return code.toString().padStart(6, "0");
 }
 
-export async function createAal2LocalClient(params: {
+function encode(value: unknown): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+export async function createFreshLocalClient(params: {
   email: string;
   userId: string;
 }): Promise<{
@@ -51,63 +55,39 @@ export async function createAal2LocalClient(params: {
   const { supabaseUrl } = assertSafeTestEnvironment();
   const anonKey =
     process.env.SUPABASE_TEST_ANON_KEY ?? "local-anon-key-not-configured";
-  const serviceKey =
-    process.env.SUPABASE_TEST_SERVICE_ROLE_KEY ??
-    "local-service-role-key-not-configured";
   const sharedOptions = {
     auth: { persistSession: false, autoRefreshToken: false },
     realtime: { transport: nodeWebSocket },
   } as const;
-  const service = createClient(supabaseUrl, serviceKey, sharedOptions);
-
-  const existing = await service.auth.admin.mfa.listFactors({
-    userId: params.userId,
+  const now = Math.floor(Date.now() / 1_000);
+  const header = encode({ alg: "HS256", typ: "JWT" });
+  const payload = encode({
+    iss: `${supabaseUrl}/auth/v1`,
+    aud: "authenticated",
+    exp: now + 3_600,
+    iat: now,
+    sub: params.userId,
+    role: "authenticated",
+    aal: "aal1",
+    session_id: randomUUID(),
+    email: params.email,
+    amr: [{ method: "otp", timestamp: now }],
   });
-  if (existing.error) throw existing.error;
-  for (const factor of existing.data?.factors ?? []) {
-    const deletion = await service.auth.admin.mfa.deleteFactor({
-      userId: params.userId,
-      id: factor.id,
-    });
-    if (deletion.error) throw deletion.error;
-  }
-
+  const unsigned = `${header}.${payload}`;
+  const secret =
+    process.env.SUPABASE_TEST_JWT_SECRET ??
+    "super-secret-jwt-token-with-at-least-32-characters-long";
+  const token = `${unsigned}.${createHmac("sha256", secret)
+    .update(unsigned)
+    .digest("base64url")}`;
   const client = createClient(supabaseUrl, anonKey, {
     ...sharedOptions,
     db: { schema: "onzio" },
+    global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const signIn = await client.auth.signInWithPassword({
-    email: params.email,
-    password: "local-contract-only",
-  });
-  if (signIn.error) throw signIn.error;
-
-  const enrollment = await client.auth.mfa.enroll({
-    factorType: "totp",
-    friendlyName: `contract-${randomUUID()}`,
-  });
-  if (enrollment.error) throw enrollment.error;
-
-  const verification = await client.auth.mfa.challengeAndVerify({
-    factorId: enrollment.data.id,
-    code: currentTotp(enrollment.data.totp.secret),
-  });
-  if (verification.error) throw verification.error;
-
-  const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (assurance.error) throw assurance.error;
-  if (assurance.data.currentLevel !== "aal2") {
-    throw new Error("Expected the local contract session to reach AAL2.");
-  }
 
   return {
     client,
-    cleanup: async () => {
-      await service.auth.admin.mfa.deleteFactor({
-        userId: params.userId,
-        id: enrollment.data.id,
-      });
-      await client.auth.signOut();
-    },
+    cleanup: async () => {},
   };
 }

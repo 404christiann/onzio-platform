@@ -431,7 +431,7 @@ describe("DCFC-204 protected mutation schemas", () => {
         feature: "contact",
         payload: {},
       }),
-    ).rejects.toMatchObject({ code: "MFA_REQUIRED" });
+    ).resolves.toMatchObject({ clubId: CLUB_ID });
 
     await expect(
       authorizeMutation({
@@ -462,8 +462,7 @@ describe("DCFC-204 protected mutation schemas", () => {
       "utf8",
     );
     for (const requiredBoundary of [
-      "supabase.auth.getUser()",
-      "supabase.auth.mfa.getAuthenticatorAssuranceLevel()",
+      "requireFreshClubSession(supabase)",
       "getClubContext({",
       "authorizeMutation({",
       "ADMIN_TABLE_FEATURES[parsed.data.table]",

@@ -25,24 +25,24 @@ describe("authentication email callback", () => {
   });
 
   it.each(["invite", "recovery"] as const)(
-    "routes %s verification to password setup",
+    "routes legacy %s verification to the passwordless admin root",
     (type) => {
       expect(
         resolveAuthCallbackDestination({
           type,
           requestedNext: "https://evil.example",
         }),
-      ).toBe("/admin/update-password");
+      ).toBe("/admin");
     },
   );
 
-  it("allowlists the legacy PKCE password-update destination", () => {
+  it("ignores legacy password-update and forged destinations", () => {
     expect(
       resolveAuthCallbackDestination({
         type: null,
         requestedNext: "/admin/update-password",
       }),
-    ).toBe("/admin/update-password");
+    ).toBe("/admin");
     expect(
       resolveAuthCallbackDestination({
         type: null,

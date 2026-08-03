@@ -6,7 +6,7 @@ import {
   expectPostgrestError,
   expectStorageError,
 } from "../helpers/database-security";
-import { createAal2LocalClient } from "../helpers/mfa";
+import { createFreshLocalClient } from "../helpers/mfa";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -111,8 +111,8 @@ describe("authenticated tenant RLS contract", () => {
     expect(wrongEnvironment.data).toEqual([]);
   });
 
-  it("allows AAL2 member writes only inside the member's club", async () => {
-    const session = await createAal2LocalClient({
+  it("allows fresh aal1 member writes only inside the member's club", async () => {
+    const session = await createFreshLocalClient({
       email: "owner-aal2@alpha.local",
       userId: USER_IDS.ownerAal2,
     });
@@ -137,7 +137,7 @@ describe("authenticated tenant RLS contract", () => {
     expectPostgrestError(
       crossClub.error,
       "42501",
-      "AAL2 cross-club content insert",
+      "aal1 cross-club content insert",
     );
 
     await clients.service
@@ -147,37 +147,26 @@ describe("authenticated tenant RLS contract", () => {
       .eq("id", "aal2-alpha-contract");
   });
 
-  it("rejects content writes from an AAL1 owner session", async () => {
-    const { supabaseUrl } = await import("../helpers/environment").then(
-      ({ assertSafeTestEnvironment }) => assertSafeTestEnvironment(),
-    );
-    const { createClient } = await import("@supabase/supabase-js");
-    const client = createClient(
-      supabaseUrl,
-      process.env.SUPABASE_TEST_ANON_KEY!,
-      {
-        auth: { persistSession: false, autoRefreshToken: false },
-        db: { schema: "onzio" },
-        realtime: {
-          transport: WebSocket as unknown as typeof globalThis.WebSocket,
-        },
-      },
-    );
-    const signIn = await client.auth.signInWithPassword({
+  it("allows content writes from a fresh aal1 owner session", async () => {
+    const session = await createFreshLocalClient({
       email: "owner-aal1@alpha.local",
-      password: "local-contract-only",
+      userId: USER_IDS.ownerAal1,
     });
-    expect(signIn.error?.message).toBeUndefined();
+    cleanups.push(session.cleanup);
 
-    const write = await client.from("site_social_links").insert({
+    const write = await session.client.from("site_social_links").insert({
       club_id: CLUB_IDS.alpha,
       id: "aal1-forged-write",
-      label: "Denied",
+      label: "Allowed",
       href: "https://example.test",
       icon: "test",
     });
-    expectPostgrestError(write.error, "42501", "AAL1 content insert");
-    await client.auth.signOut();
+    expect(write.error?.message).toBeUndefined();
+    await clients.service
+      .from("site_social_links")
+      .delete()
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", "aal1-forged-write");
   });
 });
 
@@ -187,7 +176,7 @@ describe("tier-aware database and Storage contract", () => {
       .from("clubs")
       .update({ lifecycle: "active" })
       .eq("id", CLUB_IDS.bravo);
-    const session = await createAal2LocalClient({
+    const session = await createFreshLocalClient({
       email: "multiclub@local.test",
       userId: USER_IDS.multiClub,
     });
@@ -248,7 +237,7 @@ describe("tier-aware database and Storage contract", () => {
       .from("clubs")
       .update({ lifecycle: "active" })
       .eq("id", CLUB_IDS.bravo);
-    const session = await createAal2LocalClient({
+    const session = await createFreshLocalClient({
       email: "multiclub@local.test",
       userId: USER_IDS.multiClub,
     });
@@ -340,7 +329,7 @@ describe("DCFC-302 Contact admin workflow", () => {
       .from("clubs")
       .update({ lifecycle: "active" })
       .eq("id", CLUB_IDS.bravo);
-    const session = await createAal2LocalClient({
+    const session = await createFreshLocalClient({
       email: "multiclub@local.test",
       userId: USER_IDS.multiClub,
     });
@@ -404,7 +393,7 @@ describe("DCFC-302 Contact admin workflow", () => {
 
 describe("DCFC-301 Programs admin workflow", () => {
   it("lets an AAL2 Pro admin create, edit, and reorder complete program rows", async () => {
-    const session = await createAal2LocalClient({
+    const session = await createFreshLocalClient({
       email: "admin-aal2@alpha.local",
       userId: USER_IDS.adminAal2,
     });
@@ -494,7 +483,7 @@ describe("DCFC-301 Programs admin workflow", () => {
 
 describe("DCFC-303 Tryouts admin workflow", () => {
   it("lets an AAL2 Pro admin create, edit, and reorder public-safe event rows", async () => {
-    const session = await createAal2LocalClient({
+    const session = await createFreshLocalClient({
       email: "admin-aal2@alpha.local",
       userId: USER_IDS.adminAal2,
     });
@@ -594,7 +583,7 @@ describe("DCFC-303 Tryouts admin workflow", () => {
   });
 
   it("rejects cross-tenant, unsafe URL, and Starter writes at real database boundaries", async () => {
-    const session = await createAal2LocalClient({
+    const session = await createFreshLocalClient({
       email: "admin-aal2@alpha.local",
       userId: USER_IDS.adminAal2,
     });

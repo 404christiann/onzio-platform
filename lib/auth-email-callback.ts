@@ -25,13 +25,9 @@ export function parseEmailOtpType(
 export function resolveAuthCallbackDestination(input: {
   type: SupportedEmailOtpType | null;
   requestedNext: string | null;
-}): "/admin" | "/admin/update-password" {
-  if (input.type === "invite" || input.type === "recovery") {
-    return "/admin/update-password";
-  }
-  return input.requestedNext === "/admin/update-password"
-    ? "/admin/update-password"
-    : "/admin";
+}): "/admin" {
+  void input;
+  return "/admin";
 }
 
 export function createAuthEmailCallbackUrl(origin: string): string {

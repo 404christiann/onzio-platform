@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
-import { createAal2LocalClient } from "../helpers/mfa";
+import { createFreshLocalClient } from "../helpers/mfa";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -158,7 +158,7 @@ describe("DCFC-304 local admin-to-public acceptance", () => {
     ]);
     expect(tryouts.error?.message).toBeUndefined();
 
-    const session = await createAal2LocalClient({
+    const session = await createFreshLocalClient({
       email: "admin-aal2@alpha.local",
       userId: USER_IDS.adminAal2,
     });

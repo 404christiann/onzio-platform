@@ -5,6 +5,7 @@ import {
   SINGLETON_TABLES,
   type AdminDataRequest,
 } from "@/lib/admin-data-contract";
+import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContext } from "@/lib/club-context";
@@ -49,20 +50,19 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return errorResponse("AUTHENTICATION_REQUIRED", 401);
-
-  const { data: assurance } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  const aal = assurance?.currentLevel === "aal2" ? "aal2" : "aal1";
+  let userId: string;
+  try {
+    ({ userId } = await requireFreshClubSession(supabase));
+  } catch (error) {
+    const code = error instanceof ContractError ? error.code : "AUTHENTICATION_REQUIRED";
+    return errorResponse(code, code === "AUTHENTICATION_REQUIRED" ? 401 : 403);
+  }
 
   let club;
   try {
     club = await getClubContext({
       hostname: request.headers.get("host") ?? "",
-      userId: user.id,
+      userId,
     });
   } catch (error) {
     const code = error instanceof ContractError ? error.code : "UNKNOWN_TENANT";
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   const memberships = club.role
     ? [
         {
-          userId: user.id,
+          userId,
           clubId: club.id,
           role: club.role,
           status: "active",
@@ -84,17 +84,17 @@ export async function POST(request: Request) {
     if (parsed.data.operation === "select") {
       await authorizeAdminAccess({
         club,
-        userId: user.id,
+        userId,
         memberships,
-        aal,
+        aal: "aal1",
         capability: "content",
       });
     } else {
       await authorizeMutation({
         club,
-        userId: user.id,
+        userId,
         memberships,
-        aal,
+        aal: "aal1",
         feature: ADMIN_TABLE_FEATURES[parsed.data.table],
         payload: (parsed.data.payload ?? {}) as Record<string, unknown>,
       });

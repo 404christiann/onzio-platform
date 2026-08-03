@@ -32,7 +32,7 @@ type ClubHasFeature = (
 ) => boolean;
 
 describe("admin authentication and role contract", () => {
-  it("allows an AAL2 owner to manage content and billing", async () => {
+  it("allows an AAL1 owner to manage content and billing", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
@@ -43,14 +43,14 @@ describe("admin authentication and role contract", () => {
           club: clubs.alpha,
           userId: USER_IDS.ownerAal2,
           memberships,
-          aal: "aal2",
+          aal: "aal1",
           capability,
         }),
       ).resolves.toMatchObject({ allowed: true, role: "owner" });
     }
   });
 
-  it("allows an AAL2 admin to manage content", async () => {
+  it("allows an AAL1 admin to manage content", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
@@ -60,7 +60,7 @@ describe("admin authentication and role contract", () => {
         club: clubs.alpha,
         userId: USER_IDS.adminAal2,
         memberships,
-        aal: "aal2",
+        aal: "aal1",
         capability: "content",
       }),
     ).resolves.toMatchObject({ allowed: true, role: "admin" });
@@ -76,7 +76,7 @@ describe("admin authentication and role contract", () => {
         club: clubs.bravo,
         userId: USER_IDS.multiClub,
         memberships,
-        aal: "aal2",
+        aal: "aal1",
         capability: "billing",
       }),
     ).resolves.toMatchObject({ allowed: true, role: "owner" });
@@ -100,22 +100,20 @@ describe("admin authentication and role contract", () => {
     );
   });
 
-  it("rejects an owner whose session has not reached AAL2", async () => {
+  it("allows an owner at AAL1 because content access is single-factor", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
     );
-    await expectContractError(
-      () =>
-        authorizeAdminAccess({
-          club: clubs.alpha,
-          userId: USER_IDS.ownerAal1,
-          memberships,
-          aal: "aal1",
-          capability: "content",
-        }),
-      "MFA_REQUIRED",
-    );
+    await expect(
+      authorizeAdminAccess({
+        club: clubs.alpha,
+        userId: USER_IDS.ownerAal1,
+        memberships,
+        aal: "aal1",
+        capability: "content",
+      }),
+    ).resolves.toMatchObject({ allowed: true, role: "owner" });
   });
 
   it.each([
@@ -169,7 +167,7 @@ describe("tier and mutation boundary contract", () => {
         club: clubs.alpha,
         userId: USER_IDS.adminAal2,
         memberships,
-        aal: "aal2",
+        aal: "aal1",
         feature: "standings",
         payload: { title: "League table" },
       }),

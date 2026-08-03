@@ -64,11 +64,19 @@ describe("operator invitation and membership", () => {
 
     const invited = await inviteClubMember({
       clubId,
-      actorId: actor.data.user.id,
+      operatorAccessToken: "verified-operator-token",
       email: ownerEmail,
       role: "owner",
       environment: "staging",
-      dependencies: { client: service },
+      dependencies: {
+        client: service,
+        now: () => new Date("2026-08-03T18:00:00Z"),
+        verifyOperatorAccessToken: async () => ({
+          sub: actor.data.user.id,
+          aal: "aal2",
+          amr: [{ method: "totp", timestamp: 1785780000 }],
+        }),
+      },
     });
 
     expect(invited).toMatchObject({
@@ -76,7 +84,7 @@ describe("operator invitation and membership", () => {
       role: "owner",
       callbackUrl: `https://${hostname}/admin/auth/callback`,
       authUserCreated: true,
-      invitationRequested: true,
+      codeSent: true,
       membershipActive: true,
       audited: true,
     });
@@ -105,11 +113,19 @@ describe("operator invitation and membership", () => {
       () =>
         inviteClubMember({
           clubId,
-          actorId: actor.data.user.id,
+          operatorAccessToken: "verified-operator-token",
           email: ownerEmail,
           role: "owner",
           environment: "staging",
-          dependencies: { client: service },
+          dependencies: {
+            client: service,
+            now: () => new Date("2026-08-03T18:00:00Z"),
+            verifyOperatorAccessToken: async () => ({
+              sub: actor.data.user.id,
+              aal: "aal2",
+              amr: [{ method: "totp", timestamp: 1785780000 }],
+            }),
+          },
         }),
       "AUTH_IDENTITY_EXISTS",
     );

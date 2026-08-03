@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import {
+  isOperatorSessionFresh,
+  verifyAccessTokenClaims,
+  type AuthClaims,
+} from "@/lib/auth-session";
 import { failContract } from "@/lib/contract-error";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
@@ -8,6 +13,7 @@ export type OperatorClient = ReturnType<typeof createServiceRoleClient>;
 export type OperatorDependencies = {
   client?: OperatorClient;
   now?: () => Date;
+  verifyOperatorAccessToken?: (accessToken: string) => Promise<AuthClaims>;
 };
 
 export const uuidSchema = z.string().uuid();
@@ -19,6 +25,7 @@ export const slugSchema = z
 export const emailSchema = z.string().email().max(254).transform((email) =>
   email.trim().toLowerCase(),
 );
+export const operatorAccessTokenSchema = z.string().trim().min(1);
 
 export function parseOperatorInput<T>(
   schema: z.ZodType<T>,
@@ -49,15 +56,51 @@ export function operatorNow(
   return dependencies?.now?.() ?? new Date();
 }
 
-export function assertOperator(actorId: string): void {
+export async function assertOperator(
+  accessToken: string,
+  dependencies?: OperatorDependencies,
+): Promise<{ actorId: string; claims: AuthClaims }> {
+  let claims: AuthClaims | undefined;
+  try {
+    if (dependencies?.verifyOperatorAccessToken) {
+      claims = await dependencies.verifyOperatorAccessToken(accessToken);
+    } else {
+      claims =
+        (await verifyAccessTokenClaims(
+          getOperatorClient(dependencies),
+          accessToken,
+        )) ?? undefined;
+    }
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error
+    ) {
+      throw error;
+    }
+    failContract("OPERATOR_SESSION_REQUIRED");
+  }
+
+  if (!claims || typeof claims.sub !== "string") {
+    failContract("OPERATOR_SESSION_REQUIRED");
+  }
+
   const configured = (process.env.ONZIO_OPERATOR_USER_IDS ?? "")
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
 
-  if (!configured.includes(actorId)) {
+  if (!configured.includes(claims.sub)) {
     failContract("OPERATOR_ONLY");
   }
+
+  if (claims.aal !== "aal2") failContract("OPERATOR_AAL2_REQUIRED");
+  if (!isOperatorSessionFresh(claims, operatorNow(dependencies))) {
+    failContract("OPERATOR_SESSION_EXPIRED");
+  }
+
+  return { actorId: claims.sub, claims };
 }
 
 export function assertDirectOperatorInvocation(

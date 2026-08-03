@@ -10,6 +10,10 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     testTimeout: 15_000,
     hookTimeout: 30_000,
+    // Database contract files share deterministic tenant singleton fixtures.
+    // Running files in parallel lets one file restore a singleton while
+    // another is asserting it, producing false failures and data races.
+    fileParallelism: false,
     sequence: {
       concurrent: false,
     },

@@ -122,16 +122,20 @@ production migrations. They are legacy source evidence only.
 
 ## Operator workflows
 
-Operator provisioning, membership, lifecycle, export, purge, and MFA recovery
-live only under `lib/operator`. They are not application routes. Runtime
-invocations require the actor UUID in the comma-separated
-`ONZIO_OPERATOR_USER_IDS` allowlist.
+Operator provisioning, owner transfer, lifecycle, export, purge, and TOTP
+recovery live only under `lib/operator`. Owner-managed `admin` membership uses
+the tenant-bound `/api/admin/members` route and may not transfer ownership.
+Operator runtime invocations require a verified bearer session whose subject is
+in `ONZIO_OPERATOR_USER_IDS`, is AAL2, and has a TOTP AMR entry no older than
+two hours. Scripts obtain that session interactively; never pass or log an
+operator UUID as caller authority.
 
 The local-only end-to-end smoke refuses non-loopback Supabase hosts:
 
 ```bash
 eval "$(supabase status -o env 2>/dev/null)"
 NEXT_PUBLIC_SUPABASE_URL="$API_URL" \
+NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" \
 SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
 npm run operator:smoke
 ```

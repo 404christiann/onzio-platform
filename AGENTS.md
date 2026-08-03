@@ -42,8 +42,11 @@ Preserve these decisions unless Christian explicitly changes them:
 - Composite tenant foreign keys for tenant-owned relationships
 - Server-mediated admin mutations with user-scoped RLS enforcement
 - Service role limited to privileged server-only boundaries
-- Password authentication with mandatory MFA for all admins and owners
-- Operator-only provisioning and membership management
+- Passwordless email-code authentication for club owners and admins, with no
+  self-service signup and a 30-day session-age boundary enforced from JWT AMR
+- Mandatory TOTP/AAL2 for operators, with a two-hour TOTP-age boundary
+- Operator-only club provisioning and owner transfer; club owners may add or
+  remove `admin` memberships
 - Existing Stripe account with tenant/environment metadata
 - Stripe as billing source of truth
 - Private preview before active/trialing billing
@@ -79,7 +82,8 @@ npm test
 - Never expose the service-role key to client code.
 - Never trust client-provided `club_id`, host, origin, role, tier, price ID, MIME type, or storage path.
 - Resolve tenant identity from a normalized verified domain.
-- Re-check tenant, membership, MFA, lifecycle, and entitlement at mutation time.
+- Re-check tenant, membership, role, session age, lifecycle, and entitlement at
+  mutation time; re-check operator TOTP age at privileged boundaries.
 - Treat RLS and database constraints as the final authorization boundary.
 - Keep security-definer functions in `onzio_private` with an empty search path and narrow execution grants.
 - Do not place secrets or full sensitive payloads in audit events or logs.

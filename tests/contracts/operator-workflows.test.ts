@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clubs, USER_IDS } from "../fixtures/entities";
 import { expectContractError } from "../helpers/contract";
 import {
@@ -6,14 +6,27 @@ import {
   removeClubMembership,
 } from "@/lib/operator/manage-membership";
 import { inviteClubMember } from "@/lib/operator/invite-club-member";
-import { recoverMemberMfa } from "@/lib/operator/mfa-recovery";
 
-describe("operator-only membership and MFA recovery contract", () => {
+const OPERATOR_TOKEN = "verified-operator-token";
+const operatorDependencies = {
+  now: () => new Date("2026-08-03T18:00:00Z"),
+  verifyOperatorAccessToken: async () => ({
+    sub: USER_IDS.ownerAal2,
+    aal: "aal2",
+    amr: [{ method: "totp", timestamp: 1785780000 }],
+  }),
+};
+
+describe("operator-only membership contract", () => {
+  beforeEach(() => {
+    vi.stubEnv("ONZIO_OPERATOR_USER_IDS", USER_IDS.ownerAal2);
+  });
+
   it.each([
     () =>
       addClubMembership({
         clubId: clubs.alpha.id,
-        actorId: USER_IDS.ownerAal2,
+        operatorAccessToken: OPERATOR_TOKEN,
         userId: USER_IDS.unaffiliated,
         role: "admin",
         invokedFromApplicationRoute: true,
@@ -21,7 +34,7 @@ describe("operator-only membership and MFA recovery contract", () => {
     () =>
       removeClubMembership({
         clubId: clubs.alpha.id,
-        actorId: USER_IDS.ownerAal2,
+        operatorAccessToken: OPERATOR_TOKEN,
         userId: USER_IDS.adminAal2,
         invokedFromApplicationRoute: true,
       }),
@@ -33,17 +46,20 @@ describe("operator-only membership and MFA recovery contract", () => {
     await expect(
       inviteClubMember({
         clubId: clubs.alpha.id,
-        actorId: USER_IDS.ownerAal2,
+        operatorAccessToken: OPERATOR_TOKEN,
         email: "new-owner@approved.example",
         role: "owner",
         environment: "staging",
-        dependencies: { verifiedPrimaryHostname: "alpha-onzio-staging.vercel.app" },
+        dependencies: {
+          ...operatorDependencies,
+          verifiedPrimaryHostname: "alpha-onzio-staging.vercel.app",
+        },
       }),
     ).resolves.toMatchObject({
       role: "owner",
       callbackUrl: "https://alpha-onzio-staging.vercel.app/admin/auth/callback",
       authUserCreated: true,
-      invitationRequested: true,
+      codeSent: true,
       membershipActive: true,
       audited: true,
     });
@@ -54,7 +70,7 @@ describe("operator-only membership and MFA recovery contract", () => {
       () =>
         inviteClubMember({
           clubId: clubs.alpha.id,
-          actorId: USER_IDS.ownerAal2,
+          operatorAccessToken: OPERATOR_TOKEN,
           email: "new-owner@approved.example",
           role: "owner",
           environment: "staging",
@@ -64,30 +80,47 @@ describe("operator-only membership and MFA recovery contract", () => {
     );
   });
 
-  it("requires recorded manual identity verification for MFA recovery", async () => {
-    await expect(
-      recoverMemberMfa({
-        clubId: clubs.alpha.id,
-        userId: USER_IDS.adminAal2,
-        actorId: USER_IDS.ownerAal2,
-        identityVerified: false as true,
-        verificationReference: "manual-check-123",
-      }),
-    ).rejects.toMatchObject({ code: "INVALID_OPERATOR_INPUT" });
-  });
-
-  it("rejects MFA recovery from an application route", async () => {
+  it("rejects an allowlisted operator below aal2", async () => {
     await expectContractError(
       () =>
-        recoverMemberMfa({
+        inviteClubMember({
           clubId: clubs.alpha.id,
-          userId: USER_IDS.adminAal2,
-          actorId: USER_IDS.ownerAal2,
-          identityVerified: true,
-          verificationReference: "manual-check-123",
-          invokedFromApplicationRoute: true,
+          operatorAccessToken: OPERATOR_TOKEN,
+          email: "new-owner@approved.example",
+          role: "owner",
+          environment: "staging",
+          dependencies: {
+            ...operatorDependencies,
+            verifyOperatorAccessToken: async () => ({
+              sub: USER_IDS.ownerAal2,
+              aal: "aal1",
+              amr: [{ method: "otp", timestamp: 1785780000 }],
+            }),
+          },
         }),
-      "OPERATOR_ONLY",
+      "OPERATOR_AAL2_REQUIRED",
+    );
+  });
+
+  it("rejects an operator whose TOTP step-up is older than two hours", async () => {
+    await expectContractError(
+      () =>
+        inviteClubMember({
+          clubId: clubs.alpha.id,
+          operatorAccessToken: OPERATOR_TOKEN,
+          email: "new-owner@approved.example",
+          role: "owner",
+          environment: "staging",
+          dependencies: {
+            ...operatorDependencies,
+            verifyOperatorAccessToken: async () => ({
+              sub: USER_IDS.ownerAal2,
+              aal: "aal2",
+              amr: [{ method: "totp", timestamp: 1785771000 }],
+            }),
+          },
+        }),
+      "OPERATOR_SESSION_EXPIRED",
     );
   });
 });

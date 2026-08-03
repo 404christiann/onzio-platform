@@ -2,9 +2,9 @@
 
 Epic: `DCFC-EPIC-002`
 
-Status: `dcfc_504_complete_phase_5_closed`
+Status: `dcfc_504_complete_phase_5_closed_plat_101_amended`
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
 This checklist is the evidence surface for `DCFC-501`–`DCFC-603`. It is not
 authorization to inspect or mutate staging. Each package retains its action
@@ -19,7 +19,7 @@ Record safe identifiers only; never record secrets.
 | Supabase | Exact staging organization/project ref, region, health, plan/capacity | **Pass, re-attested 2026-08-02:** `Onzio Staging` (`udlsrxgfpkqjaridfxnz`), Free plan; `Onzio Platform Staging` (`fxefqnoqxbezeccjvrsw`), `us-west-2` / West US (Oregon), healthy `nano`. Dashboard sample: 6/60 connections, 2% CPU, 3% disk, and 49% RAM. Free staging has no downloadable daily backups; Christian accepted the restricted manual-backup replacement for this gate. |
 | Schema | Local/remote migration ledgers match; no local seed applied remotely | **Pass:** the approved history-only six-version repair replaced the three verified Phase 7 execution timestamps with the three canonical versions without running schema SQL. The linked ledger now aligns all ten canonical Phase 1-7 versions. `supabase db push --linked --dry-run` lists exactly the ten reviewed Phase 9/11 files reserved for `DCFC-502`; no push or seed ran. Linked `onzio,onzio_private` lint is clean. All 32 current `onzio` tables have RLS; all 15 current security-definer functions have an empty search path. |
 | Keys/API | Modern staging-only key posture; `onzio` exposed, `onzio_private` unexposed | **Pass:** the Data API is enabled; exposed schemas are `graphql_public`, `onzio`, and `public`, while `onzio_private` is excluded. The modern default publishable key is active, and the legacy JWT keys remain disabled. `onzio_private` has zero browser table grants and zero `PUBLIC` routine grants. No key value was copied or recorded. |
-| Auth/email | TOTP, leaked-password protection, AAL1 policy, staging SMTP sender/rate limits | **Pass with accepted Free-plan exception; `DCFC-504` accepted:** TOTP is enabled; enhanced MFA terminates an unverified AAL1 session after 15 minutes. Access tokens expire after 3600 seconds; compromised-refresh-token detection is enabled with a 10-second reuse interval. Custom SMTP is enabled at `smtp.resend.com:465` as `Onzio Staging <staging@auth.onziofutbol.com>`, with a 60-second per-user interval and 30-email/hour project limit. The Site URL and four redirect URLs are staging-only; the exact Diverse City callback is the sole fourth entry. Leaked-password screening remains unavailable on Free and was explicitly accepted with the protected/noindex, staging-identity, and mandatory-admin-TOTP controls. The approved new identity has exactly one verified TOTP factor and one AAL2 session; the synthetic owner membership is removed and audited, leaving exactly one active Diverse City owner. Provider message `8ec265e4-e868-440c-8005-7b0893977ea2` remains the sole delivered message to the approved provider domain. No full identity or secret is recorded. |
+| Auth/email | Passwordless club email codes, operator TOTP, session boundaries, staging SMTP sender/rate limits | **Pass for the approved PLAT-101 configuration; hosted app acceptance pending:** self-signup remains disabled and email auth enabled. Email codes are six digits, expire after 86,400 seconds, and use a code-only Onzio template with the token first in the subject. Supabase timebox/inactivity remain `never`; the platform enforces 30-day club and two-hour operator-TOTP age from JWT AMR. The former Free-plan leaked-password exception is retired because club password paths were deleted. Existing `DCFC-504` identity/message evidence remains historical; see the amendment below. Custom SMTP, rate limits, staging-only URLs, factors, memberships, and tenant data were not changed by PLAT-101. |
 | Existing tenants | Alpha/Bravo IDs, domains, lifecycle/tier, owners/admins, content baseline | **Pass:** Alpha `362f4276-0e0b-4c6a-989d-3e59713c1d9f`, Starter/active/live at `alpha-onzio-staging.vercel.app`, has three active memberships. Bravo `fae51a8d-63b5-468c-bb7a-6e2b31d90035`, Starter/onboarding/preview at `bravo-onzio-staging.vercel.app`, has two. Database baseline: two clubs, two domains, five memberships, four explicitly `orphaned` media rows, 45 audit events. Both Storage buckets have zero objects, matching the orphaned cleanup state. No owner/admin identity was recorded. |
 | Vercel | Exact project, protected staging branch/deployment, Preview-only env-name inventory | **Pass for `DCFC-501`:** project `prj_I362ysmh9cse5cRxnL7db4dOhsEs` resolves as `onzio-rcfc`. All non-custom-domain deployments remain protected, Git-fork protection is enabled, and final readback shows exactly one replacement automation bypass with `isEnvVar=true`. Header and query probes reached the application and returned HTTP `400 INVALID_SIGNATURE`, not a Vercel Authentication redirect. The historical ready deployment and stable/Alpha/Bravo aliases remain unchanged. Its older commit is the explicitly recorded release delta for `DCFC-502`, not authorization to deploy it during `DCFC-501`. No environment value or bypass secret was recorded. |
 | Stripe | Test mode, existing Starter/Pro Prices, Portal, webhook/event allowlist | **Pass:** the recorded Starter (`$65/month`) and Pro (`$99.99/month`) Prices and test Portal remain unchanged. Enabled test webhook `we_1TxrnaK6WajTkwHYtFEvCEo8` now targets the existing protected staging alias at `/api/stripe/webhook`, includes the replacement bypass, remains `livemode=false`, and retains exactly the seven approved events. No signing secret or bypass value was recorded. |
@@ -172,6 +172,34 @@ one verified TOTP factor, 29 tenant audits, and one operator removal audit.
   from a current generic staging gate with directly applicable evidence.
 - [x] Final users, memberships, sessions, factors, and audit-event counts match
   the approved identity manifest.
+
+### PLAT-101 amendment — 2026-08-03
+
+`DCFC-504` is complete and its historical evidence remains true for the flow
+that was accepted on 2026-08-02, but its password-plus-owner-TOTP sign-in model
+is superseded for future releases by accepted decisions `PLAT-D012`–`D017`,
+`D021`, and `D023`. PLAT-101 deletes the club recovery/password routes and
+makes owner/admin sign-in a six-digit email-code flow at AAL1. Club access is
+bounded to 30 days from the earliest valid AMR entry; operator functions alone
+require AAL2 plus a TOTP AMR entry no older than two hours.
+
+The approved staging Auth mutation changed only OTP expiry `3600` → `86400`,
+OTP length `8` → `6`, and the Magic Link/OTP subject/body from the stock
+link-based template to the checked-in code-only Onzio template. Self-signup was
+already off, email auth was already on, and session timebox/inactivity remain
+`0` (`never`). Schema migrations `20260803192838` and `20260803192943` changed
+only the governed authorization functions and six named read policies; no Auth
+user, factor, session, membership, tenant content, Storage object, Stripe,
+Vercel, DNS, or production resource changed.
+
+Local replacement evidence is green: first and returning owner sign-in, exact
+unknown-address failure with no user creation, owner adds/removes an admin,
+admin signs in with the pre-sent code, tenant/role/session/operator negative
+boundaries, and desktop/mobile protected-shell checks. The deployed staging
+application still serves the older commit because no push/deploy was approved;
+therefore this amendment does not claim hosted UI acceptance. The operator
+identity must enroll TOTP privately, and delivery still needs Yahoo, AOL, and
+one ISP-hosted-domain evidence before PLAT-101 can close.
 
 ## Public and Admin Acceptance (`DCFC-602`)
 
