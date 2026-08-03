@@ -125,6 +125,69 @@ unassigned and unapproved.
 
 ## Completion Records
 
+### 2026-08-03 — PLAT-D016 superseded by PLAT-D021; session age moves to the platform — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). Continuation of the design review below, same
+session. Class 1 and loopback-only Class 2: one further throwaway probe user on
+local Supabase, deleted. Hosted-mutation count: zero.
+
+Christian confirmed that Supabase's session `timebox` and `inactivity_timeout`
+are Pro-and-above. That invalidated `PLAT-D016` hours after it was accepted,
+for two reasons rather than one:
+
+1. `AGENTS.md` locks staging as a **Free** project, so the 30-day timebox could
+   be neither configured nor rehearsed there. `PLAT-101`'s acceptance criterion
+   that "club sessions persist across the configured window" was unprovable.
+2. It was **orphaned**. `PLAT-101`'s hosted boundary is staging Auth
+   configuration only; `PLAT-102` is billing; `PLAT-103` is documentation and
+   covers only `DCFC-601`/`602`. No package could have applied a
+   production-only Auth setting, so it would have shipped unrehearsed and
+   unowned.
+
+`PLAT-D021` supersedes it: session age is enforced by the platform from the
+`amr` claim — 30 days for club sessions in RLS, 2 hours for operator `aal2` in
+`assertOperator()` per `PLAT-D015`. The 30-day duration is unchanged; only the
+mechanism moved. It is plan-independent, rehearses fully on Free staging, and
+reuses the helper `PLAT-D015` already requires. It must land in RLS rather than
+application code alone, because an app-layer-only check leaves a still-valid old
+JWT able to reach PostgREST directly, where policies see membership and
+lifecycle but nothing about session age.
+
+Verified before recording, rather than assumed: an email-OTP sign-in — the club
+path under `PLAT-D012`/`PLAT-D014` — produces `amr: [{method: "otp",
+timestamp}]` at `aal1`, and that timestamp is stable across refresh while `iat`
+moves. So the club bound is buildable on the same mechanism as the operator
+bound.
+
+Two incidental findings from the same probe, both recorded:
+
+- `shouldCreateUser: false` on an unknown address returns the **generic**
+  `Signups not allowed for otp` and creates no user. `PLAT-D014`'s explicit
+  "no account for that address" message is therefore application-side error
+  mapping, not something Supabase supplies. That is an implementation
+  obligation `PLAT-101` must carry, and it is now recorded as one.
+- The stock Magic Link template emits a link with no six-digit code,
+  independently confirming `PLAT-101`'s stated requirement to alter it to emit
+  `{{ .Token }}`.
+
+Files changed: `docs/phase-12/DECISIONS.md` (`PLAT-D016` marked superseded,
+`PLAT-D021` added, three findings appended, open items re-statused, Acceptance
+Record); `docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md` (Sessions bullet and
+Open Items corrected); this file and `HANDOFF.md`.
+
+Verification: `git status --short` clean after commit; `git diff --check` clean;
+probe directory removed. No application code, schema, or test changed.
+
+Blockers: unchanged. Push still withheld; `PLAT-101` still unauthorized. One
+open verification remains — whether Vercel notifies on a failed cron for this
+account, which decides whether `PLAT-D019`'s alert is a push or a pull.
+
+Exact next step: unchanged. `PLAT-101` may be assigned once Christian issues its
+package approval and supplies the three remaining inputs. Do not start
+`DCFC-601`; do not push.
+
+Hosted-mutation count: zero.
+
 ### 2026-08-03 — Five open PLAT items closed; PLAT-D015–D020 accepted — Claude Code (Opus 5)
 
 Agent: Claude Code (Opus 5). A structured design review of the four remaining

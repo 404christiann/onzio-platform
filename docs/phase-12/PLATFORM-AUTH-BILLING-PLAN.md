@@ -208,11 +208,15 @@ This closes `PLAT-101`'s sign-off gate. It does not assign or authorize
 - **Sessions:** ~~asymmetric — long for club accounts (weeks), short for operator
   accounts (hours)~~ — **superseded 2026-08-03.** Supabase exposes session length
   only project-wide, so this is not configurable as written. Replaced by
-  `PLAT-D016` (30-day timebox, no inactivity timeout, project-wide) plus
-  `PLAT-D015` (application-layer 2-hour maximum age on operator `aal2`, read
-  from the JWT's `amr` TOTP timestamp). AAL2 **does** survive session refresh —
-  proven, not assumed — so operator re-auth is per-session, which is why
-  `PLAT-D015` is required. Evidence is in `docs/phase-12/DECISIONS.md`.
+  `PLAT-D021`: session age is enforced **by the platform from the `amr` claim**,
+  not by Supabase session configuration — 30 days for club sessions in RLS, and
+  2 hours for operator `aal2` in `assertOperator()` per `PLAT-D015`.
+  Supabase's own `timebox` is Pro-and-above and staging is Free, so configuring
+  it there was impossible and no package owned applying it in production.
+  AAL2 **does** survive session refresh — proven, not assumed — so operator
+  re-auth is per-session, which is why `PLAT-D015` is required. The `amr`
+  approach is plan-independent and rehearses fully on Free staging. Evidence is
+  in `docs/phase-12/DECISIONS.md`.
 - **Invitations:** generalize the server-only invitation and membership workflow
   built during `DCFC-504` so a club owner can add an `admin`, including
   server-side creation of the Auth user (required, because
@@ -451,10 +455,13 @@ Outcomes, rationale, and evidence are in `docs/phase-12/DECISIONS.md`.
   and `PLAT-D020`.**
 - ~~Whether AAL2 survives session refresh~~ — **proven: it does.** Operator
   re-auth is per-session.
-- ~~Exact session durations~~ — **settled by `PLAT-D015` and `PLAT-D016`,**
-  after the asymmetric framing proved unimplementable.
+- ~~Exact session durations~~ — **settled by `PLAT-D015` and `PLAT-D021`,**
+  after the asymmetric framing proved unimplementable and Supabase's own
+  timebox proved unavailable on Free staging. `PLAT-D016` was accepted and
+  superseded the same day.
 
-Two verification tasks were opened in their place, tracked in
-`DECISIONS.md`: whether session `timebox` / `inactivity_timeout` are available
-on Supabase Free (staging is Free, production is Pro), and whether Vercel
-notifies on a failed cron for this account.
+Tracked in `DECISIONS.md` in their place: one open verification —
+whether Vercel notifies on a failed cron for this account, since `PLAT-D019`
+escalates by returning non-200 — and one implementation obligation, that
+`PLAT-D014`'s explicit unknown-address message must be produced by mapping
+Supabase's generic `Signups not allowed for otp` error in the application.

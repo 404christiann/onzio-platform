@@ -72,12 +72,18 @@ and three findings contradict the plan text:
 
 - **AAL2 survives session refresh** (proven). Operator re-auth is per-session,
   so session lifetime was the only bound on privileged access.
-- **Asymmetric session durations are not configurable.** `timebox` and
-  `inactivity_timeout` are project-wide GoTrue settings; there is no per-role
-  duration. `PLAT-101`'s "weeks for club, hours for operator" is superseded by
-  a project-wide 30-day timebox (`PLAT-D016`) plus a 2-hour application-layer
-  maximum age on operator `aal2` read from the JWT's `amr` TOTP timestamp
-  (`PLAT-D015`).
+- **Session duration is not controllable the way the plan assumed — twice
+  over.** `timebox` and `inactivity_timeout` are project-wide GoTrue settings
+  with no per-role dimension, so `PLAT-101`'s "weeks for club, hours for
+  operator" was unbuildable. They are also Pro-and-above, and `AGENTS.md` locks
+  staging as Free, so the replacement (`PLAT-D016`) was unconfigurable and
+  unrehearsable on staging — and orphaned, since no package's hosted boundary
+  could have applied a production-only Auth setting. Settled by `PLAT-D021`:
+  session age is enforced **by the platform from the `amr` claim**, 30 days for
+  club sessions in RLS and 2 hours for operator `aal2` in `assertOperator()`
+  (`PLAT-D015`). Plan-independent and fully rehearsable on Free staging. It must
+  live in RLS, not application code alone, or a still-valid old JWT reaches
+  PostgREST directly where no policy checks session age.
 - **No policy calls `club_has_feature` directly** — 115 policies across 29
   tables call the two wrappers instead — so `PLAT-102`'s fork was a false
   choice. `PLAT-D018` deletes the function by collapsing the wrappers, with
@@ -90,10 +96,14 @@ without binding the caller to a verified session — the gap is now a
 requirement, not a recommendation. Operator scripts will sign in with TOTP
 rather than relying on the service-role key plus a known operator UUID.
 
-Two verification tasks replace the closed items, neither a decision: whether
-session `timebox` / `inactivity_timeout` exist on Supabase Free (staging is
-Free, production is Pro), and whether Vercel notifies on a failed cron for this
-account, since `PLAT-D019` escalates by returning non-200.
+Carried forward: one open verification — whether Vercel notifies on a failed
+cron for this account, which decides whether `PLAT-D019`'s alert is a push or a
+pull — and two implementation obligations for `PLAT-101`, both found by probe
+rather than by reading: `PLAT-D014`'s explicit "no account for that address"
+message must be produced by mapping Supabase's generic `Signups not allowed for
+otp` error in the application, and the stock Magic Link template emits a link
+with no six-digit code, confirming the template change is a hard prerequisite
+rather than a nicety.
 
 Flagged and deliberately not fixed, because it is `PLAT-101`'s deliverable:
 `assertOperator()` in `lib/operator/shared.ts` checks only that a
