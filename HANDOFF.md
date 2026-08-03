@@ -2,6 +2,130 @@
 
 Last updated: 2026-08-03
 
+## Latest Work — PLAT-101 local implementation and approved staging boundary
+
+Agent: Codex, 2026-08-03. Christian approved `PLAT-101` for exact Supabase
+staging project `fxefqnoqxbezeccjvrsw`. The package is **in progress**, not
+complete: local implementation and the approved staging schema/Auth boundary
+are complete. The implementation is committed locally as `009d284`
+(`Implement PLAT-101 passwordless admin access`), but no application
+push/deploy was authorized, the operator
+identity still needs private TOTP enrollment, and Yahoo/AOL/ISP-hosted delivery
+evidence remains open.
+
+### Next agent — start here
+
+Read `docs/phase-12/DECISIONS.md` before the plan; it governs disagreements.
+Do not reintroduce password recovery, owner/admin MFA, per-role Supabase session
+configuration, caller-supplied operator actor IDs, or direct
+`club_has_feature` policy churn. The implemented model is:
+
+- club owners/admins sign in with a six-digit email code at AAL1; no
+  self-service signup and no password path;
+- club sessions expire in app authorization and RLS 30 days after the earliest
+  valid JWT AMR timestamp;
+- operators authenticate interactively, must be allowlisted by verified JWT
+  `sub`, must be AAL2, and must present a TOTP AMR entry no older than two hours;
+- owners may add/remove `admin` memberships only; ownership transfer remains an
+  operator action.
+
+Key implementation: `lib/auth-session.ts`, `lib/operator/shared.ts`,
+`scripts/operator-session.ts`, `lib/owner-admin-membership.ts`,
+`app/api/admin/members/route.ts`, `app/admin/(protected)/members/page.tsx`,
+`supabase/migrations/20260803192838_plat_101_admin_auth_simplification.sql`,
+`supabase/migrations/20260803192943_plat_101_club_members_initplan.sql`, and
+`docs/phase-12/PLAT-101-ROLLBACK.sql`. Club password recovery/update pages,
+their tests, the old operator MFA-recovery module, and the old hosted
+password/MFA scripts were deleted.
+
+Local verification is green: clean reset; real OTP delivery/verification and
+unknown-user noncreation; rollback then forward restoration; 315/315 contracts,
+20/20 architecture, 81/81 database, 671/671 full tests across 71 files, 2/2
+desktop/mobile Playwright scenarios, TypeScript, generated types, database lint,
+and production build. The three existing analytics exhaustive-deps warnings are
+unchanged.
+
+**Manual-acceptance follow-up, 2026-08-03:** Christian confirmed the complete
+owner → add admin → admin email-code sign-in flow works. He then found the
+add → remove → immediate re-add edge case returned the internal
+`AUTH_CODE_DELIVERY_FAILED` as HTTP 403. A disposable local Auth probe proved
+the cause: Supabase returns `over_email_send_rate_limit`, HTTP 429, with 59
+seconds remaining because `auth.email.max_frequency` is one minute. The owner
+membership workflow now maps that provider response to
+`AUTH_CODE_RATE_LIMITED`; the route returns 429; and Team access shows a
+friendly one-minute retry message instead of an internal code. The membership
+continues to roll back to `removed` until delivery succeeds, preventing an old
+session from silently regaining access. Regression coverage proves the same
+Auth identity can be reactivated and that a cooldown failure leaves it removed.
+Final verification after the fix: 314/314 contracts, 669/669 full tests,
+TypeScript clean, and production build green with only the three pre-existing
+analytics exhaustive-deps warnings. No hosted mutation or push.
+
+**Admin-navigation scroll follow-up, 2026-08-03:** Christian found that the
+admin sidebar could not be scrolled reliably. The desktop breakpoint had
+removed the sidebar's viewport height constraint, so the navigation region had
+no bounded area in which to scroll. The shell now remains viewport-height and
+sticky on desktop, clips overflow at the shell boundary, and gives the
+navigation region its own keyboard-focusable, touch-pan-enabled scroll area
+with stable scrollbar space. Christian's visual follow-up showed the native
+bright scrollbar track overwhelmed the dark navigation. It is now a 6px
+translucent thumb on a transparent track, with stronger hover/focus feedback
+and no white gutter. The original red-first contract failed 2/3 checks before
+the scroll fix and passed 3/3 afterward; a second styling contract failed 1/4
+before the refinement and passes 4/4 afterward. The real local email-code
+owner/admin browser journey passes 2/2 at 1440×900 and 390×844, including
+assertions that the nav is taller than its viewport and that its scroll
+position advances; the resulting desktop/mobile screenshots were inspected.
+Final verification is 670/670 full tests across 71 files, clean TypeScript, and
+`git diff --check`. The local application was restarted cleanly at
+`http://alpha.localhost:3000/admin` after a stale `.next` development-server
+artifact was identified. No hosted mutation, commit, or push.
+
+**New-admin cooldown UX follow-up, 2026-08-03:** Retain Supabase's one-minute
+per-address OTP cooldown as the documented abuse control, but do not make a
+newly added administrator wait through it. Adding the administrator already
+sends a valid code. If that administrator then uses the primary “Send sign-in
+code” action inside the cooldown, the login page now recognizes the exact
+`over_email_send_rate_limit` response, advances directly to code entry, and
+explains that the existing emailed code can be used immediately; Supabase's raw
+“For security purposes” message is no longer exposed. This does not alter the
+separate remove → immediate re-add rule: membership reactivation still waits
+for a successful delivery so an old session cannot regain access silently. A
+red-first contract failed 1/11 before the login behavior existed and passes
+11/11 afterward. The isolated real local owner/admin browser journey passes
+2/2, explicitly observes one `/auth/v1/otp` 429, and completes sign-in with the
+original onboarding code. Final verification is 671/671 across 71 files and
+clean TypeScript. No Auth configuration, hosted mutation, commit, or push.
+
+Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
+
+- migration `20260803192838` installed the AMR session helpers and replaced the
+  six governed club read policies;
+- migration `20260803192943` changed `club_members_self_read` to the Supabase
+  init-plan form; the advisor warning introduced by the first migration is gone;
+- email OTP expiry changed `3600` → `86400`, length `8` → `6`, and the stock
+  link-based Magic Link/OTP subject/body changed to the code-only checked-in
+  Onzio template;
+- self-signup was already disabled, email auth already enabled, and session
+  timebox/inactivity already `0` (`never`); those values were not changed.
+
+Readback confirms both migration versions, all four intended security-definer
+functions with empty search paths, all six policies using the fresh-session
+boundary, and zero remaining `is_aal2()` calls in exposed `onzio` policies.
+The security advisor still reports the intentional 24-hour OTP warning and the
+now-inapplicable leaked-password warning, plus four pre-existing policyless
+privileged tables. No package data was mutated.
+
+Exact next step: obtain a separate approval for pushing `staging` and triggering
+the protected Vercel deployment; Christian privately enrolls TOTP on the
+configured operator account; then run hosted owner/admin/operator and
+multi-provider delivery acceptance. No secret, code, address, token, or factor
+was recorded. After this handoff ledger commit, local `staging` is 13 commits
+ahead of `origin/staging`; none are pushed. Do not push now. Do not start
+`PLAT-102`, `DCFC-601`, or
+`DCFC-602`; do not extend the heartbeat to media cleanup. DMARC `p=none` is a
+separate DNS approval.
+
 ## Latest Work — PLAT-EPIC-001 prerequisites P1 and P2
 
 Agent: Claude Code (Opus 5), 2026-08-03. Assignment: prerequisites `P1` and

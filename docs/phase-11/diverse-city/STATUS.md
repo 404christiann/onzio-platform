@@ -8,20 +8,24 @@ Proposed rollout epic: `DCFC-EPIC-002`
 
 Rollout epic status: `phase_5_complete`
 
-Last updated: 2026-08-02
+Last updated: 2026-08-03
 
-Current assignment: `PLAT-EPIC-001` prerequisites `P1` and `P2` are complete as
-of 2026-08-03 (Claude Code, Opus 5). The Phase 5 worktree is committed locally
-on `staging`, and `PLAT-D001`–`PLAT-D014` are promoted into
-`docs/phase-12/DECISIONS.md`. Christian then accepted all fourteen decisions
-unamended and signed off the `PLAT-101` privilege classification table on
-2026-08-03, and settled the grace-warning schedule at day 7 and day 17. No push
-was created: the `staging` branch triggers a protected Vercel deployment, which
-is Class 3 and unapproved. Hosted-mutation count: zero. `PLAT-101`'s decision
-and sign-off gates are now closed, but the package is **not** authorized — it
-still needs its own approval naming the package ID and target environment, plus
-four required inputs. `DCFC-601` remains unstarted and is `PLAT-103`'s scope to
-respecify.
+Current assignment: `PLAT-101`, approved by Christian on 2026-08-03 for exact
+Supabase staging project `fxefqnoqxbezeccjvrsw`. Local implementation and
+verification are complete and committed locally as `009d284` (`Implement
+PLAT-101 passwordless admin access`). The two checked-in PLAT-101 migrations and the
+six-digit, 24-hour, code-only staging Auth configuration are applied and
+verified. No push/deploy was approved or performed, so the protected staging UI
+still serves release commit `8e3cde2`; hosted application acceptance is open.
+The operator account must enroll TOTP privately, and Yahoo/AOL/ISP delivery
+evidence remains outstanding. `DCFC-601` and `DCFC-602` remain unstarted and are
+`PLAT-103` scope; the media-cleanup heartbeat remains prohibited.
+Christian's local manual acceptance also exposed and closed three UI edges: an
+immediate removed-admin re-add now reports the provider's one-minute email
+cooldown clearly, and the admin sidebar now has an independently scrollable,
+viewport-bounded navigation region on both desktop and mobile. A newly added
+administrator who requests another code during that cooldown now goes directly
+to code entry and can use the valid onboarding code already sent.
 
 Prior assignment: `DCFC-504` and Phase 5 are complete. Christian recovered
 the browser-saved password privately, enrolled exactly one TOTP factor, reached
@@ -53,7 +57,7 @@ defined in `ROLLOUT-EPIC.md`, `ROLLOUT-WORK-PACKAGES.md`,
 `CONTENT-MEDIA-READINESS.md`, `STAGING-ACCEPTANCE.md`, and
 `PRODUCTION-CUTOVER-ROLLBACK.md`. Planning hosted-mutation count: zero.
 
-**The suite is GREEN — 665/665 passing across 69 files.** `DCFC-304` adds
+**The suite is GREEN — 671/671 passing across 71 files.** `DCFC-304` adds
 reusable Programs overview/detail, Contact, and Tryouts public routes; real
 AAL2 admin-to-anonymous-public database acceptance; Alpha/Bravo isolation;
 published `academy@1` persistence; and repeatable desktop/mobile public and
@@ -77,6 +81,7 @@ not satisfy the handoff requirement.
 
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
+| PLAT-101 | in_progress | Codex | Exact staging approval received; all decision/input gates satisfied | Local implementation and verification complete; staging migrations/Auth config applied. Next: separately approve push/deploy, privately enroll operator TOTP, then run hosted UI/operator and multi-provider delivery acceptance. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -124,6 +129,175 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-101 local package committed; push withheld — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at hosted application and
+  deliverability acceptance.
+- **Completed:** committed the complete local PLAT-101 implementation as
+  `009d284` (`Implement PLAT-101 passwordless admin access`). The commit includes
+  passwordless club Auth, AMR session enforcement, session-bound operator TOTP,
+  owner-managed admins, rollback/migrations, removal of superseded password
+  recovery, the manual-acceptance UI fixes, and all associated tests and design
+  records. This ledger/handoff update is the separate documentation commit.
+- **Files changed:** implementation commit `009d284` contains 66 files; this
+  closeout commit contains `HANDOFF.md` and this ledger only.
+- **Verification:** staged scope and intentional deletions were reviewed;
+  `git diff --cached --check` passed; no credential/token material was found.
+  The accepted implementation evidence remains 315/315 contracts, 20/20
+  architecture tests, 81/81 database tests, 671/671 complete tests across 71
+  files, 2/2 desktop/mobile browser scenarios, clean TypeScript, generated
+  types, database lint, and production build.
+- **Blockers:** no local implementation blocker. Protected application deploy,
+  private operator TOTP enrollment, and Yahoo/AOL/ISP delivery evidence remain
+  open.
+- **Exact next step:** Christian privately enrolls TOTP on the configured
+  operator identity and separately approves pushing `staging` plus triggering
+  the protected Vercel staging deployment. Then run hosted owner/admin/operator
+  and multi-provider delivery acceptance. Do not start `PLAT-102`, `DCFC-601`,
+  or `DCFC-602`.
+- **Hosted mutations:** zero for this commit step. After the handoff commit,
+  local `staging` is 13 commits ahead of `origin/staging`; no commit was pushed
+  and no Vercel, Supabase, Auth, email, DNS, Stripe, Storage, Bunny.net, or
+  production resource changed.
+
+### 2026-08-03 — PLAT-101 local build and staging schema/Auth applied — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress` at hosted application and
+  deliverability acceptance.
+- **Completed:** replaced club password/recovery/MFA with six-digit email-code
+  sign-in; enforced 30-day club session age in application code and RLS;
+  rebound operator workflows to verified JWT subject plus AAL2/TOTP no older
+  than two hours; added owner-only admin membership management; removed caller
+  actor IDs and the simulation auth bypass; added executable rollback and
+  browser/database/contract coverage. Applied staging migrations
+  `20260803192838` and `20260803192943`. Changed staging OTP expiry from 3600 to
+  86400 seconds, length from 8 to 6, and the stock link template to the
+  checked-in code-only Onzio template. Self-signup stayed off, email stayed on,
+  and timebox/inactivity stayed `never`.
+- **Files changed:** PLAT-101 application, operator, Auth, migration, rollback,
+  test, and documentation files shown by `git status --short`; key additions are
+  `lib/auth-session.ts`, `lib/owner-admin-membership.ts`,
+  `app/api/admin/members/route.ts`, `app/admin/(protected)/members/page.tsx`,
+  both PLAT-101 migrations, `docs/phase-12/PLAT-101-ROLLBACK.sql`, and the
+  PLAT-101 contract/database/browser suites.
+- **Verification:** clean local reset; real local OTP delivery/verification and
+  unknown-user noncreation; rollback/forward rehearsal; 314/314 contracts,
+  20/20 architecture, 81/81 database, 669/669 full tests across 71 files, 2/2
+  Playwright desktop/mobile scenarios, TypeScript, generated-type check,
+  `onzio,onzio_private` database lint, and production build. Staging readback
+  confirms both migrations, four hardened empty-search-path security-definer
+  functions, all six intended policies, zero remaining `is_aal2` policy calls,
+  and removal of the one newly introduced RLS init-plan advisor warning.
+- **Blockers:** no code/schema blocker. The protected staging application still
+  runs old code because push/deploy was not approved. The configured operator
+  identity needs private TOTP enrollment. Yahoo, AOL, and one ISP-hosted-domain
+  delivery evidence is still required. DMARC `p=none` remains a separate DNS
+  hardening item and is not a PLAT-101 blocker.
+- **Exact next step:** obtain a separate approval for the `staging` push/Vercel
+  deployment; Christian privately enrolls operator TOTP; then run hosted owner,
+  admin, operator-refusal, rollback-readiness, and provider delivery acceptance.
+  Do not start `PLAT-102`, `DCFC-601`, or `DCFC-602` until their own gates are
+  satisfied.
+- **Hosted mutations:** only the approved project
+  `fxefqnoqxbezeccjvrsw` changed: two schema migrations plus the three Auth
+  configuration deltas above. Zero Auth users/factors/sessions, tenant rows,
+  content, Storage objects, Stripe, Vercel, Git remote, DNS, Bunny.net, or
+  production mutations. No push.
+
+### 2026-08-03 — PLAT-101 removed-admin reactivation cooldown handled — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at hosted acceptance.
+- **Completed:** reproduced Christian's manual add → remove → immediate re-add
+  failure. Supabase returned `over_email_send_rate_limit`, HTTP 429, because the
+  local email-code frequency is one minute. Added successful same-identity
+  reactivation coverage, mapped the provider cooldown to
+  `AUTH_CODE_RATE_LIMITED`/HTTP 429, and replaced the internal UI error with a
+  one-minute retry message. Delivery failure still restores the removed row so
+  an old session cannot silently regain access.
+- **Files changed:** `lib/owner-admin-membership.ts`,
+  `app/api/admin/members/route.ts`,
+  `app/admin/(protected)/members/page.tsx`,
+  `tests/database/owner-admin-membership.test.ts`,
+  `tests/contracts/platform-auth.test.ts`, this ledger, and `HANDOFF.md`.
+- **Verification:** disposable loopback Auth probe confirmed exact status/code;
+  focused tests 12/12; contracts 314/314; full suite 669/669 across 71 files;
+  `npx tsc --noEmit` clean; production build green with only the three
+  pre-existing analytics exhaustive-deps warnings.
+- **Blockers/next step:** no local blocker. Retry the same email after one minute
+  and confirm the code arrives; the previously recorded deployment, operator
+  TOTP, and provider-delivery gates remain unchanged.
+- **Hosted mutations:** zero. Local Auth probe created and deleted one disposable
+  local-only identity. No staging, production, Vercel, Git remote, DNS, Stripe,
+  Storage, or tenant-content mutation; no push.
+
+### 2026-08-03 — PLAT-101 admin sidebar scroll regression fixed — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at hosted acceptance.
+- **Completed:** fixed the admin sidebar so its link region can always scroll
+  independently on mobile and desktop. The shell is viewport-height, clips its
+  outer overflow, and stays pinned to the desktop viewport; the navigation
+  region is shrinkable, keyboard-focusable, touch-pan-enabled, momentum
+  scrolling, and reserves stable scrollbar space. After Christian supplied a
+  screenshot showing the browser's bright native gutter, replaced it with a
+  sidebar-specific 6px translucent thumb on a transparent track, retaining a
+  stronger hover/focus state without hiding the scroll affordance.
+- **Files changed:** `components/AdminShell.tsx`,
+  `styles/globals.css`,
+  `tests/contracts/admin-mobile-navigation.test.ts`,
+  `tests/browser/platform-auth-local.spec.ts`, this ledger, and `HANDOFF.md`.
+- **Verification:** the red-first focused contract failed 2/3 checks before
+  implementation and passed 3/3 afterward. The follow-up styling contract then
+  failed 1/4 before implementation and passed 4/4 afterward. The real local
+  owner/admin email-code Playwright journey passed 2/2 at 1440×900 and 390×844,
+  proving `scrollHeight > clientHeight` and that setting the nav scroll position
+  moves `scrollTop`; no framework overlay or browser-console errors appeared.
+  Desktop/mobile screenshots were inspected and show no bright track or gutter.
+  The complete suite passed 670/670 across 71 files, `npx tsc --noEmit` passed,
+  and `git diff --check` passed. The unavailable `agent-browser` CLI was
+  replaced by the repository's existing Playwright harness for equivalent
+  browser verification.
+- **Blockers:** no local blocker. Existing protected-deployment, operator TOTP,
+  and multi-provider email-delivery acceptance gates remain unchanged.
+- **Exact next step:** reload `http://alpha.localhost:3000/admin` and manually
+  scroll the sidebar on desktop and mobile. Separately approve a `staging`
+  push/Vercel deployment before hosted UI acceptance; do not start `PLAT-102`,
+  `DCFC-601`, or `DCFC-602` without their own authorization.
+- **Hosted mutations:** zero. Verification used loopback Supabase and the local
+  Next.js server only. No staging, production, Vercel, Git remote, DNS, Stripe,
+  Storage, Auth-provider, or tenant-content mutation; no commit or push.
+
+### 2026-08-03 — PLAT-101 new-admin cooldown friction removed — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at hosted acceptance.
+- **Completed:** retained the documented one-minute per-address Supabase OTP
+  cooldown, but removed it as a new-admin onboarding blocker. Adding an admin
+  already sends a valid code; when that admin immediately presses the primary
+  “Send sign-in code” action, the login page recognizes
+  `over_email_send_rate_limit`, advances to code entry, and directs them to use
+  the email already sent instead of exposing Supabase's raw wait message. The
+  remove → immediate re-add membership rollback remains unchanged because that
+  operation must prove a successful delivery before restoring access.
+- **Files changed:** `app/admin/login/page.tsx`,
+  `tests/contracts/platform-auth.test.ts`,
+  `tests/browser/platform-auth-local.spec.ts`, this ledger, and `HANDOFF.md`.
+- **Verification:** the red-first contract failed 1/11 before implementation
+  and passed 11/11 afterward. The real loopback owner/add-admin/login journey
+  passed 2/2 with fresh isolated identities, explicitly required one
+  `/auth/v1/otp` 429, showed the friendly code-entry state, and signed the new
+  admin in with the original onboarding code. The complete suite passed
+  671/671 across 71 files and `npx tsc --noEmit` passed.
+- **Blockers:** no local blocker. The per-address cooldown and project-wide
+  30-OTP/hour posture remain intentional; existing protected-deployment,
+  operator-TOTP, and multi-provider delivery gates are unchanged.
+- **Exact next step:** add a fresh local administrator, then have that person
+  use the normal “Send sign-in code” button immediately and enter the code from
+  the first email. Separately approve the `staging` push/Vercel deployment
+  before hosted UI acceptance.
+- **Hosted mutations:** zero. Only loopback Auth users, memberships, messages,
+  and sessions were created and cleaned up by the isolated browser test. No
+  staging/production Auth setting, Supabase resource, Vercel deployment, Git
+  remote, DNS, Stripe, Storage, or tenant content changed; no commit or push.
 
 ### 2026-08-03 — PLAT-101 inputs all supplied; only its approval remains — Claude Code (Opus 5)
 
