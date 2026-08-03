@@ -64,9 +64,8 @@ scoped approval.
 
 ## Current State
 
-The unbudgeted Phase 5 goal for `DCFC-EPIC-002` remains active. `DCFC-501` is
-complete as of 2026-08-02 after separately approved staging remediation and a
-full read-only acceptance re-run. The exact Supabase staging project is
+The unbudgeted Phase 5 goal for `DCFC-EPIC-002` is complete as of 2026-08-02.
+`DCFC-502` is complete after its exact Class 3 approval. The Supabase staging project is
 healthy on the Free plan. A restricted, out-of-Git role/schema/data backup was
 captured; its permissions, sizes, and SHA-256 evidence are in
 `docs/phase-11/diverse-city/DCFC-501-REMEDIATION-PLAN.md`.
@@ -74,10 +73,10 @@ captured; its permissions, sizes, and SHA-256 evidence are in
 The approved history-only repair replaced hosted Phase 7 execution timestamps
 `20260727171934`, `20260727174125`, and `20260727174503` with canonical
 versions `20260727171658`, `20260727174006`, and `20260727175200`. It did not
-execute or reverse schema SQL. The linked ledger now aligns all ten canonical
-Phase 1-7 versions, linked schema lint is clean, and a dry run lists exactly
-the ten reviewed Phase 9/11 migrations reserved for `DCFC-502`. All 32 hosted
-`onzio` tables have RLS; `onzio` is exposed through the Data API while
+execute or reverse schema SQL. `DCFC-502` then applied exactly the ten reviewed
+Phase 9/11 migrations without seed. The linked ledger now aligns all 20
+canonical versions and linked schema lint is clean. All 40 hosted `onzio`
+tables have RLS; `onzio` is exposed through the Data API while
 `onzio_private` is not, and the private schema has no browser table grants or
 `PUBLIC` routine grants.
 
@@ -98,8 +97,10 @@ is still test mode, and retains its exact seven-event allowlist. The initial
 replacement attempt used the approved rollback path after Vercel required the
 environment-variable designation; the old Stripe URL was restored and the
 unused replacement revoked before the corrected atomic rotation. No secret
-was recorded. The historical staging deployment remains behind the intended
-Phase 5 source; changing it belongs to `DCFC-502`.
+was recorded. Git `staging` now points to release commit
+`8e3cde2da52ec35a9e5fd7935197953c899a6cc5`; protected Preview deployment
+`dpl_8W3YtWSw6Bu2qAaUndeofiiWd2KM` is READY and owns the approved Diverse City
+staging alias.
 
 Bunny.net is explicitly outside Phase 5 and unauthorized by this goal. Diverse
 City stays on the approved crest-led hero with the vertical video story hidden.
@@ -109,33 +110,85 @@ a separate reusable tenant-safe capability. If launch requires video, scope
 that capability after Phase 5 and before Phase 6 acceptance; otherwise finish
 and stabilize the production rollout before integrating Bunny.
 
-`docs/phase-11/diverse-city/DCFC-501-REMEDIATION-PLAN.md` records the exact
-approval, execution, rollback, backup, verification, and hosted-mutation
-evidence. That approval is exhausted. Christian subsequently authorized a
-review of the accumulated Phase 5 source, all local release gates, one scoped
-release commit, and a push to Git `staging`, but expressly excluded deployment
-and all `DCFC-502` execution. Review and local verification passed. The exact
-tenant inputs, ten migrations, operator boundary, rollback, exclusions, and
-future approval language are prepared in
-`docs/phase-11/diverse-city/DCFC-502-APPROVAL-PACKET.md`.
+`docs/phase-11/diverse-city/DCFC-502-APPROVAL-PACKET.md` records the exact
+approval and closeout. Audited operator provisioning created exactly one club
+`d88bf71b-9820-49ae-9dc0-7556b0813885` as `starter` / `onboarding` / `preview`,
+one active verified primary staging domain, one minimum active owner membership
+using the existing operator identity, and one operator audit.
 
-The Vercel project serves the Git `staging` branch and creates a deployment on
-push. The positive push authorization therefore conflicts with the narrower
-no-deployment boundary. The single release commit may exist locally, but it
-must not be pushed until Christian authorizes the resulting protected staging
-deployment as part of `DCFC-502` or supplies an approved non-deploying Git-ref
-path. Do not change Vercel Git/ignored-build settings, create then cancel a
-deployment, or otherwise work around the boundary. Stop again before
-`DCFC-503`; no approval rolls forward.
+`DCFC-503` is complete as of 2026-08-02 after Christian's exact approval for
+that tenant and immutable plan digest
+`63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36`.
+The byte-identical plan SHA-256 is
+`87efae9701f6e1fa4653a55f2687206f3370306bd900d83ee30352849b78702b`.
+Staging now contains ten approved normalized `image/webp` assets/objects
+totaling 2,864,062 bytes, four Programs, approved About/Contact/Shop/Elsa's
+Bakery content, 15 tenant-composite media relationships, and one immutable
+published `academy@1` document with configuration digest
+`1d2c6ce9eb91be5cc18a6017ffc783bdaedd231b40ea2bf5f3830b9b3549a008`.
+It contains zero Tryouts, players, staff, matches, standings, participant data,
+temporary Google references, transform/optimizer URLs, video, Bunny reference,
+subscription, or Stripe row. Private staging and cleanup queue counts are zero.
+All ten raw public object URLs return HTTP 200 and carry one-year cache metadata.
 
-The current release-preparation checkpoint adds one local Git commit and zero
-pushes or hosted mutations. Its complete local evidence is recorded in
-`docs/phase-11/diverse-city/STATUS.md`: reset through all 20 migrations,
-TypeScript, 310/310 contracts, 20/20 architecture, 78/78 database, 662/662 full
-suite, generated types, clean schema lint, deterministic plan/rehearsal,
-production build, lint, and four desktop/mobile Playwright checks. The optional
-`agent-browser` executable was unavailable, so the dedicated repository
-Playwright suites supplied the browser evidence.
+The identical replay reused all ten public objects and kept tenant state
+fingerprint `babdad9053e708e696f88a6af59e8231`, every row/object count, the
+published pointer, and the single import audit unchanged. The tenant remains
+`starter` / `onboarding` / `preview`; Auth remains seven users/five MFA factors.
+Storage/API/Postgres log review found no error signal. Local verification is
+green: TypeScript, 310/310 contracts, 20/20 architecture tests, 662/662 full
+loopback suite, generated database types, schema lint, production build, lint
+with only the three pre-existing Analytics warnings, and diff checks. The new
+staging-only importer and all `DCFC-502`/`503` ledger edits remain uncommitted
+because commit and push were expressly excluded. `DCFC-504` is now complete
+under its separate exact approval; commit and push remain excluded.
+
+`DCFC-504` is complete under Christian's exact new-identity remediation
+approval recorded in
+`docs/phase-11/diverse-city/DCFC-504-APPROVAL-PACKET.md`. The earlier single
+recovery request returned HTTP 200 without generating a message because the
+private address was absent from staging Auth. Christian then approved one new
+identity and invitation rather than a retry.
+
+Codex added and tested a reusable server-only direct-operator
+invitation-and-membership workflow with duplicate refusal, verified tenant
+callback derivation, audited membership creation, and cleanup limited to newly
+created resources. Local verification passed TypeScript, 312/312 contracts,
+20/20 architecture tests, the real local invitation database test, 665/665
+complete tests, lint, build, and database-type checks. The exact pre-send Auth
+redirects, notification switches, invite template, SMTP posture, TOTP, and
+AAL1 limit were reload-verified without changing them.
+
+The workflow then ran once against staging project
+`fxefqnoqxbezeccjvrsw` and tenant
+`d88bf71b-9820-49ae-9dc0-7556b0813885`. It created one new Auth identity,
+sent one invitation using
+`https://diverse-city-onzio-staging.vercel.app/admin/auth/callback`, added the
+new identity as a temporary second active owner, and wrote one
+`membership_added` plus one `identity_invited` audit. Resend message
+`8ec265e4-e868-440c-8005-7b0893977ea2` is delivered to the approved provider
+domain. The message body/action URL and private address were not opened or
+recorded.
+
+Christian privately opened the invitation, set the new password, recovered the
+browser-saved value, signed in, enrolled exactly one TOTP factor, and reached
+AAL2. Protected browser acceptance resolved the admin shell to Diverse City FC,
+loaded Contact at the Starter boundary, kept Programs and Tryouts Pro-gated,
+and reached the owner-only Payments route in private-preview state without any
+billing mutation. The temporary synthetic owner membership was then marked
+removed in a guarded audited transaction with the reviewed two-owner/last-owner
+invariants; its pre-existing Auth user was retained. The accepted owner session
+still reached Payments after that cutover.
+
+Final `DCFC-504` reconciliation is eight Auth users, exactly one active Diverse
+City owner, one removed synthetic owner membership, 29 tenant audit rows, one
+active AAL2 session, zero AAL1 sessions, exactly one verified TOTP factor, and
+one operator `membership_removed` audit. The approval is exhausted and Phase 5
+is closed. `DCFC-601` was not started and requires a fresh exact approval. All
+other Auth settings, SMTP/templates/rate limits, Vercel, Stripe, DNS,
+production, Bunny.net, Phase 6, commit, and push state remain unchanged. The
+temporary secret-transfer FIFO directory was deleted; no credential or private
+address was retained.
 
 DCFC-501 hosted mutations: six Supabase migration-history status changes;
 five successful Vercel mutations across the rolled-back and final rotations,
@@ -2780,16 +2833,15 @@ Known non-blocking warnings:
 
 ## Next Milestone
 
-`DCFC-401` through `DCFC-501` are complete. One reviewed Phase 5 release commit
-is prepared locally, and `DCFC-502-APPROVAL-PACKET.md` is ready. The exact next
-step is for Christian to resolve the `staging` push/deployment boundary and, if
-desired, give the fresh exact `DCFC-502` approval naming the full release SHA,
-ten migrations, staging targets, tenant slug/name/hostname, protected
-deployment, and privately resolved operator actor. Only then push/deploy, apply
-the allowlisted migrations, and provision one private Starter/onboarding/
-preview Diverse City tenant. Stop before `DCFC-503`. No content/media import,
-invitation/email, Stripe, DNS, production, Bunny.net, or Phase 6 work is
-authorized.
+`DCFC-401` through `DCFC-504` are complete and the Phase 5 gate is closed. The
+new owner has one verified TOTP factor and one AAL2 session; protected Diverse
+City admin, Starter/Pro entitlements, and the owner-only private-preview billing
+route passed. The synthetic owner membership is removed and audited, leaving
+exactly one active owner while retaining the pre-existing Auth user.
+`DCFC-601` is the next defined package, but it was not started and requires a
+fresh exact approval before any Stripe-test or lifecycle mutation. No retry
+message, additional Auth configuration, Stripe, Vercel configuration or
+deployment, DNS, production, Bunny.net, Phase 6, commit, or push is authorized.
 
 This is preparatory work for a future first-new-club rollout. It does not
 bypass the platform's presentation, prospect-automation, staging, billing,

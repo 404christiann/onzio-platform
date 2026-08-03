@@ -6,22 +6,22 @@ Completed epic status: `phase_3_complete`
 
 Proposed rollout epic: `DCFC-EPIC-002`
 
-Rollout epic status: `phase_5_release_commit_prepared_push_blocked`
+Rollout epic status: `phase_5_complete`
 
 Last updated: 2026-08-02
 
-Current assignment: `DCFC-501` is complete. Christian authorized review of the
-accumulated Phase 5 worktree, the full local release gates, one scoped release
-commit, and a push to Git `staging`, while expressly excluding deployment and
-all `DCFC-502` hosted actions. The worktree review and local gates passed, and
-`DCFC-502-APPROVAL-PACKET.md` now pins the tenant inputs, ten-migration
-allowlist, execution/rollback boundary, and approval language. The repository
-record proves that the Vercel project serves the Git `staging` branch and a
-push creates a deployment. Because push and no-deployment cannot both be
-satisfied, create the single local release commit but withhold the push until
-Christian authorizes the resulting protected deployment as `DCFC-502` or
-supplies an approved non-deploying Git-ref path. Do not change Vercel settings
-to manufacture that path. `DCFC-502` remains prepared but unexecuted.
+Current assignment: `DCFC-504` and Phase 5 are complete. Christian recovered
+the browser-saved password privately, enrolled exactly one TOTP factor, reached
+AAL2, and loaded the protected Diverse City admin. Contact loaded at the
+Starter boundary, Programs and Tryouts remained Pro-gated, and the owner-only
+Payments route loaded in private-preview state without changing billing. The
+temporary synthetic owner membership was then marked removed with the required
+operator audit while its pre-existing Auth user was retained. Final
+reconciliation is eight Auth users, exactly one active Diverse City owner, one
+removed synthetic owner membership, one verified TOTP factor, one AAL2 session,
+zero AAL1 sessions, and 29 tenant audits. `DCFC-601` requires a fresh approval;
+Vercel, Stripe, DNS, production, Bunny.net, Phase 6, commit, and push remain
+excluded.
 
 Bunny.net is outside Phase 5 and is not authorized by this goal. Diverse City
 continues to use the crest-led hero with the vertical video story hidden. Do
@@ -40,7 +40,7 @@ defined in `ROLLOUT-EPIC.md`, `ROLLOUT-WORK-PACKAGES.md`,
 `CONTENT-MEDIA-READINESS.md`, `STAGING-ACCEPTANCE.md`, and
 `PRODUCTION-CUTOVER-ROLLBACK.md`. Planning hosted-mutation count: zero.
 
-**The suite is GREEN — 662/662 passing across 68 files.** `DCFC-304` adds
+**The suite is GREEN — 665/665 passing across 69 files.** `DCFC-304` adds
 reusable Programs overview/detail, Contact, and Tryouts public routes; real
 AAL2 admin-to-anonymous-public database acceptance; Alpha/Bravo isolation;
 published `academy@1` persistence; and repeatable desktop/mobile public and
@@ -91,9 +91,9 @@ unassigned and unapproved.
 | DCFC-403 | 2 | complete | 401, 402 complete | Byte-identical plan, idempotent loopback import, exact tenant reset/replay, reconciliation, isolation, and browser evidence are green |
 | DCFC-404 | 1 | complete | 401–403 complete | Local artifact locked; unsupplied hosted inputs explicitly deferred; no staging authorization granted |
 | DCFC-501 | 1 | complete | 404 complete; preflight and remediation separately approved | Restricted backup, history-only canonical repair, atomic bypass/test-webhook rotation, and full staging acceptance re-run completed 2026-08-02; stopped before `DCFC-502` |
-| DCFC-502 | 3 | pending | 501 + fresh approval | Staging release and private tenant provisioning |
-| DCFC-503 | 3 | pending | 502 + fresh approval | Staging content/media/presentation import |
-| DCFC-504 | 3 | pending | 503 + fresh approval | Staging owner/admin invitation and MFA acceptance |
+| DCFC-502 | 3 | complete | 501 complete; exact approval received and exhausted | Exact release/migrations deployed; one private Starter/onboarding/preview tenant/domain provisioned and reconciled |
+| DCFC-503 | 3 | complete | 502 complete; exact tenant/digest approval received and exhausted | Ten normalized assets, approved content, and immutable published `academy@1` reconcile; replay is idempotent |
+| DCFC-504 | 3 | complete | Exact new-identity remediation approved and exhausted | Password/TOTP/AAL2, Starter/Pro and owner-billing boundaries, audited synthetic-owner removal, and final one-owner reconciliation passed; **Phase 5 complete** |
 | DCFC-601 | 3 | pending | 504 + fresh approval | Stripe test/lifecycle rehearsal and canonical Pro projection |
 | DCFC-602 | 3 | pending | 601 + fresh approval | Staging public/admin/isolation acceptance with restored probes |
 | DCFC-603 | 1 | pending | 601, 602 | Staging gate review and Christian acceptance |
@@ -111,6 +111,412 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-02 — DCFC-504 accepted; Phase 5 complete — Codex
+
+- Package: `DCFC-504`
+- Status: `complete`; Phase 5 gate closed
+- Completed: Christian recovered the browser-saved password privately, signed
+  in, enrolled and verified exactly one TOTP factor, and reached AAL2. Codex
+  verified the protected shell resolves Diverse City FC, Contact loads at the
+  Starter boundary, Programs and Tryouts remain Pro-gated, and the owner-only
+  Payments route reaches the private-preview billing state without changing
+  billing. Codex then marked only the synthetic owner membership removed in a
+  guarded transaction with the same two-owner/last-owner and append-only
+  operator-audit invariants as the reviewed removal workflow; its pre-existing
+  Auth user was retained.
+- Files changed: this ledger, `STAGING-ACCEPTANCE.md`,
+  `DCFC-504-APPROVAL-PACKET.md`, and repository `HANDOFF.md` only in this
+  acceptance step. Existing reviewed Phase 5 source/test changes remain
+  uncommitted because commit and push are excluded.
+- Verification: the intended identity has one active session at AAL2, zero
+  AAL1 sessions, and exactly one verified TOTP factor. Protected admin and
+  Payments remain accessible after synthetic-owner removal. Final hosted
+  reconciliation is eight Auth users, one active Diverse City owner, one
+  removed synthetic owner membership, 29 tenant audit rows, and exactly one
+  operator `membership_removed` audit. No private address, password, token,
+  QR/secret, or authenticator code was recorded.
+- Blockers or decisions needed: none for Phase 5. `DCFC-601` is pending and
+  requires a fresh exact approval; it was not started.
+- Exact next step: stop. If Christian chooses to continue, prepare the separate
+  `DCFC-601` Stripe-test/lifecycle approval boundary before any mutation.
+- Hosted mutations: one tenant-scoped synthetic membership changed from
+  `active` to `removed` and one append-only operator audit was inserted. No
+  Auth user was deleted; no email/resend, Auth configuration, Vercel, Stripe,
+  DNS, production, Bunny.net/video, Phase 6, commit, or push mutation occurred.
+
+### 2026-08-02 — DCFC-504 password changed but not known; safe stop — Codex
+
+- Package: `DCFC-504`
+- Status: `blocked` before first password sign-in
+- Completed: reconciled the user's password-knowledge report against current
+  Auth logs without inspecting credentials or sending another message.
+- Files changed: this ledger, `STAGING-ACCEPTANCE.md`,
+  `DCFC-504-APPROVAL-PACKET.md`, and repository `HANDOFF.md` only.
+- Verification: Auth recorded `PUT /user` HTTP 200 with `user_modified` at
+  `2026-08-02T22:21:08Z`, immediately followed by `POST /logout` HTTP 204. The
+  identity remains confirmed and password-backed with zero active sessions and
+  zero verified factors. This proves a password value was accepted, but does
+  not reveal what it was.
+- Blocker: Christian does not know the accepted password. Codex must not inspect
+  browser-saved credentials or guess the value.
+- Exact next step: Christian privately checks the browser password manager for
+  the Diverse City staging hostname. If the password is present, use it for one
+  sign-in attempt and continue TOTP/AAL2 acceptance. If it is absent, Christian
+  must provide fresh exact approval for one recovery message to the now-existing
+  identity; the current one-invitation approval does not authorize it.
+- Hosted mutations: zero in this diagnostic step. No recovery request, second
+  email, membership removal, Auth configuration, Vercel, Stripe, DNS,
+  production, Bunny.net, Phase 6, commit, or push mutation occurred.
+
+### 2026-08-02 — DCFC-504 invite password accepted; first sign-in pending — Codex
+
+- Package: `DCFC-504`
+- Status: `in_progress` at password sign-in and TOTP/AAL2 acceptance
+- Completed: inspected the reported invalid/expired-session message without
+  resending or changing Auth; verified the current application tab is at
+  `/admin/login?password_updated=true`; and independently reconciled the new
+  Auth identity after Christian's private password submission.
+- Files changed: this ledger, `STAGING-ACCEPTANCE.md`,
+  `DCFC-504-APPROVAL-PACKET.md`, and repository `HANDOFF.md` only.
+- Verification: exactly one intended provider-domain user is invited,
+  confirmed, password-backed, and has a prior sign-in timestamp. The invite
+  session was signed out as designed, leaving zero active sessions, zero AAL1
+  sessions, zero AAL2 sessions, and zero verified TOTP factors. The observed
+  post-update login route is reachable only after the password update succeeds
+  and the client signs out. No password, token, action URL, or factor secret was
+  inspected or recorded.
+- Blocker: Christian must sign in using the private address and new password,
+  then complete the mandatory TOTP enrollment and AAL2 verification.
+- Exact next step: Christian signs in on the current admin login page and tells
+  Codex which MFA page appears. Codex then verifies AAL1 denial, hands off the
+  private TOTP enrollment, verifies AAL2 and the approved entitlement/billing
+  boundaries, removes only the synthetic membership, and reconciles one active
+  owner.
+- Hosted mutations: Christian's approved private password update and normal
+  invite-session sign-out only. Codex performed read-only browser/database
+  checks. No second message, membership removal, Auth configuration, Vercel,
+  Stripe, DNS, production, Bunny.net, Phase 6, commit, or push mutation
+  occurred.
+
+### 2026-08-02 — DCFC-504 one invitation delivered; private acceptance pending — Codex
+
+- Package: `DCFC-504`
+- Status: `in_progress` at private invitation/password/TOTP acceptance
+- Completed: implemented and tested the reusable direct-operator
+  invitation-and-membership workflow with duplicate refusal, verified-domain
+  callback derivation, one-send behavior, audited membership creation, and
+  bounded cleanup; reload-verified the exact four-entry Auth redirect posture,
+  notification switches, invite template, SMTP, and TOTP/AAL1 settings; then
+  executed the workflow once under Christian's exact approval.
+- Files changed: `lib/operator/invite-club-member.ts`,
+  `scripts/invite-diverse-city-owner-staging.ts`,
+  `tests/contracts/operator-workflows.test.ts`,
+  `tests/database/operator-invitation.test.ts`,
+  `DCFC-504-APPROVAL-PACKET.md`, `STAGING-ACCEPTANCE.md`, this ledger, and
+  repository `HANDOFF.md`. Existing uncommitted Phase 5 changes remain
+  preserved; no commit or push is authorized.
+- Verification: TypeScript, 312/312 contracts, 20/20 architecture tests,
+  665/665 full tests, the focused real local invitation database test, lint,
+  build, and database-type checks passed. Hosted reconciliation shows eight
+  Auth users, exactly two active Diverse City owners, zero removed owners, 28
+  tenant audits, one `membership_added` audit, one `identity_invited` audit,
+  zero verified factors for the new owner, and one expected invite-created
+  AAL1 session. Resend message
+  `8ec265e4-e868-440c-8005-7b0893977ea2` is `delivered` with subject
+  `You've been invited`; only the provider domain is recorded.
+- Execution note: earlier guarded attempts stopped before hosted mutation while
+  diagnosing a masked project key and FIFO end-of-stream wait. Independent
+  aggregate reads proved the seven-user/one-owner/26-audit baseline before the
+  successful run. No retry email was sent; the successful invocation is the
+  sole invitation.
+- Blocker: Christian must open the newest invitation privately, set the
+  password without sharing it, enroll exactly one TOTP factor, and reach AAL2.
+  The synthetic owner remains active intentionally until that acceptance is
+  green.
+- Exact next step: Christian opens the newest `You've been invited` email and
+  follows its link, then tells Codex when the password page is visible. Codex
+  will verify the callback and AAL1 denial, hand off private password/TOTP,
+  verify AAL2 plus Starter/owner boundaries, remove only the synthetic
+  membership through the audited operator boundary, reconcile one active
+  owner, and stop before `DCFC-601`.
+- Hosted mutations: one Auth identity, one invitation, one active owner
+  membership, and two tenant audit rows. No second message, owner removal,
+  Auth/SMTP/template/rate-limit/notification setting, Vercel, Stripe, DNS,
+  production, Bunny.net, Phase 6, commit, or push mutation occurred. The
+  temporary FIFO directory was deleted after use; no credential or private
+  address was retained.
+
+### 2026-08-02 — DCFC-504 intended new owner confirmed; remediation prepared — Codex
+
+- Package: `DCFC-504` remediation preparation only
+- Status: `blocked` at fresh exact approval
+- Completed: recorded Christian's private selection without writing the
+  address to Git; confirmed the correct architecture path is an operator-issued
+  invitation rather than another recovery request; reviewed the current
+  callback, membership, provisioning, and acceptance contracts; and added the
+  exact reusable workflow, one-invitation, temporary-two-owner, AAL2 cutover,
+  rollback, reconciliation, exclusions, and approval language to the packet.
+- Files changed: `DCFC-504-APPROVAL-PACKET.md`, `STAGING-ACCEPTANCE.md`, this
+  ledger, and repository `HANDOFF.md`. Existing uncommitted Phase 5 work is
+  preserved; no commit or push is authorized.
+- Verification: the intended address remains absent from the seven-user Auth
+  baseline. Current source accepts `invite` callbacks and routes them to
+  password setup, requires direct operator invocation for membership changes,
+  audits membership add/remove, and prevents removal of the last owner. It does
+  not yet contain an invitation-plus-membership workflow for an existing club.
+  Current Supabase documentation confirms `inviteUserByEmail` sends one invite
+  and that its `redirectTo` participates in the configured allowlist.
+- Blocker: new Auth-user creation, invitation email, temporary second owner,
+  membership removal, and any local implementation were outside the exhausted
+  approval and require the packet's fresh exact approval.
+- Exact next step: Christian provides the packet's exact remediation approval.
+  Then implement and test the reusable direct-operator workflow, re-run safe
+  preflight, execute it once, complete the private invitation/password/TOTP and
+  AAL1/AAL2 acceptance, remove only the synthetic Diverse City membership after
+  success, reconcile, and stop before `DCFC-601`.
+- Hosted mutations: zero. No Auth user, invitation, recovery retry, membership,
+  session, factor, SMTP/template/rate-limit/notification, Vercel, Stripe, DNS,
+  production, Bunny.net, Phase 6, Git commit, or push action occurred.
+
+### 2026-08-02 — DCFC-504 recovery generated no email; owner mismatch — Codex
+
+- Package: `DCFC-504`
+- Status: `blocked` on incorrect/non-deliverable owner identity linkage
+- Completed: diagnosed the user's missing-email report without resending;
+  checked Supabase Auth logs, safe aggregate Auth/owner state, the deployed
+  recovery result, and the authenticated Resend sending ledger.
+- Files changed: `DCFC-504-APPROVAL-PACKET.md`, `STAGING-ACCEPTANCE.md`, this
+  ledger, and repository `HANDOFF.md`. Existing dirty Phase 5 files remain
+  preserved; no commit or push is authorized.
+- Verification: exactly one `POST /recover` completed at
+  `2026-08-02T20:57:58Z` with HTTP 200 and no Auth API error. The active owner
+  and every staging Auth user still have null `recovery_sent_at`; Resend has no
+  new message record. The active owner is a confirmed `example.com` identity,
+  while the privately entered address is absent from the seven-user staging
+  Auth project. Identity domains are `example.com` (five), `berkeley.edu`
+  (one), and `yahoo.com` (one); no full address was written to the ledger.
+- Root cause: the `DCFC-502` closeout's "existing staging operator identity"
+  is not the intended deliverable operator identity. Supabase's non-enumerating
+  recovery response returned 200 for the unmatched private address, so the UI
+  advanced even though no email was generated.
+- Blocker: the one-request approval is exhausted. Membership/Auth remediation
+  and any second recovery request were explicitly outside it.
+- Exact next step: prepare and obtain a fresh exact approval that privately
+  resolves one existing confirmed real staging identity, atomically makes it
+  the sole Diverse City owner through the audited operator boundary, reconciles
+  the replaced synthetic membership/audits, and authorizes exactly one new
+  recovery request. If a new Auth identity is required, stop for a different
+  invitation/user-creation approval.
+- Hosted evidence: one recovery HTTP request, zero email/provider records and
+  zero recovery-token/session/factor/user/membership mutations. Cumulative
+  `DCFC-504` hosted mutation remains the one approved callback URL addition.
+  SMTP/templates/rate limits, Vercel, Stripe, DNS, production, Bunny.net,
+  Phase 6, Git commit, and push state remain unchanged.
+
+### 2026-08-02 — DCFC-504 Auth callback remediated; private recovery handoff — Codex
+
+- Package: `DCFC-504`
+- Status: `in_progress` at the private owner-email/recovery-send step
+- Approval: Christian approved exactly one fourth redirect entry, preservation
+  of the Site URL and existing three redirects, reload verification, and
+  continuation of the already-approved single-recovery sequence.
+- Completed: added only the exact Diverse City callback; reload-verified the
+  unchanged Site URL and original branch/Alpha/Bravo entries; verified four
+  total redirects; opened the protected Diverse City login, selected the
+  password-recovery path, and handed the empty email form to Christian.
+- Files changed: `DCFC-504-APPROVAL-PACKET.md`, `STAGING-ACCEPTANCE.md`, this
+  ledger, and repository `HANDOFF.md`. Pre-existing uncommitted Phase 5 changes
+  remain preserved; commit and push remain excluded.
+- Verification: the post-save page reported success, and a separate dashboard
+  reload showed the exact callback as the sole fourth entry. The protected
+  tenant login rendered the deployed reset form. No email value was read,
+  typed, copied, logged, or recorded by Codex. Post-remediation aggregate SQL
+  remained seven Auth users, five verified project factors, one active Diverse
+  City owner, and zero owner prior sign-ins, factors, or sessions.
+- Blocker or interaction needed: Christian must privately enter the existing
+  owner email and click `Send reset link` exactly once. Codex must not receive
+  the address or interact with the mailbox/action URL/password/TOTP secret.
+- Exact next step: Christian submits the handed-off form once and reports that
+  the recovery message arrived or that the private callback is open. Continue
+  the approved private password/TOTP sequence, AAL1/AAL2 and Starter-boundary
+  acceptance, reconciliation, and stop before `DCFC-601`.
+- Hosted mutations: exactly one Supabase staging Auth redirect URL added. Email
+  sends: zero so far. All other Auth settings and all users, memberships,
+  sessions, factors, SMTP/templates/rate limits, Vercel, Stripe, DNS,
+  production, Bunny.net, Phase 6, Git commit, and push state remain unchanged.
+
+### 2026-08-02 — DCFC-504 approved execution stopped at Auth redirect gate — Codex
+
+- Package: `DCFC-504`
+- Status: `blocked` before the approved single recovery request
+- Approval: Christian approved the exact packet by replying "I approve this."
+  The approval authorizes one recovery and private password/TOTP acceptance but
+  expressly excludes Auth configuration changes.
+- Completed: revalidated the safe identity baseline; read-only verified the
+  current custom-SMTP enabled state, TOTP, 15-minute AAL1 enforcement, reset
+  template routing, automatic security-notification switches, Site URL, and
+  redirect allowlist; and stopped on the packet's callback mismatch condition.
+- Files changed: `DCFC-504-APPROVAL-PACKET.md`, `STAGING-ACCEPTANCE.md`, this
+  ledger, and repository `HANDOFF.md`. Pre-existing uncommitted Phase 5 changes
+  remain preserved; no commit or push is authorized.
+- Verification: the reset template uses the caller's clean `RedirectTo` plus
+  token hash/recovery type. The deployed Diverse City request derives
+  `https://diverse-city-onzio-staging.vercel.app/admin/auth/callback`, but the
+  live allowlist has exactly three entries: staging branch, Alpha, and Bravo.
+  The Diverse City callback is absent. All seven automatic security
+  notifications are off. Reconciliation remains seven Auth users/five MFA
+  factors and one confirmed active Diverse City owner with zero prior sign-in,
+  owner factors, or owner sessions.
+- Blocker: adding the exact Diverse City callback is an Auth configuration
+  mutation expressly excluded from the current approval.
+- Exact next step: Christian approves the packet's minimal fourth-redirect
+  remediation. Add only that exact callback, retain Site URL/three existing
+  entries, reload-verify four total, then continue the already-approved one-
+  recovery/password/TOTP acceptance and stop before `DCFC-601`.
+- Hosted mutations: zero. No recovery/email was sent; no Auth user, session,
+  factor, membership, configuration, database, Storage, Vercel, Stripe, DNS,
+  production, Bunny.net, video, Phase 6, Git, commit, or push mutation occurred.
+
+### 2026-08-02 — DCFC-504 identity/recovery/MFA approval preparation — Codex
+
+- Package: `DCFC-504` preparation only; not package execution
+- Status: `blocked` at the explicit approval and recipient-availability gate
+- Completed: reviewed the package, architecture, current Auth/recovery/MFA
+  contracts, and existing staging SMTP history; checked current official
+  Supabase Auth guidance; performed safe aggregate staging identity preflight;
+  selected the no-duplicate existing-owner recovery path; and prepared the
+  exact one-send, private-secret, acceptance, rollback, exclusion, and approval
+  boundary in `DCFC-504-APPROVAL-PACKET.md`.
+- Files changed: `DCFC-504-APPROVAL-PACKET.md`, `STAGING-ACCEPTANCE.md`, this
+  ledger, and repository `HANDOFF.md`. The pre-existing uncommitted
+  `DCFC-502`/`DCFC-503` worktree changes were preserved. No commit or push is
+  authorized.
+- Verification: the tenant has exactly one active owner, zero admins/removed
+  memberships, and one linked confirmed email identity. That identity has a
+  password hash but no prior sign-in, TOTP factor, active session, banned
+  state, or deleted state. Project baseline remains seven Auth users and five
+  verified MFA factors. Source review confirms recovery derives the clean
+  callback from the verified browser origin, verifies a manually entered
+  recovery code, separates first-time AAL1 password setup from later TOTP
+  enrollment, and requires AAL2 for protected admin. Focused local gate results
+  are green: 44/44 callback/recovery/authorization contracts and 2/2 real
+  loopback recovery/MFA database scenarios. The first sandboxed database
+  attempt received an empty local URL and failed before reaching Auth; the same
+  unchanged scenarios passed in the permitted loopback context. Diff checks
+  are clean.
+- Blockers or decisions needed: Christian must approve the exact packet and be
+  available to enter the private recipient/password/TOTP values. Automatic
+  password/factor security-notification settings must be read-only reverified
+  before the one approved recovery request; if they would send another message,
+  stop for an expanded approval.
+- Exact next step: Christian provides the approval language from
+  `DCFC-504-APPROVAL-PACKET.md`; then reconfirm the non-secret staging posture,
+  initiate exactly one recovery through the deployed Onzio login, complete the
+  private first-time-owner password/TOTP flow, reconcile, and stop before
+  `DCFC-601`.
+- Hosted mutations: zero. Supabase Database/Auth/Storage, email/Resend, Vercel,
+  Stripe, Git, DNS, production, Bunny.net, video, Phase 6, commit, and push
+  mutations: zero.
+
+### 2026-08-02 — DCFC-503 staging content, media, and presentation — Codex
+
+- Package: `DCFC-503`
+- Status: `complete`
+- Approval: Christian approved Supabase staging project
+  `fxefqnoqxbezeccjvrsw`, tenant
+  `d88bf71b-9820-49ae-9dc0-7556b0813885`, and immutable semantic plan digest
+  `63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36`.
+  The approval is exhausted and did not authorize `DCFC-504` or any excluded
+  provider/action.
+- Completed: independently reproduced the semantic plan digest and byte-level
+  SHA-256 `87efae9701f6e1fa4653a55f2687206f3370306bd900d83ee30352849b78702b`;
+  added staging-only guarded import tooling; uploaded each approved normalized
+  image to private staging, downloaded and checksum-verified it, published it
+  once to a UUID-versioned tenant path with one-year immutable cache metadata,
+  and removed the staging input; atomically inserted the approved content and
+  presentation rows without changing the provisioned club, domain, membership,
+  lifecycle, tier, public-access, or subscription state; and performed an
+  identical Storage/database replay.
+- Files changed: `scripts/import-diverse-city-staging.ts`,
+  `CONTENT-MEDIA-READINESS.md`, `STAGING-ACCEPTANCE.md`, this ledger, and
+  repository `HANDOFF.md`. These changes remain uncommitted because this
+  package expressly excluded commit/push work; the earlier `DCFC-502` ledger
+  edits remain preserved in the same dirty worktree.
+- Verification: preflight found the exact Starter/onboarding/preview tenant,
+  approved domain, one active owner, zero subscription/content/media/
+  presentation rows, and empty Storage. Final state has ten `media_assets`,
+  ten public objects / 2,864,062 bytes, zero private staging objects, four
+  Programs, one Contact profile/page, four shop-kit and two carousel references,
+  two Elsa's Bakery placements, zero Tryouts/players/staff/matches/standings,
+  15 valid composite media relationships, zero checksum/path/forbidden-reference
+  mismatches, zero cleanup rows, and ten raw public `image/webp` URLs returning
+  HTTP 200. Published `academy@1` digest
+  `1d2c6ce9eb91be5cc18a6017ffc783bdaedd231b40ea2bf5f3830b9b3549a008`
+  matches its publication pointer and validation result. Identical replay kept
+  state fingerprint `babdad9053e708e696f88a6af59e8231`, one import audit,
+  all row/object counts, and the published pointer unchanged; it staged and
+  removed ten fresh private copies while checksum-reusing all ten public
+  objects. Recent Storage/API/Postgres logs contained no error signal.
+- Local gates: Node 24 staging-tool execution; TypeScript; 310/310 contracts;
+  20/20 architecture tests; 662/662 complete loopback suite across 68 files;
+  generated database-type check; clean local `onzio,onzio_private` schema
+  lint; production build; lint with only the three pre-existing Analytics hook
+  warnings; and clean diff checks.
+- Hosted mutations: Supabase Database inserted 37 approved tenant content/
+  media/presentation rows plus one explicit import audit; existing triggers
+  appended 24 insert audits. The identical database replay was a no-op.
+  Storage performed ten final public uploads; across initial execution and
+  replay it performed 20 private staging uploads and 20 matching staging
+  deletions, ending with exactly ten public objects and zero staging objects.
+  Auth/email/MFA, Stripe, Vercel, Git, DNS, production, Bunny.net, video,
+  Phase 6, commit, and push mutations: zero.
+- Rollback: not required. The pre-import backup remains the rollback baseline;
+  the exact tenant-scoped object/row ledger is now recorded for compensating
+  cleanup if a later package fails.
+- Blockers or decisions needed: no `DCFC-503` blocker remains. `DCFC-504`
+  requires a fresh exact approval for identity, invitation/email, and MFA
+  acceptance; this package supplies no such authorization.
+- Exact next step: prepare and obtain the separate `DCFC-504` approval using
+  the privately held recipient/role inputs, then execute only the staging
+  Auth/invitation/MFA acceptance package and stop before `DCFC-601`.
+
+### 2026-08-02 — DCFC-502 staging release and private tenant — Codex
+
+- Package: `DCFC-502`
+- Status: `complete`
+- Completed: pushed exact release commit
+  `8e3cde2da52ec35a9e5fd7935197953c899a6cc5`; recorded protected READY Vercel
+  deployment `dpl_8W3YtWSw6Bu2qAaUndeofiiWd2KM`; attached only the approved
+  Diverse City staging alias; applied exactly the ten allowlisted migrations
+  without seed; and used audited operator provisioning to create exactly one
+  Diverse City staging tenant/domain with the existing operator identity as
+  the minimum owner membership. No Auth user or email was created.
+- Files changed: `DCFC-502-APPROVAL-PACKET.md`, `STAGING-ACCEPTANCE.md`, this
+  ledger, and repository `HANDOFF.md`. These closeout edits remain local because
+  the package excluded an additional commit/push.
+- Verification: remote Git SHA equals the approved release; Vercel deployment
+  and alias are exact/READY/protected; all 20 migration versions align; linked
+  schema lint is clean; all 40 `onzio` tables have RLS; club/domain/member/audit
+  readback is exact; all checked Diverse City content/billing/media counts are
+  zero; Auth remains 7 users/5 MFA factors; Storage remains 2 buckets/0 objects;
+  unauthenticated tenant access redirects to protected Vercel SSO with
+  `no-store`; private admin entry resolves; public preview remains deliberately
+  404 like Bravo; unknown host returns 404/`no-store`/`noindex`; deployment
+  error-log and 5xx counts are zero. Disabled legacy JWT probes returned 401.
+- Blockers or decisions needed: no `DCFC-502` blocker remains. Informational
+  Supabase advisors remain outside this package: accepted Free-plan leaked-
+  password posture, intentional policyless privileged tables, and performance
+  index suggestions. `DCFC-503` requires a fresh exact approval.
+- Exact next step: request `DCFC-503` approval naming tenant
+  `d88bf71b-9820-49ae-9dc0-7556b0813885` and immutable plan digest
+  `63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36`.
+  Then import only approved content/media/presentation state and stop before
+  `DCFC-504`.
+- Hosted mutations: Git one push. Vercel one protected Preview deployment and
+  one alias assignment. Supabase ten migrations plus one club, one domain, one
+  membership, and one audit row. Auth/email, Storage, content/media,
+  presentation, Stripe, DNS, production, Bunny.net, and Phase 6: zero.
 
 ### 2026-08-02 — Phase 5 release preparation and DCFC-502 packet — Codex
 
