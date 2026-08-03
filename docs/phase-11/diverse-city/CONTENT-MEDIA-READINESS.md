@@ -188,7 +188,7 @@ Every asset row must record:
   input before any public write.
 - [x] Normalize photographs and graphics offline/locally first and record exact
   output checksums.
-- [ ] Use `onzio-upload-staging` only during separately approved hosted imports;
+- [x] Use `onzio-upload-staging` only during separately approved hosted imports;
   publish only validated normalized output to UUID-versioned `onzio-media` paths.
 - [x] Confirm every Database media reference belongs to the same tenant through
   composite keys.
@@ -262,3 +262,23 @@ Accepted on 2026-08-01. `DCFC-401`–`DCFC-404` record:
 - local import/rollback evidence
 - exact unresolved hosted-input blockers and deferrals in
   `ROLLOUT-INPUT-APPROVAL-MANIFEST.md`
+
+## Staging Import Record (`DCFC-503`)
+
+Christian separately approved `DCFC-503` on 2026-08-02 for Supabase staging
+project `fxefqnoqxbezeccjvrsw`, tenant
+`d88bf71b-9820-49ae-9dc0-7556b0813885`, and the exact immutable semantic
+digest recorded above. That approval is exhausted.
+
+The hosted import revalidated and normalized all ten retained sources locally,
+staged each normalized output in private `onzio-upload-staging`, downloaded it
+for checksum verification, published it once to the translated tenant UUID path
+in `onzio-media`, and removed the staging input. Exact database and object
+checksum/path/byte counts match; the final private staging and cleanup queue
+counts are zero. An identical replay staged and removed ten fresh private
+copies, reused and checksum-verified all ten public objects, and changed no
+approved database row, object, pointer, state fingerprint, or import-audit
+count. No raw source, excluded image, SVG, video, runtime transformation,
+optimizer URL, temporary registration URL, or preview-only fact was uploaded
+or referenced. Full counts and presentation evidence are in
+`STAGING-ACCEPTANCE.md` and `STATUS.md`.
