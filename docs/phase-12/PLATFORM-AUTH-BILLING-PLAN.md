@@ -146,9 +146,13 @@ Supabase; the corrected helper now pins exact staging and accepts only a
 low-privilege publishable/legacy-anon key. A second attempt exposed Supabase's
 Node-before-22 Realtime transport requirement; the helper now supplies the
 already-pinned `ws` transport and reaches the operator-email prompt under Node
-20. No email, session, or factor was created, so the private rerun and the
-required multi-provider delivery matrix remain open. Exact evidence and next
-steps are in `HANDOFF.md` and the Phase 11 status ledger.
+20. Christian then approved one existing staging Auth user as the operator. The
+helper now keeps that hosted UUID in a dedicated ignored staging-enrollment
+variable while preserving the local test operator, and Vercel Preview branch
+`staging`'s sensitive runtime allowlist was updated without deploying. No email,
+session, or factor was created during the correction, so the private rerun and
+the required multi-provider delivery matrix remain open. Exact evidence and
+next steps are in `HANDOFF.md` and the Phase 11 status ledger.
 
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator

@@ -67,7 +67,7 @@ async function operatorPublicClientKey(prompt: Interface): Promise<string> {
 
 function operatorUserIds(): Set<string> {
   return new Set(
-    requiredEnvironment("ONZIO_OPERATOR_USER_IDS")
+    requiredEnvironment("ONZIO_STAGING_OPERATOR_USER_IDS")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean),

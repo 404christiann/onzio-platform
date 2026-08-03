@@ -80,7 +80,7 @@ describe("PLAT-101 passwordless authentication contract", () => {
     expect(enrollment).toContain('payload.role !== "anon"');
     expect(enrollment).toContain('key.startsWith("sb_secret_")');
     expect(enrollment).toContain("stdin.isTTY");
-    expect(enrollment).toContain("ONZIO_OPERATOR_USER_IDS");
+    expect(enrollment).toContain("ONZIO_STAGING_OPERATOR_USER_IDS");
     expect(enrollment).toContain("shouldCreateUser: false");
     expect(enrollment).toContain("auth.mfa.listFactors");
     expect(enrollment).toContain("auth.mfa.enroll");

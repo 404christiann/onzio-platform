@@ -114,11 +114,11 @@ below 22. Christian's next private attempt had stopped at that Node 20 transport
 guard after the publishable-key prompt and before the operator-email prompt;
 again, no Auth request or hosted mutation occurred. It then signs in with a
 six-digit email code, binds the verified JWT user to
-`ONZIO_OPERATOR_USER_IDS`, refuses existing verified or unresolved unverified
-TOTP state, stores the enrollment QR only in a mode-0600 temporary file, opens
-it locally on macOS, verifies exactly one factor and AAL2, signs out, and removes
-the temporary file. It never uses the service-role key. Red-first contract
-checks failed before both the original helper and the local-environment
+`ONZIO_STAGING_OPERATOR_USER_IDS`, refuses existing verified or unresolved
+unverified TOTP state, stores the enrollment QR only in a mode-0600 temporary
+file, opens it locally on macOS, verifies exactly one factor and AAL2, signs out,
+and removes the temporary file. It never uses the service-role key. Red-first
+contract checks failed before both the original helper and the local-environment
 correction; the focused file passes 12/12 and TypeScript passes. A real TTY
 smoke reached the exact-project prompt and deliberately cancelled there. The
 complete loopback-backed suite passes 672/672 across 71 files and
@@ -127,6 +127,23 @@ dummy publishable-format value reached the operator-email prompt under Node 20
 and was aborted before any request. The approved enrollment is still pending
 Christian's private rerun: zero staging email, Auth session, factor, or other
 hosted mutation occurred in the stopped attempts.
+
+**Operator identity correction, 2026-08-03:** Christian explicitly approved one
+existing staging Auth user as the Onzio operator for Supabase/Vercel staging.
+The prior `.env.local` allowlist entry belonged to the local-only test operator
+and had no matching user in hosted staging, so neither that address nor the
+newly selected hosted account could pass the helper's allowlist check. A
+targeted read confirmed exactly one active hosted Auth user for the approved
+address. The helper now reads a separate, ignored
+`ONZIO_STAGING_OPERATOR_USER_IDS` value so the local test operator remains
+intact. Vercel's existing sensitive `ONZIO_OPERATOR_USER_IDS` variable was
+updated only for Preview branch `staging`; no deploy was triggered. Vercel
+intentionally does not return sensitive values (`decrypted: false`, empty via
+`env run`), so hosted evidence is the successful single-variable PATCH plus
+exact key/Preview/branch/sensitive scope and a fresh update timestamp. No email,
+session, or TOTP factor was created during this correction. The private
+enrollment rerun remains the exact next step. No email address, UUID, key, code,
+token, or factor is recorded here.
 
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 
@@ -139,6 +156,9 @@ Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
   Onzio template;
 - self-signup was already disabled, email auth already enabled, and session
   timebox/inactivity already `0` (`never`); those values were not changed.
+- Vercel Preview branch `staging`'s sensitive operator allowlist was updated to
+  the approved existing staging Auth user; the change applies only to a future
+  deployment, and no deploy was triggered.
 
 Readback confirms both migration versions, all four intended security-definer
 functions with empty search paths, all six policies using the fresh-session
@@ -151,7 +171,7 @@ Exact next step: obtain a separate approval for pushing `staging` and triggering
 the protected Vercel deployment; Christian privately enrolls TOTP on the
 configured operator account; then run hosted owner/admin/operator and
 multi-provider delivery acceptance. No secret, code, address, token, or factor
-was recorded. After the local enrollment-helper commit, `staging` is 14 commits
+was recorded. After the operator-identity correction commit, `staging` is 17 commits
 ahead of `origin/staging`; none are pushed. Do not push now. Do not start
 `PLAT-102`, `DCFC-601`, or
 `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC `p=none` is a
