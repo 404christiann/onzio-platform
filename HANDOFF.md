@@ -39,8 +39,8 @@ their tests, the old operator MFA-recovery module, and the old hosted
 password/MFA scripts were deleted.
 
 Local verification is green: clean reset; real OTP delivery/verification and
-unknown-user noncreation; rollback then forward restoration; 315/315 contracts,
-20/20 architecture, 81/81 database, 671/671 full tests across 71 files, 2/2
+unknown-user noncreation; rollback then forward restoration; 316/316 contracts,
+20/20 architecture, 81/81 database, 672/672 full tests across 71 files, 2/2
 desktop/mobile Playwright scenarios, TypeScript, generated types, database lint,
 and production build. The three existing analytics exhaustive-deps warnings are
 unchanged.
@@ -97,6 +97,24 @@ red-first contract failed 1/11 before the login behavior existed and passes
 original onboarding code. Final verification is 671/671 across 71 files and
 clean TypeScript. No Auth configuration, hosted mutation, commit, or push.
 
+**Operator TOTP enrollment-helper follow-up, 2026-08-03:** The previously
+documented `npm run operator:enroll-totp` command did not yet exist when
+Christian first tried it. The repository now provides the guarded interactive
+helper in `scripts/enroll-operator-totp.ts`. It loads `.env.local`, refuses any
+host except exact staging project `fxefqnoqxbezeccjvrsw`, requires an
+interactive TTY and typed project confirmation before sending email, signs in
+with a six-digit email code, binds the verified JWT user to
+`ONZIO_OPERATOR_USER_IDS`, refuses existing verified or unresolved unverified
+TOTP state, stores the enrollment QR only in a mode-0600 temporary file, opens
+it locally on macOS, verifies exactly one factor and AAL2, signs out, and removes
+the temporary file. It never uses the service-role key. A red-first contract
+failed 1/12 before the helper existed and passes 12/12 afterward; the complete
+suite passes 672/672 across 71 files, TypeScript and `git diff --check` pass,
+and a non-interactive command smoke stops at the TTY guard before client
+creation. The helper has not been run interactively: zero staging email, Auth
+session, factor, or other hosted mutation occurred. Exact approval naming the
+staging project is still required before Christian runs it privately.
+
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 
 - migration `20260803192838` installed the AMR session helpers and replaced the
@@ -120,7 +138,7 @@ Exact next step: obtain a separate approval for pushing `staging` and triggering
 the protected Vercel deployment; Christian privately enrolls TOTP on the
 configured operator account; then run hosted owner/admin/operator and
 multi-provider delivery acceptance. No secret, code, address, token, or factor
-was recorded. After this handoff ledger commit, local `staging` is 13 commits
+was recorded. After the local enrollment-helper commit, `staging` is 14 commits
 ahead of `origin/staging`; none are pushed. Do not push now. Do not start
 `PLAT-102`, `DCFC-601`, or
 `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC `p=none` is a

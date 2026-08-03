@@ -36,6 +36,7 @@
     "migration:plan:rose-city": "tsx scripts/plan-rose-city-import.ts",
     "migration:reconcile:rose-city": "node scripts/reconcile-rose-city-export.mjs",
     "migration:reset:rose-city": "tsx scripts/import-rose-city-local.ts",
+    "operator:enroll-totp": "tsx scripts/enroll-operator-totp.ts",
     "operator:smoke": "tsx scripts/smoke-operator-workflows.ts",
     "staging:verify:lifecycle": "tsx scripts/verify-phase-7-lifecycle.ts",
     "staging:verify:media": "tsx scripts/verify-phase-7-media.ts",

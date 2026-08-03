@@ -57,7 +57,7 @@ defined in `ROLLOUT-EPIC.md`, `ROLLOUT-WORK-PACKAGES.md`,
 `CONTENT-MEDIA-READINESS.md`, `STAGING-ACCEPTANCE.md`, and
 `PRODUCTION-CUTOVER-ROLLBACK.md`. Planning hosted-mutation count: zero.
 
-**The suite is GREEN — 671/671 passing across 71 files.** `DCFC-304` adds
+**The suite is GREEN — 672/672 passing across 71 files.** `DCFC-304` adds
 reusable Programs overview/detail, Contact, and Tryouts public routes; real
 AAL2 admin-to-anonymous-public database acceptance; Alpha/Bravo isolation;
 published `academy@1` persistence; and repeatable desktop/mobile public and
@@ -130,6 +130,37 @@ unassigned and unapproved.
 
 ## Completion Records
 
+### 2026-08-03 — PLAT-101 private operator TOTP helper added — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at private operator TOTP
+  enrollment and hosted application/deliverability acceptance.
+- **Completed:** added the previously documented but missing
+  `npm run operator:enroll-totp` command. The interactive helper loads local
+  environment configuration, pins the exact staging project, requires a typed
+  confirmation before sending, signs in by email OTP, binds the verified user
+  to `ONZIO_OPERATOR_USER_IDS`, refuses ambiguous existing-factor state, opens
+  a mode-0600 temporary QR locally, verifies exactly one TOTP factor and AAL2,
+  signs out, and deletes temporary QR material. It has no service-role path.
+- **Files changed:** `package.json`, `scripts/enroll-operator-totp.ts`,
+  `tests/contracts/platform-auth.test.ts`, this ledger, and `HANDOFF.md`.
+- **Verification:** the red-first focused contract failed 1/12 before
+  implementation and passed 12/12 afterward; the complete local suite passed
+  672/672 across 71 files; `npx tsc --noEmit` and `git diff --check` passed. A
+  non-interactive command smoke reached the helper and failed closed at its TTY
+  guard before creating a Supabase client or contacting staging.
+- **Blockers:** the configured operator still has no verified TOTP factor. The
+  helper has not been run interactively because a hosted Auth email/session/
+  factor mutation needs exact staging approval and Christian must handle every
+  email code, QR/secret, and authenticator value privately.
+- **Exact next step:** Christian explicitly approves exactly one operator TOTP
+  enrollment on Supabase staging project `fxefqnoqxbezeccjvrsw`, then runs
+  `npm run operator:enroll-totp` in his own terminal and completes the private
+  prompts. After success, record only the verified-factor/AAL2 result—never the
+  address, codes, QR, secret, session, or token.
+- **Hosted mutations:** zero. No email was sent and no staging Auth session,
+  factor, user, configuration, database row, Vercel deployment, Git remote,
+  DNS, Stripe, Storage, Bunny.net, or production resource changed. No push.
+
 ### 2026-08-03 — PLAT-101 local package committed; push withheld — Codex
 
 - **Package/status:** `PLAT-101`, still `in_progress` at hosted application and
@@ -156,8 +187,8 @@ unassigned and unapproved.
   the protected Vercel staging deployment. Then run hosted owner/admin/operator
   and multi-provider delivery acceptance. Do not start `PLAT-102`, `DCFC-601`,
   or `DCFC-602`.
-- **Hosted mutations:** zero for this commit step. After the handoff commit,
-  local `staging` is 13 commits ahead of `origin/staging`; no commit was pushed
+- **Hosted mutations:** zero for this commit step. At that handoff commit,
+  local `staging` was 13 commits ahead of `origin/staging`; no commit was pushed
   and no Vercel, Supabase, Auth, email, DNS, Stripe, Storage, Bunny.net, or
   production resource changed.
 

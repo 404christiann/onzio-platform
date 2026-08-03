@@ -60,6 +60,31 @@ describe("PLAT-101 passwordless authentication contract", () => {
     expect(magicLinkTemplate).not.toContain("{{ .ConfirmationURL }}");
     expect(magicLinkTemplate).not.toContain("<a ");
   });
+
+  it("provides a guarded private operator TOTP enrollment command", () => {
+    const packageJson = JSON.parse(read("package.json")) as {
+      scripts?: Record<string, string>;
+    };
+    const enrollmentPath = resolve(root, "scripts/enroll-operator-totp.ts");
+    expect(packageJson.scripts?.["operator:enroll-totp"]).toBe(
+      "tsx scripts/enroll-operator-totp.ts",
+    );
+    expect(existsSync(enrollmentPath)).toBe(true);
+    const enrollment = read("scripts/enroll-operator-totp.ts");
+    expect(enrollment).toContain("loadEnvConfig");
+    expect(enrollment).toContain("fxefqnoqxbezeccjvrsw");
+    expect(enrollment).toContain("stdin.isTTY");
+    expect(enrollment).toContain("ONZIO_OPERATOR_USER_IDS");
+    expect(enrollment).toContain("shouldCreateUser: false");
+    expect(enrollment).toContain("auth.mfa.listFactors");
+    expect(enrollment).toContain("auth.mfa.enroll");
+    expect(enrollment).toContain("auth.mfa.challengeAndVerify");
+    expect(enrollment).toContain("getAuthenticatorAssuranceLevel");
+    expect(enrollment).toContain("mkdtemp");
+    expect(enrollment).toContain("mode: 0o600");
+    expect(enrollment).toContain("rm(");
+    expect(enrollment).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+  });
 });
 
 describe("PLAT-101 AMR session contract", () => {
