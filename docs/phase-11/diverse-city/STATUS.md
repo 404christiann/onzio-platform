@@ -12,14 +12,16 @@ Last updated: 2026-08-03
 
 Current assignment: `PLAT-101`, approved by Christian on 2026-08-03 for exact
 Supabase staging project `fxefqnoqxbezeccjvrsw`. Local implementation and
-verification are complete and committed locally as `009d284` (`Implement
+verification are complete and committed locally as `a797c60` (`Implement
 PLAT-101 passwordless admin access`). The two checked-in PLAT-101 migrations and the
 six-digit, 24-hour, code-only staging Auth configuration are applied and
 verified. No push/deploy was approved or performed, so the protected staging UI
 still serves release commit `8e3cde2`; hosted application acceptance is open.
-The operator account must enroll TOTP privately, and Yahoo/AOL/ISP delivery
-evidence remains outstanding. `DCFC-601` and `DCFC-602` remain unstarted and are
-`PLAT-103` scope; the media-cleanup heartbeat remains prohibited.
+The approved operator account has exactly one verified TOTP factor and no
+unresolved or other factors, so enrollment is complete; hosted AAL2/operator
+acceptance and Yahoo/AOL/ISP delivery evidence remain outstanding. `DCFC-601`
+and `DCFC-602` remain unstarted and are `PLAT-103` scope; the media-cleanup
+heartbeat remains prohibited.
 Christian's local manual acceptance also exposed and closed three UI edges: an
 immediate removed-admin re-add now reports the provider's one-minute email
 cooldown clearly, and the admin sidebar now has an independently scrollable,
@@ -81,7 +83,7 @@ not satisfy the handoff requirement.
 
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
-| PLAT-101 | in_progress | Codex | Exact staging approval received; all decision/input gates satisfied | Local implementation and verification complete; staging migrations/Auth config applied. Next: separately approve push/deploy, privately enroll operator TOTP, then run hosted UI/operator and multi-provider delivery acceptance. |
+| PLAT-101 | in_progress | Codex | Exact staging approval received; all decision/input gates satisfied; operator TOTP enrollment verified | Local implementation and verification complete; staging migrations/Auth config applied. Next: separately approve push/deploy, then run hosted UI/operator and Yahoo/AOL/ISP delivery acceptance. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -130,6 +132,43 @@ unassigned and unapproved.
 
 ## Completion Records
 
+### 2026-08-03 — PLAT-101 pre-push reconciliation and auth hardening — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at hosted application,
+  fresh-AAL2 operator, and Yahoo/AOL/ISP delivery acceptance.
+- **Completed:** reconciled this ledger and `STAGING-ACCEPTANCE.md` with the
+  verified operator state; documented approval-gated operator TOTP break-glass
+  recovery without restoring club-member MFA; corrected the stale
+  operator-reachable `is_aal2()` plan text; removed the broad `getClaims()`
+  error fallback and local JWT decode; and added fail-closed regression coverage.
+  Reworded the seven unpublished PLAT-101 commits with rationale, verification,
+  and hosted-mutation bodies. Their trees are unchanged; the new sequence is
+  `a797c60`, `62118dd`, `af26a8f`, `8bbc204`, `738a991`, `46a25e6`, and
+  `5f051b3`.
+- **Files changed:** `lib/auth-session.ts`,
+  `tests/contracts/platform-auth.test.ts`,
+  `docs/phase-12/OPERATOR-TOTP-RECOVERY.md`,
+  `docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md`,
+  `docs/phase-12/DECISIONS.md`, `docs/onzio-platform-plan.md`,
+  `STAGING-ACCEPTANCE.md`, this ledger, and `HANDOFF.md`.
+- **Verification:** the focused token-verification regression failed 1/13 on the
+  old fallback and passed after implementation; final focused platform-auth
+  tests 14/14, contracts 319/319, architecture 20/20, real loopback database
+  tests 81/81, complete suite 674/674 across 71 files, clean TypeScript,
+  generated database types match, production build green with only the three
+  pre-existing Analytics exhaustive-deps warnings, and diff checks clean. Git
+  tree identity before and after message rewriting matched exactly.
+- **Blockers:** no local blocker. TOTP enrollment is complete. The protected
+  deployment, hosted owner/admin/operator checks, and delivery to Yahoo, AOL,
+  and at least one ISP-hosted domain remain open.
+- **Exact next step:** obtain separate approval naming the `staging` push and
+  protected Vercel deployment; verify the exact deployed SHA and Ready state;
+  then run hosted UI/operator and multi-provider delivery acceptance. Do not
+  start `PLAT-102`, `DCFC-601`, or `DCFC-602`.
+- **Hosted mutations:** zero for this reconciliation. No Supabase, Auth, email,
+  Vercel, Git remote, deployment, production, Stripe, DNS, Storage, Bunny.net,
+  or tenant-content resource changed. No push.
+
 ### 2026-08-03 — PLAT-101 private operator TOTP helper added — Codex
 
 - **Package/status:** `PLAT-101`, still `in_progress` at private operator TOTP
@@ -166,12 +205,12 @@ unassigned and unapproved.
 - **Package/status:** `PLAT-101`, still `in_progress` at hosted application and
   deliverability acceptance.
 - **Completed:** committed the complete local PLAT-101 implementation as
-  `009d284` (`Implement PLAT-101 passwordless admin access`). The commit includes
+  `a797c60` (`Implement PLAT-101 passwordless admin access`). The commit includes
   passwordless club Auth, AMR session enforcement, session-bound operator TOTP,
   owner-managed admins, rollback/migrations, removal of superseded password
   recovery, the manual-acceptance UI fixes, and all associated tests and design
   records. This ledger/handoff update is the separate documentation commit.
-- **Files changed:** implementation commit `009d284` contains 66 files; this
+- **Files changed:** implementation commit `a797c60` contains 66 files; this
   closeout commit contains `HANDOFF.md` and this ledger only.
 - **Verification:** staged scope and intentional deletions were reviewed;
   `git diff --cached --check` passed; no credential/token material was found.

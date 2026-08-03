@@ -7,7 +7,7 @@ Last updated: 2026-08-03
 Agent: Codex, 2026-08-03. Christian approved `PLAT-101` for exact Supabase
 staging project `fxefqnoqxbezeccjvrsw`. The package is **in progress**, not
 complete: local implementation and the approved staging schema/Auth boundary
-are complete. The implementation is committed locally as `009d284`
+are complete. The implementation is committed locally as `a797c60`
 (`Implement PLAT-101 passwordless admin access`), but no application
 push/deploy was authorized. The approved operator identity now has exactly one
 verified TOTP factor; Yahoo/AOL/ISP-hosted delivery evidence remains open.
@@ -147,6 +147,34 @@ confirmed exactly one verified TOTP factor, zero unresolved TOTP factors, and
 zero other factors. The TOTP requirement is satisfied. No email address, UUID,
 key, code, token, or factor identifier is recorded here.
 
+**Pre-push reconciliation and hardening, 2026-08-03:** The Phase 11 status
+summary, package ledger, and staging-acceptance amendment now agree with this
+handoff: operator TOTP enrollment is complete, while hosted application,
+fresh-AAL2 operator, and Yahoo/AOL/ISP delivery acceptance remain open.
+`docs/phase-12/OPERATOR-TOTP-RECOVERY.md` governs approval-gated break-glass
+recovery for the sole operator without restoring the deleted club-member MFA
+workflow. The phase plan now states the implemented boundary accurately:
+`is_aal2()` has zero live exposed-policy callers and is retained only for the
+reviewed rollback; service-role operator functions enforce AAL2 in
+`assertOperator()`.
+
+`verifyAccessTokenClaims()` now accepts only claims returned by Supabase
+`getClaims()`. The custom fallback that retried every returned error through
+`getUser()` and then locally decoded the JWT was removed; the pinned Supabase
+client already performs Auth-server verification when a project uses symmetric
+signing. A red-first focused regression failed on the old fallback and passes
+after the change. Final local evidence is 14/14 focused platform-auth tests,
+319/319 contracts, 20/20 architecture tests, 81/81 real loopback database
+tests, 674/674 complete tests across 71 files, clean TypeScript, matching
+generated database types, a green production build, and clean diff checks. The
+three pre-existing Analytics exhaustive-deps warnings remain unchanged.
+
+The seven unpublished PLAT-101 commits now carry rationale, verification, and
+hosted-mutation bodies. Rewriting messages changed their hashes without changing
+the final tree: `a797c60`, `62118dd`, `af26a8f`, `8bbc204`, `738a991`,
+`46a25e6`, and `5f051b3` replace the former subject-only sequence. No remote ref
+or hosted service changed.
+
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 
 - migration `20260803192838` installed the AMR session helpers and replaced the
@@ -172,8 +200,9 @@ privileged tables. No package data was mutated.
 Exact next step: obtain a separate approval for pushing `staging` and triggering
 the protected Vercel deployment; then run hosted owner/admin/operator and
 multi-provider delivery acceptance. No secret, code, address, token, or factor
-identifier was recorded. After the TOTP acceptance-record commit, `staging` is
-18 commits ahead of `origin/staging`; none are pushed. Do not push now. Do not start
+identifier was recorded. After the pre-push reconciliation commit, `staging` is
+19 commits ahead of `origin/staging`; none are pushed. Do not push without the
+separate exact approval. Do not start
 `PLAT-102`, `DCFC-601`, or
 `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC `p=none` is a
 separate DNS approval.

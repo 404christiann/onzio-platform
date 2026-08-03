@@ -337,8 +337,11 @@ Admin mutation payloads never contain an authoritative `club_id`. The server der
 - Removed memberships lose access immediately.
 - Archived clubs reject existing admin sessions and writes.
 
-Operator TOTP recovery requires manual operator identity verification and an
-audit event. There is no self-service signup or owner-transfer UI in v1.
+Operator TOTP recovery is the approval-gated break-glass procedure in
+`docs/phase-12/OPERATOR-TOTP-RECOVERY.md`: manually verify operator identity,
+revoke active sessions, replace only the authorized factor, prove fresh AAL2,
+and write an append-only audit event. There is no self-service operator
+recovery, signup, or owner-transfer UI in v1.
 
 ### Transactional authentication email
 
@@ -793,7 +796,8 @@ Gate:
 - Add role and lifecycle enforcement.
 - Add operator provisioning.
 - Add archive/reactivate/purge tooling.
-- Add operator TOTP recovery audit flow.
+- Document and rehearse the manual operator TOTP break-glass recovery and audit
+  evidence path; do not expose self-service operator recovery.
 
 Gate:
 

@@ -224,14 +224,23 @@ recorded in the execution status above.
   strength handling, and the related contract surface. The Free-plan
   leaked-password exception recorded in `STAGING-ACCEPTANCE.md` ceases to apply
   and should be formally retired rather than left standing.
-- **Policy layer:** remove `onzio_private.is_aal2()` from club-facing content
-  policies while preserving `is_club_member`, `has_club_role`, and lifecycle
-  checks. Retain `is_aal2()` on operator-reachable paths.
+- **Policy layer:** remove `onzio_private.is_aal2()` from every live exposed
+  `onzio` policy while preserving `is_club_member`, `has_club_role`, lifecycle,
+  and club-session-age checks. Operator functions use the service-role client
+  and bypass RLS, so no operator-reachable policy exists; their AAL2 boundary is
+  `assertOperator()`. Retain the now-unused helper only because the reviewed
+  PLAT-101 rollback restores the preceding club-facing policies that call it.
 - **Operator gate:** establish and pin where AAL2 is actually enforced for
   operator actions. `assertOperator()` in `lib/operator/shared.ts` currently
   checks only membership of `ONZIO_OPERATOR_USER_IDS`, and operator functions
   use `createServiceRoleClient()`, which bypasses RLS. This is the highest-value
   gate in the system and must be proven, not assumed.
+- **Operator recovery:** do not restore the deleted club-member MFA-recovery
+  workflow. Operator TOTP loss is a manual break-glass procedure with exact
+  hosted-mutation approval, out-of-band identity verification, session
+  revocation, factor replacement, private re-enrollment, AAL2 proof, and an
+  append-only audit event. The governed procedure is
+  `docs/phase-12/OPERATOR-TOTP-RECOVERY.md`.
 - **Sessions:** ~~asymmetric — long for club accounts (weeks), short for operator
   accounts (hours)~~ — **superseded 2026-08-03.** Supabase exposes session length
   only project-wide, so this is not configurable as written. Replaced by

@@ -1,10 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   clubSessionStartedAt,
   isClubSessionFresh,
   operatorTotpVerifiedAt,
+  verifyAccessTokenClaims,
 } from "@/lib/auth-session";
 
 const root = process.cwd();
@@ -91,6 +92,22 @@ describe("PLAT-101 passwordless authentication contract", () => {
     expect(enrollment).toContain("rm(");
     expect(enrollment).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   });
+
+  it("documents operator-only break-glass recovery without restoring club MFA", () => {
+    const phasePlan = read("docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md");
+    const recoveryPath = resolve(
+      root,
+      "docs/phase-12/OPERATOR-TOTP-RECOVERY.md",
+    );
+    expect(existsSync(recoveryPath)).toBe(true);
+    const recovery = read("docs/phase-12/OPERATOR-TOTP-RECOVERY.md");
+    expect(phasePlan).toContain("no operator-reachable policy exists");
+    expect(phasePlan).not.toContain("Retain `is_aal2()` on operator-reachable paths");
+    expect(recovery).toContain("Revoke sessions first");
+    expect(recovery).toContain("Remove only the approved factor");
+    expect(recovery).toContain("Write the audit event");
+    expect(existsSync(resolve(root, "lib/operator/mfa-recovery.ts"))).toBe(false);
+  });
 });
 
 describe("PLAT-101 AMR session contract", () => {
@@ -135,6 +152,30 @@ describe("PLAT-101 AMR session contract", () => {
         ],
       }),
     ).toEqual(new Date("2026-08-03T16:30:00.000Z"));
+  });
+
+  it("accepts only claims returned by getClaims and fails closed on its error", async () => {
+    const claims = {
+      sub: "11111111-1111-4111-8111-111111111111",
+      aal: "aal2",
+      amr: [{ method: "totp", timestamp: timestamp("2026-08-03T16:30:00Z") }],
+    };
+    const getUser = vi.fn();
+    const getClaims = vi
+      .fn()
+      .mockResolvedValueOnce({ data: { claims }, error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error("JWKS unavailable") });
+    const client = {
+      auth: { getClaims, getUser },
+    } as unknown as Parameters<typeof verifyAccessTokenClaims>[0];
+
+    await expect(verifyAccessTokenClaims(client, "verified-token")).resolves.toEqual(
+      claims,
+    );
+    await expect(verifyAccessTokenClaims(client, "unverified-token")).resolves.toBeNull();
+    expect(getClaims).toHaveBeenNthCalledWith(1, "verified-token");
+    expect(getClaims).toHaveBeenNthCalledWith(2, "unverified-token");
+    expect(getUser).not.toHaveBeenCalled();
   });
 });
 

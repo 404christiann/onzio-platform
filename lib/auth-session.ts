@@ -75,35 +75,13 @@ export function isOperatorSessionFresh(
   );
 }
 
-function decodeJwtClaims(accessToken: string): AuthClaims | null {
-  try {
-    const payload = accessToken.split(".")[1];
-    if (!payload) return null;
-    const value = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return typeof value === "object" && value !== null
-      ? (value as AuthClaims)
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 export async function verifyAccessTokenClaims(
   client: SupabaseClient<any, any, any>,
   accessToken: string,
 ): Promise<AuthClaims | null> {
   const verifiedClaims = await client.auth.getClaims(accessToken);
-  if (!verifiedClaims.error && verifiedClaims.data?.claims) {
-    return verifiedClaims.data.claims as AuthClaims;
-  }
-
-  // Legacy symmetric local projects cannot expose their signing secret through
-  // JWKS. In that case getUser verifies the bearer token with Auth first; only
-  // then is the matching payload read for AMR data that getUser does not return.
-  const verifiedUser = await client.auth.getUser(accessToken);
-  if (verifiedUser.error || !verifiedUser.data.user) return null;
-  const claims = decodeJwtClaims(accessToken);
-  return claims?.sub === verifiedUser.data.user.id ? claims : null;
+  if (verifiedClaims.error || !verifiedClaims.data?.claims) return null;
+  return verifiedClaims.data.claims as AuthClaims;
 }
 
 export async function requireFreshClubSession(

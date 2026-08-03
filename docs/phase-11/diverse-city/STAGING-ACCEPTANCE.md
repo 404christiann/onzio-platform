@@ -197,9 +197,11 @@ unknown-address failure with no user creation, owner adds/removes an admin,
 admin signs in with the pre-sent code, tenant/role/session/operator negative
 boundaries, and desktop/mobile protected-shell checks. The deployed staging
 application still serves the older commit because no push/deploy was approved;
-therefore this amendment does not claim hosted UI acceptance. The operator
-identity must enroll TOTP privately, and delivery still needs Yahoo, AOL, and
-one ISP-hosted-domain evidence before PLAT-101 can close.
+therefore this amendment does not claim hosted UI acceptance. The approved
+operator identity has exactly one verified TOTP factor and no unresolved or
+other factors, satisfying the enrollment requirement. Hosted AAL2/operator
+acceptance and delivery to Yahoo, AOL, and one ISP-hosted domain are still
+required before PLAT-101 can close.
 
 ## Public and Admin Acceptance (`DCFC-602`)
 
