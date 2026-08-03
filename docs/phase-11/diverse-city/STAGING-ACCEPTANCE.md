@@ -196,12 +196,14 @@ Local replacement evidence is green: first and returning owner sign-in, exact
 unknown-address failure with no user creation, owner adds/removes an admin,
 admin signs in with the pre-sent code, tenant/role/session/operator negative
 boundaries, and desktop/mobile protected-shell checks. The deployed staging
-application still serves the older commit because no push/deploy was approved;
-therefore this amendment does not claim hosted UI acceptance. The approved
-operator identity has exactly one verified TOTP factor and no unresolved or
-other factors, satisfying the enrollment requirement. Hosted AAL2/operator
-acceptance and delivery to Yahoo, AOL, and one ISP-hosted domain are still
-required before PLAT-101 can close.
+application now serves exact approved commit `16b2a21` through protected Preview
+deployment `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF`, which is `READY`. The build and
+deployment protection are verified, but this amendment does not claim hosted UI
+acceptance. The approved operator identity has exactly one verified TOTP factor
+and no unresolved or other factors, satisfying the enrollment requirement.
+Hosted owner/admin UI, AAL1 operator refusal, fresh-AAL2 operator success, and
+delivery to Yahoo, AOL, and one ISP-hosted domain are still required before
+PLAT-101 can close.
 
 ## Public and Admin Acceptance (`DCFC-602`)
 

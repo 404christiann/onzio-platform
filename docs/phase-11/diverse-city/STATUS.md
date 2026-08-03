@@ -15,8 +15,10 @@ Supabase staging project `fxefqnoqxbezeccjvrsw`. Local implementation and
 verification are complete and committed locally as `a797c60` (`Implement
 PLAT-101 passwordless admin access`). The two checked-in PLAT-101 migrations and the
 six-digit, 24-hour, code-only staging Auth configuration are applied and
-verified. No push/deploy was approved or performed, so the protected staging UI
-still serves release commit `8e3cde2`; hosted application acceptance is open.
+verified. Christian separately approved pushing exact commit `16b2a21` and its
+protected Preview deployment. `origin/staging` now points to that exact commit,
+and Vercel deployment `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`; hosted
+application acceptance is still open.
 The approved operator account has exactly one verified TOTP factor and no
 unresolved or other factors, so enrollment is complete; hosted AAL2/operator
 acceptance and Yahoo/AOL/ISP delivery evidence remain outstanding. `DCFC-601`
@@ -59,7 +61,7 @@ defined in `ROLLOUT-EPIC.md`, `ROLLOUT-WORK-PACKAGES.md`,
 `CONTENT-MEDIA-READINESS.md`, `STAGING-ACCEPTANCE.md`, and
 `PRODUCTION-CUTOVER-ROLLBACK.md`. Planning hosted-mutation count: zero.
 
-**The suite is GREEN — 672/672 passing across 71 files.** `DCFC-304` adds
+**The suite is GREEN — 674/674 passing across 71 files.** `DCFC-304` adds
 reusable Programs overview/detail, Contact, and Tryouts public routes; real
 AAL2 admin-to-anonymous-public database acceptance; Alpha/Bravo isolation;
 published `academy@1` persistence; and repeatable desktop/mobile public and
@@ -83,7 +85,7 @@ not satisfy the handoff requirement.
 
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
-| PLAT-101 | in_progress | Codex | Exact staging approval received; all decision/input gates satisfied; operator TOTP enrollment verified | Local implementation and verification complete; staging migrations/Auth config applied. Next: separately approve push/deploy, then run hosted UI/operator and Yahoo/AOL/ISP delivery acceptance. |
+| PLAT-101 | in_progress | Codex | Exact staging approval received; all decision/input gates satisfied; operator TOTP enrollment and protected `16b2a21` Preview deployment verified | Local implementation, staging migrations/Auth configuration, exact push, and protected deployment are complete. Next: obtain provider inputs and exact approval, then run hosted owner/admin/operator and Yahoo/AOL/ISP delivery acceptance. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -131,6 +133,37 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-101 exact staging push and protected deployment — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at hosted application,
+  fresh-AAL2 operator, and Yahoo/AOL/ISP delivery acceptance.
+- **Completed:** pushed exact commit
+  `16b2a21f9d6c879846d184501361da7dccfc9ce0` to `origin/staging`, advancing the
+  remote from `8e3cde2`, and verified the resulting protected Preview deployment
+  `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`. Vercel project ID
+  `prj_I362ysmh9cse5cRxnL7db4dOhsEs` currently resolves to project name
+  `onzio-rcfc`.
+- **Files changed:** this ledger, `STAGING-ACCEPTANCE.md`,
+  `docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md`, and `HANDOFF.md`, locally after
+  the push; these evidence updates are not pushed.
+- **Verification:** `origin/staging` resolves to the exact approved SHA; the
+  deployment targets Preview and reports `READY`; build logs show branch
+  `staging`, exact commit `16b2a21`, a successful Next.js 15.5.22 / Node.js 24
+  build, and only the three known Analytics exhaustive-deps warnings. An
+  unauthenticated `/admin/login` request returned a 302 to Vercel SSO with
+  `x-robots-tag: noindex`. A deployment-scoped error-log scan returned zero
+  entries.
+- **Blockers:** hosted owner/admin UI, AAL1 operator refusal, fresh-AAL2 operator
+  success, and Yahoo/AOL/ISP delivery evidence remain open. A Ready deployment
+  is not application acceptance.
+- **Exact next step:** obtain private provider inputs and exact hosted-mutation
+  approval for those acceptance checks. Do not start `PLAT-102`, `DCFC-601`, or
+  `DCFC-602`.
+- **Hosted mutations:** one exact Git push and one protected Preview deployment;
+  zero Supabase, Auth, email, user, factor, session, schema, production, Stripe,
+  DNS, Storage, Bunny.net, or tenant-content mutations. The push approval is
+  exhausted; no later commit may be pushed without separate approval.
 
 ### 2026-08-03 — PLAT-101 pre-push reconciliation and auth hardening — Codex
 

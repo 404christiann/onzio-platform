@@ -175,6 +175,21 @@ the final tree: `a797c60`, `62118dd`, `af26a8f`, `8bbc204`, `738a991`,
 `46a25e6`, and `5f051b3` replace the former subject-only sequence. No remote ref
 or hosted service changed.
 
+**Approved push and protected deployment, 2026-08-03:** Christian explicitly
+approved pushing exact commit `16b2a21f9d6c879846d184501361da7dccfc9ce0`
+to `origin/staging` and the resulting protected Preview deployment, with no
+later push and no production mutation. The fast-forward push advanced the remote
+from `8e3cde2` to exactly `16b2a21`. Vercel project ID
+`prj_I362ysmh9cse5cRxnL7db4dOhsEs` resolves to current project name
+`onzio-rcfc`; deployment `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`, targets
+Preview, and serves exact Git SHA `16b2a21` at the protected deployment URL and
+the `staging` branch alias. The remote build cloned that SHA and completed under
+Next.js 15.5.22 / Node.js 24 with only the three known Analytics
+exhaustive-deps warnings. An unauthenticated `/admin/login` request returned a
+302 to Vercel SSO with `x-robots-tag: noindex`, proving deployment protection
+remains active. A deployment-scoped error-log scan returned zero entries. This
+proves deployment readiness, not hosted PLAT-101 application acceptance.
+
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 
 - migration `20260803192838` installed the AMR session helpers and replaced the
@@ -187,8 +202,8 @@ Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 - self-signup was already disabled, email auth already enabled, and session
   timebox/inactivity already `0` (`never`); those values were not changed.
 - Vercel Preview branch `staging`'s sensitive operator allowlist was updated to
-  the approved existing staging Auth user; the change applies only to a future
-  deployment, and no deploy was triggered.
+  the approved existing staging Auth user and is present in the environment
+  used by the approved `16b2a21` Preview deployment.
 
 Readback confirms both migration versions, all four intended security-definer
 functions with empty search paths, all six policies using the fresh-session
@@ -197,15 +212,14 @@ The security advisor still reports the intentional 24-hour OTP warning and the
 now-inapplicable leaked-password warning, plus four pre-existing policyless
 privileged tables. No package data was mutated.
 
-Exact next step: obtain a separate approval for pushing `staging` and triggering
-the protected Vercel deployment; then run hosted owner/admin/operator and
-multi-provider delivery acceptance. No secret, code, address, token, or factor
-identifier was recorded. After the pre-push reconciliation commit, `staging` is
-19 commits ahead of `origin/staging`; none are pushed. Do not push without the
-separate exact approval. Do not start
-`PLAT-102`, `DCFC-601`, or
-`DCFC-602`; do not extend the heartbeat to media cleanup. DMARC `p=none` is a
-separate DNS approval.
+Exact next step: obtain the private provider inputs and exact hosted-mutation
+approval needed to run owner/admin/operator acceptance plus Yahoo, AOL, and one
+ISP-hosted delivery check against the protected Preview. No secret, code,
+address, token, or factor identifier was recorded. The exact `16b2a21` push
+approval is exhausted. The local evidence commit created after that deployment
+must remain unpushed unless separately approved. Do not start `PLAT-102`,
+`DCFC-601`, or `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC
+`p=none` is a separate DNS approval.
 
 ## Latest Work — PLAT-EPIC-001 prerequisites P1 and P2
 

@@ -138,17 +138,20 @@ for Supabase staging project `fxefqnoqxbezeccjvrsw`. The local implementation,
 loopback acceptance, rollback/forward rehearsal, and full verification suite are
 complete. Staging Auth now uses six-digit codes with 86,400-second expiry and a
 code-only Onzio template; migrations `20260803192838` and `20260803192943` are
-applied and verified. No application push/deploy was authorized or performed,
-so hosted application acceptance remains pending. The operator TOTP requirement
+applied and verified. Christian separately approved the exact application push:
+`origin/staging` now points to `16b2a21`, and protected Preview deployment
+`dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`. Deployment readiness is verified,
+but hosted application acceptance remains pending. The operator TOTP requirement
 is satisfied: Christian approved one existing staging Auth user, the helper
 keeps that hosted UUID in a dedicated ignored staging-enrollment variable while
 preserving the local test operator, and Vercel Preview branch `staging`'s
-sensitive runtime allowlist was updated without deploying. The private helper
-run authenticated the approved account, found an existing verified TOTP factor,
-and correctly added nothing; a targeted aggregate confirmed exactly one
-verified TOTP factor and zero unresolved or other factors. The required
-multi-provider delivery matrix remains open. Exact evidence and next steps are
-in `HANDOFF.md` and the Phase 11 status ledger.
+sensitive runtime allowlist is present in the approved deployment environment.
+The private helper run authenticated the approved account, found an existing
+verified TOTP factor, and correctly added nothing; a targeted aggregate
+confirmed exactly one verified TOTP factor and zero unresolved or other
+factors. Hosted owner/admin UI, AAL1 operator refusal, fresh-AAL2 operator
+success, and the required multi-provider delivery matrix remain open. Exact
+evidence and next steps are in `HANDOFF.md` and the Phase 11 status ledger.
 
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator
