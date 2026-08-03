@@ -2,32 +2,34 @@
 
 Epic: `DCFC-EPIC-002`
 
-Status: `prepared_not_authorized`
+Status: `complete`
 
 Last updated: 2026-08-02
 
-This packet prepares the exact Class 3 boundary for `DCFC-502`. It does not
-authorize or execute a hosted migration, deployment, tenant/domain
-provisioning action, content/media import, identity change, or provider
-configuration change.
+This packet defined the exact Class 3 boundary for `DCFC-502`. Christian
+approved that boundary for release commit
+`8e3cde2da52ec35a9e5fd7935197953c899a6cc5` on 2026-08-02. The execution
+record below closes this package and exhausts that approval. It does not
+authorize `DCFC-503` or any later action.
 
 ## Release-Push Prerequisite
 
-The reviewed Phase 5 source will exist as one local commit on `staging`. The
-repository record shows that the Vercel project serves the Git `staging`
-branch and that Git pushes create deployments. The current authorization both
-requests a push and expressly excludes deployment, so the push must remain
-withheld until Christian either:
+The reviewed Phase 5 source existed as one local commit on `staging`. The
+repository record showed that the Vercel project serves the Git `staging`
+branch and that Git pushes create deployments. Christian's exact `DCFC-502`
+approval resolved the earlier boundary by authorizing the protected deployment
+of the exact commit. The prerequisite is complete.
+
+Before that approval the push remained withheld until Christian either:
 
 1. authorizes the resulting protected staging deployment as part of
    `DCFC-502`; or
 2. supplies an approved way to update the Git ref without creating a Vercel
    deployment.
 
-Do not mutate Vercel Git settings, add an ignored-build rule, or create/cancel
-a deployment to work around this boundary. The exact local release commit is
-reported outside the commit after it is created; a Git commit cannot safely
-contain its own final SHA.
+No Vercel Git setting or ignored-build rule was changed, and no deployment was
+created/cancelled as a workaround. The approved Git push directly produced the
+recorded protected Preview deployment.
 
 ## Exact Targets and Tenant Input
 
@@ -122,10 +124,67 @@ tenant through audited operator tooling; do not delete rows ad hoc. A mismatch
 at any step stops the package and must be recorded in `STATUS.md`,
 `STAGING-ACCEPTANCE.md`, and `HANDOFF.md`.
 
+## Execution Record — 2026-08-02
+
+- Approval: Christian approved this packet for exact release commit
+  `8e3cde2da52ec35a9e5fd7935197953c899a6cc5`; the approval is exhausted.
+- Git/Vercel: pushed `staging` from `a659764` to the approved commit. Protected
+  Preview deployment `dpl_8W3YtWSw6Bu2qAaUndeofiiWd2KM` became `READY` at
+  `onzio-rcfc-3zhpir3p1-404christianns-projects.vercel.app`, and the approved
+  alias `diverse-city-onzio-staging.vercel.app` points to it. The branch alias
+  remains `onzio-rcfc-git-staging-404christianns-projects.vercel.app`.
+- Schema: the linked dry run listed exactly the ten allowlisted migrations.
+  `supabase db push --linked --yes` applied exactly those ten without seed.
+  Local and hosted histories now align on all 20 canonical versions, and
+  linked `onzio,onzio_private` lint reports no schema errors.
+- Tenant: audited operator provisioning created club
+  `d88bf71b-9820-49ae-9dc0-7556b0813885` exactly once as
+  `starter` / `onboarding` / `preview`, one active/verified/primary staging
+  domain, one active owner membership using the existing staging operator
+  identity, and one `operator`/`provision` audit event. No Auth user or email
+  action was created.
+- Reconciliation: staging now contains three clubs, three domains, six
+  memberships, and 46 audit events. Diverse City has zero subscriptions,
+  Stripe events, media assets, Programs, Contact rows, Tryouts, presentation
+  rows, branding, hero/About/shop rows, players, staff, matches, or seasons.
+  Auth remains seven users/five MFA factors; Storage remains two buckets/zero
+  objects.
+- HTTP/runtime: an unauthenticated request to the tenant alias redirects to
+  Vercel SSO with `Cache-Control: no-store`; the authenticated admin entry
+  resolves HTTP 200; the public route remains deliberately unavailable at
+  HTTP 404 while the tenant is `onboarding`/`preview`, matching Bravo's private
+  staging behavior; the unknown staging hostname fails HTTP 404 with
+  `Cache-Control: no-store` and `X-Robots-Tag: noindex`. The exact deployment
+  produced zero error-log entries and zero 5xx requests during acceptance.
+- Advisors: no new schema-lint error exists. Security advisors contain the
+  previously accepted Free-plan leaked-password warning and intentional
+  privileged-table no-policy informational notices. Performance advisors are
+  informational and include existing/unindexed composite media-reference keys;
+  changing them requires a separately reviewed migration.
+- Credential handling: Vercel correctly withheld sensitive Preview values.
+  The installed Supabase CLI unexpectedly rendered disabled legacy JWT values
+  during an API-key metadata read even without `--reveal`; neither value was
+  copied into Git or documentation, and status-only probes confirmed both are
+  rejected with HTTP 401. Modern secret use stayed in process memory.
+- Failed attempts: two temporary provisioning runners failed before execution
+  (module format, then dependency resolution), and one read-only SQL query had
+  a type mismatch. None reached a hosted mutation. The final runner succeeded
+  once and was removed; the release worktree returned clean before ledger edits.
+- Hosted mutations: Git one push; Vercel one protected Preview deployment and
+  one alias assignment; Supabase ten migration applications plus one club, one
+  domain, one membership, and one audit row. Auth/email, Storage, content/media,
+  presentation, Stripe, DNS, production, Bunny.net, and Phase 6 mutations: zero.
+- Rollback: not required. Prior ready deployment and restricted `DCFC-501`
+  backup remain the recorded rollback baseline.
+- Exact next step: obtain a fresh `DCFC-503` approval naming tenant
+  `d88bf71b-9820-49ae-9dc0-7556b0813885` and immutable plan digest
+  `63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36`.
+  Stop before any content/media/presentation import.
+
 ## Exact Approval Language
 
-After the release commit is pushed or deployment-on-push is expressly included,
-Christian may authorize only this package with:
+The exact language below was satisfied with the full release SHA and is now
+historical/exhausted:
 
 > I approve DCFC-502 for release commit `<RELEASE_COMMIT_SHA>` on Git branch
 > `staging`, Supabase staging project `fxefqnoqxbezeccjvrsw`, Vercel project
