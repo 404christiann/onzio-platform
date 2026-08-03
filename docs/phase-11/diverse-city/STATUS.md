@@ -20,8 +20,11 @@ protected Preview deployment. `origin/staging` now points to that exact commit,
 and Vercel deployment `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`; hosted
 application acceptance is still open.
 The approved operator account has exactly one verified TOTP factor and no
-unresolved or other factors, so enrollment is complete; hosted AAL2/operator
-acceptance and Yahoo/AOL/ISP delivery evidence remain outstanding. `DCFC-601`
+unresolved or other factors, so enrollment is complete. Christian approved the
+bounded hosted acceptance pass, but its ISP scope still contains the literal
+placeholder `[ISP DOMAIN]`; no hosted acceptance action has run under that
+approval. The guarded local operator verifier is ready, while hosted
+owner/admin/operator and Yahoo/AOL/ISP evidence remain outstanding. `DCFC-601`
 and `DCFC-602` remain unstarted and are `PLAT-103` scope; the media-cleanup
 heartbeat remains prohibited.
 Christian's local manual acceptance also exposed and closed three UI edges: an
@@ -61,7 +64,7 @@ defined in `ROLLOUT-EPIC.md`, `ROLLOUT-WORK-PACKAGES.md`,
 `CONTENT-MEDIA-READINESS.md`, `STAGING-ACCEPTANCE.md`, and
 `PRODUCTION-CUTOVER-ROLLBACK.md`. Planning hosted-mutation count: zero.
 
-**The suite is GREEN — 674/674 passing across 71 files.** `DCFC-304` adds
+**The suite is GREEN — 675/675 passing across 71 files.** `DCFC-304` adds
 reusable Programs overview/detail, Contact, and Tryouts public routes; real
 AAL2 admin-to-anonymous-public database acceptance; Alpha/Bravo isolation;
 published `academy@1` persistence; and repeatable desktop/mobile public and
@@ -85,7 +88,7 @@ not satisfy the handoff requirement.
 
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
-| PLAT-101 | in_progress | Codex | Exact staging approval received; all decision/input gates satisfied; operator TOTP enrollment and protected `16b2a21` Preview deployment verified | Local implementation, staging migrations/Auth configuration, exact push, and protected deployment are complete. Next: obtain provider inputs and exact approval, then run hosted owner/admin/operator and Yahoo/AOL/ISP delivery acceptance. |
+| PLAT-101 | in_progress | Codex | Protected `16b2a21` Preview and operator TOTP verified; bounded hosted acceptance approved except literal `[ISP DOMAIN]` is unresolved | Guarded operator AAL1/AAL2 verifier is locally green. Next: replace `[ISP DOMAIN]` with the actual controlled ISP mailbox domain, then privately run the approved hosted owner/admin/operator and Yahoo/AOL/ISP acceptance. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -133,6 +136,37 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-101 hosted-acceptance verifier prepared — Codex
+
+- **Package/status:** `PLAT-101`, still `in_progress` at hosted owner/admin/
+  operator and Yahoo/AOL/ISP delivery acceptance.
+- **Completed:** received bounded Alpha staging acceptance approval; stopped the
+  ISP portion because the approval retained literal placeholder `[ISP DOMAIN]`;
+  and added `npm run operator:verify-staging-auth`. The guarded interactive
+  command pins project `fxefqnoqxbezeccjvrsw`, rejects secret/service-role keys,
+  sends one email code, proves the real `assertOperator()` gate rejects AAL1,
+  verifies the existing sole TOTP factor reaches fresh AAL2, proves the same
+  gate accepts it, and signs out only that acceptance session without operator
+  data mutation.
+- **Files changed:** `scripts/verify-operator-staging-auth.ts`, `package.json`,
+  `tests/contracts/platform-auth.test.ts`, this ledger, and `HANDOFF.md`.
+- **Verification:** the focused source-level contract failed 1/15 before the
+  command existed and passes 15/15 afterward; TypeScript is clean; contracts
+  pass 320/320; the complete real-loopback suite passes 675/675 across 71 files;
+  and diff checks are clean. A non-TTY smoke reached the interactive guard and
+  stopped before any network request.
+- **Blockers:** the approval does not yet name an actual ISP-hosted mailbox
+  domain. No ISP recipient, full address, code, key, token, or factor identifier
+  is recorded.
+- **Exact next step:** Christian replaces `[ISP DOMAIN]` with the actual domain,
+  then privately runs the guarded operator command and browser/provider matrix;
+  reconcile only the authorized temporary memberships/identities/session and
+  safe provider evidence. Do not start `PLAT-102`, `DCFC-601`, or `DCFC-602`.
+- **Hosted mutations:** zero under the new acceptance approval. No email/Auth
+  request, user, membership, audit, factor, session, Supabase configuration,
+  deploy, push, production, Stripe, DNS, Storage, Bunny.net, or tenant content
+  changed.
 
 ### 2026-08-03 — PLAT-101 exact staging push and protected deployment — Codex
 

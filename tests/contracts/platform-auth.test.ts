@@ -93,6 +93,40 @@ describe("PLAT-101 passwordless authentication contract", () => {
     expect(enrollment).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
   });
 
+  it("provides a guarded staging operator AAL1 and AAL2 acceptance command", () => {
+    const packageJson = JSON.parse(read("package.json")) as {
+      scripts?: Record<string, string>;
+    };
+    const verifierPath = resolve(
+      root,
+      "scripts/verify-operator-staging-auth.ts",
+    );
+    expect(packageJson.scripts?.["operator:verify-staging-auth"]).toBe(
+      "tsx scripts/verify-operator-staging-auth.ts",
+    );
+    expect(existsSync(verifierPath)).toBe(true);
+
+    const verifier = read("scripts/verify-operator-staging-auth.ts");
+    expect(verifier).toContain("loadEnvConfig");
+    expect(verifier).toContain("fxefqnoqxbezeccjvrsw");
+    expect(verifier).toContain("ONZIO_OPERATOR_SUPABASE_PUBLISHABLE_KEY");
+    expect(verifier).toContain("ONZIO_STAGING_OPERATOR_USER_IDS");
+    expect(verifier).toContain("shouldCreateUser: false");
+    expect(verifier.match(/signInWithOtp/g)).toHaveLength(1);
+    expect(verifier).toContain("verifyAccessTokenClaims");
+    expect(verifier).toContain("assertOperator");
+    expect(verifier).toContain("OPERATOR_AAL2_REQUIRED");
+    expect(verifier).toContain("auth.mfa.listFactors");
+    expect(verifier).toContain("auth.mfa.challengeAndVerify");
+    expect(verifier).toContain('currentLevel !== "aal2"');
+    expect(verifier).toContain('scope: "local"');
+    expect(verifier).toContain("operator.staging_auth_verified");
+    expect(verifier).toContain("stdin.isTTY");
+    expect(verifier).toContain('key.startsWith("sb_secret_")');
+    expect(verifier).not.toContain("auth.mfa.enroll");
+    expect(verifier).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+  });
+
   it("documents operator-only break-glass recovery without restoring club MFA", () => {
     const phasePlan = read("docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md");
     const recoveryPath = resolve(

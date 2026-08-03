@@ -7,10 +7,11 @@ Last updated: 2026-08-03
 Agent: Codex, 2026-08-03. Christian approved `PLAT-101` for exact Supabase
 staging project `fxefqnoqxbezeccjvrsw`. The package is **in progress**, not
 complete: local implementation and the approved staging schema/Auth boundary
-are complete. The implementation is committed locally as `a797c60`
-(`Implement PLAT-101 passwordless admin access`), but no application
-push/deploy was authorized. The approved operator identity now has exactly one
-verified TOTP factor; Yahoo/AOL/ISP-hosted delivery evidence remains open.
+are complete. Exact commit `16b2a21` is deployed to the protected staging
+Preview and is `READY`; the post-deployment evidence commit `da0a3f0` remains
+local and unpushed. The approved operator identity has exactly one verified
+TOTP factor. Hosted owner/admin/operator and Yahoo/AOL/ISP-hosted acceptance
+remain open.
 
 ### Next agent — start here
 
@@ -190,6 +191,23 @@ exhaustive-deps warnings. An unauthenticated `/admin/login` request returned a
 remains active. A deployment-scoped error-log scan returned zero entries. This
 proves deployment readiness, not hosted PLAT-101 application acceptance.
 
+**Hosted-acceptance preparation, 2026-08-03:** Christian approved a bounded
+Alpha staging owner/admin/operator and Yahoo/AOL/ISP delivery pass, with all
+addresses, keys, email codes, and TOTP values entered privately. The approval
+still contains the literal placeholder `[ISP DOMAIN]`, so it does not yet name
+an executable ISP-hosted recipient scope. No hosted request or mutation was
+performed under it. A new guarded local command,
+`npm run operator:verify-staging-auth`, pins exact project
+`fxefqnoqxbezeccjvrsw`, accepts only a publishable/legacy anon key, sends exactly
+one operator email code, proves the real `assertOperator()` gate refuses AAL1,
+uses the existing sole verified TOTP factor to prove fresh AAL2 succeeds, and
+signs out only that acceptance session. It never enrolls a factor, uses a
+service-role key, or invokes an operator data mutation. The source-level
+contract was red before the command existed and passes 15/15 afterward; final
+evidence is clean TypeScript, 320/320 contracts, 675/675 complete tests across
+71 files with real loopback database access, and clean diff checks. A non-TTY
+smoke stopped at the interactive guard before any network request.
+
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 
 - migration `20260803192838` installed the AMR session helpers and replaced the
@@ -212,14 +230,15 @@ The security advisor still reports the intentional 24-hour OTP warning and the
 now-inapplicable leaked-password warning, plus four pre-existing policyless
 privileged tables. No package data was mutated.
 
-Exact next step: obtain the private provider inputs and exact hosted-mutation
-approval needed to run owner/admin/operator acceptance plus Yahoo, AOL, and one
-ISP-hosted delivery check against the protected Preview. No secret, code,
-address, token, or factor identifier was recorded. The exact `16b2a21` push
-approval is exhausted. The local evidence commit created after that deployment
-must remain unpushed unless separately approved. Do not start `PLAT-102`,
-`DCFC-601`, or `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC
-`p=none` is a separate DNS approval.
+Exact next step: Christian supplies the actual ISP-hosted mailbox domain in
+place of `[ISP DOMAIN]`, then privately runs the guarded operator verifier and
+the approved browser acceptance against Alpha staging. Record only safe
+provider-domain/status/timestamp evidence and reconcile the allowed temporary
+memberships, Auth identities, sessions, and logs. No secret, code, full address,
+token, or factor identifier may be recorded. The exact `16b2a21` push approval
+is exhausted; all later local commits must remain unpushed unless separately
+approved. Do not start `PLAT-102`, `DCFC-601`, or `DCFC-602`; do not extend the
+heartbeat to media cleanup. DMARC `p=none` is a separate DNS approval.
 
 ## Latest Work — PLAT-EPIC-001 prerequisites P1 and P2
 
