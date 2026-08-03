@@ -108,7 +108,12 @@ project `fxefqnoqxbezeccjvrsw`, requires an interactive TTY and typed project
 confirmation, then reads `ONZIO_OPERATOR_SUPABASE_PUBLISHABLE_KEY` or privately
 prompts for staging's low-privilege Publishable key. It accepts a verified
 legacy `anon` key for compatibility and rejects secret/service-role keys. It
-then signs in with a six-digit email code, binds the verified JWT user to
+also supplies the repository's pinned `ws` package as Supabase Realtime's
+transport, which Supabase now requires when constructing a client under Node.js
+below 22. Christian's next private attempt had stopped at that Node 20 transport
+guard after the publishable-key prompt and before the operator-email prompt;
+again, no Auth request or hosted mutation occurred. It then signs in with a
+six-digit email code, binds the verified JWT user to
 `ONZIO_OPERATOR_USER_IDS`, refuses existing verified or unresolved unverified
 TOTP state, stores the enrollment QR only in a mode-0600 temporary file, opens
 it locally on macOS, verifies exactly one factor and AAL2, signs out, and removes
@@ -117,9 +122,11 @@ checks failed before both the original helper and the local-environment
 correction; the focused file passes 12/12 and TypeScript passes. A real TTY
 smoke reached the exact-project prompt and deliberately cancelled there. The
 complete loopback-backed suite passes 672/672 across 71 files and
-`git diff --check` passes. The approved enrollment is still pending Christian's
-private rerun: zero staging email, Auth session, factor, or other hosted
-mutation occurred in either stopped attempt.
+`git diff --check` passes. A second real TTY smoke with a deliberately invalid
+dummy publishable-format value reached the operator-email prompt under Node 20
+and was aborted before any request. The approved enrollment is still pending
+Christian's private rerun: zero staging email, Auth session, factor, or other
+hosted mutation occurred in the stopped attempts.
 
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 

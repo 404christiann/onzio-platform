@@ -7,6 +7,7 @@ import { stdin, stdout } from "node:process";
 import { createInterface, type Interface } from "node:readline/promises";
 import { loadEnvConfig } from "@next/env";
 import { createClient } from "@supabase/supabase-js";
+import WebSocket from "ws";
 
 const EXPECTED_PROJECT_REF = "fxefqnoqxbezeccjvrsw";
 const EXPECTED_HOSTNAME = `${EXPECTED_PROJECT_REF}.supabase.co`;
@@ -132,6 +133,7 @@ async function main(): Promise<void> {
         autoRefreshToken: false,
         detectSessionInUrl: false,
       },
+      realtime: { transport: WebSocket as any },
     }).auth;
 
     const email = (await prompt.question("Operator email: ")).trim().toLowerCase();

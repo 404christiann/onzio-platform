@@ -143,10 +143,12 @@ so hosted application acceptance remains pending. The operator account must
 also enroll TOTP privately before hosted operator acceptance. The first
 approved enrollment attempt stopped safely because `.env.local` targets local
 Supabase; the corrected helper now pins exact staging and accepts only a
-low-privilege publishable/legacy-anon key. No email, session, or factor was
-created, so the private rerun and the required multi-provider delivery matrix
-remain open. Exact evidence and next steps are in `HANDOFF.md` and the Phase 11
-status ledger.
+low-privilege publishable/legacy-anon key. A second attempt exposed Supabase's
+Node-before-22 Realtime transport requirement; the helper now supplies the
+already-pinned `ws` transport and reaches the operator-email prompt under Node
+20. No email, session, or factor was created, so the private rerun and the
+required multi-provider delivery matrix remain open. Exact evidence and next
+steps are in `HANDOFF.md` and the Phase 11 status ledger.
 
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator
