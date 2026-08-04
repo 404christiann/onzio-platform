@@ -83,7 +83,7 @@ accepted.
 | `PLAT-D005` | Diverse City launches on the current single-squad product. The teams epic follows the launch. |
 | `PLAT-D006` | Suspension is automatic on a 20-day timer. **Accepted risk:** an automated path exists from a webhook or cron fault to a paying customer's public site going dark. |
 | `PLAT-D007` | `grace_ends_at = paid_through + 20 days`, written by the webhook when the subscription first reaches `past_due`. Measuring from `paid_through` places Stripe's retry cycle entirely inside the grace window. |
-| `PLAT-D008` | Diverse City subscribes at **$65/month, no trial**, billing beginning at Checkout. `trialing` is not supported. |
+| `PLAT-D008` | **Price superseded by `DCFC-D119`:** Diverse City is **$75/month, no trial**, billing beginning at Checkout. `trialing` is not supported. |
 | `PLAT-D009` | The Stripe webhook **records** the price Stripe reports. Price validation exists **only at Checkout**, which reads `clubs.stripe_price_id` and never a client-supplied value. The fail-closed `UNKNOWN_PRICE` check is deleted. |
 | `PLAT-D010` | Price changes take effect at the next renewal with no proration (`proration_behavior: 'none'`). Immediate-plus-proration is available as a deliberate per-change operator override. |
 | `PLAT-D011` | Card payment only. **The 20-day timer in `PLAT-D006` assumes card payment** and must be revisited before any invoice or ACH path ships, because invoices have no dunning cycle and progress at human pace. |
@@ -332,21 +332,19 @@ recorded in the execution status above.
   table or `max_teams` (deferred to the teams epic per `PLAT-D002`); invoice or
   ACH support (`PLAT-D011`).
 - **Required inputs and approvals:** the Diverse City price and interval
-  ($65/month per `PLAT-D008`); the test-mode Price to use for rehearsal; the
+  ($75/month per `DCFC-D119`); the test-mode Price to use for rehearsal; the
   `kind` assignment for all four existing tenants; Portal capability set. The
   grace-warning schedule is settled — day 7 and day 17, accepted 2026-08-03.
 
 ### Scope detail
 
-- **Entitlement collapse.** `onzio_private.club_has_feature` currently carries a
-  hardcoded allowlist (`branding`, `roster`, `schedule`, `homepage`, `about`,
-  `contact`) with Pro-by-default for unlisted names. Reduce it to a lifecycle
-  and kind check with no feature dimension. Delete `STARTER_FEATURES` from
-  `lib/club-features.ts`. Repoint the `storage.objects` surface policies at the
-  same single source, eliminating the permissive `branding` fallback. Demote
-  `moduleRegistry`'s `entitlement` field to descriptive metadata. Retain
-  `ADMIN_TABLE_FEATURES` as a table-to-domain map for mutation validation, not
-  as a tier gate.
+- **Entitlement collapse (`PLAT-D018`).** Delete
+  `onzio_private.club_has_feature`. Collapse `can_read_feature(club, f)` to
+  `can_read_club(club)` and `can_mutate_feature(club, f)` to
+  `can_mutate_content(club)`, retaining the unused feature parameter as the
+  re-tiering seam. Make **zero policy changes**. Delete the application tier
+  gate, demote `moduleRegistry.entitlement` to descriptive metadata, and retain
+  `ADMIN_TABLE_FEATURES` as a table-to-domain validation map.
 - **Resolve the two contradictions by inclusion.** `shop` and `seasons` are both
   included. This closes `PF-002`.
 - **Keep the seam.** Retain `clubs.tier` as a dormant column driving nothing.
@@ -372,9 +370,16 @@ recorded in the execution status above.
 - **Price changes.** `proration_behavior: 'none'` by default, taking effect at
   the next renewal; immediate proration only as a recorded per-change operator
   override.
-- **Reconciliation.** A report comparing `clubs.stripe_price_id` (intent) with
-  `club_subscriptions.price_id` (fact). Divergence is a finding to investigate,
-  never a webhook rejection.
+- **Reconciliation and alerting (`PLAT-D019`–`PLAT-D022`).** Fold the comparison
+  of `clubs.stripe_price_id` (intent) to `club_subscriptions.price_id` (fact)
+  into the daily lifecycle cron. Suspension and reconciliation use independent
+  flags. A clean run logs and returns 200; drift writes one idempotent system
+  audit, logs at error level, explicitly fails the lifecycle heartbeat, and
+  returns non-200 `RECONCILIATION_DIVERGENCE`. Never extend this heartbeat to
+  `/api/cron/media-cleanup` in PLAT-102.
+- **Delivery monitoring.** Local signed Resend delivery-event handling and
+  sanitized append-only evidence are included. Hosted Resend webhook creation
+  or configuration remains separately approval-gated.
 
 - **Acceptance criteria:** exactly one source of truth for entitlement, with an
   agreement contract asserting no other source can contradict it; an active,

@@ -157,6 +157,8 @@ export async function provisionClub(rawInput: ProvisionClubInput) {
       name: input.name,
       lifecycle: "onboarding",
       public_access: "preview",
+      kind: "test",
+      stripe_price_id: null,
       tier: "starter",
     });
     if (clubInsert.error) mapDatabaseConflict(clubInsert.error);

@@ -91,8 +91,8 @@ function currentState(row: {
   stripe_subscription_id: string | null;
   last_applied_stripe_event_id: string | null;
   last_applied_stripe_event_created_at: string | null;
-  tier: string | null;
   status: string | null;
+  grace_ends_at: string | null;
 } | null) {
   if (!row) return null;
   return {
@@ -103,8 +103,8 @@ function currentState(row: {
     lastEventCreated: row.last_applied_stripe_event_created_at
       ? Math.floor(Date.parse(row.last_applied_stripe_event_created_at) / 1000)
       : null,
-    tier: row.tier,
     status: row.status,
+    graceEndsAt: row.grace_ends_at,
   };
 }
 
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
     ? await service
         .from("club_subscriptions")
         .select(
-          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,tier,status",
+          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,status,grace_ends_at",
         )
         .eq("club_id", clubId)
         .maybeSingle()
@@ -231,6 +231,7 @@ export async function POST(request: Request) {
     {
       status: projection.status,
       paidThrough: projection.paidThrough,
+      graceEndsAt: projection.graceEndsAt,
     },
     new Date(),
   );
@@ -253,7 +254,6 @@ export async function POST(request: Request) {
       p_customer_id: projection.customerId as string,
       p_subscription_id: projection.subscriptionId as string,
       p_price_id: projection.priceId as string,
-      p_tier: projection.tier as string,
       p_status: projection.status as string,
       p_cancel_at_period_end: projection.cancelAtPeriodEnd as boolean,
       p_paid_through: (projection.paidThrough as string | null) ?? null,

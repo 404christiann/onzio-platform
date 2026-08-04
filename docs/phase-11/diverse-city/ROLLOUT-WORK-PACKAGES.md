@@ -309,9 +309,9 @@ Every package inherits these rules:
   Pro entitlement works; duplicate/stale/foreign events fail; grace/suspension/
   reactivation behavior matches architecture; tenant returns to the approved
   staging state; reconciliation is exact.
-- **Verification commands/evidence:** owner application flow; existing
-  `npm run staging:verify:stripe` and `staging:verify:lifecycle` only after
-  auditing/adapting their target scope; safe Stripe IDs and ledger outcomes;
+- **Verification commands/evidence:** owner application flow; the Phase 7
+  tier-era Stripe/lifecycle scripts are historical and must be replaced with
+  PLAT-102 acceptance evidence; safe Stripe IDs and ledger outcomes;
   before/after club/subscription state.
 - **Rollback expectations:** use test-mode Portal/cancellation and canonical
   webhook projection; restore lifecycle through audited tooling; never delete

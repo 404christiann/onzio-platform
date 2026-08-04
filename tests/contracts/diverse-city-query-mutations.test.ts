@@ -386,10 +386,10 @@ describe("DCFC-204 protected mutation schemas", () => {
     }
   });
 
-  it("preserves tenant, AAL2, membership, lifecycle, and entitlement checks for new tables", async () => {
+  it("preserves tenant, membership, and lifecycle checks without tier gating", async () => {
     await expect(
       authorizeMutation({
-        club: { ...clubs.alpha, tier: "starter" },
+        club: clubs.alpha,
         userId: USER_IDS.adminAal2,
         memberships,
         aal: "aal2",
@@ -401,14 +401,14 @@ describe("DCFC-204 protected mutation schemas", () => {
     for (const feature of ["programs", "tryouts"]) {
       await expect(
         authorizeMutation({
-          club: { ...clubs.alpha, tier: "starter" },
+          club: clubs.alpha,
           userId: USER_IDS.adminAal2,
           memberships,
           aal: "aal2",
           feature,
           payload: {},
         }),
-      ).rejects.toMatchObject({ code: "FEATURE_NOT_INCLUDED" });
+      ).resolves.toMatchObject({ clubId: CLUB_ID });
     }
 
     await expect(

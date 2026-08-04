@@ -5,7 +5,6 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import sharp from "sharp";
-import { clubHasFeature, type ClubTier } from "@/lib/club-features";
 import { failContract } from "@/lib/contract-error";
 import { queueMediaCleanup } from "@/lib/media-cleanup";
 import { validateMediaUpload, type MediaKind } from "@/lib/media-validation";
@@ -152,7 +151,7 @@ export type FinalizeMediaInput = {
   actorId?: string;
   membership?: "active" | "removed" | null;
   membershipClubId?: string;
-  tier?: ClubTier;
+  tier?: "starter" | "pro";
   lifecycle?: "onboarding" | "active" | "archived";
   surface?: MediaSurface | string;
   validated?: boolean;
@@ -546,13 +545,6 @@ function assertFinalizationAuthorized(input: FinalizeMediaInput): void {
     input.membershipClubId ?? localFixtureMembershipClubId;
   if (membershipClubId && membershipClubId !== input.clubId) {
     failContract("CROSS_CLUB_MEDIA");
-  }
-  if (
-    input.tier &&
-    input.surface &&
-    !clubHasFeature(input.tier, input.surface)
-  ) {
-    failContract("FEATURE_NOT_INCLUDED");
   }
   if (input.simulateDatabaseFailure) {
     failContract("FINALIZATION_ROLLED_BACK");

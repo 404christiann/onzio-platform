@@ -32,9 +32,8 @@ export const clubs = {
     publicAccess: "preview",
     tier: "starter",
   },
-  // The only Starter club that is also active and publicly live. Exists so
-  // anonymous public reads can be tested at Starter tier -- see the comment on
-  // this row in supabase/seed.sql.
+  // A second active, publicly live club used to prove that tenant access is
+  // independent of the dormant legacy tier column.
   charlie: {
     id: CLUB_IDS.charlie,
     slug: "charlie",

@@ -6,30 +6,12 @@ import {
   buildCheckoutDecision,
 } from "@/lib/stripe-event-routing";
 import {
+  getStripePortalConfigurationId,
   getStripeRuntimeConfig,
   verifiedClubOrigin,
 } from "@/lib/stripe-config";
 
 export const runtime = "nodejs";
-
-async function requestedTier(
-  request: Request,
-  fallback: "starter" | "pro",
-): Promise<"starter" | "pro"> {
-  const contentType = request.headers.get("content-type") ?? "";
-  let value: unknown;
-  if (contentType.includes("application/json")) {
-    value = (await request.json().catch(() => null) as { tier?: unknown } | null)
-      ?.tier;
-  } else {
-    value = (await request.formData().catch(() => null))?.get("tier");
-  }
-  if (value === null || value === undefined || value === "") return fallback;
-  if (value !== "starter" && value !== "pro") {
-    throw new ContractError("UNKNOWN_TIER");
-  }
-  return value;
-}
 
 export async function POST(request: Request) {
   try {
@@ -46,10 +28,8 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     const config = getStripeRuntimeConfig();
-    const tier = await requestedTier(request, club.tier);
     const decision = buildCheckoutDecision({
       club,
-      requestedTier: tier,
       currentSubscription,
       config,
     });
@@ -62,6 +42,7 @@ export async function POST(request: Request) {
       }
       const portal = await stripe.billingPortal.sessions.create({
         customer: currentSubscription.stripe_customer_id,
+        configuration: getStripePortalConfigurationId(),
         return_url: `${origin}/admin/payments`,
       });
       return NextResponse.redirect(portal.url, 303);

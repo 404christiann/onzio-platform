@@ -49,8 +49,8 @@ Preserve these decisions unless Christian explicitly changes them:
   remove `admin` memberships
 - Existing Stripe account with tenant/environment metadata
 - Stripe as billing source of truth
-- Private preview before active/trialing billing
-- Seven-day public-site grace after paid access ends
+- Private preview before active billing; trialing is unsupported
+- Twenty-day public-site grace measured from paid-through time
 - Indefinite archival instead of normal hard deletion
 - No Supabase runtime Image Transformations
 - Versioned normalized media paths served directly without runtime optimization

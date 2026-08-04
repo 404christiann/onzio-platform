@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { validTransparentPng } from "../fixtures/media";
-import {
-  expectPostgrestError,
-  expectStorageError,
-} from "../helpers/database-security";
+import { expectPostgrestError } from "../helpers/database-security";
 import { createFreshLocalClient } from "../helpers/mfa";
 import {
   createLocalClients,
@@ -170,8 +167,8 @@ describe("authenticated tenant RLS contract", () => {
   });
 });
 
-describe("tier-aware database and Storage contract", () => {
-  it("allows Starter branding but denies Starter Pro-only shop writes", async () => {
+describe("tier-free database and Storage contract", () => {
+  it("allows every registered content domain regardless of dormant tier", async () => {
     await clients.service
       .from("clubs")
       .update({ lifecycle: "active" })
@@ -196,11 +193,7 @@ describe("tier-aware database and Storage contract", () => {
       surface: "shop",
       kit_variant: "home",
     });
-    expectPostgrestError(
-      shop.error,
-      "42501",
-      "Starter Pro-only shop insert",
-    );
+    expect(shop.error?.message).toBeUndefined();
 
     const programs = await session.client.from("programs").insert({
       id: DCFC_301_PROGRAM_IDS[1],
@@ -208,31 +201,30 @@ describe("tier-aware database and Storage contract", () => {
       slug: "dcfc-301-starter-denied",
       display_title: "Denied",
     });
-    expectPostgrestError(
-      programs.error,
-      "42501",
-      "Starter Pro-only Programs insert",
-    );
+    expect(programs.error?.message).toBeUndefined();
 
     const tryouts = await session.client.from("tryouts").insert({
       id: DCFC_303_TRYOUT_IDS[1],
       club_id: CLUB_IDS.bravo,
-      headline: "Starter must not save Pro Tryouts",
+      headline: "Tier-free Tryouts write",
     });
-    expectPostgrestError(
-      tryouts.error,
-      "42501",
-      "Starter Pro-only Tryouts insert",
-    );
+    expect(tryouts.error?.message).toBeUndefined();
 
     await clients.service
       .from("site_social_links")
       .delete()
       .eq("club_id", CLUB_IDS.bravo)
       .eq("id", "starter-branding-contract");
+    await clients.service
+      .from("shop_kit_section")
+      .delete()
+      .eq("club_id", CLUB_IDS.bravo)
+      .eq("surface", "shop");
+    await clients.service.from("tryouts").delete().eq("id", DCFC_303_TRYOUT_IDS[1]);
+    await clients.service.from("programs").delete().eq("id", DCFC_301_PROGRAM_IDS[1]);
   });
 
-  it("enforces Starter entitlement on staging upload surfaces", async () => {
+  it("allows every registered staging upload surface regardless of dormant tier", async () => {
     await clients.service
       .from("clubs")
       .update({ lifecycle: "active" })
@@ -271,14 +263,7 @@ describe("tier-aware database and Storage contract", () => {
       .upload(DCFC_301_BRAVO_MEDIA_PATH, validTransparentPng(), {
         contentType: "image/png",
       });
-    expectStorageError(
-      starterPrograms.error,
-      {
-        statusCode: "403",
-        message: "new row violates row-level security policy",
-      },
-      "Starter Pro-only Programs upload",
-    );
+    expect(starterPrograms.error?.message).toBeUndefined();
 
     const proTryouts = await session.client.storage
       .from("onzio-upload-staging")
@@ -292,14 +277,7 @@ describe("tier-aware database and Storage contract", () => {
       .upload(DCFC_303_BRAVO_MEDIA_PATH, validTransparentPng(), {
         contentType: "image/png",
       });
-    expectStorageError(
-      starterTryouts.error,
-      {
-        statusCode: "403",
-        message: "new row violates row-level security policy",
-      },
-      "Starter Pro-only Tryouts upload",
-    );
+    expect(starterTryouts.error?.message).toBeUndefined();
 
     const shop = await session.client.storage
       .from("onzio-upload-staging")
@@ -308,18 +286,19 @@ describe("tier-aware database and Storage contract", () => {
         validTransparentPng(),
         { contentType: "image/png" },
       );
-    expectStorageError(
-      shop.error,
-      {
-        statusCode: "403",
-        message: "new row violates row-level security policy",
-      },
-      "Starter Pro-only shop upload",
-    );
+    expect(shop.error?.message).toBeUndefined();
 
     await clients.service.storage
       .from("onzio-upload-staging")
-      .remove([brandingPath, DCFC_302_BRAVO_MEDIA_PATH]);
+      .remove([
+        brandingPath,
+        DCFC_302_BRAVO_MEDIA_PATH,
+        DCFC_301_ALPHA_MEDIA_PATH,
+        DCFC_301_BRAVO_MEDIA_PATH,
+        DCFC_303_ALPHA_MEDIA_PATH,
+        DCFC_303_BRAVO_MEDIA_PATH,
+        `${CLUB_IDS.bravo}/shop/99999999-9999-4999-8999-999999999992.png`,
+      ]);
   });
 });
 
@@ -582,7 +561,7 @@ describe("DCFC-303 Tryouts admin workflow", () => {
     ]);
   });
 
-  it("rejects cross-tenant, unsafe URL, and Starter writes at real database boundaries", async () => {
+  it("rejects cross-tenant and unsafe URL writes at real database boundaries", async () => {
     const session = await createFreshLocalClient({
       email: "admin-aal2@alpha.local",
       userId: USER_IDS.adminAal2,

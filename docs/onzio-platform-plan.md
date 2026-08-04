@@ -16,7 +16,7 @@ The platform uses:
 - immediate club-content publishing, with operator-managed draft/publish
   versions for presentation configuration only
 - private preview access until a subscription becomes active
-- a seven-day public-site grace period after paid access ends
+- a twenty-day public-site grace period measured from paid-through time
 - indefinite archival for returning clubs
 - Supabase Storage without Supabase Image Transformations
 - normalized immutable images served directly without runtime optimization
@@ -39,7 +39,7 @@ migrated in place.
   presentation configuration uses operator-only draft/publish versions
 - **Billing self-service:** owners use Stripe Customer Portal
 - **Pre-payment behavior:** authenticated preview only
-- **Payment lapse:** seven-day public grace after paid access ends
+- **Payment lapse:** twenty-day public grace measured from paid-through time
 - **Offboarding:** archive indefinitely; hard purge is a separate operator procedure
 - **Media:** public assets may remain cached after archival
 - **Image processing:** never use Supabase runtime Image Transformations
@@ -61,7 +61,9 @@ Create the following core tables in the `onzio` schema:
 - `name text not null`
 - `lifecycle onboarding|active|archived`
 - `public_access preview|live|grace|suspended`
-- `tier starter|pro`
+- `kind customer|demo|test`; only `customer` requires paid access
+- `stripe_price_id` as operator-approved per-club Checkout intent
+- dormant `tier starter|pro` rollback metadata, never authorization
 - safe public branding/runtime fields
 - created and updated timestamps
 
@@ -91,14 +93,16 @@ A club may have multiple aliases but exactly one active primary domain per envir
 - status `active|removed`
 - timestamps
 
-Owners can manage content and billing. Admins can manage content only. Neither role can mutate memberships in v1.
+Owners can manage content and billing and may add or remove admin memberships
+through the governed tenant-bound server route. Admins can manage content only;
+ownership transfer remains operator-only.
 
 #### `club_subscriptions`
 
 - primary key `club_id`
 - unique Stripe customer and subscription IDs
-- allowlisted price ID
-- derived tier
+- Stripe-reported price ID (billing fact)
+- dormant tier rollback metadata
 - status
 - cancellation state
 - paid-through timestamp
@@ -189,47 +193,26 @@ Generate Supabase TypeScript types from migrations. CI fails when generated type
 
 Enable RLS on every exposed table in the migration that creates it.
 
-Do not apply a blanket policy to all content. Define policies per table, operation, role, lifecycle, and tier.
+Do not apply a blanket policy to all content. Define policies per table,
+operation, role, lifecycle, and club access state.
 
-### How tier entitlement actually works
+### Tier-free content authorization
 
-Documented 2026-08-01 (`PF-003`). This mechanism was previously implicit, and
-its two surprises caused real near-misses — read this before adding any
-tenant content table.
-
-Tier is enforced by `onzio_private.club_has_feature(club_id, feature)`, which
-resolves true when either the club is Pro **or** the feature name appears in a
-**hardcoded Starter allowlist** inside the function body:
+`PLAT-102` resolves `PF-002` by deleting
+`onzio_private.club_has_feature`. Existing policies retain their feature
+parameter as a future re-tiering seam, but the wrappers deliberately ignore it:
 
 ```sql
-club.tier = 'pro'
-or p_feature in ('branding', 'roster', 'schedule', 'homepage', 'about', 'contact')
+can_read_feature(club_id, feature)   -> can_read_club(club_id)
+can_mutate_feature(club_id, feature) -> can_mutate_content(club_id)
 ```
 
-Two consequences that are not obvious from the call sites:
-
-1. **Any feature string not in that list is Pro-only by default.** There is no
-   registration step and no error for an unknown name — inventing a new
-   feature string silently makes the feature Pro-only.
-2. **`can_read_feature` gates anonymous public reads, not just admin writes.**
-   It is `can_read_club(club_id) AND club_has_feature(club_id, feature)`. So a
-   feature name that is unintentionally Pro-only does not raise an error for
-   Starter clubs — their public page simply renders with no rows. The failure
-   mode is a blank section, not a crash.
-
-When adding a tenant content table, decide its tier deliberately, add the
-feature string to the allowlist if it must be Starter-accessible, and register
-the table in `ADMIN_TABLE_FEATURES` (`lib/admin-data-contract.ts`) — a table
-missing from that map cannot be written through the admin boundary regardless
-of its RLS. Any edit to `club_has_feature` must preserve its definer rights,
-empty search path, stable volatility, and fully qualified relations.
-
-Note that tier entitlement is currently encoded independently in this
-allowlist, in `ADMIN_TABLE_FEATURES`, and in `packages/presentation`'s
-`moduleRegistry`, with known disagreements recorded as `PF-002` in
-`docs/platform-findings.md`. A contract in
-`tests/contracts/diverse-city-domains.test.ts` holds the three in agreement
-for every feature except those documented contradictions.
+`ADMIN_TABLE_FEATURES` remains a table-to-domain validation map, not a pricing
+gate. Presentation `moduleRegistry.entitlement` values are descriptive legacy
+metadata only. `clubs.tier` and `club_subscriptions.tier` remain dormant for
+rollback and drive no runtime or RLS decision. New content domains must still
+be registered at the server mutation boundary and protected by tenant,
+membership, lifecycle, and runtime-access checks.
 
 ### Public reads
 
@@ -237,7 +220,7 @@ Anonymous users may read only:
 
 - explicitly public content tables
 - rows belonging to a publicly accessible club
-- content enabled by that club’s tier
+- rows belonging to a live or grace-accessible club
 
 Anonymous users may never read:
 
@@ -259,16 +242,16 @@ the current published presentation document.
 Content mutations require:
 
 - an authenticated user
-- AAL2/MFA
+- a club session within the 30-day application/RLS freshness window
 - active membership for the row’s club
-- active club lifecycle
-- an entitled feature
+- onboarding access, or an active club lifecycle
+- current paid access for customer clubs; demo and test clubs do not bill
 
 Owners receive billing access. Admins do not.
 
 No authenticated policy permits writes to `club_members`, `stripe_events`, or operator-only lifecycle actions.
 
-RLS remains authoritative even though the application routes mutations through Server Actions or route handlers. Direct Supabase API requests must be constrained by the same tenant, lifecycle, role, and tier rules.
+RLS remains authoritative even though the application routes mutations through Server Actions or route handlers. Direct Supabase API requests must be constrained by the same tenant, lifecycle, role, session-freshness, and customer paid-access rules.
 
 Database triggers write audit events for successful mutations, including direct API mutations.
 
@@ -313,6 +296,8 @@ type ClubContext = {
   primaryDomain: string;
   lifecycle: "onboarding" | "active" | "archived";
   publicAccess: "preview" | "live" | "grace" | "suspended";
+  kind: "customer" | "demo" | "test";
+  stripePriceId: string | null;
   tier: "starter" | "pro";
   role: "owner" | "admin" | null;
 };
@@ -399,7 +384,7 @@ For every mutation:
    action.
 4. Verify active membership and required role.
 5. Verify club lifecycle.
-6. Verify feature entitlement.
+6. Verify the club's runtime content access.
 7. Validate the payload with Zod.
 8. Execute using the user-scoped Supabase session.
 9. Return structured success or error state.
@@ -434,13 +419,11 @@ Stripe is the billing source of truth; Supabase stores a local projection for fa
 
 - Checkout creates only the first subscription.
 - Existing subscribers are sent to Customer Portal.
-- Owners may update payment methods, view invoices, change Starter/Pro, and cancel.
+- Owners may update payment methods and view invoices.
 - Admins cannot access billing.
-- Checkout offers only the configured standard Starter and Pro Price IDs.
-- Existing subscriptions may use explicitly configured grandfathered Pro Price
-  IDs. Those aliases map to Pro during canonical webhook reconciliation but
-  are never offered to new Checkout sessions.
-- Client-provided price IDs or tiers are never trusted.
+- Checkout reads only the resolved customer club's `clubs.stripe_price_id`.
+- Portal cancellation and subscription changes are disabled.
+- Client-provided Price IDs and legacy tiers are never accepted.
 
 Attach the following metadata to Customers, Checkout Sessions, and Subscriptions:
 
@@ -456,31 +439,34 @@ onzio_environment
 - Record each event ID before applying state.
 - Reject duplicate and stale events.
 - Reject events for another environment.
-- Reject unknown prices.
+- Record the canonical Stripe-reported Price even when it differs from intent;
+  reconciliation reports the divergence without rejecting the webhook.
 - Verify the Stripe customer and subscription belong to the resolved club.
 - Retrieve canonical Stripe state for create, update, and invoice events.
 - Ignore deletion of an obsolete subscription after a replacement exists.
-- Update subscription state, runtime entitlement, and event ledger transactionally.
+- Update subscription state, runtime access, and event ledger transactionally.
 
 One club may not have multiple active subscriptions.
 
 ### Access behavior
 
 - No subscription: private preview only
-- `active|trialing`: public site live
-- `past_due`: remain live through paid time and Stripe retry handling
-- terminal status before grace ends: public grace
+- `active`: public site live; `trialing` is unsupported and rejected
+- first `past_due`: store `grace_ends_at = paid_through + 20 days`
+- after paid-through and before grace ends: public grace, content writes paused
 - terminal status after grace: public suspended
 - archived club: suspended regardless of billing
 
-Once paid access ends, admin access is restricted to billing. Public suspension begins seven days after paid access ends.
+The daily lifecycle cron emits idempotent day-7/day-17 warning audits, keeps
+reconciliation independently flag-controlled, and moves only overdue customer
+clubs to suspended after day 20. Demo and test clubs never require a
+subscription. A heartbeat reports clean/failure runs and detects silence.
 
 ### Rose City subscription
 
-Rose City’s existing Stripe customer and subscription remain intact.
-Its existing Pro Price may remain grandfathered through the narrow
-`STRIPE_PRICE_IDS_PRO_GRANDFATHERED` allowlist while the standard Pro Price is
-used for new clubs. Unknown or overlapping Price IDs fail closed.
+Rose City’s existing Stripe customer and subscription remain intact. Rose City
+is `kind = 'demo'`, so billing does not gate its content. Its existing Price is
+recorded as a Stripe fact without becoming a global Checkout allowlist.
 
 During migration:
 
@@ -515,8 +501,9 @@ Previously public assets may remain accessible through old URLs or third-party c
 
 ### Upload flow
 
-1. AAL2 admin requests upload authorization.
-2. Server verifies membership, lifecycle, tier, surface, type, and claimed size.
+1. A fresh club-admin session requests upload authorization.
+2. Server verifies membership, lifecycle, runtime content access, surface,
+   type, and claimed size.
 3. Browser uploads directly to the private staging bucket with a short-lived signed authorization.
 4. A Node handler downloads the object.
 5. Inspect the actual file signature; do not trust browser MIME or extension.
@@ -640,8 +627,9 @@ not reuse it.
 
 ### Upload and delivery flow (high level; exact limits are Phase 2 detail)
 
-1. AAL2 admin requests upload authorization for a video field, the same
-   membership/lifecycle/tier/surface checks as the photograph flow.
+1. A fresh club-admin session requests upload authorization for a video field,
+   using the same membership/lifecycle/runtime-access/surface checks as the
+   photograph flow.
 2. The browser or server uploads the source file to Bunny.net Stream via its
    API (not through Supabase Storage staging).
 3. Bunny.net Stream performs standard H.264 encoding (free tier) and
@@ -805,6 +793,9 @@ Gate:
 
 ### Phase 6 — Stripe billing
 
+> Historical delivery record. `PLAT-102` supersedes the tier mapping and
+> seven-day lifecycle design while retaining the secure webhook foundation.
+
 - Add allowlisted tier mapping.
 - Add first-subscription Checkout.
 - Add Customer Portal.
@@ -833,7 +824,7 @@ Exercise:
 - uploads and image processing
 - Checkout and Portal
 - webhook retry/order behavior
-- tier changes
+- per-club Price intent and customer/demo/test behavior
 - suspension
 - archive/reactivation
 - rollback
@@ -969,7 +960,8 @@ Gate:
 - Alpha cannot insert, update, delete, upload, or reference Bravo records.
 - Composite foreign keys reject cross-club relationships.
 - Forged club IDs, hosts, origins, headers, paths, and return URLs fail closed.
-- Anonymous users see only live tier-enabled content.
+- Anonymous users see only content for clubs whose projected public access is
+  live or within the approved public grace window.
 - Preview, suspended, and archived clubs do not render publicly.
 - AAL1 club sessions may access only their tenant-scoped authorized admin
   surfaces; stale sessions and nonmembers fail closed.
@@ -981,7 +973,8 @@ Gate:
 - Auth-email rate limits produce a safe retry response without revealing
   whether an arbitrary address exists.
 - Admins cannot access billing.
-- Starter users cannot mutate Pro-only features.
+- Active club members can mutate tenant-scoped content without tier gates;
+  customer clubs still require current paid access.
 - Direct Supabase requests remain constrained by RLS and database constraints.
 - Audit records are immutable and contain no secrets.
 
@@ -989,16 +982,18 @@ Gate:
 
 - valid first Checkout
 - existing customer Portal flow
-- plan upgrade and downgrade
+- client-supplied Price or tier input is rejected
+- configured per-club Price intent is used for first Checkout
 - cancel at period end
 - `past_due` retry period
-- seven-day grace
+- twenty-day grace after paid access ends
 - terminal suspension
 - duplicate webhook
 - stale/out-of-order webhook
 - environment mismatch
 - customer mismatch
-- unknown price
+- arbitrary canonical webhook Price is retained as Stripe fact while the
+  configured club Price intent remains unchanged
 - obsolete subscription deletion
 - transaction rollback
 - Rose City subscription reconciliation without changing its subscription ID

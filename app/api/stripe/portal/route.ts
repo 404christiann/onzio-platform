@@ -3,6 +3,7 @@ import { requireBillingRouteAuthorization } from "@/lib/billing-route-auth";
 import { ContractError } from "@/lib/contract-error";
 import { getStripeClient } from "@/lib/stripe-client";
 import {
+  getStripePortalConfigurationId,
   getStripeRuntimeConfig,
   verifiedClubOrigin,
 } from "@/lib/stripe-config";
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
 
     const session = await getStripeClient().billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
+      configuration: getStripePortalConfigurationId(),
       return_url: `${verifiedClubOrigin(club.primaryDomain)}/admin/payments`,
     });
     return NextResponse.redirect(session.url, 303);

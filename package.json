@@ -39,9 +39,10 @@
     "operator:enroll-totp": "tsx scripts/enroll-operator-totp.ts",
     "operator:verify-staging-auth": "tsx scripts/verify-operator-staging-auth.ts",
     "operator:smoke": "tsx scripts/smoke-operator-workflows.ts",
-    "staging:verify:lifecycle": "tsx scripts/verify-phase-7-lifecycle.ts",
+    "staging:verify:phase-7:lifecycle:legacy": "tsx scripts/verify-phase-7-lifecycle.ts",
     "staging:verify:media": "tsx scripts/verify-phase-7-media.ts",
-    "staging:verify:stripe": "tsx scripts/verify-phase-7-stripe-webhook.ts",
+    "staging:verify:phase-7:stripe:legacy": "tsx scripts/verify-phase-7-stripe-webhook.ts",
+    "staging:backfill:plat-102": "tsx scripts/backfill-plat-102-staging.ts",
     "test:watch": "vitest"
   },
   "dependencies": {

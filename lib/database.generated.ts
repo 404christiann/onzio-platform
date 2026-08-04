@@ -397,12 +397,14 @@ export type Database = {
           archived_at: string | null
           created_at: string
           id: string
+          kind: string
           lifecycle: string
           name: string
           primary_color: string | null
           public_access: string
           secondary_color: string | null
           slug: string
+          stripe_price_id: string | null
           tier: string
           updated_at: string
         }
@@ -410,12 +412,14 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           id?: string
+          kind?: string
           lifecycle?: string
           name: string
           primary_color?: string | null
           public_access?: string
           secondary_color?: string | null
           slug: string
+          stripe_price_id?: string | null
           tier?: string
           updated_at?: string
         }
@@ -423,12 +427,14 @@ export type Database = {
           archived_at?: string | null
           created_at?: string
           id?: string
+          kind?: string
           lifecycle?: string
           name?: string
           primary_color?: string | null
           public_access?: string
           secondary_color?: string | null
           slug?: string
+          stripe_price_id?: string | null
           tier?: string
           updated_at?: string
         }
@@ -510,6 +516,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_delivery_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload_digest: string
+          provider_email_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload_digest: string
+          provider_email_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload_digest?: string
+          provider_email_id?: string
+        }
+        Relationships: []
       }
       goalkeeper_match_stats: {
         Row: {
@@ -2207,7 +2240,6 @@ export type Database = {
           p_status: string
           p_stripe_created_at: string
           p_subscription_id: string
-          p_tier: string
         }
         Returns: Json
       }
@@ -2232,6 +2264,14 @@ export type Database = {
           public_access: string
           slug: string
         }[]
+      }
+      run_billing_lifecycle: {
+        Args: {
+          p_now: string
+          p_reconciliation_enabled: boolean
+          p_suspension_enabled: boolean
+        }
+        Returns: Json
       }
     }
     Enums: {

@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { clubHasFeature } from "@/lib/club-features";
 
 type AdminNavItem = {
   label: string;
@@ -239,7 +238,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const navItems = NAV_ITEMS.filter(
     (item) =>
-      (!item.feature || clubHasFeature(club.tier, item.feature)) &&
       (!item.ownerOnly || club.role === "owner") &&
       (item.href !== "/admin/payments" || isBillingAdmin),
   );
@@ -390,6 +388,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
 
         <main className="flex-1 overflow-auto p-6 lg:p-8">
+          {club.kind === "customer" &&
+            (club.publicAccess === "grace" || club.publicAccess === "suspended") && (
+              <div className="mx-auto mb-6 max-w-7xl rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 font-body text-sm text-amber-100">
+                Billing needs attention. Content changes are paused;{" "}
+                <Link href="/admin/payments" className="font-bold underline">
+                  review payment details
+                </Link>
+                .
+              </div>
+            )}
           {children}
         </main>
       </div>

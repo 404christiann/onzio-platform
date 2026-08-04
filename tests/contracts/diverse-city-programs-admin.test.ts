@@ -174,11 +174,11 @@ describe("DCFC-301 protected Programs admin surface", () => {
     "utf8",
   );
 
-  it("registers Programs navigation and enforces the Pro entitlement before loading", () => {
+  it("registers Programs navigation without a tier gate", () => {
     expect(shellSource).toContain('label: "Programs"');
     expect(shellSource).toContain('href: "/admin/programs"');
-    expect(pageSource).toContain('clubHasFeature(club.tier, "programs")');
-    expect(pageSource).toContain("Programs requires Pro");
+    expect(pageSource).not.toContain("clubHasFeature");
+    expect(pageSource).not.toContain("requires Pro");
   });
 
   it("uses only the server-mediated admin client for tenant-scoped program persistence", () => {

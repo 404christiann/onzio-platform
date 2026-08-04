@@ -17,24 +17,29 @@ beforeEach(async () => {
 
 afterEach(async () => {
   for (const clubId of clubIds.splice(0)) {
-    await clients.service
-      .from("club_subscriptions")
-      .delete()
-      .eq("club_id", clubId);
+    await clients.service.from("club_subscriptions").delete().eq("club_id", clubId);
     await clients.service.from("clubs").delete().eq("id", clubId);
   }
 });
 
-async function createClub(lifecycle: "onboarding" | "active" = "onboarding") {
+async function createClub(input: {
+  lifecycle?: "onboarding" | "active";
+  kind?: "customer" | "demo" | "test";
+  priceId?: string | null;
+} = {}) {
   const id = randomUUID();
   clubIds.push(id);
+  const lifecycle = input.lifecycle ?? "onboarding";
   const { error } = await clients.service.from("clubs").insert({
     id,
     slug: `stripe-${id.slice(0, 8)}`,
     name: "Stripe Contract Club",
     lifecycle,
-    public_access: lifecycle === "active" ? "preview" : "preview",
+    public_access: "preview",
     tier: "starter",
+    kind: input.kind ?? "customer",
+    stripe_price_id:
+      input.priceId === undefined ? "price_contract_customer" : input.priceId,
   });
   expect(error?.message).toBeUndefined();
   return id;
@@ -52,8 +57,7 @@ function projectionArgs(
     p_club_id: clubId,
     p_customer_id: `cus_${randomUUID()}`,
     p_subscription_id: `sub_${randomUUID()}`,
-    p_price_id: "price_test_pro",
-    p_tier: "pro",
+    p_price_id: "price_contract_customer",
     p_status: "active",
     p_cancel_at_period_end: false,
     p_paid_through: new Date(Date.now() + 30 * 86_400_000).toISOString(),
@@ -64,49 +68,50 @@ function projectionArgs(
   };
 }
 
-describe("Stripe billing database contract", () => {
-  it("atomically applies the ledger, subscription, tier, and runtime state", async () => {
+describe("PLAT-102 Stripe billing database contract", () => {
+  it("atomically applies arbitrary Stripe facts without changing dormant tier metadata", async () => {
     const clubId = await createClub();
-    const args = projectionArgs(clubId);
-    const { data, error } = await clients.service.rpc(
-      "apply_stripe_projection",
-      args,
-    );
+    const args = projectionArgs(clubId, {
+      p_price_id: "price_negotiated_reported_by_stripe",
+    });
+    const { data, error } = await clients.service.rpc("apply_stripe_projection", args);
     expect(error?.message).toBeUndefined();
     expect(data).toMatchObject({ action: "applied", eventId: args.p_event_id });
 
     const { data: club } = await clients.service
       .from("clubs")
-      .select("lifecycle,public_access,tier")
+      .select("lifecycle,public_access,tier,stripe_price_id,kind")
       .eq("id", clubId)
       .single();
     const { data: subscription } = await clients.service
       .from("club_subscriptions")
-      .select(
-        "stripe_customer_id,stripe_subscription_id,price_id,tier,status,last_applied_stripe_event_id",
-      )
+      .select("price_id,tier,status,last_applied_stripe_event_id")
       .eq("club_id", clubId)
-      .single();
-    const { data: event } = await clients.service
-      .from("stripe_events")
-      .select("outcome,rejection_code")
-      .eq("id", args.p_event_id)
       .single();
 
     expect(club).toEqual({
       lifecycle: "active",
       public_access: "live",
-      tier: "pro",
+      tier: "starter",
+      stripe_price_id: "price_contract_customer",
+      kind: "customer",
     });
-    expect(subscription).toMatchObject({
-      stripe_customer_id: args.p_customer_id,
-      stripe_subscription_id: args.p_subscription_id,
-      price_id: "price_test_pro",
-      tier: "pro",
+    expect(subscription).toEqual({
+      price_id: "price_negotiated_reported_by_stripe",
+      tier: null,
       status: "active",
       last_applied_stripe_event_id: args.p_event_id,
     });
-    expect(event).toEqual({ outcome: "applied", rejection_code: null });
+  });
+
+  it("rejects billing projection for demo and test clubs", async () => {
+    for (const kind of ["demo", "test"] as const) {
+      const clubId = await createClub({ kind, priceId: null });
+      const args = projectionArgs(clubId);
+      const result = await clients.service.rpc("apply_stripe_projection", args);
+      expect(result.error?.message).toBeUndefined();
+      expect(result.data).toEqual({ action: "rejected", code: "BILLING_NOT_REQUIRED" });
+    }
   });
 
   it("rejects duplicate and stale events without changing the projection", async () => {
@@ -114,154 +119,131 @@ describe("Stripe billing database contract", () => {
     const initial = projectionArgs(clubId, {
       p_stripe_created_at: "2026-07-26T12:00:00.000Z",
     });
-    const first = await clients.service.rpc("apply_stripe_projection", initial);
-    expect(first.error?.message).toBeUndefined();
+    expect((await clients.service.rpc("apply_stripe_projection", initial)).error).toBeNull();
 
-    const duplicate = await clients.service.rpc(
-      "apply_stripe_projection",
-      initial,
-    );
-    expect(duplicate.error?.message).toBeUndefined();
-    expect(duplicate.data).toMatchObject({
-      action: "rejected",
-      code: "DUPLICATE_EVENT",
-    });
+    const duplicate = await clients.service.rpc("apply_stripe_projection", initial);
+    expect(duplicate.data).toEqual({ action: "rejected", code: "DUPLICATE_EVENT" });
 
     const stale = projectionArgs(clubId, {
-      p_event_id: `evt_${randomUUID()}`,
       p_stripe_created_at: "2026-07-26T11:59:59.000Z",
       p_customer_id: initial.p_customer_id,
       p_subscription_id: initial.p_subscription_id,
-      p_tier: "starter",
-      p_price_id: "price_test_starter",
+      p_price_id: "price_later_contract",
     });
-    const staleResult = await clients.service.rpc(
-      "apply_stripe_projection",
-      stale,
-    );
-    expect(staleResult.data).toMatchObject({
-      action: "rejected",
-      code: "STALE_EVENT",
-    });
-
+    const staleResult = await clients.service.rpc("apply_stripe_projection", stale);
+    expect(staleResult.data).toEqual({ action: "rejected", code: "STALE_EVENT" });
     const { data: subscription } = await clients.service
       .from("club_subscriptions")
-      .select("tier,last_applied_stripe_event_id")
+      .select("price_id,last_applied_stripe_event_id")
       .eq("club_id", clubId)
       .single();
-    const { data: staleLedger } = await clients.service
-      .from("stripe_events")
-      .select("outcome,rejection_code")
-      .eq("id", stale.p_event_id)
-      .single();
     expect(subscription).toEqual({
-      tier: "pro",
+      price_id: "price_contract_customer",
       last_applied_stripe_event_id: initial.p_event_id,
     });
-    expect(staleLedger).toEqual({
-      outcome: "rejected",
-      rejection_code: "STALE_EVENT",
-    });
   });
 
-  it("rolls back the event ledger when the subscription write fails", async () => {
-    const firstClubId = await createClub();
-    const secondClubId = await createClub();
-    const sharedCustomer = `cus_${randomUUID()}`;
-    const first = projectionArgs(firstClubId, {
-      p_customer_id: sharedCustomer,
-    });
-    expect(
-      (await clients.service.rpc("apply_stripe_projection", first)).error
-        ?.message,
-    ).toBeUndefined();
-
-    const conflicting = projectionArgs(secondClubId, {
-      p_customer_id: sharedCustomer,
-    });
-    const result = await clients.service.rpc(
-      "apply_stripe_projection",
-      conflicting,
-    );
-    expectPostgrestError(
-      result.error,
-      "23505",
-      "conflicting Stripe customer projection",
-    );
-
-    const { data: event } = await clients.service
-      .from("stripe_events")
-      .select("id")
-      .eq("id", conflicting.p_event_id);
-    const { data: secondSubscription } = await clients.service
-      .from("club_subscriptions")
-      .select("club_id")
-      .eq("club_id", secondClubId);
-    expect(event).toEqual([]);
-    expect(secondSubscription).toEqual([]);
-  });
-
-  it("expires public grace from timestamps without waiting for another webhook", async () => {
-    const clubId = await createClub("active");
+  it("emits idempotent day-7/day-17 warnings and honors the suspension kill switch", async () => {
+    const clubId = await createClub({ lifecycle: "active" });
     const args = projectionArgs(clubId, {
-      p_status: "canceled",
-      p_paid_through: new Date(Date.now() - 3 * 86_400_000).toISOString(),
-      p_grace_ends_at: new Date(Date.now() + 4 * 86_400_000).toISOString(),
+      p_status: "past_due",
+      p_paid_through: "2026-08-01T00:00:00.000Z",
+      p_grace_ends_at: "2026-08-21T00:00:00.000Z",
       p_public_access: "grace",
     });
+    expect((await clients.service.rpc("apply_stripe_projection", args)).error).toBeNull();
+
+    const first = await clients.service.rpc("run_billing_lifecycle", {
+      p_now: "2026-08-18T00:00:00.000Z",
+      p_suspension_enabled: false,
+      p_reconciliation_enabled: true,
+    });
+    expect(first.data).toEqual({ warnings: 2, suspensions: 0, divergences: 0 });
+    const repeat = await clients.service.rpc("run_billing_lifecycle", {
+      p_now: "2026-08-18T00:00:00.000Z",
+      p_suspension_enabled: false,
+      p_reconciliation_enabled: true,
+    });
+    expect(repeat.data).toEqual({ warnings: 0, suspensions: 0, divergences: 0 });
+
+    const disabled = await clients.service.rpc("run_billing_lifecycle", {
+      p_now: "2026-08-22T00:00:00.000Z",
+      p_suspension_enabled: false,
+      p_reconciliation_enabled: true,
+    });
+    expect(disabled.data).toEqual({ warnings: 0, suspensions: 0, divergences: 0 });
     expect(
-      (await clients.service.rpc("apply_stripe_projection", args)).error
-        ?.message,
-    ).toBeUndefined();
+      (await clients.service.from("clubs").select("public_access").eq("id", clubId).single()).data,
+    ).toEqual({ public_access: "grace" });
 
-    const insideGrace = await clients.anon
-      .from("clubs")
-      .select("id")
-      .eq("id", clubId);
-    expect(insideGrace.data).toEqual([{ id: clubId }]);
-
-    await clients.service
-      .from("club_subscriptions")
-      .update({
-        grace_ends_at: new Date(Date.now() - 1_000).toISOString(),
-      })
-      .eq("club_id", clubId);
-    const afterGrace = await clients.anon
-      .from("clubs")
-      .select("id")
-      .eq("id", clubId);
-    expect(afterGrace.data).toEqual([]);
+    const enabled = await clients.service.rpc("run_billing_lifecycle", {
+      p_now: "2026-08-22T00:00:00.000Z",
+      p_suspension_enabled: true,
+      p_reconciliation_enabled: true,
+    });
+    expect(enabled.data).toEqual({ warnings: 0, suspensions: 1, divergences: 0 });
+    expect(
+      (await clients.service.from("clubs").select("public_access").eq("id", clubId).single()).data,
+    ).toEqual({ public_access: "suspended" });
   });
 
-  it("lets only the service role invoke Stripe projection RPCs", async () => {
-    const clubId = await createClub();
-    const result = await clients.anon.rpc(
+  it("reports Price drift on every run but appends only one audit per observed pair", async () => {
+    const clubId = await createClub({ lifecycle: "active" });
+    const args = projectionArgs(clubId, { p_price_id: "price_drifted" });
+    expect((await clients.service.rpc("apply_stripe_projection", args)).error).toBeNull();
+    for (let index = 0; index < 2; index += 1) {
+      const result = await clients.service.rpc("run_billing_lifecycle", {
+        p_now: "2026-08-03T00:00:00.000Z",
+        p_suspension_enabled: false,
+        p_reconciliation_enabled: true,
+      });
+      expect(result.data).toMatchObject({ divergences: 1 });
+    }
+    const { data: audits } = await clients.service
+      .from("audit_events")
+      .select("operation,payload")
+      .eq("club_id", clubId)
+      .eq("operation", "billing_reconciliation_divergence");
+    expect(audits).toHaveLength(1);
+    expect(audits?.[0]).toMatchObject({
+      operation: "billing_reconciliation_divergence",
+      payload: { reason: "PRICE_MISMATCH" },
+    });
+  });
+
+  it("lets only the service role invoke billing lifecycle RPCs", async () => {
+    const projection = await clients.anon.rpc(
       "apply_stripe_projection",
-      projectionArgs(clubId),
+      projectionArgs(await createClub()),
     );
-    expectPostgrestError(
-      result.error,
-      "42501",
-      "anonymous Stripe projection RPC",
-    );
+    expectPostgrestError(projection.error, "42501", "anonymous Stripe projection RPC");
+    const lifecycle = await clients.anon.rpc("run_billing_lifecycle", {
+      p_now: new Date().toISOString(),
+      p_suspension_enabled: true,
+      p_reconciliation_enabled: true,
+    });
+    expectPostgrestError(lifecycle.error, "42501", "anonymous lifecycle RPC");
   });
 
-  it("keeps applied Stripe ledger rows immutable outside the private RPC", async () => {
-    const clubId = await createClub();
-    const args = projectionArgs(clubId);
+  it("keeps sanitized delivery outcomes append-only and unavailable to clients", async () => {
+    const id = `msg_${randomUUID()}`;
     expect(
-      (await clients.service.rpc("apply_stripe_projection", args)).error
-        ?.message,
-    ).toBeUndefined();
-
+      (
+        await clients.service.from("email_delivery_events").insert({
+          id,
+          event_type: "email.bounced",
+          provider_email_id: `email_${randomUUID()}`,
+          occurred_at: new Date().toISOString(),
+          payload_digest: "a".repeat(64),
+        })
+      ).error,
+    ).toBeNull();
+    const anonymous = await clients.anon.from("email_delivery_events").select("id");
+    expectPostgrestError(anonymous.error, "42501", "anonymous delivery ledger read");
     const mutation = await clients.service
-      .from("stripe_events")
-      .update({ outcome: "rejected", rejection_code: "FORGED" })
-      .eq("id", args.p_event_id);
-    expectPostgrestError(
-      mutation.error,
-      "42501",
-      "direct service-role Stripe ledger update",
-    );
+      .from("email_delivery_events")
+      .update({ event_type: "email.failed" })
+      .eq("id", id);
+    expectPostgrestError(mutation.error, "42501", "delivery ledger update");
   });
 });

@@ -38,10 +38,13 @@ ONZIO_OPERATOR_USER_IDS
 ONZIO_ENVIRONMENT
 ADMIN_ALLOWED_EMAILS
 STRIPE_SECRET_KEY
-STRIPE_PRICE_ID_STARTER
-STRIPE_PRICE_ID_PRO
-STRIPE_PRICE_IDS_PRO_GRANDFATHERED
 STRIPE_WEBHOOK_SECRET
+STRIPE_PORTAL_CONFIGURATION_ID
+CRON_SECRET
+LIFECYCLE_SUSPENSION_ENABLED
+LIFECYCLE_RECONCILIATION_ENABLED
+LIFECYCLE_CRON_HEARTBEAT_URL
+RESEND_WEBHOOK_SECRET
 FORCE_PUBLIC_SITE_ONLINE
 ```
 
@@ -50,11 +53,13 @@ session, and an active owner membership. Email allowlists are legacy
 compatibility source and are not authoritative for Onzio billing.
 
 `ONZIO_ENVIRONMENT=staging` requires Stripe test mode. Production requires
-Stripe live mode. Configure distinct Starter and Pro recurring Price IDs for
-each environment. `STRIPE_PRICE_IDS_PRO_GRANDFATHERED` is an optional
-comma-separated allowlist for existing Pro subscriptions only. Checkout never
-uses those aliases, and they must not overlap the standard Starter or Pro
-Price.
+Stripe live mode. PLAT-102 stores the operator-approved Checkout Price on each
+customer club as `clubs.stripe_price_id`; no tier Price environment variables
+are accepted. The Portal configuration must enable payment-method updates and
+invoice history while disabling subscription cancellation and plan updates.
+Lifecycle suspension and reconciliation flags must each be the exact string
+`true` or `false`. `RESEND_WEBHOOK_SECRET` is needed only when the local
+receiver is separately authorized and configured with Resend.
 
 For local hostname routing, use `alpha.localhost:3000` or another verified
 seeded subdomain. Bare `localhost` is rejected unless development explicitly

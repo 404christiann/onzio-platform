@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  getStripePortalConfigurationId,
   getStripeRuntimeConfig,
   verifiedClubOrigin,
 } from "@/lib/stripe-config";
@@ -14,9 +15,7 @@ function configureEnvironment(
 ) {
   vi.stubEnv("ONZIO_ENVIRONMENT", environment);
   vi.stubEnv("STRIPE_SECRET_KEY", secretKey);
-  vi.stubEnv("STRIPE_PRICE_ID_STARTER", "price_starter");
-  vi.stubEnv("STRIPE_PRICE_ID_PRO", "price_pro");
-  vi.stubEnv("STRIPE_PRICE_IDS_PRO_GRANDFATHERED", "");
+  vi.stubEnv("STRIPE_PORTAL_CONFIGURATION_ID", "bpc_contract");
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
 }
 
@@ -26,9 +25,8 @@ describe("Stripe runtime configuration", () => {
     expect(getStripeRuntimeConfig()).toMatchObject({
       environment: "staging",
       ledgerEnvironment: "test",
-      starterPriceId: "price_starter",
-      proPriceId: "price_pro",
     });
+    expect(getStripePortalConfigurationId()).toBe("bpc_contract");
   });
 
   it.each([
@@ -51,34 +49,27 @@ describe("Stripe runtime configuration", () => {
     );
   });
 
-  it("parses a narrow grandfathered Pro Price allowlist", () => {
+  it("ignores retired tier Price environment variables", () => {
     configureEnvironment("production", "sk_live_safe");
-    vi.stubEnv(
-      "STRIPE_PRICE_IDS_PRO_GRANDFATHERED",
-      "price_rose_city_legacy, price_second_legacy",
-    );
+    vi.stubEnv("STRIPE_PRICE_ID_STARTER", "price_retired_starter");
+    vi.stubEnv("STRIPE_PRICE_ID_PRO", "price_retired_pro");
 
-    expect(getStripeRuntimeConfig()).toMatchObject({
-      starterPriceId: "price_starter",
-      proPriceId: "price_pro",
-      grandfatheredProPriceIds: [
-        "price_rose_city_legacy",
-        "price_second_legacy",
-      ],
-    });
+    const config = getStripeRuntimeConfig() as Record<string, unknown>;
+    expect(config).not.toHaveProperty("starterPriceId");
+    expect(config).not.toHaveProperty("proPriceId");
+    expect(config).not.toHaveProperty("grandfatheredProPriceIds");
   });
 
-  it("rejects malformed grandfathered Price configuration", () => {
-    configureEnvironment("production", "sk_live_safe");
-    vi.stubEnv(
-      "STRIPE_PRICE_IDS_PRO_GRANDFATHERED",
-      "price_rose_city_legacy,not_a_price",
-    );
+  it("keeps webhook configuration independent from the Portal", () => {
+    configureEnvironment("staging", "sk_test_safe");
+    vi.stubEnv("STRIPE_PORTAL_CONFIGURATION_ID", "");
 
-    expect(() => getStripeRuntimeConfig()).toThrowError(
-      expect.objectContaining({
-        code: "STRIPE_PRICE_CONFIGURATION_INVALID",
-      }),
+    expect(getStripeRuntimeConfig()).toMatchObject({
+      environment: "staging",
+      webhookSecret: "whsec_test",
+    });
+    expect(() => getStripePortalConfigurationId()).toThrowError(
+      expect.objectContaining({ code: "STRIPE_CONFIGURATION_MISSING" }),
     );
   });
 

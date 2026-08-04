@@ -1,5 +1,4 @@
 import { failContract } from "@/lib/contract-error";
-import { parseGrandfatheredProPriceIds } from "@/lib/stripe-tiers";
 
 export type OnzioEnvironment = "staging" | "production";
 
@@ -40,13 +39,12 @@ export function getStripeRuntimeConfig() {
   return {
     environment,
     ledgerEnvironment: environment === "production" ? "production" : "test",
-    starterPriceId: required("STRIPE_PRICE_ID_STARTER"),
-    proPriceId: required("STRIPE_PRICE_ID_PRO"),
-    grandfatheredProPriceIds: parseGrandfatheredProPriceIds(
-      process.env.STRIPE_PRICE_IDS_PRO_GRANDFATHERED,
-    ),
     webhookSecret: required("STRIPE_WEBHOOK_SECRET"),
   } as const;
+}
+
+export function getStripePortalConfigurationId(): string {
+  return required("STRIPE_PORTAL_CONFIGURATION_ID");
 }
 
 export function verifiedClubOrigin(primaryDomain: string): string {

@@ -23,10 +23,9 @@ const NEW_TABLES = [
   "tryouts",
 ] as const;
 
-// Starter-accessible per DCFC-D108.
+// Retained domain grouping; PLAT-102 removes authorization meaning from tier.
 const CONTACT_TABLES = ["contact_profile", "contact_page_content"] as const;
-// Pro-only per DCFC-D108.
-const PRO_ONLY_TABLES = ["programs", "tryouts"] as const;
+const FORMERLY_PRO_ONLY_TABLES = ["programs", "tryouts"] as const;
 
 // PostgREST returns PGRST205 when a table is absent from the schema cache.
 // Several assertions below are about a request being *rejected*, and a missing
@@ -120,12 +119,11 @@ describe("Diverse City domain schema (DCFC-202 target)", () => {
   });
 });
 
-describe("Diverse City domain tier gating (DCFC-D108)", () => {
-  // Charlie is the only seeded club that is Starter AND active AND publicly
-  // live. can_read_club rejects Bravo before tier is consulted, so Charlie is
-  // the only fixture that can prove anonymous Starter-tier read behavior.
+describe("Diverse City domain tier-free reads (PLAT-D018)", () => {
+  // Charlie is the seeded live fixture with legacy Starter metadata. PLAT-102
+  // proves that metadata no longer changes public read authorization.
   it.each(CONTACT_TABLES)(
-    "allows an anonymous read of onzio.%s for a Starter club",
+    "allows an anonymous read of onzio.%s for a live club with Starter metadata",
     async (table) => {
       const { data: existing, error: existingError } = await clients.service
         .from(table)
@@ -155,8 +153,7 @@ describe("Diverse City domain tier gating (DCFC-D108)", () => {
           .eq("club_id", CLUB_IDS.charlie);
         expect(
           error?.message,
-          "Contact is Starter-accessible; can_read_feature gates anonymous " +
-            "public reads, so a Starter club's contact page must not render empty",
+          "can_read_feature must delegate to live club access and ignore tier",
         ).toBeUndefined();
         expect(data).toEqual([{ club_id: CLUB_IDS.charlie }]);
       } finally {
@@ -171,8 +168,8 @@ describe("Diverse City domain tier gating (DCFC-D108)", () => {
     },
   );
 
-  it.each(PRO_ONLY_TABLES)(
-    "returns no rows of onzio.%s to an anonymous reader of a Starter club",
+  it.each(FORMERLY_PRO_ONLY_TABLES)(
+    "returns onzio.%s rows to a live club regardless of dormant tier",
     async (table) => {
       await clients.service.from(table).insert(
         table === "programs"
@@ -189,16 +186,13 @@ describe("Diverse City domain tier gating (DCFC-D108)", () => {
         .select("club_id")
         .eq("club_id", CLUB_IDS.charlie);
       expectTablePresent(error, table);
-      expect(
-        data ?? [],
-        `${table} is Pro-only, so a Starter club must expose no rows publicly`,
-      ).toEqual([]);
+      expect(data).toEqual([{ club_id: CLUB_IDS.charlie }]);
 
       await clients.service.from(table).delete().eq("club_id", CLUB_IDS.charlie);
     },
   );
 
-  it("exposes Pro-only rows to an anonymous reader of a Pro club", async () => {
+  it("continues exposing rows for a live club with legacy Pro metadata", async () => {
     await clients.service.from("programs").insert({
       club_id: CLUB_IDS.alpha,
       slug: "dcfc-201-pro-probe",
@@ -212,7 +206,7 @@ describe("Diverse City domain tier gating (DCFC-D108)", () => {
     expect(error?.message).toBeUndefined();
     expect(
       (data ?? []).length,
-      "a Pro club's programs must be publicly readable",
+      "a live club's programs must be publicly readable",
     ).toBeGreaterThan(0);
 
     await clients.service

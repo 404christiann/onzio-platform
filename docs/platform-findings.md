@@ -6,9 +6,9 @@ This file tracks known platform-wide issues that have been **identified and
 verified but not fixed**. It exists so findings discovered during scoped
 epic work are not lost when that epic closes.
 
-As of 2026-08-01, `PF-001`, `PF-003`, `PF-005`, `PF-006`, and `PF-007` are
-resolved. Two findings remain open — `PF-002` and `PF-004` — both latent or
-documentary. None affects a live site.
+As of 2026-08-03, `PF-001`, `PF-002`, `PF-003`, `PF-005`, `PF-006`, and
+`PF-007` are resolved. Only `PF-004` remains open; it is documentary and does
+not affect a live site.
 
 Rules for this file:
 
@@ -179,6 +179,16 @@ should be scoped per-branch rather than taken as one commitment.
 - **Owner:** unassigned.
 
 ### PF-002 — Five parallel entitlement sources of truth, two of which contradict
+
+> **RESOLVED 2026-08-03 in `PLAT-102`.**
+> `20260804024349_plat_102_billing_entitlement.sql` deletes
+> `onzio_private.club_has_feature` and collapses the two policy wrappers to
+> `can_read_club` / `can_mutate_content` without policy churn. The application
+> tier gate and Stripe tier mapper were deleted; Storage policies inherit the
+> collapsed wrappers; `ADMIN_TABLE_FEATURES` remains validation metadata; and
+> presentation entitlement labels are explicitly non-authorizing. Contract and
+> real local database coverage prove a live club with dormant Starter metadata
+> can read/write Programs, Tryouts, Shop, Contact, and their staging surfaces.
 
 - **Severity:** latent bug with a specific trigger. Nothing currently breaks
   (see trigger condition), but it will misbehave for the first affected

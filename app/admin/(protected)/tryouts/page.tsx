@@ -5,7 +5,6 @@ import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
-import { clubHasFeature } from "@/lib/club-features";
 import type { DBProgram, DBTryout } from "@/lib/db-types";
 import {
   buildTryoutMutationPayload,
@@ -38,12 +37,11 @@ function FieldError({ message }: { message?: string }) {
 
 export default function AdminTryoutsPage() {
   const club = useClubContext();
-  const entitled = clubHasFeature(club.tier, "tryouts");
   const heroInput = useRef<HTMLInputElement>(null);
   const [tryouts, setTryouts] = useState<TryoutDraft[]>([]);
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
   const [draft, setDraft] = useState<TryoutDraft | null>(null);
-  const [loading, setLoading] = useState(entitled);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -83,12 +81,8 @@ export default function AdminTryoutsPage() {
   }, []);
 
   useEffect(() => {
-    if (!entitled) {
-      setLoading(false);
-      return;
-    }
     void loadTryouts();
-  }, [club.id, entitled, loadTryouts]);
+  }, [club.id, loadTryouts]);
 
   useEffect(() => {
     if (!saved) return;
@@ -243,23 +237,6 @@ export default function AdminTryoutsPage() {
       setError(errorMessage(reorderError, "Unable to reorder tryout events"));
       await loadTryouts(draft?.id);
     }
-  }
-
-  if (!entitled) {
-    return (
-      <section className="mx-auto max-w-3xl rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-8">
-        <p className="font-display text-xs font-bold uppercase tracking-[0.2em] text-amber-200/70">
-          Pro capability
-        </p>
-        <h1 className="mt-3 font-display text-3xl font-black uppercase text-white">
-          Tryouts requires Pro
-        </h1>
-        <p className="mt-3 max-w-xl font-body text-sm leading-6 text-white/55">
-          This club’s current tier does not include the Tryouts content domain.
-          No tryout content was loaded or changed.
-        </p>
-      </section>
-    );
   }
 
   return (

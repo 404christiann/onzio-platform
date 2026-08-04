@@ -10,7 +10,42 @@ Rollout epic status: `phase_5_complete`
 
 Last updated: 2026-08-03
 
-Current assignment: `PLAT-101`, approved by Christian on 2026-08-03 for exact
+Current assignment: `PLAT-102`, approved by Christian on 2026-08-03 for exact
+Supabase staging project `fxefqnoqxbezeccjvrsw`, protected Vercel Preview
+project `prj_I362ysmh9cse5cRxnL7db4dOhsEs`, and the existing Stripe test-mode
+account only. Local implementation and verification are complete: tier-based
+authorization and Stripe mapping are deleted; `clubs.kind` and
+`clubs.stripe_price_id` are added; Checkout, webhook projection, Portal,
+20-day lifecycle warnings/suspension, independent reconciliation, lifecycle
+heartbeat, and local signed/sanitized Resend delivery monitoring are covered.
+Verification passed: clean local reset; PLAT-102 DB 7/7; all DB 82/82;
+contracts 325/325; architecture 20/20; full suite 658/658 across 75 files;
+TypeScript, generated DB types, schema lint, production build, lint, and diff
+check. The primary staging migration and revised three-club backfill are now
+applied and reconciled as detailed below. No push, deploy, Stripe API mutation,
+Resend configuration, production, live Stripe, Auth, DNS, Storage,
+public-access, or tenant-content mutation has occurred. The staging database
+gate, including search-path hardening, is complete. `PLAT-102` remains
+`in_progress` until commit, push/deploy, and hosted acceptance complete.
+The first approved staging release attempt stopped before mutation: a sanitized
+baseline found Alpha, Bravo, and Diverse City but no Rose City row, including
+no fuzzy slug/name match. At that point, the exact PLAT-102 migration was the
+sole pending remote migration and no backfill audit existed, so the attempt
+stopped until Christian explicitly revised the expected set.
+
+Christian then explicitly approved Rose City's absence as a no-op. Migration
+`20260804024349_plat_102_billing_entitlement.sql` is applied to exact staging,
+and one guarded transaction reconciled the three existing clubs: Alpha/Bravo
+`test` with no Price and Diverse City `customer` with the approved test Price.
+Rose City remains absent and uncreated; exactly three sanitized audits exist.
+Post-apply security advice found mutable-search-path warnings on the two new
+service-role RPC wrappers. A narrow local follow-up migration fixes both and
+passes clean reset, 82/82 DB tests, TypeScript, diff check, and local security
+advice. Christian separately approved it; exact staging now has empty pinned
+paths on all four public/private functions, service-role-only exposed grants,
+and no remaining PLAT-102 advisor warning. The backfill stayed at three audits.
+
+Prior assignment: `PLAT-101`, approved by Christian on 2026-08-03 for exact
 Supabase staging project `fxefqnoqxbezeccjvrsw`. Local implementation and
 verification are complete and committed locally as `a797c60` (`Implement
 PLAT-101 passwordless admin access`). The two checked-in PLAT-101 migrations and the
@@ -115,6 +150,7 @@ not satisfy the handoff requirement.
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
 | PLAT-101 | complete | Codex | Local, staging, operator, owner, admin, Yahoo, and unknown-address acceptance complete; AOL and ISP-hosted delivery explicitly waived, not passed | No PLAT-101 work remains. Fresh exact approval is required before PLAT-102, DCFC-601, or DCFC-602. |
+| PLAT-102 | in_progress | Codex | Local implementation plus primary/follow-up staging migrations, revised three-club backfill, and database reconciliation complete; local commit approved | Read the package-boundary SHA from Git, then obtain exact-SHA push/protected Preview approval and run hosted application acceptance; local Resend code is included but hosted Resend configuration remains separately gated. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -162,6 +198,116 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-102 local implementation — Codex
+
+- **Package/status:** `PLAT-102`, `in_progress`; local implementation and all
+  local acceptance gates are complete. The package remains open only for its
+  separately approved staging migration/backfill, push/deployment, and hosted
+  acceptance.
+- **Completed:** replaced tier authorization with tenant/lifecycle/customer
+  paid-access authorization without policy churn; added customer/demo/test
+  kind and per-club Checkout Price intent; made Checkout server-owned and
+  webhook Price projection fact-based; constrained Portal capabilities;
+  implemented the 20-day grace, day-7/day-17 warning audits, independent
+  suspension/reconciliation flags, exception-only drift, daily cron heartbeat,
+  guarded exact staging backfill, and signed/sanitized append-only Resend
+  delivery monitoring. The webhook runtime no longer depends on Portal
+  configuration, and obsolete Phase 7 mutation verifiers are explicitly
+  labeled legacy.
+- **Files changed:** PLAT-102 runtime under `lib/`, Stripe/cron/Resend routes
+  under `app/api/`, billing/admin surfaces, migration
+  `20260804024349_plat_102_billing_entitlement.sql`, generated database types,
+  guarded staging backfill, `vercel.json`, focused contract/database tests,
+  architecture/local-development/Phase 11/Phase 12 documentation, this ledger,
+  and `HANDOFF.md`. Dormant tier helper modules were deleted; no unrelated
+  implementation was intentionally changed.
+- **Verification:** the initial focused PLAT-102 contracts were intentionally
+  red at 13 failures. Final evidence: clean local migration reset; PLAT-102
+  database tests 7/7; complete database tests 82/82; contracts 325/325;
+  architecture 20/20; complete loopback suite 658/658 across 75 files;
+  `npx tsc --noEmit`; generated DB-type drift check; local `onzio` and
+  `onzio_private` schema lint; production build; and `git diff --check` all
+  passed. Lint passed with only three pre-existing Analytics hook dependency
+  warnings. No test was skipped, loosened, deleted, or mocked.
+- **Blockers or decisions needed at this local-only checkpoint:** none locally.
+  This checkpoint is superseded by the later staging record below, including
+  its narrow search-path follow-up gate. Hosted Resend webhook/configuration
+  remains distinct and is not required for the billing release.
+- **Exact next step at this checkpoint:** the original four-club release gate
+  was attempted and stopped safely when Rose City was absent. Christian then
+  revised it to the completed three-club gate recorded below; follow that newer
+  record rather than repeating this historical instruction.
+- **Hosted mutations at this checkpoint:** zero. No hosted database/Auth/Storage, Stripe API,
+  Resend, Vercel, Git remote, DNS, public-access, tenant-content, production,
+  or live-Stripe action occurred. The guarded backfill was created but not run;
+  no commit or push was created. A later approved staging attempt performed
+  only read-only migration-history, four-slug baseline, and bounded Rose City
+  lookup queries; it stopped before applying the migration because Rose City
+  does not exist in staging. The baseline found zero PLAT-102 backfill audits
+  and zero PLAT-102 columns, and the dry run identified only the named migration.
+
+### 2026-08-03 — PLAT-102 staging migration and three-club backfill — Codex
+
+- **Package/status:** `PLAT-102`, `in_progress`; the primary staging schema and
+  backfill are applied, with one narrow security-advisor follow-up still gated.
+- **Completed:** after Christian explicitly accepted Rose City as absent, the
+  guard was revised to require exactly Alpha, Bravo, and Diverse City and to
+  fail if Rose City exists. Applied only migration `20260804024349`; executed
+  one transactional backfill; left Rose City uncreated; and independently
+  reconciled migration history, club kinds/Price intent, RLS, grants, removed
+  tier helper/policy calls, and exactly three sanitized audits.
+- **Files changed:** revised guarded backfill and operations/handoff ledgers;
+  added local follow-up migration
+  `20260804035147_plat_102_function_search_paths.sql` after hosted security
+  advice identified two mutable-path wrapper functions.
+- **Verification:** hosted reconciliation reports Alpha/Bravo `test` with no
+  Price, Diverse City `customer` with only the approved test Price, Rose City
+  count zero, audit count three with only approved payload keys, delivery-ledger
+  RLS enabled, deleted tier helper, zero tier policy calls, lifecycle RPC denied
+  to anon/authenticated and allowed to service role. Local follow-up verification
+  passed clean reset, 82/82 DB tests, TypeScript, diff check, and zero local
+  security-advisor warnings.
+- **Blockers or decisions needed:** the hosted advisor still reports mutable
+  `search_path` on the two new RPC wrappers until the narrow follow-up migration
+  is separately approved. Two unrelated Auth warnings are intentionally
+  unchanged: accepted 24-hour OTP expiry and leaked-password protection in a
+  passwordless system.
+- **Exact next step:** approve only follow-up migration `20260804035147` for
+  staging, then rerun hosted security advice and reconciliation. Do not rerun
+  the backfill. Commit/push/deploy remain separately gated.
+- **Hosted mutations:** exactly one approved migration application, one guarded
+  three-club backfill transaction, and three sanitized audit inserts in Supabase
+  staging `fxefqnoqxbezeccjvrsw`. Zero Rose City creation, Auth, Storage,
+  Stripe, Resend, Vercel, Git remote, DNS, public-access, tenant-content,
+  production, or live-Stripe mutation. No commit or push was created.
+
+### 2026-08-03 — PLAT-102 staging search-path hardening — Codex
+
+- **Package/status:** `PLAT-102`, `in_progress`; staging database gate complete.
+- **Completed:** applied only follow-up migration `20260804035147` to Supabase
+  staging `fxefqnoqxbezeccjvrsw`. It pins empty `search_path` on the two exposed
+  PLAT-102 service-role wrappers. No backfill or other migration reran.
+- **Files changed:** the already locally verified follow-up migration plus
+  `HANDOFF.md`, `PLAT-102-OPERATIONS.md`, and this status ledger.
+- **Verification:** dry run listed only `20260804035147`; remote migration
+  history matches local. Both `onzio` wrappers and both `onzio_private`
+  implementations report `search_path=""`. Exposed Checkout projection and
+  lifecycle RPCs remain denied to anon/authenticated and executable by service
+  role. Hosted security advice no longer reports either PLAT-102 function;
+  exactly three backfill audits remain. The only advisor warnings left are the
+  pre-existing accepted 24-hour Auth OTP expiry and irrelevant leaked-password
+  protection setting, neither changed here.
+- **Blockers or decisions needed:** none for the staging database gate.
+  Christian approved the local PLAT-102 commit; Git push and protected Preview
+  application acceptance remain separately approval-gated.
+- **Exact next step:** the commit containing this record is the PLAT-102 package
+  boundary. Read its SHA from Git and name that exact commit in a separate
+  push/protected Preview approval. Do not rerun the migrations/backfill or
+  begin hosted acceptance before deployment.
+- **Hosted mutations:** exactly one approved follow-up migration application.
+  Zero backfill, audit, club, Auth, Storage, Stripe, Resend, Vercel, Git remote,
+  DNS, public-access, tenant-content, production, or live-Stripe mutation.
 
 ### 2026-08-03 — Five rollout decisions answered; price raised to $75 — Claude Code (Opus 5)
 

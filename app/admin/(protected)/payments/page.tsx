@@ -37,7 +37,7 @@ export default async function PaymentsPage() {
     .schema("onzio")
     .from("club_subscriptions")
     .select(
-      "stripe_customer_id,stripe_subscription_id,status,cancel_at_period_end,paid_through,tier",
+      "stripe_customer_id,stripe_subscription_id,status,cancel_at_period_end,paid_through,grace_ends_at",
     )
     .eq("club_id", club.id)
     .maybeSingle();
@@ -48,6 +48,7 @@ export default async function PaymentsPage() {
         status: subscription.status,
         cancel_at_period_end: subscription.cancel_at_period_end,
         current_period_end: subscription.paid_through,
+        grace_ends_at: subscription.grace_ends_at,
       }
     : null;
   const uiState = resolvePaymentsUiState(mirrorRow);
@@ -56,9 +57,11 @@ export default async function PaymentsPage() {
     uiState.state === "no_subscription"
       ? "Private preview"
       : uiState.state === "active"
-        ? `${subscription?.tier === "pro" ? "Pro" : "Starter"} active`
+        ? "Subscription active"
         : uiState.state === "active_canceling"
           ? `Ends ${formatDate(uiState.periodEndsAt)}`
+          : uiState.state === "grace"
+            ? `Payment overdue — ${uiState.daysRemaining} days remaining`
           : "Subscription ended";
 
   return (
@@ -86,8 +89,8 @@ export default async function PaymentsPage() {
         {uiState.state === "active_canceling" && (
           <p className="mt-3 rounded-lg border border-white/10 bg-black/20 px-4 py-3 font-body text-sm text-white/60">
             Your subscription is scheduled to end on{" "}
-            {formatDate(uiState.periodEndsAt)}. You can keep it active from the
-            Customer Portal.
+            {formatDate(uiState.periodEndsAt)}. Contact Onzio if this should be
+            changed; Portal cancellation is disabled.
           </p>
         )}
 
@@ -102,33 +105,31 @@ export default async function PaymentsPage() {
           </p>
         )}
 
-        {uiState.state === "no_subscription" ? (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {(["starter", "pro"] as const).map((tier) => (
-              <form
-                key={tier}
-                action="/api/stripe/checkout"
-                method="POST"
-                className="rounded-xl border border-white/10 bg-black/20 p-5"
-              >
-                <input type="hidden" name="tier" value={tier} />
-                <p className="font-display text-xl font-black uppercase text-white">
-                  {tier}
-                </p>
-                <p className="mt-2 min-h-10 font-body text-sm text-white/45">
-                  {tier === "starter"
-                    ? "Core club identity, roster, schedule, homepage, and About."
-                    : "Everything in Starter plus standings, shop, sponsors, and advanced surfaces."}
-                </p>
-                <button
-                  type="submit"
-                  className="mt-5 w-full rounded-lg bg-[#E7001B] px-5 py-3 font-display text-sm font-black uppercase tracking-widest text-white transition hover:bg-[#ff0a25]"
-                >
-                  Choose {tier}
-                </button>
-              </form>
-            ))}
-          </div>
+        {uiState.state === "grace" && (
+          <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-3 font-body text-sm text-amber-100">
+            Content changes are paused while payment is overdue. The public site
+            remains available through {formatDate(uiState.graceEndsAt)}. Update
+            the card in the Customer Portal or contact{" "}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">
+              {SUPPORT_EMAIL}
+            </a>
+            .
+          </p>
+        )}
+
+        {uiState.state === "no_subscription" && club.kind !== "customer" ? (
+          <p className="mt-5 rounded-lg border border-white/10 bg-black/20 px-4 py-3 font-body text-sm text-white/60">
+            This {club.kind} club does not require a paid subscription.
+          </p>
+        ) : uiState.state === "no_subscription" ? (
+          <form action="/api/stripe/checkout" method="POST" className="mt-6">
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-[#E7001B] px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-[#ff0a25] sm:w-auto"
+            >
+              Start subscription
+            </button>
+          </form>
         ) : (
           <form action="/api/stripe/portal" method="POST" className="mt-6">
             <button

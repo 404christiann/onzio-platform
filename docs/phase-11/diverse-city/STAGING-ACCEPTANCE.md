@@ -253,6 +253,30 @@ Run at 1440×900 desktop and 390×844 mobile.
 - [ ] Temporary probe values, memberships, sessions, factors, media, and
   presentation pointers are restored and reconciled.
 
+## Platform Billing Foundation (`PLAT-102`)
+
+- [ ] Migration `20260804024349_plat_102_billing_entitlement.sql` is applied
+  only to Supabase staging project `fxefqnoqxbezeccjvrsw` under exact approval.
+- [ ] The guarded backfill reconciles exactly Diverse City `customer` with test
+  Price `price_1U0Y0sK6WajTkwHYnnttR9nN`, Rose City `demo`, and Alpha/Bravo
+  `test`; before/after row counts and sanitized audits match.
+- [ ] Checkout reads only `clubs.stripe_price_id`, refuses client Price/tier
+  input, and never reads the live or superseded $65 Price.
+- [ ] Canonical webhook projection records arbitrary Stripe Price facts without
+  a tier write or `UNKNOWN_PRICE` rejection.
+- [ ] Portal allows payment-method updates and invoice history only; cancel and
+  subscription update are disabled.
+- [ ] Day-7/day-17 warning audits are idempotent; the suspension and
+  reconciliation flags operate independently; demo/test clubs are skipped.
+- [ ] Clean cron runs return 200; drift returns non-200
+  `RECONCILIATION_DIVERGENCE`; success/failure heartbeat signals arrive and the
+  monitor's missing-ping alarm is proven.
+- [ ] `/api/cron/media-cleanup` remains unchanged and has no heartbeat.
+- [ ] The local Resend delivery receiver remains unconfigured until a separate
+  hosted Resend approval is supplied.
+- [ ] No production, live Stripe, Auth, DNS, Storage, public-access, tenant
+  content, Price, teams, `PLAT-103`, `DCFC-601`, or `DCFC-602` mutation occurs.
+
 ## Stripe Test and Lifecycle (`DCFC-601`)
 
 - [ ] Existing test Pro Price, Portal, webhook, key mode, and environment

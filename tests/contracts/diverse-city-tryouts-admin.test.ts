@@ -195,12 +195,12 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     )
     .join("\n");
 
-  it("registers Tryouts navigation and enforces Pro entitlement before loading", () => {
+  it("registers Tryouts navigation without a tier gate", () => {
     expect(shellSource).toContain('label: "Tryouts"');
     expect(shellSource).toContain('href: "/admin/tryouts"');
     expect(shellSource).toContain('feature: "tryouts"');
-    expect(pageSource).toContain('clubHasFeature(club.tier, "tryouts")');
-    expect(pageSource).toContain("Tryouts requires Pro");
+    expect(pageSource).not.toContain("clubHasFeature");
+    expect(pageSource).not.toContain("requires Pro");
   });
 
   it("uses only server-mediated tenant-scoped persistence", () => {
@@ -240,7 +240,7 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     }
   });
 
-  it("adds a Pro-entitled secure Tryouts media surface", () => {
+  it("adds a secure Tryouts media surface", () => {
     expect(MEDIA_SURFACES).toContain("tryouts");
     expect(clientSource).toContain(
       'tryouts: { surface: "tryouts", kind: "photo" }',

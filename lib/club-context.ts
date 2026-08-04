@@ -13,6 +13,8 @@ export type ClubContext = {
   primaryDomain: string;
   lifecycle: "onboarding" | "active" | "archived";
   publicAccess: "preview" | "live" | "grace" | "suspended";
+  kind: "customer" | "demo" | "test";
+  stripePriceId: string | null;
   tier: "starter" | "pro";
   role: "owner" | "admin" | null;
   primaryColor: string | null;
@@ -30,6 +32,8 @@ const TEST_CONTEXTS = {
     primaryDomain: "alpha-onzio.vercel.app",
     lifecycle: "active",
     publicAccess: "live",
+    kind: "test",
+    stripePriceId: null,
     tier: "pro",
     primaryColor: "#111111",
     secondaryColor: "#E7001B",
@@ -41,6 +45,8 @@ const TEST_CONTEXTS = {
     primaryDomain: "bravo-onzio.vercel.app",
     lifecycle: "onboarding",
     publicAccess: "preview",
+    kind: "test",
+    stripePriceId: null,
     tier: "starter",
     primaryColor: "#222222",
     secondaryColor: "#666666",
@@ -70,7 +76,7 @@ async function getDatabaseContext(
   const { data: domain, error } = await onzio
     .from("club_domains")
     .select(
-      "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, tier, primary_color, secondary_color)",
+      "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color)",
     )
     .eq("hostname", hostname)
     .eq("active", true)
@@ -85,6 +91,8 @@ async function getDatabaseContext(
     name: string;
     lifecycle: ClubContext["lifecycle"];
     public_access: ClubContext["publicAccess"];
+    kind: ClubContext["kind"];
+    stripe_price_id: string | null;
     tier: ClubContext["tier"];
     primary_color: string | null;
     secondary_color: string | null;
@@ -124,6 +132,8 @@ async function getDatabaseContext(
     primaryDomain: primary?.hostname ?? hostname,
     lifecycle: club.lifecycle,
     publicAccess: club.public_access,
+    kind: club.kind,
+    stripePriceId: club.stripe_price_id,
     tier: club.tier,
     role,
     primaryColor: club.primary_color,
@@ -176,7 +186,7 @@ export async function getClubContextBySlug(
   const onzio = supabase.schema("onzio");
   const { data: club, error } = await onzio
     .from("clubs")
-    .select("id, slug, name, lifecycle, public_access, tier, primary_color, secondary_color")
+    .select("id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color")
     .eq("slug", slug)
     .maybeSingle();
   if (error || !club) failContract("UNKNOWN_TENANT");
@@ -216,6 +226,8 @@ export async function getClubContextBySlug(
     primaryDomain: primary.hostname,
     lifecycle: club.lifecycle as ClubContext["lifecycle"],
     publicAccess: club.public_access as ClubContext["publicAccess"],
+    kind: club.kind as ClubContext["kind"],
+    stripePriceId: club.stripe_price_id,
     tier: club.tier as ClubContext["tier"],
     role,
     primaryColor: club.primary_color,

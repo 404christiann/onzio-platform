@@ -5,7 +5,6 @@ import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
-import { clubHasFeature } from "@/lib/club-features";
 import type { DBProgram } from "@/lib/db-types";
 import {
   buildProgramMutationPayload,
@@ -40,10 +39,9 @@ function errorMessage(error: unknown, fallback: string): string {
 
 export default function AdminProgramsPage() {
   const club = useClubContext();
-  const entitled = clubHasFeature(club.tier, "programs");
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
   const [draft, setDraft] = useState<ProgramDraft | null>(null);
-  const [loading, setLoading] = useState(entitled);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -77,12 +75,8 @@ export default function AdminProgramsPage() {
   }, []);
 
   useEffect(() => {
-    if (!entitled) {
-      setLoading(false);
-      return;
-    }
     void loadPrograms();
-  }, [club.id, entitled, loadPrograms]);
+  }, [club.id, loadPrograms]);
 
   function markDirty() {
     setDirty(true);
@@ -266,23 +260,6 @@ export default function AdminProgramsPage() {
       setError(errorMessage(reorderError, "Unable to reorder programs"));
       await loadPrograms(draft?.id);
     }
-  }
-
-  if (!entitled) {
-    return (
-      <section className="mx-auto max-w-3xl rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-8">
-        <p className="font-display text-xs font-bold uppercase tracking-[0.2em] text-amber-200/70">
-          Pro capability
-        </p>
-        <h1 className="mt-3 font-display text-3xl font-black uppercase text-white">
-          Programs requires Pro
-        </h1>
-        <p className="mt-3 max-w-xl font-body text-sm leading-6 text-white/55">
-          This club’s current tier does not include the Programs content domain.
-          No program content was loaded or changed.
-        </p>
-      </section>
-    );
   }
 
   return (

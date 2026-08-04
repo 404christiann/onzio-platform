@@ -188,8 +188,10 @@ describe("tenant and privileged-boundary architecture contract", () => {
       "lib/club-context.ts",
       "lib/authorization.ts",
       "lib/club-access.ts",
-      "lib/club-features.ts",
       "lib/stripe-event-routing.ts",
+      "lib/stripe-portal.ts",
+      "lib/billing-lifecycle.ts",
+      "lib/resend-webhook.ts",
       "lib/media-cleanup.ts",
       "lib/media-processing.ts",
     ];
@@ -206,11 +208,13 @@ describe("tenant and privileged-boundary architecture contract", () => {
     ).flat();
     const approved = [
       /^app\/api\/stripe\/webhook\//,
+      /^app\/api\/webhooks\/resend\//,
       /^lib\/operator\//,
       /^lib\/owner-admin-membership\.ts$/,
       /^lib\/migration\//,
       /^lib\/media-cleanup\.ts$/,
       /^lib\/media-processing\.ts$/,
+      /^lib\/billing-lifecycle\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
     ];
     const violations: string[] = [];

@@ -2,10 +2,67 @@
 
 Last updated: 2026-08-03
 
-## PLAT-102 readiness — all inputs supplied as of 2026-08-03
+## PLAT-102 local implementation complete — stop at hosted release gate
 
-Every required input for `PLAT-102` now exists. What remains is the package
-approval itself, which must name the package ID and exact target environment.
+Agent: Codex, 2026-08-03. Status: `in_progress`.
+
+After the first pre-mutation baseline found Rose City absent, Christian
+explicitly approved that absence as a no-op and revised the guard to exactly
+Alpha, Bravo, and Diverse City. Migration
+`20260804024349_plat_102_billing_entitlement.sql` is now applied only to
+Supabase staging project `fxefqnoqxbezeccjvrsw`. One fail-closed transactional
+backfill set Alpha/Bravo to `test` with no Price and Diverse City to `customer`
+with the approved test Price; Rose City remains absent and uncreated. Exactly
+three sanitized backfill audits exist. Remote migration history and independent
+read-only reconciliation match.
+
+The post-apply Supabase security advisor found mutable `search_path` warnings
+on the two new exposed-schema service-role RPC wrappers. Their bodies use fully
+qualified names and anon/authenticated cannot execute them, but the warning is
+valid. Christian separately approved follow-up migration
+`20260804035147_plat_102_function_search_paths.sql`; it is now applied to exact
+staging and reconciled. Both public and private RPCs have empty pinned paths,
+and the exposed wrappers remain denied to anon/authenticated and allowed to
+service role. The advisor now reports no PLAT-102 function warning. Hosted Auth
+advisor warnings for the accepted 24-hour email-code expiry and irrelevant
+leaked-password protection remain unchanged; do not mutate Auth under PLAT-102.
+
+Christian approved PLAT-102 locally for exact Supabase staging project
+`fxefqnoqxbezeccjvrsw`, protected Vercel Preview project
+`prj_I362ysmh9cse5cRxnL7db4dOhsEs`, and the existing Stripe test-mode account.
+The local package is implemented and verified. No push, deployment, Stripe
+mutation API, Resend configuration, production, live Stripe, Auth, DNS,
+Storage, public-access, tenant-content, teams, PLAT-103, DCFC-601, or DCFC-602
+work was performed beyond the exact approved staging migration and three-club
+backfill recorded above.
+
+Implemented: tier-free authorization with zero policy churn; `clubs.kind` and
+per-club `stripe_price_id`; server-owned Checkout Price; arbitrary canonical
+webhook Price projection with no tier write; constrained Portal sessions;
+20-day grace with day-7/day-17 warning audits; independent suspension and
+reconciliation flags; exception-only reconciliation; lifecycle heartbeat;
+guarded exact staging backfill; and local signed, sanitized, append-only Resend
+delivery monitoring. The hosted Resend webhook remains unconfigured and needs
+separate approval.
+
+Local evidence: clean migration reset passed; PLAT-102 database contracts 7/7;
+complete database suite 82/82; contracts 325/325; architecture 20/20; complete
+loopback suite 658/658 across 75 files; TypeScript and generated database-type
+drift checks passed; `onzio` and `onzio_private` schema lint found no errors;
+the production build passed; `git diff --check` passed. Lint passed with only
+the three pre-existing Analytics hook dependency warnings.
+
+Exact next step: the staging database gate is complete and Christian approved
+the local PLAT-102 commit. The commit containing this handoff is the package
+boundary; read its exact SHA from Git, then obtain a separate exact-SHA Git
+push/protected Preview approval. Do not rerun either migration or the backfill,
+deploy manually, configure Resend, change Auth, or call Stripe APIs yet.
+
+## Historical PLAT-102 readiness snapshot — superseded
+
+This section records the pre-approval input state. PLAT-102 was subsequently
+approved and its current status is the release-gate block above; do not treat
+the historical approval instruction here as the next step.
 
 **Stripe.** Use the **test** Price `price_1U0Y0sK6WajTkwHYnnttR9nN` and **never**
 the live `price_1TwbmvK6WajTkwHYueLvjhv5` — `PLAT-102`'s prohibited actions
@@ -33,11 +90,9 @@ forbid live-mode Stripe operations. The live Price is the value
   to `/api/cron/media-cleanup`; that is outside this package's scope and needs
   its own widening.
 
-**Recommended but not decided:** folding the Resend bounce webhook into this
-package. It touches `vercel.json`, which `PLAT-102` also edits for the cron
-entry, so doing it separately guarantees a conflict. It would close the
-deliverability gap left by the AOL/ISP waiver. Christian has not confirmed
-this; treat it as a proposal, not scope.
+**Resolved scope:** Christian included local bounce/failure monitoring code and
+tests in PLAT-102. Hosted Resend webhook creation or configuration remains a
+separate approval and was not performed.
 
 ## Latest Work — Five rollout decisions answered; Diverse City price now $75/month
 

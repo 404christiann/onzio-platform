@@ -25,48 +25,14 @@ const NEW_TABLE_FEATURES = {
   tryouts: "tryouts",
 } as const;
 
-// Tier expectations resolved by DCFC-D108: Contact is Starter-accessible;
-// Programs and Tryouts are Pro-only.
-const STARTER_ALLOWLIST_ADDITIONS = ["contact"] as const;
-const PRO_ONLY_NEW_FEATURES = ["programs", "tryouts"] as const;
-
-// club_has_feature is defined with `create or replace` and may be redefined by
-// any later migration, so the effective definition is the one in the
-// last-ordered migration that declares it. Reading only the original
-// foundation migration would assert against a stale definition -- and would
-// keep passing even if a later migration dropped `security definer`.
-async function effectiveClubHasFeatureDefinition(): Promise<string> {
+async function plat102Migration(): Promise<string> {
   const { readdir } = await import("node:fs/promises");
   const dir = resolve(ROOT, "supabase/migrations");
-  const files = (await readdir(dir))
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
-
-  let effective: string | null = null;
-  for (const name of files) {
-    const sql = await readFile(resolve(dir, name), "utf8");
-    const start = sql.indexOf("function onzio_private.club_has_feature");
-    if (start === -1) continue;
-    const body = sql.slice(start);
-    effective = body.slice(0, body.indexOf("$$;") + 3);
-  }
-
-  if (!effective) {
-    throw new Error(
-      "[RED CONTRACT] No migration defines onzio_private.club_has_feature.",
-    );
-  }
-  return effective;
-}
-
-function starterAllowlist(definition: string): string[] {
-  const match = definition.match(/p_feature in \(([^)]*)\)/);
-  if (!match) {
-    throw new Error(
-      "[RED CONTRACT] Could not locate the club_has_feature Starter allowlist.",
-    );
-  }
-  return [...match[1].matchAll(/'([a-z_]+)'/g)].map((entry) => entry[1]);
+  const name = (await readdir(dir)).find((entry) =>
+    entry.endsWith("_plat_102_billing_entitlement.sql"),
+  );
+  if (!name) throw new Error("[RED CONTRACT] Missing PLAT-102 migration.");
+  return readFile(resolve(dir, name), "utf8");
 }
 
 describe("Diverse City domain admin registration (DCFC-201)", () => {
@@ -101,31 +67,13 @@ describe("Diverse City domain admin registration (DCFC-201)", () => {
   });
 });
 
-describe("Diverse City tier gating (DCFC-D108)", () => {
-  it("adds 'contact' to the club_has_feature Starter allowlist", async () => {
-    const allowlist = starterAllowlist(await effectiveClubHasFeatureDefinition());
-    for (const feature of STARTER_ALLOWLIST_ADDITIONS) {
-      expect(
-        allowlist,
-        "Contact must be Starter-accessible; can_read_feature gates anonymous " +
-          "public reads, so omitting it renders Starter contact pages empty",
-      ).toContain(feature);
-    }
-  });
-
-  it("leaves programs and tryouts Pro-only by keeping them out of the allowlist", async () => {
-    const allowlist = starterAllowlist(await effectiveClubHasFeatureDefinition());
-    for (const feature of PRO_ONLY_NEW_FEATURES) {
-      expect(allowlist).not.toContain(feature);
-    }
-  });
-
-  it("preserves the security properties of club_has_feature", async () => {
-    const body = await effectiveClubHasFeatureDefinition();
-    expect(body).toContain("security definer");
-    expect(body).toContain("set search_path = ''");
-    expect(body).toContain("stable");
-    expect(body).toContain("onzio.clubs");
+describe("PLAT-102 tier-free authorization supersedes DCFC-D108", () => {
+  it("deletes club_has_feature and collapses both policy wrappers", async () => {
+    const migration = await plat102Migration();
+    expect(migration).toContain("drop function onzio_private.club_has_feature");
+    expect(migration).toContain("select onzio_private.can_read_club(p_club_id)");
+    expect(migration).toContain("select onzio_private.can_mutate_content(p_club_id)");
+    expect(migration).not.toContain("drop policy");
   });
 });
 
@@ -161,49 +109,16 @@ describe("Diverse City presentation registration (DCFC-D104)", () => {
   });
 });
 
-describe("entitlement source agreement (PF-002)", () => {
-  // moduleRegistry and the club_has_feature Starter allowlist independently
-  // encode tier. Nothing ties them together, which is PF-002. This contract
-  // locks agreement for every feature except the two already-recorded
-  // contradictions, so no NEW drift can be introduced while PF-002 is open.
-  //
-  // Fixing `store` and `seasons` is deliberately NOT in DCFC-201's scope --
-  // see docs/platform-findings.md. When PF-002 is resolved, delete these two
-  // entries; this contract should then pass with no exclusions at all.
-  const PF002_KNOWN_CONTRADICTIONS = new Set(["store", "seasons"]);
-
-  it("keeps moduleRegistry entitlements consistent with the Starter allowlist", async () => {
-    const allowlist = new Set(starterAllowlist(await effectiveClubHasFeatureDefinition()));
+describe("presentation metadata is non-authorizing", () => {
+  it("retains descriptive module labels without using them in policy wrappers", async () => {
+    const migration = await plat102Migration();
     const modules = moduleRegistry as unknown as Record<
       string,
       { entitlement: string }
     >;
-    const featureForModule: Record<string, string> = {
-      roster: "roster",
-      schedule: "schedule",
-      store: "shop",
-      sponsors: "branding",
-      standings: "standings",
-      contact: "contact",
-      programs: "programs",
-      tryouts: "tryouts",
-    };
-
-    const disagreements: string[] = [];
-    for (const [moduleName, feature] of Object.entries(featureForModule)) {
-      if (PF002_KNOWN_CONTRADICTIONS.has(moduleName)) continue;
-      const registration = modules[moduleName];
-      if (!registration) continue;
-      const dbAllowsStarter = allowlist.has(feature);
-      const registryAllowsStarter = registration.entitlement === "starter";
-      if (dbAllowsStarter !== registryAllowsStarter) {
-        disagreements.push(
-          `${moduleName}: moduleRegistry says ${registration.entitlement}, ` +
-            `club_has_feature says ${dbAllowsStarter ? "starter" : "pro"}`,
-        );
-      }
-    }
-    expect(disagreements).toEqual([]);
+    expect(modules.programs.entitlement).toBe("pro");
+    expect(modules.contact.entitlement).toBe("starter");
+    expect(migration).not.toMatch(/club\.tier\s*=\s*'pro'/);
   });
 });
 

@@ -814,6 +814,8 @@ export function buildRoseCityImportPlan(input: {
       name: "Rose City Futbol Club",
       lifecycle: "active",
       public_access: "live",
+      kind: "demo",
+      stripe_price_id: null,
       tier: "pro",
       primary_color: "#C8102E",
       secondary_color: "#111111",
