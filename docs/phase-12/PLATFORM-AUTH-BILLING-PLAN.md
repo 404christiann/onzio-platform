@@ -271,6 +271,9 @@ recorded in the execution status above.
   subdomain; bounce and failure monitoring; delivery verified against Yahoo,
   AOL, and at least one ISP-hosted domain, not only Gmail. Email is now the sole
   authentication path and is a hard dependency.
+- **Onboarding mailbox guidance:** prefer Gmail, Yahoo, or work addresses. If
+  someone only has an ISP-hosted address, confirm that the first code arrives
+  while you are on the phone with them.
 
 - **Acceptance criteria:** every row of the classification table is enforced and
   proven; a club admin completes first sign-in and a returning sign-in with no
