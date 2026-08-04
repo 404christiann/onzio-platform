@@ -3922,3 +3922,63 @@ branch. The designated integrator must preserve every completion record while
 merging, reconcile the package ledger, run the required broad verification,
 and update `HANDOFF.md`. No completion record may be dropped merely to resolve
 a documentation conflict.
+
+### 2026-08-03 — PLAT-102 review; PLAT-D024 accepted — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). Review only; no code, schema, or test changed.
+Hosted-mutation count: zero.
+
+Reviewed `ba59b1b` (PLAT-102) against the accepted decisions. Verified rather
+than accepted on trust: the migration contains **zero** `create policy` /
+`drop policy` statements, so `PLAT-D018` landed exactly as designed with all
+115 policies untouched; `PLAT-D020`'s two flags are independent and fail closed;
+the `PLAT-D022` heartbeat is required, HTTPS-only, and correctly not extended to
+`media-cleanup`; every tier helper is deleted; no secret and no live Price
+appears in code; and the separately approved staging application stopped safely
+when Rose City was absent rather than improvising.
+
+Two findings.
+
+**1. The suite is red.** `tests/architecture/platform-architecture.test.ts >
+hardens every security-definer function` fails, 35 vs 33. It is **not** a
+security hole — a live-schema query confirms every `security definer` function
+in `onzio` and `onzio_private` carries an empty `search_path`. The cause is the
+follow-up migration hardening two functions with `alter function … set
+search_path = ''`, which the contract's text-count model adds to one side only.
+Two consequences: the commit's claim of passing architecture tests does not
+reproduce, and the tempting fix — loosening `toBe` to
+`toBeGreaterThanOrEqual` — would blind the contract to a definer function with
+no `search_path` at all, which `AGENTS.md` forbids. Fix by making the contract
+parse per function and account for `ALTER FUNCTION`, or by re-declaring those
+two functions with `create or replace`.
+
+**2. Read-only admin during grace, now decided as `PLAT-D024`.** `PLAT-102`
+shipped `can_mutate_content` requiring `public_access = 'live'` for `customer`
+clubs, so a club in grace kept its public site, its login, and its billing
+route, but lost all content editing for up to 20 days. No decision authorised
+it. Christian accepted the recommendation to allow edits during grace. The
+decisive argument was that **`PLAT-D006`'s kill switch does not reach this
+behaviour** — `LIFECYCLE_SUSPENSION_ENABLED` gates only the cron's
+grace→suspended write, while the edit lock keys off `public_access = 'grace'`,
+which the webhook sets. In the exact fault `PLAT-D006` accepts, the escape
+hatch would keep the site up and still leave the customer unable to edit. A
+scope note recording that kill-switch limit is now attached to the `PLAT-D006`
+risk row.
+
+Files changed: `docs/phase-12/DECISIONS.md` (`PLAT-D024`, `PLAT-D006` scope
+note), this file, and `HANDOFF.md`.
+
+Verification: full suite re-run independently at 657/658 with the one
+architecture failure above; `npx tsc --noEmit` clean; live-schema definer
+hardening query clean; `git diff --check` clean.
+
+Blockers: **do not push** — the suite is red, and `PLAT-102` is `in_progress`
+pending its push/deploy approval and hosted application acceptance.
+
+Exact next step: hand Codex the two follow-ups together — fix the architecture
+contract without weakening it, and implement `PLAT-D024` as a new migration
+with a test pinning the behaviour. The `PLAT-102` migration is already applied
+to staging, so this is additive and its staging application needs its own
+approval.
+
+Hosted-mutation count: zero.

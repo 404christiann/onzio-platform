@@ -2,6 +2,49 @@
 
 Last updated: 2026-08-03
 
+## PLAT-102 review — two follow-ups before push
+
+Agent: Claude Code (Opus 5), 2026-08-03. Review only; no code, schema, or test
+changed. Hosted-mutation count: zero.
+
+**Do not push. The suite is red.**
+
+**1. Architecture contract failing.** `tests/architecture/platform-architecture.test.ts
+> hardens every security-definer function` fails 35 vs 33. **Not a security
+hole** — a live-schema query confirms every `security definer` function in
+`onzio` and `onzio_private` carries an empty `search_path`. The cause is
+`20260803...plat_102_function_search_paths.sql` hardening two functions with
+`alter function … set search_path = ''`, which the contract's text-count model
+adds to one side only. Note the commit's claim of passing architecture tests
+does not reproduce. **Do not fix by loosening `toBe` to
+`toBeGreaterThanOrEqual`** — that blinds the contract to a definer function with
+no `search_path` at all, which `AGENTS.md` forbids. Fix by parsing per function
+and accounting for `ALTER FUNCTION`, or by re-declaring the two functions with
+`create or replace`.
+
+**2. `PLAT-D024` accepted — club admins keep editing during grace.** `PLAT-102`
+shipped `can_mutate_content` requiring `public_access = 'live'` for `customer`
+clubs, so a club in grace kept its public site, login, read access, and billing
+route but lost all content editing for up to 20 days. No decision authorised
+that. It needs a new migration admitting `public_access in ('live','grace')`,
+plus a test pinning the behaviour. The `PLAT-102` migration is already applied
+to staging, so this is additive and its staging application needs its own
+approval.
+
+The decisive reason, worth carrying forward: **`PLAT-D006`'s kill switch does
+not reach grace-keyed behaviour.** `LIFECYCLE_SUSPENSION_ENABLED` gates only the
+cron's grace→suspended write, while the edit lock keys off `public_access =
+'grace'`, which the webhook sets. A scope note is now attached to the
+`PLAT-D006` risk row; any future grace-keyed restriction must either be covered
+by the switch or accepted as a separate risk.
+
+**Verified good in the same review**, so nobody re-does it: zero policy churn
+(`PLAT-D018` landed exactly as designed, all 115 policies untouched); two
+independent fail-closed lifecycle flags (`PLAT-D020`); heartbeat required,
+HTTPS-only, and correctly not extended to `media-cleanup` (`PLAT-D022`); every
+tier helper deleted; no secret and no live Price in code; and the separately
+approved staging application stopped safely when Rose City was absent.
+
 ## PLAT-102 local implementation complete — stop at hosted release gate
 
 Agent: Codex, 2026-08-03. Status: `in_progress`.
