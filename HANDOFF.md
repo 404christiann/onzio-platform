@@ -34,13 +34,14 @@ records and rationale are in `docs/phase-11/diverse-city/DECISIONS.md`; the
    `Diverse City FC Pro Plan`, Product `prod_UwUmEgeunaSPSI`, **$75/month, live
    mode, no trial, zero active subscriptions, MRR $0**. No subscription exists,
    so `DCFC-901` remains the owner-driven Checkout step. Three follow-ups are
-   open: the exact `price_…` ID (`DCFC-D126`), a **test-mode** Price for
-   `PLAT-102`'s rehearsal (`DCFC-D125` — `PLAT-102` names a test Price in its
-   required inputs and only a live one exists), and stripping tier language
-   from the Product name and description before the first invoice
-   (`DCFC-D124`). The description currently reads "Everything in Starter,
-   plus…", which describes the tier model `PLAT-102` deletes, on an artifact
-   customers see on invoices and in the Portal.
+   resolved: a matching **test-mode** Product and $75/month Price now exists
+   too (`DCFC-D125`), satisfying `PLAT-102`'s required test-Price input. Two
+   follow-ups remain: the exact `price_…` IDs for both modes (`DCFC-D126` —
+   only Product IDs supplied so far), and stripping tier language from **both**
+   Products' name and description before the first invoice (`DCFC-D124`). The
+   description reads "Everything in Starter, plus…", which describes the tier
+   model `PLAT-102` deletes, on an artifact customers see on invoices and in
+   the Portal.
 3. **The domain ships at launch**, so there is no billing-versus-delivery gap.
    Domain ownership on termination is still unpinned — open as `DCFC-D122`.
 
