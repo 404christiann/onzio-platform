@@ -51,6 +51,7 @@ Preserve these decisions unless Christian explicitly changes them:
 - Stripe as billing source of truth
 - Private preview before active billing; trialing is unsupported
 - Twenty-day public-site grace measured from paid-through time
+- Club content editing remains available throughout that grace window
 - Indefinite archival instead of normal hard deletion
 - No Supabase runtime Image Transformations
 - Versioned normalized media paths served directly without runtime optimization

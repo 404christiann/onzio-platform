@@ -273,12 +273,33 @@ describe("migration SQL security contract", () => {
       )
     ).join("\n");
 
-    const definerCount = (sql.match(/security definer/gi) ?? []).length;
-    const emptySearchPathCount = (
-      sql.match(/set\s+search_path\s*=\s*''/gi) ?? []
-    ).length;
-    expect(definerCount).toBeGreaterThan(0);
-    expect(emptySearchPathCount).toBe(definerCount);
+    const declarations = [
+      ...sql.matchAll(
+        /create\s+(?:or\s+replace\s+)?function\s+([^\s(]+)/gi,
+      ),
+    ];
+    const definerFunctions: string[] = [];
+    const missingEmptySearchPath: string[] = [];
+
+    for (const [index, declaration] of declarations.entries()) {
+      const start = declaration.index ?? 0;
+      const end = declarations[index + 1]?.index ?? sql.length;
+      const functionSql = sql.slice(start, end);
+      const bodyStart = functionSql.search(/\bas\s+\$[a-z0-9_]*\$/i);
+      const header =
+        bodyStart === -1 ? functionSql.split(";")[0] : functionSql.slice(0, bodyStart);
+
+      if (!/security\s+definer/i.test(header)) continue;
+
+      const functionName = declaration[1];
+      definerFunctions.push(functionName);
+      if (!/set\s+search_path\s*(?:=|to)\s*''/i.test(header)) {
+        missingEmptySearchPath.push(functionName);
+      }
+    }
+
+    expect(definerFunctions.length).toBeGreaterThan(0);
+    expect(missingEmptySearchPath).toEqual([]);
     expect(sql).toMatch(/revoke execute on function .* from public/i);
   });
 });

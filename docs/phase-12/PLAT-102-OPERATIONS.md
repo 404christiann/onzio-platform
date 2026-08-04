@@ -61,6 +61,17 @@ settings. It is applied to staging under separate exact approval; migration
 history, grants, empty paths, and the hosted advisor reconcile. The backfill
 was not rerun and its audit count remains exactly three.
 
+### PLAT-D024 grace-edit follow-up
+
+Migration `20260804061257_plat_102_grace_content_edits.sql` keeps customer-club
+content editing available while projected access is `live` or `grace`, with
+`suspended` remaining the enforcement boundary. It is implemented, verified
+locally, and applied only to Supabase staging project
+`fxefqnoqxbezeccjvrsw` under separate exact approval. Remote history,
+definition, empty path, grants, unchanged club/backfill state, and the security
+advisor reconcile. Neither earlier PLAT-102 migration nor the three-club
+backfill reran.
+
 The former `staging:verify:lifecycle` and `staging:verify:stripe` commands were
 Phase 7 tier-era mutation rehearsals. They remain available only under explicit
 `phase-7:*:legacy` names and must not be used for PLAT-102 acceptance.

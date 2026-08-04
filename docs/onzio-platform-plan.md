@@ -245,7 +245,8 @@ Content mutations require:
 - a club session within the 30-day application/RLS freshness window
 - active membership for the row’s club
 - onboarding access, or an active club lifecycle
-- current paid access for customer clubs; demo and test clubs do not bill
+- live or grace projected access for customer clubs; demo and test clubs do not
+  bill
 
 Owners receive billing access. Admins do not.
 
@@ -453,7 +454,8 @@ One club may not have multiple active subscriptions.
 - No subscription: private preview only
 - `active`: public site live; `trialing` is unsupported and rejected
 - first `past_due`: store `grace_ends_at = paid_through + 20 days`
-- after paid-through and before grace ends: public grace, content writes paused
+- after paid-through and before grace ends: public grace, with content editing
+  still available to active club members
 - terminal status after grace: public suspended
 - archived club: suspended regardless of billing
 
@@ -974,7 +976,8 @@ Gate:
   whether an arbitrary address exists.
 - Admins cannot access billing.
 - Active club members can mutate tenant-scoped content without tier gates;
-  customer clubs still require current paid access.
+  customer clubs may edit while projected access is live or grace, and lose
+  mutation access only when suspended.
 - Direct Supabase requests remain constrained by RLS and database constraints.
 - Audit records are immutable and contain no secrets.
 

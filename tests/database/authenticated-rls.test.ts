@@ -66,8 +66,18 @@ afterEach(async () => {
     .delete()
     .eq("club_id", CLUB_IDS.bravo);
   await clients.service
+    .from("site_social_links")
+    .delete()
+    .eq("club_id", CLUB_IDS.bravo)
+    .in("id", ["grace-content-edit-contract", "suspended-content-edit-contract"]);
+  await clients.service
     .from("clubs")
-    .update({ lifecycle: "onboarding", public_access: "preview" })
+    .update({
+      lifecycle: "onboarding",
+      public_access: "preview",
+      kind: "test",
+      stripe_price_id: null,
+    })
     .eq("id", CLUB_IDS.bravo);
 });
 
@@ -168,6 +178,52 @@ describe("authenticated tenant RLS contract", () => {
 });
 
 describe("tier-free database and Storage contract", () => {
+  it("allows customer content edits during grace and denies them after suspension", async () => {
+    await clients.service
+      .from("clubs")
+      .update({
+        lifecycle: "active",
+        public_access: "grace",
+        kind: "customer",
+        stripe_price_id: "price_local_grace_contract",
+      })
+      .eq("id", CLUB_IDS.bravo);
+    const session = await createFreshLocalClient({
+      email: "multiclub@local.test",
+      userId: USER_IDS.multiClub,
+    });
+    cleanups.push(session.cleanup);
+
+    const graceWrite = await session.client.from("site_social_links").insert({
+      club_id: CLUB_IDS.bravo,
+      id: "grace-content-edit-contract",
+      label: "Grace edit allowed",
+      href: "https://example.test/grace",
+      icon: "test",
+    });
+    expect(graceWrite.error?.message).toBeUndefined();
+
+    await clients.service
+      .from("clubs")
+      .update({ public_access: "suspended" })
+      .eq("id", CLUB_IDS.bravo);
+
+    const suspendedWrite = await session.client
+      .from("site_social_links")
+      .insert({
+        club_id: CLUB_IDS.bravo,
+        id: "suspended-content-edit-contract",
+        label: "Suspended edit denied",
+        href: "https://example.test/suspended",
+        icon: "test",
+      });
+    expectPostgrestError(
+      suspendedWrite.error,
+      "42501",
+      "suspended customer content insert",
+    );
+  });
+
   it("allows every registered content domain regardless of dormant tier", async () => {
     await clients.service
       .from("clubs")

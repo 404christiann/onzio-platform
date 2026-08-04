@@ -18,15 +18,21 @@ authorization and Stripe mapping are deleted; `clubs.kind` and
 `clubs.stripe_price_id` are added; Checkout, webhook projection, Portal,
 20-day lifecycle warnings/suspension, independent reconciliation, lifecycle
 heartbeat, and local signed/sanitized Resend delivery monitoring are covered.
-Verification passed: clean local reset; PLAT-102 DB 7/7; all DB 82/82;
-contracts 325/325; architecture 20/20; full suite 658/658 across 75 files;
-TypeScript, generated DB types, schema lint, production build, lint, and diff
-check. The primary staging migration and revised three-club backfill are now
-applied and reconciled as detailed below. No push, deploy, Stripe API mutation,
-Resend configuration, production, live Stripe, Auth, DNS, Storage,
-public-access, or tenant-content mutation has occurred. The staging database
-gate, including search-path hardening, is complete. `PLAT-102` remains
-`in_progress` until commit, push/deploy, and hosted acceptance complete.
+The independent review's two follow-ups are now green locally. The architecture
+contract validates each security-definer declaration strictly, and accepted
+`PLAT-D024` is implemented in additive migration
+`20260804061257_plat_102_grace_content_edits.sql` with a real grace-success /
+suspension-denial RLS regression. Current verification passed: clean local
+reset; all DB 83/83; contracts 325/325; architecture 20/20; full suite 659/659
+across 75 files; TypeScript, generated DB types, schema lint, local security
+advisor, production build, lint, and diff check. The primary staging migration
+and revised three-club backfill are applied and reconciled as detailed below,
+and the additive PLAT-D024 migration is now applied only to exact staging and
+reconciled. No push, deploy, Stripe API mutation, Resend configuration,
+production, live Stripe, Auth, DNS, Storage, public-access, or tenant-content
+mutation has occurred. The follow-up is committed locally under separate
+approval. `PLAT-102` remains `in_progress` until push/deploy and hosted
+acceptance complete.
 The first approved staging release attempt stopped before mutation: a sanitized
 baseline found Alpha, Bravo, and Diverse City but no Rose City row, including
 no fuzzy slug/name match. At that point, the exact PLAT-102 migration was the
@@ -150,7 +156,7 @@ not satisfy the handoff requirement.
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
 | PLAT-101 | complete | Codex | Local, staging, operator, owner, admin, Yahoo, and unknown-address acceptance complete; AOL and ISP-hosted delivery explicitly waived, not passed | No PLAT-101 work remains. Fresh exact approval is required before PLAT-102, DCFC-601, or DCFC-602. |
-| PLAT-102 | in_progress | Codex | Local implementation plus primary/follow-up staging migrations, revised three-club backfill, and database reconciliation complete; local commit approved | Read the package-boundary SHA from Git, then obtain exact-SHA push/protected Preview approval and run hosted application acceptance; local Resend code is included but hosted Resend configuration remains separately gated. |
+| PLAT-102 | in_progress | Codex | Core local implementation, all three approved staging migrations, revised three-club backfill, architecture review fix, PLAT-D024 regression, database reconciliation, and local follow-up commit complete | Read the new package-boundary SHA and obtain separate exact-SHA push/protected Preview approval. Hosted Resend configuration remains separately gated. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -371,6 +377,115 @@ Exact next step: approve `PLAT-102` (the last substantial build), and settle
 Do not start `DCFC-601`/`DCFC-602`; they remain `PLAT-103` scope.
 
 Hosted-mutation count: zero.
+
+### 2026-08-03 — PLAT-102 follow-ups green locally — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: resolved both findings from the independent `ba59b1b` review.
+  Replaced the global security-definer/search-path text-count assertion with a
+  strict per-function declaration check that identifies any specific definer
+  declaration missing its own empty path. Implemented accepted `PLAT-D024` in
+  additive migration `20260804061257_plat_102_grace_content_edits.sql`, keeping
+  content editing available for active customer clubs in both `live` and
+  `grace` while retaining `suspended` as the denial boundary. Added a real RLS
+  regression that proves grace success and same-session suspension refusal.
+- Files changed: `AGENTS.md`, `HANDOFF.md`, `docs/onzio-platform-plan.md`,
+  `docs/phase-11/diverse-city/STATUS.md`,
+  `docs/phase-12/PLAT-102-OPERATIONS.md`,
+  `supabase/migrations/20260804061257_plat_102_grace_content_edits.sql`,
+  `tests/architecture/platform-architecture.test.ts`, and
+  `tests/database/authenticated-rls.test.ts`.
+- Verification: reproduced the original architecture failure at 19/20 and 35
+  versus 33 before editing; current clean local migration reset passed;
+  focused authenticated RLS file 10/10; database 83/83; contracts 325/325;
+  architecture 20/20; full loopback suite 659/659 across 75 files; `npx tsc
+  --noEmit`; generated database types; `onzio`/`onzio_private` schema lint;
+  local Supabase security advisor with no issues; production build; lint; and
+  `git diff --check`. Lint/build report only the three pre-existing Analytics
+  hook dependency warnings. The first sandboxed focused-test invocation lacked
+  the local Docker status variables and failed before setup with `Invalid URL`;
+  its exact loopback rerun passed 10/10 and is not a product failure.
+- Blockers or decisions needed: the additive PLAT-D024 migration is local only
+  and requires exact Supabase staging application approval. PLAT-102 remains
+  `in_progress`; no push/deployment is approved.
+- Exact next step: approve applying only
+  `20260804061257_plat_102_grace_content_edits.sql` to Supabase staging project
+  `fxefqnoqxbezeccjvrsw`, followed by read-only migration-history,
+  function-definition/grant, security-advisor, and grace/suspension
+  reconciliation. Do not rerun prior PLAT-102 migrations or the backfill. After
+  recording that evidence, create the local follow-up commit and request a new
+  exact-SHA push/protected Preview approval.
+- Hosted mutations: none. No hosted Supabase, Git remote, Vercel, Stripe,
+  Resend, Auth, DNS, Storage, production, or tenant data/config was contacted
+  or changed.
+
+### 2026-08-03 — PLAT-102 PLAT-D024 staging migration — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: after an exact dry run named only
+  `20260804061257_plat_102_grace_content_edits.sql`, applied that migration only
+  to Supabase staging project `fxefqnoqxbezeccjvrsw`. No earlier migration or
+  backfill reran.
+- Files changed: `HANDOFF.md`, `docs/phase-11/diverse-city/STATUS.md`, and
+  `docs/phase-12/PLAT-102-OPERATIONS.md` record hosted evidence. Existing local
+  implementation/migration/test files remain uncommitted under the explicit
+  approval boundary.
+- Verification: remote history ends at exact version `20260804061257` with name
+  `plat_102_grace_content_edits`; the target function remains security-definer
+  with empty `search_path`, fresh-session and membership checks, unchanged
+  authenticated/service-role execute grants, and anon/public denied. Its
+  definition contains the live-or-grace clause and no live-only clause. Alpha,
+  Bravo, Diverse City, and Rose City absence are unchanged; the prior backfill
+  audit count remains exactly three. Security advice is unchanged with no new
+  function warning; only the two previously recorded Auth warnings and
+  informational intentionally policy-less service tables remain.
+- Blockers or decisions needed: Christian's exact migration approval prohibited
+  committing, pushing, and deployment. PLAT-102 therefore remains
+  `in_progress` at the local commit gate.
+- Exact next step: approve committing the current PLAT-102 follow-up
+  implementation, additive migration, regression tests, and evidence locally.
+  Then read the new SHA and request separate exact-SHA push/protected Preview
+  approval. Do not rerun any PLAT-102 migration or backfill.
+- Hosted mutations: exactly one approved DDL migration on Supabase staging
+  project `fxefqnoqxbezeccjvrsw`. No backfill/audit insert, club row, Git
+  remote, Vercel, Stripe, Resend, Auth, DNS, Storage, production, or unrelated
+  data/config changed.
+
+### 2026-08-03 — PLAT-102 follow-up local commit — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: Christian separately approved committing the architecture
+  contract correction, accepted PLAT-D024 additive migration and RLS
+  regression, governing documentation updates, and staging reconciliation
+  evidence locally on branch `staging`. This commit is the follow-up package
+  boundary; it is not pushed.
+- Files changed: `AGENTS.md`, `HANDOFF.md`, `docs/onzio-platform-plan.md`,
+  `docs/phase-11/diverse-city/STATUS.md`,
+  `docs/phase-12/PLAT-102-OPERATIONS.md`,
+  `supabase/migrations/20260804061257_plat_102_grace_content_edits.sql`,
+  `tests/architecture/platform-architecture.test.ts`, and
+  `tests/database/authenticated-rls.test.ts`.
+- Verification: retained the immediately preceding green evidence: clean local
+  reset; authenticated RLS 10/10; database 83/83; contracts 325/325;
+  architecture 20/20; full suite 659/659 across 75 files; TypeScript; generated
+  database types; schema lint; local security advisor; production build; lint;
+  and diff checks. No executable content changed after that evidence. Final
+  staged diff and commit scope were inspected before commit.
+- Blockers or decisions needed: no push or protected Preview deployment is
+  approved. PLAT-102 remains `in_progress` pending exact-SHA push/deployment and
+  hosted application acceptance. Hosted Resend configuration remains a
+  separate approval gate.
+- Exact next step: read the new HEAD SHA, then obtain approval naming that exact
+  SHA, `origin/staging`, protected Vercel Preview project
+  `prj_I362ysmh9cse5cRxnL7db4dOhsEs`, and Supabase staging project
+  `fxefqnoqxbezeccjvrsw`. Do not push later commits or mutate production.
+- Hosted mutations: none during the local commit. The one approved PLAT-D024
+  staging DDL migration is recorded separately above. No Git remote, Vercel,
+  Stripe, Resend, Auth, DNS, Storage, production, or unrelated data/config was
+  changed.
 
 ### 2026-08-03 — PLAT-101 final staging push and protected Preview — Codex
 

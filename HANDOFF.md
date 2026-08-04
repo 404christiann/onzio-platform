@@ -2,12 +2,61 @@
 
 Last updated: 2026-08-03
 
-## PLAT-102 review — two follow-ups before push
+## PLAT-102 follow-ups committed locally — stop at exact-SHA push gate
+
+Agent: Codex, 2026-08-03. Status: `in_progress`.
+
+Both findings from the independent `ba59b1b` review are resolved locally.
+The architecture contract now evaluates every `create function` declaration
+individually and reports any security-definer function whose own header lacks
+an empty `search_path`; it remains strict and correctly ignores later
+`alter function ... set search_path` hardening when counting declarations.
+
+Accepted decision `PLAT-D024` is implemented in additive migration
+`20260804061257_plat_102_grace_content_edits.sql` and applied only to Supabase
+staging project `fxefqnoqxbezeccjvrsw` under Christian's exact approval. A
+customer club with active lifecycle may mutate content while projected access
+is `live` or `grace`; `suspended` remains the enforcement boundary. A real
+loopback RLS regression proves a fresh member can write during grace and that
+the same session receives PostgreSQL `42501` after suspension. The architecture
+plan, stable repository invariant, and staging operations note match the
+accepted decision.
+
+Local verification is green: clean migration reset; focused grace/suspension
+RLS file 10/10; complete database suite 83/83; contracts 325/325; architecture
+20/20; complete suite 659/659 across 75 files; TypeScript; generated database
+type drift; `onzio`/`onzio_private` schema lint; local security advisor;
+production build; and `git diff --check`. Lint/build retain only the three
+pre-existing Analytics hook dependency warnings.
+
+Hosted reconciliation passed. Remote migration history ends at exactly
+`20260804061257`; `onzio_private.can_mutate_content(uuid)` remains
+security-definer with empty `search_path`, retains authenticated/service-role
+execution and denies anon/public execution, retains fresh-session/membership
+checks, contains the live-or-grace clause, and no longer contains the live-only
+clause. Alpha, Bravo, Diverse City, and Rose City absence are unchanged;
+backfill audits remain exactly three. The security advisor is unchanged: no new
+function warning, with only the two previously recorded Auth warnings and
+informational intentionally policy-less service tables.
+
+Christian separately approved committing the current follow-up locally. This
+commit is the PLAT-102 follow-up package boundary. **Do not push or deploy
+yet.** Exact next step: read the new HEAD SHA and obtain a separate exact-SHA
+Git push/protected Preview approval. Do not rerun any PLAT-102 migration or the
+backfill, configure Resend, change Auth, or call Stripe APIs.
+
+Hosted-mutation count for this follow-up: exactly one approved DDL migration on
+Supabase staging project `fxefqnoqxbezeccjvrsw`. No backfill/audit insert, club
+row, Git remote, Vercel, Stripe, Resend, Auth, DNS, Storage, production, or
+unrelated data/config was changed.
+
+## Historical PLAT-102 review — both findings resolved locally above
 
 Agent: Claude Code (Opus 5), 2026-08-03. Review only; no code, schema, or test
 changed. Hosted-mutation count: zero.
 
-**Do not push. The suite is red.**
+At review time, the suite was red. This is historical evidence; the current
+green verification and release gate are recorded above.
 
 **1. Architecture contract failing.** `tests/architecture/platform-architecture.test.ts
 > hardens every security-definer function` fails 35 vs 33. **Not a security
@@ -88,17 +137,11 @@ guarded exact staging backfill; and local signed, sanitized, append-only Resend
 delivery monitoring. The hosted Resend webhook remains unconfigured and needs
 separate approval.
 
-Local evidence: clean migration reset passed; PLAT-102 database contracts 7/7;
-complete database suite 82/82; contracts 325/325; architecture 20/20; complete
-loopback suite 658/658 across 75 files; TypeScript and generated database-type
-drift checks passed; `onzio` and `onzio_private` schema lint found no errors;
-the production build passed; `git diff --check` passed. Lint passed with only
-the three pre-existing Analytics hook dependency warnings.
+The original package evidence was subsequently superseded by the 659/659 green
+follow-up evidence at the top of this handoff.
 
-Exact next step: the staging database gate is complete and Christian approved
-the local PLAT-102 commit. The commit containing this handoff is the package
-boundary; read its exact SHA from Git, then obtain a separate exact-SHA Git
-push/protected Preview approval. Do not rerun either migration or the backfill,
+Exact next step: follow the additive PLAT-D024 staging migration gate at the top
+of this handoff. Do not rerun either earlier migration or the backfill, push,
 deploy manually, configure Resend, change Auth, or call Stripe APIs yet.
 
 ## Historical PLAT-102 readiness snapshot — superseded
