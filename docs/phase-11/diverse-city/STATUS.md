@@ -163,6 +163,62 @@ unassigned and unapproved.
 
 ## Completion Records
 
+### 2026-08-03 — Five rollout decisions answered; price raised to $75 — Claude Code (Opus 5)
+
+Agent: Claude Code (Opus 5). Class 1, documentation only. Hosted-mutation
+count: zero. No package was started.
+
+Christian answered the five rollout decisions carried since `DCFC-D118`, in one
+pass. Recorded in `docs/phase-11/diverse-city/DECISIONS.md`:
+
+- `DCFC-D112` — launch on an Onzio-controlled `*.vercel.app` hostname, **no
+  custom domain at launch**. Onzio will buy and manage the club's domain,
+  attached afterwards. This lifts `DCFC-902` out of the launch sequence and
+  removes DNS propagation and domain-verification risk from the critical path.
+- `DCFC-D113` — production provisions exactly one owner, no admins; the owner
+  adds admins through the `PLAT-101` flow. Keeps `DCFC-803` to one account.
+  Identity values remain outside Git; only the shape is recorded.
+- `DCFC-D116` — 7-day observation window; Christian sole rollback authority;
+  stop conditions are site down, incorrect billing state, or cross-tenant
+  exposure.
+- `DCFC-D117` — `noindex, nofollow` retained through launch; indexing stays a
+  separate later approval at `DCFC-1003`.
+- `DCFC-D119` — **price raised to $75/month** from $65, the difference covering
+  the domain Onzio will purchase and manage.
+
+`DCFC-D119` has consequences that were recorded rather than assumed, and two of
+them need attention before `DCFC-901`:
+
+- **`PLAT-D008` is superseded on price.** It is marked accordingly in
+  `docs/phase-12/DECISIONS.md`. Its no-trial and no-`trialing` provisions are
+  unchanged.
+- **No live $75/month Stripe Price exists**, and the recorded $65/month Starter
+  Price can no longer be reused. One must be created manually, because
+  `PLAT-102`'s prohibited actions and the original `DCFC-D115` both forbid
+  creating live Prices inside a package. This is currently an **unowned step
+  with no home package** — opened as `DCFC-D120`.
+- **Billing starts before the domain is delivered.** `DCFC-D112` defers the
+  domain until after launch while the $75 price is justified by it, so when
+  billing begins relative to domain delivery is an open commercial question —
+  opened as `DCFC-D121`. Domain ownership on termination is likewise unpinned —
+  opened as `DCFC-D122`.
+
+`DCFC-D115` is therefore partly resolved: the price is settled, and its
+remainder is split into `DCFC-D120`/`D121`/`D122` rather than closed.
+
+Files changed: `docs/phase-11/diverse-city/DECISIONS.md`,
+`docs/phase-12/DECISIONS.md`, this file, and `HANDOFF.md`. No application code,
+schema, or test was touched.
+
+Verification: `git status --short` clean after commit; `git diff --check` clean.
+No identity value, address, or secret was recorded.
+
+Exact next step: approve `PLAT-102` (the last substantial build), and settle
+`DCFC-D120` — the live Price has no owning package and blocks `DCFC-901`.
+Do not start `DCFC-601`/`DCFC-602`; they remain `PLAT-103` scope.
+
+Hosted-mutation count: zero.
+
 ### 2026-08-03 — PLAT-101 final staging push and protected Preview — Codex
 
 - **Package/status:** `PLAT-101`, `complete`; its final implementation,

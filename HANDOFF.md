@@ -2,6 +2,42 @@
 
 Last updated: 2026-08-03
 
+## Latest Work — Five rollout decisions answered; Diverse City price now $75/month
+
+Agent: Claude Code (Opus 5), 2026-08-03. Class 1, documentation only.
+Hosted-mutation count: zero. No package started.
+
+Christian answered the five rollout decisions carried since `DCFC-D118`. Full
+records and rationale are in `docs/phase-11/diverse-city/DECISIONS.md`; the
+`STATUS.md` completion record has the detail. Summary:
+
+- **No custom domain at launch** (`DCFC-D112`). Launch on an Onzio-controlled
+  `*.vercel.app` hostname; Onzio buys and manages the club's domain afterwards.
+  This lifts `DCFC-902` out of the launch sequence.
+- **One owner, no pre-provisioned admins** (`DCFC-D113`); the owner adds admins
+  through the `PLAT-101` flow. Identity values stay outside Git.
+- **7-day observation window**, Christian sole rollback authority (`DCFC-D116`).
+- **`noindex` retained through launch** (`DCFC-D117`).
+- **Price raised to $75/month** from $65 (`DCFC-D119`), the difference covering
+  the domain Onzio will purchase.
+
+**Three things the price change opened — read before `DCFC-901`:**
+
+1. `PLAT-D008` is **superseded on price** and marked so in
+   `docs/phase-12/DECISIONS.md`. Its no-trial and no-`trialing` provisions
+   still stand.
+2. **No live $75/month Stripe Price exists**, and the recorded $65/month
+   Starter Price can no longer be reused. `PLAT-102`'s prohibited actions and
+   the original `DCFC-D115` both forbid creating live Prices inside a package,
+   so this is an **unowned manual step with no home** — tracked as `DCFC-D120`
+   and it blocks `DCFC-901`.
+3. **Billing begins before the domain is delivered**, since `DCFC-D112` defers
+   the domain while the $75 price is justified by it. Open as `DCFC-D121`;
+   domain ownership on termination is open as `DCFC-D122`.
+
+Exact next step: approve `PLAT-102` — the last substantial build — and settle
+`DCFC-D120`.
+
 ## Latest Work — PLAT-101 local implementation and approved staging boundary
 
 Agent: Codex, 2026-08-03. Christian approved `PLAT-101` for exact Supabase
