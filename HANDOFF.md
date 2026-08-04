@@ -2,6 +2,43 @@
 
 Last updated: 2026-08-03
 
+## PLAT-102 readiness — all inputs supplied as of 2026-08-03
+
+Every required input for `PLAT-102` now exists. What remains is the package
+approval itself, which must name the package ID and exact target environment.
+
+**Stripe.** Use the **test** Price `price_1U0Y0sK6WajTkwHYnnttR9nN` and **never**
+the live `price_1TwbmvK6WajTkwHYueLvjhv5` — `PLAT-102`'s prohibited actions
+forbid live-mode Stripe operations. The live Price is the value
+`clubs.stripe_price_id` takes later at `DCFC-901`, not now.
+
+**Price is $75/month, not $65.** `PLAT-D008`'s figure is superseded by
+`DCFC-D119`; its no-trial and no-`trialing` provisions still stand.
+
+**Decisions this package implements**, all accepted and recorded in
+`docs/phase-12/DECISIONS.md`:
+
+- `PLAT-D018` — delete `club_has_feature` by collapsing `can_read_feature` →
+  `can_read_club` and `can_mutate_feature` → `can_mutate_content`, keeping the
+  unused feature parameter as the re-tiering seam. **Zero policy churn** — all
+  115 policies across 29 tables stay as written. Do not rewrite them.
+- `PLAT-D004` — `clubs.kind` backfill: Diverse City `customer`, Rose City
+  `demo`, Alpha and Bravo `test`. Only `customer` requires a subscription.
+- `PLAT-D007` — `grace_ends_at = paid_through + 20 days`; warnings at **day 7
+  and day 17** (settled 2026-08-03).
+- `PLAT-D019` / `PLAT-D020` — reconciliation folded into the daily lifecycle
+  cron, exception-only, with **two independent flags** so the `PLAT-D006` kill
+  switch stops the suspension write without stopping reconciliation.
+- `PLAT-D022` — heartbeat/dead-man's-switch on the cron. **Do not** extend it
+  to `/api/cron/media-cleanup`; that is outside this package's scope and needs
+  its own widening.
+
+**Recommended but not decided:** folding the Resend bounce webhook into this
+package. It touches `vercel.json`, which `PLAT-102` also edits for the cron
+entry, so doing it separately guarantees a conflict. It would close the
+deliverability gap left by the AOL/ISP waiver. Christian has not confirmed
+this; treat it as a proposal, not scope.
+
 ## Latest Work — Five rollout decisions answered; Diverse City price now $75/month
 
 Agent: Claude Code (Opus 5), 2026-08-03. Class 1, documentation only.

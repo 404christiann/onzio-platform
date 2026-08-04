@@ -42,6 +42,16 @@ Statuses: `accepted`, `open`, `superseded`.
 
 | DCFC-D126 | Both Stripe Price IDs are recorded. **Live: `price_1TwbmvK6WajTkwHYueLvjhv5`** — the value `clubs.stripe_price_id` takes at `DCFC-901`. **Test: `price_1U0Y0sK6WajTkwHYnnttR9nN`** — for `PLAT-102`'s test-mode rehearsal. | Christian supplied both on 2026-08-03. Both are $75.00 USD per month with no trial, on the `Diverse City FC Pro Plan` Products (live `prod_UwUmEgeunaSPSI`). Both carry the same account infix as the already-recorded staging webhook `we_1TxrnaK6WajTkwHYtFEvCEo8`, confirming one Stripe account across environments. These are non-secret identifiers of the class this repository already records; no key or signing secret is stored. `PLAT-102` must read the **test** Price and never the live one, per its own prohibition on live-mode Stripe actions. |
 
+| DCFC-D124 | Tier language is removed from **both** Stripe Products. Name is `Onzio - Diverse City FC` (plain hyphen, as applied); description is the tier-free wording pinned below. Applied to live and test on 2026-08-03. | The original `Diverse City FC Pro Plan` name and its "Everything in Starter, plus…" description described the tier ladder `PLAT-102` deletes, on artifacts customers read on invoices, receipts, and in the Customer Portal. The `Onzio - <Club>` name shape scales to every future club, which matters because `PLAT-D003` gives each club its own Product and negotiated Price. Three claims were dropped deliberately: **analytics** and **advanced content controls**, neither of which maps to a customer-facing feature in the codebase, and **expanded profiles**, which reads as a tier upgrade. Every remaining item maps to a real table. Applied in both modes so `PLAT-102`'s test rehearsal exercises the shipped wording. |
+
+**Pinned description for `DCFC-D124`.** Both Stripe Products carry this text;
+changes need a new decision.
+
+> Hosted club website for Diverse City FC, managed through Onzio. Includes
+> roster, schedule, standings, seasons, programs, tryouts, store, sponsors, and
+> contact pages, with media management and admin access for club staff. Custom
+> domain registration and management included.
+
 ## Open Decisions
 
 | ID | Decision needed | Owner | Required before | Resolution evidence |
@@ -55,7 +65,6 @@ below rather than closed.
 | ID | Decision needed | Owner | Required before | Resolution evidence |
 | --- | --- | --- | --- | --- |
 | DCFC-D107 | Whether a future Contact submission form is needed | Christian/client | Outside this epic | Separate scoped epic if approved |
-| DCFC-D124 | Rename **both** Stripe Products and rewrite their descriptions to remove tier language, before the first invoice sends. Both live and test now carry `Pro Plan` and the "Everything in Starter, plus…" description, which describes the tier model `PLAT-102` deletes, on artifacts customers read on invoices, receipts, and in the Portal. | Christian/client | Before `DCFC-901`; ideally before `PLAT-102` finishes, so the test rehearsal exercises the final wording | Updated name and description recorded for both modes |
 | DCFC-D123 | Exact domain to purchase, and whether apex or `www` is canonical. Onzio buys and controls DNS per `DCFC-D112`, so only the name and canonical form remain. | Christian/client | Before `DCFC-902`; the purchase itself should start now because DNS and verification are calendar time, not work | Recorded hostname manifest with no secret values |
 | DCFC-D122 | Who owns the purchased domain if the club leaves Onzio. Not a technical blocker, but unpinned commercial terms around a domain Onzio buys on a customer's behalf. | Christian/client | Before or at `DCFC-901` | Recorded commercial term |
 | DCFC-D115 | ~~Live billing activation inputs~~ — price resolved by `DCFC-D119`; remainder split into `DCFC-D120`, `DCFC-D121`, and `DCFC-D122`. Billing owner/contact and owner-driven Checkout timing still confirm at `DCFC-901`. | Christian/client | Reverified before `DCFC-901` | Dated commercial approval plus safe live Price identifier |
