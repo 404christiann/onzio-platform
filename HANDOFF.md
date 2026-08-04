@@ -11,9 +11,13 @@ Christian answered the five rollout decisions carried since `DCFC-D118`. Full
 records and rationale are in `docs/phase-11/diverse-city/DECISIONS.md`; the
 `STATUS.md` completion record has the detail. Summary:
 
-- **No custom domain at launch** (`DCFC-D112`). Launch on an Onzio-controlled
-  `*.vercel.app` hostname; Onzio buys and manages the club's domain afterwards.
-  This lifts `DCFC-902` out of the launch sequence.
+- **Onzio buys the club's domain and launches on it** (`DCFC-D112`). Onzio owns
+  the registration and controls DNS. `DCFC-902` is therefore **on the launch
+  critical path** — purchase, DNS propagation, Vercel verification, the
+  production Auth redirect allowlist, and the tenant's verified primary
+  `club_domains` row all precede `DCFC-903`. The exact domain and
+  apex-versus-`www` are open as `DCFC-D123`, and the purchase is elapsed time
+  rather than work, so it should start well ahead of `DCFC-902`.
 - **One owner, no pre-provisioned admins** (`DCFC-D113`); the owner adds admins
   through the `PLAT-101` flow. Identity values stay outside Git.
 - **7-day observation window**, Christian sole rollback authority (`DCFC-D116`).
@@ -31,9 +35,8 @@ records and rationale are in `docs/phase-11/diverse-city/DECISIONS.md`; the
    the original `DCFC-D115` both forbid creating live Prices inside a package,
    so this is an **unowned manual step with no home** — tracked as `DCFC-D120`
    and it blocks `DCFC-901`.
-3. **Billing begins before the domain is delivered**, since `DCFC-D112` defers
-   the domain while the $75 price is justified by it. Open as `DCFC-D121`;
-   domain ownership on termination is open as `DCFC-D122`.
+3. **The domain ships at launch**, so there is no billing-versus-delivery gap.
+   Domain ownership on termination is still unpinned — open as `DCFC-D122`.
 
 Exact next step: approve `PLAT-102` — the last substantial build — and settle
 `DCFC-D120`.

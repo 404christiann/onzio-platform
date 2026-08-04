@@ -171,10 +171,15 @@ count: zero. No package was started.
 Christian answered the five rollout decisions carried since `DCFC-D118`, in one
 pass. Recorded in `docs/phase-11/diverse-city/DECISIONS.md`:
 
-- `DCFC-D112` — launch on an Onzio-controlled `*.vercel.app` hostname, **no
-  custom domain at launch**. Onzio will buy and manage the club's domain,
-  attached afterwards. This lifts `DCFC-902` out of the launch sequence and
-  removes DNS propagation and domain-verification risk from the critical path.
+- `DCFC-D112` — **Onzio purchases the club's domain and launches on it.**
+  Corrected the same day: a first pass recorded a `vercel.app` launch, but
+  Christian clarified that the purchase in `DCFC-D119` means launching *on*
+  that domain. `DCFC-902` is therefore **on the launch critical path**, and the
+  purchase, DNS propagation, Vercel verification, production Auth redirect
+  allowlist, and the tenant's verified primary `club_domains` row all precede
+  `DCFC-903`. Onzio controls DNS, which removes the client-side DNS dependency
+  that made the original decision hard to answer. The exact domain name and
+  apex-versus-`www` remain open as `DCFC-D123`.
 - `DCFC-D113` — production provisions exactly one owner, no admins; the owner
   adds admins through the `PLAT-101` flow. Keeps `DCFC-803` to one account.
   Identity values remain outside Git; only the shape is recorded.
@@ -197,14 +202,16 @@ them need attention before `DCFC-901`:
   `PLAT-102`'s prohibited actions and the original `DCFC-D115` both forbid
   creating live Prices inside a package. This is currently an **unowned step
   with no home package** — opened as `DCFC-D120`.
-- **Billing starts before the domain is delivered.** `DCFC-D112` defers the
-  domain until after launch while the $75 price is justified by it, so when
-  billing begins relative to domain delivery is an open commercial question —
-  opened as `DCFC-D121`. Domain ownership on termination is likewise unpinned —
-  opened as `DCFC-D122`.
+- **The domain is delivered at launch**, so the club receives what the $75
+  covers from the first invoice and no billing-versus-delivery gap exists.
+  Domain ownership on termination remains unpinned — opened as `DCFC-D122`.
+- **The domain purchase is now launch-critical calendar time.** Registration,
+  DNS propagation, and Vercel verification are elapsed time rather than work,
+  so the purchase should start well before `DCFC-902` is assigned. The exact
+  domain and canonical form are open as `DCFC-D123`.
 
 `DCFC-D115` is therefore partly resolved: the price is settled, and its
-remainder is split into `DCFC-D120`/`D121`/`D122` rather than closed.
+remainder is split into `DCFC-D120` and `DCFC-D122` rather than closed.
 
 Files changed: `docs/phase-11/diverse-city/DECISIONS.md`,
 `docs/phase-12/DECISIONS.md`, this file, and `HANDOFF.md`. No application code,
