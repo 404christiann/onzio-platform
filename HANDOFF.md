@@ -36,9 +36,12 @@ records and rationale are in `docs/phase-11/diverse-city/DECISIONS.md`; the
    so `DCFC-901` remains the owner-driven Checkout step. Three follow-ups are
    resolved: a matching **test-mode** Product and $75/month Price now exists
    too (`DCFC-D125`), satisfying `PLAT-102`'s required test-Price input. Two
-   follow-ups remain: the exact `price_…` IDs for both modes (`DCFC-D126` —
-   only Product IDs supplied so far), and stripping tier language from **both**
-   Products' name and description before the first invoice (`DCFC-D124`). The
+   resolved along with `DCFC-D126` — both Price IDs are recorded: **live
+   `price_1TwbmvK6WajTkwHYueLvjhv5`** for `clubs.stripe_price_id` at
+   `DCFC-901`, **test `price_1U0Y0sK6WajTkwHYnnttR9nN`** for `PLAT-102`'s
+   rehearsal. `PLAT-102` must read the test Price and never the live one.
+   One follow-up remains: stripping tier language from **both** Products'
+   name and description before the first invoice (`DCFC-D124`). The
    description reads "Everything in Starter, plus…", which describes the tier
    model `PLAT-102` deletes, on an artifact customers see on invoices and in
    the Portal.
