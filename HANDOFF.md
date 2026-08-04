@@ -30,11 +30,17 @@ records and rationale are in `docs/phase-11/diverse-city/DECISIONS.md`; the
 1. `PLAT-D008` is **superseded on price** and marked so in
    `docs/phase-12/DECISIONS.md`. Its no-trial and no-`trialing` provisions
    still stand.
-2. **No live $75/month Stripe Price exists**, and the recorded $65/month
-   Starter Price can no longer be reused. `PLAT-102`'s prohibited actions and
-   the original `DCFC-D115` both forbid creating live Prices inside a package,
-   so this is an **unowned manual step with no home** — tracked as `DCFC-D120`
-   and it blocks `DCFC-901`.
+2. **The live Price now exists** — `DCFC-D120` is resolved. Christian created
+   `Diverse City FC Pro Plan`, Product `prod_UwUmEgeunaSPSI`, **$75/month, live
+   mode, no trial, zero active subscriptions, MRR $0**. No subscription exists,
+   so `DCFC-901` remains the owner-driven Checkout step. Three follow-ups are
+   open: the exact `price_…` ID (`DCFC-D126`), a **test-mode** Price for
+   `PLAT-102`'s rehearsal (`DCFC-D125` — `PLAT-102` names a test Price in its
+   required inputs and only a live one exists), and stripping tier language
+   from the Product name and description before the first invoice
+   (`DCFC-D124`). The description currently reads "Everything in Starter,
+   plus…", which describes the tier model `PLAT-102` deletes, on an artifact
+   customers see on invoices and in the Portal.
 3. **The domain ships at launch**, so there is no billing-versus-delivery gap.
    Domain ownership on termination is still unpinned — open as `DCFC-D122`.
 
