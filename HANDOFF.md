@@ -1,10 +1,10 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
-## PLAT-102 follow-ups committed locally — stop at exact-SHA push gate
+## PLAT-102 local follow-up committed — stop at exact-SHA release approval
 
-Agent: Codex, 2026-08-03. Status: `in_progress`.
+Agent: Codex, 2026-08-04. Status: `in_progress`.
 
 Both findings from the independent `ba59b1b` review are resolved locally.
 The architecture contract now evaluates every `create function` declaration
@@ -39,16 +39,232 @@ backfill audits remain exactly three. The security advisor is unchanged: no new
 function warning, with only the two previously recorded Auth warnings and
 informational intentionally policy-less service tables.
 
-Christian separately approved committing the current follow-up locally. This
-commit is the PLAT-102 follow-up package boundary. **Do not push or deploy
-yet.** Exact next step: read the new HEAD SHA and obtain a separate exact-SHA
-Git push/protected Preview approval. Do not rerun any PLAT-102 migration or the
-backfill, configure Resend, change Auth, or call Stripe APIs.
+Christian separately approved committing and then pushing exact follow-up SHA
+`f951528c3a16088710244e34222fdb03f90cc3fe` to `origin/staging`. The remote
+branch resolves exactly to that SHA. Git integration created protected Preview
+deployment `dpl_25QDp3kbtLoiHPRD4ZSJxbmkGMta` in Vercel project
+`prj_I362ysmh9cse5cRxnL7db4dOhsEs`; it is `READY`, target `preview`, and its
+metadata pins branch `staging` and the exact approved commit. The build cloned
+that commit, compiled cleanly, generated all 29 static pages, deployed outputs,
+and retained only the three pre-existing Analytics hook warnings.
 
-Hosted-mutation count for this follow-up: exactly one approved DDL migration on
-Supabase staging project `fxefqnoqxbezeccjvrsw`. No backfill/audit insert, club
-row, Git remote, Vercel, Stripe, Resend, Auth, DNS, Storage, production, or
-unrelated data/config was changed.
+Christian separately approved repointing only the manually managed
+`alpha-onzio-staging.vercel.app` Preview alias from prior PLAT-101 deployment
+`dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` to the new PLAT-102 deployment
+`dpl_25QDp3kbtLoiHPRD4ZSJxbmkGMta`. `vercel alias set` reused the existing
+build and created no deployment. Independent read-only resolution now returns
+that exact target, Preview, `READY`.
+
+Christian approved adding exactly the five load-bearing PLAT-102 variables to
+Preview for git branch `staging`, followed by exactly one protected rebuild of
+the exact committed deployment source and one Alpha alias repoint after
+`READY`. Read-only preflight reconfirmed all five names absent immediately
+before mutation. The two lifecycle flags are exact `true`; Christian privately
+entered the existing test Portal configuration ID, a new cron secret, and the
+Healthchecks.io lifecycle ping URL. Final reconciliation shows exactly those
+five names as encrypted Preview/`staging` variables without reading their
+values. The Portal variable was initially submitted empty and immediately
+corrected under the same approved name before any rebuild.
+
+The one approved rebuild of source deployment
+`dpl_25QDp3kbtLoiHPRD4ZSJxbmkGMta` created Preview deployment
+`dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny`. It is `READY`; its build log pins branch
+`staging` and commit `f951528`, compiles successfully, generates all 29 static
+pages, and retains only the three known Analytics hook warnings. The approved
+alias command then repointed only `alpha-onzio-staging.vercel.app` from
+`dpl_25QDp3kbtLoiHPRD4ZSJxbmkGMta` to that new deployment. Independent
+resolution returns the exact new ID, Preview, `READY`; `/admin` remains behind
+Vercel SSO with a no-store 302 response.
+
+Christian supplied the separately bounded hosted-acceptance approval. Its
+read-only baseline stopped at the first broken boundary before any acceptance
+mutation: Alpha is not a clean temporary billing fixture. It retains the
+intentional Phase 7 test customer/subscription projection
+`sub_1TxsLTK6WajTkwHYEUjdWeNR`, active on historical $65 test Price
+`price_1Tw6sHK6WajTkwHYRQumSWcM`, with 22 existing Stripe ledger events. The
+current approval permits creating and cleaning up only new temporary Alpha
+Stripe artifacts; it does not authorize altering or deleting this pre-existing
+subscription. Creating a first Checkout would also route to the Portal because
+the subscription row already exists. Project identity is exact and healthy,
+all three PLAT-102 migrations are present, Alpha/Bravo/Diverse City and Rose
+City absence match, and the three `plat_102.billing_backfill` audits remain.
+Final read-only reconciliation confirmed the Alpha and Stripe-ledger baseline
+did not change. No OTP, Stripe API, lifecycle, heartbeat, club, Auth, or monitor
+mutation was attempted.
+
+Christian approved the recommended Bravo fixture preflight read-only. It stopped
+at its first boundary: `bravo-onzio-staging.vercel.app` remains protected and
+`READY`, but resolves to seven-day-old deployment
+`dpl_GJbEfRwSagF6gNt2ESqwPSxZuzua`, whose build log pins branch `staging` at
+commit `92038d4`. It does not contain PLAT-101/102. The current PLAT-102 target
+is `dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny`, branch `staging`, commit `f951528`,
+Preview/`READY`. Per the stop rule, no Bravo membership/billing query or Stripe
+configuration read followed. Protection remained a no-store Vercel SSO 302.
+
+Christian approved and the agent repointed only
+`bravo-onzio-staging.vercel.app` from stale deployment
+`dpl_GJbEfRwSagF6gNt2ESqwPSxZuzua` to already-built
+`dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny`. Independent resolution returns the exact
+new target, Preview/`READY`; protection remains a no-store Vercel SSO 302. The
+remaining read-only baseline confirms Bravo is `test`, onboarding/preview, with
+no Price intent and no subscription row; it has one active synthetic owner and
+one active synthetic admin. Their three pre-existing sessions each are baseline
+state to preserve, not acceptance sessions. Bravo has exactly its one
+`plat_102.billing_backfill` audit.
+
+The Stripe-configuration boundary then stopped. The connected Stripe reader is
+authenticated to Onzio account `acct_1TvPQyK6WajTkwHY` in **live mode**, not
+test mode. The approved $75 test Price retrieval correctly failed with Stripe's
+"similar object exists in test mode" response. Because three read-only requests
+were issued concurrently before mode was known, the Portal and webhook list
+requests returned the live default Portal configuration and live webhook
+endpoint. No secret, customer, subscription, payment, Price, Portal, webhook,
+or other Stripe resource was written. The live-mode connector must not be used
+again for PLAT-102 acceptance.
+
+Christian then manually opened Stripe's test-mode Dashboard and confirmed the
+approved $75/month recurring Price exists. Although the preflight instruction
+was read-only, Christian also changed the test Customer Portal settings: payment
+method updates and invoice history remain enabled, while subscription
+cancellation and subscription/plan updates were disabled. This is a
+user-performed hosted Stripe test configuration mutation, not an agent action,
+and it corrects the exact Phase 7 capability mismatch PLAT-102 needed to remove.
+The agent stopped immediately and did not inspect the test webhook or send any
+further Stripe request. Retaining and verifying that test Portal change needs
+explicit confirmation before the preflight continues.
+
+Christian then explicitly approved retaining the one manual test-mode Portal
+change and read-only verification through the private signed-in test Dashboard.
+Independent verification now passes: default Portal configuration
+`bpc_1Tw73SK6WajTkwHYgoLJ1tpN` is active in test mode; invoice history and
+payment-method updates are enabled; subscription cancellation and plan
+switching are disabled. Existing test webhook
+`we_1TxrnaK6WajTkwHYtFEvCEo8` is active, targets the protected staging webhook
+route through its existing secret-bearing bypass URL, and listens to exactly
+the seven application events: `checkout.session.completed`,
+`customer.subscription.created`, `customer.subscription.deleted`,
+`customer.subscription.updated`, `invoice.paid`, `invoice.payment_failed`, and
+`invoice.payment_succeeded`. The signing secret and protection-bypass value
+remained masked from repository documentation. No test event was sent and no
+Stripe setting or object changed during verification.
+
+Christian supplied the fresh Bravo-specific hosted acceptance approval. A new
+read-only baseline passes before mutation: exact Supabase staging remains
+`ACTIVE_HEALTHY`; Bravo is still `test`, onboarding/preview, with no configured
+Price intent or subscription row; its original synthetic owner/admin remain
+active with exactly three pre-existing Auth sessions each; and the two approved
+temporary identity candidates have no Bravo membership or session. The Bravo
+alias still resolves to exact Preview/`READY` deployment
+`dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny`. Bravo currently has nine historical
+Stripe ledger rows, 23 audit rows including exactly one PLAT-102 backfill audit,
+and neither count changed. An initial TOTP check used the superseded Phase 7
+operator UUID and returned zero; read-only reconciliation corrected that
+stale reference. The current privately configured staging operator is the
+active Alpha owner and has exactly one verified TOTP factor. No OTP was sent.
+
+Christian completed exactly the one approved private operator OTP/TOTP run.
+The helper correctly proved AAL1 refusal, fresh AAL2 acceptance, and one
+verified factor, but its final JSON incorrectly claimed the acceptance session
+was revoked. Immediate database reconciliation found the new Auth session and
+one unrevoked refresh token still present. The installed Supabase client
+explains the false success: `auth.signOut()` deliberately suppresses backend
+401/403 logout errors before returning `error: null`, and the verifier has no
+server-side revocation postcondition.
+
+The acceptance stopped at that boundary. Before it was detected, the guarded
+setup created exactly the two approved temporary Bravo memberships plus two
+sanitized `membership_added` audits, and exactly one owner OTP email was sent;
+its code was never entered, so it created no owner acceptance session. No admin
+email was sent. Cleanup then removed the one new operator session and refresh
+token, deleted only the two temporary Bravo memberships, and wrote exactly two
+sanitized `membership_removed` audits. Final reconciliation restores every
+mutable baseline: zero temporary membership/session/refresh rows, six original
+Bravo sessions, no Bravo subscription, nine Bravo Stripe events, unchanged
+Alpha subscription and Diverse City Price intent, absent Rose City, and the
+same exact Preview/`READY` Bravo deployment. Bravo's audit count is 27 rather
+than 23 solely because the four approved append-only membership audits remain.
+
+The operator verifier is now fixed locally. New fail-closed helper
+`lib/operator/revoke-session.ts` calls the unsuppressed
+`auth.admin.signOut(accessToken, "local")` boundary, probes the newest refresh
+token, reports success only for Supabase's explicit
+`refresh_token_not_found` result, rejects transient probe failures as
+unproven, and makes a second cleanup attempt if a supposedly revoked session
+can still refresh. The verifier retains the original AAL1 access token for
+the same-session server logout, updates to the AAL2 refresh token after TOTP
+step-up, and emits `acceptanceSessionRevoked: true` only after both server
+logout and the refresh-token postcondition pass. Its `finally` path uses the
+same strict helper.
+
+Red-first evidence failed because the helper did not exist. Completed focused
+coverage is 25/25 and includes backend logout failure, transient refresh-probe
+failure, successful server logout plus dead-token proof, and cleanup of an
+unexpectedly refreshable session. Current local gates pass: TypeScript;
+contracts 329/329; architecture 20/20; complete local-Supabase suite 663/663
+across 75 files; and production build. The build retains only the three known
+Analytics hook warnings. No hosted service was contacted and no OTP, session,
+membership, Stripe, Vercel, database, or other hosted mutation occurred while
+implementing or verifying this fix.
+
+Christian supplied the fresh exact approval for one replacement operator
+OTP/TOTP session and its strict revocation proof only. Preflight found exact
+Supabase staging `ACTIVE_HEALTHY`, one configured operator, zero session rows,
+and zero unrevoked refresh tokens. Christian then ran the fixed verifier
+privately. Its sanitized event proved AAL1 refusal, AAL2 acceptance, exactly one
+verified TOTP factor, strict acceptance-session revocation, and zero operator
+data mutations. Independent post-run reconciliation again found exactly one
+operator, zero session rows, and zero unrevoked refresh tokens. The local fix
+is therefore proven against staging rather than only mocked behavior.
+
+Christian then supplied the exact remaining Bravo acceptance approval. Static
+preflight found the first broken boundary before any fixture or hosted
+mutation: `app/admin/(protected)/payments/page.tsx` tells a club in grace that
+"Content changes are paused," while accepted `PLAT-D024`, the applied
+`can_mutate_content` definition, and its real RLS regression guarantee full
+content editing through grace. Shipping or accepting that message would give
+owners false operational guidance during the exact overdue state the page is
+meant to explain. Acceptance stopped immediately.
+
+Final read-only reconciliation proves no baseline moved: Bravo remains one
+`test` club at onboarding/preview with no Price or subscription; the configured
+operator and temporary admin have no Bravo membership or Auth session; the
+one original owner and one original admin remain active with six sessions;
+Bravo remains at nine Stripe-event and 27 audit rows; Alpha retains one
+subscription; Diverse City's exact $75 Price intent remains; and the Bravo
+alias still resolves to Preview/`READY` deployment
+`dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny`.
+
+Christian approved the local-only fix. The Payments grace message now tells
+owners that content editing remains available and the public site stays live
+until the displayed grace deadline. The dormant `isAdminLocked()` helper also
+encoded the superseded lock despite having no runtime callers; it now returns
+true only for terminal/suspended UI state. Red-first focused coverage failed in
+both places, then passed 13/13 after implementation. Final local gates pass:
+TypeScript; contracts 330/330; architecture 20/20; complete local-Supabase
+suite 664/664 across 75 files; production build; and `git diff --check`. Build
+retains only the three known Analytics hook warnings.
+
+Christian approved and the current PLAT-102 verifier, grace-copy/helper,
+regression, and evidence changes are committed locally as one package boundary.
+No push or hosted action followed. Exact next step: read the current HEAD SHA
+and request a separate exact-SHA push/protected Preview rebuild/Bravo alias
+approval before requesting fresh remaining hosted acceptance. The latest
+hosted-acceptance approval performed no mutations before the stop.
+Do not use the live Stripe connector, alter Portal/webhook configuration,
+expose secrets, touch the six original Bravo sessions, repurpose/delete Alpha
+artifacts, deploy, push, or mutate production.
+
+Hosted-mutation count for this follow-up: one approved DDL migration on
+Supabase staging project `fxefqnoqxbezeccjvrsw`; one exact-SHA fast-forward of
+`origin/staging`; the one Git-triggered protected Preview deployment above; and
+two approved Preview-alias repoints recorded above; five final branch-scoped
+Preview variables (six set operations because the Portal ID's initial empty
+submission was immediately corrected); and the one approved configuration-aware
+Preview rebuild `dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny`. No backfill/audit insert,
+club row, agent-issued Stripe write, Resend, Auth, DNS, Storage, production, or
+unrelated data/config was changed. Christian made one additional hosted
+test-mode Stripe Portal configuration change manually: disabling subscription
+cancellation and subscription/plan updates.
 
 ## Historical PLAT-102 review — both findings resolved locally above
 

@@ -69,8 +69,7 @@ export function isAdminLocked(
   row: SubscriptionMirrorRow,
   now: Date = new Date(),
 ): boolean {
-  const state = resolvePaymentsUiState(row, now).state;
-  return state === "grace" || state === "terminal";
+  return resolvePaymentsUiState(row, now).state === "terminal";
 }
 
 export function isPublicSiteLocked(

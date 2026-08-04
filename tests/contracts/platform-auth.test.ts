@@ -7,6 +7,7 @@ import {
   operatorTotpVerifiedAt,
   verifyAccessTokenClaims,
 } from "@/lib/auth-session";
+import { revokeOperatorSession } from "@/lib/operator/revoke-session";
 import { renderTotpQrPage } from "@/lib/operator/totp-qr";
 
 const root = process.cwd();
@@ -120,7 +121,8 @@ describe("PLAT-101 passwordless authentication contract", () => {
     expect(verifier).toContain("auth.mfa.listFactors");
     expect(verifier).toContain("auth.mfa.challengeAndVerify");
     expect(verifier).toContain('currentLevel !== "aal2"');
-    expect(verifier).toContain('scope: "local"');
+    expect(verifier).toContain("revokeOperatorSession");
+    expect(verifier).not.toContain('auth.signOut({ scope: "local" })');
     expect(verifier).toContain("operator.staging_auth_verified");
     expect(verifier).toContain("stdin.isTTY");
     expect(verifier).toContain('key.startsWith("sb_secret_")');
@@ -142,6 +144,92 @@ describe("PLAT-101 passwordless authentication contract", () => {
     expect(recovery).toContain("Remove only the approved factor");
     expect(recovery).toContain("Write the audit event");
     expect(existsSync(resolve(root, "lib/operator/mfa-recovery.ts"))).toBe(false);
+  });
+});
+
+describe("PLAT-102 operator acceptance session revocation", () => {
+  const accessToken = "aal1-access-token";
+  const refreshToken = "operator-refresh-token";
+
+  it("uses the unsuppressed server logout and proves the refresh token is dead", async () => {
+    const signOut = vi.fn().mockResolvedValue({ data: null, error: null });
+    const refreshSession = vi.fn().mockResolvedValue({
+      data: { session: null, user: null },
+      error: {
+        code: "refresh_token_not_found",
+        message: "Refresh Token Not Found",
+      },
+    });
+
+    await expect(
+      revokeOperatorSession(
+        { admin: { signOut }, refreshSession },
+        { accessToken, refreshToken },
+      ),
+    ).resolves.toEqual({ revoked: true, refreshRejected: true });
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(signOut).toHaveBeenCalledWith(accessToken, "local");
+    expect(refreshSession).toHaveBeenCalledWith({ refresh_token: refreshToken });
+  });
+
+  it("fails instead of swallowing a backend logout error", async () => {
+    const signOut = vi.fn().mockResolvedValue({
+      data: null,
+      error: new Error("Forbidden"),
+    });
+    const refreshSession = vi.fn();
+
+    await expect(
+      revokeOperatorSession(
+        { admin: { signOut }, refreshSession },
+        { accessToken, refreshToken },
+      ),
+    ).rejects.toThrow("Operator session revocation failed");
+    expect(refreshSession).not.toHaveBeenCalled();
+  });
+
+  it("does not treat a transient refresh error as revocation proof", async () => {
+    const signOut = vi.fn().mockResolvedValue({ data: null, error: null });
+    const refreshSession = vi.fn().mockResolvedValue({
+      data: { session: null, user: null },
+      error: new Error("network unavailable"),
+    });
+
+    await expect(
+      revokeOperatorSession(
+        { admin: { signOut }, refreshSession },
+        { accessToken, refreshToken },
+      ),
+    ).rejects.toThrow("Operator session revocation could not be proven");
+  });
+
+  it("re-revokes and fails if the supposedly revoked session can refresh", async () => {
+    const signOut = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: null });
+    const refreshSession = vi.fn().mockResolvedValue({
+      data: {
+        session: { access_token: "unexpected-refreshed-access-token" },
+        user: null,
+      },
+      error: null,
+    });
+
+    await expect(
+      revokeOperatorSession(
+        { admin: { signOut }, refreshSession },
+        { accessToken, refreshToken },
+      ),
+    ).rejects.toThrow("Operator session remained refreshable after revocation");
+
+    expect(signOut).toHaveBeenNthCalledWith(1, accessToken, "local");
+    expect(signOut).toHaveBeenNthCalledWith(
+      2,
+      "unexpected-refreshed-access-token",
+      "local",
+    );
   });
 });
 

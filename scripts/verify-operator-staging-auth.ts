@@ -5,6 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { verifyAccessTokenClaims } from "@/lib/auth-session";
 import { ContractError } from "@/lib/contract-error";
+import { revokeOperatorSession } from "@/lib/operator/revoke-session";
 import { assertOperator } from "@/lib/operator/shared";
 
 const EXPECTED_PROJECT_REF = "fxefqnoqxbezeccjvrsw";
@@ -82,6 +83,10 @@ async function main(): Promise<void> {
 
   const prompt = createInterface({ input: stdin, output: stdout });
   let auth: ReturnType<typeof createClient>["auth"] | null = null;
+  let acceptanceSession: {
+    accessToken: string;
+    refreshToken: string;
+  } | null = null;
   const originalOperatorUserIds = process.env.ONZIO_OPERATOR_USER_IDS;
 
   try {
@@ -126,10 +131,15 @@ async function main(): Promise<void> {
     if (verifiedEmail.error) throw verifiedEmail.error;
 
     const aal1AccessToken = verifiedEmail.data.session?.access_token;
+    const aal1RefreshToken = verifiedEmail.data.session?.refresh_token;
     const userId = verifiedEmail.data.user?.id;
-    if (!aal1AccessToken || !userId) {
+    if (!aal1AccessToken || !aal1RefreshToken || !userId) {
       throw new Error("Verified operator AAL1 session is missing");
     }
+    acceptanceSession = {
+      accessToken: aal1AccessToken,
+      refreshToken: aal1RefreshToken,
+    };
     if (!allowedUserIds.has(userId)) {
       throw new Error("The signed-in user is not an allowlisted Onzio operator");
     }
@@ -166,6 +176,13 @@ async function main(): Promise<void> {
       code: totpCode,
     });
     if (challenge.error) throw challenge.error;
+    if (!challenge.data.refresh_token) {
+      throw new Error("Verified operator AAL2 refresh token is missing");
+    }
+    acceptanceSession = {
+      accessToken: aal1AccessToken,
+      refreshToken: challenge.data.refresh_token,
+    };
 
     const assurance = await auth.mfa.getAuthenticatorAssuranceLevel();
     if (assurance.error || assurance.data.currentLevel !== "aal2") {
@@ -179,9 +196,9 @@ async function main(): Promise<void> {
       throw new Error("Operator gate returned the wrong verified actor");
     }
 
-    const signOut = await auth.signOut({ scope: "local" });
-    if (signOut.error) throw signOut.error;
+    const revocation = await revokeOperatorSession(auth, acceptanceSession);
     auth = null;
+    acceptanceSession = null;
 
     stdout.write(
       `${JSON.stringify({
@@ -190,18 +207,18 @@ async function main(): Promise<void> {
         aal1Refused: true,
         aal2Accepted: true,
         verifiedTotpFactors: 1,
-        acceptanceSessionRevoked: true,
+        acceptanceSessionRevoked:
+          revocation.revoked && revocation.refreshRejected,
         operatorDataMutations: 0,
       })}\n`,
     );
   } finally {
     let cleanupError: Error | null = null;
-    if (auth) {
-      const cleanup = await auth.signOut({ scope: "local" });
-      if (cleanup.error) {
-        cleanupError = new Error(
-          `Operator acceptance session cleanup failed: ${cleanup.error.message}`,
-        );
+    if (auth && acceptanceSession) {
+      try {
+        await revokeOperatorSession(auth, acceptanceSession);
+      } catch {
+        cleanupError = new Error("Operator acceptance session cleanup failed");
       }
     }
     if (originalOperatorUserIds === undefined) {

@@ -70,23 +70,20 @@ describe("PLAT-102 payment UI state", () => {
     });
   });
 
-  it("locks content during grace but keeps the public site until suspension", () => {
+  it("keeps content and the public site available through grace, then locks both", () => {
     const grace = row({
       status: "past_due",
       current_period_end: PAID_THROUGH,
       grace_ends_at: GRACE_END,
     });
-    expect(isAdminLocked(grace, NOW)).toBe(true);
+    expect(isAdminLocked(grace, NOW)).toBe(false);
     expect(isPublicSiteLocked(grace, NOW)).toBe(false);
-    expect(
-      isPublicSiteLocked(
-        row({
-          status: "past_due",
-          current_period_end: PAID_THROUGH,
-          grace_ends_at: "2026-08-09T00:00:00.000Z",
-        }),
-        NOW,
-      ),
-    ).toBe(true);
+    const suspended = row({
+      status: "past_due",
+      current_period_end: PAID_THROUGH,
+      grace_ends_at: "2026-08-09T00:00:00.000Z",
+    });
+    expect(isAdminLocked(suspended, NOW)).toBe(true);
+    expect(isPublicSiteLocked(suspended, NOW)).toBe(true);
   });
 });

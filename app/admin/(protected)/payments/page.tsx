@@ -107,9 +107,10 @@ export default async function PaymentsPage() {
 
         {uiState.state === "grace" && (
           <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/10 px-4 py-3 font-body text-sm text-amber-100">
-            Content changes are paused while payment is overdue. The public site
-            remains available through {formatDate(uiState.graceEndsAt)}. Update
-            the card in the Customer Portal or contact{" "}
+            Content editing remains available while payment is overdue. Your
+            public site stays live until the grace period ends on{" "}
+            {formatDate(uiState.graceEndsAt)}. Update the card in the Customer
+            Portal or contact{" "}
             <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">
               {SUPPORT_EMAIL}
             </a>
