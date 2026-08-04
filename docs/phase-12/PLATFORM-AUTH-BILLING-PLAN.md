@@ -133,15 +133,15 @@ acceptance recorded in that file before either is assigned.
 
 ## PLAT-101 — Admin auth simplification
 
-**Execution status — in progress, 2026-08-03.** Christian approved `PLAT-101`
+**Execution status — complete, 2026-08-03.** Christian approved `PLAT-101`
 for Supabase staging project `fxefqnoqxbezeccjvrsw`. The local implementation,
 loopback acceptance, rollback/forward rehearsal, and full verification suite are
 complete. Staging Auth now uses six-digit codes with 86,400-second expiry and a
 code-only Onzio template; migrations `20260803192838` and `20260803192943` are
 applied and verified. Christian separately approved the exact application push:
 `origin/staging` now points to `16b2a21`, and protected Preview deployment
-`dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`. Deployment readiness is verified,
-but hosted application acceptance remains pending. The operator TOTP requirement
+`dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`. Deployment readiness and hosted
+application acceptance are verified. The operator TOTP requirement
 is satisfied: Christian approved one existing staging Auth user, the helper
 keeps that hosted UUID in a dedicated ignored staging-enrollment variable while
 preserving the local test operator, and Vercel Preview branch `staging`'s
@@ -150,8 +150,10 @@ The private helper run authenticated the approved account, found an existing
 verified TOTP factor, and correctly added nothing; a targeted aggregate
 confirmed exactly one verified TOTP factor and zero unresolved or other
 factors. Hosted owner/admin UI, AAL1 operator refusal, fresh-AAL2 operator
-success, and the required multi-provider delivery matrix remain open. Exact
-evidence and next steps are in `HANDOFF.md` and the Phase 11 status ledger.
+success, Yahoo delivery, and the unknown-address negative path all pass.
+Christian explicitly accepted a reduced delivery matrix by waiving AOL and
+ISP-hosted checks; those providers were not tested and are not passed. Exact
+evidence is in `HANDOFF.md` and the Phase 11 status ledger.
 
 - **Objective:** replace password-plus-mandatory-MFA admin authentication with
   passwordless email-code sign-in for club accounts, confine AAL2 to operator
@@ -288,7 +290,9 @@ recorded in the execution status above.
   recording any code or secret. Completed locally: 314/314 contracts, 20/20
   architecture, 81/81 database, two Playwright scenarios, TypeScript, build,
   database lint, generated types, clean reset, and rollback/forward rehearsal.
-  The multi-provider hosted delivery evidence remains open.
+  Hosted acceptance is complete with a disclosed evidence limitation: Yahoo
+  passed, while Christian explicitly waived AOL and ISP-hosted delivery. The
+  full three-provider matrix therefore was not proven.
 - **Rollback expectations:** the migration must ship with a reviewed down path
   restoring `is_aal2()` on club-facing policies. Auth configuration changes
   (template and expiry) must be recorded with prior values so

@@ -7,6 +7,7 @@ import {
   operatorTotpVerifiedAt,
   verifyAccessTokenClaims,
 } from "@/lib/auth-session";
+import { renderTotpQrPage } from "@/lib/operator/totp-qr";
 
 const root = process.cwd();
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
@@ -141,6 +142,40 @@ describe("PLAT-101 passwordless authentication contract", () => {
     expect(recovery).toContain("Remove only the approved factor");
     expect(recovery).toContain("Write the audit event");
     expect(existsSync(resolve(root, "lib/operator/mfa-recovery.ts"))).toBe(false);
+  });
+});
+
+describe("PLAT-101 private TOTP QR contract", () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0" /></svg>';
+
+  it.each([
+    ["Supabase auth-js utf-8 data URL", `data:image/svg+xml;utf-8,${svg}`],
+    [
+      "percent-encoded SVG data URL",
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
+    ],
+    [
+      "base64 SVG data URL",
+      `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`,
+    ],
+  ])("renders %s in a private local viewer", (_label, input) => {
+    const page = renderTotpQrPage(input);
+    expect(page).toContain('<meta http-equiv="Content-Security-Policy"');
+    expect(page).toContain("default-src 'none'; img-src data:");
+    expect(page).toContain("<img");
+    expect(page).toContain("data:image/svg+xml");
+    expect(page).not.toContain(svg);
+    expect(page).not.toContain('onerror="');
+  });
+
+  it.each([
+    "data:image/png;base64,aGVsbG8=",
+    "<svg />",
+    "data:image/svg+xml;utf-8,",
+  ])("rejects input that is not a populated SVG data URL", (input) => {
+    expect(() => renderTotpQrPage(input)).toThrow(
+      "Supabase returned an unsupported TOTP QR format",
+    );
   });
 });
 

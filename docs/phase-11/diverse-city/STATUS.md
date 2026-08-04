@@ -18,15 +18,40 @@ six-digit, 24-hour, code-only staging Auth configuration are applied and
 verified. Christian separately approved pushing exact commit `16b2a21` and its
 protected Preview deployment. `origin/staging` now points to that exact commit,
 and Vercel deployment `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`; hosted
-application acceptance is still open.
+application acceptance is complete.
 The approved operator account is in governed TOTP break-glass recovery: its one
 session and unrevoked refresh token were revoked, then its sole inaccessible
 verified factor was removed. The configured user remains active with zero
-sessions or factors; private replacement enrollment is the next required step.
+sessions or factors. Two private replacement attempts exposed and safely rolled
+back local handling incompatibilities with Supabase Auth's current SVG data
+URL. The helper now opens that data URL directly in a private temporary viewer;
+Christian then privately enrolled and verified exactly one replacement factor
+at AAL2. A read-only aggregate confirms one verified factor and zero unresolved
+factors or sessions. The guarded operator verifier subsequently proved AAL1
+refusal, fresh-AAL2 acceptance, and acceptance-session revocation. Exactly one
+sanitized system recovery audit was appended and read back. Operator recovery
+and hosted operator acceptance are complete.
 Christian approved the bounded hosted acceptance pass, but its ISP scope still
-contains the literal placeholder `[ISP DOMAIN]`. The guarded local operator
-verifier is ready, while hosted owner/admin/operator and Yahoo/AOL/ISP evidence
-remain outstanding. `DCFC-601` and `DCFC-602` remain unstarted and are
+contained the literal placeholder `[ISP DOMAIN]`. Christian then explicitly
+waived that ISP-hosted check as an accepted, disclosed residual risk because no
+mailbox is available; it is not a pass. The guarded operator verifier, hosted
+owner, Yahoo delivery, and unknown-address negative evidence are complete.
+Christian explicitly waived AOL as well as ISP-hosted delivery; both are
+waived, not passed. The single approved unknown-address request displayed the
+explicit no-account state, was rejected by Auth with `otp_disabled`, and
+created no matching user, session, refresh token, or email delivery.
+The protected Alpha alias was separately approved and repointed from the older
+password/MFA Preview to the approved exact-`16b2a21` PLAT-101 Preview. Fresh
+CLI and browser verification passed. Yahoo email delivery, code verification,
+protected Alpha admin access, and owner-only Team-access denial now pass;
+hosted owner OTP/UI acceptance also passes. AOL is waived, not passed. The sole
+active Alpha owner had mapped to the non-deliverable synthetic Phase 7
+`example.com` identity, so owner
+acceptance required a separately approved ownership transfer. Christian has now
+approved the exact transfer to the existing configured operator identity; the
+read-only baseline matched, fresh private AAL2 proof passed, and the guarded
+atomic transfer plus independent reconciliation are complete.
+`DCFC-601` and `DCFC-602` remain unstarted and are
 `PLAT-103` scope; the media-cleanup heartbeat remains prohibited.
 Christian's local manual acceptance also exposed and closed three UI edges: an
 immediate removed-admin re-add now reports the provider's one-minute email
@@ -65,7 +90,7 @@ defined in `ROLLOUT-EPIC.md`, `ROLLOUT-WORK-PACKAGES.md`,
 `CONTENT-MEDIA-READINESS.md`, `STAGING-ACCEPTANCE.md`, and
 `PRODUCTION-CUTOVER-ROLLBACK.md`. Planning hosted-mutation count: zero.
 
-**The suite is GREEN — 675/675 passing across 71 files.** `DCFC-304` adds
+**The suite is GREEN — 681/681 passing across 71 files.** `DCFC-304` adds
 reusable Programs overview/detail, Contact, and Tryouts public routes; real
 AAL2 admin-to-anonymous-public database acceptance; Alpha/Bravo isolation;
 published `academy@1` persistence; and repeatable desktop/mobile public and
@@ -89,7 +114,7 @@ not satisfy the handoff requirement.
 
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
-| PLAT-101 | in_progress | Codex | Protected `16b2a21` Preview verified; operator break-glass recovery has revoked the prior session/factor; literal `[ISP DOMAIN]` remains unresolved | Next: privately enroll exactly one replacement operator TOTP factor, run the guarded AAL1/AAL2 verifier, write the approved sanitized recovery audit, then complete the provider/browser matrix after naming the ISP domain. |
+| PLAT-101 | complete | Codex | Local, staging, operator, owner, admin, Yahoo, and unknown-address acceptance complete; AOL and ISP-hosted delivery explicitly waived, not passed | No PLAT-101 work remains. Fresh exact approval is required before PLAT-102, DCFC-601, or DCFC-602. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -137,6 +162,373 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-101 hosted acceptance complete — Codex
+
+- **Package/status:** `PLAT-101`, `complete`. Yahoo delivery passed. Christian
+  explicitly waived AOL and ISP-hosted delivery; those two providers were not
+  tested and must not be reported as passed.
+- **Completed:** submitted exactly one approved synthetic unknown-address
+  request through the protected Alpha login UI. The page displayed the pinned
+  no-account state with retry and contact paths and never rendered code entry.
+  This closes the last executable hosted acceptance gate after the already
+  completed operator, owner, admin, and Yahoo journeys.
+- **Files changed:** `HANDOFF.md`, this ledger,
+  `docs/phase-12/PLATFORM-AUTH-BILLING-PLAN.md`,
+  `scripts/enroll-operator-totp.ts`, `lib/operator/totp-qr.ts`, and
+  `tests/contracts/platform-auth.test.ts`.
+- **Verification:** digest-only preflight and postflight both found zero matching
+  Auth users; postflight also found zero sessions and refresh tokens. Auth logs
+  show one `/otp` response at HTTP 422 with `otp_disabled`, with no recovery or
+  mail-success event. Final aggregate reconciliation shows one active Alpha
+  owner, two active admins, one verified operator TOTP factor, one sanitized
+  ownership-transfer audit, and zero remaining acceptance-user sessions or
+  unrevoked refresh tokens. The final QR compatibility change is covered by
+  21/21 focused auth contracts, 326/326 contracts, clean TypeScript, and the
+  complete 681/681 loopback suite.
+- **Blockers:** none for `PLAT-101`. The reduced delivery matrix is an explicitly
+  accepted evidence limitation: Yahoo passed; AOL and ISP-hosted did not.
+- **Exact next step:** no `PLAT-101` work remains. Do not start `PLAT-102`,
+  `DCFC-601`, or `DCFC-602` without fresh exact approval. Do not extend the
+  media-cleanup heartbeat. Keep all current closeout work local; do not push.
+- **Hosted mutations:** this final negative check made one rejected Auth request
+  and created no user, email, session, token, membership, or audit. Earlier
+  approved PLAT-101 hosted actions and their exact counts remain recorded in the
+  preceding entries. No deployment, configuration, production, Stripe, DNS,
+  Storage, Bunny.net, tenant-content, or unrelated-identity mutation occurred.
+
+### 2026-08-03 — PLAT-101 AOL delivery check waived — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; AOL delivery/admin acceptance is
+  explicitly `waived`, not passed. ISP-hosted delivery is also waived; Yahoo is
+  the only provider result passed.
+- **Completed:** Christian explicitly chose to skip AOL acceptance and accept
+  the disclosed deliverability-evidence gap.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** no AOL address was read or recorded and no AOL request was
+  submitted. The protected owner Team-access page was loaded, but its
+  add-administrator action was not used for AOL.
+- **Blockers:** provider testing is closed by explicit waivers, not evidence.
+  The approved hosted unknown-address negative request still needs to prove the
+  explicit no-account message, zero Auth-user creation, and zero email delivery.
+- **Exact next step:** Christian signs out the owner acceptance session. Run
+  exactly one synthetic unknown-address request through the protected Alpha
+  login UI, then reconcile no matching Auth user and no email.
+- **Hosted mutations:** zero for this waiver. No AOL email, Auth identity,
+  membership, session, audit, configuration, alias, deployment, push,
+  production, Stripe, DNS, Storage, Bunny.net, or tenant-content mutation.
+
+### 2026-08-03 — PLAT-101 hosted Alpha owner acceptance passed — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; hosted owner acceptance passes.
+  AOL remains open; ISP-hosted delivery is waived, not passed.
+- **Completed:** Christian signed out Yahoo, requested and verified the single
+  approved owner OTP, entered the protected Alpha portal as the transferred
+  owner, and confirmed `Team access` is visible.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** browser DOM independently shows Alpha FC, the protected
+  owner navigation including `Team access` and `Payments`, the owner-only
+  membership-management page, add-administrator form, and two expected active
+  admins. Read-only Supabase reconciliation returns one active Alpha owner at
+  the approved target, one recent target sign-in, one active target session,
+  two active admins, and zero Yahoo sessions or unrevoked refresh tokens.
+- **Blockers:** owner acceptance has none. AOL delivery and admin least-privilege
+  acceptance remain open.
+- **Exact next step:** Christian privately types the AOL mailbox in the preserved
+  Team-access form without submitting. Run a hash-only read-only identity and
+  membership preflight, then perform the single approved AOL code/admin/cleanup
+  flow.
+- **Hosted mutations:** one approved owner OTP email and one active owner Auth
+  session were created. The Yahoo acceptance session was revoked by ordinary
+  sign-out. Zero Auth identities, memberships, audits, factors,
+  allowlist/configuration, aliases, deployments, pushes, production, Stripe,
+  DNS, Storage, Bunny.net, or tenant-content mutations occurred in this step.
+
+### 2026-08-03 — PLAT-101 Alpha ownership transfer complete — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; ownership transfer is complete.
+  Hosted owner UI and AOL acceptance remain open; ISP-hosted delivery is waived,
+  not passed.
+- **Completed:** Christian privately produced the guarded verifier's sanitized
+  success event proving AAL1 refusal, fresh TOTP-backed AAL2 acceptance, one
+  verified factor, zero operator data mutations, and session revocation. Ran the
+  approved ownership change as one exact-guard atomic transaction: added the
+  approved target as owner, removed only the synthetic source membership,
+  rechecked exactly one owner, and appended one sanitized
+  `ownership_transferred` operator audit.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** independent hosted reconciliation returns one active Alpha
+  owner at the approved target, one removed synthetic source owner, both Auth
+  identities retained, two unchanged active admins, one transfer audit with the
+  exact expected shape, and zero active operator sessions or unrevoked refresh
+  tokens. The first transaction attempt failed before any mutation on unsupported
+  `min(uuid)`; the corrected exact selector succeeded. The first read-only
+  reconciliation had a text/UUID comparison mismatch; its corrected rerun
+  passed.
+- **Blockers:** ownership transfer has none. The new owner still needs the
+  approved hosted OTP/UI check, Yahoo needs ordinary sign-out, and AOL delivery
+  plus admin-boundary acceptance remains open.
+- **Exact next step:** Christian signs out the accepted Yahoo admin session,
+  signs in with the newly active Alpha owner mailbox, confirms `Team access`,
+  then performs the bounded AOL delivery/admin check and cleanup.
+- **Hosted mutations:** the fresh verifier sent one operator OTP, created one
+  acceptance session, stepped it to AAL2, and revoked it. The atomic transfer
+  inserted one target owner membership, marked one synthetic source owner
+  membership removed, and wrote one ownership-transfer audit. Zero Auth identity,
+  admin membership, factor, allowlist/configuration, alias, deployment, push,
+  production, Stripe, DNS, Storage, Bunny.net, or tenant-content changes.
+
+### 2026-08-03 — PLAT-101 Alpha ownership transfer approved/preflighted — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; transfer approved but not yet
+  executed. Fresh private operator AAL2 proof is the remaining mutation gate.
+- **Completed:** captured Christian's exact approval to transfer Alpha staging
+  ownership from the synthetic Phase 7 owner to the existing configured
+  operator identity while retaining both Auth identities, exactly one active
+  owner, the allowlist, unrelated memberships, and one sanitized audit. Ran the
+  read-only exact-target baseline.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** baseline returns one Alpha club, two matching active Auth
+  identities, exactly one active owner matching the approved source, zero target
+  Alpha memberships, and zero prior `ownership_transferred` audits. Local env is
+  loopback-only and no hosted service-role secret will be requested or pasted.
+- **Blockers:** the operator action requires fresh AAL2. The existing guarded
+  verifier collects all email/TOTP inputs privately and revokes its own session.
+- **Exact next step:** Christian privately runs
+  `npm run operator:verify-staging-auth` and reports only its sanitized final
+  event. Then execute one atomic exact-guard transaction through the connected
+  staging control plane and reconcile exactly one approved target owner.
+- **Hosted mutations:** zero. Read-only preflight only; no email, session, Auth
+  user, membership, audit, factor, allowlist, configuration, alias, deployment,
+  push, production, Stripe, DNS, Storage, Bunny.net, or tenant-content mutation.
+
+### 2026-08-03 — PLAT-101 synthetic Alpha owner mapping found — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; hosted owner acceptance is
+  blocked on a real owner mailbox. Yahoo passes; AOL remains open; ISP-hosted
+  delivery is waived, not passed.
+- **Completed:** performed a read-only Supabase lookup of the sole active Alpha
+  owner's Auth email mapping.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** exactly one active, non-deleted Alpha owner maps to
+  `onzio.phase7.alpha.owner@example.com`, the synthetic Phase 7 identity. The
+  reserved `example.com` address cannot receive the owner OTP.
+- **Blockers:** PLAT-101 ownership transfer is an operator-only action and was
+  not authorized by the existing acceptance or alias approvals. A real target
+  owner mailbox and separate exact hosted-mutation approval are required.
+- **Exact next step:** Christian chooses the real Alpha owner mailbox. Prepare
+  and approve a narrow operator ownership transfer that preserves exactly one
+  active owner, then complete owner and AOL acceptance.
+- **Hosted mutations:** zero. Read-only query only; no email, session, Auth user,
+  membership, audit, factor, alias/configuration, deployment, push, production,
+  Stripe, DNS, Storage, Bunny.net, or tenant-content mutation occurred.
+
+### 2026-08-03 — PLAT-101 Yahoo hosted acceptance passed — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; Yahoo passes. Hosted Alpha owner
+  and AOL acceptance remain open; ISP-hosted delivery is waived, not passed.
+- **Completed:** Christian privately requested and received the single approved
+  Yahoo email code, verified it, and entered the protected Alpha admin portal.
+  Browser inspection confirms Alpha FC and the `Admin` role render while the
+  owner-only `Team access` navigation is absent. That denial is the intended
+  least-privilege boundary.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** protected browser DOM shows the Alpha admin dashboard and no
+  Team-access link. Read-only Supabase reconciliation returns exactly one active
+  Alpha owner, two active Alpha admins, and one recently signed-in active admin.
+  The accepted Yahoo Auth identity and membership both pre-existed this pass.
+- **Blockers:** Yahoo has none. The Yahoo session remains active until ordinary
+  sign-out; owner login and AOL email/admin acceptance remain open.
+- **Exact next step:** Christian signs out Yahoo, privately signs in as the
+  configured Alpha owner and confirms `Team access`, then performs the bounded
+  AOL delivery/admin check and cleanup.
+- **Hosted mutations:** exactly one approved Yahoo OTP email and one Yahoo Auth
+  session were created by the successful login. Zero Auth identities,
+  memberships, audits, factors, aliases/configuration, deployments, pushes,
+  production changes, Stripe, DNS, Storage, Bunny.net, or tenant-content
+  mutations occurred. The session remains active pending sign-out.
+
+### 2026-08-03 — PLAT-101 protected Alpha alias corrected — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; the alias blocker is resolved
+  and hosted owner/admin plus Yahoo/AOL acceptance can resume.
+- **Completed:** under Christian's separate exact approval, repointed only
+  `alpha-onzio-staging.vercel.app` from stale Preview
+  `dpl_GJbEfRwSagF6gNt2ESqwPSxZuzua` to already-built approved Preview
+  `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF`.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** `vercel alias set` reported success. Fresh read-only
+  inspection resolves the alias to `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF`, project
+  `onzio-rcfc`, Preview, Ready. Reloading the protected Alpha Chrome tab shows
+  the PLAT-101 passwordless copy and the unique “Send sign-in code” and “I
+  already have a code” controls; the old password/MFA fields are absent.
+- **Blockers:** no alias blocker remains. Private owner/admin login and Yahoo/AOL
+  delivery evidence remain open; ISP-hosted delivery is waived, not passed.
+- **Exact next step:** Christian privately submits the configured Alpha owner
+  address and code in the preserved tab, then completes the bounded Yahoo and
+  AOL membership/delivery checks and cleanup.
+- **Hosted mutations:** exactly one Vercel Preview-alias reassignment, limited to
+  `alpha-onzio-staging.vercel.app`. Zero deployments, pushes, production
+  changes, other alias/configuration changes, Auth emails, identities, sessions,
+  memberships, audits, factors, Stripe, DNS, Storage, Bunny.net, or
+  tenant-content mutations occurred.
+
+### 2026-08-03 — PLAT-101 protected Alpha alias mismatch found — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; hosted owner/admin and Yahoo/AOL
+  acceptance are blocked on the protected Alpha alias serving the approved
+  PLAT-101 Preview.
+- **Completed:** used Christian's authenticated Chrome tab in the isolated
+  `PLAT-101 hosted acceptance` group. Read-only Supabase reconciliation proved
+  the hostname maps to the active Alpha staging tenant and the privately
+  supplied Yahoo identity has exactly one active Alpha admin membership. After
+  signing out the observed browser session, the login page exposed the retired
+  password and club-MFA flow. No owner or provider OTP request was submitted,
+  so Yahoo is not accepted and AOL was not attempted.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** read-only Vercel inspection shows
+  `alpha-onzio-staging.vercel.app` resolves to older Ready Preview
+  `dpl_GJbEfRwSagF6gNt2ESqwPSxZuzua`; approved exact-`16b2a21` Preview
+  `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is Ready on the `staging` branch alias but
+  not the protected Alpha alias. The browser's old login UI independently
+  confirms the mismatch. No mailbox address, credential, code, token, session
+  identifier, or Auth user identifier is recorded.
+- **Blockers:** changing the alias is a Vercel configuration mutation excluded
+  by the current hosted-acceptance approval. The stale alias prevents truthful
+  PLAT-101 browser or provider acceptance.
+- **Exact next step:** obtain fresh exact approval to repoint only
+  `alpha-onzio-staging.vercel.app` from
+  `dpl_GJbEfRwSagF6gNt2ESqwPSxZuzua` to already-built
+  `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF`, without deploying or pushing. Verify the
+  passwordless interface, then resume the private owner, Yahoo, and AOL matrix.
+- **Hosted mutations:** one pre-existing browser session for the observed Yahoo
+  identity was revoked through ordinary sign-out. Zero email sends, new Auth
+  identities, membership changes, audits, factors, alias/configuration changes,
+  deployments, pushes, production changes, Stripe, DNS, Storage, Bunny.net, or
+  tenant-content mutations occurred.
+
+### 2026-08-03 — PLAT-101 ISP-hosted delivery check waived — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; ISP-hosted delivery is
+  explicitly `waived`, not passed. Hosted owner/admin and Yahoo/AOL acceptance
+  remain open.
+- **Completed:** Christian confirmed no ISP-hosted mailbox is available and
+  explicitly accepted skipping that provider check while disclosing the
+  limitation. Yahoo remains available and required; AOL remains required.
+- **Files changed:** `HANDOFF.md` and this ledger only.
+- **Verification:** no ISP delivery attempt occurred and none is claimed. The
+  protected Alpha URL reached Vercel authentication in an isolated browser; an
+  authenticated Chrome check was not used because it contained an unrelated
+  existing app session.
+- **Blockers:** the ISP mailbox is no longer a package blocker under Christian's
+  explicit waiver. Hosted owner/admin browser behavior and Yahoo/AOL delivery
+  still require private acceptance.
+- **Exact next step:** Christian signs into Vercel in the isolated browser, then
+  completes the protected Alpha owner/admin flow using Yahoo and AOL addresses
+  and codes privately.
+- **Hosted mutations:** zero. No email/Auth request, user, membership, audit,
+  session, factor, configuration, deploy, push, production, Vercel project,
+  Stripe, DNS, Storage, Bunny.net, or tenant-content change occurred.
+
+### 2026-08-03 — PLAT-101 operator recovery and acceptance complete — Codex
+
+- **Package/status:** operator TOTP break-glass recovery and hosted operator
+  acceptance are complete; `PLAT-101` remains `in_progress` at hosted
+  owner/admin and Yahoo/AOL acceptance. The separate ISP-hosted criterion was
+  later explicitly waived, not passed.
+- **Completed:** Christian privately ran the guarded staging verifier. Its
+  sanitized result proves the real operator boundary refused AAL1, accepted
+  fresh AAL2 only after TOTP step-up, observed exactly one verified factor,
+  performed zero operator data mutations, and revoked the acceptance session.
+  After a zero-match audit preflight, appended exactly one truthful `system`
+  recovery event containing only the approved reference digest, aggregate
+  before/after counts, pre-recovery session-revocation result, boundary-proof
+  booleans, and recovered outcome.
+- **Files changed:** `HANDOFF.md` and this ledger for closeout, alongside the
+  still-uncommitted QR-viewer implementation and regression test.
+- **Verification:** before the audit append, read-only reconciliation returned
+  one configured user, zero sessions and unrevoked refresh tokens, exactly one
+  verified TOTP factor, zero unresolved/other factors, and zero matching audit
+  rows. The guarded append returned one inserted row. Independent readback
+  returned the same Auth aggregate, exactly one matching audit, and `true` for
+  its exact sanitized shape.
+- **Blockers:** operator recovery has none. `PLAT-101` still lacks hosted
+  owner/admin browser acceptance and Yahoo/AOL delivery. The separately recorded
+  ISP waiver supersedes this checkpoint's former placeholder blocker.
+- **Exact next step:** follow the newer protected-Alpha-alias record above, then
+  run the private hosted owner/admin and Yahoo/AOL matrix. Do not start
+  `PLAT-102`, `DCFC-601`, or `DCFC-602`.
+- **Hosted mutations:** the verifier sent exactly one staging operator OTP
+  email, created exactly one acceptance session, stepped it from AAL1 to AAL2,
+  and revoked it. Appended exactly one sanitized `system` recovery audit. Final
+  state is one verified TOTP factor, zero sessions, zero unresolved/other
+  factors, and one matching recovery audit. No operator data mutation, user,
+  allowlist, membership, configuration, deploy, push, production, Vercel,
+  Stripe, DNS, Storage, Bunny.net, tenant-content, or unrelated-identity change.
+
+### 2026-08-03 — PLAT-101 replacement operator TOTP enrolled — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; replacement enrollment is
+  complete, while fresh operator-boundary verification and the recovery audit
+  remain open.
+- **Completed:** Christian privately reran `npm run operator:enroll-totp` and
+  reported its exact safe AAL2 success status. Independently reconciled exactly
+  one verified replacement TOTP factor, zero unresolved or other factors, and
+  zero leftover sessions or refresh tokens for the active configured operator.
+- **Files changed:** `HANDOFF.md` and this ledger for the checkpoint, in addition
+  to the still-uncommitted private QR viewer correction already listed below.
+- **Verification:** hosted read-only aggregate returned one configured user,
+  one verified TOTP factor, and zero sessions, unrevoked refresh tokens,
+  unresolved TOTP factors, or other factors.
+- **Blockers:** the real operator gate still needs its approved AAL1 refusal,
+  TOTP step-up, fresh-AAL2 success, and acceptance-session revocation proof. The
+  single sanitized recovery audit must follow that proof, not precede it.
+- **Exact next step:** Christian privately runs
+  `npm run operator:verify-staging-auth` and reports only its safe final status.
+  Then reconcile the session/factor aggregate and append exactly one approved
+  sanitized recovery audit event.
+- **Hosted mutations:** the successful retry sent one staging operator OTP
+  email, created one temporary enrollment session and one replacement TOTP
+  factor, verified exactly that factor, and revoked the enrollment session. The
+  current state is exactly one verified factor and zero sessions. No user,
+  allowlist, membership, tenant audit, configuration, deploy, push, production,
+  Vercel, Stripe, DNS, Storage, Bunny.net, or tenant-content change occurred.
+
+### 2026-08-03 — PLAT-101 operator TOTP QR viewer correction — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; recovery remains fail-closed
+  with zero operator factors until the private replacement succeeds.
+- **Completed:** diagnosed the first private replacement failure after email
+  verification and `auth.mfa.enroll()` as a local data-URL parser gap. The first
+  decoder correction still rejected the actual SVG body on the second private
+  attempt. Both attempts automatically removed their unresolved factor and
+  signed out their session. Replaced SVG-body parsing with Supabase's documented
+  direct `<img>` usage: the helper HTML-escapes the populated SVG data URL into
+  a mode-0600 temporary local page with a restrictive Content Security Policy,
+  opens it locally, and removes it during cleanup.
+- **Files changed:** `lib/operator/totp-qr.ts`,
+  `scripts/enroll-operator-totp.ts`, `tests/contracts/platform-auth.test.ts`,
+  this ledger, and `HANDOFF.md`.
+- **Verification:** a read-only staging aggregate returned one matching active
+  configured operator and zero sessions, unrevoked refresh tokens, verified
+  factors, unresolved factors, or other factors after each attempt. The second
+  red-first focused test failed 6/21 before the private viewer existed; the
+  focused file now passes 21/21, contracts 326/326, TypeScript is clean, and the
+  complete real-loopback suite passes 681/681 across 71 files.
+- **Blockers:** replacement enrollment, fresh AAL1-refusal/AAL2-success proof,
+  and the single sanitized recovery audit remain open. The hosted provider
+  matrix also still lacks a named ISP domain.
+- **Exact next step:** Christian privately reruns
+  `npm run operator:enroll-totp` and reports only the safe final status. After
+  successful enrollment, run `npm run operator:verify-staging-auth`, reconcile
+  exactly one verified factor, and append the approved sanitized audit.
+- **Hosted mutations:** across the two failed attempts, exactly two staging
+  operator OTP emails were sent; each created one temporary operator Auth
+  session and one unresolved TOTP factor, then revoked its session and deleted
+  its factor during automatic cleanup. Current aggregate counts are zero. No
+  verified factor, user,
+  allowlist, membership, tenant audit, configuration, deploy, push, production,
+  Vercel, Stripe, DNS, Storage, Bunny.net, or tenant-content change occurred.
 
 ### 2026-08-03 — PLAT-101 operator TOTP break-glass checkpoint — Codex
 

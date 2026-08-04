@@ -8,6 +8,7 @@ import { createInterface, type Interface } from "node:readline/promises";
 import { loadEnvConfig } from "@next/env";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
+import { renderTotpQrPage } from "@/lib/operator/totp-qr";
 
 const EXPECTED_PROJECT_REF = "fxefqnoqxbezeccjvrsw";
 const EXPECTED_HOSTNAME = `${EXPECTED_PROJECT_REF}.supabase.co`;
@@ -72,22 +73,6 @@ function operatorUserIds(): Set<string> {
       .map((value) => value.trim())
       .filter(Boolean),
   );
-}
-
-function decodeQrCode(dataUri: string): Buffer {
-  if (dataUri.trimStart().startsWith("<svg")) {
-    return Buffer.from(dataUri, "utf8");
-  }
-  const match = dataUri.match(
-    /^data:image\/svg\+xml(?:;charset=[^;,]+)?(;base64)?,([\s\S]+)$/i,
-  );
-  const payload = match?.[2];
-  if (!payload) {
-    throw new Error("Supabase returned an unsupported TOTP QR format");
-  }
-  return match[1]
-    ? Buffer.from(payload, "base64")
-    : Buffer.from(decodeURIComponent(payload), "utf8");
 }
 
 async function openPrivateQr(path: string): Promise<void> {
@@ -183,8 +168,8 @@ async function main(): Promise<void> {
     enrolledFactorId = enrollment.data.id;
 
     temporaryDirectory = await mkdtemp(join(tmpdir(), "onzio-operator-totp-"));
-    const qrPath = join(temporaryDirectory, "operator-totp.svg");
-    await writeFile(qrPath, decodeQrCode(enrollment.data.totp.qr_code), {
+    const qrPath = join(temporaryDirectory, "operator-totp.html");
+    await writeFile(qrPath, renderTotpQrPage(enrollment.data.totp.qr_code), {
       mode: 0o600,
     });
     await openPrivateQr(qrPath);
