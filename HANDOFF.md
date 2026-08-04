@@ -9,10 +9,12 @@ staging project `fxefqnoqxbezeccjvrsw`. The package is **complete** with two
 explicitly accepted delivery-evidence waivers: Yahoo delivery passed, while
 AOL and ISP-hosted delivery were waived and were not tested or passed. Local
 implementation, the approved staging schema/Auth boundary, and hosted
-acceptance are complete. Exact commit `16b2a21` is deployed to the protected staging
-Preview and is `READY`; `da0a3f0` and every later closeout commit remain local
-and unpushed. The approved operator identity is in governed break-glass
-recovery: its prior sessions and sole inaccessible TOTP factor are revoked, and
+acceptance are complete. Exact commit `457280b` is now pushed to
+`origin/staging`; its Git-triggered protected Preview
+`dpl_GNkG2FYHNciomriQ3YtGkPyqzT8N` is `READY`, targets Preview, and returns the
+expected Vercel SSO redirect with `noindex`. The approved operator identity is
+in governed break-glass recovery: its prior sessions and sole inaccessible TOTP
+factor are revoked, and
 two replacement attempts safely rolled back after exposing a local SVG
 data-URL handling gap. The helper now uses Supabase's QR data URL directly in a
 private temporary viewer; Christian's third private run enrolled and verified
@@ -463,9 +465,9 @@ now-inapplicable leaked-password warning, plus four pre-existing policyless
 privileged tables. No package data was mutated.
 
 Exact next step: no PLAT-101 work remains. Yahoo passed; AOL and ISP-hosted
-delivery were explicitly waived and were not passed. The exact `16b2a21` push
-approval is exhausted; all later local commits must remain unpushed unless
-separately approved. Do not start `PLAT-102`,
+delivery were explicitly waived and were not passed. The exact `457280b` push
+approval is exhausted; this deployment-evidence update and all later local
+commits must remain unpushed unless separately approved. Do not start `PLAT-102`,
 `DCFC-601`, or `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC
 `p=none` is a separate DNS approval.
 

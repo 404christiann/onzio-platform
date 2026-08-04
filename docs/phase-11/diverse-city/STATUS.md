@@ -15,10 +15,10 @@ Supabase staging project `fxefqnoqxbezeccjvrsw`. Local implementation and
 verification are complete and committed locally as `a797c60` (`Implement
 PLAT-101 passwordless admin access`). The two checked-in PLAT-101 migrations and the
 six-digit, 24-hour, code-only staging Auth configuration are applied and
-verified. Christian separately approved pushing exact commit `16b2a21` and its
-protected Preview deployment. `origin/staging` now points to that exact commit,
-and Vercel deployment `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`; hosted
-application acceptance is complete.
+verified. Christian separately approved the final PLAT-101 push through exact
+commit `457280b`. `origin/staging` now points to that exact commit, and its
+Git-triggered protected Preview deployment `dpl_GNkG2FYHNciomriQ3YtGkPyqzT8N`
+is `READY`; hosted application acceptance is complete.
 The approved operator account is in governed TOTP break-glass recovery: its one
 session and unrevoked refresh token were revoked, then its sole inaccessible
 verified factor was removed. The configured user remains active with zero
@@ -162,6 +162,32 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-101 final staging push and protected Preview — Codex
+
+- **Package/status:** `PLAT-101`, `complete`; its final implementation,
+  acceptance evidence, onboarding guidance, and accepted-risk correction are
+  published through exact commit `457280b`.
+- **Completed:** pushed only `457280b` to `origin/staging` using an exact SHA
+  refspec. Git integration created Preview deployment
+  `dpl_GNkG2FYHNciomriQ3YtGkPyqzT8N` for Vercel project
+  `prj_I362ysmh9cse5cRxnL7db4dOhsEs`.
+- **Files changed:** `HANDOFF.md` and this ledger only for the mandatory local
+  hosted-mutation record. These evidence changes are not pushed.
+- **Verification:** the remote `refs/heads/staging` resolves exactly to
+  `457280b4439b9c6cad903359d4a19dccf26e644a`; the local branch matches the
+  remote. Vercel reports the exact SHA on branch `staging`, target Preview,
+  status `READY`, and deployment protection returns HTTP 302 to Vercel SSO with
+  `x-robots-tag: noindex`.
+- **Blockers:** none for `PLAT-101`.
+- **Exact next step:** obtain fresh exact approval naming `PLAT-102` and its
+  environment before beginning billing or entitlement work. Do not start
+  `DCFC-601` or `DCFC-602` separately; they are `PLAT-103` scope.
+- **Hosted mutations:** exactly one Git push advancing `origin/staging` from
+  `16b2a21` to `457280b` and one Git-triggered protected Preview deployment.
+  Zero Supabase, Auth, email, user, factor, session, database, configuration,
+  production, Stripe, DNS, Storage, tenant-content, alias, or unrelated-identity
+  mutations. No manual deployment command ran.
 
 ### 2026-08-03 — PLAT-101 hosted acceptance complete — Codex
 
