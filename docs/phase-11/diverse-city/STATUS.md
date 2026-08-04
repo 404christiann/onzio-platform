@@ -19,14 +19,15 @@ verified. Christian separately approved pushing exact commit `16b2a21` and its
 protected Preview deployment. `origin/staging` now points to that exact commit,
 and Vercel deployment `dpl_54H3R35nnxpV7ERqw5ZGbvXLxmEF` is `READY`; hosted
 application acceptance is still open.
-The approved operator account has exactly one verified TOTP factor and no
-unresolved or other factors, so enrollment is complete. Christian approved the
-bounded hosted acceptance pass, but its ISP scope still contains the literal
-placeholder `[ISP DOMAIN]`; no hosted acceptance action has run under that
-approval. The guarded local operator verifier is ready, while hosted
-owner/admin/operator and Yahoo/AOL/ISP evidence remain outstanding. `DCFC-601`
-and `DCFC-602` remain unstarted and are `PLAT-103` scope; the media-cleanup
-heartbeat remains prohibited.
+The approved operator account is in governed TOTP break-glass recovery: its one
+session and unrevoked refresh token were revoked, then its sole inaccessible
+verified factor was removed. The configured user remains active with zero
+sessions or factors; private replacement enrollment is the next required step.
+Christian approved the bounded hosted acceptance pass, but its ISP scope still
+contains the literal placeholder `[ISP DOMAIN]`. The guarded local operator
+verifier is ready, while hosted owner/admin/operator and Yahoo/AOL/ISP evidence
+remain outstanding. `DCFC-601` and `DCFC-602` remain unstarted and are
+`PLAT-103` scope; the media-cleanup heartbeat remains prohibited.
 Christian's local manual acceptance also exposed and closed three UI edges: an
 immediate removed-admin re-add now reports the provider's one-minute email
 cooldown clearly, and the admin sidebar now has an independently scrollable,
@@ -88,7 +89,7 @@ not satisfy the handoff requirement.
 
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
-| PLAT-101 | in_progress | Codex | Protected `16b2a21` Preview and operator TOTP verified; bounded hosted acceptance approved except literal `[ISP DOMAIN]` is unresolved | Guarded operator AAL1/AAL2 verifier is locally green. Next: replace `[ISP DOMAIN]` with the actual controlled ISP mailbox domain, then privately run the approved hosted owner/admin/operator and Yahoo/AOL/ISP acceptance. |
+| PLAT-101 | in_progress | Codex | Protected `16b2a21` Preview verified; operator break-glass recovery has revoked the prior session/factor; literal `[ISP DOMAIN]` remains unresolved | Next: privately enroll exactly one replacement operator TOTP factor, run the guarded AAL1/AAL2 verifier, write the approved sanitized recovery audit, then complete the provider/browser matrix after naming the ISP domain. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -136,6 +137,38 @@ unassigned and unapproved.
 | DCFC-1003 | 3 | pending | 1001 accepted, `DCFC-D117`, fresh approval | Indexing approval and rollout closeout |
 
 ## Completion Records
+
+### 2026-08-03 — PLAT-101 operator TOTP break-glass checkpoint — Codex
+
+- **Package/status:** `PLAT-101`, `in_progress`; operator recovery is fail-closed
+  between removal of the inaccessible factor and private replacement enrollment.
+- **Completed:** under Christian's exact approval, confirmed the active configured
+  staging operator by a non-reversible local-ID digest; recorded the approval and
+  out-of-band identity-verification reference only as SHA-256
+  `2b71d470293d9feed3a89dfbfd96dd6b8e3569e169cd9cd4d41e21037a0b69cb`;
+  reconciled one active session, one unrevoked refresh token, exactly one verified
+  TOTP factor, and zero unresolved/other factors; revoked the session and refresh
+  token first; read both back at zero; removed only the sole verified factor; and
+  read back zero sessions, unrevoked tokens, or factors while the user remains
+  active.
+- **Files changed:** this ledger and `HANDOFF.md` only for the checkpoint.
+- **Verification:** exact project read returned active/healthy staging project
+  `fxefqnoqxbezeccjvrsw`; pre- and post-mutation aggregate reads matched the
+  approved counts. The first read-only hash included a newline and safely matched
+  zero users. The first revocation transaction failed on `min(uuid)` before any
+  delete; the corrected guarded transaction succeeded and was independently
+  read back before factor removal.
+- **Blockers:** replacement enrollment, fresh AAL1-refusal/AAL2-success proof,
+  and the single sanitized recovery audit remain open. Operator functions remain
+  unavailable until those steps pass.
+- **Exact next step:** Christian privately runs
+  `npm run operator:enroll-totp`, enters all values locally, and reports only the
+  safe final status. Then run `npm run operator:verify-staging-auth`, append the
+  approved recovery audit, and reconcile exactly one verified factor.
+- **Hosted mutations:** deleted exactly one staging Auth refresh-token row, one
+  staging Auth session row, and one verified TOTP factor. Zero email, new factor,
+  user, allowlist, membership, tenant audit, configuration, deploy, push,
+  production, Vercel, Stripe, DNS, Storage, Bunny.net, or tenant-content changes.
 
 ### 2026-08-03 — PLAT-101 hosted-acceptance verifier prepared — Codex
 

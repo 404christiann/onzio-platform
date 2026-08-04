@@ -9,9 +9,10 @@ staging project `fxefqnoqxbezeccjvrsw`. The package is **in progress**, not
 complete: local implementation and the approved staging schema/Auth boundary
 are complete. Exact commit `16b2a21` is deployed to the protected staging
 Preview and is `READY`; the post-deployment evidence commit `da0a3f0` remains
-local and unpushed. The approved operator identity has exactly one verified
-TOTP factor. Hosted owner/admin/operator and Yahoo/AOL/ISP-hosted acceptance
-remain open.
+local and unpushed. The approved operator identity is in governed break-glass
+recovery: its prior sessions and sole inaccessible TOTP factor are revoked, and
+private replacement enrollment is the next required step. Hosted owner/admin/
+operator and Yahoo/AOL/ISP-hosted acceptance remain open.
 
 ### Next agent — start here
 
@@ -208,6 +209,26 @@ evidence is clean TypeScript, 320/320 contracts, 675/675 complete tests across
 71 files with real loopback database access, and clean diff checks. A non-TTY
 smoke stopped at the interactive guard before any network request.
 
+**Operator TOTP break-glass recovery, 2026-08-03 — in progress:** Christian
+approved the governed recovery for exactly the configured operator in Supabase
+staging project `fxefqnoqxbezeccjvrsw`. A read-only aggregate confirmed one
+active configured user, one active session, one unrevoked refresh token, exactly
+one verified TOTP factor, and zero unresolved or other factors. The approval and
+out-of-band identity-verification reference is retained only as SHA-256
+`2b71d470293d9feed3a89dfbfd96dd6b8e3569e169cd9cd4d41e21037a0b69cb`.
+The sole session and refresh token were revoked first and read back at zero;
+only then was the sole verified factor removed. The current aggregate is one
+active configured user and zero sessions, unrevoked refresh tokens, verified
+TOTP factors, unresolved TOTP factors, or other factors. One initial read-only
+hash lookup included a newline and matched no user; the corrected lookup matched
+exactly one. The first revocation transaction failed on an unsupported
+`min(uuid)` aggregate before any delete; the corrected guarded transaction then
+succeeded. No email was sent, no replacement factor was enrolled, and no audit
+event was written yet. Recovery remains fail-closed until Christian privately
+runs `npm run operator:enroll-totp`, then
+`npm run operator:verify-staging-auth`; write the single sanitized audit only
+after fresh AAL2 succeeds.
+
 Approved hosted mutations completed only on `fxefqnoqxbezeccjvrsw`:
 
 - migration `20260803192838` installed the AMR session helpers and replaced the
@@ -230,15 +251,15 @@ The security advisor still reports the intentional 24-hour OTP warning and the
 now-inapplicable leaked-password warning, plus four pre-existing policyless
 privileged tables. No package data was mutated.
 
-Exact next step: Christian supplies the actual ISP-hosted mailbox domain in
-place of `[ISP DOMAIN]`, then privately runs the guarded operator verifier and
-the approved browser acceptance against Alpha staging. Record only safe
-provider-domain/status/timestamp evidence and reconcile the allowed temporary
-memberships, Auth identities, sessions, and logs. No secret, code, full address,
-token, or factor identifier may be recorded. The exact `16b2a21` push approval
-is exhausted; all later local commits must remain unpushed unless separately
-approved. Do not start `PLAT-102`, `DCFC-601`, or `DCFC-602`; do not extend the
-heartbeat to media cleanup. DMARC `p=none` is a separate DNS approval.
+Exact next step: Christian privately runs `npm run operator:enroll-totp` and
+reports only its safe final status. Then run the guarded operator verifier,
+write and reconcile the single recovery audit, and resume the remaining hosted
+acceptance after replacing `[ISP DOMAIN]` with the actual ISP-hosted mailbox
+domain. No secret, code, full address, token, or factor identifier may be
+recorded. The exact `16b2a21` push approval is exhausted; all later local commits
+must remain unpushed unless separately approved. Do not start `PLAT-102`,
+`DCFC-601`, or `DCFC-602`; do not extend the heartbeat to media cleanup. DMARC
+`p=none` is a separate DNS approval.
 
 ## Latest Work — PLAT-EPIC-001 prerequisites P1 and P2
 
