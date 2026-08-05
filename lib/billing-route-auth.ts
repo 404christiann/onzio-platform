@@ -1,6 +1,7 @@
 import { authorizeAdminAccess } from "@/lib/authorization";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
+import { failContract } from "@/lib/contract-error";
 import { createClient } from "@/lib/supabase-server";
 
 export async function requireBillingRouteAuthorization(request: Request) {
@@ -29,11 +30,16 @@ export async function requireBillingRouteAuthorization(request: Request) {
     capability: "billing",
   });
 
+  if (typeof claims.session_id !== "string") {
+    failContract("AUTHENTICATION_REQUIRED");
+  }
+
   return {
     supabase,
     user: {
       id: userId,
       email: typeof claims.email === "string" ? claims.email : undefined,
+      sessionId: claims.session_id,
     },
     club,
   };

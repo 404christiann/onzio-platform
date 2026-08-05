@@ -19,7 +19,63 @@ type ResolveStripeEvent = (
   config: Record<string, unknown>,
 ) => Promise<Record<string, unknown>>;
 
+type CheckoutIdempotencyKeys = (input: {
+  environment: "staging" | "production";
+  clubId: string;
+  sessionId: string;
+}) => { customer: string; checkout: string };
+
 describe("PLAT-102 per-club billing intent", () => {
+  it("scopes Checkout idempotency to the authenticated owner session", async () => {
+    const keys = await loadContract<CheckoutIdempotencyKeys>(
+      "@/lib/stripe-checkout-idempotency",
+      "checkoutIdempotencyKeys",
+    );
+    const firstSession = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const secondSession = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const first = keys({
+      environment: "staging",
+      clubId: clubs.alpha.id,
+      sessionId: firstSession,
+    });
+    expect(
+      keys({
+        environment: "staging",
+        clubId: clubs.alpha.id,
+        sessionId: firstSession,
+      }),
+    ).toEqual(first);
+    expect(
+      keys({
+        environment: "staging",
+        clubId: clubs.alpha.id,
+        sessionId: secondSession,
+      }),
+    ).not.toEqual(first);
+    expect(JSON.stringify(first)).not.toContain(firstSession);
+    await expectContractError(
+      () =>
+        keys({
+          environment: "staging",
+          clubId: clubs.alpha.id,
+          sessionId: "not-a-session-id",
+        }),
+      "CHECKOUT_ATTEMPT_INVALID",
+    );
+  });
+
+  it("does not retain permanent per-club first-Checkout keys", async () => {
+    const checkoutRoute = await readFile(
+      resolve(process.cwd(), "app/api/stripe/checkout/route.ts"),
+      "utf8",
+    );
+    expect(checkoutRoute).toContain("checkoutIdempotencyKeys");
+    expect(checkoutRoute).toContain("sessionId: user.sessionId");
+    expect(checkoutRoute).not.toContain(":first-customer");
+    expect(checkoutRoute).not.toContain(":first-checkout");
+  });
+
   it("uses the server-owned club Price and never accepts a client tier or Price", async () => {
     const buildCheckoutDecision = await loadContract<BuildCheckoutDecision>(
       "@/lib/stripe-event-routing",

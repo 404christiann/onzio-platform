@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireBillingRouteAuthorization } from "@/lib/billing-route-auth";
 import { ContractError } from "@/lib/contract-error";
 import { getStripeClient } from "@/lib/stripe-client";
+import { checkoutIdempotencyKeys } from "@/lib/stripe-checkout-idempotency";
 import {
   buildCheckoutDecision,
 } from "@/lib/stripe-event-routing";
@@ -50,6 +51,11 @@ export async function POST(request: Request) {
 
     const metadata = decision.metadata!;
     if (!user.email) throw new ContractError("AUTHENTICATION_REQUIRED");
+    const idempotencyKeys = checkoutIdempotencyKeys({
+      environment: config.environment,
+      clubId: club.id,
+      sessionId: user.sessionId,
+    });
     const customer = await stripe.customers.create(
       {
         email: user.email,
@@ -57,7 +63,7 @@ export async function POST(request: Request) {
         metadata,
       },
       {
-        idempotencyKey: `onzio:${config.environment}:${club.id}:first-customer`,
+        idempotencyKey: idempotencyKeys.customer,
       },
     );
 
@@ -73,7 +79,7 @@ export async function POST(request: Request) {
         cancel_url: `${origin}/admin/payments?checkout=cancelled`,
       },
       {
-        idempotencyKey: `onzio:${config.environment}:${club.id}:first-checkout`,
+        idempotencyKey: idempotencyKeys.checkout,
       },
     );
     return NextResponse.redirect(session.url!, 303);

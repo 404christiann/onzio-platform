@@ -69,11 +69,20 @@ required for temporary membership or the remaining acceptance matrix.
 Christian supplied that approval, but its static preflight stopped before any
 mutation: the deployed Payments grace copy incorrectly says content changes
 are paused, contradicting accepted `PLAT-D024` and the applied/editable grace
-boundary. Final reconciliation proves every Bravo, candidate, Alpha, Diverse
+boundary. Final reconciliation proved every Bravo, candidate, Alpha, Diverse
 City, event/audit, session, and deployment baseline unchanged. The copy and
-dormant helper semantics are now corrected and regressed locally; focused
-13/13, contracts 330/330, architecture 20/20, full 664/664, TypeScript, build,
-and diff checks pass. Commit and every hosted step remain separately gated.
+dormant helper semantics are corrected and regressed; focused 13/13, contracts
+330/330, architecture 20/20, full 664/664, TypeScript, build, and diff checks
+pass. Exact commit `a1f28feb9d0e7206508ff23f115a09190bb7ef04` is now pushed
+to `origin/staging`. Git created exactly one matching protected Preview,
+`dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`, which is `READY` and pins branch `staging`
+and the exact approved SHA. Only `bravo-onzio-staging.vercel.app` was repointed
+from `dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny` to that deployment. Hosted acceptance
+remains paused and requires fresh approval. A post-release read-only preflight
+reconfirmed the exact READY alias plus the unchanged Bravo baseline: `test`,
+onboarding/preview, no Price or subscription, one synthetic owner and one
+synthetic admin, six preserved sessions, nine Stripe events, and 27 audits
+including the one PLAT-102 backfill audit.
 The first approved staging release attempt stopped before mutation: a sanitized
 baseline found Alpha, Bravo, and Diverse City but no Rose City row, including
 no fuzzy slug/name match. At that point, the exact PLAT-102 migration was the
@@ -197,7 +206,7 @@ not satisfy the handoff requirement.
 | Package | Status | Assigned agent | Dependency state | Evidence or next step |
 | --- | --- | --- | --- | --- |
 | PLAT-101 | complete | Codex | Local, staging, operator, owner, admin, Yahoo, and unknown-address acceptance complete; AOL and ISP-hosted delivery explicitly waived, not passed | No PLAT-101 work remains. Fresh exact approval is required before PLAT-102, DCFC-601, or DCFC-602. |
-| PLAT-102 | in_progress | Codex | Strict verifier fix is proven on staging; grace copy and dormant admin-lock helper match PLAT-D024; all follow-up changes are committed locally with full suite 664/664 | Read current HEAD and obtain exact-SHA push/rebuild/Bravo-alias approval before fresh hosted acceptance. Never reuse the live-mode Stripe reader. Hosted Resend remains separately gated. |
+| PLAT-102 | in_progress | Codex | Third pass stopped cleanly when permanent per-club Stripe idempotency keys replayed the prior deleted-Customer/completed-Checkout response; baseline restored to 39 audits/14 events; session-scoped hashed keys are fixed and full local verification is green | Obtain local commit approval, then separate exact-SHA release/both-alias approval before a newly bounded hosted pass. Never use the live-mode Stripe reader. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -1097,6 +1106,391 @@ Hosted-mutation count: zero.
 - Hosted mutations: zero. No Supabase, Auth/email, membership, audit, Stripe,
   Vercel, Healthchecks, Resend, Git remote, production, tenant content, or
   unrelated hosted service was contacted or changed for this local fix.
+
+### 2026-08-04 — PLAT-102 exact follow-up release and Bravo alias — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: pushed only exact commit
+  `a1f28feb9d0e7206508ff23f115a09190bb7ef04` to `origin/staging` using an
+  exact refspec. Git integration created exactly one matching protected Preview
+  deployment, `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`. After it reached `READY`
+  and its metadata proved branch `staging` plus the full approved SHA, repointed
+  only `bravo-onzio-staging.vercel.app` from
+  `dpl_DYxMvHj9V8vgLsVHh2aSgUm7YBny` to the new deployment.
+- Files changed: `HANDOFF.md` and this status ledger only for the mandatory
+  local release evidence. These documentation changes are not committed or
+  pushed.
+- Verification: `git ls-remote` returns the exact approved SHA for
+  `refs/heads/staging`. A SHA-filtered Vercel listing returns exactly one
+  deployment, status `READY`, with metadata
+  `githubCommitRef=staging` and the full approved `githubCommitSha`. Final alias
+  inspection resolves Bravo to exact deployment
+  `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`, target Preview, status `READY`. A fresh
+  post-release read-only Supabase aggregate found Bravo unchanged at
+  test/onboarding/preview with no Price or subscription, one active owner, one
+  active admin, six member sessions, nine Stripe events, and 27 audits including
+  one PLAT-102 backfill audit.
+- Blockers or decisions needed: no release blocker. PLAT-102 remains
+  `in_progress`; hosted acceptance did not resume under this release approval.
+- Exact next step: obtain a fresh, separately bounded Bravo hosted-acceptance
+  approval before temporary membership creation, owner/admin OTP delivery,
+  Stripe test-mode artifacts, lifecycle invocations, or Healthchecks changes.
+  Never use the connected live-mode Stripe reader.
+- Hosted mutations: exactly one approved exact-SHA fast-forward of
+  `origin/staging`, exactly one Git-triggered protected Preview deployment, and
+  exactly one Bravo-only alias repoint. No manual rebuild, Alpha/other alias,
+  Vercel configuration, Supabase migration/backfill/data, Auth/email, Stripe,
+  Resend, Healthchecks, production, tenant-content, or unrelated mutation
+  occurred.
+
+### 2026-08-04 — PLAT-102 Bravo acceptance resumed; owner code pending — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: received Christian's fresh exact approval for the remaining
+  Bravo-only hosted matrix. Read-only identity guards found exactly one active
+  configured operator identity, exactly one active existing Yahoo admin
+  candidate, no Bravo membership/session for either, and one verified operator
+  TOTP factor. One atomic guarded transaction revalidated Bravo's complete
+  baseline, added only the approved temporary owner/admin memberships, and
+  appended only two sanitized `membership_added` audits. Sent exactly the one
+  approved owner OTP and stopped at the private code screen.
+- Files changed: `docs/phase-12/PLAT-102-OPERATIONS.md`, `HANDOFF.md`, and this
+  status ledger. The operations note now pins the exact release/baseline,
+  one-flow Stripe boundary, six lifecycle calls, monitor proof, cleanup order,
+  and append-only deltas. These local documentation changes are uncommitted.
+- Verification: after fixture creation Bravo has two active owners, two active
+  admins, zero sessions for the two temporary candidates, and 29 audits. The
+  delta from the 27-audit baseline is exactly the two approved sanitized add
+  audits. The original memberships and six original sessions are unchanged.
+  The protected app reached the six-digit owner code screen.
+- Blockers or decisions needed: Christian must enter the owner code privately;
+  the agent must not inspect the mailbox or receive the code in chat.
+- Exact next step: Christian enters the owner code in the retained Chrome tab
+  and reports completion. Continue from the resulting owner portal without
+  sending another owner OTP.
+- Hosted mutations: exactly two temporary Bravo membership inserts, two
+  sanitized membership-add audits, and one owner OTP email. No owner/admin
+  session exists yet; no admin OTP, club billing/lifecycle field, Stripe,
+  webhook, lifecycle/cron, Healthchecks, Vercel, Resend, production, tenant
+  content, original membership/session, or unrelated mutation occurred.
+
+### 2026-08-04 — PLAT-102 Bravo Checkout stopped at Vercel protection; cleanup complete — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: Christian privately completed the one approved owner OTP and the
+  one approved admin OTP. The owner entered the protected portal, saw Team
+  access and Payments, and proved the `test`-club no-billing state. A guarded
+  update then set only Bravo to `customer` with the approved test Price intent.
+  The owner submitted Start subscription exactly once. The pass stopped when
+  `POST /api/stripe/checkout` returned 403 before reaching the Checkout
+  function or Stripe. Cleanup revoked only the two acceptance sessions and
+  refresh tokens, removed only the two temporary memberships, restored Bravo's
+  complete mutable baseline, and appended the two approved sanitized removal
+  audits.
+- Files changed: `docs/phase-12/PLAT-102-OPERATIONS.md`, `HANDOFF.md`, and this
+  status ledger only. These documentation changes are uncommitted and unpushed.
+- Verification: the exact Vercel deployment log contains one 403 request at
+  source `edge-middleware` and no serverless Checkout invocation. A read-only
+  HEAD to the same path returns Vercel's no-store 302 to its SSO endpoint. The
+  checked-in Next middleware has 404 and 303 fail-closed branches but no 403
+  response. Final Supabase reconciliation returns Bravo to `test`, onboarding/
+  preview, null Price intent, and no subscription; one original owner, one
+  original admin, and all six original sessions remain; both temporary
+  candidates have zero membership/session/refresh rows; Stripe-event count
+  remains nine. Audit count is 31, exactly the 27-row baseline plus two add and
+  two remove audits. No Stripe object or webhook projection was created.
+- Blockers or decisions needed: the automated browser must establish the
+  existing Vercel protection-bypass cookie privately before a replacement
+  owner tries Checkout. The consumed approval cannot be reused, and its owner/
+  admin OTP allowances are exhausted.
+- Exact next step: obtain fresh exact approval for a second Bravo-only pass,
+  explicitly allowing Christian to enter the existing protection-bypass value
+  privately to set a Bravo-only browser cookie before fixture creation and one
+  replacement owner/admin OTP each. Then rerun the remaining Stripe test,
+  lifecycle, heartbeat, cleanup, and reconciliation matrix from the 31-audit
+  baseline. Do not change Vercel configuration or expose the bypass value.
+- Hosted mutations: one owner OTP/session, one admin OTP/session, one guarded
+  Bravo kind/Price change, two session/refresh revocations, two temporary
+  membership inserts and removals, and four sanitized membership audits. The
+  guarded club fields were fully restored. No Stripe Customer, Checkout,
+  Subscription, Portal, webhook event, lifecycle invocation/audit,
+  Healthchecks change, Vercel configuration/alias/deployment, production,
+  live-Stripe, Resend, Auth configuration, tenant content, original identity/
+  membership/session, or unrelated mutation occurred.
+
+### 2026-08-04 — PLAT-102 second-pass preflight; private bypass entry pending — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: received Christian's fresh exact approval for a second Bravo-only
+  hosted pass, including private use of the existing Vercel automation bypass.
+  Re-ran every pre-mutation guard and opened the exact project's Deployment
+  Protection settings for Christian's private interaction. Read only the
+  Preview/`staging` environment variable names/scopes; no value was requested.
+  Vercel documentation confirms the generated protection value is exposed to
+  deployments as the system variable `VERCEL_AUTOMATION_BYPASS_SECRET`, not as
+  an ordinary user-managed environment-variable row.
+- Files changed: `HANDOFF.md` and this status ledger only for the mandatory
+  continuation evidence. Existing uncommitted PLAT-102 operations documentation
+  remains in the worktree. Nothing was committed or pushed.
+- Verification: local HEAD is exact approved SHA
+  `a1f28feb9d0e7206508ff23f115a09190bb7ef04`; Vercel inspection returns exact
+  deployment `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`, Preview/`READY`, with the
+  Checkout, Portal, webhook, lifecycle, and unchanged media-cleanup functions
+  present. Supabase returns Bravo `test`, onboarding/preview, null Price intent,
+  zero subscription, one owner, one admin, six original sessions, zero
+  candidate membership/session/refresh rows, nine Stripe events, and 31 audits
+  including exactly one backfill audit.
+- Blockers or decisions needed: Christian must reveal/copy the existing bypass
+  value in the open Vercel settings page and use it privately to establish a
+  temporary cookie only on `bravo-onzio-staging.vercel.app`. The agent must not
+  view, receive, log, or persist that value.
+- Exact next step: Christian privately sets the Bravo-only bypass cookie and
+  reports completion. Codex then performs the authorized read-only protected-
+  access check. Only if that passes may it create the two temporary memberships
+  and send one replacement owner OTP and one replacement admin OTP.
+- Hosted mutations: zero in the second pass so far. Read-only activity was
+  limited to the exact Vercel deployment, environment names/scopes, Deployment
+  Protection settings page, and Supabase Bravo aggregate. No secret value,
+  membership, audit, email, session, club field, Stripe, lifecycle,
+  Healthchecks, Vercel configuration, deployment/alias, production, Resend,
+  Auth configuration, tenant content, or unrelated resource changed.
+
+### 2026-08-04 — PLAT-102 bypass proven; second-pass owner code pending — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: Christian privately entered the existing Vercel automation bypass
+  and established the temporary Bravo-only cookie without exposing its value.
+  The agent navigated directly to the clean `/admin/login` URL and verified the
+  actual Bravo Admin Portal with no Vercel SSO redirect. One atomic transaction
+  rechecked the complete 31-audit baseline, reactivated only the approved
+  temporary owner/admin memberships, and appended only two sanitized add
+  audits. Sent exactly one replacement owner OTP and stopped at its private code
+  form.
+- Files changed: `HANDOFF.md` and this status ledger only for continuation
+  evidence. The uncommitted PLAT-102 operations note already records the exact
+  protected-browser preflight. Nothing was committed or pushed.
+- Verification: clean Bravo `/admin/login` rendered directly; after fixture
+  creation Bravo has two owners, two admins, two candidate memberships, zero
+  candidate sessions/refresh tokens, and 33 audits. The original memberships
+  and six original sessions remain untouched. The owner OTP form confirms one
+  code was sent to the configured operator mailbox.
+- Blockers or decisions needed: Christian must enter the six-digit owner code
+  privately; the agent must not inspect the mailbox or receive the code in chat.
+- Exact next step: Christian completes the retained owner code form and reports
+  success. Continue the owner portal/test-entitlement checks without sending
+  another owner OTP, then send only the one approved replacement admin OTP.
+- Hosted mutations: exactly two temporary membership reactivations, two
+  sanitized membership-add audits, and one owner OTP email. No owner session
+  exists yet; no admin OTP/session, club billing/lifecycle field, Stripe,
+  webhook, lifecycle/cron, Healthchecks, Vercel configuration, production,
+  live-Stripe, Resend, original membership/session, tenant content, or unrelated
+  resource changed.
+
+### 2026-08-04 — PLAT-102 owner/test entitlement passed; Stripe Checkout pending — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: Christian privately completed the one owner OTP. Verified the
+  protected Bravo Dashboard, visible owner-only Team access and Payments, and
+  the `test`-club private-preview state with no billing requirement or Checkout
+  action. An atomic guard then set only Bravo to `customer` with approved test
+  Price `price_1U0Y0sK6WajTkwHYnnttR9nN`. Payments exposed Start subscription;
+  it was submitted exactly once and opened the authorized Stripe Sandbox
+  Checkout at $75/month.
+- Files changed: `HANDOFF.md` and this status ledger only for continuation
+  evidence. Existing PLAT-102 operations documentation remains uncommitted.
+  Nothing was committed or pushed.
+- Verification: the pre-customer guard proved one owner acceptance session,
+  zero admin acceptance sessions, all six original sessions, 33 audits, nine
+  Stripe events, and zero subscription rows. Vercel records exactly one
+  `POST /api/stripe/checkout` with HTTP 303 on the exact deployment. Immediate
+  pre-payment Supabase reconciliation remains one owner session, zero
+  subscription, nine Stripe events, and 33 audits. The Stripe page is Sandbox,
+  uses the approved $75/month Price, and is the sole retained Checkout.
+- Blockers or decisions needed: Christian must privately complete only that
+  retained Stripe Sandbox Checkout. The agent must not receive test payment
+  inputs or initiate another Checkout.
+- Exact next step: Christian completes the retained test Checkout and reports
+  return to Bravo. Codex then waits for and reconciles only that flow's webhook
+  projection and metadata before creating the one Portal Session. Do not send
+  the admin OTP yet.
+- Hosted mutations: one owner OTP/session; two temporary memberships and two
+  sanitized add audits; one guarded Bravo kind/Price change; exactly one
+  temporary Stripe test Customer and one Checkout Session created through the
+  application. No Subscription, Portal Session, webhook projection, lifecycle
+  invocation/audit, Healthchecks change, admin OTP/session, Vercel
+  configuration, production, live-Stripe, Resend, original membership/session,
+  tenant content, or unrelated resource changed.
+
+### 2026-08-04 — PLAT-102 Checkout passed; stale webhook receiver stopped acceptance — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: Christian privately completed the sole retained Stripe Sandbox
+  Checkout and returned to Bravo. Read-only Stripe test inspection proved the
+  temporary Customer and Subscription metadata named Bravo's exact UUID and
+  staging, and the Subscription used exact approved $75 Price
+  `price_1U0Y0sK6WajTkwHYnnttR9nN`. Stopped when all five resulting webhook
+  events were rejected `UNKNOWN_PRICE`. Canceled only that temporary test
+  Subscription, deleted only its Customer, revoked only the owner acceptance
+  session/refresh token, removed only the two temporary memberships, restored
+  Bravo's complete billing/lifecycle baseline, and appended only the two
+  authorized sanitized remove audits.
+- Files changed: `HANDOFF.md`, this status ledger, and
+  `docs/phase-12/PLAT-102-OPERATIONS.md` for evidence and the corrected retry
+  preflight. No application code changed. Nothing was committed or pushed.
+- Verification: current `a1f28fe` source has no `UNKNOWN_PRICE` branch and
+  implements PLAT-D009. Vercel logs show Checkout HTTP 303 on approved Bravo
+  deployment `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`, while all webhook POSTs went
+  to the rolling staging alias on stale deployment
+  `dpl_BdsxrZUAXbTV6ggcguMBVGzn9nS7`, created seven days earlier. Final
+  Supabase reconciliation shows Bravo test/onboarding/preview, null Price, no
+  subscription, one original owner, one original admin, six original sessions,
+  35 audits, and 14 Stripe rows: the nine-row baseline plus exactly five
+  `UNKNOWN_PRICE` rejections. Alpha and Diverse City retain their expected
+  state. Stripe test shows the temporary Customer deleted and Subscription
+  canceled; immutable Checkout/invoice/payment/webhook history remains.
+- Blockers or decisions needed: the existing Stripe test endpoint's rolling
+  staging Vercel alias is stale. The current approval explicitly prohibited
+  alias and webhook-configuration changes and authorized only one temporary
+  Stripe flow, so neither the alias nor acceptance may be retried without fresh
+  exact approval.
+- Exact next step: approve repointing only
+  `onzio-platform-staging-git-staging-404christianns-projects.vercel.app` from
+  `dpl_BdsxrZUAXbTV6ggcguMBVGzn9nS7` to exact READY deployment
+  `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`, then perform read-only alias and one
+  invalid-signature route check. After that passes, obtain a new bounded Bravo
+  acceptance approval for replacement OTPs and one replacement test flow.
+- Hosted mutations: exactly one temporary test Customer, Checkout,
+  Subscription, paid invoice/payment, and their child history; exactly five
+  rejected append-only Bravo Stripe ledger events; one owner session; two
+  temporary membership reactivations; two sanitized add audits; cleanup of
+  only that Subscription, Customer, owner session, and two memberships; and two
+  sanitized remove audits. No Portal Session, admin OTP/session, lifecycle or
+  Healthchecks call/change, Vercel alias/configuration, push/deploy, production,
+  live Stripe, Resend, Auth configuration, original membership/session, tenant
+  content, or unrelated mutation occurred.
+
+### 2026-08-04 — PLAT-102 rolling staging webhook alias corrected — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: under Christian's exact alias-only approval, reconfirmed the
+  rolling staging alias on stale deployment
+  `dpl_BdsxrZUAXbTV6ggcguMBVGzn9nS7`, reconfirmed approved target
+  `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV` as Preview/`READY`, and repointed only
+  `onzio-platform-staging-git-staging-404christianns-projects.vercel.app` to
+  that target. No request was sent to the webhook route.
+- Files changed: `HANDOFF.md`, this status ledger, and
+  `docs/phase-12/PLAT-102-OPERATIONS.md` for local evidence only. Nothing was
+  committed or pushed.
+- Verification: direct alias inspection resolves to exact deployment
+  `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`, Preview/`READY`; the Vercel account alias
+  list independently maps the exact alias to the same deployment and immutable
+  deployment URL. Bravo already maps to that release. Historical logs and the
+  database ledger retain the stopped flow's evidence; no new webhook log was
+  generated because this correction deliberately sent no request.
+- Blockers or decisions needed: the stale receiver is fixed. The earlier
+  approval authorized only one temporary Stripe flow and is consumed, so the
+  remaining acceptance matrix requires a new bounded approval.
+- Exact next step: obtain a fresh Bravo-only approval starting from 35 audits
+  and 14 Stripe ledger rows. It must explicitly authorize replacement owner and
+  admin OTP sessions, one new temporary Stripe test Customer/Checkout/
+  Subscription/Portal flow, cleanup, the remaining lifecycle calls/audits, and
+  the Healthchecks success/failure/missing-ping proof.
+- Hosted mutations: exactly one Vercel Preview alias repoint. Zero build,
+  deployment, push, environment/configuration, webhook endpoint, Stripe API,
+  email/Auth, Supabase, production, live-Stripe, Resend, tenant-content, or
+  unrelated mutation occurred.
+
+### 2026-08-04 — PLAT-102 third-pass owner code pending — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: accepted Christian's exact third-pass approval; reconfirmed local
+  HEAD and both named Vercel aliases on exact approved Preview/`READY`
+  deployment `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`; proved the complete
+  35-audit/14-event baseline and candidate isolation; atomically reactivated
+  only the same temporary owner/admin memberships; appended exactly two
+  sanitized third-pass membership-add audits; and sent exactly one owner OTP.
+- Files changed: `HANDOFF.md` and this status ledger for continuation evidence;
+  the operations note remains modified with the corrected alias preflight.
+  Nothing was committed or pushed.
+- Verification: pre-fixture Bravo was test/onboarding/preview with null Price,
+  no subscription, one owner, one admin, six original sessions, zero candidate
+  sessions/refresh tokens, 35 audits, and 14 Stripe rows. Alpha, Diverse City,
+  and Rose City matched their required baseline. Post-fixture Bravo has two
+  owners, two admins, two active candidate memberships, zero candidate
+  sessions/refresh tokens, 37 audits including exactly two third-pass add
+  audits, 14 Stripe rows, and no subscription. The clean protected Bravo login
+  reached the six-digit owner-code form without Vercel SSO.
+- Blockers or decisions needed: Christian must enter the owner code privately;
+  the one approved owner OTP has already been consumed for delivery and must
+  not be resent.
+- Exact next step: Christian enters the six-digit code in the retained Bravo
+  tab and reports success. Codex then proves owner portal access and the test
+  entitlement before guarded customer/Price setup and the sole replacement
+  Stripe flow.
+- Hosted mutations: exactly two temporary membership reactivations, two
+  sanitized membership-add audits, and one owner OTP email. Zero application
+  session yet; no admin OTP/session, club billing/lifecycle field, Stripe,
+  webhook, lifecycle/Healthchecks, Vercel, production, live-Stripe, Resend,
+  original membership/session, tenant-content, or unrelated mutation occurred.
+
+### 2026-08-04 — PLAT-102 third pass stopped; Checkout idempotency fixed locally — Codex
+
+- Package: PLAT-102
+- Status: in_progress
+- Completed: Christian privately completed the sole owner OTP. Verified the
+  protected owner portal, Team access, Payments, and the test-club no-billing
+  state. Guardedly changed only Bravo to customer with the exact $75 test Price
+  and submitted Start subscription once. Stopped when Stripe immediately
+  returned the prior Checkout's completed/expired page. Reconciled zero new
+  Customer, Checkout, webhook event, or subscription projection; revoked only
+  the new owner session/refresh token; removed only the two temporary
+  memberships; restored Bravo completely; and appended only two sanitized
+  remove audits. Implemented the local regression and fix.
+- Files changed: `app/api/stripe/checkout/route.ts`,
+  `lib/billing-route-auth.ts`, `lib/stripe-checkout-idempotency.ts`,
+  `tests/contracts/plat-102-billing-model.test.ts`, `HANDOFF.md`, this ledger,
+  and `docs/phase-12/PLAT-102-OPERATIONS.md`. Nothing was committed or pushed.
+- Verification: the application made exactly one Checkout POST and received
+  HTTP 303 on exact deployment `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`. Stripe test
+  Customer count remained three, Supabase remained at 14 Bravo Stripe rows and
+  zero subscriptions, proving no new Stripe object/event. The deployed source
+  uses permanent `first-customer`/`first-checkout` keys, which replayed the
+  earlier idempotent response. The fix derives stable, non-reversible keys from
+  club plus authenticated Auth session: same-session retries match, a fresh
+  session differs, and the raw session ID is absent. Focused contracts pass
+  27/27 and `npx tsc --noEmit` passes. Final hosted reconciliation shows Bravo
+  test/onboarding/preview with null Price, one owner, one admin, six original
+  sessions, zero candidate membership/session/refresh state, 39 audits exactly
+  including four third-pass membership audits, 14 Stripe rows, and zero
+  subscriptions; Alpha/Diverse City/Rose City remain unchanged. Local checks
+  are green: clean reset; database 83/83; contracts 332/332; architecture
+  20/20; complete suite 666/666 across 75 files; TypeScript; database-type
+  drift; schema lint; production build; and diff check. An initial parallel
+  database/full-suite run collided on shared local fixtures; the authoritative
+  sequential rerun after reset passed both. Build retains only three known
+  Analytics hook warnings.
+- Blockers or decisions needed: commit and release approvals remain. The
+  third-pass approval is consumed and must not be reused.
+- Exact next step: obtain local commit approval, then a separate exact-SHA
+  push/deployment plus both-alias approval, followed by a newly bounded hosted
+  acceptance starting from 39 audits and 14 Stripe rows.
+- Hosted mutations: two temporary membership reactivations, two sanitized add
+  audits, one owner OTP/session, one guarded Bravo kind/Price change, and one
+  application Checkout POST that idempotently replayed prior Stripe responses;
+  cleanup removed only those memberships/session, restored Bravo, and wrote two
+  sanitized remove audits. No new Stripe object, Portal, webhook row,
+  admin OTP/session, lifecycle/Healthchecks action, Vercel change, push/deploy,
+  production, live-Stripe, Resend, original membership/session, tenant-content,
+  or unrelated mutation occurred.
 
 ### 2026-08-03 — PLAT-101 final staging push and protected Preview — Codex
 
