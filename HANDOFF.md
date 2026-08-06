@@ -2,6 +2,43 @@
 
 Last updated: 2026-08-06
 
+## DCFC-602 in progress — standings fix deployed; fixed the root browser-client/session-sharing bug
+
+Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.
+
+The standings fix below was approved, committed as `62300a3`, pushed,
+deployed (`dpl_9RXH6xeL7WhMUDTNtCAJpRh6Z92N`, `READY`), and aliased —
+confirmed with a hard reload showing the fake league table is gone. The
+hero still showed the neutral fallback rather than real content, though,
+even after a guarded `public_access` `preview`→`live` flip. Traced this to
+`onzio_private.subscription_public_access`, which forces `'preview'`
+whenever `lifecycle = 'onboarding'` regardless of `public_access` —
+Diverse City's `lifecycle` has been `onboarding` throughout, including
+through `DCFC-601`'s rehearsal, and only changes for real at a future
+`DCFC-901` production launch. Confirmed directly with a raw anonymous REST
+call. Restored `public_access` to `preview` immediately.
+
+Christian chose to fix the actual root cause rather than also flip
+`lifecycle`: `lib/supabase.ts` used the plain `@supabase/supabase-js`
+client, which persists sessions in `localStorage` — invisible to
+`middleware.ts`'s cookie-based `@supabase/ssr` session. The codebase
+already had the correct pattern in `lib/supabase-browser.ts`, used only by
+admin auth/storage, never by the public content query layer. Fix reuses
+that existing singleton with `.schema("onzio")` rather than constructing a
+second `createBrowserClient` — confirmed via its source that the singleton
+cache is shared at the whole `@supabase/ssr` module level, so a second
+call with its own schema option would have silently lost to whichever
+call initialized first.
+
+Single file changed (`lib/supabase.ts`) — `lib/queries.ts`,
+`lib/media-assets.ts`, and the club-logo route all import `{ supabase }`
+from it and needed no changes. Verification: `tsc` clean, contracts
+336/336, architecture 20/20, build clean, lint clean, diff-check clean.
+Not yet committed — needs approval, then needs Christian to sign back in
+to actually confirm real content renders, since that's exactly the
+scenario this targets. Full detail in
+`docs/phase-11/diverse-city/STATUS.md`.
+
 ## DCFC-602 in progress — hero fix deployed; second Rose City leak found in League Standings
 
 Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.

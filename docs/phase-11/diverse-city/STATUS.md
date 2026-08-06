@@ -5685,3 +5685,85 @@ Hosted-mutation count: zero.
   independently reconciled back to the exact pre-probe baseline each time.
   Zero Stripe, DNS, Resend, production, or other-tenant mutation. This
   fix is not deployed to any hosted environment yet.
+
+### 2026-08-06 — DCFC-602 in progress: standings fix deployed; found and fixed the browser-client/session-sharing gap — Claude Code (Sonnet 5)
+
+- Package: DCFC-602
+- Status: in_progress
+- Completed: Christian approved committing, pushing, and deploying the
+  standings fix. Committed as `62300a3`, pushed, deployed
+  (`dpl_9RXH6xeL7WhMUDTNtCAJpRh6Z92N`, `READY`), aliased to
+  `diverse-city-onzio-staging.vercel.app` — independently re-verified via
+  `vercel inspect`.
+
+  Resumed the actual public-route acceptance sweep, starting with a guarded
+  `public_access` `preview`→`live` flip (same pattern as before, sanitized
+  audits both legs). A hard reload confirmed the standings section is now
+  correctly gone (fix holding), but the hero still showed the neutral
+  fallback, not real content — even though the flip should have made
+  `is_publicly_accessible` true for anyone. Traced this precisely: it isn't
+  reading `clubs.public_access` directly. `onzio_private.subscription_public_access`
+  forces `'preview'` whenever `lifecycle = 'onboarding'`, regardless of
+  `public_access` — and Diverse City's `lifecycle` has been `onboarding`
+  this entire time, including through `DCFC-601`'s real Checkout rehearsal
+  (deliberately restored afterward, never meant to permanently launch the
+  tenant). So the `public_access` flip alone can never produce a genuinely
+  live anonymous view; only a real `DCFC-901` production launch changes
+  `lifecycle`. Confirmed directly with a raw REST call using the project's
+  publishable key, no auth header at all: `homepage_hero_content` returned
+  `[]` even with `public_access=live`. Restored `public_access` to
+  `preview` immediately since the flip wasn't accomplishing anything.
+
+  Presented Christian two paths: fix the underlying browser-client session
+  gap (the RLS design already has an authenticated-member read path
+  specifically for previewing real content before going live — this is
+  the architecturally correct fix), or also guardedly flip `lifecycle`
+  (bigger blast radius, billing-adjacent field). Christian chose to fix the
+  session gap.
+
+  Root cause, confirmed by reading `@supabase/ssr`'s installed source
+  directly rather than assuming: `lib/supabase.ts` used the plain
+  `@supabase/supabase-js` `createClient`, which persists its session in
+  `localStorage` — invisible to `middleware.ts`'s cookie-based
+  `@supabase/ssr` `createServerClient` session. The codebase already has
+  the correct pattern in `lib/supabase-browser.ts` (`createBrowserClient`,
+  cookie-based), used by admin auth/storage flows, but never by the public
+  content query layer. Also confirmed a real footgun before reusing it:
+  `createBrowserClient`'s singleton cache (`cachedBrowserClient`) is
+  shared at the whole `@supabase/ssr` module level, not per caller — a
+  second `createBrowserClient(...)` call with its own `db.schema` option
+  would have silently lost that option to whichever call initialized
+  first. Fix reuses `lib/supabase-browser.ts`'s existing singleton and
+  applies `.schema("onzio")` on top, rather than constructing a second
+  browser client — the one architecturally-correct way to share it
+  safely. Verified `createBrowserClient` degrades safely (empty `getAll`,
+  throws only on an actual write) when there's no `document`, so this is
+  also safe for the codebase's existing server-component callers
+  (`app/%5Fclubs/[slug]/programs/page.tsx` and similar) — no regression
+  there, they were already effectively anonymous.
+- Files changed: `lib/supabase.ts` (single file — `lib/queries.ts`,
+  `lib/media-assets.ts`, and `app/%5Fclubs/[slug]/club-logo/route.ts` all
+  import `{ supabase }` from it and needed no changes, since they only ever
+  call `.from(...)`), this status ledger, `HANDOFF.md`. Not yet committed.
+- Verification: `npx tsc --noEmit` clean (confirms `.schema("onzio")`'s
+  return type is a full drop-in for every existing `.from(...)` call
+  site); `npm run test:contracts` 336/336; `npm run test:architecture`
+  20/20 (no import-boundary rule affected); `npm run build` clean;
+  `npm run lint` clean (same pre-existing unrelated analytics warnings);
+  `git diff --check` clean. No architecture test references either
+  `lib/supabase.ts` or `lib/supabase-browser.ts` by name, so nothing was
+  silently protecting the old shape. Not yet verified live against a real
+  authenticated session — that requires Christian signing in after deploy.
+- Blockers or decisions needed: needs Christian's approval to commit,
+  push, and deploy, then needs him to sign back in as Diverse City's owner
+  to actually confirm the fix — this is exactly the scenario it targets
+  and can't be verified by an agent-only probe.
+- Exact next step: get approval to commit+push+deploy, have Christian sign
+  in and confirm real hero content now renders, then continue the DCFC-602
+  public/admin acceptance pass and isolation checks — still not properly
+  started.
+- Hosted mutations: one guarded `public_access` `preview`→`live`→`preview`
+  flip on Diverse City with two sanitized audit events, independently
+  reconciled to the exact pre-flip baseline. Zero Stripe, DNS, Resend,
+  production, or other-tenant mutation. This fix is not deployed to any
+  hosted environment yet.
