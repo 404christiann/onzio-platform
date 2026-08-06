@@ -207,6 +207,7 @@ not satisfy the handoff requirement.
 | --- | --- | --- | --- | --- |
 | PLAT-101 | complete | Codex | Local, staging, operator, owner, admin, Yahoo, and unknown-address acceptance complete; AOL and ISP-hosted delivery explicitly waived, not passed | No PLAT-101 work remains. Fresh exact approval is required before PLAT-102, DCFC-601, or DCFC-602. |
 | PLAT-102 | complete | Claude Code (Sonnet 5) | Stripe retry checkpoint reconciled clean (5/5 stale deliveries rejected with `CUSTOMER_METADATA_MISMATCH`, no bad projection); CRON_SECRET recovered via redeploy to `dpl_A6uNwY9RYx9v1eHFHCJ9Q6tGqX91` with both aliases re-verified; Checkout, Portal, full six-call lifecycle matrix, and Healthchecks success/failure/missing-ping all passed; cleanup and final reconciliation confirmed Bravo restored to exact test/onboarding/preview baseline with two active members and zero subscription rows | None. A latent gap was found and flagged, not fixed: `/api/cron/lifecycle` is not exempted from tenant-domain middleware like `/api/stripe/webhook` is — see `HANDOFF.md` 2026-08-05 entry. The Vercel Protection Bypass rotation (deferred during this pass) also remains outstanding. |
+| PLAT-103 | complete | Claude Code (Sonnet 5) | `PLAT-101` and `PLAT-102` both complete, satisfying PLAT-103's dependency. Rewrote `DCFC-601`/`DCFC-602` in `ROLLOUT-WORK-PACKAGES.md` and their checklist rows in `STAGING-ACCEPTANCE.md` to remove all obsolete Starter/Pro tier language, correct the stale $65→$75 Diverse City price, fix a stale AAL2-for-club-editors reference to AAL1 per `PLAT-D012`, and repoint verification evidence at the PLAT-102 Bravo acceptance pattern instead of the retired Phase 7 scripts. Also checked off `STAGING-ACCEPTANCE.md`'s previously-untouched `PLAT-102` checklist section with fresh evidence. Documentation only; no code changed, nothing executed. | None. `DCFC-601` and `DCFC-602` are now correctly specified and awaiting their own fresh, separate approvals before execution — PLAT-103 does not authorize starting either. |
 | DCFC-001 | complete | Claude Code (Sonnet 5) | DCFC-D101 accepted 2026-07-31 | `/contact` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-002 | complete | Claude Code (Sonnet 5) | DCFC-D102 partially resolved (URL, nav placement, and layout approved 2026-07-31; age/eligibility/dates/location/cost still TBA) | `/tryouts` implemented, verified, and approved by Christian on 2026-07-31 |
 | DCFC-003 | complete | Claude Code (Sonnet 5) | DCFC-001 (done) and DCFC-002 (done) | Pinned local commit `5bbdfa3` (includes dedicated Date card); full evidence in `VISUAL-ACCEPTANCE.md` |
@@ -5401,3 +5402,46 @@ Hosted-mutation count: zero.
   deduped); Healthchecks schedule temporarily shortened and restored, monitor
   paused. Zero production, live-Stripe, DNS, Resend, other-club, or
   unrelated mutation occurred.
+
+### 2026-08-05 — PLAT-103 respecification complete — Claude Code (Sonnet 5)
+
+- Package: PLAT-103
+- Status: complete
+- Completed: rewrote `DCFC-601` and `DCFC-602` in
+  `docs/phase-11/diverse-city/ROLLOUT-WORK-PACKAGES.md` and their matching
+  checklist rows in `docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md` to
+  match the post-`PLAT-101`/`PLAT-102` model: removed all Starter/Pro tier
+  language (obsolete per `PLAT-D003`, `D004`, `D009`, `D018`), corrected the
+  stale $65/month Diverse City price to the current $75/month
+  (`price_1U0Y0sK6WajTkwHYnnttR9nN`, per `PLAT-D008`/`DCFC-D119`), fixed a
+  stale "editors load at AAL2" line to AAL1 (`PLAT-D012` moved club accounts
+  to single-factor; AAL2 is operator-only), and repointed both packages'
+  verification evidence at the `PLAT-102` Bravo acceptance pattern (real
+  Checkout/webhook/Portal, the six-call lifecycle matrix, Healthchecks proof)
+  instead of the retired Phase 7 tier-era scripts. Also used the same pass to
+  check off `STAGING-ACCEPTANCE.md`'s previously-untouched `PLAT-102`
+  checklist section, each box backed by fresh evidence gathered specifically
+  for this: live-verified Diverse City/Alpha/Rose City `kind` values,
+  read the Checkout route's actual price-sourcing code
+  (`app/api/stripe/checkout/route.ts`, `buildCheckoutDecision`) rather than
+  assume it, and confirmed `/api/cron/media-cleanup` was never touched via
+  git history.
+- Files changed: `docs/phase-11/diverse-city/ROLLOUT-WORK-PACKAGES.md`,
+  `docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md`, this status ledger, and
+  `HANDOFF.md`. No application code changed.
+- Verification: no code to test — documentation-only package. Every factual
+  claim used in the rewrite (price, migration presence, club `kind` values,
+  Checkout price-sourcing logic, media-cleanup history) was independently
+  re-verified against the linked staging project or the actual source rather
+  than copied from the older planning packet.
+- Blockers or decisions needed: none. One item spotted but left out of scope:
+  the `DCFC-504`/`PLAT-101` checklist section in `STAGING-ACCEPTANCE.md` also
+  has stale "Pro-only Programs/Tryouts" language, but `PLAT-103`'s charter
+  only covers `DCFC-601`/`602`.
+- Exact next step: none required to close `PLAT-103`. `DCFC-601` and
+  `DCFC-602` are correctly specified and ready to be assigned, but each still
+  needs its own fresh, separate approval before any execution — this package
+  does not authorize starting either.
+- Hosted mutations: zero. This was Class 1, documentation-only work; no
+  Stripe, Vercel, Supabase write, Auth, DNS, or tenant-content mutation
+  occurred.

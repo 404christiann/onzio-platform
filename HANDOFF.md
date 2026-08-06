@@ -2,6 +2,36 @@
 
 Last updated: 2026-08-05
 
+## PLAT-103 respecification complete — DCFC-601/602 ready for their own approvals
+
+Agent: Claude Code (Sonnet 5), 2026-08-05. Status: `complete`.
+
+With `PLAT-101` and `PLAT-102` both complete, `PLAT-103`'s dependency was
+satisfied. Rewrote `DCFC-601` and `DCFC-602` in `ROLLOUT-WORK-PACKAGES.md` and
+their matching checklist rows in `STAGING-ACCEPTANCE.md` to remove obsolete
+Starter/Pro tier language (`PLAT-D003`/`D004`/`D009`/`D018` collapsed that
+model entirely), correct the stale $65/month Diverse City price to the
+current $75/month (`PLAT-D008`/`DCFC-D119`), fix a stale "editors load at
+AAL2" line to AAL1 (`PLAT-D012` made club accounts single-factor; AAL2 is
+operator-only), and repoint both packages' verification evidence at the
+`PLAT-102` Bravo acceptance pattern instead of the retired Phase 7 scripts.
+Every factual claim used in the rewrite was independently re-verified rather
+than copied from the older `PLATFORM-AUTH-BILLING-PLAN.md` planning packet.
+
+While in the same file, also checked off `STAGING-ACCEPTANCE.md`'s
+previously-untouched `PLAT-102` checklist section — it wasn't part of
+`PLAT-102`'s own required evidence trail, so this was optional, folded in for
+free since the file was already open. Each box is backed by fresh evidence:
+live-verified `kind` values for Diverse City/Alpha/Rose City, a direct read of
+`app/api/stripe/checkout/route.ts` and `buildCheckoutDecision` confirming
+Checkout accepts no client Price/tier input, and confirmation via git history
+that `/api/cron/media-cleanup` was never touched.
+
+This was Class 1, documentation-only work — zero hosted mutation, nothing
+executed. `PLAT-103` is `complete`. `DCFC-601` and `DCFC-602` are correctly
+specified and ready to be assigned, but each still needs its own fresh,
+separate approval before any execution.
+
 ## PLAT-102 hosted acceptance complete — Bravo pass closed out
 
 Agent: Claude Code (Sonnet 5), 2026-08-05. Status: `complete`.

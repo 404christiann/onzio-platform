@@ -293,38 +293,45 @@ Every package inherits these rules:
 ### DCFC-601 — Staging Stripe and lifecycle rehearsal
 
 - **Objective:** prove the real owner Checkout/webhook/Portal and lifecycle
-  behavior in Stripe test mode without creating new Prices.
+  behavior for Diverse City in Stripe test mode, using the existing
+  $75/month test Price (`price_1U0Y0sK6WajTkwHYnnttR9nN`) without creating
+  new Prices.
 - **Action class:** Class 3 — hosted mutation.
-- **Dependencies:** `DCFC-504` complete; existing test Price/Portal/webhook
-  reverified; fresh explicit `DCFC-601` approval.
+- **Dependencies:** `DCFC-504` complete; `PLAT-102` complete; existing test
+  Price/Portal/webhook reverified; fresh explicit `DCFC-601` approval.
 - **Permitted actions:** one approved test-mode Checkout; webhook projection;
-  Portal access; tier/lifecycle scenarios; duplicate/stale/foreign rejection;
-  restore the agreed final staging state.
+  Portal access; grace/suspension/reactivation scenarios; duplicate/stale/
+  foreign rejection; restore the agreed final staging state.
 - **Prohibited actions:** Price creation/change, live-mode Stripe, direct
   subscription creation, production webhook, real charge, or using a
-  client-supplied tier/Price.
-- **Required inputs and approvals:** approved test payer; exact existing test
-  Pro Price; test webhook; expected final tenant state; per-package approval.
-- **Acceptance criteria:** exactly one canonical test subscription projection;
-  Pro entitlement works; duplicate/stale/foreign events fail; grace/suspension/
-  reactivation behavior matches architecture; tenant returns to the approved
-  staging state; reconciliation is exact.
-- **Verification commands/evidence:** owner application flow; the Phase 7
-  tier-era Stripe/lifecycle scripts are historical and must be replaced with
-  PLAT-102 acceptance evidence; safe Stripe IDs and ledger outcomes;
-  before/after club/subscription state.
+  client-supplied Price (Checkout accepts none — see `PLAT-102` evidence).
+- **Required inputs and approvals:** approved test payer; the existing test
+  Price (no tier selection — Diverse City has exactly one negotiated Price);
+  test webhook; expected final tenant state; per-package approval.
+- **Acceptance criteria:** exactly one canonical test subscription projection
+  named to Diverse City; the club's `stripe_price_id` alone drives Checkout;
+  duplicate/stale/foreign events fail closed; `paid_through + 20` grace,
+  automatic suspension, and reactivation behavior matches `PLAT-D006`/`D007`;
+  content editing remains available through grace per `PLAT-D024`; tenant
+  returns to the approved staging state; reconciliation is exact.
+- **Verification commands/evidence:** owner application flow, following the
+  `PLAT-102` Bravo acceptance pattern (real Checkout/webhook/Portal, the
+  six-call lifecycle matrix, Healthchecks proof) as the template. The Phase 7
+  tier-era Stripe/lifecycle scripts remain retired and must not be used.
 - **Rollback expectations:** use test-mode Portal/cancellation and canonical
   webhook projection; restore lifecycle through audited tooling; never delete
   ledger evidence or edit projection tables ad hoc.
 - **Exact hosted-mutation boundary:** Stripe test-mode Customer/Checkout/
-  Subscription/Portal events plus named staging projection/lifecycle rows.
+  Subscription/Portal events plus named staging projection/lifecycle rows for
+  Diverse City only.
 - **Expected documentation updates:** `STAGING-ACCEPTANCE.md`, `STATUS.md`,
   `HANDOFF.md`.
 
 ### DCFC-602 — Staging public/admin and tenant-isolation acceptance
 
-- **Objective:** prove complete Pro-entitled Diverse City staging behavior and
-  Alpha/Bravo/Diverse City isolation at desktop and mobile.
+- **Objective:** prove complete Diverse City staging behavior — full content
+  availability once billing is active — and Alpha/Bravo/Diverse City
+  isolation at desktop and mobile.
 - **Action class:** Class 3 — hosted mutation because protected write probes
   and their restoration are required.
 - **Dependencies:** `DCFC-601` complete; fresh explicit `DCFC-602` approval.
@@ -336,9 +343,11 @@ Every package inherits these rules:
 - **Required inputs and approvals:** test identities; exact before-state
   snapshot; approved temporary values; screenshot/log evidence location.
 - **Acceptance criteria:** every non-billing row in `STAGING-ACCEPTANCE.md`
-  passes; canonical test billing makes Programs/Tryouts Pro editors available;
-  Alpha/Bravo/DCFC reads and writes remain isolated; all temporary values are
-  restored and reconciled; public/admin surfaces show no prohibited data path.
+  passes; Contact, Programs, and Tryouts are all available to club editors at
+  aal1 once `public_access` is `live` or `grace` — no tier-gated availability
+  remains, per `PLAT-D018`; Alpha/Bravo/DCFC reads and writes remain isolated;
+  all temporary values are restored and reconciled; public/admin surfaces
+  show no prohibited data path.
 - **Verification commands/evidence:** staging-targeted Playwright suite (after
   adapting local-only credentials safely); HTTP/header/cache probes; exact RLS
   denial signatures; before/after row and presentation digests; runtime logs.

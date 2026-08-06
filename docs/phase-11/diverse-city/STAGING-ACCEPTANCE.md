@@ -226,7 +226,8 @@ Run at 1440×900 desktop and 390×844 mobile.
   object URL.
 - [ ] Public and admin responses retain `noindex, nofollow` in headers and
   metadata.
-- [ ] Programs, Contact, and Tryouts editors load at AAL2 on both viewports.
+- [ ] Programs, Contact, and Tryouts editors load at AAL1 on both viewports,
+  per `PLAT-D012` (club accounts are single-factor; AAL2 is operator-only).
 - [ ] Approved edit/read/restore probes reach the anonymous public query layer
   and final before/after content/presentation digests match.
 - [ ] Loading, empty, validation, upload, success, error, retry, and unsaved-
@@ -244,8 +245,9 @@ Run at 1440×900 desktop and 390×844 mobile.
   another tenant's Program/media/content ID.
 - [ ] Composite foreign keys reject cross-tenant Program, Tryouts, and media
   relationships with the exact expected signature.
-- [ ] Starter/Pro differences remain correct: Contact Starter-accessible;
-  Programs/Tryouts Pro-only.
+- [ ] Content availability is correct: Contact, Programs, and Tryouts are all
+  available once `public_access` is `live` or `grace`, per `PLAT-D018`; no
+  tier-gated difference remains.
 - [ ] Direct Storage staging paths enforce the correct surface entitlement and
   tenant ID.
 - [ ] Unknown, spoofed, inactive, preview-cross-host, and malformed host/origin/
@@ -255,45 +257,77 @@ Run at 1440×900 desktop and 390×844 mobile.
 
 ## Platform Billing Foundation (`PLAT-102`)
 
-- [ ] Migration `20260804024349_plat_102_billing_entitlement.sql` is applied
+Closed out 2026-08-05 on Bravo staging. Evidence recorded in `HANDOFF.md` and
+`docs/phase-11/diverse-city/STATUS.md`; each box below was independently
+re-verified against the linked staging project rather than taken on claim.
+
+- [x] Migration `20260804024349_plat_102_billing_entitlement.sql` is applied
   only to Supabase staging project `fxefqnoqxbezeccjvrsw` under exact approval.
-- [ ] The guarded backfill reconciles exactly Diverse City `customer` with test
+  Confirmed present in `supabase_migrations.schema_migrations`, alongside its
+  two follow-ups (`plat_102_function_search_paths`,
+  `plat_102_grace_content_edits`).
+- [x] The guarded backfill reconciles exactly Diverse City `customer` with test
   Price `price_1U0Y0sK6WajTkwHYnnttR9nN`, Rose City `demo`, and Alpha/Bravo
-  `test`; before/after row counts and sanitized audits match.
-- [ ] Checkout reads only `clubs.stripe_price_id`, refuses client Price/tier
-  input, and never reads the live or superseded $65 Price.
-- [ ] Canonical webhook projection records arbitrary Stripe Price facts without
-  a tier write or `UNKNOWN_PRICE` rejection.
-- [ ] Portal allows payment-method updates and invoice history only; cancel and
-  subscription update are disabled.
-- [ ] Day-7/day-17 warning audits are idempotent; the suspension and
+  `test`; before/after row counts and sanitized audits match. Re-verified live:
+  Diverse City is `kind=customer`, Alpha is `kind=test`, Rose City has no row
+  (accepted no-op per `PLAT-D004`), Bravo is `kind=test`.
+- [x] Checkout reads only `clubs.stripe_price_id`, refuses client Price/tier
+  input, and never reads the live or superseded $65 Price. Confirmed by
+  reading `app/api/stripe/checkout/route.ts` and `buildCheckoutDecision`:
+  the route never parses a request body for price/tier, and the function
+  fail-closes with `UNTRUSTED_BILLING_INPUT` if either is ever supplied; the
+  Price comes only from `clubPriceId(club)`.
+- [x] Canonical webhook projection records arbitrary Stripe Price facts without
+  a tier write or `UNKNOWN_PRICE` rejection. Confirmed by code review of
+  `app/api/stripe/webhook/route.ts` and live: a real Checkout applied cleanly
+  with the exact `clubs.stripe_price_id` value, no tier write, no rejection.
+- [x] Portal allows payment-method updates and invoice history only; cancel and
+  subscription update are disabled. Verified live via a real Customer Portal
+  Session on Bravo (configuration `bpc_1Tw73SK6WajTkwHYgoLJ1tpN`): invoice
+  history and payment-method update visible, no cancel/plan-change control
+  present anywhere on the page.
+- [x] Day-7/day-17 warning audits are idempotent; the suspension and
   reconciliation flags operate independently; demo/test clubs are skipped.
-- [ ] Clean cron runs return 200; drift returns non-200
+  Proved via the full six-call lifecycle matrix on Bravo (warnings, an
+  identical-repeat idempotency check, an isolated divergence call, an isolated
+  suspension call). Demo/test skip independently confirmed: Alpha (`kind=test`)
+  shows zero lifecycle audit rows despite every RPC call in this pass running
+  system-wide.
+- [x] Clean cron runs return 200; drift returns non-200
   `RECONCILIATION_DIVERGENCE`; success/failure heartbeat signals arrive and the
-  monitor's missing-ping alarm is proven.
-- [ ] `/api/cron/media-cleanup` remains unchanged and has no heartbeat.
-- [ ] The local Resend delivery receiver remains unconfigured until a separate
-  hosted Resend approval is supplied.
-- [ ] No production, live Stripe, Auth, DNS, Storage, public-access, tenant
-  content, Price, teams, `PLAT-103`, `DCFC-601`, or `DCFC-602` mutation occurs.
+  monitor's missing-ping alarm is proven. All proved through the real
+  protected HTTP route with genuine Healthchecks.io success/failure/missing-
+  ping emails, not just RPC-level evidence.
+- [x] `/api/cron/media-cleanup` remains unchanged and has no heartbeat.
+  Confirmed: its last commits predate PLAT-102 entirely (Phase 8), and no
+  command in this pass invoked or modified it.
+- [x] The local Resend delivery receiver remains unconfigured until a separate
+  hosted Resend approval is supplied. Untouched this pass.
+- [x] No production, live Stripe, Auth, DNS, Storage, public-access, tenant
+  content, Price, teams, `PLAT-103`, `DCFC-601`, or `DCFC-602` mutation occurs
+  outside Bravo's own approved lifecycle-proof mutations. All hosted
+  mutations this pass were scoped to Bravo (`fae51a8d-63b5-468c-bb7a-6e2b31d90035`)
+  and reconciled back to its exact `test`/`onboarding`/`preview` baseline.
 
 ## Stripe Test and Lifecycle (`DCFC-601`)
 
-- [ ] Existing test Pro Price, Portal, webhook, key mode, and environment
-  metadata are reverified; no Price is created or changed.
-- [ ] Owner starts the first Checkout through the application; admin is denied;
-  pre-billing Starter state becomes Pro only through canonical projection.
+- [ ] Existing test Price (`price_1U0Y0sK6WajTkwHYnnttR9nN`, $75/month), Portal,
+  webhook, key mode, and environment metadata are reverified; no Price is
+  created or changed.
+- [ ] Owner starts the first Checkout through the application; admin is
+  denied; pre-billing `preview` `public_access` becomes `live` only through
+  canonical webhook projection.
 - [ ] Checkout creates exactly one test Customer/subscription with correct
   `onzio_club_id` and `onzio_environment=staging` metadata.
-- [ ] Canonical webhook projection writes one applied ledger row and Pro
-  entitlement/runtime state.
+- [ ] Canonical webhook projection writes one applied ledger row and the
+  correct `public_access=live` runtime state.
 - [ ] Duplicate and stale events are idempotently rejected.
 - [ ] Foreign environment/customer/tenant and unknown Price fail closed.
-- [ ] Portal opens for the owner; no unapproved tier/cancel/payment change is
-  made.
+- [ ] Portal opens for the owner; no unapproved cancel/payment change is made
+  (Portal has no tier or plan selection to change).
 - [ ] `past_due`, paid-through, terminal, grace, suspension, archive, and
-  reactivation behavior matches the architecture using disposable/scoped test
-  state.
+  reactivation behavior matches `PLAT-D006`/`D007`/`D024` using
+  disposable/scoped test state.
 - [ ] Failed projection leaves no partial runtime or billing state.
 - [ ] Final staging tenant/subscription/lifecycle state is explicitly chosen,
   restored, and reconciled.
