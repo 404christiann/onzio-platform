@@ -2,6 +2,43 @@
 
 Last updated: 2026-08-06
 
+## DCFC-602 agent handoff — read this before doing anything
+
+Christian is switching from Claude Code to a different agent partway
+through `DCFC-602` (context-limit handoff, not a stopping point). Full
+detail is in `docs/phase-11/diverse-city/STATUS.md`'s final entry — read
+it in full. Summary:
+
+**Done, deployed, and Christian-confirmed working:** three real bugs found
+while starting the DCFC-602 acceptance pass, all fixed, committed, pushed,
+and deployed to `diverse-city-onzio-staging.vercel.app` (`staging` is at
+`bef8164`, working tree clean): a Rose-City-branded hero fallback
+(`807b08c`), a fake League Standings table leaking to the public
+(`62300a3`), and their root cause — `lib/supabase.ts` used a
+`localStorage`-based Supabase client instead of the cookie-based one
+`middleware.ts` uses, so public content queries always ran anonymous even
+for a signed-in owner (`bef8164`).
+
+**Not started yet — this is the actual remaining `DCFC-602` work:** every
+item in `STAGING-ACCEPTANCE.md`'s "Public and Admin Acceptance" and
+"Alpha/Bravo/Diverse City Isolation" sections. Desktop (1440×900) and
+mobile (390×844) route sweep, admin-editor checks (needs Christian's live
+sign-in), and the isolation checks across Alpha/Bravo/Diverse City are all
+still ahead.
+
+**Approval already granted** for `DCFC-602` on exact Supabase staging
+project `fxefqnoqxbezeccjvrsw` and the Alpha/Bravo/Diverse City protected
+Vercel deployments — full terms reproduced in the `STATUS.md` entry so a
+new session doesn't need Christian to re-grant it verbally.
+
+**One flagged, unresolved, out-of-scope item:** Diverse City's
+`lifecycle` has stayed `onboarding` throughout (expected — it only
+changes for real at a future `DCFC-901` launch), which means
+`public_access` alone can never produce a genuinely-anonymous-visible
+`live` state for testing. Testing the "once live" anonymous-visitor
+checklist items needs either a guarded `lifecycle` probe (not yet
+approved, bigger blast radius) or waiting for `DCFC-901`.
+
 ## DCFC-602 in progress — standings fix deployed; fixed the root browser-client/session-sharing bug
 
 Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.

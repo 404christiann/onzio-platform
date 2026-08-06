@@ -5767,3 +5767,106 @@ Hosted-mutation count: zero.
   reconciled to the exact pre-flip baseline. Zero Stripe, DNS, Resend,
   production, or other-tenant mutation. This fix is not deployed to any
   hosted environment yet.
+
+### 2026-08-06 — DCFC-602 handoff checkpoint: three bugs fixed and confirmed live; the actual acceptance checklist has not started — Claude Code (Sonnet 5)
+
+Christian is switching agents (context-limit handoff) partway through
+`DCFC-602`. This entry is the orientation point for whichever agent picks
+it up next — read it in full before doing anything.
+
+- Package: `DCFC-602`
+- Status: `in_progress`
+- Approval on file: Christian approved `DCFC-602` in the handing-off
+  agent's chat session (not written elsewhere) for exact Supabase staging
+  project `fxefqnoqxbezeccjvrsw` and the existing protected Vercel staging
+  deployments for Alpha, Bravo, and Diverse City only — matching the scope
+  already defined in `ROLLOUT-WORK-PACKAGES.md`'s `DCFC-602` entry and the
+  checklist in `STAGING-ACCEPTANCE.md`. Permitted: tenant-scoped edit/
+  read/restore probes and browser/HTTP/RSC/cache/media/accessibility
+  checks on those three tenants only. Prohibited: any billing/lifecycle
+  mutation, production access, publication/indexing changes, cross-tenant
+  reads outside expected-denial checks. All temporary values must be
+  restored and reconciled before the package is marked complete. This
+  approval's terms are reproduced here in full so a new agent session has
+  them without needing Christian to re-grant verbally; treat it as valid
+  unless Christian says otherwise.
+- Completed so far (all committed, pushed, deployed, and Christian-confirmed
+  working — see the three entries immediately above this one for full
+  detail): reconnected the Supabase MCP connector to the correct project;
+  captured a clean before-state snapshot across Alpha/Bravo/Diverse City;
+  re-added and independently verified Diverse City's temporary admin
+  membership; fixed an unrelated `ws`-transport bug in
+  `scripts/operator-session.ts`; found and fixed three real bugs uncovered
+  while starting the acceptance pass:
+  1. `807b08c` — homepage hero fallback leaking "ROSE CITY FC" branding
+     (`lib/queries.ts`).
+  2. `62300a3` — League Standings leaking a full fake Rose City table
+     (`lib/queries.ts`).
+  3. `bef8164` — the root cause of both: `lib/supabase.ts` used a
+     `localStorage`-based client instead of the cookie-based one
+     `middleware.ts` uses, so public content queries always ran anonymous
+     even for a signed-in club owner. Fixed by reusing
+     `lib/supabase-browser.ts`'s existing singleton with `.schema("onzio")`.
+  Christian independently confirmed live, signed in as owner: the real
+  hero content ("One Club / One Community", "Explore Our Programs" →
+  `/programs`, "Discover the Club" → `/club/about`) now renders correctly,
+  and confirmed the standings section correctly shows nothing (matches the
+  approved Phase 4 dispositions in `DECISIONS.md`/`CONTENT-MATRIX.md` — the
+  real tenant is *supposed* to diverge from the full mockup at
+  `diverse-city-fc-preview.vercel.app`, which still has placeholder roster/
+  fixtures/standings/hero-video that were deliberately never imported).
+- Current exact state: `git log --oneline -1` on `staging` is `bef8164`,
+  pushed to `origin/staging`, matching what's deployed and aliased to
+  `diverse-city-onzio-staging.vercel.app`. Working tree is clean, nothing
+  uncommitted. Diverse City (`d88bf71b-9820-49ae-9dc0-7556b0813885`) is
+  back at its exact baseline: `kind=customer`, `lifecycle=onboarding`,
+  `public_access=preview`, Price intent unchanged, two active members:
+  owner `cdc588f1…` and the temporary admin `522d90c2…`
+  (`christianalcala3@yahoo.com`) added earlier in this session — that
+  admin membership was never part of any restore step and is
+  intentionally still active, left in place for the role-boundary and
+  isolation checks below. Independently re-verified via direct query
+  immediately before writing this entry, not assumed.
+- **What has NOT started yet — this is the actual remaining work.** Every
+  checklist item in `STAGING-ACCEPTANCE.md` under "Public and Admin
+  Acceptance (DCFC-602)" and "Alpha/Bravo/Diverse City Isolation
+  (DCFC-602)" is still unchecked. Concretely, still to do:
+  - Desktop (1440×900) and mobile (390×844) sweep of `/`, `/club/about`,
+    `/programs` plus each of the 4 approved program slugs, `/contact`,
+    `/tryouts` — verify rendered content against the approved facts
+    already recorded in this codebase (Programs: `youth-academy`,
+    `special-kickers-program`, `special-olympics-soccer`,
+    `upsl-mens-teams`; Contact: `diverse.cityfc@gmail.com`,
+    `(312) 731-9479`, "Schaumburg, Illinois"; Tryouts: zero rows, expect
+    the safe-unavailable state), nav/footer contents, console/page errors,
+    image validity, `noindex, nofollow` headers, no horizontal overflow.
+  - Programs/Contact/Tryouts admin editors loading at AAL1 (needs
+    Christian's live owner sign-in and interaction — cannot be done by an
+    agent alone).
+  - Alpha/Bravo/Diverse City isolation: distinct tenant identity per
+    hostname, no cross-tenant reads/writes, composite FK rejection,
+    content availability parity once live/grace, temporary-value
+    restoration.
+  - A remaining, deliberately-unfixed, out-of-scope finding from this
+    session worth a human decision at some point: even with the session
+    fix, Diverse City's `public_access` cannot reach a genuinely
+    anonymous-visible `live` state right now because
+    `onzio_private.subscription_public_access` forces `'preview'` whenever
+    `lifecycle = 'onboarding'` (which it has been throughout, including
+    through `DCFC-601`'s rehearsal). That's expected — `lifecycle` only
+    changes for real at a future `DCFC-901` production launch — but it
+    means the anonymous-visitor-once-live checklist items can only be
+    tested via a guarded `lifecycle` probe (bigger blast radius, not yet
+    approved) or deferred until `DCFC-901`. Flag this to Christian if it
+    becomes a blocker.
+- Exact next step for the next agent: read this file's required order
+  (`AGENTS.md` → `HANDOFF.md` → this file → `STAGING-ACCEPTANCE.md`), then
+  resume the DCFC-602 checklist starting with the desktop public-route
+  sweep listed above. The Supabase MCP connector may need reconnecting
+  again in a fresh session (see the first `DCFC-602` entry above for how
+  to detect and fix a misconfigured connector). `diverse-city-onzio-staging.vercel.app`'s
+  Deployment Protection requires either Christian's own logged-in Vercel
+  browser session (Claude-in-Chrome-equivalent) or a fresh Vercel CLI
+  login — a sandboxed/unauthenticated browser will hit Vercel's login wall.
+- Hosted mutations this entry covers: none new: purely a documentation
+  checkpoint.
