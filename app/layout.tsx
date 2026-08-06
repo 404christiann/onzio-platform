@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rose City FC — Pasadena's Club",
+  title: "Onzio Platform",
   description:
-    "Rose City Futbol Club — 2024 UPSL Champions. Semi-professional soccer based in Pasadena, CA.",
+    "Onzio-powered club websites, content management, and public soccer experiences.",
   icons: {
     icon: "/club-logo",
   },

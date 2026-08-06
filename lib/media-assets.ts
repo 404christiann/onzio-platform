@@ -29,6 +29,7 @@ export async function resolveMediaReferences<T extends Record<string, unknown>>(
   rows: readonly T[],
   clubId: string,
   references: readonly MediaReference[],
+  client: typeof supabase = supabase,
 ): Promise<T[]> {
   if (process.env.NODE_ENV === "test") return rows.map((row) => ({ ...row }));
 
@@ -43,7 +44,7 @@ export async function resolveMediaReferences<T extends Record<string, unknown>>(
   ];
   if (assetIds.length === 0) return rows.map((row) => ({ ...row }));
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("media_assets")
     .select("id, storage_bucket, storage_path, status")
     .eq("club_id", clubId)
@@ -70,11 +71,12 @@ export async function resolveMediaStoragePath(
   clubId: string,
   assetId: unknown,
   fallback: string,
+  client: typeof supabase = supabase,
 ): Promise<string> {
   if (typeof assetId !== "string" || process.env.NODE_ENV === "test") {
     return fallback;
   }
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("media_assets")
     .select("storage_bucket, storage_path, status")
     .eq("club_id", clubId)

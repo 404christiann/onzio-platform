@@ -37,12 +37,15 @@ export async function authorizeAdminAccess(input: AuthorizationInput): Promise<{
   role: "owner" | "admin";
 }> {
   if (input.club.lifecycle === "archived") failContract("CLUB_ARCHIVED");
-  if (
-    input.club.lifecycle !== "active" &&
-    !(input.capability === "billing" && input.club.lifecycle === "onboarding")
-  ) {
+
+  const lifecycleAllowsCapability =
+    input.club.lifecycle === "active" ||
+    input.club.lifecycle === "onboarding";
+
+  if (!lifecycleAllowsCapability) {
     failContract("CLUB_INACTIVE");
   }
+
   const membership = membershipForClub(input);
   if (!membership) failContract("MEMBERSHIP_REQUIRED");
   if (membership.status !== "active") failContract("MEMBERSHIP_INACTIVE");

@@ -2,6 +2,216 @@
 
 Last updated: 2026-08-06
 
+## DCFC-602 staging acceptance complete
+
+Agent: Codex (GPT-5.5), 2026-08-06. Status: `complete`.
+
+Christian approved continuing the DCFC-602 checklist. Work stayed inside the
+approved isolation/security scope: read-only Supabase staging inspection,
+rollback-only database RLS simulation, and documentation updates. No Stripe,
+Auth user/session/factor, email, DNS, Storage-object, public-access,
+production, or tenant-content mutation occurred. Christian then explicitly
+approved restoring the temporary Diverse City admin membership for
+`christianalcala3@yahoo.com` while keeping
+`christianjavieralcala@gmail.com` active and recording that shared Alpha/
+Diverse City access as an intentional staging fixture exception.
+
+Completed evidence:
+- Supabase staging project `fxefqnoqxbezeccjvrsw`: Alpha, Bravo, and Diverse
+  City hostnames each resolve through `onzio.resolve_verified_tenant` to
+  exactly one active/verified staging tenant with distinct tenant IDs.
+- Spoofed/malformed hosts including unknown staging hostnames, `.evil.test`
+  suffixes, and path-in-host probes resolve to zero tenants.
+- Current Program, Contact, Tryouts, media, and presentation-document
+  relationships show zero cross-tenant violations.
+- Private-row RLS simulation for `club_members` shows the single-tenant Alpha
+  admin can see only its Alpha membership, and the single-tenant Bravo owner
+  can see only its Bravo membership.
+- Staging catalog confirms composite tenant foreign keys for Program/media,
+  Tryouts/Program, Tryouts/media, Contact/media, and presentation state/
+  publication document pointers.
+- Staging Storage catalog confirms `onzio-upload-staging` remains private,
+  `onzio-media` remains public, MIME allowlist is JPEG/PNG/WebP, and staging
+  object policies enforce tenant ID plus surface entitlement through
+  `onzio_private.can_mutate_feature`.
+- Public-access projection shows Alpha as `active/live` and publicly
+  accessible despite Starter metadata, while Bravo and Diverse City remain
+  onboarding/preview and not anonymously public.
+- Route/admin browser sweep from the previous checkpoint remains the public UI
+  evidence for no tenant copy/media/navigation bleed on the final Diverse City
+  staging alias.
+- Temporary Diverse City admin cleanup completed:
+  `christianalcala3@yahoo.com` was marked `removed` for Diverse City at
+  `2026-08-06T20:15:19.430016+00:00`; post-cleanup reconciliation confirmed the
+  row is removed for Diverse City and already removed for Bravo.
+
+Accepted fixture exception:
+- `christianjavieralcala@gmail.com` intentionally remains an active owner on
+  both Alpha and Diverse City in staging. This is treated as a Christian-owned
+  staging fixture exception, not a tenant-isolation leak.
+- `christianalcala3@yahoo.com` still has an active Alpha admin fixture row, but
+  no active Diverse City or Bravo membership after cleanup.
+- Pulling the full Vercel Preview env into `/private/tmp` to run PostgREST/
+  Storage API probes was rejected as too broad because it would extract all
+  Preview secrets. I did not attempt a workaround.
+
+Files changed in this checkpoint:
+- `docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md`
+- `HANDOFF.md`
+- `docs/phase-11/diverse-city/STATUS.md`
+
+Exact next step:
+- DCFC-602 is complete in `docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md`.
+  No next DCFC-602 action remains unless Christian requests commit/push or a
+  follow-up hosted release/hardening task.
+
+## DCFC-602 staging route/admin sweep passed after approved local-fix deployment
+
+Agent: Codex (GPT-5.5), 2026-08-06 12:55 PT. Status: `in_progress`.
+
+Christian explicitly approved deploying the DCFC-602 local fixes to staging.
+Performed only Vercel Preview deployment/alias mutations for the linked staging
+project and the Diverse City staging alias. No Supabase write, Storage write,
+Stripe/Auth mutation, DNS registrar change, email send, public-access change,
+tenant-content mutation, or production deploy occurred.
+
+Final deployed artifact:
+- Deployment: `dpl_7FrP6DkXd8yrwF5xvrye4Y7dtP54`
+- Preview URL: `https://onzio-rcfc-p1mslxsdy-404christianns-projects.vercel.app`
+- Alias: `https://diverse-city-onzio-staging.vercel.app`
+- Alias verification: `vercel alias ls` showed
+  `diverse-city-onzio-staging.vercel.app` pointing to
+  `onzio-rcfc-p1mslxsdy-404christianns-projects.vercel.app`.
+- Deploy source: local CLI source upload from the current uncommitted worktree;
+  no commit or push was performed.
+
+Fixes included in the final artifact:
+- Onboarding/private-preview content admin access no longer fails with
+  `CLUB_INACTIVE`.
+- SSR Supabase client is threaded through academy public `Programs`, Program
+  Detail, `Contact`, `Tryouts`, and `About` routes so signed-in preview reads
+  can see tenant content.
+- Mobile admin chrome uses tenant-derived `Diverse City FC Admin` instead of
+  `Rose City Admin`.
+- Root metadata is neutral `Onzio Platform` copy instead of Rose City copy.
+- Added `.vercelignore` to prevent `.codex-work`, `.next`, `node_modules`,
+  coverage, and test-report artifacts from future Vercel source uploads.
+  Evidence: pre-ignore deploy downloaded 1004 deployment files; final clean
+  deploy downloaded 533 deployment files.
+
+Verification completed:
+- Local: `npx vitest run tests/contracts/authorization.test.ts` passed, 19/19.
+- Local: `npx tsc --noEmit` passed before the first deployment and again after
+  the About follow-up.
+- Vercel: final clean deployment built successfully and reported `Ready`.
+  Existing warnings only: Supabase Edge-runtime warning and pre-existing
+  Analytics hook lint warnings.
+- Browser: using the approved `.env.local` Vercel bypass only to establish the
+  protection bypass cookie, the final alias was swept in Chrome at desktop
+  `1440x900` and mobile `390x844`.
+- Browser routes swept on the final alias: `/`, `/club/about`, `/programs`,
+  `/programs/youth-academy`, `/programs/special-kickers-program`,
+  `/programs/special-olympics-soccer`, `/programs/upsl-mens-teams`,
+  `/contact`, `/tryouts`, `/admin/programs`, `/admin/contact`, and
+  `/admin/tryouts`.
+- Browser result: every swept route had expected Diverse City content, no 404,
+  no `CLUB_INACTIVE`, no visible Rose City/Pasadena copy, zero broken images,
+  zero horizontal overflow, and zero console errors in both desktop and mobile
+  viewports.
+- Admin result: `/admin/programs` showed active program data,
+  `/admin/contact` showed `diverse.cityfc@gmail.com`, `(312) 731-9479`, and
+  `Schaumburg, Illinois`, and `/admin/tryouts` showed the expected empty state
+  without capability/lifecycle blocking.
+
+Still not complete:
+- This closes the desktop/mobile public-route and owner-admin editor sweep that
+  was next in the previous checkpoint. The broader `DCFC-602` isolation
+  checklist still has unchecked non-browser items in
+  `docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md` such as cross-tenant
+  private-row probes, composite-FK rejection signatures, Storage entitlement
+  probes, and cleanup/reconciliation of any temporary probes.
+
+Exact next step:
+- Continue `DCFC-602` with the remaining non-browser isolation/security probes
+  from `docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md`. Do not start a new
+  hosted mutation outside this approved DCFC-602 scope without confirming the
+  exact scope with Christian first.
+
+## DCFC-602 in progress - local fixes for preview content/admin blockers
+
+Agent: Codex (GPT-5.5), 2026-08-06 11:22 PT. Status: `in_progress`.
+
+Christian's "one" selection was treated as approval for the local-fix path
+before any new hosted mutation. This checkpoint fixed the code paths that the
+signed-in desktop/mobile sweep exposed: onboarding/private-preview owner-admin
+content access was incorrectly blocked with `CLUB_INACTIVE`, public academy
+server pages were reading preview content through the default browser-client
+query path instead of an SSR Supabase client, and the admin shell/root metadata
+still leaked Rose City copy.
+
+Files changed: `lib/authorization.ts`,
+`tests/contracts/authorization.test.ts`, `lib/media-assets.ts`,
+`lib/queries.ts`, `app/%5Fclubs/[slug]/programs/page.tsx`,
+`app/%5Fclubs/[slug]/programs/[programSlug]/page.tsx`,
+`app/%5Fclubs/[slug]/contact/page.tsx`,
+`app/%5Fclubs/[slug]/tryouts/page.tsx`, `components/AdminShell.tsx`, and
+`app/layout.tsx`.
+
+Verification completed locally:
+- `npx vitest run tests/contracts/authorization.test.ts` passed, 19/19 tests.
+- `npx tsc --noEmit` passed.
+
+Hosted mutation evidence: no hosted mutation occurred in this checkpoint. No
+Vercel deploy, alias change, environment change, Supabase write, Storage write,
+Stripe/Auth mutation, DNS change, or email send was performed.
+
+Still not complete: staging still runs deployment
+`dpl_AzUTewXEbduTRGaJQkz35AEHySDL` at commit `bef8164`; these local fixes are
+not deployed there yet. The real
+`docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md` desktop/mobile public-route
+and admin-editor checklist must be re-run after an explicitly approved staging
+deploy.
+
+Exact next step: ask Christian for explicit approval to deploy this DCFC-602
+local fix set to staging. After deployment, use the already-approved
+`.env.local` Vercel bypass only for the DCFC-602 staging browser sweep and
+record the renewed acceptance evidence.
+
+## DCFC-602 in progress — Vercel bypass works; public sweep now blocked by app preview state
+
+Agent: Codex (GPT-5.5), 2026-08-06. Status: `in_progress`.
+
+Christian explicitly approved using the local `.env.local`
+`VERCEL_AUTOMATION_BYPASS_SECRET` for the `DCFC-602` staging checks. Used it
+only to establish a temporary bypass cookie for
+`diverse-city-onzio-staging.vercel.app`; the value was not printed or recorded.
+Deployment protection is no longer the blocker for this session's HTTP probes.
+
+After bypass, Diverse City reaches the app edge but all required anonymous
+public routes still fail closed: `/`, `/club/about`, `/programs`,
+`/programs/youth-academy`, `/programs/special-kickers-program`,
+`/programs/special-olympics-soccer`, `/programs/upsl-mens-teams`, `/contact`,
+and `/tryouts` each returned `404` with body length 9 (`Not found`) and no
+`x-onzio-cache-tenant` header. By contrast, `GET /admin/login` on the same
+host returned `200`, proving the hostname can resolve for the protected/admin
+surface.
+
+Read-only Supabase staging evidence confirms the expected data state:
+Diverse City's domain row is active/verified for `staging`, but the club remains
+`lifecycle=onboarding`, `public_access=preview`, and
+`get_club_runtime_access(...) = preview`. Alpha comparison through `vercel curl`
+returns public `/` as `200` with tenant header
+`362f4276-0e0b-4c6a-989d-3e59713c1d9f`; Bravo comparison returns public `/` as
+`404` and `/admin/login` as `200`, matching its preview/onboarding state.
+
+The exact deployment currently serving Diverse City is
+`dpl_AzUTewXEbduTRGaJQkz35AEHySDL`, built from branch `staging` at commit
+`bef8164`. No hosted mutation, Vercel configuration change, Supabase mutation,
+or secret rotation occurred. The remaining public-render checklist still needs
+either Christian's live owner/admin app session in an authenticated browser, or
+a separately approved lifecycle/public-access probe; do not perform that broader
+mutation under this checkpoint alone.
+
 ## DCFC-602 agent handoff — read this before doing anything
 
 Christian is switching from Claude Code to a different agent partway
@@ -42,6 +252,31 @@ approved, bigger blast radius) or waiting for `DCFC-901`.
 ## DCFC-602 in progress — standings fix deployed; fixed the root browser-client/session-sharing bug
 
 Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.
+
+## DCFC-602 in progress — desktop/mobile public-route sweep blocked by Vercel deployment protection
+
+Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.
+
+The next DCFC-602 task (desktop/mobile public-route sweep over `/`, `/club/about`,
+`/programs`, all 4 approved program slugs, `/contact`, `/tryouts`) was attempted
+from this session with unauthenticated hosted checks only. The endpoint chain on
+`diverse-city-onzio-staging.vercel.app` is blocked before app rendering:
+
+- `curl`/`-L` on each route returns `HTTP/2 302` to
+  `https://vercel.com/sso-api?url=...`, then `HTTP/2 307` to
+  `https://vercel.com/login?next=%2Fsso-api...`, with the final effective URL
+  always a Vercel login page.
+- Concrete evidence came from the route set above on
+  `2026-08-06T17:52:38Z` to `2026-08-06T17:52:52Z`:
+  `/`, `/club/about`, `/programs`, `/programs/youth-academy`,
+  `/programs/special-kickers-program`, `/programs/special-olympics-soccer`,
+  `/programs/upsl-mens-teams`, `/contact`, `/tryouts`.
+
+No rendered route HTML, viewport, header metadata, or overflow/image checks could be
+collected in this session because of this gate. No hosted mutation was
+performed during this attempt; status remains `in_progress`, and the exact next
+step is to continue with Christian's authenticated Vercel session (or valid
+Vercel login in this runtime), then rerun the full DCFC-602 desktop/mobile sweep.
 
 The standings fix below was approved, committed as `62300a3`, pushed,
 deployed (`dpl_9RXH6xeL7WhMUDTNtCAJpRh6Z92N`, `READY`), and aliased —

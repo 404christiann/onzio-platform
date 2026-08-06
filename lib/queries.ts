@@ -335,9 +335,12 @@ function mapTryout(row: HydratedTryout, email: unknown): TryoutContent {
 // ── Queries ───────────────────────────────────────────────────
 
 /** Fetches active Programs content for one already-verified tenant. */
-export async function fetchPrograms(clubId: string): Promise<ProgramContent[]> {
+export async function fetchPrograms(
+  clubId: string,
+  client: typeof supabase = supabase,
+): Promise<ProgramContent[]> {
   const tenantId = requireVerifiedClubId(clubId);
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("programs")
     .select("*")
     .eq("club_id", tenantId)
@@ -352,6 +355,7 @@ export async function fetchPrograms(clubId: string): Promise<ProgramContent[]> {
       { assetId: "hero_media_asset_id", url: "hero_media_url" },
       { assetId: "detail_media_asset_id", url: "detail_media_url" },
     ],
+    client,
   );
   return (rows as HydratedProgram[]).map(mapProgram);
 }
@@ -360,11 +364,12 @@ export async function fetchPrograms(clubId: string): Promise<ProgramContent[]> {
 export async function fetchProgramBySlug(
   clubId: string,
   slug: string,
+  client: typeof supabase = supabase,
 ): Promise<ProgramContent | null> {
   const tenantId = requireVerifiedClubId(clubId);
   if (!/^[a-z][a-z0-9-]*$/.test(slug)) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("programs")
     .select("*")
     .eq("club_id", tenantId)
@@ -379,6 +384,7 @@ export async function fetchProgramBySlug(
       { assetId: "hero_media_asset_id", url: "hero_media_url" },
       { assetId: "detail_media_asset_id", url: "detail_media_url" },
     ],
+    client,
   );
   const row = (rows as HydratedProgram[])[0];
   return row ? mapProgram(row) : null;
@@ -387,20 +393,21 @@ export async function fetchProgramBySlug(
 /** Fetches canonical Contact data, page copy, and shared social destinations. */
 export async function fetchContactContent(
   clubId: string,
+  client: typeof supabase = supabase,
 ): Promise<ContactContent> {
   const tenantId = requireVerifiedClubId(clubId);
   const [profileResult, pageResult, socialResult] = await Promise.all([
-    supabase
+    client
       .from("contact_profile")
       .select("*")
       .eq("club_id", tenantId)
       .limit(1),
-    supabase
+    client
       .from("contact_page_content")
       .select("*")
       .eq("club_id", tenantId)
       .limit(1),
-    supabase
+    client
       .from("site_social_links")
       .select("*")
       .eq("club_id", tenantId)
@@ -414,6 +421,7 @@ export async function fetchContactContent(
     (pageResult.data ?? []) as DBContactPageContent[],
     tenantId,
     [{ assetId: "hero_media_asset_id", url: "hero_media_url" }],
+    client,
   );
   const page = (hydratedPages as HydratedContactPage[])[0] ?? null;
   const socialLinks = ((socialResult.data ?? []) as DBSiteSocialLink[])
@@ -442,15 +450,18 @@ export async function fetchContactContent(
 }
 
 /** Fetches ordered Tryouts and derives a safe registration/contact action. */
-export async function fetchTryouts(clubId: string): Promise<TryoutContent[]> {
+export async function fetchTryouts(
+  clubId: string,
+  client: typeof supabase = supabase,
+): Promise<TryoutContent[]> {
   const tenantId = requireVerifiedClubId(clubId);
   const [tryoutsResult, contactResult] = await Promise.all([
-    supabase
+    client
       .from("tryouts")
       .select("*")
       .eq("club_id", tenantId)
       .order("sort_order", { ascending: true }),
-    supabase
+    client
       .from("contact_profile")
       .select("public_email")
       .eq("club_id", tenantId)
@@ -463,6 +474,7 @@ export async function fetchTryouts(clubId: string): Promise<TryoutContent[]> {
     (tryoutsResult.data ?? []) as DBTryout[],
     tenantId,
     [{ assetId: "hero_media_asset_id", url: "hero_media_url" }],
+    client,
   );
   const email = (
     (contactResult.data ?? []) as Pick<DBContactProfile, "public_email">[]
@@ -686,15 +698,18 @@ export async function fetchHomepageContent(clubId?: string): Promise<HomepageCon
 }
 
 /** Fetches editable About Club and Club Logo page content. */
-export async function fetchAboutClubContent(clubId?: string): Promise<AboutClubContent> {
+export async function fetchAboutClubContent(
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<AboutClubContent> {
   const tenantId = requireClubId(clubId);
   const [aboutResult, logoResult] = await Promise.all([
-    supabase
+    client
       .from("about_page_content")
       .select("*")
       .eq("club_id", tenantId)
       .limit(1),
-    supabase
+    client
       .from("club_logo_page_content")
       .select("*")
       .eq("club_id", tenantId)
@@ -705,6 +720,7 @@ export async function fetchAboutClubContent(clubId?: string): Promise<AboutClubC
     (aboutResult.data ?? []) as Record<string, unknown>[],
     tenantId,
     [{ assetId: "feature_image_asset_id", url: "feature_image_url" }],
+    client,
   );
   const hydratedLogo = await resolveMediaReferences(
     (logoResult.data ?? []) as Record<string, unknown>[],
@@ -713,6 +729,7 @@ export async function fetchAboutClubContent(clubId?: string): Promise<AboutClubC
       { assetId: "annotated_image_asset_id", url: "annotated_image_url" },
       { assetId: "map_image_asset_id", url: "map_image_url" },
     ],
+    client,
   );
   const rawAbout =
     aboutResult.error || !aboutResult.data

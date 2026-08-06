@@ -78,6 +78,22 @@ describe("admin authentication and role contract", () => {
     ).resolves.toMatchObject({ allowed: true, role: "owner" });
   });
 
+  it("allows an onboarding owner to manage content from private preview", async () => {
+    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
+      "@/lib/authorization",
+      "authorizeAdminAccess",
+    );
+    await expect(
+      authorizeAdminAccess({
+        club: clubs.bravo,
+        userId: USER_IDS.multiClub,
+        memberships,
+        aal: "aal1",
+        capability: "content",
+      }),
+    ).resolves.toMatchObject({ allowed: true, role: "owner" });
+  });
+
   it("rejects an admin attempting billing", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",

@@ -3,6 +3,7 @@ import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import { EMPTY_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchAboutClubContent, fetchSiteSponsorLogos } from "@/lib/queries";
+import { createClient } from "@/lib/supabase-server";
 
 export default async function TenantAboutPage({
   params,
@@ -10,7 +11,8 @@ export default async function TenantAboutPage({
   params: Promise<{ slug: string }>;
 }) {
   const club = await getClubContextBySlug((await params).slug);
-  const content = await fetchAboutClubContent(club.id).catch((error) => {
+  const onzio = (await createClient()).schema("onzio");
+  const content = await fetchAboutClubContent(club.id, onzio).catch((error) => {
     console.error("TenantAboutPage:", error);
     return { about: EMPTY_ABOUT_PAGE_CONTENT };
   });

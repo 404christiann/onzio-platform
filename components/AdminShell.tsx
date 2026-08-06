@@ -383,7 +383,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </svg>
           </button>
           <p className="font-display font-black uppercase text-white text-sm tracking-widest">
-            Rose City Admin
+            {club.name} Admin
           </p>
         </div>
 

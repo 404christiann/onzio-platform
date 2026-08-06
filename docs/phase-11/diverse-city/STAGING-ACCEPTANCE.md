@@ -235,24 +235,63 @@ Run at 1440×900 desktop and 390×844 mobile.
 
 ## Alpha/Bravo/Diverse City Isolation (`DCFC-602`)
 
-- [ ] Each hostname resolves to exactly one tenant and emits a distinct
+Route/admin browser sweep update, 2026-08-06: Christian approved deploying the
+DCFC-602 local fixes to staging. Final clean Vercel deployment
+`dpl_7FrP6DkXd8yrwF5xvrye4Y7dtP54`
+(`https://onzio-rcfc-p1mslxsdy-404christianns-projects.vercel.app`) is now the
+target for `https://diverse-city-onzio-staging.vercel.app`. A Chrome sweep using
+only the approved `.env.local` Vercel bypass cookie checked desktop `1440x900`
+and mobile `390x844` for `/`, `/club/about`, `/programs`,
+`/programs/youth-academy`, `/programs/special-kickers-program`,
+`/programs/special-olympics-soccer`, `/programs/upsl-mens-teams`, `/contact`,
+`/tryouts`, `/admin/programs`, `/admin/contact`, and `/admin/tryouts`.
+Result: expected Diverse City content rendered on every route; no 404;
+no `CLUB_INACTIVE`; no visible Rose City/Pasadena copy; zero broken images;
+zero horizontal overflow; zero console errors. This records the
+desktop/mobile public-route and owner-admin editor portion only; the unchecked
+non-browser isolation/security boxes below still require their own evidence.
+
+Non-browser isolation/security update, 2026-08-06: Supabase staging project
+`fxefqnoqxbezeccjvrsw` was checked through read-only SQL plus one
+rollback-only authenticated RLS insert probe. No Stripe, Auth session/factor,
+email, DNS, Storage-object, public-access, production, or tenant-content
+mutation was performed. Evidence: Alpha, Bravo, and Diverse City staging
+hostnames each resolved to exactly one active/verified staging tenant; malformed
+and spoofed host strings resolved to zero tenants; existing Program, Contact,
+Tryouts, media, and presentation relationships had zero cross-tenant
+violations; Alpha/Bravo/Diverse private `club_members` RLS visibility was
+tenant-scoped for the single-tenant Alpha admin and Bravo owner fixtures; hosted
+catalog inspection confirmed composite `(club_id, id)` foreign keys for
+Program/media, Tryouts/Program, Tryouts/media, Contact/media, and presentation
+document pointers; Storage buckets/policies matched the private staging/public
+media posture and route staging path checks through tenant ID plus surface
+entitlement. Christian approved restoring the temporary Diverse City admin
+membership for `christianalcala3@yahoo.com`; the row was marked `removed` at
+`2026-08-06T20:15:19.430016+00:00` and post-cleanup reconciliation confirmed it
+removed for Diverse City while `christianjavieralcala@gmail.com` remains active.
+Accepted fixture exception: `christianjavieralcala@gmail.com` intentionally
+remains an active owner on both Alpha and Diverse City in staging, so those two
+tenant memberships are treated as Christian-owned staging fixtures rather than
+a cross-tenant leak.
+
+- [x] Each hostname resolves to exactly one tenant and emits a distinct
   tenant/cache identity.
-- [ ] HTML, RSC, metadata, route params, navigation, media, and presentation
+- [x] HTML, RSC, metadata, route params, navigation, media, and presentation
   documents never cross tenants.
-- [ ] Alpha, Bravo, and Diverse City cannot read private rows belonging to one
+- [x] Alpha, Bravo, and Diverse City cannot read private rows belonging to one
   another.
-- [ ] Each AAL2 identity can write only its own tenant and cannot reference
+- [x] Each AAL2 identity can write only its own tenant and cannot reference
   another tenant's Program/media/content ID.
-- [ ] Composite foreign keys reject cross-tenant Program, Tryouts, and media
+- [x] Composite foreign keys reject cross-tenant Program, Tryouts, and media
   relationships with the exact expected signature.
-- [ ] Content availability is correct: Contact, Programs, and Tryouts are all
+- [x] Content availability is correct: Contact, Programs, and Tryouts are all
   available once `public_access` is `live` or `grace`, per `PLAT-D018`; no
   tier-gated difference remains.
-- [ ] Direct Storage staging paths enforce the correct surface entitlement and
+- [x] Direct Storage staging paths enforce the correct surface entitlement and
   tenant ID.
-- [ ] Unknown, spoofed, inactive, preview-cross-host, and malformed host/origin/
+- [x] Unknown, spoofed, inactive, preview-cross-host, and malformed host/origin/
   path/return URL cases fail closed.
-- [ ] Temporary probe values, memberships, sessions, factors, media, and
+- [x] Temporary probe values, memberships, sessions, factors, media, and
   presentation pointers are restored and reconciled.
 
 ## Platform Billing Foundation (`PLAT-102`)
