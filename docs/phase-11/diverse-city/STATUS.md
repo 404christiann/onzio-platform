@@ -238,7 +238,7 @@ unassigned and unapproved.
 | DCFC-502 | 3 | complete | 501 complete; exact approval received and exhausted | Exact release/migrations deployed; one private Starter/onboarding/preview tenant/domain provisioned and reconciled |
 | DCFC-503 | 3 | complete | 502 complete; exact tenant/digest approval received and exhausted | Ten normalized assets, approved content, and immutable published `academy@1` reconcile; replay is idempotent |
 | DCFC-504 | 3 | complete | Exact new-identity remediation approved and exhausted | Password/TOTP/AAL2, Starter/Pro and owner-billing boundaries, audited synthetic-owner removal, and final one-owner reconciliation passed; **Phase 5 complete** |
-| DCFC-601 | 3 | pending | 504 + fresh approval | Stripe test/lifecycle rehearsal and canonical Pro projection |
+| DCFC-601 | 3 | complete | 504 (done), `PLAT-102`/`PLAT-103` (done), fresh approval exhausted | Real $75/month Checkout, webhook projection, Portal, and full six-call lifecycle matrix all passed on Diverse City; owner/admin role boundary proven; cleanup and final reconciliation confirmed exact restoration. A stale pre-`PLAT-101`/`PLAT-102` deployment on `diverse-city-onzio-staging.vercel.app` was found and fixed before the pass could run — see `HANDOFF.md` 2026-08-06 entry |
 | DCFC-602 | 3 | pending | 601 + fresh approval | Staging public/admin/isolation acceptance with restored probes |
 | DCFC-603 | 1 | pending | 601, 602 | Staging gate review and Christian acceptance |
 | DCFC-701 | 1 | pending | 603 | Production read-only preflight and backup baseline |
@@ -5445,3 +5445,56 @@ Hosted-mutation count: zero.
 - Hosted mutations: zero. This was Class 1, documentation-only work; no
   Stripe, Vercel, Supabase write, Auth, DNS, or tenant-content mutation
   occurred.
+
+### 2026-08-06 — DCFC-601 hosted acceptance complete — Claude Code (Sonnet 5)
+
+- Package: DCFC-601
+- Status: complete
+- Completed: before this pass could run, found and fixed a latent issue:
+  `diverse-city-onzio-staging.vercel.app` was still pinned to a
+  pre-`PLAT-101`/`PLAT-102` deployment (`8e3cde2`, "Prepare Diverse City
+  Phase 5 release") and was reassigned to the current deployment (`dbfe825`,
+  the same one Bravo uses). Added one temporary admin membership
+  (`christianalcala3@yahoo.com`) alongside Diverse City's existing active
+  owner. Verified the owner/admin role boundary (owner reaches
+  Payments/Team access, admin does not). Owner completed one real $75/month
+  test Checkout (`sub_1U1ImGK6WajTkwHYSJrFjmuT` /
+  `cus_V1LT4xNreu46xz`); webhook applied cleanly, `public_access` transitioned
+  `preview` → `live`. Verified the Customer Portal Session (invoice history
+  and payment-method update available, no cancel/plan-change control,
+  tier-free Product name). Ran the full six-call lifecycle matrix directly
+  against Diverse City (clean run, day-7/day-17 warnings, idempotency
+  repeat, isolated Price-drift divergence, isolated suspension, final clean
+  run) — all six passed exactly as specified. Christian canceled the
+  temporary Stripe Subscription and deleted its temporary Customer; a guarded
+  database transaction then removed the temporary admin membership with a
+  sanitized audit, cleared the subscription row, and restored `public_access`
+  to `preview` and `lifecycle` to `onboarding` — leaving `kind` and
+  `stripe_price_id` untouched, since those are Diverse City's real ongoing
+  configuration, not test fixtures.
+- Files changed: `HANDOFF.md`, this status ledger, and
+  `docs/phase-11/diverse-city/STAGING-ACCEPTANCE.md` for acceptance evidence.
+  No application code changed.
+- Verification: final reconciliation confirmed `kind=customer` (unchanged),
+  `lifecycle=onboarding`, `public_access=preview`, Price intent unchanged,
+  exactly one active member (the original owner only), zero subscription
+  rows, and 36 audit events (30 baseline + 6 fully explained by this pass:
+  one membership add, day-7 warning, day-17 warning, one divergence, one
+  suspension, one membership remove) — all independently re-verified against
+  the linked staging project.
+- Blockers or decisions needed: none. Duplicate/stale/foreign-event
+  rejection and the Healthchecks heartbeat path were not re-tested per this
+  package — both are tenant-agnostic route code already proven the same day
+  in `PLAT-102`'s Bravo pass, so re-testing them per club would have been
+  redundant.
+- Exact next step: `DCFC-601` does not authorize `DCFC-602` or `DCFC-901`.
+  `DCFC-602` (public/admin and tenant-isolation acceptance) is next in
+  sequence per `ROLLOUT-WORK-PACKAGES.md`, but needs its own fresh, separate
+  approval before starting.
+- Hosted mutations: one Vercel alias reassignment (fixing the stale
+  deployment); one temporary admin membership add/remove pair with two
+  sanitized audits; one real Stripe test Checkout, Portal Session, and
+  Subscription (created and later canceled/deleted by Christian); guarded
+  direct-RPC invocations for the lifecycle matrix (four synthetic
+  warning/divergence/suspension audits). Zero production, live-Stripe, DNS,
+  Resend, other-tenant, or unrelated mutation occurred.

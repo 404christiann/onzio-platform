@@ -1,6 +1,68 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-05
+Last updated: 2026-08-06
+
+## DCFC-601 hosted acceptance complete — Diverse City's real billing rehearsal closed out
+
+Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `complete`.
+
+**Latent issue found and fixed before this pass could run:**
+`diverse-city-onzio-staging.vercel.app` was still pinned to
+`dpl_8W3YtWSw6Bu2qAaUndeofiiWd2KM` (commit `8e3cde2`, "Prepare Diverse City
+Phase 5 release") — a deployment from before `PLAT-101` and `PLAT-102` even
+existed. The Payments page was serving the old Starter/Pro tier-selection UI.
+Reassigned to the current deployment (`dbfe825`), same one Bravo uses;
+verified independently before proceeding. Only Diverse City's alias was
+touched; no other alias, deployment, or configuration changed.
+
+**Fixture and role boundary.** Diverse City already had one active owner
+(same operator identity used throughout `PLAT-102`); added one temporary
+admin membership (`christianalcala3@yahoo.com`) with a sanitized
+`membership_added` audit. Confirmed the owner reaches Payments/Team access
+and the admin does not (one early mix-up during testing — the owner check was
+first attempted with the admin's email by mistake — was caught by checking
+`auth.sessions` directly rather than trusting the report, and resolved by
+re-running with the correct address).
+
+**Checkout, webhook, Portal.** Owner completed one real $75/month test
+Checkout: `sub_1U1ImGK6WajTkwHYSJrFjmuT` / `cus_V1LT4xNreu46xz`, status
+`active`, paid through 2026-09-06. Webhook applied cleanly; `public_access`
+transitioned `preview` → `live`. Customer Portal Session confirmed invoice
+history and payment-method update available, no cancel/plan-change control,
+and the tier-free Product name ("Onzio - Diverse City FC") from `DCFC-D124`.
+
+**Six-call lifecycle matrix — all six passed**, run directly against Diverse
+City via the authenticated Supabase Management API (no HTTP route or
+Healthchecks re-proof needed — that plumbing is tenant-agnostic and already
+proven the same day in `PLAT-102`'s Bravo pass):
+
+1. Clean run: `{"warnings":0,"suspensions":0,"divergences":0}`.
+2. Projected `past_due` (`paid_through` 18 days past, `grace_ends_at` 2 days
+   future), suspension disabled, reconciliation enabled: exactly the day-7
+   and day-17 warning audits.
+3. Identical repeat: zero new warnings — idempotency confirmed.
+4. Controlled Price drift: exactly one `billing_reconciliation_divergence`
+   audit (`PRICE_MISMATCH`). Price intent restored immediately.
+5. `grace_ends_at` moved into the past, suspension enabled: exactly one
+   `billing_suspended` audit, `public_access` transitioned to `suspended`.
+6. Restored to healthy baseline; final clean run:
+   `{"warnings":0,"suspensions":0,"divergences":0}`.
+
+**Cleanup and final reconciliation.** Christian canceled the temporary Stripe
+Subscription and deleted its temporary Customer via the Stripe Dashboard. A
+guarded database transaction removed the temporary admin membership with a
+sanitized `membership_removed` audit, cleared the `club_subscriptions` row,
+and restored `public_access` to `preview` and `lifecycle` to `onboarding` —
+`kind` and `stripe_price_id` were **not** touched, since unlike Bravo's
+throwaway test fixtures, those are Diverse City's real ongoing configuration.
+Final state: `kind=customer` (unchanged), `lifecycle=onboarding`,
+`public_access=preview`, Price intent unchanged, exactly one active member
+(the original owner), zero subscription rows, 36 audit events (30 baseline +
+6 fully explained by this pass).
+
+`DCFC-601` is `complete`. It does not authorize `DCFC-602` or `DCFC-901` —
+`DCFC-602` (public/admin and tenant-isolation acceptance) is next in sequence
+per `ROLLOUT-WORK-PACKAGES.md`, but needs its own fresh, separate approval.
 
 ## PLAT-103 respecification complete — DCFC-601/602 ready for their own approvals
 

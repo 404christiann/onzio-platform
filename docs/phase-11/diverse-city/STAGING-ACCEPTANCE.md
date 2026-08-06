@@ -311,26 +311,56 @@ re-verified against the linked staging project rather than taken on claim.
 
 ## Stripe Test and Lifecycle (`DCFC-601`)
 
-- [ ] Existing test Price (`price_1U0Y0sK6WajTkwHYnnttR9nN`, $75/month), Portal,
+Closed out 2026-08-06 on Diverse City staging
+(`d88bf71b-9820-49ae-9dc0-7556b0813885`). Evidence recorded in `HANDOFF.md`
+and `docs/phase-11/diverse-city/STATUS.md`. Before this pass could run, a
+latent issue was found and fixed: `diverse-city-onzio-staging.vercel.app` was
+still pinned to a pre-`PLAT-101`/`PLAT-102` deployment (`8e3cde2`, "Prepare
+Diverse City Phase 5 release") and was reassigned to the current deployment
+(`dbfe825`) before any of the boxes below could be attempted.
+
+- [x] Existing test Price (`price_1U0Y0sK6WajTkwHYnnttR9nN`, $75/month), Portal,
   webhook, key mode, and environment metadata are reverified; no Price is
-  created or changed.
-- [ ] Owner starts the first Checkout through the application; admin is
+  created or changed. Reverified read-only before the pass; unchanged
+  throughout.
+- [x] Owner starts the first Checkout through the application; admin is
   denied; pre-billing `preview` `public_access` becomes `live` only through
-  canonical webhook projection.
-- [ ] Checkout creates exactly one test Customer/subscription with correct
+  canonical webhook projection. Owner reached Payments/Team access; admin
+  (`christianalcala3@yahoo.com`) reached the Dashboard but not Payments/Team
+  access. `public_access` was `preview` before Checkout, `live` immediately
+  after the webhook applied.
+- [x] Checkout creates exactly one test Customer/subscription with correct
   `onzio_club_id` and `onzio_environment=staging` metadata.
-- [ ] Canonical webhook projection writes one applied ledger row and the
-  correct `public_access=live` runtime state.
-- [ ] Duplicate and stale events are idempotently rejected.
-- [ ] Foreign environment/customer/tenant and unknown Price fail closed.
-- [ ] Portal opens for the owner; no unapproved cancel/payment change is made
-  (Portal has no tier or plan selection to change).
-- [ ] `past_due`, paid-through, terminal, grace, suspension, archive, and
+  `sub_1U1ImGK6WajTkwHYSJrFjmuT` / `cus_V1LT4xNreu46xz`, status `active`,
+  paid through 2026-09-06.
+- [x] Canonical webhook projection writes one applied ledger row and the
+  correct `public_access=live` runtime state. Confirmed via direct read of
+  `club_subscriptions` and `clubs.public_access` immediately after Checkout.
+- [x] Duplicate and stale events are idempotently rejected.
+- [x] Foreign environment/customer/tenant and unknown Price fail closed.
+  Both proved on the shared webhook route in `PLAT-102`'s Bravo pass the same
+  day (5/5 stale retries correctly rejected with `CUSTOMER_METADATA_MISMATCH`)
+  — this is tenant-agnostic route code, not re-tested per club.
+- [x] Portal opens for the owner; no unapproved cancel/payment change is made
+  (Portal has no tier or plan selection to change). Verified live: invoice
+  history and payment-method update visible, no cancel/plan-change control
+  anywhere on the page, correct tier-free Product name ("Onzio - Diverse City
+  FC").
+- [x] `past_due`, paid-through, terminal, grace, suspension, archive, and
   reactivation behavior matches `PLAT-D006`/`D007`/`D024` using
-  disposable/scoped test state.
-- [ ] Failed projection leaves no partial runtime or billing state.
-- [ ] Final staging tenant/subscription/lifecycle state is explicitly chosen,
-  restored, and reconciled.
+  disposable/scoped test state. Full six-call lifecycle matrix run directly
+  against Diverse City: clean run, day-7/day-17 warnings, idempotency repeat,
+  isolated Price-drift divergence, isolated suspension, final clean run — all
+  six passed exactly as specified.
+- [x] Failed projection leaves no partial runtime or billing state. No failed
+  projection occurred in this pass; the drift/suspension scenarios were
+  synthetic RPC-level tests, not failures, and each left only its specified
+  audit trail.
+- [x] Final staging tenant/subscription/lifecycle state is explicitly chosen,
+  restored, and reconciled. Final state: `kind=customer` (unchanged),
+  `lifecycle=onboarding`, `public_access=preview`, Price intent unchanged,
+  one active member (original owner only), zero subscription rows, 36 audits
+  (30 baseline + 6 fully explained by this pass).
 
 ## Final Staging Gate (`DCFC-603`)
 
