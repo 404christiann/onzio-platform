@@ -658,13 +658,27 @@ export async function fetchHomepageContent(clubId?: string): Promise<HomepageCon
         (tenantScoped
           ? { ...DEFAULT_BEHIND_THE_ROSE_SECTION, visible: false }
           : DEFAULT_BEHIND_THE_ROSE_SECTION);
+  // Unlike the sibling fallbacks above, this had no tenantScoped-safe variant,
+  // so a club with no public-readable hero row (e.g. public_access below
+  // live/grace) rendered this file's hardcoded Rose City default instead of
+  // falling through to the caller's own club.name/empty-state handling.
+  const tenantSafeHeroDefault: DBHomepageHeroContent = {
+    ...DEFAULT_HOMEPAGE_HERO_CONTENT,
+    headline_line_one: "",
+    primary_cta_label: "",
+    primary_cta_href: "",
+    secondary_cta_label: "",
+    secondary_cta_href: "",
+  };
 
   return {
     hero:
       heroResult.error || !heroResult.data
-        ? DEFAULT_HOMEPAGE_HERO_CONTENT
+        ? tenantScoped
+          ? tenantSafeHeroDefault
+          : DEFAULT_HOMEPAGE_HERO_CONTENT
         : ((heroResult.data ?? []) as DBHomepageHeroContent[])[0] ??
-          DEFAULT_HOMEPAGE_HERO_CONTENT,
+          (tenantScoped ? tenantSafeHeroDefault : DEFAULT_HOMEPAGE_HERO_CONTENT),
     slideshowPhotos,
     slideshowSettings,
     behindTheRose,

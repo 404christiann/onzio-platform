@@ -5498,3 +5498,103 @@ Hosted-mutation count: zero.
   direct-RPC invocations for the lifecycle matrix (four synthetic
   warning/divergence/suspension audits). Zero production, live-Stripe, DNS,
   Resend, other-tenant, or unrelated mutation occurred.
+
+### 2026-08-06 — DCFC-602 in progress: public-homepage acceptance blocker found and fixed locally — Claude Code (Sonnet 5)
+
+- Package: DCFC-602
+- Status: in_progress
+- Completed: under Christian's fresh explicit `DCFC-602` approval (staging
+  project `fxefqnoqxbezeccjvrsw`; Alpha/Bravo/Diverse City only), reconnected
+  the Supabase MCP connector to the correct org/project (it was previously
+  scoped to an unrelated `Mockup_DB` project) and captured a before-state
+  snapshot across all three tenants — clubs, domains, active memberships,
+  subscriptions, audit/Stripe-event counts, presentation state, and Diverse
+  City's Programs/Contact content — all reconciling exactly against prior
+  HANDOFF.md/STATUS.md evidence with zero drift. Re-added a temporary admin
+  membership on Diverse City (`522d90c2…`/`christianalcala3@yahoo.com`,
+  reusing the identity from `DCFC-601`) via the existing guarded
+  `addClubMembership` operator path, run by Christian himself through a new
+  narrowly-scoped script (`scripts/dcfc-602-add-diverse-city-temp-admin-staging.ts`,
+  modeled on the `DCFC-504` `invite-diverse-city-owner-staging.ts` precedent:
+  hard-coded project ref/club ID, confirmation-string gate, exact-target
+  assertions, interactive operator TOTP sign-in only Christian can perform).
+  Fixed an unrelated pre-existing bug found in the process:
+  `scripts/operator-session.ts`'s Supabase client was missing the `ws`
+  transport override that `lib/supabase-service-role.ts` already carries,
+  causing `Node.js 20 detected without native WebSocket support` on every
+  operator sign-in (affects `invite-diverse-city-owner-staging.ts`,
+  `smoke-operator-workflows.ts`, and `verify-phase-7-lifecycle.ts` too, not
+  just this pass). Independently re-verified the new membership row and its
+  `membership_added` audit (id `114`) read-only afterward.
+
+  Began the public/admin browser acceptance pass on Diverse City's homepage
+  (desktop 1440×900) and found real content instead of Diverse City's actual
+  branding: hero headline "ROSE CITY FC" with Roster/Schedule/Store nav
+  framing. Root cause, after investigation and one wrong turn: **not** a
+  missing `academy@1` template branch (`/programs`, `/contact`, `/tryouts`
+  routes already correctly branch on `presentationTemplateKey`, and
+  `Hero.tsx` already has a working generic "crest-led non-video" branch keyed
+  off `club.slug !== "rose-city"`, matching the accepted `DCFC-D114` hero).
+  The actual bug: `lib/queries.ts`'s `fetchHomepageContent`, unlike its
+  `behindTheRose`/slideshow sibling fields in the same function, had no
+  `tenantScoped`-aware fallback for the `hero` field — so whenever RLS
+  returns zero rows for `homepage_hero_content` (confirmed via
+  `onzio_private.can_read_club`/`is_publicly_accessible`, requiring
+  `public_access` `live`/`grace` OR a fresh authenticated member session for
+  *that* club), the function fell through to the file's literal
+  `DEFAULT_HOMEPAGE_HERO_CONTENT` — Rose City's original single-tenant
+  branding, never generalized when the platform went multi-tenant. Confirmed
+  this is reachable even for Diverse City's actual owner: a genuinely
+  anonymous visit correctly 404s at the middleware tenant-resolution gate
+  (proven by clearing cookies and reloading), but the stray authenticated
+  owner session in Christian's browser (`cdc588f1…`, `auth.sessions.updated_at`
+  matching the test almost to the second) still showed the bug — meaning the
+  browser-side Supabase client used by `lib/queries.ts` does not carry the
+  same session middleware recognizes server-side, so this client fetch runs
+  effectively anonymous. That deeper session-sharing question is a separate,
+  unscoped architecture finding, not fixed by this pass. Verified
+  `fetchLeagueStandings`, `fetchSiteSponsorLogos`, and `fetchSchedule` (the
+  other homepage sections) do not share this gap — each already resolves
+  safely to an empty/neutral state in the same scenario.
+
+  Fix: added a `tenantSafeHeroDefault` (empty headline/CTA fields) and used
+  it in both `hero` fallback branches when `tenantScoped`, mirroring the
+  exact pattern already used for `behindTheRose` in the same function —
+  letting `Hero.tsx`'s existing `heroContent.headline_line_one.trim() ||
+  club.name` logic take over as designed. No new component, no new design
+  decision, no club-slug branch.
+- Files changed: `lib/queries.ts`, `tests/contracts/homepage-hero-content.test.ts`
+  (new regression test), `scripts/operator-session.ts` (unrelated `ws`
+  transport fix), `scripts/dcfc-602-add-diverse-city-temp-admin-staging.ts`
+  (new), this status ledger. Also added `onzio-platform-bravo-preview` to the
+  user's local `~/.claude/launch.json` (dev-tooling config, outside the repo)
+  for local reproduction. None of these are committed yet.
+- Verification: `npx tsc --noEmit` clean; `npm run test:contracts` 334/334;
+  `npm run test:architecture` 20/20; `npm run build` clean; `npm run lint`
+  clean (only pre-existing unrelated warnings on
+  `app/admin/(protected)/analytics/page.tsx`); `git diff --check` clean. New
+  regression test passes both branches (tenant-scoped RLS-empty → neutral
+  fallback; genuinely unscoped → unchanged branded default, preserving
+  existing behavior). `npm test`'s 75 database-suite failures are the
+  pre-existing local-environment gap HANDOFF.md already documents (`SUPABASE_TEST_*`
+  needs JWT-shaped values locally, `Expected 3 parts in JWT; got 1`) — not
+  caused by this change; nothing in the modified files failed. Local browser
+  reproduction against a non-live local club (`bravo`, `academy@1`) hit the
+  same correct-and-unrelated middleware 404 as the anonymous hosted test, so
+  visual confirmation relies on the regression test plus the source-level
+  proof above rather than a live screenshot of the fixed state.
+- Blockers or decisions needed: this fix is local-only so far. Diverse City's
+  live staging site still serves the unfixed build. Need Christian's approval
+  to commit and push (bundled with the two already-pending PLAT-103/DCFC-601
+  documentation commits, per his standing preference) and to deploy to the
+  protected staging alias before the public/admin acceptance pass can
+  continue against real rendered output. The browser-client/session-sharing
+  question flagged above is unscoped and not blocking, but worth a follow-up.
+- Exact next step: get approval to commit+push+deploy the fix, then resume
+  the DCFC-602 public/admin acceptance pass (desktop 1440×900 and mobile
+  390×844) against the corrected homepage, followed by the isolation checks.
+- Hosted mutations: one Vercel alias reassignment (already recorded under
+  `DCFC-601`, unrelated); one temporary admin membership add on Diverse City
+  with a sanitized audit (Christian-executed, independently re-verified).
+  Zero Stripe, DNS, Resend, production, or other-tenant mutation. No code
+  deployed to any hosted environment yet.

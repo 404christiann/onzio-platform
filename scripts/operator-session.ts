@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { createClient } from "@supabase/supabase-js";
+import WebSocket from "ws";
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name]?.trim();
@@ -19,6 +20,9 @@ export async function acquireOperatorAccessToken(): Promise<string> {
     requiredEnvironment("SUPABASE_ANON_KEY");
   const auth = createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    realtime: {
+      transport: WebSocket as unknown as typeof globalThis.WebSocket,
+    },
   }).auth;
   const prompt = createInterface({ input: stdin, output: stdout });
 

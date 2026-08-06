@@ -2,6 +2,56 @@
 
 Last updated: 2026-08-06
 
+## DCFC-602 in progress — public-homepage acceptance blocker found and fixed locally
+
+Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.
+
+Under Christian's fresh explicit `DCFC-602` approval, reconnected the
+Supabase MCP connector to the correct staging org/project (it had been
+scoped to an unrelated `Mockup_DB` project) and captured a before-state
+snapshot across Alpha/Bravo/Diverse City — clean, zero drift against prior
+evidence. Re-added a temporary admin membership on Diverse City
+(`christianalcala3@yahoo.com`, reusing the `DCFC-601` identity) through the
+existing guarded operator path, run by Christian himself via a new
+narrowly-scoped script modeled on `DCFC-504`'s invite-script precedent.
+Along the way, fixed an unrelated pre-existing bug in
+`scripts/operator-session.ts` (missing the `ws` transport override that
+`lib/supabase-service-role.ts` already carries, breaking every operator
+sign-in under Node 20).
+
+Starting the public/admin browser acceptance pass found Diverse City's
+homepage rendering literal "ROSE CITY FC" branding instead of its own
+content. Root cause, after one wrong turn (it is **not** a missing
+`academy@1` template branch — Programs/Contact/Tryouts and `Hero.tsx`
+already handle that template correctly): `lib/queries.ts`'s
+`fetchHomepageContent` had no `tenantScoped`-safe fallback for the `hero`
+field, unlike its `behindTheRose` sibling in the same function. Whenever RLS
+returns zero rows (public_access below `live`/`grace`, or the request isn't
+from a fresh session that's a member of that specific club), it fell
+through to the file's literal Rose City default — never generalized when
+the platform went multi-tenant. Confirmed a genuinely anonymous visit
+correctly 404s at the middleware tenant gate (verified by clearing cookies),
+but the bug still reached Diverse City's actual owner's own browser session,
+because the browser-side Supabase client doesn't share the session
+middleware sees server-side — that deeper session-sharing gap is flagged,
+not fixed, here. `fetchLeagueStandings`, `fetchSiteSponsorLogos`, and
+`fetchSchedule` were checked and don't share this gap.
+
+Fix mirrors the existing `behindTheRose` pattern exactly: a tenant-safe
+empty hero fallback when `tenantScoped`, letting `Hero.tsx`'s existing
+`|| club.name` logic take over. No new component, no design decision, no
+club-slug branch. Verification: `tsc` clean, contracts 334/334, architecture
+20/20, build clean, lint clean, diff-check clean, new regression test
+passing both branches. `npm test`'s database-suite failures are the
+pre-existing local `SUPABASE_TEST_*` JWT-env gap already documented below,
+unrelated to this change.
+
+Nothing was deployed before this entry; the fix is being committed and
+pushed now bundled with the two pending `PLAT-103`/`DCFC-601` documentation
+commits, and staging deployment follows under the same approval so the
+DCFC-602 acceptance pass can continue against real rendered output. Full
+detail in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## DCFC-601 hosted acceptance complete — Diverse City's real billing rehearsal closed out
 
 Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `complete`.
