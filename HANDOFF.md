@@ -2,6 +2,41 @@
 
 Last updated: 2026-08-06
 
+## DCFC-602 in progress — hero fix deployed; second Rose City leak found in League Standings
+
+Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.
+
+The hero fix below was approved, committed as `807b08c`, pushed, deployed
+(`dpl_CHeYTT9sKbTgwRouMU76Y7m3hpzn`, `READY`), and aliased to
+`diverse-city-onzio-staging.vercel.app`. Verifying it live surfaced that
+Claude-in-Chrome controls Christian's real browser, not a sandbox — clearing
+cookies there to test anonymous behavior logged him out of his own owner
+session (flagged and explained). After signing back in, the homepage
+correctly showed "DIVERSE CITY FC" instead of "ROSE CITY FC," but the CTA
+labels revealed it was still the neutral fallback, not the real content —
+confirming the browser-client/session-sharing gap is live, though out of
+scope for what DCFC-602 actually requires (content correct once `public_access`
+is `live`, which needs no session at all).
+
+To test that directly, ran a guarded, fully-reversible probe: `public_access`
+`preview`→`live`→`preview` on Diverse City, sanitized audits on both legs,
+reconciled back to the exact original baseline. This surfaced a second, more
+severe bug: League Standings rendered a full hardcoded fake table ("Rose
+City FC," "Ocelot FC," etc.) to a **genuinely anonymous** visitor once live —
+proven via a clean, unmocked local call to the real query function. Root
+cause: `lib/standings-content.ts`'s normalize functions unconditionally fall
+back to Rose City's original demo data on empty input, with no tenant
+awareness — but that's *intentional* for the admin editor's empty-state
+preview and is covered by an existing test, so the fix lives in the
+public-facing `fetchLeagueStandings` query layer instead (same shape as the
+hero fix), not in the shared normalize functions.
+
+Verification: `tsc` clean, contracts 336/336, architecture 20/20, build
+clean, lint clean, diff-check clean, new regression test passing, existing
+admin-preview test unmodified and still passing, directly confirmed against
+local Supabase. Not yet committed or deployed — full detail in
+`docs/phase-11/diverse-city/STATUS.md`.
+
 ## DCFC-602 in progress — public-homepage acceptance blocker found and fixed locally
 
 Agent: Claude Code (Sonnet 5), 2026-08-06. Status: `in_progress`.

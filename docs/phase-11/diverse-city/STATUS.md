@@ -5598,3 +5598,90 @@ Hosted-mutation count: zero.
   with a sanitized audit (Christian-executed, independently re-verified).
   Zero Stripe, DNS, Resend, production, or other-tenant mutation. No code
   deployed to any hosted environment yet.
+
+### 2026-08-06 — DCFC-602 in progress: hero fix committed/deployed; second Rose City leak found and fixed (standings) — Claude Code (Sonnet 5)
+
+- Package: DCFC-602
+- Status: in_progress
+- Completed: Christian approved committing, pushing, and deploying the hero
+  fix. Committed as `807b08c` (bundled with the two pending `PLAT-103`/
+  `DCFC-601` docs commits per his standing preference), pushed to
+  `origin/staging`, built as Vercel deployment `dpl_CHeYTT9sKbTgwRouMU76Y7m3hpzn`
+  (`READY`), and `diverse-city-onzio-staging.vercel.app` reassigned to it —
+  independently re-verified via `vercel inspect`.
+
+  During re-verification, cleared cookies on that origin in Christian's real
+  Chrome (Claude-in-Chrome controls his actual browser, not a sandbox) to
+  test genuinely-anonymous behavior — this logged him out of his own owner
+  session there, an unintended side effect flagged and explained. A
+  genuinely anonymous visit correctly 404s at the middleware tenant gate
+  while `public_access` is `preview` (expected, unrelated to the fix). After
+  Christian signed back in, the homepage correctly showed "DIVERSE CITY FC"
+  (via `Hero.tsx`'s existing `|| club.name` fallback, no more "ROSE CITY
+  FC") — but the CTA labels ("Next Match"/"Meet the Squad") revealed this
+  was still the neutral *fallback*, not the real `homepage_hero_content` row
+  ("One Club / One Community", "Explore Our Programs", "Discover the
+  Club") — confirming the flagged browser-client/session-sharing gap is
+  live, not hypothetical, though out of scope for content-correctness once
+  actually live (`is_publicly_accessible` needs no session at all).
+
+  To prove the actual DCFC-602-relevant behavior (content correct once
+  `public_access` is `live`, for anyone), ran a guarded, fully-reversible
+  probe: recorded exact before-state, set `public_access` to `live` with a
+  sanitized `dcfc_602_public_access_probe_live` audit, verified, then
+  restored to `preview` with a matching `..._restored` audit — twice, since
+  the first pass's evidence-gathering hit a stale same-origin network-log
+  read. Final state independently reconciled exactly to the pre-probe
+  baseline (`kind=customer`, `lifecycle=onboarding`, `public_access=preview`,
+  Price intent unchanged, `archived_at=null`).
+
+  The second pass of that probe surfaced a real, more severe finding: the
+  League Standings section rendered a full hardcoded fake table ("Rose City
+  FC" 7-5-1-1, "Ocelot FC", "LA Sol Athletics", etc.) to a **genuinely
+  anonymous, no-session** request once live — proven with a clean,
+  unmocked, local call to the real `fetchLeagueStandings` against local
+  Supabase for a club with zero standings rows, confirmed via raw
+  Postgrest response inspection (`error: null`, `data: []`, both queries).
+  Root cause: `lib/standings-content.ts`'s `normalizeStandingsRows`/
+  `normalizeStandingsSettings` unconditionally fall back to
+  `DEFAULT_STANDINGS_ROWS`/`DEFAULT_STANDINGS_SETTINGS` (Rose City's
+  original data) whenever given empty input — with no tenant-scoping
+  awareness at all, unlike the hero fallback. Confirmed this behavior is
+  *intentional* for the admin editor's empty-state preview
+  (`app/admin/(protected)/standings/page.tsx:288`) and covered by an
+  existing test (`lib/__tests__/standings-content.test.ts:58`), so the fix
+  could not touch those shared functions — it had to live in the
+  public-facing `fetchLeagueStandings` query layer instead, exactly
+  mirroring the hero fix's shape: when `tenantScoped` and the fetch result
+  is genuinely empty, return `rows: []` and a neutral (not Rose City)
+  `settings` object, bypassing the demo-table substitution entirely for the
+  public read path while leaving the admin-editor behavior and its test
+  untouched.
+- Files changed: `lib/queries.ts` (second edit, `fetchLeagueStandings`),
+  `tests/contracts/homepage-standings-content.test.ts` (new regression
+  test), this status ledger, `HANDOFF.md`. Nothing in
+  `lib/standings-content.ts` changed. Not yet committed.
+- Verification: `npx tsc --noEmit` clean; `npm run test:contracts` 336/336;
+  `npm run test:architecture` 20/20; `npm run build` clean; `npm run lint`
+  clean (same pre-existing unrelated analytics warnings); `git diff --check`
+  clean. New regression test passes both branches (tenant-scoped empty →
+  `rows: []`/neutral settings; genuinely unscoped → unchanged branded
+  default). The pre-existing `normalizeStandingsRows` admin-preview test
+  still passes unmodified, confirming that behavior is preserved. Directly
+  verified via a clean, unmocked local call against local Supabase
+  (`fetchLeagueStandings` for a zero-standings club) that the fix returns
+  `rows: []` and empty `settings.title`/`intro` — not the Rose City demo
+  table.
+- Blockers or decisions needed: this second fix is local-only so far, not
+  committed. Need Christian's approval to commit+push+deploy it (same
+  pattern as the hero fix), after which the public/admin acceptance pass can
+  resume against fully-corrected rendered output.
+- Exact next step: get approval to commit+push+deploy this fix, then
+  actually complete the DCFC-602 public/admin acceptance pass (desktop
+  1440×900 and mobile 390×844) plus the isolation checks — neither has
+  properly started yet; everything so far has been setup and defect-fixing.
+- Hosted mutations: two temporary `public_access` flips on Diverse City
+  (`preview`→`live`→`preview`, twice) with four sanitized audit events,
+  independently reconciled back to the exact pre-probe baseline each time.
+  Zero Stripe, DNS, Resend, production, or other-tenant mutation. This
+  fix is not deployed to any hosted environment yet.

@@ -770,6 +770,7 @@ export async function fetchSiteSponsorLogos(
 /** Fetches the DB-backed league standings table for the homepage. */
 export async function fetchLeagueStandings(clubId?: string): Promise<StandingsTableContent> {
   const tenantId = requireClubId(clubId);
+  const tenantScoped = Boolean(clubId);
   const [settingsResult, rowsResult] = await Promise.all([
     supabase
       .from("league_standings_settings")
@@ -792,17 +793,29 @@ export async function fetchLeagueStandings(clubId?: string): Promise<StandingsTa
     };
   }
 
+  const settingsRow =
+    ((settingsResult.data ?? []) as DBLeagueStandingsSettings[])[0] ?? null;
+  const fetchedRows = (await resolveMediaReferences(
+    (rowsResult.data ?? []) as Record<string, unknown>[],
+    tenantId,
+    [{ assetId: "logo_asset_id", url: "logo_url" }],
+  )) as unknown as DBLeagueStandingRow[];
+
+  // normalizeStandingsRows/normalizeStandingsSettings intentionally show a
+  // demo table when given no rows/settings — that's the admin editor's
+  // empty-state preview (app/admin/(protected)/standings/page.tsx) and is
+  // covered by their own tests. This public query path must not surface
+  // that demo data to real visitors when a club genuinely has no standings
+  // configured yet.
   return {
-    settings: normalizeStandingsSettings(
-      ((settingsResult.data ?? []) as DBLeagueStandingsSettings[])[0] ?? null,
-    ),
-    rows: normalizeStandingsRows(
-      (await resolveMediaReferences(
-        (rowsResult.data ?? []) as Record<string, unknown>[],
-        tenantId,
-        [{ assetId: "logo_asset_id", url: "logo_url" }],
-      )) as unknown as DBLeagueStandingRow[],
-    ),
+    settings:
+      tenantScoped && !settingsRow
+        ? { ...DEFAULT_STANDINGS_SETTINGS, eyebrow: "", title: "", intro: "" }
+        : normalizeStandingsSettings(settingsRow),
+    rows:
+      tenantScoped && fetchedRows.length === 0
+        ? []
+        : normalizeStandingsRows(fetchedRows),
   };
 }
 
