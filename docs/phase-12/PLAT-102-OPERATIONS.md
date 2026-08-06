@@ -1,7 +1,12 @@
 # PLAT-102 staging operations
 
-Status: local implementation complete; hosted application is not authorized or
-applied by the local package.
+Status: complete. Hosted acceptance closed out 2026-08-05 — see `HANDOFF.md`
+and `docs/phase-11/diverse-city/STATUS.md` for the full evidence record. The
+protocol below is retained as the historical runbook; two follow-ups were
+flagged but not fixed in this pass: `/api/cron/lifecycle` is not exempted from
+`middleware.ts` tenant-domain resolution the way `/api/stripe/webhook` is, and
+the Vercel Protection Bypass for Automation value in use was not rotated after
+its most recent exposure.
 
 ## Runtime configuration contract
 
@@ -105,20 +110,32 @@ because its response is uncertain.
 - The 2026-08-04 pass proved that ordinary Vercel SSO page access is not enough
   for the owner form POST: the single Checkout request stopped at Vercel's
   edge-middleware layer and never invoked the application function or Stripe.
-- Before sending an OTP or adding a temporary membership, have Christian enter
-  the existing Vercel protection-bypass value privately and set its cookie only
-  on `bravo-onzio-staging.vercel.app`. Do not print, copy to chat, inspect,
-  persist in Git, or change the configured bypass value.
+- The former Vercel protection-bypass value was exposed through a Chrome tab
+  title and was revoked on 2026-08-04 through exactly one approved `Regenerate
+  Secret` action. Never reuse it. Its replacement was later exposed on
+  2026-08-05 when Stripe Workbench rendered the full test webhook destination
+  into a diagnostic screenshot. Never reuse that replacement either. Do not
+  open, snapshot, or screenshot Workbench while a bypass-bearing destination is
+  visible.
+- Before sending an OTP or adding a temporary membership, require an approved
+  fresh rotation and have Christian enter the new Vercel protection-bypass
+  value privately and set its
+  cookie only on `bravo-onzio-staging.vercel.app`. Do not print, copy to chat,
+  inspect, or persist the replacement in Git.
 - Christian uses the browser address bar privately with this shape, replacing
   only the placeholder locally:
-  `https://bravo-onzio-staging.vercel.app/?x-vercel-protection-bypass=PASTE_SECRET_HERE&x-vercel-set-bypass-cookie=true`.
+  `https://bravo-onzio-staging.vercel.app/admin/login?x-vercel-protection-bypass=PASTE_SECRET_HERE&x-vercel-set-bypass-cookie=true`.
   Both parameters are required: the first authorizes the request and the second
   asks Vercel to redirect with a follow-up authorization cookie.
-- After Christian reports that the page loaded, do not inspect the secret-
-  bearing URL or browser history. Navigate the retained tab directly to the
-  clean `https://bravo-onzio-staging.vercel.app/admin/login` URL and verify it
-  stays on Bravo without a Vercel SSO redirect. Only that clean URL may be
-  recorded as evidence.
+- After Christian reports that the page loaded, Christian must replace the
+  entire address bar with the clean
+  `https://bravo-onzio-staging.vercel.app/admin/login` URL and explicitly
+  confirm the address bar is clean. Until that confirmation, do not enumerate,
+  claim, inspect, or read the tab: Chrome may surface a secret-bearing URL as
+  the page title even when the page body is only Not Found. Never inspect the
+  secret-bearing URL or browser history. After the clean-address confirmation,
+  verify the retained tab stays on Bravo without a Vercel SSO redirect. Only
+  that clean URL may be recorded as evidence.
 - Prove only that a protected Bravo page stays on the exact approved deployment
   without an SSO redirect. This browser-access preflight creates no application
   session, membership, Stripe object, audit, or tenant mutation.
@@ -129,9 +146,9 @@ because its response is uncertain.
 ### 1. Pin the immutable release and baseline
 
 - Require `origin/staging` and local `HEAD` to equal
-  `a1f28feb9d0e7206508ff23f115a09190bb7ef04`.
+  `dbfe8253dbe672f320c32200ed3041db14dc2fa4`.
 - Require `bravo-onzio-staging.vercel.app` to resolve to Preview/`READY`
-  deployment `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`, whose Git metadata pins that
+  deployment `dpl_E7eBqjj6GBQ8aFrhyYv8HzSyoJ6V`, whose Git metadata pins that
   exact SHA and branch `staging`.
 - Require Bravo to be `test`, `onboarding`, and `preview`, with null Price
   intent and no subscription row.
@@ -144,12 +161,12 @@ because its response is uncertain.
   never compensate by changing the Price, Product, webhook secret, or endpoint.
   Christian approved and the alias was corrected on 2026-08-04: direct
   resolution and the Vercel alias list both map it to exact approved READY
-  deployment `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`. Recheck this guard before any
+  deployment `dpl_E7eBqjj6GBQ8aFrhyYv8HzSyoJ6V`. Recheck this guard before any
   new Stripe object is created; do not assume the mapping remains current.
 - Require exactly one active synthetic owner, one active synthetic admin, six
   sessions belonging to those baseline members, 14 historical Stripe ledger
-  rows, and 39 audits including exactly one `plat_102.billing_backfill` audit.
-  The twelve-row increase from the original 27-audit baseline is three complete
+  rows, and 43 audits including exactly one `plat_102.billing_backfill` audit.
+  The sixteen-row increase from the original 27-audit baseline is four complete
   append-only add/remove membership histories. The five-row Stripe increase
   from the original nine is exactly the stopped flow's `UNKNOWN_PRICE`
   rejections: Checkout completed, Subscription created/deleted, invoice paid,
@@ -157,10 +174,30 @@ because its response is uncertain.
 - The third stopped pass added no Stripe object or event: deployed permanent
   per-club idempotency keys replayed the prior deleted-Customer/completed-
   Checkout response. Require the session-scoped hashed-idempotency fix to be on
-  the exact approved deployment before any fourth-pass membership or email.
+  exact approved commit `dbfe8253dbe672f320c32200ed3041db14dc2fa4` and
+  deployment `dpl_E7eBqjj6GBQ8aFrhyYv8HzSyoJ6V` before any fourth-pass
+  membership or email.
 - Require both approved temporary identity candidates to have no Bravo
   membership or session. Record only IDs/counts or digests; never record email,
   OTP, TOTP, keys, webhook secrets, or monitor URLs.
+- Before any new Stripe object, require the existing Stripe **test-mode**
+  destination to retain the approved rolling host and `/api/stripe/webhook`
+  path while using the current private bypass value. Preserve its signing
+  secret, seven-event selection, and active state. Never render or record the
+  full destination. Reconcile any pending automatic retries from the stopped
+  2026-08-05 flow; restore Bravo to the baseline above if a delayed event
+  projects subscription state before a new pass. The temporary Customer was
+  deleted before remediation, so current code is expected to reject those
+  retries at canonical-customer validation and append only sanitized rejected
+  ledger rows; treat that as a code-derived expectation, not acceptance
+  evidence, until hosted reconciliation proves the result.
+- On 2026-08-05 Christian confirmed that he saved the new private bypass only
+  in that existing Stripe Sandbox destination and cleared both secret-bearing
+  pages. The immediate read-only database check retained the exact 43-audit /
+  14-event baseline with no subscription and no post-remediation ledger row;
+  the authenticated Vercel CLI likewise found no webhook invocation yet. This
+  proves a clean checkpoint, not delivery. Wait for the provider's automatic
+  retry and never use Workbench's manual `Resend` action for this evidence.
 
 ### 2. Create and prove only the temporary access fixtures
 
@@ -181,7 +218,7 @@ because its response is uncertain.
   and cannot start Checkout.
 - Immediately before the Stripe flow, re-resolve both the Bravo alias and the
   rolling staging webhook alias and require both to pin exact approved READY
-  deployment `dpl_4NBVd1L24cRoPemzZgvkHR1U8giV`. An alias mismatch is a hard
+  deployment `dpl_E7eBqjj6GBQ8aFrhyYv8HzSyoJ6V`. An alias mismatch is a hard
   stop before Customer or Checkout creation.
 - Guarded fixture setup may then set only Bravo to `customer` with exact test
   Price intent `price_1U0Y0sK6WajTkwHYnnttR9nN`. Do not accept a client Price or
