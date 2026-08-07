@@ -2,6 +2,200 @@
 
 Last updated: 2026-08-06
 
+## DCFC-701 production billing webhook remediation complete
+
+Agent: Claude Opus 5 (Claude Code), 2026-08-06. Status: `complete`.
+
+Unlike the read-only preflight recorded below, this operation performed
+approved production mutations. Christian approved each one individually: the
+Vercel environment corrections, the production deployments, the Stripe live
+event resend, and the deletion of one `onzio.stripe_events` audit row. No
+repository code, migration, schema, DNS, Auth/email, or Storage change was
+approved or performed, and no manual repair of the `club_subscriptions` or
+`clubs` projection was performed.
+
+Stripe live reported `sub_1TwcndK6WajTkwHYH1VuFgrG` as `canceled`
+(`cancellation_requested`) at 2026-07-28T23:10:45Z via
+`evt_1TyK93K6WajTkwHY9zzFiSYB`, while the production projection still read
+`active`/`pro` paid through 2026-08-24T06:41:35Z. Endpoint
+`we_1TwEpdK6WajTkwHYD5SEYzXX` had returned HTTP 500
+`{"error":"WEBHOOK_CONFIGURATION_INVALID"}` on every delivery from 2026-07-28
+through 2026-07-31.
+
+Root cause was two independent configuration faults, both introduced with the
+2026-07-27 environment setup and baked into the 2026-07-29 production
+deployment:
+- `STRIPE_SECRET_KEY` held a **restricted** live key (`rk_live_`). Deployed
+  commit `10559e5` requires `sk_live_` strictly in `lib/stripe-config.ts` and
+  has no `rk_` branch, so `getStripeRuntimeConfig()` threw
+  `STRIPE_MODE_MISMATCH` before signature verification. The newer `staging`
+  implementation of that same file does accept `rk_live_`; reading the working
+  tree instead of the deployed commit materially delayed diagnosis and caused
+  an unnecessary restricted-key detour.
+- `STRIPE_PRICE_ID_PRO` did not equal the subscription price
+  `price_1TwbmvK6WajTkwHYueLvjhv5`, so `tierForPriceId` failed closed with
+  `UNKNOWN_PRICE` once the config check passed.
+
+The reported hypothesis — a missing or wrong `STRIPE_WEBHOOK_SECRET` — was
+disproved early: an incorrect secret returns HTTP 400 `INVALID_SIGNATURE`, never
+500, and the variable was present the whole time. It was later proven correct by
+a real signed delivery. `ONZIO_ENVIRONMENT=production` was also verified correct
+via the `onzio.club_domains` row and a rendered Rose City homepage, ruling out
+an environment flip that would have 404'd the site.
+
+Remediation evidence:
+- `STRIPE_SECRET_KEY` replaced with a rotated standard live key by Christian;
+  the previous `sk_live_` is now invalidated. `STRIPE_PRICE_ID_PRO` set to
+  `price_1TwbmvK6WajTkwHYueLvjhv5` by the agent under explicit approval.
+- Production served from commit `10559e5` throughout. Two `vercel redeploy` of
+  `dpl_6QBiJ2CAN6opoNQJqVuxU3Q1YbrG` and three `vercel deploy --prod` from a
+  temporary detached git worktree; the worktree was removed and the repository
+  working tree and branch were never modified. `staging` was deliberately not
+  promoted.
+- Pre-replay guards verified clear: `last_applied_stripe_event_created_at`
+  2026-07-28T01:39:08Z predates the cancel event (no `STALE_EVENT`), a distinct
+  `last_applied_stripe_event_id`, and initially no `onzio.stripe_events` row.
+- Production `apply_stripe_projection` confirmed as the 15-argument
+  tier-bearing signature in both `onzio` and `onzio_private`, with migration
+  head `20260727175200`, matching deployed commit `10559e5`.
+- Probes moved from 403 `STRIPE_MODE_MISMATCH` / 500
+  `WEBHOOK_CONFIGURATION_INVALID` to 401 `AUTHENTICATION_REQUIRED` / 400
+  `INVALID_SIGNATURE`, with `GET /` returning 200 and the Rose City title.
+- The first resend returned HTTP 200 `{"received":true,"rejected":
+  "UNKNOWN_PRICE"}`, which wrote a rejection row to `onzio.stripe_events`.
+  Because the webhook route short-circuits any event with an existing ledger
+  row as `DUPLICATE_EVENT`, that row had to be deleted by Christian before the
+  event could be replayed. **This removed one audit record.**
+- The second resend returned `{"received":true,"result":{"action":"applied"}}`.
+  Post-replay projection for club `32ceba0b-4e25-52c2-bb6b-d82fb87637a7`:
+  `status=canceled`, `tier=pro`, `paid_through=2026-08-24 06:41:35+00`,
+  `grace_ends_at=2026-08-31 06:41:35+00`, `last_applied_stripe_event_id=
+  evt_1TyK93K6WajTkwHY9zzFiSYB`, `public_access=live`, `lifecycle=active`.
+  `public_access=live` is correct: the club is paid through 2026-08-24.
+
+Open follow-ups:
+- Checkout and Billing Portal are unverified end to end. The wrong
+  `STRIPE_PRICE_ID_PRO` also broke new subscriptions, and
+  `STRIPE_PRICE_ID_STARTER` remains an unread value that could be wrong the
+  same way. A real Checkout run against production is required.
+- Production runs pre-PLAT-102 code against a pre-PLAT-102 schema. The
+  `staging` branch calls the 14-argument `apply_stripe_projection` introduced by
+  `20260804024349_plat_102_billing_entitlement.sql`, which does not exist in
+  production. **Promoting `staging` to production without applying those
+  migrations first would fail every webhook with `TRANSACTION_ROLLED_BACK`.**
+- `app/api/stripe/webhook/route.ts` collapses four distinct
+  `getStripeRuntimeConfig()` failures into one opaque
+  `WEBHOOK_CONFIGURATION_INVALID`, which is why this was misdiagnosed for nine
+  days; `app/api/stripe/portal/route.ts` already surfaces `error.code` and is
+  what identified it.
+- A live `sk_live_` key was written to local `.env.local` during remediation and
+  should be removed, along with the unused `claude_key` restricted key created
+  during the detour.
+
+## DCFC-701 production read-only preflight started
+
+Agent: Codex (GPT-5.5), 2026-08-06. Status: `in_progress`.
+
+Christian approved `DCFC-701` as a read-only production preflight only. No
+production mutation, deploy, migration, DNS, Auth/email, Stripe, Storage,
+tenant-content, or provisioning action was approved or performed.
+
+Completed evidence:
+- Supabase production identity confirmed through CLI project list:
+  `Onzio Platform Production` / `ioalthwsdrlzrubomrow`, org `404DB`
+  (`zmvjbvoraowhwbkwwtse`), `ca-central-1`, Postgres `17.6.1.147`,
+  `ACTIVE_HEALTHY`; org plan is `pro`.
+- Supabase backups confirmed: latest completed physical backup
+  `2026-08-06T11:15:23.430Z`, completed daily backups visible back through
+  `2026-07-30`, `walg_enabled=true`, `pitr_enabled=false`.
+- Vercel production baseline confirmed: project `onzio-rcfc`
+  (`prj_I362ysmh9cse5cRxnL7db4dOhsEs`) serves production deployment
+  `dpl_CVAdyYykHK47z6LdsYxmf9znWUqf` at `https://onzio-rcfc.vercel.app`.
+- Vercel production env-name inventory was read without values; production
+  error-log query for the last 24 hours returned no error-level logs.
+- Rose City HTTP/DNS baseline: `onzio-rcfc.vercel.app` returns HTTP 200 on key
+  Rose City routes with tenant header
+  `32ceba0b-4e25-52c2-bb6b-d82fb87637a7`; retired
+  `rosecityfutbolclub.com` and `www.rosecityfutbolclub.com` return Vercel
+  `DEPLOYMENT_NOT_FOUND` 404.
+- Stripe account `acct_1TvPQyK6WajTkwHY` (`Onzio`) and live webhook
+  `we_1TwEpdK6WajTkwHYD5SEYzXX` were read without secrets; live Price inventory
+  includes both the `$75/month` accepted Diverse City FC Pro Plan
+  `price_1TwbmvK6WajTkwHYueLvjhv5` and a `$65/month` Diverse City-specific
+  product/Price that must be resolved at `DCFC-901`.
+- Christian approved the production DB SQL/read method. An isolated temporary
+  Supabase workdir under `/private/tmp` was linked to production ref
+  `ioalthwsdrlzrubomrow`; the repository remained linked to staging. Only
+  read-only `migration list --linked` and `db query --linked` SELECTs were run.
+- Production migration ledger has exactly ten remote versions ending at
+  `20260727175200`.
+- Production database/security baseline: 32 `onzio` tables, 32/32 RLS enabled,
+  zero `public` tables, zero `onzio_private` browser table grants, zero
+  `onzio_private` PUBLIC routine grants, and 15/15 security-definer functions
+  with search-path configuration.
+- Production Auth/Storage/count baseline: one Auth user, one identity, two
+  sessions, one MFA factor; `onzio-media` public with 515 objects /
+  49,834,337 bytes; `onzio-upload-staging` private with zero objects; one Rose
+  City club at `pro`/`active`/`live`, one active owner membership, two domain
+  rows, one subscription projection, one applied Stripe event, 209 audit
+  events, 515 media assets, and zero media cleanup rows.
+- Important blocker found: production DB projects Rose City subscription
+  `sub_1TwcndK6WajTkwHYH1VuFgrG` as active/pro/paid through
+  `2026-08-24T06:41:35+00:00`, but direct live Stripe retrieval says the same
+  subscription is `canceled` with cancellation reason `cancellation_requested`.
+
+Blocked before `DCFC-701` can close:
+- Rose City production billing projection drift must be resolved or explicitly
+  accepted before `DCFC-701` closes: DB says active/live, Stripe says canceled.
+- Supabase production service logs remain unverified.
+- No restricted evidence package was created because no exact restricted
+  evidence location was supplied.
+
+Hosted mutation count in this checkpoint: zero. One read-only
+`supabase db query --linked "select 1"` probe executed against the already
+linked staging project only, proving the local CLI link is not production.
+
+Exact next step:
+- Decide how to handle the Rose City Stripe/DB projection drift and provide a
+  restricted evidence location if a packaged artifact is required. Do not start
+  `DCFC-702`.
+
+## DCFC-603 staging gate accepted
+
+Agent: Codex (GPT-5.5), 2026-08-06. Status: `complete`.
+
+Completed in this read-only review pass:
+- Confirmed `DCFC-601` is complete and `DCFC-602` is complete with no unresolved
+  blockers.
+- Confirmed the staged evidence in `STAGING-ACCEPTANCE.md` and this ledger is
+  internally consistent for the 603 closeout: tenant, media, temporary-probe,
+  and rollback entries reconcile to a stable staging state.
+- Confirmed no new hosted mutation occurred in this pass; `DCFC-603` is Class 1
+  and executes only review/record updates.
+- Christian explicitly accepted the `DCFC-603` staging gate in this thread on
+  2026-08-06.
+
+Final staging mutation count for this closeout action:
+- Vercel: `0`
+- Supabase: `0`
+- Stripe: `0`
+- Auth/email: `0`
+- DNS: `0`
+- Bunny: `0`
+- Tenant content: `0`
+- Production: `0`
+
+Exact next step:
+- `DCFC-701` is eligible but not started. Obtain separate production read-only
+  preflight approval, exact production identifiers, read-only method,
+  restricted evidence location, and rollback owner before any `DCFC-701`
+  action.
+
+State note:
+- Temporary staging exception remains `christianjavieralcala@gmail.com` active on
+  both Alpha and Diverse City as an accepted staging fixture, and
+  `christianalcala3@yahoo.com` remains removed for Diverse City and Bravo.
+
 ## DCFC-602 staging acceptance complete
 
 Agent: Codex (GPT-5.5), 2026-08-06. Status: `complete`.
@@ -5196,3 +5390,19 @@ supabase start -x vector,logflare
 
 After each meaningful milestone, update this file with shipped work,
 verification, blockers, and the next step.
+
+## 2026-08-06 - DCFC-701 blocker: Rose City Stripe projection drift
+
+- Status: `blocked` for production cutover progression until Stripe/DB billing projection is repaired.
+- Evidence: production DB projected Rose City subscription `sub_1TwcndK6WajTkwHYH1VuFgrG` as `active`/`pro` with `paid_through=2026-08-24T06:41:35+00:00`, while live Stripe source of truth reports the same subscription as `canceled` with cancellation reason `cancellation_requested`.
+- Stripe readback: live event `evt_1TyK93K6WajTkwHY9zzFiSYB` (`customer.subscription.deleted`) was created at `2026-07-28T23:10:45+00:00` for the Rose City subscription and showed `pending_webhooks=1` during read-only inspection.
+- Production mutation count: zero. No Stripe resend, production DB update, deploy, migration, DNS/Auth/Storage action, or tenant-content mutation was performed.
+- Exact next step: get explicit production mutation approval for the canonical repair path, preferably replaying `evt_1TyK93K6WajTkwHY9zzFiSYB` to live webhook endpoint `we_1TwEpdK6WajTkwHYD5SEYzXX`, then perform read-only DB/Stripe verification. If replay fails, request separate approval for a targeted manual DB projection repair.
+
+## 2026-08-06 - DCFC-701 Stripe replay attempt blocked by key permissions
+
+- Approved action attempted: replay live Stripe event `evt_1TyK93K6WajTkwHY9zzFiSYB` to webhook endpoint `we_1TwEpdK6WajTkwHYD5SEYzXX`.
+- Result: Stripe rejected the replay before delivery with `more_permissions_required`; the active restricted live key lacks `webhook_write` / `Webhook Endpoints, Event Destinations Write` permission.
+- Production mutation count from this attempt: zero; no event replay reached the webhook, and no manual DB mutation was attempted.
+- Current blocker: repair requires either a live Stripe key/session with webhook replay permission or a separately approved targeted production DB repair path.
+- Exact next step: have Christian enable/use Stripe webhook replay permission for the live account and rerun only the approved event replay, or provide separate explicit approval for a narrowly scoped manual production projection repair.

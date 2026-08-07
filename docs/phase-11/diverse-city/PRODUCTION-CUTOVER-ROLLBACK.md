@@ -2,9 +2,9 @@
 
 Epic: `DCFC-EPIC-002`
 
-Status: `phase_4_local_rehearsal_complete; production_not_started`
+Status: `dcfc_701_in_progress_read_only_preflight`
 
-Last updated: 2026-08-01
+Last updated: 2026-08-06
 
 This checklist covers `DCFC-701`–`DCFC-1003`. It plans hosted mutations but
 authorizes none. Production private preview, billing, domain attachment,
@@ -37,6 +37,124 @@ The locked artifact and all deferred hosted inputs are recorded in
 `ROLLOUT-INPUT-APPROVAL-MANIFEST.md`.
 
 ## Production Read-Only Baseline (`DCFC-701`)
+
+### DCFC-701 read-only checkpoint (`2026-08-06`)
+
+Christian approved `DCFC-701` as a read-only production preflight only:
+production metadata, logs, schema/migration readback, backup status, Storage/
+Auth/Stripe/Vercel/DNS read-only baselines, and documentation updates. No
+production mutation, deploy, migration, DNS, Auth/email, Stripe, Storage,
+tenant-content, or provisioning action was approved.
+
+Evidence collected in this checkpoint:
+
+- Supabase CLI project list confirms `Onzio Platform Production`
+  (`ioalthwsdrlzrubomrow`) in org `404DB` (`zmvjbvoraowhwbkwwtse`), region
+  `ca-central-1`, Postgres `17.6.1.147`, status `ACTIVE_HEALTHY`.
+- Supabase organization read confirms `404DB` is on the `pro` plan.
+- Supabase production physical backups list confirms daily completed physical
+  backups from `2026-07-30` through latest completed backup
+  `2026-08-06T11:15:23.430Z`; `walg_enabled=true`, `pitr_enabled=false`.
+- Vercel CLI confirms project `onzio-rcfc`, project ID
+  `prj_I362ysmh9cse5cRxnL7db4dOhsEs`, owner `404christiann's projects`, root
+  directory `.`, Next.js framework, Node.js `24.x`.
+- Vercel production deployment inspection confirms
+  `dpl_CVAdyYykHK47z6LdsYxmf9znWUqf` is `Ready`, target `production`, created
+  `2026-07-28 19:00:20 PDT`, with aliases `onzio-rcfc.vercel.app`,
+  `onzio-rcfc-404christianns-projects.vercel.app`, and
+  `onzio-rcfc-git-main-404christianns-projects.vercel.app`.
+- Vercel environment inventory recorded names/scopes only; production names
+  present include `CRON_SECRET`, `STRIPE_SECRET_KEY`,
+  `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `ONZIO_ENVIRONMENT`,
+  `ONZIO_OPERATOR_USER_IDS`, `STRIPE_PRICE_ID_STARTER`,
+  `STRIPE_PRICE_ID_PRO`, `STRIPE_PRICE_IDS_PRO_GRANDFATHERED`, and
+  `STRIPE_WEBHOOK_SECRET`. No values were revealed.
+- Vercel project-domain inventory under the account shows no current
+  `rosecityfutbolclub.com` domain; `rosecityfutbolclub.com` and
+  `www.rosecityfutbolclub.com` HTTP probes return Vercel
+  `DEPLOYMENT_NOT_FOUND` 404, while `https://onzio-rcfc.vercel.app/` returns
+  HTTP 200 with `x-onzio-cache-tenant:
+  32ceba0b-4e25-52c2-bb6b-d82fb87637a7`.
+- Rose City route/header probes: `/`, `/club/about`, `/roster`, `/shop`,
+  `/schedule`, `/admin/login`, and `/admin/update-password` return HTTP 200 on
+  `onzio-rcfc.vercel.app`; `/programs`, `/contact`, and an unknown spoofed Host
+  probe fail closed with 404 behavior.
+- Vercel production error-log query for the last 24 hours returned no
+  error-level logs. The request log query returned only this checkpoint's
+  read-only HEAD probes.
+- DNS readback for `rosecityfutbolclub.com` records authoritative
+  nameservers `ns71.domaincontrol.com` / `ns72.domaincontrol.com`, Microsoft
+  365 MX, SPF including GoDaddy/SecureServer, and DMARC `p=none`.
+- Stripe account read confirms account `acct_1TvPQyK6WajTkwHY` display name
+  `Onzio`.
+- Stripe live-mode read confirms active live products/prices including
+  `Onzio - Diverse City FC` product `prod_V0ZBwEyJqipBOw` with default live
+  Price `price_1U0Y2lK6WajTkwHYMBrmmOPe` at `$65/month`, and
+  `Diverse City FC Pro Plan` product `prod_UwUmEgeunaSPSI` with live Price
+  `price_1TwbmvK6WajTkwHYueLvjhv5` at `$75/month`.
+- Stripe live webhook read confirms enabled endpoint
+  `we_1TwEpdK6WajTkwHYD5SEYzXX` at
+  `https://onzio-rcfc.vercel.app/api/stripe/webhook`, API version
+  `2026-06-24.dahlia`, with the seven expected events. No signing secret was
+  read or recorded.
+- Stripe live customer/subscription inventory confirms one Rose City customer
+  with `onzio_club_id=32ceba0b-4e25-52c2-bb6b-d82fb87637a7` and
+  `onzio_environment=production`, plus one unrelated MVMNT CULTR customer.
+  The sole live subscription currently listed belongs to MVMNT CULTR, not Rose
+  City; this needs reconciliation against production database billing state
+  before `DCFC-701` can close.
+- After Christian approved the production DB SQL/read method, an isolated
+  temporary Supabase workdir under `/private/tmp` was linked to production ref
+  `ioalthwsdrlzrubomrow`. The repository remained linked to staging. No
+  migration, seed, push, pull, dump, restore, or write command was run.
+- Production migration ledger contains exactly ten remote versions:
+  `20260726000100`, `20260726000200`, `20260726000300`, `20260726000400`,
+  `20260726000500`, `20260726000600`, `20260726000700`, `20260727171658`,
+  `20260727174006`, and latest `20260727175200`.
+- Production table/security posture: 32 `onzio` tables, 32/32 with RLS
+  enabled, zero `public` tables, zero `onzio_private` browser table grants,
+  zero `onzio_private` PUBLIC routine grants, and 15/15 security-definer
+  functions with search-path configuration.
+- Production Auth/Storage counts: one Auth user, one identity, two sessions,
+  one MFA factor; `onzio-media` is public with 515 objects / 49,834,337 bytes,
+  and `onzio-upload-staging` is private with zero objects.
+- Production exact state: one club (`rose-city`,
+  `32ceba0b-4e25-52c2-bb6b-d82fb87637a7`) at `pro`/`active`/`live`, one
+  active owner membership, two domain rows (`onzio-rcfc.vercel.app` active
+  primary production; `rosecityfutbolclub.com` inactive non-primary
+  production), one `club_subscriptions` row, one applied `stripe_events` row,
+  209 audit events, 515 media assets, and zero media cleanup rows.
+- Production DB billing projection says Rose City is `active`/`pro` on
+  `price_1TwbmvK6WajTkwHYueLvjhv5`, customer `cus_UwVpy1YlirV3li`,
+  subscription `sub_1TwcndK6WajTkwHYH1VuFgrG`, paid through
+  `2026-08-24T06:41:35+00:00`, with applied event
+  `evt_1Txzz4K6WajTkwHYBzaweVRI`.
+- Direct live Stripe retrieval of that DB-listed subscription returns
+  `status=canceled`, `ended_at=1785280245`, and
+  `cancellation_details.reason=cancellation_requested`, while retaining the
+  same customer/club/environment metadata and `$75/month` Price. This is a
+  production billing projection drift blocker for `DCFC-701` closeout.
+
+Open items before `DCFC-701` can close:
+
+- Resolve or explicitly accept the production billing projection drift:
+  database `club_subscriptions.status=active` and `clubs.public_access=live`
+  while live Stripe subscription `sub_1TwcndK6WajTkwHYH1VuFgrG` is canceled.
+- Supabase production service logs are not exposed by the installed CLI, and
+  the Supabase MCP log tools reject the production ref in this session.
+- No restricted evidence package was created because no exact restricted
+  evidence location was supplied for `DCFC-701`.
+- The live Stripe price/product inventory contains both a `$65/month` Diverse
+  City-specific product and the accepted `$75/month` Diverse City FC Pro Plan;
+  this is a `DCFC-901` approval/reverification issue, not a mutation in this
+  package.
+
+Hosted mutation count for this checkpoint: zero. A read-only `supabase db
+query --linked "select 1"` probe executed against the already-linked staging
+project only, confirming the CLI link is not production. No production write,
+deploy, migration, DNS, Auth/email, Stripe write, Storage write, tenant-content
+write, or provisioning occurred.
 
 - [ ] Record the exact production Supabase organization/project ref, region,
   health, plan/capacity, backup status, and current migration ledger.
@@ -300,3 +418,17 @@ Any of these blocks indexing and makes rollback assessment mandatory:
   counts, unresolved operational issues, and next maintenance step.
 - [ ] `DCFC-EPIC-002` is marked complete only after all required evidence is
   present.
+
+## 2026-08-06 - Billing projection repair gate
+
+Production cutover remains gated on resolving Rose City billing drift:
+
+- DB projection: `sub_1TwcndK6WajTkwHYH1VuFgrG` recorded as `active`/`pro`, paid through `2026-08-24T06:41:35+00:00`.
+- Live Stripe readback: the same subscription is `canceled` with cancellation reason `cancellation_requested`.
+- Canonical Stripe event available for repair: `evt_1TyK93K6WajTkwHY9zzFiSYB`, type `customer.subscription.deleted`, created `2026-07-28T23:10:45+00:00`, `pending_webhooks=1` at readback.
+- Safe repair preference: replay the canonical Stripe event to the live webhook endpoint, then verify the production DB projection changed to the terminal Stripe status while preserving paid-through/grace semantics.
+- Mutation status: no repair action has been run yet; explicit production mutation approval is required.
+
+## 2026-08-06 - Replay attempt blocked
+
+The approved canonical replay of `evt_1TyK93K6WajTkwHY9zzFiSYB` to `we_1TwEpdK6WajTkwHYD5SEYzXX` did not run because Stripe rejected the request before delivery with `more_permissions_required`. The active restricted live key lacks webhook replay/write permission. No production mutation occurred from this attempt.

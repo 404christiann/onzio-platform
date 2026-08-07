@@ -2,9 +2,9 @@
 
 Epic: `DCFC-EPIC-002`
 
-Status: `dcfc_504_complete_phase_5_closed_plat_101_amended`
+Status: `dcfc_603_complete_staging_gate_accepted`
 
-Last updated: 2026-08-03
+Last updated: 2026-08-06
 
 This checklist is the evidence surface for `DCFC-501`–`DCFC-603`. It is not
 authorization to inspect or mutate staging. Each package retains its action
@@ -403,17 +403,25 @@ Diverse City Phase 5 release") and was reassigned to the current deployment
 
 ## Final Staging Gate (`DCFC-603`)
 
-- [ ] Every package completion record includes files/evidence, blockers, exact
+### DCFC-603 closeout review snapshot (`2026-08-06`)
+
+- Scope: read-only staging inspection only. No hosted mutation executed in this closeout review pass.
+- Verified: `DCFC-601` and `DCFC-602` are complete in `STATUS.md`, and their latest entries report no unresolved blockers or pending `DCFC-601`/`DCFC-602` rollback/reconciliation needs.
+- Verified: temporary probe/user/session/factor/media/content exceptions are reconciled and recorded in the `DCFC-602` evidence stream.
+- Verified: staging host/project state references remain within `fxefqnoqxbezeccjvrsw`, `alpha-onzio-staging.vercel.app`, `bravo-onzio-staging.vercel.app`, and `diverse-city-onzio-staging.vercel.app` boundaries.
+- Accepted: Christian explicitly accepted the `DCFC-603` staging gate in this thread on 2026-08-06.
+
+- [x] Every package completion record includes files/evidence, blockers, exact
   next step, rollback result, and hosted mutation counts by provider.
-- [ ] Full release verification is current: TypeScript, contracts,
+- [x] Full release verification is current: TypeScript, contracts,
   architecture, loopback database, complete suite, generated types, schema
   lint, lint, build, and diff checks.
-- [ ] Staging runtime logs contain no unresolved authorization, tenant, cache,
+- [x] Staging runtime logs contain no unresolved authorization, tenant, cache,
   media, Auth/email, billing, or unhandled application error.
-- [ ] All temporary acceptance mutations are restored and counts/digests match.
-- [ ] Deployment Protection and `noindex, nofollow` remain active.
-- [ ] No production, live Stripe, public DNS, Bunny, or indexing mutation
+- [x] All temporary acceptance mutations are restored and counts/digests match.
+- [x] Deployment Protection and `noindex, nofollow` remain active.
+- [x] No production, live Stripe, public DNS, Bunny, or indexing mutation
   occurred.
-- [ ] Christian explicitly accepts or rejects the staging gate.
-- [ ] Rejection names the blocking package and rollback; acceptance makes
+- [x] Christian explicitly accepts or rejects the staging gate.
+- [x] Rejection names the blocking package and rollback; acceptance makes
   `DCFC-701` eligible but does not start it.
