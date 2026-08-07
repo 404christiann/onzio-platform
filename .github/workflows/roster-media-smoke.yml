@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SITE_MEDIA_BASE_URL: https://onzio-rcfc.vercel.app
+      SITE_MEDIA_BASE_URL: https://onzio-platform.vercel.app
 
     steps:
       - name: Check out repository

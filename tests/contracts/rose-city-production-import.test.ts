@@ -30,11 +30,12 @@ describe("retired Rose City production import", () => {
 
   it("records the current hostname and sole active owner separately", () => {
     expect(ROSE_CITY_CURRENT_PRODUCTION_STATE).toEqual({
-      recordedAt: "2026-07-28",
-      primaryHostname: "onzio-rcfc.vercel.app",
+      recordedAt: "2026-08-06",
+      primaryHostname: "onzio-platform.vercel.app",
       retiredHostnames: [
         "www.rosecityfutbolclub.com",
         "rosecityfutbolclub.com",
+        "onzio-rcfc.vercel.app",
       ],
       activeOwnerEmails: ["christianjavieralcala@gmail.com"],
       removedIdentityEmails: ["info@rosecityfutbolclub.com"],

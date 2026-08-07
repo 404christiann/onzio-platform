@@ -14,7 +14,7 @@ Commands:
 - `npm run test:contracts` — TypeScript behavior contracts
 - `npm run test:db` — local Supabase/RLS contracts
 - `npm run test:architecture` — static architecture contracts
-- `ROSTER_MEDIA_BASE_URL=https://onzio-rcfc.vercel.app npm run test:browser:roster`
+- `ROSTER_MEDIA_BASE_URL=https://onzio-platform.vercel.app npm run test:browser:roster`
   — retained focused roster compatibility check
 - `SITE_MEDIA_BASE_URL=http://127.0.0.1:3000 npx playwright test
   --config=playwright.site-media.config.ts` — desktop and iPhone checks for

@@ -32,11 +32,12 @@ export const ROSE_CITY_HISTORICAL_CUTOVER = Object.freeze({
  * migration tooling.
  */
 export const ROSE_CITY_CURRENT_PRODUCTION_STATE = Object.freeze({
-  recordedAt: "2026-07-28",
-  primaryHostname: "onzio-rcfc.vercel.app",
+  recordedAt: "2026-08-06",
+  primaryHostname: "onzio-platform.vercel.app",
   retiredHostnames: Object.freeze([
     "www.rosecityfutbolclub.com",
     "rosecityfutbolclub.com",
+    "onzio-rcfc.vercel.app",
   ]),
   activeOwnerEmails: Object.freeze([
     "christianjavieralcala@gmail.com",

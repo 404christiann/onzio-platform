@@ -30,6 +30,61 @@ bills against the $75 price, so a $99 value here rejects its events with
 is $75, which makes this value correct in both directions. If you find a $99
 expectation somewhere, that expectation is stale, not this variable.
 
+## Production host renamed to onzio-platform.vercel.app
+
+Agent: Claude Opus 5 (Claude Code), 2026-08-06. Status: `complete` pending one
+Supabase Auth confirmation.
+
+`onzio-rcfc.vercel.app` is retired. The production host is now
+`https://onzio-platform.vercel.app`. Christian approved each step. Older entries
+in this file and under `docs/` still name `onzio-rcfc.vercel.app`; those are
+dated historical evidence and were deliberately left unedited. **This entry
+supersedes them.**
+
+Executed in this order, with both hosts serving simultaneously until the final
+step, so there was no downtime:
+- Added an `onzio.club_domains` row for `onzio-platform.vercel.app`
+  (`environment=production`, `active=true`, `is_primary=false`). It must enter
+  as non-primary: the partial unique index
+  `club_domains_one_active_primary_per_environment` permits only one active
+  primary per club and environment.
+- Renamed the Vercel project `onzio-rcfc` → `onzio-platform`. The project ID is
+  unchanged (`prj_I362ysmh9cse5cRxnL7db4dOhsEs`). **The rename did not
+  auto-assign the new `.vercel.app` domain**; it had to be added explicitly with
+  `vercel domains add`.
+- Updated Stripe endpoint `we_1TwEpdK6WajTkwHYD5SEYzXX` to
+  `https://onzio-platform.vercel.app/api/stripe/webhook`. The signing secret was
+  not rotated by the URL change and all seven enabled events were retained.
+- Flipped `club_domains`: the old row is now `is_primary=false, active=false`
+  and the new row is `is_primary=true`. Clear the old primary first in the same
+  transaction or the unique index rejects the update. This flip is required, not
+  cleanup: the Billing Portal `return_url` is built from the club's primary
+  domain.
+
+Verified after cutover: `https://onzio-platform.vercel.app` returns HTTP 200 and
+renders `Rose City Futbol Club`; `/api/stripe/webhook` returns HTTP 400
+`INVALID_SIGNATURE` for an unsigned probe; `/admin/login` returns 200;
+`https://onzio-rcfc.vercel.app` returns HTTP 404 with no tenant.
+
+Repository references updated in the same change:
+`lib/migration/rose-city-production-import.ts` and its contract test (the
+current-state manifest now records `onzio-platform.vercel.app` as primary and
+lists `onzio-rcfc.vercel.app` among retired hostnames; the frozen cutover
+evidence above it was not touched), `.github/workflows/roster-media-smoke.yml`
+(a daily 15:17 UTC cron that would otherwise have started failing against a
+404), and `tests/README.md`.
+
+Outstanding:
+- **Supabase Auth for project `ioalthwsdrlzrubomrow` must have Site URL set to
+  `https://onzio-platform.vercel.app` and
+  `https://onzio-platform.vercel.app/admin/auth/callback` in the redirect
+  allow-list.** The callback path is derived from `window.location.origin`, so
+  no code pins the host, but a missing allow-list entry breaks admin login and
+  password recovery with no other outward symptom. This was not verifiable by
+  the agent; production Supabase is outside its access.
+- `onzio-rcfc.vercel.app` is still attached to the Vercel project and should be
+  removed so the name is released rather than held as a stale alias.
+
 ## DCFC-701 production billing webhook remediation complete
 
 Agent: Claude Opus 5 (Claude Code), 2026-08-06. Status: `complete`.
