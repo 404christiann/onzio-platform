@@ -1,5 +1,143 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Handoff: 4 remaining pixel-perfect gaps, precisely scoped for the next session
+
+**Package:** none — ad hoc. Christian: "The nav bar is not matching either,
+theres still a lot still missing. The styling etc. lets pass this context to
+a new session and have it try doing all 4."
+**Status:** investigation only, no code changed. Written specifically so the
+next session does not have to redo this research.
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+The pixel-perfect sweep (see entries below) covered per-page body content but
+not chrome (nav) or the 4 items already known to need real inputs. Christian
+caught the nav gap; this entry investigates it and re-characterizes the other
+4 so the next session doesn't waste effort or violate the no-fabrication
+policy trying to "just build" things that actually need facts from Christian.
+
+### 1. Nav bar missing affiliation badges — real, concrete fix, no policy conflict
+
+The mockup's `components/Nav.tsx` (in
+`onzioProspects/diverse-city-fc/site`) renders three affiliation badges (US
+Soccer, FIFA, UPSL) inline next to the crest, with a color/white variant
+swapped based on transparent-vs-solid nav state, on **every page** — this is
+an explicit documented brand requirement in that repo's own `CLAUDE.md`:
+"The navigation uses the Diverse City crest and local U.S. Soccer, FIFA, and
+UPSL affiliation assets." Confirmed live on production
+(`https://diverse-city-fc-private.vercel.app/`) that **no page's nav shows
+any affiliation badges** — just the crest.
+
+Root cause confirmed by reading `onzio-platform/components/Nav.tsx`: this
+feature already exists in code, just never for Diverse City's template. Two
+existing branches handle it —
+- `affiliationLogos` (lines 16-45): Supabase-hosted migrated logos, used
+  somewhere for the `clubhouse@1`/Rose-City-family templates (grep the file
+  for where this specific array renders — it wasn't the branch inspected
+  here).
+- `lionsLocalAffiliations` (lines 47-66): local `/images/logo/affiliations/
+  *.png` paths, rendered inside the `club.presentationTemplateKey ===
+  "clubhouse@1"` branch (~line 185) via `.clubhouse-affiliation-lockup`.
+
+The generic branch used by every other template, including `academy@1`
+(~line 269 onward), has zero affiliation-logo rendering. This is the same
+shape of gap as the `/sponsors` page and the `/programs` CTA found earlier
+in this sweep: a feature built for `clubhouse@1` that was never extended to
+`academy@1`.
+
+**What the next session needs to do:** add an `academy@1`-appropriate
+affiliation-badge lockup to the generic nav branch, using real US
+Soccer/FIFA/UPSL assets — these are not club-specific facts, they're
+standard federation/league badges any real American soccer club would show
+(Diverse City is genuinely UPSL-affiliated per `lib/site-data.ts`'s
+`league: "UPSL Midwest Central Conference"` in the mockup, so this isn't
+fabrication). Source assets already exist and were already approved for
+this club specifically:
+`onzioProspects/diverse-city-fc/site/public/media/affiliations/{us-soccer,fifa,upsl}-{color,white}.png`
+(6 files, confirmed present on disk). Match the mockup's own
+`components/Nav.tsx` logic for exactly when to swap color vs. white variants
+(transparent nav state) and sizing (`h-7 w-7 sm:h-10 sm:w-10` per badge,
+`h-7 w-11 sm:h-10 sm:w-16` for FIFA's wider aspect ratio). Decide during
+implementation whether to store these as static `/public` files (matching
+the `lionsLocalAffiliations` pattern) or upload to Supabase Storage
+(matching the `affiliationLogos` pattern) — static files are simpler and
+sufficient since these assets aren't club-editable content.
+
+### 2. Video hero + "Developing the Next Generation" story section — same single blocker, one real option to close both without new infra
+
+Both are hidden per `DCFC-D114`. Re-verified against the mockup source
+(`components/HomeSections.tsx`'s `VerticalStory()`, and `components/
+Hero.tsx`): the **only** thing blocking either section is video. The story
+section's copy ("Developing the next generation... Diverse City FC combines
+professional-level coaching, mentorship, and community support...") is real,
+already-written marketing copy — not fabricated, not data-dependent, safe to
+ship as-is. The hero is the same: no per-match or per-season facts involved,
+just a looping background clip behind the same "One Club, One Community"
+headline production already shows.
+
+`DCFC-D105` approved Bunny.net Stream as the real video delivery mechanism,
+but it was never implemented — no Bunny.net account is wired into the
+codebase, no upload/transcode pipeline exists.
+
+**Two real paths, not yet decided — needs Christian's call before code:**
+- **(a) Build the real pipeline.** Wire up Bunny.net Stream per `DCFC-D105`,
+  upload real club footage, replace the static crest hero and re-enable the
+  story section with actual video. This is real infrastructure work (Bunny
+  account credentials, upload flow, admin video-swap UI), not a quick patch.
+- **(b) Interim static substitute, no new infra.** Both mockup sections
+  already ship with a **poster image** for when video can't play — e.g.
+  `homepage-hero-edited.mp4` uses poster `keeper-save-poster.jpg`, and
+  `club-reel-portrait.mp4` (the vertical story video) uses poster
+  `club-reel-poster.jpg` — both files confirmed present in
+  `onzioProspects/diverse-city-fc/site/public/media/video/`. Showing these
+  same real, already-approved photos **statically** (no `<video>` tag, just
+  an `<Image>`) would close the visual gap on both sections immediately,
+  with zero new infrastructure, and could be swapped for real video later
+  with no re-work of the surrounding markup/copy. This is not fabrication —
+  it's real footage stills from the same photo/video shoot Christian already
+  approved for the mockup.
+
+The next session should present this choice to Christian rather than pick
+one, since (a) is real scoped work/cost and (b) is a design compromise, not
+purely a technical decision.
+
+### 3. Next Match card — NOT closable by code; needs a real fixture from Christian
+
+Re-verified against the mockup source
+(`components/HomeSections.tsx`): the mockup's own "Next Match" card is
+**itself a fake placeholder** — opponent slot shows a literal "TBA" badge,
+"Next Opponent" label, and "Date and time TBA" text. Only the club's own
+crest, the league name ("UPSL Midwest Central"), and the location
+("Schaumburg, Illinois" — the club's home base, not match-specific) are
+real.
+
+Showing this on production would mean fabricating the exact class of fake
+placeholder content that `DCFC-D102` and the `/schedule`/`/tryouts` pages
+correctly avoid today (confirmed matching, no action needed, in the entry
+below). **This is not a coding task.** The next session's job here, if
+Christian wants this card back, is to ask for a real upcoming fixture (date,
+time, opponent, whether home/away) — only then does building the card make
+sense. Until a real fixture exists, hiding it is the correct, consistent
+behavior alongside `/schedule`.
+
+### 4. Standings table — NOT closable by code; needs real season data from Christian
+
+Same shape as #3: hidden because `onzio.league_standings` has no rows for
+Diverse City, and inventing win/loss records would be fabrication, exactly
+what `DCFC-D106` already ruled out for the initial rollout. The underlying
+`league_standings`/`league_standings_settings`/admin editing flow all
+already exist and work (confirmed reusable, no new code needed — see the
+`DCFC-403` planning entry deep in this file's history: "Fully reusable, no
+new work: standings... already exist"). The only blocker is Christian
+supplying real current-season standings numbers, or deciding the season
+hasn't progressed far enough to have any yet.
+
+**Exact next step for whichever session picks this up:** implement #1 (nav
+badges) directly — it's fully scoped, no open questions. Present #2's (a)/
+(b) choice to Christian before writing code. For #3 and #4, ask Christian
+for real facts before doing anything; do not fabricate "TBA" content to
+match the mockup, since that's the exact anti-pattern the platform's
+existing decisions already reject elsewhere.
+
 ## 2026-08-07 - Added missing "Find Your Pathway" CTA to `/programs`
 
 **Package:** none — ad hoc, Christian's explicit go-ahead ("build the CTA

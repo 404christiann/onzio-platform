@@ -2,6 +2,35 @@
 
 Last updated: 2026-08-07
 
+## Handoff: 4 remaining pixel-perfect gaps, precisely scoped — read the full entry in STATUS.md before starting
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: investigation
+only, ready for a new session to act on.
+
+Christian flagged the nav bar as still not matching the mockup and asked to
+hand the remaining gaps to a new session. Full detail (exact files, exact
+line numbers, exact assets, exactly what's blocked vs. what's just missing
+code) is in `docs/phase-11/diverse-city/STATUS.md`'s entry with this same
+title — read it first, it's written specifically so this research doesn't
+need repeating. Summary:
+
+1. **Nav bar missing US Soccer/FIFA/UPSL affiliation badges** — real,
+   scoped, buildable now. The feature exists in `components/Nav.tsx` for
+   `clubhouse@1` but was never extended to `academy@1`. Assets already
+   exist on disk in the mockup repo.
+2. **Video hero + "Developing the Next Generation" story section** — both
+   blocked on the same thing (no video pipeline was ever built per
+   `DCFC-D105`). Real option: use the mockup's own poster-image stills as a
+   static substitute now, real video later — needs Christian's choice
+   between that and building the actual Bunny.net pipeline, before writing
+   code.
+3. **Next Match card** and **4. Standings table** — **not coding tasks.**
+   Both need real facts from Christian (an actual upcoming fixture; actual
+   current standings) before any UI work makes sense — the mockup's own
+   versions of these are themselves fake placeholders, and reproducing them
+   on production would violate the no-fabrication policy already correctly
+   applied to `/schedule` and `/tryouts` elsewhere on this same site.
+
 ## Added missing "Find Your Pathway" CTA to `/programs`
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
