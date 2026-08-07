@@ -1,5 +1,91 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Pixel-perfect sweep: `/shop` renders blank on first load (GSAP ScrollTrigger bug) — fix ready, NOT yet committed/deployed
+
+**Package:** none — ad hoc, found during the pixel-perfect mockup-vs-production
+comparison sweep
+**Status:** fix complete locally (code + `tsc` + full suite green);
+**not committed, not pushed, not deployed** — awaiting Christian's go-ahead
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+**Severity: high.** `https://diverse-city-fc-private.vercel.app/shop`
+rendered completely blank below the nav on first load — no jersey image, no
+title, no price, no CTA button, nothing — even though the DOM/text content
+was present (`get_page_text` extracted it fine; only the visual paint was
+missing). A real first-time visitor to `/shop` would very likely just see a
+blank white page and leave.
+
+**Root cause:** `components/ShopKitSection.tsx` animates its hero image and
+text blocks in with `gsap.fromTo(..., { opacity: 0 }, { opacity: 1,
+scrollTrigger: { trigger: sectionRef.current, start: "top 80%" } })`. This
+component is reused two ways: as a below-the-fold embed on the homepage
+(`app/(public)/page.tsx`, `headingTag` defaults to `"h2"`, right after
+`<Hero />` — genuinely off-screen until the visitor scrolls, so the
+scroll-triggered reveal works exactly as intended there) and as `/shop`'s
+own page hero (`app/(public)/shop/page.tsx`, `headingTag="h1"`, first thing
+on the page). For the hero usage, the section is already fully in view at
+scroll position 0 when the component mounts — its ScrollTrigger "start"
+point is already behind the initial scroll position before any scroll ever
+happens. GSAP only recalculates trigger positions on scroll or resize
+events, and the surrounding page's data (`ShopKitSectionContainer`,
+`ShopPhotoStripContainer`, `ShopPurchaseDetailsContainer` each fetch
+independently and swap in async) is still shifting page height at the
+moment this effect fires, so the initial trigger-position measurement is
+unreliable to begin with. Net effect: the hero content's `opacity:1` state
+never gets applied, and nothing a visitor does on a fresh page load
+(without scrolling) will ever trigger it, because the trigger point is
+already "in the past" relative to scroll position 0.
+
+**Confirmed via direct DOM inspection** (Christian's Chrome, via Claude in
+Chrome): the hero text block was found stuck at literal
+`opacity: 0; transform: translate(0px, 30px)` — the GSAP `fromTo` initial
+state, never animated to its `to` state. Scrolling down and back up to the
+top made everything render correctly (confirms the diagnosis: any
+scroll/resize event lets GSAP recalculate and the animation fires
+retroactively — this is exactly why the codebase's other above-the-fold
+hero sections, e.g. the roster page hero in `app/(public)/roster/page.tsx`,
+use a plain time-delayed `gsap.fromTo` with no `scrollTrigger` at all,
+rather than this component's pattern).
+
+**Fix:** `components/ShopKitSection.tsx` — added an `isHero = headingTag ===
+"h1"` check. When hero, both the image and text tweens drop the
+`scrollTrigger` config entirely and instead use a small fixed `delay`
+(matching the codebase's established above-the-fold convention). The
+below-the-fold homepage embed (`headingTag` unset, defaults to `"h2"`) is
+completely unaffected — still uses the original `scrollTrigger` config,
+since Christian already visually confirmed that embed matches on the
+homepage.
+
+**Verified:**
+- `npx tsc --noEmit` clean.
+- Full suite green: `686/686` (`.env.test` exported per `tests/README.md`).
+- No existing test covered this component's animation behavior (searched
+  `tests/` and `lib/__tests__/` for `ShopKitSection` and `top 80%` — no
+  hits), so nothing needed updating; no regression test added since this is
+  a pure animation-timing fix with no meaningful way to unit-test GSAP/
+  ScrollTrigger's actual browser-scroll-position behavior in this repo's
+  Vitest setup (would need a full browser-based test, out of scope for this
+  fix).
+- Did not verify visually against real content locally: local Supabase has
+  no working storage/media in this environment (documented in the entry two
+  above this one — the same gap hit while trying to preview the roster
+  fixes), so `/shop` has no real local data to render either. Root cause
+  and fix were diagnosed and applied by direct source inspection plus live
+  DOM inspection of the *actual* bug on production before the fix, not by
+  local reproduction.
+
+**Files changed:** `components/ShopKitSection.tsx`, this file (not yet
+committed).
+
+**Exact next step:** Christian decides whether to ship this now. If yes:
+commit, push, `vercel deploy --prod`, then the required
+`vercel alias set <new-deployment-id> diverse-city-fc-private.vercel.app`
+re-alias (the private hostname does not follow `--prod`'s automatic
+alias), then verify `/shop` renders on a hard, fresh load (no prior scroll)
+in a real browser session. After that: resume the pixel-perfect sweep
+(roster, schedule, programs done; shop found/fixed but unshipped; sponsors,
+contact, tryouts remaining).
+
 ## 2026-08-07 - fetchRoster empty-season fix + staff crest fallback: committed, deployed, verified live
 
 **Package:** none — ad hoc, Christian's explicit "just deploy to production"

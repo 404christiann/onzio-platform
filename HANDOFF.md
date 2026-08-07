@@ -2,6 +2,36 @@
 
 Last updated: 2026-08-07
 
+## `/shop` renders blank on first load — fix ready, NOT yet shipped
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: fix complete
+locally, tests green, awaiting Christian's go-ahead to ship.
+
+Found during the pixel-perfect comparison sweep: production `/shop` was
+rendering completely blank below the nav on a fresh page load — no jersey
+image, no title, no price, no CTA, nothing visible, though the content
+existed in the DOM. Root cause: `components/ShopKitSection.tsx`'s GSAP
+`ScrollTrigger`-gated fade-in assumes the section is below the fold (true
+for its homepage embed use, false when it's `/shop`'s own hero). For the
+hero case, the section is already in view at scroll position 0 on mount, so
+the trigger point is already "behind" the initial scroll position and GSAP
+never gets a scroll/resize event to recalculate and fire it — the content
+stays stuck at its initial `opacity: 0` forever unless the visitor happens
+to scroll (confirmed live: scrolling down and back up made it render).
+
+Fixed by skipping `scrollTrigger` and using a plain delayed fade for the
+hero usage only (`headingTag === "h1"`), matching the same above-the-fold
+pattern already used elsewhere in this codebase (e.g. the roster page
+hero). The homepage's below-the-fold embed is unaffected.
+
+`tsc --noEmit` clean, full suite `686/686`. Full detail in
+`docs/phase-11/diverse-city/STATUS.md`. Files changed:
+`components/ShopKitSection.tsx`.
+
+**Not committed, not pushed, not deployed** — this is a real behavior
+change and, like the prior fixes today, ships only with Christian's
+explicit go-ahead.
+
 ## Two roster fixes shipped: fetchRoster empty-season bug + staff crest fallback
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
