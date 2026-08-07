@@ -1,5 +1,69 @@
 # Diverse City FC Status
 
+## 2026-08-07 - DCFC-703 DOCUMENTATION PACKAGE ASSEMBLY IN PROGRESS
+
+**Package:** `DCFC-703`
+**Status:** `in_progress` — documentation packet filled, no go/no-go recorded.
+**Agent:** Codex (GPT-5)
+
+**Approval used:** DCFC-702 was complete and signed off; this work is documentation-only. No hosted mutation was performed in this package.
+
+**Completed work:**
+
+- Filled the `DCFC-703` packet in
+  `docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md` (table rows for
+  Release/Import/Backup/Tenant/Identity/Billing/Domain/Launch/Observation/Rollback).
+- Added exact HEAD (`d6487fa`), full pending-migration list (15 files), and current
+  local test outputs from required commands in the Release row.
+- Replaced stale `DCFC-701` values with fresh read-only Vercel, Supabase, HTTP,
+  and Stripe evidence; retained explicit `AWAITING CHRISTIAN` only for the
+  remaining owner decisions and go/no-go.
+- Ran local validation commands for evidence:
+  `npx tsc --noEmit`, `npm run test:contracts`, `npm run test:architecture`,
+  `npm run test:db`, `npm test`.
+
+**Verification run and results:**
+
+- `npx tsc --noEmit`: pass
+- `npm run test:contracts`: pass (41/41)
+- `npm run test:architecture`: pass (20/20)
+- `npm run test:db` with current `supabase status -o env` loopback values exported:
+  pass (13/13 files, 83/83 tests)
+- `npm test` with the same local Supabase environment exported:
+  pass (79/79 files, 680/680 tests)
+- Fresh read-only Vercel evidence: project `onzio-platform`
+  (`prj_I362ysmh9cse5cRxnL7db4dOhsEs`); current production alias resolves to
+  Ready deployment `dpl_FqM3XpLSChhPp7BkNd5wt7BNCnKq`; immediately preceding
+  Ready deployment `dpl_6JPwNc9ipBZ39tr8s9dZAoZkwuPF`; current host returns
+  200 and the retired `onzio-rcfc.vercel.app` host returns 404.
+- Fresh read-only Supabase evidence: production project is `ACTIVE_HEALTHY`;
+  latest completed physical backup is `2026-08-06T11:15:23.430Z` with
+  `walg_enabled=true`, `pitr_enabled=false`; production has no Diverse City
+  club or membership; current Storage baseline is 515 objects / 49,834,337
+  bytes in public `onzio-media` and zero in private `onzio-upload-staging`.
+- Fresh live Stripe GET evidence: `Onzio Pro Plan`/`prod_UwUmEgeunaSPSI` and
+  `price_1TwbmvK6WajTkwHYueLvjhv5` are active/live at $75 monthly with no
+  trial; webhook `we_1TwEpdK6WajTkwHYD5SEYzXX` is enabled at the current
+  `onzio-platform.vercel.app` endpoint with seven expected event types.
+
+**Blockers and unresolved decisions:**
+
+- Current hosted evidence is refreshed. Production has no Diverse City tenant,
+  membership, custom domain, or private hostname yet; this absence is recorded
+  rather than substituting local/staging identifiers.
+- Christian decisions still required: exact custom domain and apex/`www`
+  canonical form (`DCFC-D123`); launch window/final approver/monitoring owner;
+  observation checkpoint cadence/indexing-decision date; fresh confirmation of
+  Christian's `DCFC-D116` rollback authority and coordinated recovery shape.
+- `DCFC-703` must remain separate from go/no-go and does not by itself authorize release.
+
+**Exact next step:** Christian supplies the remaining Domain/Launch/Observation/
+Rollback decisions and personally records go/no-go. A go makes only `DCFC-801`
+eligible; the RELEASE GATE still blocks release until its pre-flight checklist
+is satisfied.
+
+**Hosted mutations:** zero.
+
 ## 2026-08-07 - DCFC-702 COMPLETE — 11 of 11 items proved
 
 **Package:** `DCFC-702`
@@ -1015,8 +1079,8 @@ unassigned and unapproved.
 | DCFC-602 | 3 | in_progress | 601 + fresh approval | Staging public/admin/isolation acceptance with restored probes; first public-route sweep attempt is blocked by Vercel deployment protection before app content renders. |
 | DCFC-603 | 1 | complete | 601, 602 | Staging gate accepted by Christian on 2026-08-06; zero hosted mutations in the closeout pass |
 | DCFC-701 | 1 | in_progress | 603 | Production preflight mostly collected; blocked on Rose City Stripe/DB projection drift, Supabase service-log access, and optional restricted evidence package location |
-| DCFC-702 | 2 | in_progress | 701 | Local production cutover/rollback rehearsal blocked on loopback replay and browser/rollback execution |
-| DCFC-703 | 1 | pending | 701, 702 | Production go/no-go and mutation approval packet |
+| DCFC-702 | 2 | complete | 701 | Local production cutover/rollback rehearsal proved; all 11 checklist items documented in completion entry and gated evidence |
+| DCFC-703 | 1 | in_progress | 701, 702 | Production go/no-go and mutation approval packet being assembled; go/no-go still unset |
 | DCFC-801 | 3 | pending | 703 + fresh approval | Production release and private tenant provisioning |
 | DCFC-802 | 3 | pending | 801 + fresh approval | Production content/media/presentation import |
 | DCFC-803 | 3 | pending | 802 + fresh approval | Production private Auth/admin acceptance |
