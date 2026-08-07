@@ -32,6 +32,34 @@ under the club-neutral product "Onzio Pro Plan" (`prod_UwUmEgeunaSPSI`), and the
 $99 product is archived. If you find a $99 expectation somewhere, that
 expectation is stale, not this variable.
 
+## Staging billing configuration state (2026-08-06)
+
+Paused deliberately at a consistent state; nothing here is half-applied.
+
+- Preview/`staging` `STRIPE_PRICE_ID_PRO` is now the test-mode $75 price
+  `price_1U0Y2RK6WajTkwHYY38XzOcJ`. It is **not yet in effect**: the tenant host
+  `diverse-city-onzio-staging.vercel.app` is aliased to deployment
+  `onzio-rcfc-p1mslxsdy…` (commit `599016e`, 4 days old) and env values bake in
+  at deploy time. It takes effect on the next staging deploy and is correct then.
+- Preview/`staging` `STRIPE_PRICE_ID_STARTER` was **left unchanged on purpose**.
+  Alpha FC holds an active test subscription
+  (`sub_1TxsLTK6WajTkwHYEUjdWeNR`) billing against the currently configured
+  `price_1Tw6sHK6WajTkwHYRQumSWcM`. Repointing it without first moving that
+  subscription reproduces the DCFC-701 `UNKNOWN_PRICE` failure in staging. To
+  move it: cancel Alpha's test subscription, repoint the variable, redeploy,
+  re-subscribe through Checkout.
+- Diverse City has **no** subscription (`club_subscriptions` row absent,
+  lifecycle `onboarding`), so its first Checkout cannot hit `UNKNOWN_PRICE` —
+  Checkout and the webhook read the same variable.
+- `lifecycle` needs no manual flip. `apply_stripe_projection` promotes
+  `onboarding` to `active` on the first `active` status, and forces
+  `public_access` to `preview` until then.
+- All three staging tenant hosts sit behind Vercel deployment protection and
+  return `302`; a checkout test needs a bypass token or a logged-in session.
+- `STRIPE_PRICE_ID` (no suffix, Preview only) feeds
+  `getConfiguredStripePriceLabel`, which has no runtime caller and returns null
+  when unset. Legacy leftover, safe to delete.
+
 ## Stripe product naming normalised to club-neutral tiers
 
 Agent: Claude Opus 5 (Claude Code), 2026-08-06. Status: `complete`.
