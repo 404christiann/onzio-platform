@@ -106,6 +106,10 @@ export async function resolveStripeEvent(
   const eventId = requiredString(event.id);
   const eventType = requiredString(event.type);
   const eventCreated = event.created;
+  const subscription = record(record(event.data).object);
+  const metadata = record(subscription.metadata);
+  const clubIdFromMetadata = requiredString(metadata.onzio_club_id);
+  const currentCustomerId = objectId(subscription.customer);
   if (typeof eventCreated !== "number" || !Number.isSafeInteger(eventCreated)) {
     failContract("INVALID_STRIPE_EVENT");
   }
@@ -115,11 +119,19 @@ export async function resolveStripeEvent(
     typeof current?.lastEventCreated === "number" &&
     eventCreated <= current.lastEventCreated
   ) {
+    if (eventType.startsWith("invoice.")) {
+      return {
+        action: "ignored",
+        eventId,
+        eventType,
+        eventCreated,
+        clubId: clubIdFromMetadata,
+        customerId: currentCustomerId,
+      };
+    }
     failContract("STALE_EVENT");
   }
 
-  const subscription = record(record(event.data).object);
-  const metadata = record(subscription.metadata);
   const configuredEnvironment = eventEnvironment(config);
   const metadataEnvironment = requiredString(metadata.onzio_environment);
   const expectedMetadataEnvironment =
@@ -132,10 +144,10 @@ export async function resolveStripeEvent(
     failContract("FOREIGN_ENVIRONMENT");
   }
 
-  const clubId = requiredString(metadata.onzio_club_id);
+  const clubId = clubIdFromMetadata;
   if (current && current.clubId !== clubId) failContract("CLUB_MISMATCH");
 
-  const customerId = objectId(subscription.customer);
+  const customerId = currentCustomerId;
   if (current?.customerId && current.customerId !== customerId) {
     failContract("CUSTOMER_MISMATCH");
   }

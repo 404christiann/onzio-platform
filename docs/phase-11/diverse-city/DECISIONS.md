@@ -44,13 +44,24 @@ Statuses: `accepted`, `open`, `superseded`.
 
 | DCFC-D124 | Tier language is removed from **both** Stripe Products. Name is `Onzio - Diverse City FC` (plain hyphen, as applied); description is the tier-free wording pinned below. Applied to live and test on 2026-08-03. | The original `Diverse City FC Pro Plan` name and its "Everything in Starter, plus…" description described the tier ladder `PLAT-102` deletes, on artifacts customers read on invoices, receipts, and in the Customer Portal. The `Onzio - <Club>` name shape scales to every future club, which matters because `PLAT-D003` gives each club its own Product and negotiated Price. Three claims were dropped deliberately: **analytics** and **advanced content controls**, neither of which maps to a customer-facing feature in the codebase, and **expanded profiles**, which reads as a tier upgrade. Every remaining item maps to a real table. Applied in both modes so `PLAT-102`'s test rehearsal exercises the shipped wording. |
 
-**Pinned description for `DCFC-D124`.** Both Stripe Products carry this text;
-changes need a new decision.
+| DCFC-D127 | **Supersedes the `DCFC-D124` pinned description.** Live Stripe Products carry one shared, club-neutral, tier-free description, pinned below. Applied to `prod_UwUmEgeunaSPSI` and `prod_Uw0SrC4bw23myw` on 2026-08-06. `DCFC-D124`'s prohibition on tier language stands unchanged; only the wording is replaced. | Christian decided this on 2026-08-06 after `DCFC-701`. Two drivers. First, `PLAT-102` deletes tier gating, so Starter and Pro no longer differ by feature — only by price. Any description implying a feature ladder is now factually false, which is why the shared wording drops the club name rather than differentiating the products. Second, an agent had overwritten the `DCFC-D124` pinned text earlier that day with the exact "Everything in Starter, plus…" wording `DCFC-D124` deleted, while renaming Products toward tier language, because it proposed a per-tier convention without reading this file. That change is reverted by this decision. The naming question is deliberately left open — see `DCFC-D128`. `D124`'s discipline is retained: every item in the wording maps to a real table. |
 
-> Hosted club website for Diverse City FC, managed through Onzio. Includes
-> roster, schedule, standings, seasons, programs, tryouts, store, sponsors, and
-> contact pages, with media management and admin access for club staff. Custom
-> domain registration and management included.
+| DCFC-D128 | **Open.** Stripe Product naming is unresolved. Live Products are currently named `Onzio Pro Plan` and `Onzio Starter Plan`, which reintroduces the tier language `DCFC-D124` removed and conflicts with `PLAT-D003`'s per-club Product model and `DCFC-D124`'s `Onzio - <Club>` shape. | Needs Christian. The conflict is real and predates the renaming: `prod_UwUmEgeunaSPSI` is simultaneously Rose City's billing Product (its subscription bills against `price_1TwbmvK6WajTkwHYueLvjhv5`) and the Product `DCFC-D124` renamed for Diverse City, so renaming it for one club rewrites the other's customer-facing labels. `PLAT-D003`'s per-club Products resolve this; per-tier Products do not. Also outstanding: `prod_V0ZBwEyJqipBOw` (`Onzio - Diverse City FC`, the `DCFC-D124`-named Product) was archived on 2026-08-06 and should be restored if the per-club model is confirmed. |
+
+**Pinned description for `DCFC-D127`.** Live Stripe Products carry this text;
+changes need a new decision. Supersedes the `DCFC-D124` wording.
+
+> Hosted club website managed through Onzio. Includes roster, schedule,
+> standings, seasons, programs, tryouts, store, sponsors, and contact pages,
+> with media management and admin access for club staff. Custom domain
+> registration and management included.
+
+**Test-mode parity for `DCFC-D127` is outstanding.** The test-mode Products
+(`prod_V1iYXl47nqE0hM` at $65, `prod_V0ZAFI3eQv4qxZ` at $75) still carry their
+previous descriptions. `DCFC-D124` required both modes to match so the
+`PLAT-102` rehearsal exercises shipped wording; that requirement carries
+forward. This must be applied by Christian, since agent Stripe access is
+live-mode only.
 
 ## Open Decisions
 

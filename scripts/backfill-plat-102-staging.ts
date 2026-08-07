@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const PROJECT_REF = "fxefqnoqxbezeccjvrsw";
 const EXPECTED_URL = `https://${PROJECT_REF}.supabase.co`;
-const DIVERSE_CITY_PRICE = "price_1U0Y0sK6WajTkwHYnnttR9nN";
+const DIVERSE_CITY_PRICE = "price_1U0Y2RK6WajTkwHYY38XzOcJ";
 const EXPECTED = {
   "diverse-city": { kind: "customer", stripePriceId: DIVERSE_CITY_PRICE },
   alpha: { kind: "test", stripePriceId: null },

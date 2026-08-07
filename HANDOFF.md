@@ -1,6 +1,6 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-06
+Last updated: 2026-08-07
 
 ## Known non-regressions — do not investigate these as bugs
 
@@ -59,6 +59,34 @@ Paused deliberately at a consistent state; nothing here is half-applied.
 - `STRIPE_PRICE_ID` (no suffix, Preview only) feeds
   `getConfiguredStripePriceLabel`, which has no runtime caller and returns null
   when unset. Legacy leftover, safe to delete.
+
+## Staging billing configuration state (2026-08-07) — supersedes 2026-08-06
+
+This supersedes the 2026-08-06 state after DCFC-304 alignment and the fresh staging
+re-alias.
+
+- `diverse-city-onzio-staging.vercel.app` remains pinned to `staging` `cf09412`
+  via deployment `dpl_7SFZhVNaKwkoQTuvayTCZbU476G9` (`https://onzio-platform-cu75epbse-404christianns-projects.vercel.app`) and alias.
+- `STRIPE_PRICE_ID_PRO` is `price_1U0Y2RK6WajTkwHYY38XzOcJ` in staging config.
+- `STRIPE_PRICE_ID_STARTER` remains unchanged at `price_1Tw6sHK6WajTkwHYRQumSWcM`
+  until Christian explicitly requests Task 3.
+- All staging tenant hosts remain behind Vercel deployment protection; protected
+  flows still require owner auth or bypass.
+- Live webhook smoke is correct: unsigned `POST /api/stripe/webhook` returns
+  HTTP 400 `INVALID_SIGNATURE` with no 500.
+- Owner-authenticated checkout verification is complete and green:
+  - `clubs.lifecycle='active'`, `clubs.public_access='live'` ✅
+  - `club_subscriptions` is `status='active'`, `tier=null`, and
+    `price_id='price_1U0Y2RK6WajTkwHYY38XzOcJ'` ✅
+  - Latest checkout window has `applied_events=1`, `rejected_events=0`, timeline
+    shows only `checkout.session.completed` with `outcome='applied'` ✅
+
+Hosted mutation for this verification run:
+- Owner checkout executed under owner auth against staging host alias.
+- Staging preview deployment recreated and alias moved.
+
+Next action in this state:
+- Task 3 only, if Christian requests it: Alpha FC starter price repoint sequence.
 
 ## Stripe product naming normalised to club-neutral tiers
 

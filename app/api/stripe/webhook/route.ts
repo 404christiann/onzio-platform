@@ -233,6 +233,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, rejected: code });
   }
 
+  if (projection.action === "ignored") {
+    const eventCreated = projection.eventCreated as number;
+    const eventType = projection.eventType as string;
+    const { error: ignoreError } = await service
+      .from("stripe_events")
+      .insert({
+        id: projection.eventId as string,
+        club_id: projection.clubId as string,
+        environment: config.ledgerEnvironment,
+        event_type: eventType,
+        stripe_created_at: new Date(eventCreated * 1000).toISOString(),
+        outcome: "ignored",
+        payload_digest: digest,
+      })
+      .select("id")
+      .single();
+    if (ignoreError && ignoreError.code !== "23505") {
+      return NextResponse.json(
+        { error: "IGNORED_EVENT_LEDGER_FAILED" },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ received: true, ignored: "STALE_EVENT" });
+  }
+
   const runtimeAccess = resolveSubscriptionAccess(
     {
       status: projection.status,

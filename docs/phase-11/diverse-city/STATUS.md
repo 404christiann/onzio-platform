@@ -1,5 +1,40 @@
 # Diverse City FC Status
 
+## 2026-08-07 - DCFC staging billing verification (DCFC-701 follow-up re-run)
+
+**Package:** `DCFC-701` (staging re-alias + real webhook smoke)
+**Status:** `complete` (staging checkout proof completed)
+**Agent:** Codex (GPT-5), with Christian approval for staging-only operations
+
+**Approval used:** Christian approved moving `diverse-city-onzio-staging.vercel.app` from commit `599016e` to current `staging` head and performing the staged deploy/alias mutation. No production project was touched.
+
+**Completed work:**
+- Created a new staging preview deployment from `staging` head (`cf09412`) because builds before 2026-08-06 20:00 UTC are now known to be pre-`DCFC-304` alignment.
+- Re-aliased `diverse-city-onzio-staging.vercel.app` to deployment `onzio-platform-cu75epbse-404christianns-projects.vercel.app` (deployment `dpl_7SFZhVNaKwkoQTuvayTCZbU476G9`).
+- Probed `POST /api/stripe/webhook` through the bypass header (`x-vercel-protection-bypass`) and got `400 INVALID_SIGNATURE` with no 500.
+- Confirmed checkout route still requires owner session (`AUTHENTICATION_REQUIRED` when unauthenticated), consistent with `authorizeAdminAccess` + `billing` capability checks.
+- Owner-authenticated checkout was executed and validated against
+  `diverse-city-onzio-staging.vercel.app` with a Stripe test card.
+- Final post-checkout verification on staging `fxefqnoqxbezeccjvrsw` returned:
+  - `onzio.clubs`: `lifecycle='active'`, `public_access='live'` ✅
+  - `onzio.club_subscriptions`: `status='active'`, `tier IS NULL`, `price_id='price_1U0Y2RK6WajTkwHYY38XzOcJ'` ✅
+  - Latest checkout window in `onzio.stripe_events`: `checkout.session.completed` with `outcome='applied'`; `applied_events=1`, `rejected_events=0` ✅
+
+**Files changed:** `HANDOFF.md`, `docs/phase-11/diverse-city/STATUS.md`
+
+**Verification run and results:** `POST /api/stripe/webhook` on staging alias returns HTTP 400 `{"error":"INVALID_SIGNATURE"}` for unsigned input. `POST /api/stripe/checkout` on staging alias returns HTTP 401 `AUTHENTICATION_REQUIRED` without owner login.
+Owner checkout replay produced live DB rows as above: `clubs.lifecycle=active`, `clubs.public_access=live`, `club_subscriptions.status=active`, `price_id=price_1U0Y2RK6WajTkwHYY38XzOcJ`, and no rejected events in the latest checkout window.
+
+**Blockers and unresolved decisions:**
+- `tier` remains `null` in `club_subscriptions` by PLAT-102 contract expectation.
+- `stripe_events` latest checkout window has zero rejected events.
+
+**Exact next step:** wait for explicit Christian request for Task 3 (Alpha FC starter price sequence); otherwise no further staging billing action is required in this package.
+
+**Hosted mutations:**
+- Vercel deployment (staging preview): `dpl_7SFZhVNaKwkoQTuvayTCZbU476G9` from `staging` commit `cf09412`.
+- Vercel alias: `diverse-city-onzio-staging.vercel.app` moved to that preview deployment.
+
 ## 2026-08-06 - DCFC-701 follow-up: webhook configuration codes are identifiable
 
 **Package:** `DCFC-701` (follow-up)
