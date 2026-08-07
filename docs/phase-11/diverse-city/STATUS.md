@@ -35,6 +35,55 @@ Owner checkout replay produced live DB rows as above: `clubs.lifecycle=active`, 
 - Vercel deployment (staging preview): `dpl_7SFZhVNaKwkoQTuvayTCZbU476G9` from `staging` commit `cf09412`.
 - Vercel alias: `diverse-city-onzio-staging.vercel.app` moved to that preview deployment.
 
+## 2026-08-07 - DCFC-702 local cutover/rollback rehearsal
+
+**Package:** `DCFC-702` (Local production cutover/rollback rehearsal)
+**Status:** `in_progress` (runtime rehearsal blocked by loopback bootstrap failure)
+**Agent:** Codex (GPT-5)
+
+**Completed work:**
+- Verified manifest digest generation is stable and matches checked-in content.
+- Proved deterministic dry-run planning across two independent runs.
+- Ran local contract-only import checks for idempotent counts and loopback-safeguard rules.
+- Ran local non-DB verification commands and build.
+
+**Files changed:** `docs/phase-11/diverse-city/STATUS.md`
+
+**Verification run and results:**
+- `node --import tsx scripts/plan-diverse-city-import.ts --dry-run` output:
+  `{"out":"/Users/christianalcala/Downloads/onzio-platform/docs/phase-11/diverse-city/diverse-city-local-import-plan.json","planDigest":"63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36","retainedAssets":10,"excludedAssets":32,"hostedMutations":0}`
+- `cat docs/phase-11/diverse-city/diverse-city-local-import-plan.json` shows `"planDigest":"63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36"` and `"hostedMutations":0`.
+- `node --import tsx scripts/plan-diverse-city-import.ts --dry-run` produced identical output in two separate files (`diff -u` empty).
+- `npx vitest run tests/contracts/diverse-city-local-import.test.ts` → **1 file passed, 4 tests passed**.
+- `npx tsc --noEmit` clean.
+- `SUPABASE_LOCAL=1 npm run test:contracts` → **40 files, 341 tests passed**.
+- `SUPABASE_LOCAL=1 npm run test:architecture` → **3 files, 20 tests passed**.
+- `SUPABASE_LOCAL=1 npm run test:db` failed with **75 failed / 13 failed suites / 8 skipped**. First error was `connect EPERM 127.0.0.1:54321` and no loopback DB available.
+- `npm run build` passed (one pre-existing React Hook warning).
+- `npm run migration:rehearse:diverse-city:local` could not complete.
+  - First failure: `listen EPERM: operation not permitted ... tsx-501/...pipe`.
+  - Second, with direct-node invocation and explicit loopback env: `connect EPERM 127.0.0.1:54321 - Local (0.0.0.0:0)`.
+
+**Checklist status (DCFC-702):**
+- [x] Production-target content/media/presentation manifest matches the exact staging-accepted digest.
+- [ ] Release migration ledger replays from scratch on loopback Supabase.
+- [x] Import plan is deterministic across two independent runs.
+- [ ] Import is idempotent and reconciles every table, relationship, object, asset reference, checksum, route, module, and presentation pointer.
+- [ ] Rose City and synthetic Alpha/Bravo remain unchanged and isolated.
+- [ ] Diverse City renders on simulated production and private hostnames at desktop/mobile with `noindex, nofollow`.
+- [ ] Auth/admin acceptance is rehearsed only with local identities/MFA.
+- [ ] Stripe behavior uses inert/test-shaped fixtures locally; no live call.
+- [ ] Rollback restores the previous deployment/config representation and removes/restores only Diverse City tenant artifacts.
+- [ ] Identical replay after rollback produces the original manifest digest and acceptance result.
+- [ ] Full local verification passes without hosted credentials.
+
+**Blockers or decisions needed:** loopback bootstrap is unavailable in this environment (`docker` absent/unavailable), so replay, rollback, import idempotence, host-name simulation, and DB-backed acceptance checks cannot execute to completion.
+
+**Exact next step:** start loopback Supabase successfully, then rerun `SUPABASE_LOCAL=1 npm run migration:rehearse:diverse-city:local` and complete remaining unchecked DCFC-702 checklist items.
+
+**Hosted mutations:**
+- Zero hosted mutations this turn. All failed runs are local-only execution attempts.
+
 ## 2026-08-06 - DCFC-701 follow-up: webhook configuration codes are identifiable
 
 **Package:** `DCFC-701` (follow-up)
@@ -683,7 +732,7 @@ unassigned and unapproved.
 | DCFC-602 | 3 | in_progress | 601 + fresh approval | Staging public/admin/isolation acceptance with restored probes; first public-route sweep attempt is blocked by Vercel deployment protection before app content renders. |
 | DCFC-603 | 1 | complete | 601, 602 | Staging gate accepted by Christian on 2026-08-06; zero hosted mutations in the closeout pass |
 | DCFC-701 | 1 | in_progress | 603 | Production preflight mostly collected; blocked on Rose City Stripe/DB projection drift, Supabase service-log access, and optional restricted evidence package location |
-| DCFC-702 | 2 | pending | 701 | Local production cutover/rollback rehearsal |
+| DCFC-702 | 2 | in_progress | 701 | Local production cutover/rollback rehearsal blocked on loopback replay and browser/rollback execution |
 | DCFC-703 | 1 | pending | 701, 702 | Production go/no-go and mutation approval packet |
 | DCFC-801 | 3 | pending | 703 + fresh approval | Production release and private tenant provisioning |
 | DCFC-802 | 3 | pending | 801 + fresh approval | Production content/media/presentation import |

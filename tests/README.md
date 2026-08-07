@@ -7,6 +7,30 @@ still expect future local Supabase migrations; and architecture tests still
 expect future tenant/security modules. Until each corresponding delivery phase
 is implemented, those contracts must remain red.
 
+## Local database setup — required before `test:db` or `npm test`
+
+The database suite needs a running local Supabase **and** the test environment
+exported into the shell. Vitest does **not** auto-load `.env.test`; nothing in
+`vitest.config.ts` reads it, so the file alone is not enough.
+
+```bash
+supabase start
+cp .env.test.example .env.test   # then fill in from `supabase status`
+set -a && . ./.env.test && set +a && npm run test:db
+```
+
+Skipping the `set -a && . ./.env.test` step produces
+`[RED CONTRACT] Local Supabase is unavailable or the planned onzio.clubs
+contract is missing: Error: Expected 3 parts in JWT; got 1`, plus
+`Invalid supabaseUrl`. Both mean **the environment was not exported**, not that
+Supabase is down — check `supabase status` before concluding the database is
+unavailable. Roughly 75 database tests fail this way, and the message has
+already been misread once as an unrunnable environment (`DCFC-702`, 2026-08-06).
+
+`.env.test` is gitignored. Its values are local fixtures: the Supabase demo JWTs
+are identical on every local install, and the Stripe entries are inert
+placeholders the suite rejects live values for.
+
 Commands:
 
 - `npm test` — legacy regressions plus all platform contracts
