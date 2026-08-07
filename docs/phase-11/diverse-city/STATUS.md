@@ -1,5 +1,76 @@
 # Diverse City FC Status
 
+## 2026-08-07 - DCFC-702 COMPLETE — 11 of 11 items proved
+
+**Package:** `DCFC-702`
+**Status:** `complete` — all eleven checklist items proved
+**Agent:** Claude Opus 5 (Claude Code)
+
+**Approval used:** Christian approved the local rehearsal including
+`supabase db reset`. Loopback only. **Zero hosted mutation** across the entire
+package: no production or staging Supabase, no Stripe, no Vercel, no DNS, no
+real mailbox.
+
+**Item 7 — auth/admin acceptance rehearsal — PASSED.** Run entirely against
+loopback Supabase and local Mailpit with local-only identities.
+
+- Local membership used: `owner-aal2@alpha.local`, an `active` `owner` of
+  `diverse-city` (and of `alpha`, but **not** of `bravo` — which supplied a
+  genuine cross-tenant negative case).
+- Passwordless email-code sign-in completed end to end at
+  `http://diverse-city.localhost:3005/admin/login`.
+- The code was delivered to local Mailpit at
+  `plat101-code-5c4f1abe-…@onzio.local`, not to the member's real address.
+  **This confirms the PLAT-101 safe-recipient redirect works** — no local
+  rehearsal can reach a real mailbox.
+- **Negative case, expiry:** a code from an earlier send was rejected with
+  "That code is invalid or expired." Codes do not remain valid indefinitely.
+- **Positive case:** a freshly issued code signed in successfully and rendered
+  the admin dashboard.
+- Tenant scoping verified: `/admin/roster` renders under `DIVERSE CITY FC ADMIN`
+  with the full tenant nav.
+- **Negative case, cross-tenant:** with that same authenticated session,
+  `http://bravo.localhost:3005/admin` returns **404 Not found**. The session
+  owns `alpha` and `diverse-city` but not `bravo`, and access fails closed
+  rather than leaking another tenant's admin surface.
+
+**Scope note on MFA.** The checklist says "local identities/MFA". TOTP/AAL2 was
+**not** exercised, and correctly so: PLAT-101 makes TOTP mandatory for
+**operators**, while club owners authenticate by email code. This rehearsal
+covers the club-owner boundary. The operator TOTP boundary is a separate
+surface and is not part of the Diverse City tenant cutover.
+
+**Full package result — all eleven items:**
+
+| # | Item | Result |
+| --- | --- | --- |
+| 1 | Manifest digest matches staging-accepted | Passed |
+| 2 | Migration ledger replays from scratch | Passed — head `20260804061257`, `pronargs=14`, db 83/83 |
+| 3 | Plan deterministic across two runs | Passed — identical digests |
+| 4 | Import idempotent and reconciles | Passed — `uploaded:0, reused:10` on replay |
+| 5 | Baseline isolation preserved | Passed for `alpha`/`bravo`/`charlie`; no Rose City club exists locally |
+| 6 | Renders on simulated hosts with `noindex, nofollow` | Passed — unconditional header per `DCFC-D117`, verified at runtime |
+| 7 | Auth/admin rehearsed with local identities | Passed — see above |
+| 8 | Stripe uses inert local fixtures, no live call | Passed — `hostedMutations: 0` |
+| 9 | Rollback removes only Diverse City artifacts | Passed — `removedObjects:10, removedTenant:true` |
+| 10 | Identical replay after rollback | Passed — `replayDigest == firstDigest` |
+| 11 | Full local verification, no hosted credentials | Passed — 680/680 across 79 files |
+
+**Files changed:** this entry only. No application code changed by item 7.
+
+**Blockers and unresolved decisions:**
+- Item 5 could only be proved for the clubs present in local fixtures. If Rose
+  City isolation must be proved locally, the fixture set needs a Rose City club;
+  otherwise the checklist wording should be narrowed to the clubs that exist.
+- `DCFC-1003` must implement indexing as an explicit per-club opt-in defaulting
+  to blocked. Reintroducing a `public_access` branch would silently re-open the
+  `DCFC-D117` violation corrected earlier today.
+
+**Exact next step:** `DCFC-703` production go/no-go packet is now eligible to be
+assembled. It authorises nothing on its own — a go makes only `DCFC-801`
+eligible, and the RELEASE GATE at the top of `PRODUCTION-CUTOVER-ROLLBACK.md`
+still governs the fifteen pending migrations.
+
 ## 2026-08-07 - DCFC-702 Track B follow-up: tenant robots contract implemented
 
 **Package:** `DCFC-702`

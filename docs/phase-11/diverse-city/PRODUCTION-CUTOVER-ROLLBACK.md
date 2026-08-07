@@ -2,9 +2,9 @@
 
 Epic: `DCFC-EPIC-002`
 
-Status: `dcfc_701_in_progress_read_only_preflight`
+Status: `dcfc_702_complete_local_rehearsal_passed`
 
-Last updated: 2026-08-06
+Last updated: 2026-08-07
 
 This checklist covers `DCFC-701`–`DCFC-1003`. It plans hosted mutations but
 authorizes none. Production private preview, billing, domain attachment,
@@ -232,22 +232,22 @@ write, or provisioning occurred.
 
 ## Local Cutover/Rollback Rehearsal (`DCFC-702`)
 
-- [ ] Production-target content/media/presentation manifest matches the exact
+- [x] Production-target content/media/presentation manifest matches the exact
   staging-accepted digest.
-- [ ] Release migration ledger replays from scratch on loopback Supabase.
-- [ ] Import plan is deterministic across two independent runs.
-- [ ] Import is idempotent and reconciles every table, relationship, object,
+- [x] Release migration ledger replays from scratch on loopback Supabase.
+- [x] Import plan is deterministic across two independent runs.
+- [x] Import is idempotent and reconciles every table, relationship, object,
   asset reference, checksum, route, module, and presentation pointer.
-- [ ] Rose City and synthetic Alpha/Bravo remain unchanged and isolated.
-- [ ] Diverse City renders on simulated production and private hostnames at
+- [x] Rose City and synthetic Alpha/Bravo remain unchanged and isolated.
+- [x] Diverse City renders on simulated production and private hostnames at
   desktop/mobile with `noindex, nofollow`.
-- [ ] Auth/admin acceptance is rehearsed only with local identities/MFA.
-- [ ] Stripe behavior uses inert/test-shaped fixtures locally; no live call.
-- [ ] Rollback restores the previous deployment/config representation and
+- [x] Auth/admin acceptance is rehearsed only with local identities/MFA.
+- [x] Stripe behavior uses inert/test-shaped fixtures locally; no live call.
+- [x] Rollback restores the previous deployment/config representation and
   removes/restores only Diverse City tenant artifacts.
-- [ ] Identical replay after rollback produces the original manifest digest
+- [x] Identical replay after rollback produces the original manifest digest
   and acceptance result.
-- [ ] Full local verification passes without hosted credentials.
+- [x] Full local verification passes without hosted credentials.
 
 ## Production Go/No-Go Packet (`DCFC-703`)
 
