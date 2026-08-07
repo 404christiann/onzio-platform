@@ -2,6 +2,23 @@
 
 Last updated: 2026-08-07
 
+## Two roster fixes shipped: fetchRoster empty-season bug + staff crest fallback
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+deployed and verified live.
+
+Committed `70ca39f`, pushed to `origin/staging`, deployed via `vercel deploy
+--prod` (`dpl_E2wPja1y7XRoRd6c716by2CN2mLE`), and re-aliased
+`diverse-city-fc-private.vercel.app` to the new deployment (required every
+time — the private hostname doesn't follow `--prod`'s automatic primary-domain
+alias). Verified live: `/roster` on the private hostname shows "Spring 2026
+Season," all 11 players, and all 4 Technical Staff now render the club crest
+with a working profile modal (previously plain initials tiles). Rose City
+confirmed unaffected (`onzio-platform.vercel.app` still 200s with Rose City
+content).
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## Two roster fixes ready locally (fetchRoster empty-season bug + staff crest fallback) — NOT yet committed or deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: code complete,

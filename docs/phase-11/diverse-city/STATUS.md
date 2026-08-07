@@ -1,5 +1,55 @@
 # Diverse City FC Status
 
+## 2026-08-07 - fetchRoster empty-season fix + staff crest fallback: committed, deployed, verified live
+
+**Package:** none — ad hoc, Christian's explicit "just deploy to production"
+**Status:** `complete`
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+Follow-up to the entry below (same fixes, now shipped). Christian asked how
+to check the fixes out first; local dev turned out to have no working
+storage/media at all in this environment (pre-existing gap, the default
+Rose City crest doesn't even render locally — confirmed while trying to
+seed a faithful local preview onto the `alpha` tenant), so a real visual
+check wasn't practical locally. Given tests were already green and the
+change was small, Christian said to just deploy to production.
+
+**Shipped:**
+- Committed `70ca39f`: "Fix fetchRoster empty-season crash and staff crest
+  fallback" (`lib/queries.ts`, `lib/__tests__/queries.test.ts`,
+  `components/StaffCard.tsx`, `components/StaffModal.tsx`, `HANDOFF.md`,
+  this file). Pushed to `origin/staging`.
+- `vercel deploy --prod` → `dpl_E2wPja1y7XRoRd6c716by2CN2mLE`, aliased to
+  `onzio-platform.vercel.app` automatically.
+- Per the standing gotcha (recorded in the entry two below this one): also
+  ran `vercel alias set dpl_E2wPja1y7XRoRd6c716by2CN2mLE
+  diverse-city-fc-private.vercel.app` — the private hostname does not
+  follow `--prod`'s primary-domain alias automatically. Confirmed via
+  `vercel inspect diverse-city-fc-private.vercel.app` that it now points at
+  the new deployment id.
+
+**Verified live:**
+- `https://diverse-city-fc-private.vercel.app/roster` (Christian's Chrome,
+  via Claude in Chrome): "Spring 2026 Season" header, all 11 players
+  correctly grouped, all 4 Technical Staff cards now render the club crest
+  (previously plain gray initials tiles — screenshotted both states this
+  session). Clicked a staff card: `StaffModal` opens correctly showing the
+  crest, initials badge, name, role, hometown, nationality, and the
+  "Preview profile..." bio — confirms the modal-open behavior that was
+  already working continues to work with the new image source.
+- Rose City sanity check: `curl -s -o /dev/null -w "%{http_code}" 
+  https://onzio-platform.vercel.app/` → `200`, body contains "Rose City" —
+  unaffected by the deploy.
+- Did not re-run the full suite post-deploy (no code changed between the
+  pre-deploy verification in the entry below and this deploy — same commit).
+
+**Files changed:** none beyond the prior entry's commit; this entry is
+deploy + verification only.
+
+**Exact next step:** resume the pixel-perfect page-by-page comparison sweep
+(roster/schedule done, programs in progress, shop/sponsors/contact/tryouts
+remaining).
+
 ## 2026-08-07 - fetchRoster empty-season fix + staff crest fallback (code complete, NOT yet committed/deployed)
 
 **Package:** none — ad hoc, both items directed by Christian live in chat
