@@ -1,5 +1,57 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Added missing "Find Your Pathway" CTA to `/programs`
+
+**Package:** none — ad hoc, Christian's explicit go-ahead ("build the CTA
+now, hold sponsors for later") following the pixel-perfect sweep entry below
+**Status:** `complete`
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+Added the closing CTA section `/programs` was missing relative to the sales
+mockup: headline "Find your pathway.", a contact prompt paragraph, and a
+"Find your program" button. Only shown when `programs.length > 0` (the
+existing "Programs coming soon... contact the club" empty state already
+covers the zero-programs case, so showing both would be redundant).
+
+Kept it generic/reusable across future `academy@1` clubs rather than
+hardcoding "Diverse City FC": added an optional `clubName` prop to
+`AcademyProgramsPage` (defaults to `"the club"`), threaded from
+`club.name` in the tenant-scoped route
+(`app/%5Fclubs/[slug]/programs/page.tsx`). The button links to `/contact`
+(the platform's own contact page) rather than the mockup's raw
+`mailto:diverse.cityfc@gmail.com` — consistent with how other CTAs in this
+codebase (e.g. `ShopKitSection`'s homepage embed) prefer internal
+navigation over a hardcoded external link when a real destination page
+exists.
+
+Styled to match `AcademyProgramsPage`'s own existing visual language (its
+hero section's `bg-[#141414]` dark band, `var(--color-red)` accent) rather
+than copying the mockup's navy/light-blue palette verbatim — the production
+`academy@1` template already diverged from the mockup's specific color
+choices intentionally (per `DCFC-D104`), so this new section follows the
+template's own established convention, not the mockup's.
+
+**Verified:**
+- `npx tsc --noEmit` clean.
+- Full suite green: `686/686` (`.env.test` exported).
+- Checked the one existing test that reads `AcademyProgramsPage.tsx`'s
+  source (`tests/contracts/diverse-city-admin-public-acceptance.test.ts`) —
+  a combined-file string-contains contract, unaffected by this addition.
+- Not yet verified live in a real browser (deploying next).
+
+**Files changed:** `components/AcademyProgramsPage.tsx`,
+`app/%5Fclubs/[slug]/programs/page.tsx`, this file.
+
+**Exact next step:** commit, push, deploy, re-alias the private hostname,
+verify `/programs` live.
+
+**`/sponsors` decided, not deferred:** Christian's exact words: "Since the
+sponsor page didnt exist, lets not add it." The stub behavior
+(`app/(public)/sponsors/page.tsx` showing "Partners are not published for
+this site yet." for any non-`clubhouse@1` template) is accepted as-is for
+Diverse City — not a bug to revisit later, a closed decision. See `DECISIONS.md`
+`DCFC-D130`.
+
 ## 2026-08-07 - Pixel-perfect mockup-vs-production sweep complete
 
 **Package:** none — ad hoc, Christian's request to compare the sales mockup

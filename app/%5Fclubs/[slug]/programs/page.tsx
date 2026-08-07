@@ -13,5 +13,5 @@ export default async function TenantProgramsPage({
   if (club.presentationTemplateKey !== "academy@1") notFound();
   const onzio = (await createClient()).schema("onzio");
   const programs = await fetchPrograms(club.id, onzio);
-  return <AcademyProgramsPage programs={programs} />;
+  return <AcademyProgramsPage programs={programs} clubName={club.name} />;
 }

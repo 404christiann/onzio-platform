@@ -2,6 +2,22 @@
 
 Last updated: 2026-08-07
 
+## Added missing "Find Your Pathway" CTA to `/programs`
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+deploying now.
+
+Added the closing CTA section `/programs` was missing versus the sales
+mockup (headline + contact prompt + "Find your program" button, linking to
+`/contact`). Made it reusable across future `academy@1` clubs via a
+`clubName` prop rather than hardcoding Diverse City FC. Styled to match the
+production template's own existing palette, not the mockup's. `tsc` clean,
+suite `686/686`. Full detail in `docs/phase-11/diverse-city/STATUS.md`.
+
+`/sponsors` is a closed decision, not deferred: Christian confirmed the
+existing stub page is fine as-is since a real sponsors page never existed
+for this template in the first place. See `DECISIONS.md` `DCFC-D130`.
+
 ## Pixel-perfect mockup-vs-production sweep complete
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.

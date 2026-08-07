@@ -4,8 +4,10 @@ import type { ProgramContent } from "@/lib/queries";
 
 export default function AcademyProgramsPage({
   programs,
+  clubName = "the club",
 }: {
   programs: ProgramContent[];
+  clubName?: string;
 }) {
   return (
     <div className="min-h-screen bg-white pt-24 text-[#141414] sm:pt-28">
@@ -77,6 +79,28 @@ export default function AcademyProgramsPage({
           )}
         </div>
       </section>
+
+      {programs.length > 0 && (
+        <section className="bg-[#141414] px-6 py-20 text-white sm:py-28 lg:px-10">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-end">
+            <h2 className="text-4xl font-black sm:text-6xl">
+              Find your pathway.
+            </h2>
+            <div>
+              <p className="text-base leading-7 text-white/70 sm:text-lg">
+                Contact {clubName} to find the program that best fits your
+                athlete&apos;s goals and support needs.
+              </p>
+              <Link
+                href="/contact"
+                className="mt-7 inline-flex bg-[var(--color-red)] px-8 py-4 font-display text-sm font-black uppercase tracking-[0.16em] text-white transition hover:opacity-90"
+              >
+                Find your program
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
