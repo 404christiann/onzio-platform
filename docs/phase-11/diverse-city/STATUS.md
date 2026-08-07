@@ -42,12 +42,13 @@ channel. The trade-off is that an unauthenticated caller can read the code;
 failure below.
 
 **Blockers and unresolved decisions:**
-- `tests/contracts/diverse-city-admin-public-acceptance.test.ts` fails
-  independently of this change, verified by re-running with the change stashed.
-  It expects `fetchPrograms(club.id)` while the tenant Programs page now calls
-  `fetchPrograms(club.id, onzio)` after the DCFC-602 browser-client session fix.
-  DCFC-304 acceptance is therefore currently red and needs its owner to decide
-  whether the test or the call site is authoritative.
+- ~~`tests/contracts/diverse-city-admin-public-acceptance.test.ts` fails
+  independently of this change.~~ **Resolved in the same session.** The DCFC-304
+  assertions expected the pre-DCFC-602 single-argument calls. The call sites were
+  authoritative: DCFC-602 deliberately passes the server-resolved schema-scoped
+  client so the authenticated-member read path is reachable. All four assertions
+  were tightened to the full call including the explicit client, rather than
+  loosened to a prefix match. `npm run test:contracts` is now 341/341.
 - **This fix is not live in production.** Production serves commit `10559e5`,
   and this lands on `staging`. It reaches production only with the PLAT-102
   promotion, which is itself gated on applying the PLAT-102 migrations first.

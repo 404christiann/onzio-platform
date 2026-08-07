@@ -37,11 +37,17 @@ describe("DCFC-304 reusable public route acceptance", () => {
 
   it("loads every public domain with the server-resolved tenant id", () => {
     const joined = tenantRoutes.map(source).join("\n");
+    // The tenant id stays the first argument, and DCFC-602 additionally
+    // requires the server-resolved schema-scoped client to be passed
+    // explicitly: the default browser client stores its session in
+    // localStorage while middleware uses cookies, so without this the
+    // authenticated-member read path is unreachable and public reads run as
+    // anonymous. Both halves are the contract, so assert the full call.
     for (const query of [
-      "fetchPrograms(club.id)",
-      "fetchProgramBySlug(club.id, programSlug)",
-      "fetchContactContent(club.id)",
-      "fetchTryouts(club.id)",
+      "fetchPrograms(club.id, onzio)",
+      "fetchProgramBySlug(club.id, programSlug, onzio)",
+      "fetchContactContent(club.id, onzio)",
+      "fetchTryouts(club.id, onzio)",
     ]) {
       expect(joined).toContain(query);
     }
