@@ -73,7 +73,7 @@ export default function LoginPage() {
   }
 
   async function verifyCode(candidate: string) {
-    if (candidate.length !== 6 || loading) return;
+    if (candidate.length < 4 || loading) return;
     if (lastSubmittedCode.current === candidate) return;
     lastSubmittedCode.current = candidate;
     setLoading(true);
@@ -166,7 +166,7 @@ export default function LoginPage() {
         ) : step === "code" ? (
           <form onSubmit={submitCode} className="mt-8 space-y-5">
             <p className="text-sm leading-6 text-white/55">
-              We sent a six-digit sign-in code to{" "}
+              We sent a sign-in code to{" "}
               <strong className="break-all text-white/85">{email.trim()}</strong>.
             </p>
             <label className="block text-sm font-semibold" htmlFor="sign-in-code">
@@ -179,22 +179,21 @@ export default function LoginPage() {
               autoComplete="one-time-code"
               autoFocus
               required
-              pattern="[0-9]{6}"
-              minLength={6}
-              maxLength={6}
+              pattern="[0-9]{4,10}"
+              minLength={4}
+              maxLength={10}
               value={code}
               onChange={(event) => {
                 const nextCode = event.target.value
                   .replace(/\D/g, "")
-                  .slice(0, 6);
+                  .slice(0, 10);
                 setCode(nextCode);
-                if (nextCode.length === 6) void verifyCode(nextCode);
               }}
               className="w-full rounded-lg border border-white/10 bg-black px-4 py-3 text-center font-mono text-2xl tracking-[0.35em] text-white outline-none focus:border-red-500"
             />
             <button
               type="submit"
-              disabled={loading || code.length !== 6}
+              disabled={loading || code.length < 4}
               className="w-full rounded-lg bg-red-600 py-3 font-display font-black uppercase tracking-widest disabled:opacity-50"
             >
               {loading ? "Verifying…" : "Sign in"}

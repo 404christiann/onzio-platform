@@ -2,6 +2,105 @@
 
 Last updated: 2026-08-07
 
+## Second production bug fixed: admin login hard-coded 6-digit codes, deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+pending Christian's live confirmation.
+
+`app/admin/login/page.tsx` hard-coded a 6-digit OTP assumption
+(`maxLength={6}`, exact-length auto-submit and verify guards), but this
+production project's Supabase Auth issues 8-digit codes — confirmed
+repeatedly during the operator-script debugging earlier tonight. The code
+input was silently truncating real codes to their first 6 digits before
+submitting, so every login attempt failed with "invalid or expired," which
+was misleading — it was never actually expiring, it was being cut short.
+
+This is configuration drift, not intended design: `supabase/config.toml`
+says `otp_length = 6`, and an existing contract test already asserted the
+client matches that. Production's Auth dashboard has drifted to 8 without
+that being reflected in the repo. Fixed the client to accept 4–10 digits
+instead of assuming a fixed length (removed the auto-submit-at-6-digits
+behavior accordingly), updated the contract test, and asked Christian to
+separately correct production's OTP length setting back to 6 — doing both
+rather than just papering over the drift client-side.
+
+Tested end-to-end against local dev first (real 6-digit code, full login
+succeeded) before deploying. Deployed via `vercel deploy --prod`,
+`dpl_EZCxP5iAm9MFKXW5215bUFdxWfi4`. Rose City reverified unaffected, zero
+runtime errors post-deploy.
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`. Files changed:
+`app/admin/login/page.tsx`, `tests/contracts/platform-auth.test.ts`, that
+STATUS.md entry, this file.
+
+## Production bug fixed: resolve_verified_tenant had no grants
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
+
+`onzio.resolve_verified_tenant(text, text)` — middleware's fallback tenant
+lookup for admin/billing paths on a non-`live` tenant — had no `EXECUTE`
+grant for `anon`/`authenticated`/`service_role` in production, despite
+`20260727171658_phase7_private_preview_resolution.sql` already containing
+the intended `GRANT`. This has silently existed since that migration first
+ran; Rose City never exercised the fallback (always `public_access=live`,
+so its direct lookup always succeeds), so nobody noticed until Diverse City
+— still `preview` — hit it today and 404'd on `/admin/login` for every
+visitor including its own owner.
+
+Fixed with a one-line grant-restoring migration:
+`supabase/migrations/20260807200000_fix_resolve_verified_tenant_grants.sql`.
+Rehearsed locally, verified missing pre-fix and present post-fix via direct
+`SET ROLE anon` queries against production, applied, then confirmed live in
+a real browser session — `/admin/login` on the private host now renders
+correctly. `/` still 404s for anonymous visitors, which is unrelated and
+intentional (RLS only exposes `live` clubs to anon).
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`. Worth checking
+whether any other `security invoker` wrapper functions in the `onzio`
+schema have the same missing-grant problem — this one went unnoticed for
+over a week simply because nothing exercised its fallback path.
+
+## DCFC-802 complete — Diverse City FC content/media live in production
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
+
+Imported the same approved content/media plan already proven in `DCFC-403`/
+`DCFC-503` into production tenant `d7a41762-5158-496e-b415-c83c01ab5c70`.
+Built `scripts/import-diverse-city-production.ts` (ported from the working
+staging script), but ran the actual mutation through a different channel
+than the checked-in script expects: no production secret key was available
+to this agent (same Vercel-Sensitive restriction as `DCFC-801`), so media
+went through `supabase storage cp --linked` (uses the CLI's own linked
+session) and the generated SQL through `supabase db query --linked --file`,
+reproducing the checked-in script's exact staging→publish→verify→cleanup
+logic by other means. One CLI gotcha worth knowing: `supabase storage rm`
+silently does nothing without `--yes` in a non-interactive shell.
+
+Verified: 10/10 media assets checksum-exact after publish, `programs=4`,
+`presentation_documents=1`, idempotent replay proven for real (re-ran the
+guarded SQL, identical result, no duplicate audit row), Rose City unchanged.
+Not verified: actual visual rendering, since the private host sits behind
+Vercel's SSO gate this agent can't pass — Christian should check it himself.
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md` and
+`PRODUCTION-CUTOVER-ROLLBACK.md`. Files changed:
+`scripts/import-diverse-city-production.ts` (new), those two docs, and
+`CONTENT-MEDIA-READINESS.md`. No application code changed.
+
+## clubs.kind gap fixed — provisionClub() now requires an explicit kind
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
+
+`provisionClub()` previously hardcoded `clubs.kind = "test"` for every tenant
+it provisioned, silently exempting real customer clubs from the Stripe
+billing-entitlement gate `PLAT-102` introduced. Fixed: `kind` is now a
+required enum input (`customer`/`demo`/`test`, no default), returned in the
+function's result for verifiability. Updated all three callers and the
+contract test suite (685/685, up from 680). Diverse City FC's already-
+provisioned production row was corrected from `kind='test'` to
+`kind='customer'` and verified; Rose City confirmed unaffected. Full detail
+in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## DCFC-801 tenant provisioning complete — Diverse City FC exists in production (DB only)
 
 Agent: Claude Sonnet 5 (Claude Code) with Christian, 2026-08-07. Status:

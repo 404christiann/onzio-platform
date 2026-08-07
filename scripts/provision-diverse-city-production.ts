@@ -64,6 +64,7 @@ async function main() {
     slug: SLUG,
     name: NAME,
     primaryDomain: PRIMARY_DOMAIN,
+    kind: "customer",
     ownerEmail: OWNER_EMAIL,
     existingAuthUserId: EXISTING_OWNER_AUTH_USER_ID,
     operatorAccessToken,

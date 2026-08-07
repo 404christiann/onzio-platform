@@ -27,6 +27,7 @@ describe("operator provisioning contract", () => {
     slug: "charlie",
     name: "Charlie Athletic",
     primaryDomain: "charlie-onzio.vercel.app",
+    kind: "customer" as const,
     ownerEmail: "owner@charlie.example",
     operatorAccessToken: OPERATOR_TOKEN,
     dependencies: operatorDependencies,
@@ -40,6 +41,7 @@ describe("operator provisioning contract", () => {
     await expect(provisionClub(request)).resolves.toMatchObject({
       club: {
         slug: "charlie",
+        kind: "customer",
         lifecycle: "onboarding",
         publicAccess: "preview",
       },
@@ -73,6 +75,8 @@ describe("operator provisioning contract", () => {
     [{ existingSlug: true }, "SLUG_CONFLICT"],
     [{ existingDomain: true }, "DOMAIN_CONFLICT"],
     [{ simulateMembershipFailure: true }, "PROVISIONING_ROLLED_BACK"],
+    [{ kind: undefined }, "INVALID_OPERATOR_INPUT"],
+    [{ kind: "enterprise" }, "INVALID_OPERATOR_INPUT"],
   ] as const)("rolls back invalid provisioning %#", async (override, code) => {
     const provisionClub = await loadContract<ProvisionClub>(
       "@/lib/operator/provision-club",
@@ -83,6 +87,19 @@ describe("operator provisioning contract", () => {
       code,
     );
   });
+
+  it.each(["customer", "demo", "test"] as const)(
+    "persists the requested kind (%s)",
+    async (kind) => {
+      const provisionClub = await loadContract<ProvisionClub>(
+        "@/lib/operator/provision-club",
+        "provisionClub",
+      );
+      await expect(
+        provisionClub({ ...request, kind }),
+      ).resolves.toMatchObject({ club: { kind } });
+    },
+  );
 });
 
 describe("archive, reactivate, and purge contract", () => {

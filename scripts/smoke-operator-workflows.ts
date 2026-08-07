@@ -38,6 +38,7 @@ async function main() {
     slug,
     name: "Operator Smoke FC",
     primaryDomain: `${slug}.localhost`,
+    kind: "test",
     ownerEmail: "multiclub@local.test",
     operatorAccessToken,
     existingAuthUserId: EXISTING_OWNER_ID,

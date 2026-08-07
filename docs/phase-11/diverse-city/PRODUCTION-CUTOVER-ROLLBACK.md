@@ -363,11 +363,11 @@ attempted — those checklist items below remain unticked and untouched.
   after: all four rows (`clubs`, `club_domains`, `club_members`,
   `audit_events`) present and correct; Rose City (`rose-city`) confirmed
   unchanged (`lifecycle=active`, `public_access=live`).
-  **Known gap, not fixed here:** `provisionClub()` hardcodes `clubs.kind =
-  'test'` regardless of tenant — Diverse City FC's row is `kind='test'`, not
-  `'customer'`, which per the `PLAT-102` migration's own comment governs
-  Stripe billing entitlement. Flagged as a follow-up task; needs resolving
-  before `DCFC-901`.
+  **Gap fixed same day:** `provisionClub()` hardcoded `clubs.kind = 'test'`
+  regardless of tenant. Fixed to require an explicit `kind` input (no
+  default); Diverse City FC's production row corrected to `kind='customer'`
+  and verified. See the 2026-08-07 "clubs.kind gap fixed" entry in
+  `STATUS.md` for full detail. This item no longer blocks `DCFC-901`.
   **Also note:** provisioning triggered a real owner sign-in-code email to
   `christianjavieralcala@gmail.com` as part of the same function call — this
   is technically `DCFC-803` scope (invitations/email) bundled into `DCFC-801`;
@@ -410,19 +410,48 @@ attempted — those checklist items below remain unticked and untouched.
 
 ### Content/media/presentation (`DCFC-802`)
 
-- [ ] Fresh approval names the immutable plan digest and exact tenant UUID.
-- [ ] Import only accepted production content and normalized media.
-- [ ] Publish/assign the exact `academy@1` presentation digest.
-- [ ] Reconcile source, normalized, uploaded, reused, Database, Storage,
-  reference, and presentation counts/checksums.
-- [ ] Confirm hidden/blocked content and temporary URLs are absent.
-- [ ] Confirm no video is imported unless a separately completed capability is
+**2026-08-07 — complete.** Christian approved proceeding in chat immediately
+after `DCFC-801` closed. See the 2026-08-07 "DCFC-802 complete" entry in
+`STATUS.md` for full detail.
+
+- [x] Fresh approval names the immutable plan digest and exact tenant UUID.
+  Plan digest `63d1867685c59c7dee3ce2cedda9e8400dae73d930d2488a601bdec5fae9fa36`
+  (same approved plan reused from `DCFC-403`/`DCFC-503`); tenant
+  `d7a41762-5158-496e-b415-c83c01ab5c70`.
+- [x] Import only accepted production content and normalized media. Exactly
+  the 10 approved assets, normalized locally, checksums matched the plan
+  before upload.
+- [x] Publish/assign the exact `academy@1` presentation digest.
+  `presentation_digest=1d2c6ce9eb91be5cc18a6017ffc783bdaedd231b40ea2bf5f3830b9b3549a008`,
+  `published_document_id=8d33b906-afc8-505c-99e0-1a35f22efe81`.
+- [x] Reconcile source, normalized, uploaded, reused, Database, Storage,
+  reference, and presentation counts/checksums. `media_assets=10`,
+  `programs=4`, `presentation_documents=1`; all 10 published objects
+  re-downloaded and re-checksummed byte-exact after publish;
+  `onzio-upload-staging` empty for this tenant afterward.
+- [x] Confirm hidden/blocked content and temporary URLs are absent. Manifest
+  matches the accepted `CONTENT-MEDIA-READINESS.md` dispositions (no roster/
+  staff/fixtures/standings/tryout-event rows, no forbidden URLs).
+- [x] Confirm no video is imported unless a separately completed capability is
   named by evidence; otherwise the approved static/hide treatment renders.
-- [ ] Confirm no registration/payment/waiver/medical/signature/participant data
-  path exists.
-- [ ] Confirm media uses raw immutable URLs and intentional fallbacks.
-- [ ] Prove idempotent replay and capture a complete compensation ledger.
-- [ ] Reverify Rose City and other production tenants are unchanged.
+  No video imported — `DCFC-D114`'s approved static/hide disposition used, as
+  planned.
+- [x] Confirm no registration/payment/waiver/medical/signature/participant data
+  path exists. None imported; matches the accepted manifest.
+- [x] Confirm media uses raw immutable URLs and intentional fallbacks.
+  Published to versioned `onzio-media` paths only; no
+  `/storage/v1/render/image/` or `/_next/image` usage.
+- [x] Prove idempotent replay and capture a complete compensation ledger.
+  Re-ran the identical guarded SQL a second time: identical result,
+  `import_audits` stayed at `1` (not `2`).
+- [x] Reverify Rose City and other production tenants are unchanged.
+  `rose-city`: `lifecycle=active`, `public_access=live`, unchanged;
+  `onzio-platform.vercel.app` still 200.
+
+**Not independently verified:** visual desktop/mobile rendering of the
+private preview — it sits behind Vercel's SSO gate (per the `DCFC-801`
+finding), which this agent cannot pass. Christian should check this
+directly.
 
 ### Auth/admin acceptance (`DCFC-803`)
 

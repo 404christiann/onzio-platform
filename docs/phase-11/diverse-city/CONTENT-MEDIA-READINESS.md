@@ -282,3 +282,23 @@ count. No raw source, excluded image, SVG, video, runtime transformation,
 optimizer URL, temporary registration URL, or preview-only fact was uploaded
 or referenced. Full counts and presentation evidence are in
 `STAGING-ACCEPTANCE.md` and `STATUS.md`.
+
+## Production Import Record (`DCFC-802`)
+
+Christian separately approved `DCFC-802` on 2026-08-07 for Supabase
+production project `ioalthwsdrlzrubomrow`, tenant
+`d7a41762-5158-496e-b415-c83c01ab5c70`, and the same immutable semantic
+digest recorded above. This approval is exhausted.
+
+The hosted import reused the identical approved plan and normalized all ten
+retained sources locally, staged each in private `onzio-upload-staging`,
+checksum-verified, published once to the translated production tenant UUID
+path in `onzio-media`, checksum-verified again, and removed the staging
+input. Final counts match the plan exactly: 10 media assets, 4 Programs, 1
+presentation document, 1 import-audit row. A second identical run of the
+guarded database step reproduced the same result with no duplicate audit
+row, proving idempotency for real (not only simulated). No raw source,
+excluded image, SVG, video, runtime transformation, optimizer URL, or
+preview-only fact was uploaded or referenced. Rose City confirmed
+unchanged. Full counts and evidence are in `PRODUCTION-CUTOVER-ROLLBACK.md`
+and `STATUS.md`.

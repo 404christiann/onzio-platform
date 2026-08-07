@@ -18,15 +18,23 @@ describe("PLAT-101 passwordless authentication contract", () => {
   const authConfig = read("supabase/config.toml");
   const magicLinkTemplate = read("supabase/templates/magic_link.html");
 
-  it("requests a code without creating unknown users and verifies exactly six digits", () => {
+  it("requests a code without creating unknown users and verifies without assuming a fixed code length", () => {
     expect(loginPage).toContain("supabase.auth.signInWithOtp");
     expect(loginPage).toContain("shouldCreateUser: false");
     expect(loginPage).toContain("supabase.auth.verifyOtp");
     expect(loginPage).toContain('type: "email"');
     expect(loginPage).toContain('autoComplete="one-time-code"');
     expect(loginPage).toContain('inputMode="numeric"');
-    expect(loginPage).toContain("maxLength={6}");
-    expect(loginPage).toContain("nextCode.length === 6");
+    // The configured otp_length (see below) is the intended value, but the
+    // client must not hard-code a fixed digit count: production has drifted
+    // from config.toml before (8 digits vs the configured 6) and silently
+    // truncating/rejecting a correct code is worse than accepting whatever
+    // length the server actually issues.
+    expect(loginPage).toContain("minLength={4}");
+    expect(loginPage).toContain("maxLength={10}");
+    expect(loginPage).toContain("candidate.length < 4");
+    expect(loginPage).not.toContain("maxLength={6}");
+    expect(loginPage).not.toContain("nextCode.length === 6");
   });
 
   it("maps an unknown address to the exact accepted message", () => {
