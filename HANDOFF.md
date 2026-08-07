@@ -2,6 +2,34 @@
 
 Last updated: 2026-08-06
 
+## Known non-regressions — do not investigate these as bugs
+
+Read this before opening an investigation into Stripe rejection rows or the
+production Pro price. Both items below are expected, deliberate, and verified.
+
+**1. MVMNT CULTR events are rejected by the Onzio webhook, by design.**
+Live subscription `sub_1U0q37K6WajTkwHYlfhGjpV2` (customer
+`cus_V0rm5Z6bgU7sVE`, product `prod_V0b5dZPlJHxdzM` "MVMNT CULTR - Website",
+$65/mo, active since 2026-08-04) belongs to a **non-Onzio client** on the same
+Stripe account `acct_1TvPQyK6WajTkwHY`. It carries no `onzio_club_id` or
+`onzio_environment` metadata. Its billing events reach the same endpoint
+`we_1TwEpdK6WajTkwHYD5SEYzXX` and are correctly rejected, writing rejection
+rows to `onzio.stripe_events`. This fails closed and is the intended tenant
+isolation behaviour. Expect recurring rejection rows on that subscription's
+monthly billing cycle. **Do not "fix" this, and do not add Onzio metadata to
+that subscription.** The only change worth considering is a separate Stripe
+account or endpoint per business line.
+
+**2. `STRIPE_PRICE_ID_PRO` is `price_1TwbmvK6WajTkwHYueLvjhv5` ($75), not the
+$99 price, and that is deliberate.**
+The deployed commit reads this variable in two directions: `tierForPriceId`
+maps an incoming subscription's price to a tier (webhook path), and
+`priceIdForTier` selects the price for a new Checkout. Rose City's subscription
+bills against the $75 price, so a $99 value here rejects its events with
+`UNKNOWN_PRICE` — the DCFC-701 failure. As of 2026-08-06 the intended Pro price
+is $75, which makes this value correct in both directions. If you find a $99
+expectation somewhere, that expectation is stale, not this variable.
+
 ## DCFC-701 production billing webhook remediation complete
 
 Agent: Claude Opus 5 (Claude Code), 2026-08-06. Status: `complete`.
