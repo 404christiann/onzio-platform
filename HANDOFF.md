@@ -2,6 +2,23 @@
 
 Last updated: 2026-08-07
 
+## Pixel-perfect mockup-vs-production sweep complete
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
+
+Compared every route between the sales mockup and production. Found and
+shipped three real bugs this session (roster empty-season crash, staff
+crest fallback, `/shop` rendering blank on first load — see entries below
+for each). Found one real unbuilt feature (no `/sponsors` page exists for
+Diverse City's `academy@1` template — every non-`clubhouse@1` club gets a
+hardcoded stub regardless of actual sponsor data) and one small missing
+static CTA section on `/programs`, both left for Christian to prioritize
+rather than fixed unilaterally. Everything else checked out as either
+already matching or a previously-approved, correctly-implemented scope
+decision (schedule, tryouts, contact, homepage sections).
+
+Full findings in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## `/shop` renders blank on first load — fix ready, NOT yet shipped
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: fix complete

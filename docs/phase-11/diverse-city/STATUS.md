@@ -1,5 +1,89 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Pixel-perfect mockup-vs-production sweep complete
+
+**Package:** none — ad hoc, Christian's request to compare the sales mockup
+(`onzioProspects/diverse-city-fc/site`) against production page-by-page
+**Status:** `complete` (sweep); two bugs found and shipped this session
+(see entries below), one real gap found and left unfixed pending scope
+decision, several differences confirmed as already-approved and correct
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+Covered every route: `/`, `/roster`, `/schedule`, `/programs` + 4 detail
+routes, `/shop`, `/sponsors`, `/contact`, `/tryouts`. Full findings
+delivered to Christian in chat; summarized here for the record.
+
+**Bugs found and shipped this session** (full detail in the entries below):
+1. `fetchRoster` 400'd on an empty-string `season_id` when no active season
+   existed, surfacing a raw error instead of the page's own "Roster coming
+   soon" empty state. Fixed, deployed.
+2. `StaffCard`/`StaffModal` didn't fall back to the club crest like player
+   cards do. Fixed, deployed.
+3. `/shop` rendered completely blank on first load — GSAP `ScrollTrigger`
+   fade-in assumed below-the-fold content, but the same component is also
+   used as the page's own hero (already in view at scroll 0, so the trigger
+   never fires without an explicit scroll). Fixed, deployed.
+
+**Real gap found, not fixed — needs a scope decision, not a quick patch:**
+`app/(public)/sponsors/page.tsx` has no real implementation for any template
+except `clubhouse@1` (Rose City) — every other template, including
+Diverse City's `academy@1`, falls through to a hardcoded one-line stub
+("Partners are not published for this site yet."), regardless of whether
+`onzio.site_sponsor_logos` actually has rows. Confirmed Diverse City does
+have 2 real rows (`carousel`, `footer` placements — the Elsa's Bakery logo
+visible in every page's footer), so the stub's message is misleading, not
+accurate. This is a real, unbuilt page, not a small bug — building it needs
+a decision on scope (a full academy@1-styled sponsors listing vs. accepting
+the stub given the club currently has exactly one partner) before any code
+changes.
+
+**Content-model difference, not a bug — already-approved content:**
+programs index/detail headlines show `programs.display_title` (marketing
+copy, e.g. "Building Future Champions") rather than the plain program
+`name`/`nav_label` ("Youth Academy") the mockup uses as its headline. This
+matches the richer `nav_label`/`display_title`/`kicker`/`summary`/`body`
+content model approved in `DCFC-D109`, and the program name isn't lost —
+it's used correctly in the nav dropdown. Visually different from the
+mockup, functionally and factually correct.
+
+**Real gap found, not fixed — small, no missing-data dependency:**
+`/programs` is missing the mockup's closing "Find Your Pathway." CTA
+section (contact prompt + button). Confirmed it doesn't exist anywhere in
+the platform codebase (`grep` for "find your pathway"/"find your program" —
+no hits). Unlike most other homepage/programs gaps, this one has no
+real-data dependency — it's static marketing copy — so it's a
+straightforward fix whenever Christian wants it done, not a scope decision.
+
+**Confirmed matching already-approved scope decisions (no action needed):**
+- `/schedule`: mockup shows 3 fake "Date TBA / Opponent TBA" fixture cards;
+  production correctly shows "Schedule coming soon" instead of fabricating
+  fixtures — the `AGENTS.md` no-invented-facts rule working as intended.
+- `/tryouts`: mockup shows a "Register Your Interest" CTA pointed at
+  TBA/no real destination; production correctly shows a clean "No tryouts
+  published" state instead — matches `DCFC-D102` exactly.
+- `/contact`: matches `DCFC-D101` almost exactly (email/phone/location);
+  only cosmetic wording differences ("Follow Along" vs. "Follow the Club").
+- Homepage: video hero, "Next Match" card, story section, and standings
+  table are all correctly hidden per `DCFC-D114` and lack-of-real-data
+  reasoning already established before this session.
+
+**Non-issues ruled out:** the first two `/programs` card images appeared as
+gray boxes momentarily on load — confirmed via DOM inspection
+(`naturalWidth` populated, network 200s) this was normal image-loading
+latency for full-resolution `unoptimized` images, not a bug; it resolved
+itself within a second or two. Not flagged as an action item, though the
+`unoptimized` full-resolution delivery is a minor performance note if
+Christian wants faster first paint later.
+
+**Files changed:** none in this entry — this is a summary of the sweep and
+its already-shipped/already-documented findings. See the shop/roster fix
+entries below for their own file lists.
+
+**Exact next step:** Christian decides on the two open items — (1) whether
+to build a real `/sponsors` page for `academy@1` now or later, and (2)
+whether to add the "Find Your Pathway" CTA to `/programs`. Everything else
+found in this sweep is either already shipped or confirmed correct as-is.
+
 ## 2026-08-07 - Pixel-perfect sweep: `/shop` renders blank on first load (GSAP ScrollTrigger bug) — fix ready, NOT yet committed/deployed
 
 **Package:** none — ad hoc, found during the pixel-perfect mockup-vs-production
