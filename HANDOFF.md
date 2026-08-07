@@ -2,6 +2,47 @@
 
 Last updated: 2026-08-07
 
+## DCFC-702 Track B robots follow-up — runtime and auth remain open
+
+Agent: Codex (GPT-5), 2026-08-07. Status: `in_progress`.
+
+The required environment probes selected Track B: `docker: unavailable`,
+`supabase status` did not produce a healthy local service list, and
+`set -a && . ./.env.test && set +a && npm run test:db` ended with
+`79 failed | 4 skipped (83)`. This is the known sandbox/loopback limitation,
+not a repository failure. Item 7 was therefore not attempted, and no dev-server/rendered-output
+claim was made for item 6.
+
+Item 6 now has contract-only implementation and evidence. A new middleware
+contract was written red first (`expected null to be 'noindex, nofollow'`) and
+then made green. Middleware sets `X-Robots-Tag: noindex, nofollow` on tenant
+responses — rewrites, normal responses, suspended responses, and lifecycle
+redirects — covering non-HTML responses that page metadata would miss.
+
+**The policy is unconditional and must stay that way for now.** An earlier
+same-day version keyed it to `public_access` and omitted the header for `live`
+and `grace`, which would have made the site indexable the moment `DCFC-903`
+flipped it live. That contradicts **`DCFC-D117`**: the production site retains
+`noindex, nofollow` *through launch*, and indexing is a separate later approval
+carried by `DCFC-1003` after observation closes. The conflict came from the task
+instruction, not the implementing agent, which flagged it. When `DCFC-1003`
+grants indexing, add an explicit per-club opt-in that defaults to blocked rather
+than reintroducing a `public_access` branch.
+
+Runtime verification completed on loopback (Track A): with `diverse-city` at
+`public_access=live`, both `/` and `/programs` return HTTP 200 carrying
+`x-robots-tag: noindex, nofollow` — the case the earlier version would have
+missed. A `preview` club returns 404 to anonymous visitors, which is stronger
+than noindex. Desktop and mobile both render (375x812, no horizontal overflow).
+Complete suite 680/680 across 79 files with loopback only; TypeScript clean.
+
+Files changed: `middleware.ts`, `tests/contracts/tenant-robots.test.ts`,
+`docs/phase-11/diverse-city/STATUS.md`, and this handoff. Hosted mutations: zero.
+
+The exact next step is `DCFC-702` item 7: the local-only Mailpit email-code /
+TOTP / admin rehearsal. Item 6 is now closed at both contract and runtime level.
+`DCFC-703` remains ineligible until item 7 passes.
+
 ## Known non-regressions — do not investigate these as bugs
 
 Read this before opening an investigation into Stripe rejection rows or the

@@ -49,6 +49,21 @@ function copyCookies(source: NextResponse, target: NextResponse): NextResponse {
   return target;
 }
 
+/**
+ * `DCFC-D117`: the production site retains `noindex, nofollow` **through
+ * launch**. Indexing is a separate later approval carried by `DCFC-1003`, after
+ * observation closes — so this is deliberately unconditional and must not be
+ * keyed to `public_access`. Going live at `DCFC-903` must not make the site
+ * indexable as a side effect.
+ *
+ * When `DCFC-1003` grants indexing, add an explicit per-club opt-in that
+ * defaults to blocked, rather than reintroducing a `public_access` branch here.
+ */
+function applyTenantRobotsPolicy(response: NextResponse): NextResponse {
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === "/api/stripe/webhook") {
     return NextResponse.next({ request });
@@ -181,7 +196,7 @@ export async function middleware(request: NextRequest) {
     !isAdminRequest &&
     !isBillingRequest
   ) {
-    return notFound();
+    return applyTenantRobotsPolicy(notFound());
   }
   if (
     isAdminRequest &&
@@ -190,9 +205,8 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname !== "/admin/login" &&
     request.nextUrl.pathname !== "/admin/auth/callback"
   ) {
-    return NextResponse.redirect(
-      new URL("/admin/payments", request.url),
-      303,
+    return applyTenantRobotsPolicy(
+      NextResponse.redirect(new URL("/admin/payments", request.url), 303),
     );
   }
 
@@ -217,14 +231,14 @@ export async function middleware(request: NextRequest) {
     });
     rewritten.headers.set("Vary", "Host, RSC, Next-Router-State-Tree");
     rewritten.headers.set("x-onzio-cache-tenant", tenant.id);
-    return copyCookies(sessionResponse, rewritten);
+    return applyTenantRobotsPolicy(copyCookies(sessionResponse, rewritten));
   }
 
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
   response.headers.set("Vary", "Host");
-  return copyCookies(sessionResponse, response);
+  return applyTenantRobotsPolicy(copyCookies(sessionResponse, response));
 }
 
 export const config = {
