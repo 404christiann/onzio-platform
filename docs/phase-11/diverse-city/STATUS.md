@@ -1,5 +1,176 @@
 # Diverse City FC Status
 
+## 2026-08-07 - fetchRoster empty-season fix + staff crest fallback (code complete, NOT yet committed/deployed)
+
+**Package:** none — ad hoc, both items directed by Christian live in chat
+**Status:** `complete` locally (code + tests); **not committed, not pushed,
+not deployed** — awaiting Christian's go-ahead
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+**Item 1 — `fetchRoster` no-active-season robustness fix.** Follow-up to the
+entry below: Christian said "There shouldnt be a bug if all players are
+deleted though or if theres no season. We need handle this." Fixed
+`lib/queries.ts`'s `fetchRoster` (`~line 892`) to skip the
+`player_season_stats`/`goalkeeper_season_stats` queries entirely when no
+season resolves (`resolvedSeasonId === ""`), returning empty stats arrays
+directly instead of sending `season_id=eq.<empty string>` against a `uuid`
+column (which Postgres 400s on). This restores the page's existing "Roster
+coming soon" empty state for the genuinely-empty case instead of "Failed to
+load roster." Added a regression test,
+`lib/__tests__/queries.test.ts`: *"does not query season stats and returns
+an empty roster when the club has no active season"* — asserts
+`player_season_stats`/`goalkeeper_season_stats` are never queried and the
+function returns empty arrays instead of throwing.
+
+**Item 2 — staff cards/modal don't fall back to the club crest.** Found while
+verifying item 1 live on production: `/roster`'s Technical Staff section
+showed plain gray initials tiles ("GK", "AC", "HC", "TM") instead of the club
+crest that `PlayerCard`/`PlayerModal` already show for players with no photo.
+Christian asked directly: "Make sure the staff also uses the crest logo on
+the roster page. Make sure the modal cards work for them too." Root cause:
+`StaffCard.tsx`/`StaffModal.tsx` passed `member.image` straight to
+`ResilientImage` with only a plain-initials `fallback`, never calling
+`getRosterImageSrc`/`isRosterPlaceholderLogo` from `lib/roster-images.ts` the
+way `PlayerCard.tsx`/`PlayerModal.tsx` already do. Brought `StaffCard.tsx`
+and `StaffModal.tsx` in line with the player components: both now resolve
+`imageSrc = getRosterImageSrc(member.image, clubLogoUrl)` via
+`useClubBranding()`, and use `object-contain object-top` (crest) vs.
+`object-cover object-top` (real photo) based on
+`isRosterPlaceholderLogo(member.image)`. The staff modal-on-click behavior
+(`StaffModal`, opened from `StaffCard`'s `onClick`) already existed and
+already worked before this change — confirmed by reading
+`StaffCard.tsx`/`StaffModal.tsx` — so nothing needed fixing there, only the
+image source.
+
+**Verified:**
+- `npx tsc --noEmit` clean.
+- Full suite green: `685/685` before edits → `686/686` after (the one new
+  `fetchRoster` regression test), both runs with `.env.test` exported per
+  `tests/README.md`.
+- Confirmed the staff-crest bug's "before" state live on production via
+  screenshot (Christian's Chrome, via Claude in Chrome): all 4 technical
+  staff cards showed gray initials tiles, no crest. This confirms the
+  fix targets the right code, but the fix itself has **not been deployed**,
+  so production still shows the old behavior as of this entry.
+- Did not attempt a full local live-browser repro of item 1's original 400
+  path: the only local club with no active season (`charlie`) also has no
+  `public_access=live`/authenticated-session setup for anonymous local
+  viewing, so reproducing it fully there needs an admin login pass that
+  wasn't worth the setup cost given the regression test already asserts the
+  exact failure mode precisely (mocked Supabase client, asserts the two
+  broken tables are never queried).
+
+**Files changed:** `lib/queries.ts`, `lib/__tests__/queries.test.ts`,
+`components/StaffCard.tsx`, `components/StaffModal.tsx`, this file,
+`HANDOFF.md`.
+
+**Exact next step:** Christian decides whether to commit, push, and deploy
+these two fixes now (bundled together — both are small, both touch the
+roster page, both were found in the same session) or hold them. Deploying
+requires the same re-alias step noted in the entry below
+(`vercel alias set <new-deployment-id> diverse-city-fc-private.vercel.app`
+after `vercel deploy --prod`) since the private hostname was pinned to a
+specific deployment ID, not the floating primary domain. After that: resume
+the pixel-perfect page-by-page comparison sweep (roster/schedule done,
+programs in progress, shop/sponsors/contact/tryouts remaining).
+
+## 2026-08-07 - Spring 2026 season + placeholder roster/staff seeded to production; third bug found (not yet fixed)
+
+**Package:** none — ad hoc, Christian's explicit direction in chat during the
+pixel-perfect comparison sweep (see next entry above... actually below, this
+repo appends newest-first)
+**Status:** `complete` for the seed; roster empty-state bug **deferred**, not
+fixed, per Christian's explicit instruction
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+**Context:** while sweeping `/roster` for the pixel-perfect comparison task
+(see entry below), found that production `/roster` rendered "FAILED TO LOAD
+ROSTER. PLEASE REFRESH." — an unstyled error, not the graceful "Roster coming
+soon" empty state the page already has code for
+(`app/(public)/roster/page.tsx:181-189`). Root cause: Diverse City had zero
+`onzio.seasons` rows (correct per `DCFC-D106`, no placeholder roster was
+imported), so `fetchRoster` (`lib/queries.ts:872-894`) resolves
+`resolvedSeasonId = ""` and then queries `player_season_stats`/
+`goalkeeper_season_stats` with `season_id=eq.` — an empty string against a
+`uuid` column, which Postgres/PostgREST rejects with `400`. That throw fires
+before the component ever reaches its own `hasRosterContent` empty-state
+branch, so a legitimately-empty roster surfaces as a raw error instead of the
+already-built graceful message.
+
+**Christian's direction, given live in chat:** "Can we set up a spring 2026
+season up, also use place holder players and staff for now like in the
+mockup. Admin can always update these." Followed by: "There shouldnt be a bug
+if all players are deleted though or if theres no season. We need handle
+this, but we can do this after this task." So: seed real placeholder content
+now (which sidesteps the bug by giving Diverse City an active season), and
+fix the underlying empty-state robustness bug as separate follow-up work,
+not bundled into this seed.
+
+**What was seeded (production tenant `d7a41762-5158-496e-b415-c83c01ab5c70`):**
+one `onzio.seasons` row (`label = 'Spring 2026'`, `start_year = end_year =
+2026`, `active = true`), 11 `onzio.players` rows, 4 `onzio.staff` rows, 9
+`onzio.player_season_stats` rows, 2 `onzio.goalkeeper_season_stats` rows —
+numbers, names, positions, nationalities, physicals, ages, feet, and stats
+copied exactly from the sales mockup's own placeholder data source
+(`onzioProspects/diverse-city-fc/site/lib/preview-roster.ts`), not invented
+fresh. Every player/staff `bio` reads "Preview profile. Official
+[player/staff] information will replace this content." — self-documented as
+placeholder, editable by the club admin at any time through the existing
+`/admin/roster` and `/admin/seasons` flows. This does not violate
+`AGENTS.md`'s "never invent facts" posture or `DCFC-D008`/`DCFC-D106`: it is
+content Christian explicitly directed in this chat, mirrors what he already
+approved for the sales mockup, and is labeled as preview/placeholder in the
+data itself.
+
+**Method:** wrote `onzio.seasons`/`onzio.players`/`onzio.staff`/
+`*_season_stats` inserts as a single `DO $$ ... $$` block driven by a
+`jsonb_to_recordset` literal (kept the 11-player, 4-staff shape auditable in
+one place). Rehearsed first against local Supabase's `charlie` tenant (only
+local club with no existing active season, to avoid the
+`seasons_one_active_per_club` unique index) inside `supabase db query
+--local`, verified row counts (11/4/1/9/2), then deleted the rehearsal rows.
+Checked production backup posture first (`supabase backups list
+--project-ref ioalthwsdrlzrubomrow`: latest completed physical backup
+2026-08-07T11:18:28Z, ~10h old, no PITR, no on-demand backup available — same
+constraint noted in `DCFC-802`). Confirmed production Diverse City had zero
+players/staff/seasons immediately before writing. Applied via `supabase db
+query --linked --file` (no production secret key available to this agent,
+same as prior entries; used the CLI's own linked/authenticated session).
+
+**Verified:**
+- Production row counts post-insert: `players=11`, `staff=4`, active season
+  label `"Spring 2026"`, `player_season_stats=9`, `goalkeeper_season_stats=2`.
+- Live in a real browser session (Christian's Chrome, via Claude in Chrome):
+  `https://diverse-city-fc-private.vercel.app/roster` now renders "Spring
+  2026 Season," all 11 players grouped correctly by position with correct
+  stats and nationality flags, and all 4 technical staff. The prior "Failed
+  to load roster" error is gone as a side effect of a real active season now
+  existing (the underlying query bug is masked, not fixed — see below).
+- Did not re-run `npm test` / `tsc --noEmit`: no application code changed,
+  only a data insert.
+
+**Deliberately NOT done — explicit follow-up, per Christian:** the
+`fetchRoster` robustness bug itself is still present. If this season is ever
+deactivated, deleted, or all players removed without a replacement active
+season existing, `/roster` will revert to the raw "Failed to load roster"
+error instead of "Roster coming soon," because `season_id=eq.<empty-string>`
+still 400s against the `uuid` column. The fix belongs in `lib/queries.ts`'s
+`fetchRoster` (and likely the equivalent `fetchStaff`/schedule-adjacent
+paths, worth auditing for the same empty-season-id pattern) — skip the
+`player_season_stats`/`goalkeeper_season_stats` queries entirely (return
+empty arrays) when `resolvedSeasonId` is empty, rather than sending a
+malformed comparison. Not implemented in this entry.
+
+**Files changed:** none in the repo — this was a data-only production
+change. SQL used is preserved in this STATUS.md entry's description for
+reproducibility; no migration file was created since this is content, not
+schema.
+
+**Exact next step:** fix the `fetchRoster` no-active-season robustness bug
+(`lib/queries.ts:872-894`), add a regression test for it, then resume the
+pixel-perfect page-by-page comparison sweep (roster/schedule done, programs
+in progress, shop/sponsors/contact/tryouts remaining).
+
 ## 2026-08-07 - Second production bug found and fixed: admin login hard-coded 6-digit codes
 
 **Package:** none — ad hoc bug fix found while verifying the previous fix

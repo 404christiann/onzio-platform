@@ -889,15 +889,24 @@ export async function fetchRoster(seasonId?: string, clubId?: string): Promise<{
     isActiveSeason   = season?.active === true;
   }
 
-  const [fieldResult, goalkeeperResult] = await Promise.all([
-    supabase.from("player_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
-    supabase.from("goalkeeper_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
-  ]);
-  const seasonStatsError = fieldResult.error ?? goalkeeperResult.error;
-  if (seasonStatsError) throw new Error(`fetchRoster season stats: ${seasonStatsError.message}`);
+  // No season resolved (e.g. a club with no active season yet): skip the stats
+  // queries entirely rather than comparing an empty string against a `uuid`
+  // column, which Postgres rejects with a 400 and would otherwise surface as
+  // a hard fetch failure instead of a legitimately empty roster.
+  let fieldStats: Record<string, unknown>[] = [];
+  let gkStats:    Record<string, unknown>[] = [];
 
-  const fieldStats = (fieldResult.data      ?? []) as Record<string, unknown>[];
-  const gkStats    = (goalkeeperResult.data ?? []) as Record<string, unknown>[];
+  if (resolvedSeasonId) {
+    const [fieldResult, goalkeeperResult] = await Promise.all([
+      supabase.from("player_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+      supabase.from("goalkeeper_season_stats").select("*").eq("club_id", tenantId).eq("season_id", resolvedSeasonId),
+    ]);
+    const seasonStatsError = fieldResult.error ?? goalkeeperResult.error;
+    if (seasonStatsError) throw new Error(`fetchRoster season stats: ${seasonStatsError.message}`);
+
+    fieldStats = (fieldResult.data      ?? []) as Record<string, unknown>[];
+    gkStats    = (goalkeeperResult.data ?? []) as Record<string, unknown>[];
+  }
 
   const allPlayerIds = [
     ...fieldStats.map((r) => r.player_id as string),

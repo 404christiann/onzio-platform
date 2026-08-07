@@ -2,6 +2,78 @@
 
 Last updated: 2026-08-07
 
+## Two roster fixes ready locally (fetchRoster empty-season bug + staff crest fallback) — NOT yet committed or deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: code complete,
+tests green, awaiting Christian's go-ahead to commit/push/deploy.
+
+Two small fixes, both found/requested during the same session as the seed
+below:
+
+1. **`fetchRoster` no-active-season bug**, per Christian's ask below —
+   `lib/queries.ts` now skips the `player_season_stats`/
+   `goalkeeper_season_stats` queries when no season resolves, instead of
+   sending an empty-string `season_id` comparison against a `uuid` column
+   (which 400s). Regression test added.
+2. **Staff cards/modal didn't show the club crest fallback** — `StaffCard.tsx`
+   /`StaffModal.tsx` now use the same `getRosterImageSrc`/
+   `isRosterPlaceholderLogo` pattern `PlayerCard`/`PlayerModal` already use,
+   so staff with no photo show the crest instead of a plain initials tile.
+   Christian asked for this directly after seeing the seeded staff on
+   production render gray initials boxes; also confirmed the staff
+   click-to-open-modal behavior already worked correctly.
+
+`tsc --noEmit` clean, full suite `686/686` (`.env.test` exported). Full
+detail in `docs/phase-11/diverse-city/STATUS.md`. Files changed:
+`lib/queries.ts`, `lib/__tests__/queries.test.ts`, `components/StaffCard.tsx`,
+`components/StaffModal.tsx`.
+
+**Not committed, not pushed, not deployed** — this is a real code change and
+deploying it needs the private-hostname re-alias step noted below, so it's
+waiting on Christian's explicit confirmation rather than going out
+unilaterally.
+
+## Spring 2026 season + placeholder roster/staff seeded to Diverse City FC production; third bug found, deferred
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete` for the
+seed; the underlying bug it exposed is a documented, deferred follow-up.
+
+Found during the pixel-perfect mockup-vs-production comparison sweep:
+production `/roster` showed a raw "Failed to load roster. Please refresh."
+instead of the page's own graceful "Roster coming soon" empty state, because
+`lib/queries.ts`'s `fetchRoster` queries `player_season_stats`/
+`goalkeeper_season_stats` with `season_id=eq.<empty string>` when there is no
+active season — Postgres 400s comparing an empty string to a `uuid` column,
+which throws before the empty-state branch is ever reached.
+
+Christian, live in chat, asked to seed a real Spring 2026 season with
+placeholder players/staff "like in the mockup" (admin-editable later), and
+separately confirmed the empty-season/no-players bug still needs a real fix
+but should wait until after the seed. Seeded production tenant
+`d7a41762-5158-496e-b415-c83c01ab5c70`: 1 active season ("Spring 2026"), 11
+players, 4 staff, 9 field-stat rows, 2 goalkeeper-stat rows — all values
+copied from the sales mockup's own `preview-roster.ts` placeholder data
+(same names, numbers, positions, stats), every bio self-labeled "Preview
+profile... will replace this content." Rehearsed against local Supabase
+first, verified production had zero rows beforehand, checked backup posture
+(latest physical backup ~10h old, no PITR — same constraint as `DCFC-802`),
+applied via `supabase db query --linked --file`, verified row counts and a
+live render in Christian's authenticated browser session: `/roster` now
+shows "Spring 2026 Season" with all 11 players and 4 staff correctly
+grouped and styled.
+
+**Not done, on purpose:** the `fetchRoster` robustness bug itself is still
+live — if the season is ever deactivated or all players removed without a
+new active season, `/roster` reverts to the raw error. Next step is to fix
+`lib/queries.ts` to skip the season-stats queries (return empty arrays)
+when no active season resolves, rather than sending a malformed comparison,
+then resume the mockup-vs-production comparison sweep (roster and schedule
+done; programs, shop, sponsors, contact, tryouts remain).
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`. No application files
+changed — this was a data-only production change; the SQL is preserved in
+that STATUS.md entry.
+
 ## Second production bug fixed: admin login hard-coded 6-digit codes, deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,

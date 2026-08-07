@@ -779,6 +779,27 @@ describe('fetchRoster (season-aware)', () => {
     expect(result.seasonId).toBe(activeSeason.id)
   })
 
+  it('does not query season stats and returns an empty roster when the club has no active season', async () => {
+    const calledTables: string[] = []
+    mockFrom.mockImplementation((table: string) => {
+      calledTables.push(table)
+      if (table === 'seasons') return chain({ data: [], error: null }) // no active season
+      return chain({ data: [], error: null })
+    })
+
+    const result = await fetchRoster()   // no seasonId, no active season exists
+
+    expect(result.seasonId).toBe('')
+    expect(result.seasonLabel).toBe('Current Season')
+    expect(result.goalkeepers).toEqual([])
+    expect(result.defenders).toEqual([])
+    expect(result.midfielders).toEqual([])
+    expect(result.forwards).toEqual([])
+    // Must never send season_id=eq.<empty string> against these uuid columns.
+    expect(calledTables).not.toContain('player_season_stats')
+    expect(calledTables).not.toContain('goalkeeper_season_stats')
+  })
+
   it('excludes a deactivated player from the active season even when their season stats remain', async () => {
     const activeAndInactiveStats = [
       fieldSeasonStats[0],
