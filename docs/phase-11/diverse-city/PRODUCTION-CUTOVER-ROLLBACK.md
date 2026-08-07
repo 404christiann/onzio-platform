@@ -10,6 +10,57 @@ This checklist covers `DCFC-701`–`DCFC-1003`. It plans hosted mutations but
 authorizes none. Production private preview, billing, domain attachment,
 public launch, rollback, and indexing each retain separate explicit approvals.
 
+## RELEASE GATE — schema/code coupling (blocks `DCFC-801`)
+
+**Do not promote `staging` to `main` until every box below is checked.** As of
+2026-08-06 production runs commit `10559e5` against migration head
+`20260727175200`. Fifteen migrations are pending, and one of them makes the
+schema and the application version mutually incompatible in **both** directions.
+
+`20260804024349_plat_102_billing_entitlement.sql` drops the fifteen-argument
+`apply_stripe_projection` and creates a fourteen-argument replacement in the
+same transaction. Production's deployed commit calls the fifteen-argument form
+with `p_tier`; `staging` calls the fourteen-argument form. Therefore:
+
+- Promoting `staging` **without** applying the migrations → every webhook fails
+  with `TRANSACTION_ROLLED_BACK`, because the fourteen-argument function does
+  not exist in production.
+- Applying the migrations **without** promoting → every webhook fails for the
+  same reason in reverse, because the fifteen-argument function is gone.
+
+There is no ordering that avoids a gap. Migration and deploy must be executed
+back to back, and the gap must be treated as expected webhook downtime. Stripe
+retries failed deliveries, so events are not lost, but the window must be short
+and deliberately observed. If a zero-gap release is required, split
+`20260804024349` so the fourteen-argument overload is added first, the deploy
+lands, and the fifteen-argument function is dropped in a later migration.
+
+Pre-flight checklist:
+
+- [ ] Verified, restorable production backup taken immediately before the
+      release. `pitr_enabled=false` as of `DCFC-701`, so the daily physical
+      backup is the only recovery point — confirm its timestamp.
+- [ ] All fifteen pending migrations reviewed, not only the PLAT-102 three.
+      They carry Phase 9 presentation, Phase 11 domains, `DCFC-301`–`DCFC-304`,
+      and PLAT-101 auth changes. This is the Diverse City launch release, not a
+      billing patch.
+- [ ] Migration and production deploy scheduled back to back by the same
+      operator, in one window, with rollback ready.
+- [ ] Post-release: `select p.pronargs from pg_proc p join pg_namespace n on
+      n.oid = p.pronamespace where p.proname = 'apply_stripe_projection'`
+      returns `14` for both `onzio` and `onzio_private`.
+- [ ] Post-release: `POST /api/stripe/webhook` with an unsigned body returns
+      HTTP 400 `INVALID_SIGNATURE`, confirming configuration loads. A 500 means
+      the release is broken; roll back rather than debug in place.
+- [ ] Post-release: one real Stripe event is delivered and applied, not merely
+      accepted. A `200` carrying `{"received":true,"rejected":"…"}` is a
+      failure — see the `DCFC-701` remediation entry in `HANDOFF.md`.
+
+Current risk if this gate is skipped is low but not zero: Rose City is
+`canceled` and the only other live subscription is a non-Onzio client whose
+events are rejected by design. That will stop being true the moment Diverse City
+begins billing.
+
 ## Phase 4 Local Import/Reset/Replay Evidence (`DCFC-403`)
 
 This is local input-readiness evidence only. It does not satisfy or start the
