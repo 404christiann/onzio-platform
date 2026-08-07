@@ -27,8 +27,51 @@ maps an incoming subscription's price to a tier (webhook path), and
 `priceIdForTier` selects the price for a new Checkout. Rose City's subscription
 bills against the $75 price, so a $99 value here rejects its events with
 `UNKNOWN_PRICE` — the DCFC-701 failure. As of 2026-08-06 the intended Pro price
-is $75, which makes this value correct in both directions. If you find a $99
-expectation somewhere, that expectation is stale, not this variable.
+is $75, which makes this value correct in both directions. That price now sits
+under the club-neutral product "Onzio Pro Plan" (`prod_UwUmEgeunaSPSI`), and the
+$99 product is archived. If you find a $99 expectation somewhere, that
+expectation is stale, not this variable.
+
+## Stripe product naming normalised to club-neutral tiers
+
+Agent: Claude Opus 5 (Claude Code), 2026-08-06. Status: `complete`.
+
+Live Stripe products previously mixed two models: generic tier products and
+per-club products. That mix caused a real collision — `prod_UwUmEgeunaSPSI` was
+Rose City's plan, was later renamed "Diverse City FC Pro Plan", and Rose City's
+subscription still billed against it, so renaming for one club rewrote the
+other's billing labels.
+
+The convention is now **one product per tier, club-neutral, with per-club
+pricing expressed as prices underneath it** — never a product per club.
+
+Applied under Christian's approval:
+- `prod_Uw0SrC4bw23myw` "Starter" → **"Onzio Starter Plan"**, price
+  `price_1Tw8RjK6WajTkwHYcTsgHNGc` at $65/mo, unchanged.
+- `prod_UwUmEgeunaSPSI` "Diverse City FC Pro Plan" → **"Onzio Pro Plan"**, price
+  `price_1TwbmvK6WajTkwHYueLvjhv5` at $75/mo. This is now the canonical Pro
+  product. Its description was also replaced, because the club-specific copy
+  ("Hosted club website for Diverse City FC…") is customer-visible on Checkout,
+  invoices, and the Billing Portal; it now carries the generic tier copy
+  inherited from the archived $99 product.
+- `prod_Uw0TYfkWstKVTG` "Pro" ($99, `price_1Tw8S7K6WajTkwHYcyQ3zjgK`) →
+  **archived** (`active: false`). It had zero subscriptions, live or historical.
+
+Product and price IDs are unchanged by a rename, so no environment variable,
+application code, or deployment change was required. Intended pricing as of this
+date is Starter $65 and Pro $75, which both production environment variables
+already matched.
+
+Not changed, and left as a judgment call: `prod_V0ZBwEyJqipBOw`
+"Onzio - Diverse City FC" ($65, `price_1U0Y2lK6WajTkwHYMBrmmOPe`, zero
+subscriptions). Under the convention above Diverse City should subscribe to
+Onzio Starter or Onzio Pro rather than carry its own product, so this is a
+candidate for archiving before its launch. `prod_V0b5dZPlJHxdzM`
+"MVMNT CULTR - Website" belongs to a different business line entirely and is
+out of scope for the Onzio tier convention.
+
+Unverified: the product image on `prod_UwUmEgeunaSPSI` may still be
+club-branded. The file URL is opaque, so it was not inspected.
 
 ## Production host renamed to onzio-platform.vercel.app
 
