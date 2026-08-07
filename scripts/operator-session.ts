@@ -9,6 +9,22 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
+function extractTokenHashFromLink(input: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    throw new Error(
+      "Expected either an email code or the full sign-in link URL",
+    );
+  }
+  const token = parsed.searchParams.get("token");
+  if (!token) {
+    throw new Error("Sign-in link is missing its token query parameter");
+  }
+  return token;
+}
+
 export async function acquireOperatorAccessToken(): Promise<string> {
   if (!stdin.isTTY || !stdout.isTTY) {
     throw new Error("Operator sign-in requires an interactive terminal");
@@ -36,13 +52,18 @@ export async function acquireOperatorAccessToken(): Promise<string> {
     });
     if (request.error) throw request.error;
 
-    const emailCode = (await prompt.question("Six-digit email code: ")).trim();
-    if (!/^\d{6}$/.test(emailCode)) throw new Error("Invalid email code format");
-    const verification = await auth.verifyOtp({
-      email,
-      token: emailCode,
-      type: "email",
-    });
+    const emailInput = (
+      await prompt.question(
+        "Email code, OR paste the full sign-in link from the email: ",
+      )
+    ).trim();
+
+    const verification = /^\d{4,10}$/.test(emailInput)
+      ? await auth.verifyOtp({ email, token: emailInput, type: "email" })
+      : await auth.verifyOtp({
+          token_hash: extractTokenHashFromLink(emailInput),
+          type: "email",
+        });
     if (verification.error) throw verification.error;
 
     const factors = await auth.mfa.listFactors();
