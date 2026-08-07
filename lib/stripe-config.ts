@@ -1,6 +1,21 @@
-import { failContract } from "@/lib/contract-error";
+import { ContractError, failContract } from "@/lib/contract-error";
 
 export type OnzioEnvironment = "staging" | "production";
+
+/**
+ * Maps a `getStripeRuntimeConfig` failure to the code a caller should surface.
+ *
+ * `getStripeRuntimeConfig` distinguishes four configuration faults, and
+ * collapsing them into one opaque code cost nine days of misdiagnosis during
+ * DCFC-701. Callers report the specific code so the fault is identifiable from
+ * the response alone. Only the code is surfaced, never the message, which can
+ * name the offending variable.
+ */
+export function stripeConfigurationErrorCode(error: unknown): string {
+  return error instanceof ContractError
+    ? error.code
+    : "WEBHOOK_CONFIGURATION_INVALID";
+}
 
 function isStripeKeyForEnvironment(
   secretKey: string,

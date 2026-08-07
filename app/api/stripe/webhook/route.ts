@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { ContractError } from "@/lib/contract-error";
 import { getStripeClient } from "@/lib/stripe-client";
-import { getStripeRuntimeConfig } from "@/lib/stripe-config";
+import {
+  getStripeRuntimeConfig,
+  stripeConfigurationErrorCode,
+} from "@/lib/stripe-config";
 import {
   resolveStripeEvent,
   verifyWebhookEvent,
@@ -112,11 +115,14 @@ export async function POST(request: Request) {
   let config: ReturnType<typeof getStripeRuntimeConfig>;
   try {
     config = getStripeRuntimeConfig();
-  } catch {
-    return NextResponse.json(
-      { error: "WEBHOOK_CONFIGURATION_INVALID" },
-      { status: 500 },
-    );
+  } catch (error) {
+    // Surface the specific configuration fault. Stripe retains the response
+    // body per delivery attempt, so this is the only durable diagnostic
+    // channel; Vercel runtime logs expire well before a stale projection is
+    // noticed. Status stays 500 so Stripe keeps retrying.
+    const code = stripeConfigurationErrorCode(error);
+    console.error(`stripe webhook configuration rejected: ${code}`);
+    return NextResponse.json({ error: code }, { status: 500 });
   }
 
   const payload = await request.text();

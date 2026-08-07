@@ -1,5 +1,60 @@
 # Diverse City FC Status
 
+## 2026-08-06 - DCFC-701 follow-up: webhook configuration codes are identifiable
+
+**Package:** `DCFC-701` (follow-up)
+**Status:** `complete` on `staging`; not live in production
+**Agent:** Claude Opus 5 (Claude Code)
+
+**Approval used:** Christian approved implementing the flagged fix. Repository
+change only; no hosted mutation was performed in this turn.
+
+**Problem:** `app/api/stripe/webhook/route.ts` caught every
+`getStripeRuntimeConfig()` failure and returned one opaque
+`WEBHOOK_CONFIGURATION_INVALID`. Four distinct faults collapsed into one code,
+which is why the DCFC-701 outage was misdiagnosed as a bad webhook secret for
+nine days when the real cause was `STRIPE_MODE_MISMATCH`.
+
+**Completed work:**
+- Added `stripeConfigurationErrorCode` to `lib/stripe-config.ts`, mapping a
+  `ContractError` to its own code and anything else to the previous opaque code.
+- The webhook route now returns the specific code and logs it via
+  `console.error`. Status remains 500 so Stripe keeps retrying.
+- Only `error.code` is surfaced, never `error.message`, which can name the
+  offending environment variable.
+- Added `tests/contracts/stripe-webhook-configuration.test.ts` covering all four
+  faults, the non-contract fallback, the message-leak guard, and route wiring.
+
+**Design note:** the specific code goes in the response body, not only the log.
+Stripe retains the response body per delivery attempt, whereas Vercel runtime
+logs on this plan expire within a day — during DCFC-701 the log query returned
+nothing for the failing window. The response body is the durable diagnostic
+channel. The trade-off is that an unauthenticated caller can read the code;
+`app/api/stripe/portal/route.ts` already surfaces contract codes the same way.
+
+**Files changed:** `lib/stripe-config.ts`,
+`app/api/stripe/webhook/route.ts`, `tests/contracts/stripe-webhook-configuration.test.ts`.
+
+**Verification:** `npx tsc --noEmit` clean; new contract 4/4;
+`lib/__tests__/stripe-config.test.ts` 10/10; `npm run test:architecture` 20/20;
+`npm run test:contracts` 340/341. The full suite shows 76 failures confined to
+`tests/database/*`, all from local Supabase not running, plus the one contract
+failure below.
+
+**Blockers and unresolved decisions:**
+- `tests/contracts/diverse-city-admin-public-acceptance.test.ts` fails
+  independently of this change, verified by re-running with the change stashed.
+  It expects `fetchPrograms(club.id)` while the tenant Programs page now calls
+  `fetchPrograms(club.id, onzio)` after the DCFC-602 browser-client session fix.
+  DCFC-304 acceptance is therefore currently red and needs its owner to decide
+  whether the test or the call site is authoritative.
+- **This fix is not live in production.** Production serves commit `10559e5`,
+  and this lands on `staging`. It reaches production only with the PLAT-102
+  promotion, which is itself gated on applying the PLAT-102 migrations first.
+
+**Exact next step:** resolve the DCFC-304 assertion drift, then treat this fix
+as part of the gated PLAT-102 production promotion.
+
 ## 2026-08-06 - DCFC-701 production billing webhook remediation complete
 
 **Package:** `DCFC-701`  
