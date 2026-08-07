@@ -74,16 +74,22 @@ evidence above it was not touched), `.github/workflows/roster-media-smoke.yml`
 (a daily 15:17 UTC cron that would otherwise have started failing against a
 404), and `tests/README.md`.
 
+Supabase Auth for project `ioalthwsdrlzrubomrow` was updated and confirmed by
+screenshot: Site URL is `https://onzio-platform.vercel.app` and the redirect
+allow-list contains `https://onzio-platform.vercel.app/admin/auth/callback`. No
+query-string variant is required. `createAuthEmailCallbackUrl` in
+`lib/auth-email-callback.ts` builds a bare `<origin>/admin/auth/callback`, and
+`resolveAuthCallbackDestination` routes `recovery` and `invite` to
+`/admin/update-password` from the `type` parameter server-side rather than from
+a `next` parameter on the redirect, so the legacy
+`?next=/admin/update-password` entry carried no function.
+
 Outstanding:
-- **Supabase Auth for project `ioalthwsdrlzrubomrow` must have Site URL set to
-  `https://onzio-platform.vercel.app` and
-  `https://onzio-platform.vercel.app/admin/auth/callback` in the redirect
-  allow-list.** The callback path is derived from `window.location.origin`, so
-  no code pins the host, but a missing allow-list entry breaks admin login and
-  password recovery with no other outward symptom. This was not verifiable by
-  the agent; production Supabase is outside its access.
 - `onzio-rcfc.vercel.app` is still attached to the Vercel project and should be
   removed so the name is released rather than held as a stale alias.
+- The two legacy `onzio-rcfc` entries remain in the Supabase redirect
+  allow-list. They are inert because that host now returns 404, but they should
+  be removed.
 
 ## DCFC-701 production billing webhook remediation complete
 
