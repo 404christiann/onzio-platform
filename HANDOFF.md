@@ -2,6 +2,77 @@
 
 Last updated: 2026-08-07
 
+## DCFC-801 tenant provisioning complete — Diverse City FC exists in production (DB only)
+
+Agent: Claude Sonnet 5 (Claude Code) with Christian, 2026-08-07. Status:
+`complete` for DB provisioning; Vercel hostname attachment still pending.
+
+Diverse City FC is now provisioned in production: club
+`d7a41762-5158-496e-b415-c83c01ab5c70`, slug `diverse-city`,
+`lifecycle=onboarding`, `public_access=preview`, `tier=starter`, owner is
+Christian's own existing operator Auth user. Ran via a new interactive script
+(`scripts/provision-diverse-city-production.ts`) that Christian executed
+himself with his own operator TOTP — no credential passed through the
+assisting agent. Rehearsed against loopback first, including the real-DB
+conflict/rollback path (previously only simulated).
+
+**Not done yet:** the private hostname `diverse-city-fc-private.vercel.app`
+exists as a `club_domains` row but isn't attached to the Vercel project —
+currently 404s. That's a separate action pending its own approval.
+
+**Known gap:** `provisionClub()` always sets `clubs.kind = "test"`; Diverse
+City's row should likely be `kind=customer` before `DCFC-901` bills it.
+Flagged as a follow-up task, not fixed here.
+
+Full detail, including the several real operator-auth issues hit and fixed
+live (Vercel key format, production email template mismatch, 8- vs 6-digit
+codes, duplicate-user, and same-email OTP rate limiting), is in
+`docs/phase-11/diverse-city/STATUS.md` (2026-08-07 entry) and
+`docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`.
+
+The exact next step: Christian decides on Vercel hostname attachment and the
+`kind` gap. No further `DCFC-801`/`802`/`803` scope proceeds without separate
+approval.
+
+## DCFC-801 release half complete — 15 migrations applied, production redeployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete` for the
+four items Christian approved in chat (apply migrations, deploy staging HEAD,
+reverify Rose City smoke, record evidence). Diverse City provisioning and
+hostname attachment were not approved and not attempted.
+
+Production migration head moved `20260727175200` → `20260804061257` (15
+migrations). Production now runs commit `22d8fe2`
+(`dpl_YQZDFp4ALkHvbfFBaXZ5zjtDq32x`, aliased `onzio-platform.vercel.app`).
+`apply_stripe_projection` is confirmed 14-arg in both `onzio` and
+`onzio_private`; the unsigned-webhook check returns 400 `INVALID_SIGNATURE`,
+not 500; Rose City `/` and `/admin/login` both return 200; Vercel runtime
+logs show zero errors in the post-release window. Exactly one production data
+row changed outside the migrations themselves: `onzio.clubs` row `rose-city`
+got `kind='demo'` from migration `20260804024349`'s reviewed backfill.
+
+**Open gate item:** the full `RELEASE GATE` in
+`PRODUCTION-CUTOVER-ROLLBACK.md` also wants one real Stripe event delivered
+and applied post-release, not just the signature check. That was outside
+this session's approved scope and was not done — flagged back to Christian,
+not silently skipped.
+
+**Process note:** mid-task, this repo's Supabase CLI link was briefly pointed
+at production before the established isolated-workdir practice was applied;
+no command ran against production while linked from the repo, and the link
+was restored to staging within the same turn.
+
+Full pre-flight evidence, exact timestamps, and mutation counts are in
+`docs/phase-11/diverse-city/STATUS.md` (2026-08-07 `DCFC-801` entry) and
+`docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`. Files changed:
+those two docs only — no application code changed in this session. Hosted
+mutations: 15 migrations + 1 data row (Supabase), 1 deployment (Vercel), zero
+Stripe, zero DNS.
+
+The exact next step: Christian reviews this and decides on the outstanding
+live-Stripe-event gate item; no further `DCFC-801` scope (provisioning,
+hostname) proceeds without separate approval.
+
 ## DCFC-702 Track B robots follow-up — runtime and auth remain open
 
 Agent: Codex (GPT-5), 2026-08-07. Status: `in_progress`.

@@ -1,5 +1,216 @@
 # Diverse City FC Status
 
+## 2026-08-07 - DCFC-801 hostname attached — Diverse City FC preview is now live (SSO-gated)
+
+**Package:** `DCFC-801` (hostname attachment follow-up to the entry below)
+**Status:** `complete`
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+**Approval used:** Christian's separate explicit go to attach the hostname in Vercel, given after reviewing the tenant-provisioning result below.
+
+**What happened:** `vercel alias set onzio-platform.vercel.app diverse-city-fc-private.vercel.app` — succeeded, `https://diverse-city-fc-private.vercel.app` now resolves to the production deployment instead of `DEPLOYMENT_NOT_FOUND`. Rose City confirmed unaffected (`onzio-platform.vercel.app` still 200).
+
+**Finding:** the new alias is behind Vercel's own project-wide "Vercel Authentication" (SSO) protection (`all_except_custom_domains`) — only the project's designated production domain (`onzio-platform.vercel.app`) is exempt; every other `.vercel.app` alias, including this one, requires a Vercel-team login before the request ever reaches the app's own `preview`/`noindex` logic. Practical effect: only Christian (Vercel team) can currently reach this host at all — stricter than the app-level gating, and since no external Diverse City owner exists yet (`DCFC-803` unapproved), this was left as-is rather than loosened. Did not change project-wide protection settings.
+
+**Files changed:** `docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`, this file. No code changes.
+
+**Exact next step:** revisit the SSO gate before `DCFC-803` — a real external owner will need a way to reach this host that doesn't require Vercel team membership.
+
+**Hosted mutations:** 1 Vercel alias created. Zero Supabase, zero DNS, zero Stripe.
+
+## 2026-08-07 - DCFC-801 tenant provisioning complete (DB only, hostname not yet live)
+
+**Package:** `DCFC-801` (tenant/hostname half, separately approved after the release half)
+**Status:** `complete` for the DB-side provisioning; Vercel hostname attachment still pending
+**Agent:** Claude Sonnet 5 (Claude Code), executed jointly with Christian
+
+**Approval used:** Christian approved this in chat, separately from the original release-half approval: exact slug `diverse-city`, name `Diverse City FC`, private hostname `diverse-city-fc-private.vercel.app`, owner email `christianjavieralcala@gmail.com` (himself), and accepted that `provisionClub()` bundles the owner OTP-email send into this step rather than deferring it to `DCFC-803`.
+
+**What happened:** Built `scripts/provision-diverse-city-production.ts`, following the existing `scripts/invite-diverse-city-owner-staging.ts` pattern (hardcoded project-ref guard, explicit confirmation string, `acquireOperatorAccessToken()` for interactive operator auth). Rehearsed the underlying `provisionClub()` function against loopback Supabase first, including its real-DB conflict/rollback path (never previously exercised against a real database, only simulated) — both passed cleanly.
+
+Christian ran the script himself, interactively:
+
+- Authenticated as operator via his own email OTP + TOTP (AAL2) — no operator credential or token passed through the assisting agent at any point.
+- Hit three real, unanticipated issues along the way, each diagnosed and fixed live: (1) Vercel key-format mismatch (needed the new `sb_secret_...`/`sb_publishable_...` keys, not legacy JWT — this project has legacy keys disabled); (2) production's Magic Link email template rendered a link only, no code — traced to the dashboard template not matching this repo's checked-in `supabase/templates/magic_link.html`, fixed by having Christian paste the canonical content in; (3) even after the code appeared, it turned out to be 8 digits, not 6 — the script's regex assumed 6 and was widened to 4–10; (4) `provisionClub()` initially failed with "user already registered" since Christian used his own email as both operator and owner — fixed by passing `existingAuthUserId`; (5) the owner-invite OTP send collided with the operator OTP send (same email, Supabase's ~60s per-email cooldown) — fixed by adding a 70-second pause between operator auth completing and the owner-invite send firing.
+- Also built and tested (but ultimately didn't need) a fallback path in `scripts/operator-session.ts`: accepting a pasted magic-link URL and extracting its `token` query param via `verifyOtp({ token_hash, type: 'email' })` instead of a typed code — tested end-to-end against loopback Supabase before being offered. Kept in the script as a permanent alternative input path since it's low-risk and now proven.
+
+**Result, verified read-only against production immediately after:**
+
+- `onzio.clubs`: id `d7a41762-5158-496e-b415-c83c01ab5c70`, slug `diverse-city`, name `Diverse City FC`, `lifecycle=onboarding`, `public_access=preview`, `tier=starter`, `kind=test` (see gap below).
+- `onzio.club_domains`: `hostname=diverse-city-fc-private.vercel.app`, `is_primary=true`, `active=true`, `environment=production`.
+- `onzio.club_members`: Christian's existing operator Auth user (`199d8437-1237-4098-99dd-8b089411255e`) as `role=owner`, `status=active`.
+- `onzio.audit_events`: one `operation=provision` row, `actor_type=operator`.
+- Rose City confirmed unchanged: `lifecycle=active`, `public_access=live`; `onzio-platform.vercel.app` still 200.
+- Two earlier attempts failed partway (owner-email rate limit) and correctly rolled back with zero orphaned rows each time — verified read-only before each retry.
+
+**Known gap, not fixed in this package:** `provisionClub()` hardcodes `clubs.kind = "test"` for every tenant it provisions, never `"customer"`. Per `PLAT-102`'s migration comment this gates Stripe billing entitlement, so Diverse City FC's row should likely be `kind=customer` before `DCFC-901`. Flagged as a separate follow-up task rather than fixed here (production data mutation needs its own explicit approval).
+
+**Not done — still pending a further explicit go:** the private hostname (`diverse-city-fc-private.vercel.app`) exists only as a `club_domains` row. It is **not yet attached to the Vercel project**, so it currently returns `DEPLOYMENT_NOT_FOUND` and the tenant is not actually reachable at that host yet.
+
+**Files changed:** `scripts/provision-diverse-city-production.ts` (new), `scripts/operator-session.ts` (widened code-length regex, added magic-link URL fallback), `docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`, this file. `supabase/templates/magic_link.html` was temporarily modified for local testing and reverted to its original content before finishing — `git diff` on it is clean.
+
+**Exact next step:** Christian decides whether/when to attach `diverse-city-fc-private.vercel.app` to the Vercel project (separate action, not yet approved), and whether to fix the `kind` gap before `DCFC-901`. No further `DCFC-801`/`802`/`803` scope proceeds without separate approval.
+
+**Hosted mutations:** 4 rows (Supabase: `clubs`, `club_domains`, `club_members`, `audit_events`), 1 real email sent (owner sign-in code, to Christian himself). Zero Vercel, zero DNS, zero Stripe mutations.
+
+## 2026-08-07 - DCFC-801 follow-up — RELEASE GATE Stripe-event item investigated, drift confirmed fixed
+
+**Package:** `DCFC-801` (release half — follow-up to the entry below)
+**Status:** `open, deliberately deferred to DCFC-901`
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+**What happened:** Christian manually resent `evt_1TyK93K6WajTkwHY9zzFiSYB`
+from the Stripe Dashboard (Webhooks → `we_1TwEpdK6WajTkwHYD5SEYzXX` → Event
+deliveries) twice:
+
+- **2026-08-06, 7:02:50 PM PDT** (pre-release, old 15-arg
+  `apply_stripe_projection`): `HTTP 200`,
+  `{"received":true,"result":{"action":"applied","eventId":"evt_1TyK93K6WajTkwHY9zzFiSYB"}}`.
+  A genuine apply — this fixed the long-standing `DCFC-701` billing
+  projection drift (DB said `active`/`pro`, live Stripe said `canceled`).
+- **2026-08-07, post-release** (after this session's migration/deploy):
+  `HTTP 200`, `{"received":true,"rejected":"DUPLICATE_EVENT"}` — correct
+  idempotent rejection of an already-applied event, not a bug.
+
+**Verified read-only against production, 2026-08-07:** `onzio.club_subscriptions`
+for `sub_1TwcndK6WajTkwHYH1VuFgrG` shows `status=canceled`,
+`last_applied_stripe_event_id=evt_1TyK93K6WajTkwHY9zzFiSYB`,
+`updated_at=2026-08-07 02:02:50 UTC` — matches live Stripe exactly, and is
+unchanged by today's 15 migrations. The drift is fixed and durable across
+the release.
+
+**What this does and doesn't prove:** the post-release deployment correctly
+handles signature validation, tenant/event routing, and idempotency. It does
+**not** prove the new 14-arg `apply_stripe_projection` write path itself
+executes correctly post-release, because the only available real event was
+already consumed pre-release. No unconsumed real event currently exists —
+Rose City is terminally `canceled`, MVMNT CULTR's events are rejected by
+design.
+
+**Decision:** do not manufacture a synthetic event to force this gate item
+closed. Leave the `RELEASE GATE` "one real event delivered and applied
+post-release" checklist item open, explicitly carried into `DCFC-901` (live
+billing activation), which will produce a fresh, unconsumed event and prove
+the apply path naturally, before any real money is at stake under the new
+code.
+
+**Files changed:** `docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`,
+this file. No application code changed. Hosted mutations this entry: zero
+(the two webhook resends were performed directly by Christian via the Stripe
+Dashboard, not by this agent; verification was read-only).
+
+**Exact next step:** no action required now. Revisit when `DCFC-901` is
+approved — the first live Checkout-driven event after that point should be
+checked for `action: "applied"` (not `rejected`) to close this out for real.
+
+## 2026-08-07 - DCFC-801 RELEASE HALF COMPLETE — migrations applied, production deployed
+
+**Package:** `DCFC-801` (release half only)
+**Status:** `complete` for the four approved items; provisioning/hostname items untouched.
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+**Approval used:** Christian approved exactly four items in chat: apply the 15
+pending migrations to production, deploy the staging-accepted release to
+production, reverify Rose City public/admin/billing smoke, and record
+deployment ID/commit/mutation counts. Diverse City provisioning, private
+hostname attachment, `DCFC-802`, `DCFC-803`, `DCFC-901`, `DCFC-902`, `DCFC-903`
+were explicitly not approved and were not attempted. Christian's go/no-go
+was given directly in chat for this scope; the go/no-go checkbox in
+`PRODUCTION-CUTOVER-ROLLBACK.md` was intentionally left for Christian to
+record himself.
+
+**Pre-flight verification (all passed before any mutation):**
+
+- Latest completed production backup: `2026-08-07T11:18:28.149Z`
+  (`supabase backups list`), matching expected value.
+- No production writes since that backup: `onzio.audit_events` count
+  unchanged at 209, latest row `2026-07-27 23:24:37+00`.
+- Production migration head unchanged at `20260727175200` (10 remote
+  migrations) immediately before push.
+- Local suite with `supabase status -o env` exported: `npx tsc --noEmit`
+  pass; `npm test` pass `680/680` (`79/79` files).
+- 15 local migration files matched the `DCFC-703` packet list exactly;
+  `supabase db push --dry-run` against production echoed the same 15
+  filenames before the real push.
+
+**Execution:**
+
+- Migrations applied to production (`ioalthwsdrlzrubomrow`) via an isolated
+  temp workdir under `/private/tmp`, linked only there — this repo's
+  Supabase link was restored to staging (`fxefqnoqxbezeccjvrsw`) immediately
+  after the one accidental production link (see blockers). `supabase db push`
+  ran `16:27:57Z`–`16:28:08Z`; all 15 migrations applied cleanly (one
+  non-fatal catalog-cache warning after the push itself completed).
+- Discovered mid-release: the fast `vercel build --prod` → `deploy --prebuilt
+  --skip-domain` path from the brief is blocked — 11 of this project's
+  production env vars (including `NEXT_PUBLIC_SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`)
+  are marked Sensitive in Vercel and `vercel pull` returns `[SENSITIVE]`
+  placeholders instead of real values, so a valid local production build
+  cannot be assembled. Did not attempt to source these values through any
+  other channel to work around the restriction. Fell back to the brief's
+  documented contingency: `vercel deploy --prod` from source (server-side
+  build, Vercel injects real production env directly), accepting a longer
+  gap instead of a prebuilt artifact.
+- `vercel deploy --prod` started `16:28:17Z`; deployment
+  `dpl_YQZDFp4ALkHvbfFBaXZ5zjtDq32x` (commit `22d8fe2`,
+  `22d8fe28fac427fb12833900d8af2f3e35ffe9bc`, working tree clean throughout)
+  created `16:28:19Z` and aliased to `onzio-platform.vercel.app`. Total
+  schema/code-mismatch gap ≈ 90 seconds–2 minutes, within the 2–3 minute
+  fallback estimate in the brief.
+
+**Post-release verification (four required checks, all passed):**
+
+1. `apply_stripe_projection` `pronargs` = 14 for both `onzio` and
+   `onzio_private`. Confirmed.
+2. `POST /api/stripe/webhook` with unsigned body → `HTTP 400`,
+   `{"error":"INVALID_SIGNATURE"}`. Confirmed (not a 500).
+3. Rose City smoke: `/` → 200, `<title>Rose City Futbol Club</title>`;
+   `/admin/login` → 200. Confirmed.
+4. Vercel runtime logs/errors for the new deployment, 30-minute window: zero
+   error/fatal entries, zero runtime error clusters. Confirmed.
+
+**Exact mutation counts:**
+
+- Database: 15 migrations applied (schema/DDL). Exactly one data row
+  mutated — `onzio.clubs` row `rose-city`: `kind` set to `'demo'`,
+  `updated_at` bumped to `2026-08-07T16:28:03Z`, via migration
+  `20260804024349`'s reviewed backfill (`slug in
+  ('diverse-city','rose-city','alpha','bravo')`; only `rose-city` exists in
+  production, so the other three matched zero rows). Zero rows
+  inserted/deleted.
+- Vercel: one new production deployment created and aliased. Zero other
+  project, domain, or environment-variable mutations.
+- Stripe: zero API calls made. The signature check used a synthetic unsigned
+  body, not a live event.
+- DNS: zero changes.
+
+**Blockers and unresolved items:**
+
+- The full `RELEASE GATE` checklist at the top of
+  `PRODUCTION-CUTOVER-ROLLBACK.md` also requires "one real Stripe event is
+  delivered and applied, not merely accepted" post-release. **This was not
+  performed** — it fell outside the four items Christian approved for this
+  session. The release is verified healthy by the four checks above, but this
+  specific gate item remains open until Christian separately approves it.
+- Mid-task process error, self-corrected: the repo's own Supabase CLI link
+  was pointed at production (`ioalthwsdrlzrubomrow`) briefly via `supabase
+  link` before the established isolated-workdir practice (documented in this
+  file's `DCFC-701` entry) was followed. No command ran against production
+  while linked from the repo; the link was corrected back to staging
+  (`fxefqnoqxbezeccjvrsw`) within the same turn before any further action.
+- Diverse City tenant provisioning, private hostname attachment, and all of
+  `DCFC-802`/`803`/`901`/`902`/`903` remain fully unapproved and untouched, as
+  scoped.
+
+**Exact next step:** Christian reviews this record and the updated
+`PRODUCTION-CUTOVER-ROLLBACK.md` `DCFC-801` section; decides whether/when to
+approve the outstanding live-Stripe-event gate item; separately approves any
+further `DCFC-801` provisioning or later packages when ready.
+
+**Hosted mutations:** 15 migrations + 1 data row (Supabase), 1 deployment
+(Vercel). Zero Stripe, zero DNS, zero Diverse City tenant mutations.
+
 ## 2026-08-07 - DCFC-703 DOCUMENTATION PACKAGE ASSEMBLY IN PROGRESS
 
 **Package:** `DCFC-703`
