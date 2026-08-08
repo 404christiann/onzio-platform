@@ -65,7 +65,14 @@ export function emptyTryoutDraft(sortOrder = 0): TryoutDraft {
   };
 }
 
-export function tryoutToDraft(row: DBTryout): TryoutDraft {
+/**
+ * A `tryouts` row as /api/admin/data returns it on select: stored columns plus
+ * the hero delivery URL the route resolves from `hero_media_asset_id` (see
+ * ADMIN_SELECT_MEDIA_REFERENCES). Absent when no published hero is attached.
+ */
+export type AdminTryoutRow = DBTryout & { hero_media_url?: string };
+
+export function tryoutToDraft(row: AdminTryoutRow): TryoutDraft {
   return {
     id: row.id,
     programId: row.program_id,
@@ -77,7 +84,7 @@ export function tryoutToDraft(row: DBTryout): TryoutDraft {
     headline: row.headline,
     intro: row.intro,
     heroMediaAssetId: row.hero_media_asset_id,
-    heroMediaPreviewUrl: "",
+    heroMediaPreviewUrl: row.hero_media_url ?? "",
     eligibilityCopy: row.eligibility_copy,
     whatToExpectCopy: row.what_to_expect_copy,
     preparationCopy: row.preparation_copy,
@@ -178,6 +185,22 @@ export function buildTryoutMutationPayload(
     closed_message: draft.closedMessage.trim(),
     sort_order: draft.sortOrder,
   };
+}
+
+/**
+ * Turns an unsaved editor draft back into the row shape the public tryouts
+ * mapper expects, so /admin/tryouts can preview a draft through the real
+ * component and the real content rules. Trimming matches
+ * buildTryoutMutationPayload exactly — the preview must show what saving would
+ * publish, not what is currently typed.
+ */
+export function tryoutDraftToRow(draft: TryoutDraft): AdminTryoutRow {
+  return {
+    ...(buildTryoutMutationPayload(draft) as Omit<DBTryout, "id" | "club_id">),
+    id: draft.id ?? "draft-tryout",
+    club_id: "",
+    hero_media_url: draft.heroMediaPreviewUrl,
+  } as AdminTryoutRow;
 }
 
 export function moveTryout(

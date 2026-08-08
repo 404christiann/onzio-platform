@@ -99,7 +99,18 @@ function programHighlights(value: DBProgram["highlights"]): string[] {
     : [];
 }
 
-export function programToDraft(row: DBProgram): ProgramDraft {
+/**
+ * A `programs` row as /api/admin/data returns it on select: the stored columns
+ * plus the delivery URLs the route resolves from the media asset references
+ * (see ADMIN_SELECT_MEDIA_REFERENCES). Both URL fields are absent when the
+ * program has no published media attached.
+ */
+export type AdminProgramRow = DBProgram & {
+  hero_media_url?: string | null;
+  detail_media_url?: string | null;
+};
+
+export function programToDraft(row: AdminProgramRow): ProgramDraft {
   return {
     id: row.id,
     slug: row.slug,
@@ -113,8 +124,8 @@ export function programToDraft(row: DBProgram): ProgramDraft {
       row.layout_variant === "detail_focus" ? "detail_focus" : "statement_band",
     heroMediaAssetId: row.hero_media_asset_id,
     detailMediaAssetId: row.detail_media_asset_id,
-    heroMediaPreviewUrl: "",
-    detailMediaPreviewUrl: "",
+    heroMediaPreviewUrl: row.hero_media_url ?? "",
+    detailMediaPreviewUrl: row.detail_media_url ?? "",
     externalCtaLabel: row.external_cta_label,
     externalCtaHref: row.external_cta_href,
     registrationEnabled: row.registration_enabled === true,

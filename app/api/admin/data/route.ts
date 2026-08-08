@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import {
+  ADMIN_SELECT_MEDIA_REFERENCES,
   ADMIN_TABLE_FEATURES,
   adminDataRequestSchema,
   SINGLETON_TABLES,
   type AdminDataRequest,
 } from "@/lib/admin-data-contract";
+import { resolveMediaReferences } from "@/lib/media-assets";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { ContractError } from "@/lib/contract-error";
@@ -176,8 +178,30 @@ export async function POST(request: Request) {
   if (result.error) {
     return errorResponse("DATABASE_OPERATION_FAILED", 400, result.error.message);
   }
+
+  let data = result.data ?? null;
+  const mediaReferences = ADMIN_SELECT_MEDIA_REFERENCES[input.table];
+  if (input.operation === "select" && mediaReferences && data) {
+    // Admin editors need the same delivery URL the public site resolves, or a
+    // club's already-published hero and detail images have nothing to render.
+    const rows = Array.isArray(data) ? data : [data];
+    try {
+      const resolved = await resolveMediaReferences(
+        rows as Record<string, unknown>[],
+        club.id,
+        mediaReferences,
+        onzio as unknown as Parameters<typeof resolveMediaReferences>[3],
+      );
+      data = Array.isArray(data) ? resolved : (resolved[0] ?? null);
+    } catch {
+      // Media hydration is presentational. A club that can read its own rows
+      // should still get them if the asset lookup fails; the editor falls back
+      // to its "media attached" state rather than failing the whole page load.
+    }
+  }
+
   return NextResponse.json({
-    data: result.data ?? null,
+    data,
     count: result.count ?? null,
     error: null,
   });

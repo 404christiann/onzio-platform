@@ -391,6 +391,28 @@ export const adminDataRequestSchema = z
 
 export type AdminDataRequest = z.infer<typeof adminDataRequestSchema>;
 
+/**
+ * Media asset columns the admin data route resolves into delivery URLs on
+ * select.
+ *
+ * A row that references published media stores only the asset UUID; the public
+ * site turns that into a URL through `resolveMediaReferences` in
+ * `lib/queries.ts`. `/api/admin/data` returned the raw row instead, so
+ * /admin/programs had no URL to render and showed "Published media attached"
+ * placeholder text in place of hero and detail images a club had already
+ * uploaded. The `<field>_media_url` naming matches the hydrated shapes
+ * `lib/queries.ts` already produces for the same tables.
+ */
+export const ADMIN_SELECT_MEDIA_REFERENCES: Partial<
+  Record<AdminTable, ReadonlyArray<{ assetId: string; url: string }>>
+> = {
+  programs: [
+    { assetId: "hero_media_asset_id", url: "hero_media_url" },
+    { assetId: "detail_media_asset_id", url: "detail_media_url" },
+  ],
+  tryouts: [{ assetId: "hero_media_asset_id", url: "hero_media_url" }],
+};
+
 export const SINGLETON_TABLES = new Set<AdminTable>([
   "about_page_content",
   "behind_the_rose_section",
