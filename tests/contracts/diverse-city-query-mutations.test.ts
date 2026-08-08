@@ -43,6 +43,9 @@ function chain(result: { data: unknown; error: unknown }) {
   for (const method of [
     "select",
     "eq",
+    // `in` is used to batch the onzio.program_media lookup across a tenant's
+    // programs in one round trip.
+    "in",
     "order",
     "limit",
     "maybeSingle",
@@ -104,6 +107,9 @@ describe("DCFC-204 tenant-scoped public query mappings", () => {
       }),
     ]);
     expect(mockFrom).toHaveBeenCalledWith("programs");
+    // The program gallery is loaded under the same verified tenant scope.
+    expect(mockFrom).toHaveBeenCalledWith("program_media");
+    expect(query.in).toHaveBeenCalledWith("program_id", ["program-1"]);
     expect(query.eq).toHaveBeenCalledWith("club_id", CLUB_ID);
     expect(query.eq).toHaveBeenCalledWith("status", "active");
     expect(query.order).toHaveBeenCalledWith("sort_order", { ascending: true });
