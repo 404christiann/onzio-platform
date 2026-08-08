@@ -2,6 +2,61 @@
 
 Last updated: 2026-08-07
 
+## Full mockup-parity fix pass: all 18 audit findings implemented (DCFC-D132) — committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Fable (Claude Code), 2026-08-07. Status: `complete`,
+committed and pushed to `origin/staging` across 12 commits (`2bbd730` …
+`8d73fa8`), **not deployed**.
+
+Christian pre-approved fixing the complete 18-item findings list from the
+mockup-vs-local-dev audit in one pass, including verbally overriding
+`DCFC-D104`'s own-palette stance — recorded as `DCFC-D132` in
+`docs/phase-11/diverse-city/DECISIONS.md`. The palette repaint is
+scoped, not global: Tailwind's brand aliases and the `--color-*`
+variables are now CSS-variable-driven with byte-identical `:root`
+defaults, overridden only under the existing `[data-font-pack="academy"]`
+scope (plus `body:has(...)` for `<body>` itself, which also fixes the
+Geist→Inter base-font gap). Verified non-academy surfaces still compute
+the previous values exactly.
+
+Everything else is component work matching the mockup's actual source and
+computed styles: hero (headline scale, sky second line, sharp red CTAs,
+plus an explicit muted-`play()` autoplay kick — the video pipeline was
+fine, the client-mounted `<video>` just never started), navy multi-column
+footer without the global Proud Partners strip, mockup mobile-menu
+overlay (the working tree's uncommitted redesign folded in, its three
+deltas fixed), transparent nav over program-detail heroes, navy sponsor
+marquee with the mobile clipping bug fixed and pre-authorized placeholder
+slots, programs index/detail rebuilt to the mockup's per-variant layouts,
+mockup shop surfaces (two-jersey home feature, Front/Back pill shop
+page), contact and tryouts pages rebuilt (tryouts keeps `DCFC-D102`'s
+no-fabricated-URL posture — the interest CTA is a mailto), the missing
+"A pathway for every player." homepage block built, and clamp()-based
+heading sizing verified overflow-free at 375px on every route.
+
+Local-only data (zero hosted mutations): the two already-approved
+production seeds (Spring 2026 roster/staff; TBA fixture + real UPSL
+standings) were replayed against the **local** `diverse-city` tenant so
+local dev now matches production content — full SQL preserved in the
+STATUS.md entry. The mockup shop-copy tweak was applied to the local
+`shop_kit_section` rows and the import definitions; **production's two
+`shop_kit_section` rows still carry the old copy** and need the same
+UPDATEs at deploy time (flagged in STATUS.md item 9).
+
+`tsc` clean, full suite `686/686` — one contract
+(`diverse-city-admin-public-acceptance`) correctly caught a route-call
+change mid-pass and was satisfied by restoring the pinned call, not by
+editing the test. Full per-finding detail, verification notes (including
+an embedded-browser quirk that freezes CSS transitions and blocks
+autoplay — affects verification only, on the mockup too), commit list,
+and the deploy-time follow-up in `docs/phase-11/diverse-city/STATUS.md`'s
+entry with this same title.
+
+**Not done:** deployment — same standing rule as every entry today;
+production ships only on Christian's explicit go-ahead plus the
+`diverse-city-fc-private.vercel.app` re-alias step, then the item-9 copy
+UPDATEs.
+
 ## Italic academy@1 headings + button-font mockup parity — 2 of 3 CSS-pass judgment calls resolved
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,

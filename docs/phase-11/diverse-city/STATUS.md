@@ -1,5 +1,293 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Full mockup-parity fix pass: all 18 audit findings implemented (DCFC-D132), committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc, Christian pre-approved fixing the complete
+18-item findings list from the mockup-vs-local-dev audit in one
+continuous pass, including the verbal override of `DCFC-D104`'s palette
+stance (recorded as `DCFC-D132` in `DECISIONS.md`).
+**Status:** `complete` for all 18 findings; committed and pushed to
+`origin/staging` only, **not deployed**. One data follow-up for the
+deploy pass (below).
+**Agent:** Claude Fable (Claude Code)
+
+**Scoping approach (matters for every future template):** the palette
+repaint is variable-driven, not a repaint of shared components. The
+Tailwind brand aliases (`white`/`black`/`green`/`red`/`gray`) now compile
+to `rgb(var(--tw-*-rgb) / <alpha-value>)` and the long-standing
+`--color-*` variables stay the cascade's source of truth; `:root` keeps
+byte-identical defaults and `[data-font-pack="academy"]` (plus
+`body:has([data-font-pack="academy"])`, because `<body>` sits outside the
+`display: contents` scope wrapper) overrides them to the mockup palette:
+ground `#F9FAFD`, ink `#1E3653`, dark band `#14283F`, red
+`#FF1616`/`#D70000`, sky `#B9E3F6`, muted `#6B7E94`/`#EDF2F7`. Verified
+non-academy surfaces (admin login, :root values) still compute the old
+values exactly; full contract suite green.
+
+**The 18 findings and what was done:**
+
+1. **Palette** — variable-driven repaint above; `DCFC-D132` recorded.
+2. **Body font** — the `body:has(...)` scope now carries the academy font
+   variables and `font-family`, so `<body>` itself computes Inter for
+   academy@1 (it previously resolved Geist at `:root` before the wrapper's
+   override could matter).
+3. **Footer** — new academy@1 branch in `components/Footer.tsx`: mockup's
+   navy multi-column footer (crest + "One Club. One Community. / Endless
+   Opportunities." tagline, Explore grid, Connect column fed by a new lean
+   `fetchContactProfile` query, inverted social icons, hairline copyright
+   bar). The generic footer's global "Proud Partners" strip no longer
+   renders for academy@1 — the mockup's only sponsors band is the homepage
+   carousel.
+4. **Hero headline scale/secondary color** — academy hero branch now uses
+   the mockup's exact section frame (`100svh` capped 720/760px), headline
+   sizes, and sky `#B9E3F6` second line.
+5. **Nav-at-top state** — academy@1 program detail pages
+   (`/programs/<slug>`) start transparent over the photo hero like the
+   mockup; scrolled tint resolves to `#F9FAFD/95` via the palette
+   aliases.
+6. **Hero CTAs** — sharp-cornered red `#FF1616` primary with `#D70000`
+   darken-on-hover (mock classes verbatim), bordered secondary.
+7. **Hero "static photo"** — the Bunny pipeline was fine; the `autoPlay`
+   attribute alone was not honored on the client-mounted video, so it sat
+   paused on its poster frame. `ResilientBunnyVideo` now kicks playback
+   explicitly (muted + `play()` + one-shot `touchstart` retry), the same
+   pattern as the mockup's hero. Note: the embedded audit/verification
+   browser blocks autoplay *entirely* — the mockup's own video also sits
+   paused there — so parity in that environment means both show the same
+   frame; production browsers autoplay correctly.
+8. **Missing home sections** — `NextMatchCard`/`LeagueStandingsContainer`
+   were indeed only empty-data states (fixed by the local seed, item 17).
+   The "A pathway for every player." block was genuinely absent: new
+   `components/AcademyProgramsPathway.tsx` (mock's `ProgramsFeature`,
+   numbered 01-04 program links) mounted after standings on the academy
+   homepage.
+9. **Home store section** — new `components/AcademyHomeShopFeature.tsx`:
+   two-jersey front/back render on the sky panel with the ground fade,
+   "Official Club Store / Sky Blue Match Jersey" copy, red "Buy Now" CTA.
+   Copy stays admin-editable; local import definitions and the local dev
+   tenant's `shop_kit_section` rows were updated to the mockup copy.
+   **Deploy-pass follow-up:** production's `shop_kit_section` rows still
+   carry the old copy (`Sky Blue` eyebrow / `View the Club Store` CTA) —
+   the same two UPDATEs need to run against production at deploy time or
+   via admin.
+10. **Sponsor carousel** — mockup marquee structure (two aria-managed
+    groups of a 4x-repeated list, fixed 260px logo boxes) fixes the
+    mobile half-clipped-logo bug; band/eyebrow now `#14283F`/`#B9E3F6`
+    for academy via `--sponsor-band-bg`/`--sponsor-band-eyebrow` (other
+    templates keep `#0D0D0D`/white). Mockup sponsor images copied to
+    `public/images/sponsors/` and academy pads the band with "Sponsor
+    opportunity" placeholder slots until real sponsors exist
+    (pre-authorized by Christian, admin-editable later).
+11. **/programs index** — rewritten to the mockup: navy hero with sky
+    line, flat hairline `gap-px` grid, numbered 01-04 image overlays,
+    cards titled with the program *name* (`nav_label`) instead of the
+    tagline, sky `#B9E3F6` "Find your pathway." band.
+12. **Program detail template** — rebuilt per mockup with data-driven
+    variants: cinematic full-viewport photo hero for every program
+    (kicker = program name, heading = display title), navy three-column
+    statement band (`statement_band`), detail-image + "Grow through the
+    game." + sky "Program Focus" numbered list (`detail_focus`),
+    registration band with red CTA when `external_cta_*` exists (renders
+    only with a real URL, per `DCFC-D102` — the mockup's google.com
+    placeholder never ships), and the "Explore other programs." navy
+    button row (tenant route now also fetches siblings; the pinned
+    `fetchProgramBySlug(club.id, programSlug, onzio)` contract call is
+    retained).
+13. **Mobile heading overflow** — all headings now use the mockup's
+    `clamp()` sizing; verified at 375px on `/`, `/programs`,
+    `/programs/upsl-mens-teams`, `/programs/youth-academy`, `/tryouts`,
+    `/contact`, `/shop`, `/roster`, `/schedule`, `/club/about`: zero
+    `scrollWidth > clientWidth` headings, zero document horizontal
+    overflow.
+14. **/shop** — new `components/AcademyShopPage.tsx`: mockup's compact
+    split with the sky jersey panel and Front/Back pill toggle, hairline
+    detail columns derived from the section bullets, red order CTA; the
+    academy branch of `/shop` renders it alone (no photo strip, no
+    "Purchase Details" cards, no "Ready to order" band).
+15. **/contact** — rewritten to the mockup: navy hero + red "Email
+    Diverse City FC" CTA (club name passed by the tenant route), flat
+    hairline detail columns, social icon links.
+16. **/tryouts** — rewritten to the mockup: sky "Join Diverse City FC"
+    headline, upcoming-state message, red "Register Your Interest" CTA as
+    a mailto to the club's own published address (no placeholder
+    registration URL, `DCFC-D102` pattern), DATE/LOCATION/COST hairline
+    columns reading TBA. Published tryout rows render restyled to the
+    academy palette.
+17. **Local content parity (data-only, local Supabase ONLY)** — replayed
+    the two already-approved production seeds against the local
+    `diverse-city` tenant (`5f5e7793-53bc-592f-907a-615bf8b47b54`):
+    active season relabeled "Spring 2026", 11 players, 4 staff, 9
+    field-stat rows, 2 goalkeeper-stat rows (values from the mockup's
+    `preview-roster.ts`), the explicitly-authorized TBA fixture
+    (`2026-09-05` `13:00`, opponent/venue `TBA`, `UPSL Midwest Central
+    Conference`, home), standings settings ("Premier League Standings" /
+    "UPSL Midwest Central"), and the real 10-team standings table from
+    `DiverseLeagueStandings.tsx` (Wisłoka diacritic preserved, Diverse
+    City `is_club`). Verified counts and live rendering on `/`,
+    `/roster`, `/schedule`. Zero hosted mutations. Full SQL preserved
+    below for reproducibility.
+18. **Mobile menu** — the working tree's numbered bold-italic redesign was
+    folded in and its three deltas fixed: links render palette navy
+    `#1E3653`, the overlay is a full-viewport `100dvh` panel below the
+    header with body scroll locked (page no longer bleeds through), and
+    an open menu forces the solid light header strip on the homepage.
+
+**Out of scope, untouched per instruction:** `/sponsors` stub
+(`DCFC-D130`), homepage `PhotoSlideshow` (empty on both sides, already at
+parity).
+
+**Verification:** `npx tsc --noEmit` clean; full suite `686/686`
+(`.env.test` exported). Screenshot-verified against the mockup
+(`localhost:3012`) side by side per component at desktop and 375px
+mobile, including the mobile menu open state, program detail
+transparent-nav state, and the seeded roster/schedule/standings. One
+contract interaction: the fix pass initially replaced the program-detail
+route's `fetchProgramBySlug` call with a single `fetchPrograms` call and
+`tests/contracts/diverse-city-admin-public-acceptance.test.ts` correctly
+failed — resolved by restoring the pinned call and fetching siblings in
+parallel, not by editing the contract.
+
+**Environment note for future verification sessions:** the embedded
+browser pane used for verification freezes CSS transitions (a
+`bg-white/95` header can *compute* a stuck mid-transition alpha) and
+blocks video autoplay entirely, on the mockup too. Verify final states
+via cloned elements/screenshots and treat both sites' identical behavior
+as parity, not breakage.
+
+**Commits (oldest first):** `2bbd730` palette tokens (DCFC-D132),
+`c8c9061` hero + autoplay kick, `f774be1` academy footer, `e64e01d` nav
+mobile menu + transparent state, `77752dd` sponsor carousel, `7d482cf`
+programs index, `c655eac` program detail template, `484b755` contact,
+`d42f7e6` tryouts, `f4c9103` shop surfaces, `71629c9` homepage
+composition, `8d73fa8` program-detail contract call. Pushed to
+`origin/staging` only; **no deploy, no hosted Supabase writes, no Stripe
+actions.**
+
+**Files changed:** `tailwind.config.ts`, `styles/globals.css`,
+`components/{Hero,Footer,Nav,SponsorCarousel,SponsorCarouselContainer,ResilientBunnyVideo,AcademyProgramsPage,AcademyProgramDetailPage,AcademyContactPage,AcademyTryoutsPage}.tsx`,
+new `components/{AcademyHomeShopFeature,AcademyShopPage,AcademyProgramsPathway}.tsx`,
+`app/(public)/{page,shop/page}.tsx`,
+`app/%5Fclubs/[slug]/{contact,tryouts,programs/[programSlug]}/page.tsx`,
+`lib/queries.ts` (`fetchContactProfile`),
+`lib/migration/diverse-city-local-import.ts`,
+`public/images/sponsors/{elsas-bakery.webp,sponsor-placeholder.png}`,
+`docs/phase-11/diverse-city/DECISIONS.md` (`DCFC-D132`), this file,
+`HANDOFF.md`.
+
+**Exact next step:** Christian reviews the after-state artifact; on his
+explicit go-ahead, deploy to production (`vercel deploy --prod` + the
+`diverse-city-fc-private.vercel.app` re-alias) and apply the two
+production `shop_kit_section` copy UPDATEs from item 9's follow-up.
+
+**Local parity seed SQL (item 17, local Supabase only):**
+
+```sql
+DO $$
+DECLARE
+  v_club uuid := '5f5e7793-53bc-592f-907a-615bf8b47b54';
+  v_season uuid;
+BEGIN
+  SELECT id INTO v_season FROM onzio.seasons
+    WHERE club_id = v_club AND active LIMIT 1;
+  IF v_season IS NULL THEN
+    INSERT INTO onzio.seasons (club_id, label, start_year, end_year, active)
+      VALUES (v_club, 'Spring 2026', 2026, 2026, true)
+      RETURNING id INTO v_season;
+  ELSE
+    UPDATE onzio.seasons SET label = 'Spring 2026', start_year = 2026,
+      end_year = 2026 WHERE id = v_season;
+  END IF;
+
+  WITH player_rows AS (
+    SELECT * FROM jsonb_to_recordset('[
+      {"number":1,"name":"Player 01","caption":null,"nationality":"American","position":"Goalkeeper","height":"6''2","weight":"188 lbs","age":24,"foot":"Right","gk":{"goals_against":5,"saves":31,"clean_sheets":4,"starts":9,"mins":810}},
+      {"number":22,"name":"Player 22","caption":null,"nationality":"Mexican","position":"Goalkeeper","height":"6''0","weight":"181 lbs","age":21,"foot":"Right","gk":{"goals_against":3,"saves":18,"clean_sheets":2,"starts":5,"mins":450}},
+      {"number":2,"name":"Player 02","caption":null,"nationality":"Salvadoran","position":"Defender","height":"5''10","weight":"169 lbs","age":23,"foot":"Right","field":{"goals":1,"assists":3,"starts":10,"mins":874}},
+      {"number":4,"name":"Player 04","caption":null,"nationality":"American","position":"Defender","height":"6''3","weight":"194 lbs","age":27,"foot":"Right","field":{"goals":2,"assists":0,"starts":11,"mins":990}},
+      {"number":5,"name":"Player 05","caption":null,"nationality":"Guatemalan","position":"Defender","height":"6''0","weight":"178 lbs","age":25,"foot":"Left","field":{"goals":0,"assists":2,"starts":9,"mins":792}},
+      {"number":6,"name":"Player 06","caption":"(C)","nationality":"Mexican","position":"Midfielder","height":"5''11","weight":"174 lbs","age":28,"foot":"Right","field":{"goals":3,"assists":5,"starts":11,"mins":963}},
+      {"number":8,"name":"Player 08","caption":null,"nationality":"American","position":"Midfielder","height":"5''9","weight":"164 lbs","age":22,"foot":"Right","field":{"goals":4,"assists":4,"starts":10,"mins":836}},
+      {"number":10,"name":"Player 10","caption":null,"nationality":"Guatemalan","position":"Midfielder","height":"5''8","weight":"158 lbs","age":24,"foot":"Left","field":{"goals":6,"assists":7,"starts":10,"mins":851}},
+      {"number":7,"name":"Player 07","caption":null,"nationality":"American","position":"Forward","height":"6''0","weight":"176 lbs","age":26,"foot":"Right","field":{"goals":8,"assists":4,"starts":11,"mins":925}},
+      {"number":9,"name":"Player 09","caption":null,"nationality":"Salvadoran","position":"Forward","height":"6''1","weight":"183 lbs","age":25,"foot":"Right","field":{"goals":11,"assists":3,"starts":11,"mins":947}},
+      {"number":11,"name":"Player 11","caption":null,"nationality":"Mexican","position":"Forward","height":"5''9","weight":"162 lbs","age":21,"foot":"Left","field":{"goals":5,"assists":6,"starts":8,"mins":701}}
+    ]'::jsonb) AS x(
+      "number" int, name text, caption text, nationality text,
+      "position" text, height text, weight text, age int, foot text,
+      gk jsonb, field jsonb
+    )
+  ), inserted AS (
+    INSERT INTO onzio.players
+      (club_id, "number", name, caption, nationality, "position", height,
+       weight, hometown, age, foot, bio)
+    SELECT v_club, "number", name, caption, nationality, "position", height,
+       weight, 'Chicago, IL', age, foot,
+       'Preview profile. Official player information will replace this content.'
+    FROM player_rows
+    RETURNING id, "number"
+  ), gk_stats AS (
+    INSERT INTO onzio.goalkeeper_season_stats
+      (club_id, player_id, season_id, goals_against, saves, clean_sheets,
+       starts, yellow, red, mins)
+    SELECT v_club, i.id, v_season,
+      (p.gk->>'goals_against')::int, (p.gk->>'saves')::int,
+      (p.gk->>'clean_sheets')::int, (p.gk->>'starts')::int, 0, 0,
+      (p.gk->>'mins')::int
+    FROM inserted i JOIN player_rows p ON p."number" = i."number"
+    WHERE p.gk IS NOT NULL
+    RETURNING 1
+  )
+  INSERT INTO onzio.player_season_stats
+    (club_id, player_id, season_id, goals, assists, tackles, starts,
+     yellow, red, mins, offsides, fouls, fouls_suffered)
+  SELECT v_club, i.id, v_season,
+    (p.field->>'goals')::int, (p.field->>'assists')::int,
+    (p.field->>'starts')::int * 2, (p.field->>'starts')::int, 0, 0,
+    (p.field->>'mins')::int, 0, (p.field->>'starts')::int,
+    (p.field->>'starts')::int
+  FROM inserted i JOIN player_rows p ON p."number" = i."number"
+  WHERE p.field IS NOT NULL;
+
+  INSERT INTO onzio.staff (club_id, initials, name, role, hometown, nationality, bio)
+  VALUES
+    (v_club, 'HC', 'Staff Member 01', 'Head Coach', 'Chicago, IL', 'American',
+     'Preview profile. Official staff information will replace this content.'),
+    (v_club, 'AC', 'Staff Member 02', 'Assistant Coach', 'Chicago, IL', 'Mexican',
+     'Preview profile. Official staff information will replace this content.'),
+    (v_club, 'GK', 'Staff Member 03', 'Goalkeeper Coach', 'Chicago, IL', 'Salvadoran',
+     'Preview profile. Official staff information will replace this content.'),
+    (v_club, 'TM', 'Staff Member 04', 'Team Manager', 'Chicago, IL', 'Guatemalan',
+     'Preview profile. Official staff information will replace this content.');
+
+  INSERT INTO onzio.matches
+    (club_id, season_id, date, "time", opponent, competition, home, venue)
+  VALUES
+    (v_club, v_season, '2026-09-05', '13:00', 'TBA',
+     'UPSL Midwest Central Conference', true, 'TBA');
+
+  INSERT INTO onzio.league_standings_settings (club_id, eyebrow, title, intro)
+  VALUES (v_club, 'Premier League Standings', 'UPSL Midwest Central', '')
+  ON CONFLICT (club_id) DO UPDATE
+    SET eyebrow = EXCLUDED.eyebrow, title = EXCLUDED.title,
+        intro = EXCLUDED.intro;
+
+  INSERT INTO onzio.league_standings
+    (club_id, team_name, team_abbreviation, played, wins, draws, losses,
+     goal_difference, points, is_club, sort_order)
+  VALUES
+    (v_club, 'Chicago Nation', 'CN', 10, 9, 0, 1, 35, 27, false, 0),
+    (v_club, 'Wisłoka Chicago', 'WC', 10, 8, 1, 1, 18, 25, false, 1),
+    (v_club, 'Round Lake Evolution', 'RLE', 10, 6, 0, 4, -4, 18, false, 2),
+    (v_club, 'Berber City', 'BC', 10, 6, 0, 4, 1, 18, false, 3),
+    (v_club, 'TBD FC', 'TBD', 10, 4, 1, 5, 1, 13, false, 4),
+    (v_club, 'Diverse City', 'DC', 10, 4, 1, 5, -7, 13, true, 5),
+    (v_club, 'Chicago Strikers', 'CS', 10, 3, 3, 4, 0, 12, false, 6),
+    (v_club, '1974 Libertyville', '74', 10, 2, 2, 6, -3, 8, false, 7),
+    (v_club, 'Urbana City', 'UC', 10, 2, 0, 8, -29, 6, false, 8),
+    (v_club, 'Chicago KICS', 'CK', 10, 1, 2, 7, -12, 5, false, 9);
+END $$;
+```
+
 ## 2026-08-07 - Italic academy@1 headings + button-font mockup parity — resolves 2 of the 3 open judgment calls
 
 **Package:** none — ad hoc, Christian's answers to the CSS pass's open
