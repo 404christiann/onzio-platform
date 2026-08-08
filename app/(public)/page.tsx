@@ -15,21 +15,29 @@ const ShopKitSection  = nextDynamic(() => import("@/components/ShopKitSectionCon
 const BehindTheRose   = nextDynamic(() => import("@/components/BehindTheRose"),   { ssr: false });
 const ClubhouseHomePage = nextDynamic(() => import("@/components/ClubhouseHomePage"), { ssr: false });
 const DevelopingNextGeneration = nextDynamic(() => import("@/components/DevelopingNextGeneration"), { ssr: false });
+const AcademyHomeShopFeature = nextDynamic(() => import("@/components/AcademyHomeShopFeature"), { ssr: false });
+const AcademyProgramsPathway = nextDynamic(() => import("@/components/AcademyProgramsPathway"), { ssr: false });
 
 export default function HomePage() {
   const club = useClubContext();
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseHomePage />;
+  const isAcademy = club.presentationTemplateKey === "academy@1";
 
   return (
     <>
       <Hero />
-      <ShopKitSection surface="home" fadeImageToWhite />
+      {isAcademy ? (
+        <AcademyHomeShopFeature />
+      ) : (
+        <ShopKitSection surface="home" fadeImageToWhite />
+      )}
       {club.slug === "rose-city" && <ChampionsBadge />}
       <NextMatchCard />
-      {club.presentationTemplateKey === "academy@1" && <DevelopingNextGeneration />}
+      {isAcademy && <DevelopingNextGeneration />}
       <PhotoSlideshow />
       <SponsorCarousel />
       <LeagueStandings />
+      {isAcademy && <AcademyProgramsPathway />}
       <BehindTheRose />
     </>
   );
