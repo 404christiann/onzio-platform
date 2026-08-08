@@ -36,6 +36,7 @@ import {
 } from "@/lib/homepage-story-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import { createClient } from "@/lib/admin-client";
+import { siteRouteOptionsWithFallback, type SiteRouteOption } from "@/lib/site-routes";
 
 type AdminTab = "hero" | "slideshow" | "story" | "behind";
 
@@ -186,6 +187,9 @@ export default function AdminHomepagePage() {
     {},
   );
   const [loading, setLoading] = useState(true);
+  const [linkablePrograms, setLinkablePrograms] = useState<
+    { slug: string; navLabel: string; displayTitle: string }[]
+  >([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -199,12 +203,26 @@ export default function AdminHomepagePage() {
     Promise.all([
       fetchHomepageContent(clubId),
       createClient().from("homepage_story_section").select("*").limit(1),
+      createClient()
+        .from("programs")
+        .select("slug, nav_label, display_title")
+        .eq("status", "active")
+        .order("sort_order", { ascending: true }),
     ])
       .then(([
         { hero, slideshowPhotos, slideshowSettings, behindTheRose },
         storyResult,
+        programsResult,
       ]) => {
         if (storyResult.error) throw new Error(storyResult.error.message);
+        if (programsResult.error) throw new Error(programsResult.error.message);
+        setLinkablePrograms(
+          (programsResult.data ?? []).map((row: { slug: string; nav_label: string; display_title: string }) => ({
+            slug: row.slug,
+            navLabel: row.nav_label,
+            displayTitle: row.display_title,
+          })),
+        );
         setStoryFields(
           homepageStoryToDraft(
             ((storyResult.data ?? []) as DBHomepageStorySection[])[0] ?? null,
@@ -570,11 +588,19 @@ export default function AdminHomepagePage() {
                     />
                   </Field>
                   <Field label="Primary Link">
-                    <input
+                    <select
                       value={heroFields.primary_cta_href}
                       onChange={(event) => setHeroField("primary_cta_href", event.target.value)}
                       style={inputStyle}
-                    />
+                    >
+                      {siteRouteOptionsWithFallback(linkablePrograms, heroFields.primary_cta_href).map(
+                        (option: SiteRouteOption) => (
+                          <option key={option.href} value={option.href}>
+                            {option.label}
+                          </option>
+                        ),
+                      )}
+                    </select>
                   </Field>
                   <Field label="Secondary Button">
                     <input
@@ -584,11 +610,19 @@ export default function AdminHomepagePage() {
                     />
                   </Field>
                   <Field label="Secondary Link">
-                    <input
+                    <select
                       value={heroFields.secondary_cta_href}
                       onChange={(event) => setHeroField("secondary_cta_href", event.target.value)}
                       style={inputStyle}
-                    />
+                    >
+                      {siteRouteOptionsWithFallback(linkablePrograms, heroFields.secondary_cta_href).map(
+                        (option: SiteRouteOption) => (
+                          <option key={option.href} value={option.href}>
+                            {option.label}
+                          </option>
+                        ),
+                      )}
+                    </select>
                   </Field>
                 </div>
               </div>
