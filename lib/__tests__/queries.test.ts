@@ -30,6 +30,7 @@ import {
   fetchPlayerMatchTrend,
   type MatchLogRow,
 } from '@/lib/queries'
+import { DEFAULT_ACADEMY_FOOTER_TAGLINE } from '@/lib/club-branding'
 
 // ─────────────────────────────────────────────────────────────
 // Supabase mock
@@ -166,6 +167,9 @@ describe('fetchClubBranding', () => {
     await expect(fetchClubBranding()).resolves.toEqual({
       logoPath: 'club-branding/new-crest.png',
       inverseLogoPath: '',
+      // A row with no stored tagline resolves to the approved template
+      // wording, never a blank footer line.
+      footerTagline: DEFAULT_ACADEMY_FOOTER_TAGLINE,
     })
     expect(mockFrom).toHaveBeenCalledWith('site_branding')
     expect(q.eq).toHaveBeenCalledWith('id', 1)
@@ -177,6 +181,7 @@ describe('fetchClubBranding', () => {
     await expect(fetchClubBranding()).resolves.toEqual({
       logoPath: 'Rose City FC Patch Color.png',
       inverseLogoPath: '',
+      footerTagline: DEFAULT_ACADEMY_FOOTER_TAGLINE,
     })
   })
 
