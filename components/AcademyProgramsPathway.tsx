@@ -3,17 +3,34 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
-import { fetchPrograms, type ProgramContent } from "@/lib/queries";
+import {
+  fetchPrograms,
+  fetchProgramsPageContent,
+  type ProgramContent,
+} from "@/lib/queries";
+import {
+  resolveProgramsPageContent,
+  type ProgramsPageContent,
+} from "@/lib/programs-page-content";
 import { useClubContext } from "@/components/ClubContextProvider";
 
-// Mockup-parity "A pathway for every player." homepage block for academy@1
+// Mockup-parity programs-pathway homepage block for academy@1
 // (DCFC-D132 pass), modeled on the sales mockup's ProgramsFeature: photo
 // panel beside the red eyebrow, sky-scale italic heading, and the numbered
 // 01-04 hairline program link list. Driven by the club's published
 // programs; renders nothing until programs exist.
+//
+// The band's eyebrow, heading, and intro used to be literals. They are the
+// club's own copy — the intro names the club and describes its programs — so
+// they now come from onzio.programs_page_content, editable at /admin/programs,
+// with the approved academy@1 wording in lib/programs-page-content.ts as the
+// fallback. The numbered program list itself is already admin content.
 export default function AcademyProgramsPathway() {
   const club = useClubContext();
   const [programs, setPrograms] = useState<ProgramContent[]>([]);
+  const [content, setContent] = useState<ProgramsPageContent>(() =>
+    resolveProgramsPageContent(null, club.name),
+  );
 
   useEffect(() => {
     fetchPrograms(club.id)
@@ -23,6 +40,20 @@ export default function AcademyProgramsPathway() {
         setPrograms([]);
       });
   }, [club.id]);
+
+  useEffect(() => {
+    let active = true;
+    fetchProgramsPageContent(club.id, club.name)
+      .then((value) => {
+        if (active) setContent(value);
+      })
+      .catch((error) => {
+        console.error("AcademyProgramsPathway content:", error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [club.id, club.name]);
 
   if (programs.length === 0) return null;
 
@@ -44,16 +75,16 @@ export default function AcademyProgramsPathway() {
       </div>
 
       <div className="flex flex-col justify-center px-6 py-16 md:px-12 lg:px-16">
-        <p className="font-display text-sm font-bold uppercase text-[#FF1616]">
-          Our Programs
-        </p>
+        {content.pathwayEyebrow ? (
+          <p className="font-display text-sm font-bold uppercase text-[#FF1616]">
+            {content.pathwayEyebrow}
+          </p>
+        ) : null}
         <h2 className="mt-4 max-w-xl font-display text-[clamp(2.8rem,5vw,5.2rem)] font-black uppercase italic leading-[.92] text-[#1E3653]">
-          A pathway for every player.
+          {content.pathwayHeading}
         </h2>
         <p className="mt-6 max-w-xl font-body text-base leading-7 text-[#51667E]">
-          From first competitive steps to high-level amateur soccer,{" "}
-          {club.name} offers programs designed around development, inclusion,
-          and opportunity.
+          {content.pathwayIntro}
         </p>
         <ol className="mt-9 grid gap-4 sm:grid-cols-2">
           {programs.map((program, index) => (

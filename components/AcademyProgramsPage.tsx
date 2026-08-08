@@ -1,35 +1,55 @@
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
+import {
+  resolveProgramsPageContent,
+  type ProgramsPageContent,
+} from "@/lib/programs-page-content";
 import type { ProgramContent } from "@/lib/queries";
 
 // Mockup-parity programs index (DCFC-D132 pass): navy hero band with the
 // sky second headline line, flat hairline card grid with numbered image
 // overlays and the program *name* (navLabel) as the card title, and the
-// sky-blue "Find your pathway." closing band — all structure/classes from
-// the sales mockup's app/(public)/programs/page.tsx.
+// sky-blue closing band — all structure/classes from the sales mockup's
+// app/(public)/programs/page.tsx.
+//
+// The hero and closing bands' copy is admin content
+// (onzio.programs_page_content, edited at /admin/programs); `content` is
+// optional so the template still renders its approved defaults if a caller has
+// not loaded a row. Structural labels ("Explore Program", the empty state) stay
+// template chrome per DCFC-D007.
 export default function AcademyProgramsPage({
   programs,
   clubName = "the club",
+  content,
 }: {
   programs: ProgramContent[];
   clubName?: string;
+  content?: ProgramsPageContent;
 }) {
+  const copy = content ?? resolveProgramsPageContent(null, clubName);
+
   return (
     <div className="bg-[#F9FAFD]">
       <section className="bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
         <div className="mx-auto max-w-7xl">
-          <p className="font-display text-sm font-bold uppercase text-[#B9E3F6]">
-            Our Programs
-          </p>
+          {copy.heroEyebrow ? (
+            <p className="font-display text-sm font-bold uppercase text-[#B9E3F6]">
+              {copy.heroEyebrow}
+            </p>
+          ) : null}
           <h1 className="mt-5 max-w-5xl font-display text-[clamp(3.4rem,8vw,7.4rem)] font-black uppercase italic leading-[.88]">
-            One pathway.
-            <br />
-            <span className="text-[#B9E3F6]">Every athlete belongs.</span>
+            {copy.heroHeadlineLineOne}
+            {copy.heroHeadlineLineTwo ? (
+              <>
+                <br />
+                <span className="text-[#B9E3F6]">
+                  {copy.heroHeadlineLineTwo}
+                </span>
+              </>
+            ) : null}
           </h1>
           <p className="mt-8 max-w-3xl font-body text-base leading-8 text-white/75 md:text-lg">
-            {clubName} connects youth development, specialized programming,
-            and high-level competition. Every program helps athletes grow in
-            confidence, skill, teamwork, and character.
+            {copy.heroIntro}
           </p>
         </div>
       </section>
@@ -99,21 +119,26 @@ export default function AcademyProgramsPage({
         <section className="bg-[#B9E3F6] px-6 py-20 lg:px-10 lg:py-24">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-end">
             <h2 className="font-display text-[2.35rem] font-black uppercase italic leading-[.9] text-[#1E3653] sm:text-[3rem] lg:text-[5rem]">
-              Find your
-              <br />
-              pathway.
+              {copy.closingHeadingLineOne}
+              {copy.closingHeadingLineTwo ? (
+                <>
+                  <br />
+                  {copy.closingHeadingLineTwo}
+                </>
+              ) : null}
             </h2>
             <div>
               <p className="font-body text-base leading-8 text-[#51667E]">
-                Contact {clubName} to find the program that best fits your
-                athlete&apos;s goals and support needs.
+                {copy.closingBody}
               </p>
-              <Link
-                href="/contact"
-                className="mt-7 inline-block bg-[#FF1616] px-7 py-4 font-display text-sm font-bold uppercase text-white transition-colors hover:bg-[#D70000]"
-              >
-                Find Your Program
-              </Link>
+              {copy.closingCtaLabel ? (
+                <Link
+                  href="/contact"
+                  className="mt-7 inline-block bg-[#FF1616] px-7 py-4 font-display text-sm font-bold uppercase text-white transition-colors hover:bg-[#D70000]"
+                >
+                  {copy.closingCtaLabel}
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>

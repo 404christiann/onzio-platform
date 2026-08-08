@@ -26,9 +26,22 @@ import {
   DBContactProfile,
   DBContactPageContent,
   DBTryout,
+  DBHomepageStorySection,
+  DBProgramsPageContent,
   SponsorLogoPlacement,
 } from "@/lib/db-types";
-import { DEFAULT_CLUB_LOGO_PATH } from "@/lib/club-branding";
+import {
+  DEFAULT_CLUB_LOGO_PATH,
+  resolveFooterTagline,
+} from "@/lib/club-branding";
+import {
+  resolveHomepageStorySection,
+  type HomepageStoryContent,
+} from "@/lib/homepage-story-content";
+import {
+  resolveProgramsPageContent,
+  type ProgramsPageContent,
+} from "@/lib/programs-page-content";
 import { coerceRating } from "@/lib/db-utils";
 import {
   DEFAULT_BEHIND_THE_ROSE_SECTION,
@@ -164,6 +177,8 @@ export type ShopKitContent = {
 export type ClubBranding = {
   logoPath: string;
   inverseLogoPath: string;
+  /** Resolved academy@1 footer tagline; never blank. */
+  footerTagline: string;
 };
 
 export type HomepageContent = {
@@ -611,7 +626,7 @@ export async function fetchClubBranding(clubId?: string): Promise<ClubBranding> 
   const tenantId = requireClubId(clubId);
   const query = supabase
     .from("site_branding")
-    .select("club_id, club_logo_path, club_logo_asset_id, inverse_logo_path, inverse_logo_asset_id, updated_at");
+    .select("club_id, club_logo_path, club_logo_asset_id, inverse_logo_path, inverse_logo_asset_id, footer_tagline, updated_at");
   const { data, error } = await (
     clubId ? query.eq("club_id", tenantId) : query.eq("id", 1)
   ).limit(1);
@@ -628,7 +643,52 @@ export async function fetchClubBranding(clubId?: string): Promise<ClubBranding> 
       row?.inverse_logo_asset_id,
       row?.inverse_logo_path?.trim() || "",
     ),
+    footerTagline: resolveFooterTagline(row?.footer_tagline),
   };
+}
+
+/**
+ * Fetches the academy@1 homepage story band's copy for one tenant.
+ *
+ * A club with no row resolves to the approved template defaults with the band
+ * visible, so the section renders exactly as it did when the copy lived in
+ * component source. Only an explicit `visible = false` hides it.
+ */
+export async function fetchHomepageStorySection(
+  clubId: string,
+  clubName: string,
+  client: typeof supabase = supabase,
+): Promise<HomepageStoryContent> {
+  const tenantId = requireVerifiedClubId(clubId);
+  const { data, error } = await client
+    .from("homepage_story_section")
+    .select("*")
+    .eq("club_id", tenantId)
+    .limit(1);
+  if (error) throw new Error(`fetchHomepageStorySection: ${error.message}`);
+  const row = ((data ?? []) as DBHomepageStorySection[])[0] ?? null;
+  return resolveHomepageStorySection(row, clubName);
+}
+
+/**
+ * Fetches the copy wrapped around the academy@1 programs surfaces (the
+ * homepage pathway band, the /programs hero, and the /programs closing band).
+ * The programs themselves come from `fetchPrograms`.
+ */
+export async function fetchProgramsPageContent(
+  clubId: string,
+  clubName: string,
+  client: typeof supabase = supabase,
+): Promise<ProgramsPageContent> {
+  const tenantId = requireVerifiedClubId(clubId);
+  const { data, error } = await client
+    .from("programs_page_content")
+    .select("*")
+    .eq("club_id", tenantId)
+    .limit(1);
+  if (error) throw new Error(`fetchProgramsPageContent: ${error.message}`);
+  const row = ((data ?? []) as DBProgramsPageContent[])[0] ?? null;
+  return resolveProgramsPageContent(row, clubName);
 }
 
 /** Fetches the singleton shop kit section and its ordered photos. */

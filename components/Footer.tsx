@@ -35,7 +35,7 @@ const academyFooterLinks = [
 export default function Footer() {
   const club = useClubContext();
   const clubId = club.id;
-  const { clubLogoUrl, inverseLogoUrl } = useClubBranding();
+  const { clubLogoUrl, inverseLogoUrl, footerTagline } = useClubBranding();
   const isAcademy = club.presentationTemplateKey === "academy@1";
   const [partners, setPartners] = useState<DBSiteSponsorLogo[]>([]);
   const [socialLinks, setSocialLinks] =
@@ -164,11 +164,16 @@ export default function Footer() {
               <p className="font-display text-xl font-black uppercase italic">
                 {club.name}
               </p>
-              <p className="mt-2 font-body text-sm text-white/65">
-                One Club. One Community.
-                <br />
-                Endless Opportunities.
-              </p>
+              {/* The club's own slogan, not template chrome: it comes from
+                  onzio.site_branding.footer_tagline (editable at
+                  /admin/branding) and falls back to the approved academy@1
+                  wording. whitespace-pre-line keeps the club's own line break,
+                  which is what reproduces the two-line lockup. */}
+              {footerTagline ? (
+                <p className="mt-2 whitespace-pre-line font-body text-sm text-white/65">
+                  {footerTagline}
+                </p>
+              ) : null}
             </div>
           </div>
 
