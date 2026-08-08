@@ -17,6 +17,14 @@ export type DBContactPageContent = Tables<
   "contact_page_content"
 >;
 export type DBTryout = Tables<{ schema: "onzio" }, "tryouts">;
+export type DBHomepageStorySection = Tables<
+  { schema: "onzio" },
+  "homepage_story_section"
+>;
+export type DBProgramsPageContent = Tables<
+  { schema: "onzio" },
+  "programs_page_content"
+>;
 
 export type DBPlayer = {
   id: string;
@@ -275,6 +283,8 @@ export type DBSiteBranding = {
   club_logo_asset_id: string | null;
   inverse_logo_path: string;
   inverse_logo_asset_id: string | null;
+  /** academy@1 footer tagline; empty means "use the template default". */
+  footer_tagline: string;
   updated_at: string;
 };
 

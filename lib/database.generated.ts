@@ -799,6 +799,44 @@ export type Database = {
           },
         ]
       }
+      homepage_story_section: {
+        Row: {
+          body_primary: string
+          body_secondary: string
+          club_id: string
+          cta_label: string
+          heading: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          body_primary?: string
+          body_secondary?: string
+          club_id: string
+          cta_label?: string
+          heading?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          body_primary?: string
+          body_secondary?: string
+          club_id?: string
+          cta_label?: string
+          heading?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homepage_story_section_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       league_standings: {
         Row: {
           club_id: string
@@ -1731,6 +1769,62 @@ export type Database = {
           },
         ]
       }
+      programs_page_content: {
+        Row: {
+          closing_body: string
+          closing_cta_label: string
+          closing_heading_line_one: string
+          closing_heading_line_two: string
+          club_id: string
+          hero_eyebrow: string
+          hero_headline_line_one: string
+          hero_headline_line_two: string
+          hero_intro: string
+          pathway_eyebrow: string
+          pathway_heading: string
+          pathway_intro: string
+          updated_at: string
+        }
+        Insert: {
+          closing_body?: string
+          closing_cta_label?: string
+          closing_heading_line_one?: string
+          closing_heading_line_two?: string
+          club_id: string
+          hero_eyebrow?: string
+          hero_headline_line_one?: string
+          hero_headline_line_two?: string
+          hero_intro?: string
+          pathway_eyebrow?: string
+          pathway_heading?: string
+          pathway_intro?: string
+          updated_at?: string
+        }
+        Update: {
+          closing_body?: string
+          closing_cta_label?: string
+          closing_heading_line_one?: string
+          closing_heading_line_two?: string
+          club_id?: string
+          hero_eyebrow?: string
+          hero_headline_line_one?: string
+          hero_headline_line_two?: string
+          hero_intro?: string
+          pathway_eyebrow?: string
+          pathway_heading?: string
+          pathway_intro?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programs_page_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
           active: boolean
@@ -1964,6 +2058,7 @@ export type Database = {
           club_id: string
           club_logo_asset_id: string | null
           club_logo_path: string
+          footer_tagline: string
           inverse_logo_asset_id: string | null
           inverse_logo_path: string
           updated_at: string
@@ -1972,6 +2067,7 @@ export type Database = {
           club_id: string
           club_logo_asset_id?: string | null
           club_logo_path?: string
+          footer_tagline?: string
           inverse_logo_asset_id?: string | null
           inverse_logo_path?: string
           updated_at?: string
@@ -1980,6 +2076,7 @@ export type Database = {
           club_id?: string
           club_logo_asset_id?: string | null
           club_logo_path?: string
+          footer_tagline?: string
           inverse_logo_asset_id?: string | null
           inverse_logo_path?: string
           updated_at?: string
