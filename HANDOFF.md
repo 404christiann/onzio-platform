@@ -2,6 +2,23 @@
 
 Last updated: 2026-08-07
 
+## Special Olympics registration section deployed to production, verified live
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
+
+Christian: "deploy this too." Deployed `af42219` (the Special Olympics
+registration-section commit and its docs) via `vercel deploy --prod` →
+`dpl_8cbBqyd6HzVWRwEvfR8TUKTtPB9Z`, auto-aliased to `onzio-platform.vercel.app`,
+then re-aliased `diverse-city-fc-private.vercel.app` to the same deployment.
+
+**Verified live** through Christian's authenticated Chrome session (SSO-gated,
+unreachable by this agent's own tools): `/programs/special-olympics-soccer`
+shows the "Program Registration" band exactly as built — red eyebrow, italic
+navy "Ready to take the field?", honest body copy, a real "Registration Link
+Coming Soon" block (not a link), and the 4-photo slideshow showing a real
+Special Olympics photo. Rose City (`onzio-platform.vercel.app`) reconfirmed
+unaffected, `HTTP 200`.
+
 ## Special Olympics "Program Registration" section: mockup slideshow + DCFC-D102 TBA button — committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Fable 5 (Claude Code), 2026-08-07. Status: `complete`,
