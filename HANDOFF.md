@@ -2,6 +2,59 @@
 
 Last updated: 2026-08-08
 
+## Both rounds of admin-editable content work deployed to production — real Supabase migrations applied first, both hostnames verified live
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete`.
+
+Christian: "deploy this too." Unlike every earlier deploy today, `staging`
+HEAD (`632552e`) depended on two real Supabase migrations
+(`20260808020000`, `20260808130000`) that had only ever been applied to
+local Supabase — production's schema had neither `onzio.program_media`,
+`onzio.homepage_story_section`, `onzio.programs_page_content`, nor the new
+`onzio.programs`/`onzio.site_branding` columns. Deploying the code alone
+would have broken every surface this session's two rounds just built.
+
+**Sequence, following `AGENTS.md`'s production-write discipline exactly:**
+
+1. Re-linked explicitly (`supabase link --project-ref ioalthwsdrlzrubomrow`),
+   verified with a read query (`select current_database(), now()`, then
+   confirmed real club data matched known production state) before touching
+   anything.
+2. Confirmed via `supabase migration list --linked` that exactly the two
+   expected migrations were missing (`remote: ""`), everything else already
+   applied.
+3. Checked backup posture: latest completed physical backup
+   `2026-08-08T11:15:20Z`, ~3h old. Both migrations are purely additive (new
+   tables, new `not null default ''` columns, no drops/renames/data
+   changes) — accepted as low-risk given that and the extensive local test
+   coverage (140 real database tests across both rounds).
+4. `supabase db push --linked` — both migrations applied cleanly, verified
+   via `migration list` and a direct column-existence query.
+5. Applied the one deploy-time seed round one's `STATUS.md` had already
+   written out in full: `registration_enabled = true` plus the 4
+   `program_media` rows for Diverse City's `special-olympics-soccer`
+   program (production club `d7a41762-5158-496e-b415-c83c01ab5c70`) —
+   without this, the registration section Christian already saw working
+   would have silently stopped rendering, since round one replaced its old
+   hardcoded-slug branch with this flag. Verified: `registration_enabled =
+   true`, exactly 4 media rows, all other programs correctly untouched.
+   Also checked the older outstanding `shop_kit_section` copy debt flagged
+   earlier today — already correct in production, no action needed.
+6. `vercel deploy --prod` → `dpl_2DBs59mzo5v9S5dDkudVbuBbC9B2`, auto-aliased
+   to `onzio-platform.vercel.app`; re-aliased
+   `diverse-city-fc-private.vercel.app` to the same deployment.
+
+**Verified live**, both hostnames: Rose City `200`, unaffected. Diverse
+City checked through Christian's authenticated Chrome session — zero
+console errors on `/` and `/programs/special-olympics-soccer`; homepage
+story section, "A pathway for every player" band, and footer tagline all
+rendering their real database-backed content; the Special Olympics
+registration band rendering exactly as before (headline, honest TBA CTA
+state, and the real photo slideshow), now genuinely powered by the schema
+and seed applied above rather than hardcoded source.
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## academy@1 content audit round two: homepage story copy, programs page copy, and the footer tagline made club-editable — committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete` for

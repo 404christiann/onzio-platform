@@ -1,5 +1,95 @@
 # Diverse City FC Status
 
+## 2026-08-08 - Both admin-editability rounds deployed to production, with the required Supabase migrations applied first
+
+**Package:** none — ad hoc. Christian: "deploy this too."
+
+**Status:** `complete`.
+
+**Why this deploy needed more than `vercel deploy --prod`:** every earlier
+deploy today was a pure code deploy — the public components only ever read
+columns/tables that already existed in production. This one is different:
+`staging` HEAD (`632552e`) carries two schema migrations
+(`20260808020000` from round one, `20260808130000` from round two) that had
+only been applied to local Supabase. Deploying the code without them would
+have made every newly-wired component (registration band, homepage story
+section, programs page copy, footer tagline) query columns/tables that
+don't exist in production — real breakage, not graceful degradation, since
+the whole point of round one/two was to stop these surfaces from being
+hardcoded and start them being real queries.
+
+**Production Supabase steps taken, in order:**
+
+1. `supabase link --project-ref ioalthwsdrlzrubomrow`, then verified the
+   link with a read-only query (`select current_database(), now()`) and a
+   second query confirming real club data (`diverse-city` / `rose-city`
+   rows matching known state) before any write.
+2. `supabase migration list --linked` confirmed exactly `20260808020000`
+   and `20260808130000` were missing (`"remote": ""`); every earlier
+   migration already applied and untouched.
+3. Backup check: latest completed physical backup
+   `2026-08-08T11:15:20.439Z` (`walg_enabled: true`, `pitr_enabled: false`
+   — same known constraint as every earlier production write today), ~3
+   hours old at deploy time. Accepted as sufficient given both migrations
+   are strictly additive (new tables; new columns all
+   `not null default ''`/`false`; no drops, renames, or data mutation) and
+   both were exercised by 140 real database tests locally (108 from round
+   one + 32 new in round two) before ever reaching production.
+4. `supabase db push --linked` applied both migrations. Verified via
+   `migration list --linked` (both now show matching `local`/`remote`
+   timestamps) and a direct
+   `information_schema.columns` query confirming the new
+   `programs.registration_*` columns exist.
+5. Applied the one deploy-time data step round one's entry below already
+   specified in full (exact SQL, not improvised here): set
+   `registration_enabled = true` on Diverse City's
+   `special-olympics-soccer` program row
+   (`d7a41762-5158-496e-b415-c83c01ab5c70`) and inserted its 4
+   `program_media` rows (the same approved slide paths/alt text already
+   live as static assets). Without this step, the registration band
+   Christian already reviewed and approved live would have reverted to
+   not rendering at all — round one replaced its old
+   `slug === 'special-olympics-soccer'` hardcoded branch with this flag,
+   so a `false` default is a real regression, not a cosmetic gap. Verified
+   after: `registration_enabled = true`, exactly 4 `program_media` rows,
+   every other program's row correctly untouched (`false` / 0 rows).
+6. While in there, checked the older outstanding `shop_kit_section` copy
+   debt (flagged earlier today, item 9 of the original 18-finding pass) —
+   queried production directly, it already carries the correct mockup-style
+   copy. No SQL statement for it was ever recorded in this file to begin
+   with, so rather than reconstruct one from memory, verified the actual
+   current state and confirmed no action is needed.
+
+**Vercel deploy:** `vercel deploy --prod` →
+`dpl_2DBs59mzo5v9S5dDkudVbuBbC9B2`, auto-aliased to
+`onzio-platform.vercel.app`. Re-aliased `diverse-city-fc-private.vercel.app`
+to the same deployment (required every time, per every earlier entry
+today).
+
+**Verification, live, both hostnames:**
+- Rose City (`onzio-platform.vercel.app`): `HTTP 200`, unaffected.
+- Diverse City, checked through Christian's authenticated Chrome session
+  (Vercel-SSO-gated, unreachable by this agent's own tools): zero console
+  errors on `/` and `/programs/special-olympics-soccer`, confirmed via
+  `read_console_messages` after a fresh navigation on each page (not a
+  stale check). Confirmed rendering, all from real data now: the homepage
+  story section ("Developing the Next Generation" + both paragraphs), the
+  "A pathway for every player." band, the footer's two-line tagline, the
+  UPSL standings table, and the Special Olympics registration band
+  (headline, honest "Registration Link Coming Soon" state note: CTA is
+  still disabled since no real registration URL exists yet, and the
+  4-photo slideshow with a real image loaded).
+
+**Supabase CLI link state:** left linked to production
+(`ioalthwsdrlzrubomrow`) after this session, matching today's established
+practice of not actively unlinking — next session doing any local
+Supabase work should re-link to a local/staging context explicitly rather
+than assume the current link state, same caution noted repeatedly earlier
+today.
+
+**Not done:** nothing outstanding from either admin-editability round.
+Both are now fully live.
+
 ## 2026-08-08 - academy@1 content audit round two: homepage story copy, programs page copy, and the footer tagline made club-editable, committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc, a direct continuation of the 2026-08-07 audit
