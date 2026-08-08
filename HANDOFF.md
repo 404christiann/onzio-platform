@@ -2,6 +2,31 @@
 
 Last updated: 2026-08-07
 
+## Next Match fixture + real UPSL Midwest Central standings live in production (items 3 and 4 of the 4-gap handoff, closed)
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+verified live.
+
+Christian gave explicit direction on both remaining data-blocked items: a
+placeholder Next Match fixture (opponent/venue literally "TBA", his exact
+instruction) and the real 10-team UPSL Midwest Central Conference standings
+table from the sales mockup's `DiverseLeagueStandings.tsx` (his exact
+instruction: "let these teams be initialized as these are the actual
+teams"). Both `NextMatchCard` and `LeagueStandingsContainer` turned out to
+already be fully built and already wired into the homepage unconditionally
+— they were only showing their built-in empty states for lack of data, not
+missing any code. Seeded both directly via SQL (same pattern as the earlier
+roster seed): rehearsed locally first, applied to production, verified live
+on the homepage and `/schedule` with zero console errors. No files changed
+— data-only. Full detail, including the exact SQL and a Supabase CLI
+re-linking gotcha worth remembering, in `docs/phase-11/diverse-city/STATUS.md`.
+
+Remaining open item: video hero + story section (Bunny.net) — Christian
+supplied `BUNNY_API_KEY` and `BUNNY_VIDEO_LIBRARY_API` in `.env.local` and
+a Stream library (name "onzio", library ID `723074`, visible at
+`https://dash.bunny.net/stream/723074/player`) already exists in his
+account. See the next entry for that work.
+
 ## Nav affiliation badges shipped to `staging` (item 1 of the 4-gap handoff); items 2-4 handed back with exact questions for Christian
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: item 1 code
