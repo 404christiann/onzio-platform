@@ -2,6 +2,37 @@
 
 Last updated: 2026-08-08
 
+## Admin punch-list round deployed — the platform-wide media upload fix is now live for every club
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete`.
+
+Christian: "Yes." Deployed `staging` HEAD (`d78c634`), which included one
+migration (`20260808160000`, the storage upload-policy fix) not yet applied
+to production.
+
+**Production Supabase**: re-linked, verified with a read query, confirmed
+exactly one migration missing, checked backup posture (~5h old, accepted —
+this migration only drops/recreates one RLS policy, no schema or data
+changes at all). `supabase db push --linked` applied it; verified the live
+policy definition matches source exactly (no mimetype check remains).
+
+**Vercel**: `vercel deploy --prod` → `dpl_7N4fVg4j6kSmy4Ar6crxBv4XWb8a`,
+auto-aliased to `onzio-platform.vercel.app`; re-aliased
+`diverse-city-fc-private.vercel.app` to the same deployment.
+
+**Verified live**: Rose City `200`, unaffected. Diverse City's public
+pages (`/`, `/programs`, `/shop`) loaded with zero console errors. This
+round's actual fixes are almost entirely inside `/admin`, which needs a
+real email-code login this agent cannot complete on Christian's behalf —
+public-site health is what's confirmed here; **Christian needs to test the
+`/admin` changes himself** (exact steps already given in the prior
+`STATUS.md` entry: homepage tabs, program slug/images, contact phone save,
+tryouts preview, roster fields, shop tabs, about preview sizing, and
+especially sponsor image replace, which specifically required this
+migration to work).
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## Christian's nine-item `/admin` punch list — three real bugs fixed, three surfaces hidden for academy@1, two previews built, Payments confirmed expected. Committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Opus 5 (Claude Code), 2026-08-08. Status: `complete` for

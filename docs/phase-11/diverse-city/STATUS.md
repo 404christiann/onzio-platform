@@ -1,5 +1,53 @@
 # Diverse City FC Status
 
+## 2026-08-08 - Admin punch-list round deployed to production
+
+**Package:** none — ad hoc. Christian: "Yes" (to deploying).
+
+**Status:** `complete`.
+
+**Production Supabase steps:**
+
+1. Re-linked (`supabase link --project-ref ioalthwsdrlzrubomrow`), verified
+   with `select current_database(), now()` before touching anything.
+2. `supabase migration list --linked` confirmed exactly `20260808160000`
+   missing; everything else already applied from the two prior rounds
+   today.
+3. Backup check: latest completed physical backup `2026-08-08T11:15:20Z`,
+   ~5h old. Accepted: this migration only does `drop policy if exists` +
+   `create policy` on `storage.objects` — no table, column, or data change
+   of any kind, the lowest-risk migration of any applied today.
+4. `supabase db push --linked` applied it. Verified via
+   `migration list --linked` (matching `local`/`remote`) and a direct
+   `pg_policies` query confirming the live `with_check` clause matches the
+   migration file exactly — the broken `metadata ->> 'mimetype'` condition
+   is gone, the path-shape regex and `can_mutate_feature` entitlement check
+   are both intact.
+
+**Vercel:** `vercel deploy --prod` → `dpl_7N4fVg4j6kSmy4Ar6crxBv4XWb8a`,
+auto-aliased to `onzio-platform.vercel.app`. Re-aliased
+`diverse-city-fc-private.vercel.app` to the same deployment.
+
+**Verification, live:**
+- Rose City (`onzio-platform.vercel.app`): `HTTP 200`, unaffected.
+- Diverse City public pages (`/`, `/programs`, `/shop`), checked through
+  Christian's authenticated Chrome session: zero console errors on all
+  three, confirmed via `read_console_messages` after fresh navigations.
+
+**Not verified by this agent, and cannot be:** the actual admin-portal
+fixes from the punch-list round (hidden tabs, the slug/image fixes, the
+phone-save fix, the two new previews, and — most importantly, since it's
+the reason this migration exists — that sponsor logo Replace now actually
+works end to end against production). All of that lives behind `/admin`'s
+real email-code login, which requires an email Christian receives, not
+something this agent can complete on his behalf. **Christian needs to test
+these himself** using the exact steps recorded in the prior `2026-08-08`
+entry in this file (the nine-item punch-list round).
+
+**Not done:** nothing outstanding. This closes out today's `staging` work;
+production now matches `staging` HEAD (`d78c634`) exactly, migrations
+included.
+
 ## 2026-08-08 - Christian's nine-item /admin punch list: three real bugs found and fixed, three surfaces hidden, two previews built, one item confirmed expected. Committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc. Christian used `/admin` himself for the first
