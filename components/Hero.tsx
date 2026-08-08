@@ -93,9 +93,14 @@ export default function Hero() {
     const primaryHref = heroContent.primary_cta_href.trim() || "/schedule";
     const secondaryHref = heroContent.secondary_cta_href.trim() || "/roster";
 
+    // Mockup-parity hero (DCFC-D132 pass): section frame, gradient, headline
+    // scale/colors, and CTA treatment copied from the sales mockup's
+    // Hero.tsx (onzioProspects/diverse-city-fc/site) — second headline line
+    // renders in the sky accent, primary CTA is the sharp-cornered red
+    // button with the darken-on-hover state. Content stays admin-editable.
     return (
-      <section className="relative flex min-h-[92svh] w-full items-end overflow-hidden text-white">
-        <div className="absolute inset-0 h-full w-full" style={{ zIndex: 0 }}>
+      <section className="relative h-[100svh] min-h-[600px] max-h-[720px] overflow-hidden bg-[#1E3653] text-white md:h-[82svh] md:max-h-[760px]">
+        <div className="absolute inset-0">
           <ResilientBunnyVideo
             guid={DIVERSE_CITY_HERO_VIDEO.guid}
             posterSrc={DIVERSE_CITY_HERO_VIDEO.posterSrc}
@@ -103,50 +108,47 @@ export default function Hero() {
             className="h-full w-full object-cover"
           />
         </div>
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(0deg, rgba(0,0,0,0.74) 0%, rgba(0,0,0,0.38) 45%, rgba(0,0,0,0.14) 100%)",
-            zIndex: 1,
-          }}
-        />
-        <div className="relative z-10 mx-auto w-full max-w-[1500px] px-5 pb-14 pt-40 sm:px-8 md:pb-16 lg:px-12">
-          {heroContent.eyebrow.trim() && (
-            <p className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/70">
-              {heroContent.eyebrow}
-            </p>
-          )}
-          <h1 className="font-display max-w-4xl text-4xl font-black not-italic uppercase leading-[0.92] text-white sm:text-6xl lg:text-7xl">
-            <span className="block">{headlineOne}</span>
-            {headlineTwo && (
-              <span className="block" style={{ color: "#F0F0F0" }}>
-                {headlineTwo}
-              </span>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#14283F] via-[#14283F]/45 to-[#14283F]/30" />
+        <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-6 pb-12 pt-36 md:pb-8 lg:px-10">
+          <div className="w-full min-w-0 max-w-5xl">
+            {heroContent.eyebrow.trim() && (
+              <p className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/70">
+                {heroContent.eyebrow}
+              </p>
             )}
-          </h1>
-          {intro && (
-            <p className="font-body mt-6 max-w-xl text-base leading-7 text-white/80">
-              {intro}
-            </p>
-          )}
-          <div
-            ref={ctaRef}
-            className="mt-8 flex flex-col gap-3 sm:flex-row"
-            style={{ opacity: 0 }}
-          >
-            <Link
-              href={primaryHref}
-              className="font-display inline-flex min-h-12 items-center justify-center rounded-md bg-white px-7 py-3 text-xs font-bold uppercase tracking-widest text-[#1B2958] transition-transform duration-200 hover:-translate-y-0.5"
+            <h1 className="max-w-5xl font-display font-black uppercase italic leading-[.88]">
+              <span className="block text-[1.9rem] text-[#F9FAFD] sm:text-[2.7rem] md:text-[3.4rem]">
+                {headlineOne}
+              </span>
+              {headlineTwo && (
+                <span className="mt-1 block whitespace-nowrap text-[clamp(2rem,8.6vw,2.25rem)] text-[#B9E3F6] sm:text-[3.7rem] md:text-[4.4rem]">
+                  {headlineTwo}
+                </span>
+              )}
+            </h1>
+            {intro && (
+              <p className="mt-7 max-w-2xl font-body text-base leading-7 text-white/80 md:text-lg">
+                {intro}
+              </p>
+            )}
+            <div
+              ref={ctaRef}
+              className="mt-8 flex flex-col gap-3 sm:flex-row"
+              style={{ opacity: 0 }}
             >
-              {heroContent.primary_cta_label.trim() || "Next match"}
-            </Link>
-            <Link
-              href={secondaryHref}
-              className="font-display inline-flex min-h-12 items-center justify-center rounded-md border border-white/40 bg-white/10 px-7 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform duration-200 hover:-translate-y-0.5"
-            >
-              {heroContent.secondary_cta_label.trim() || "Meet the squad"}
-            </Link>
+              <Link
+                href={primaryHref}
+                className="bg-[#FF1616] px-7 py-4 text-center font-display text-sm font-bold uppercase text-[#F9FAFD] transition-colors hover:bg-[#D70000]"
+              >
+                {heroContent.primary_cta_label.trim() || "Next match"}
+              </Link>
+              <Link
+                href={secondaryHref}
+                className="border border-white/50 px-7 py-4 text-center font-display text-sm font-bold uppercase text-white transition-colors hover:border-white hover:bg-white/10"
+              >
+                {heroContent.secondary_cta_label.trim() || "Meet the squad"}
+              </Link>
+            </div>
           </div>
         </div>
       </section>

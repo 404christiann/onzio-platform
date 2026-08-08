@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { bunnyVideoMp4Url } from "@/lib/bunny-video";
 
@@ -27,6 +27,27 @@ export default function ResilientBunnyVideo({
   style,
 }: Props) {
   const [failed, setFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // The `autoPlay` attribute alone is not reliably honored when the element
+  // mounts client-side (these sections render with `ssr: false`): the video
+  // buffered fully but sat paused on its poster frame, which is exactly the
+  // "hero renders a static photo" symptom seen in local dev. Kick playback
+  // explicitly, the same way the sales mockup's Hero does — set muted before
+  // play() so autoplay policy allows it, and retry once on first touch for
+  // mobile browsers that defer autoplay until user interaction.
+  useEffect(() => {
+    if (failed) return;
+    const video = videoRef.current;
+    if (!video) return;
+    const play = () => {
+      video.muted = true;
+      video.play().catch(() => {});
+    };
+    play();
+    document.addEventListener("touchstart", play, { once: true });
+    return () => document.removeEventListener("touchstart", play);
+  }, [failed]);
 
   if (failed) {
     return (
@@ -41,6 +62,7 @@ export default function ResilientBunnyVideo({
 
   return (
     <video
+      ref={videoRef}
       autoPlay
       muted
       loop
