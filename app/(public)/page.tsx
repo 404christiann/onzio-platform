@@ -17,6 +17,7 @@ const ClubhouseHomePage = nextDynamic(() => import("@/components/ClubhouseHomePa
 const DevelopingNextGeneration = nextDynamic(() => import("@/components/DevelopingNextGeneration"), { ssr: false });
 const AcademyHomeShopFeature = nextDynamic(() => import("@/components/AcademyHomeShopFeature"), { ssr: false });
 const AcademyProgramsPathway = nextDynamic(() => import("@/components/AcademyProgramsPathway"), { ssr: false });
+const AcademyNextMatch = nextDynamic(() => import("@/components/AcademyNextMatch"), { ssr: false });
 
 export default function HomePage() {
   const club = useClubContext();
@@ -32,7 +33,7 @@ export default function HomePage() {
         <ShopKitSection surface="home" fadeImageToWhite />
       )}
       {club.slug === "rose-city" && <ChampionsBadge />}
-      <NextMatchCard />
+      {isAcademy ? <AcademyNextMatch /> : <NextMatchCard />}
       {isAcademy && <DevelopingNextGeneration />}
       <PhotoSlideshow />
       <SponsorCarousel />
