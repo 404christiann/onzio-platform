@@ -64,6 +64,12 @@ import {
   resolveMediaStoragePath,
 } from "@/lib/media-assets";
 import { normalizePublicHref } from "@/lib/public-link";
+import {
+  normalizeProgramMedia,
+  resolveProgramRegistration,
+  type ProgramMediaItem,
+  type ProgramRegistrationContent,
+} from "@/lib/program-content";
 
 const TEST_CLUB_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -185,6 +191,10 @@ export type ProgramContent = {
   heroMediaUrl: string;
   detailMediaUrl: string;
   externalCta: { label: string; href: string } | null;
+  /** Admin-editable registration band copy, resolved against template defaults. */
+  registration: ProgramRegistrationContent;
+  /** Ordered admin-managed gallery images for this program (onzio.program_media). */
+  media: ProgramMediaItem[];
   sortOrder: number;
 };
 
@@ -230,6 +240,7 @@ export type TryoutContent = {
 type HydratedProgram = DBProgram & {
   hero_media_url?: string;
   detail_media_url?: string;
+  program_media?: unknown[];
 };
 
 type HydratedContactPage = DBContactPageContent & {
@@ -274,8 +285,58 @@ function mapProgram(row: HydratedProgram): ProgramContent {
     heroMediaUrl: row.hero_media_url ?? "",
     detailMediaUrl: row.detail_media_url ?? "",
     externalCta: href && label ? { label, href } : null,
+    registration: resolveProgramRegistration(row),
+    media: normalizeProgramMedia(row.program_media),
     sortOrder: row.sort_order,
   };
+}
+
+/**
+ * Loads onzio.program_media for a tenant's programs and attaches the ordered,
+ * media-resolved rows to each program.
+ *
+ * Media rows carry both `url` (the delivered source, which may be a club's own
+ * static path) and an optional `media_asset_id`; resolveMediaReferences
+ * overwrites `url` from the published asset whenever one is attached, which is
+ * the same pairing homepage_slideshow_photos and shop_kit_photos already use.
+ */
+async function attachProgramMedia(
+  rows: HydratedProgram[],
+  tenantId: string,
+  client: typeof supabase = supabase,
+): Promise<HydratedProgram[]> {
+  if (rows.length === 0) return rows;
+  const { data, error } = await client
+    .from("program_media")
+    .select("*")
+    .eq("club_id", tenantId)
+    .in(
+      "program_id",
+      rows.map((row) => row.id),
+    )
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(`attachProgramMedia: ${error.message}`);
+
+  const resolved = (await resolveMediaReferences(
+    (data ?? []) as Record<string, unknown>[],
+    tenantId,
+    [{ assetId: "media_asset_id", url: "url" }],
+    client,
+  )) as Record<string, unknown>[];
+
+  const byProgram = new Map<string, Record<string, unknown>[]>();
+  for (const item of resolved) {
+    const programId = item.program_id;
+    if (typeof programId !== "string") continue;
+    const bucket = byProgram.get(programId);
+    if (bucket) bucket.push(item);
+    else byProgram.set(programId, [item]);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    program_media: byProgram.get(row.id) ?? [],
+  }));
 }
 
 function contactHref(email: unknown): string {
@@ -357,7 +418,12 @@ export async function fetchPrograms(
     ],
     client,
   );
-  return (rows as HydratedProgram[]).map(mapProgram);
+  const withMedia = await attachProgramMedia(
+    rows as HydratedProgram[],
+    tenantId,
+    client,
+  );
+  return withMedia.map(mapProgram);
 }
 
 /** Fetches one active Program by tenant-scoped slug, or null when unavailable. */
@@ -387,7 +453,9 @@ export async function fetchProgramBySlug(
     client,
   );
   const row = (rows as HydratedProgram[])[0];
-  return row ? mapProgram(row) : null;
+  if (!row) return null;
+  const [withMedia] = await attachProgramMedia([row], tenantId, client);
+  return mapProgram(withMedia);
 }
 
 /** Fetches canonical Contact data, page copy, and shared social destinations. */

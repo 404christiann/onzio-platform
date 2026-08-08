@@ -2,10 +2,15 @@ import ResilientImage from "@/components/ResilientImage";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 
+// `clubName` is a prop rather than a literal: this component shipped with one
+// tenant's name written into its intro copy, which is a per-club fact in a
+// shared template and would have read wrong for any other academy@1 club.
 export default function AcademySponsorsPage({
   sponsors,
+  clubName = "The club",
 }: {
   sponsors: DBSiteSponsorLogo[];
+  clubName?: string;
 }) {
   return (
     <div className="min-h-screen bg-[#F9FAFD] pt-24 text-[#1E3653] sm:pt-28">
@@ -20,7 +25,7 @@ export default function AcademySponsorsPage({
             <span className="text-[#B9E3F6]">Building opportunity.</span>
           </h1>
           <p className="mt-8 max-w-2xl font-body text-lg leading-8 text-white/70">
-            Diverse City FC is grateful to the organizations that support its
+            {clubName} is grateful to the organizations that support its
             players, programs, and inclusive mission.
           </p>
         </div>

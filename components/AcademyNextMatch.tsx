@@ -9,7 +9,11 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
-import { fetchSchedule } from "@/lib/queries";
+import {
+  fetchContactProfile,
+  fetchLeagueStandings,
+  fetchSchedule,
+} from "@/lib/queries";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -45,6 +49,28 @@ export default function AcademyNextMatch() {
   const sectionRef = useRef<HTMLElement>(null);
   const [nextFixture, setNextFixture] = useState<Fixture | null>(null);
   const [loading, setLoading] = useState(true);
+  // Both of these were hardcoded club facts even though each already had an
+  // admin-editable home: the competition name is the standings section title
+  // the club edits at /admin/standings, and the fallback location is the
+  // service area it edits at /admin/contact. Neither is template chrome, so
+  // neither belongs in component source (DCFC-D007).
+  const [leagueLabel, setLeagueLabel] = useState("");
+  const [serviceArea, setServiceArea] = useState("");
+
+  useEffect(() => {
+    fetchLeagueStandings(club.id)
+      .then((content) => setLeagueLabel(content.settings.title.trim()))
+      .catch((error) => {
+        console.error("AcademyNextMatch standings settings:", error);
+        setLeagueLabel("");
+      });
+    fetchContactProfile(club.id)
+      .then((profile) => setServiceArea(profile?.serviceArea.trim() ?? ""))
+      .catch((error) => {
+        console.error("AcademyNextMatch contact profile:", error);
+        setServiceArea("");
+      });
+  }, [club.id]);
 
   useEffect(() => {
     fetchSchedule(undefined, club.id)
@@ -92,8 +118,10 @@ export default function AcademyNextMatch() {
   const cityState = nextFixture
     ? [nextFixture.city?.trim(), nextFixture.state?.trim()].filter(Boolean).join(", ")
     : "";
-  const venueLabel = nextFixture?.venue?.trim() || (cityState ? "" : "Schaumburg, Illinois");
-  const locationLabel = [venueLabel, cityState || (nextFixture ? "" : "")].filter(Boolean).join(", ") || "Schaumburg, Illinois";
+  const venueLabel = nextFixture?.venue?.trim() || (cityState ? "" : serviceArea);
+  const locationLabel =
+    [venueLabel, cityState || (nextFixture ? "" : "")].filter(Boolean).join(", ") ||
+    serviceArea;
   const opponentName = nextFixture?.opponent?.trim() || "TBA";
   const opponentLabel = nextFixture ? opponentName : "Next Opponent";
 
@@ -123,9 +151,11 @@ export default function AcademyNextMatch() {
           </div>
           <div className="text-center">
             <span className="font-display text-5xl font-black italic text-[#FF1616]">VS</span>
-            <p className="mt-3 font-body text-xs font-bold uppercase text-[#6B7E94]">
-              UPSL Midwest Central
-            </p>
+            {leagueLabel && (
+              <p className="mt-3 font-body text-xs font-bold uppercase text-[#6B7E94]">
+                {leagueLabel}
+              </p>
+            )}
           </div>
           <div className="flex flex-col items-center text-center">
             <OpponentCrest

@@ -11,5 +11,5 @@ export default async function TenantSponsorsPage({
   const club = await getClubContextBySlug((await params).slug);
   if (club.presentationTemplateKey !== "academy@1") return <SponsorsPage />;
   const sponsors = await fetchSiteSponsorLogos("carousel", club.id);
-  return <AcademySponsorsPage sponsors={sponsors} />;
+  return <AcademySponsorsPage sponsors={sponsors} clubName={club.name} />;
 }
