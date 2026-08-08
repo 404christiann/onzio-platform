@@ -412,7 +412,7 @@ export default function AdminStandingsPage() {
                         checked={row.is_club}
                         onChange={(event) => updateRow(row.id, "is_club", event.target.checked)}
                       />
-                      Rose City row
+                      Our team&rsquo;s row
                     </label>
                     <button
                       type="button"
