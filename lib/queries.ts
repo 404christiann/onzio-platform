@@ -449,6 +449,37 @@ export async function fetchContactContent(
   };
 }
 
+export type ContactProfileContent = {
+  publicEmail: string;
+  publicPhone: string;
+  serviceArea: string;
+  hours: string;
+};
+
+/** Lean public contact-profile fetch (no page content or media hydration)
+ *  for chrome components such as the academy@1 footer's Connect column. */
+export async function fetchContactProfile(
+  clubId: string,
+  client: typeof supabase = supabase,
+): Promise<ContactProfileContent | null> {
+  const tenantId = requireVerifiedClubId(clubId);
+  const { data, error } = await client
+    .from("contact_profile")
+    .select("*")
+    .eq("club_id", tenantId)
+    .limit(1);
+  if (error) throw new Error(`fetchContactProfile: ${error.message}`);
+  const profile = ((data ?? []) as DBContactProfile[])[0] ?? null;
+  return profile
+    ? {
+        publicEmail: profile.public_email,
+        publicPhone: profile.public_phone,
+        serviceArea: profile.service_area,
+        hours: profile.hours,
+      }
+    : null;
+}
+
 /** Fetches ordered Tryouts and derives a safe registration/contact action. */
 export async function fetchTryouts(
   clubId: string,
