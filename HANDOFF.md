@@ -2,6 +2,35 @@
 
 Last updated: 2026-08-07
 
+## Full day's mockup-parity work deployed to production — Christian approved, both hostnames re-verified live
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
+
+Christian: "Looks good to me, let's deploy this." Deployed everything
+accumulated on `staging` since the last production deploy (`fda3f59`
+onward — font-pack wiring, italic headings, the `DCFC-D132` palette
+repaint, the full mockup-parity component pass, Next Match/fixture-row
+fixes, and the component-identity re-audit fixes) via `vercel deploy --prod`
+→ `dpl_E5FE8DwoudkGbL5ipCtLDSAUJ6TV`, auto-aliased to
+`onzio-platform.vercel.app`. Re-aliased `diverse-city-fc-private.vercel.app`
+to the same deployment (required every time — the private hostname doesn't
+follow `--prod`'s automatic primary-domain alias).
+
+**Verified live**, not just self-reported: Rose City (`onzio-platform.vercel.app`)
+still 200s with correct title, unaffected. Diverse City's private hostname
+checked directly through Christian's authenticated Chrome session (it's
+Vercel-SSO-gated, unreachable by this agent's own tools) — a real browser,
+not this session's throttled test harness, so every animation completed
+normally: homepage hero video, the `AcademyNextMatch` stacked crest/VS
+section, the `AcademyLeagueStandingsTable` (all 6 columns, no sort buttons,
+Diverse City row highlighted red), `DevelopingNextGeneration` at full size,
+the sponsor carousel; `/schedule`'s full-size italic "Fixtures" hero and
+correct 4-column fixture row with "TBA" spelled out in the crest; `/roster`'s
+sky-blue dividers and untracked count labels. Zero console errors on every
+page checked.
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## Component-identity re-audit: 6 more mockup-parity fixes — committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,

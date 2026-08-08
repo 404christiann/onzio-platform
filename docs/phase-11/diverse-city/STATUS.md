@@ -1,5 +1,58 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Full day's mockup-parity work deployed to production, both hostnames re-verified live
+
+**Package:** none — ad hoc. Christian: "Looks good to me, let's deploy
+this," after reviewing the component-identity re-audit entry below.
+
+**Status:** `complete`.
+
+**Deploy:** `vercel deploy --prod` from a clean working tree at `staging`
+HEAD `5c4cea1` → `dpl_E5FE8DwoudkGbL5ipCtLDSAUJ6TV`, auto-aliased to
+`onzio-platform.vercel.app` by `--prod`. Then
+`vercel alias set dpl_E5FE8DwoudkGbL5ipCtLDSAUJ6TV diverse-city-fc-private.vercel.app`
+— the private hostname re-alias step every deploy today has needed, since
+`--prod` only auto-aliases the primary domain.
+
+**Scope of this deploy:** everything on `staging` since the last production
+deploy (`fda3f59`, "Document production deploy of nav badges + video
+pipeline"): font-pack wiring (`628cdf3`), italic headings + button-font
+revert (`67fe45e`), the `DCFC-D132` navy palette repaint (`2bbd730`), the
+full mockup-parity component pass — hero/footer/nav/sponsor-carousel/
+programs/program-detail/shop/contact/tryouts/homepage composition
+(`c8c9061`…`597dda4`), the Next Match section + `/schedule` fixture-row
+fixes (`09fb8ad`, `baf205c`), and the component-identity re-audit fixes —
+homepage standings, `/schedule` hero, `/roster` colors, `OpponentCrest` TBA
+fallback, `DevelopingNextGeneration` heading, staff placeholder padding
+(`b41395a`…`96ecb5c`). Full detail for each in this file's earlier
+2026-08-07 entries.
+
+**Verification, live, both hostnames:**
+- **Rose City** (`onzio-platform.vercel.app`, public, curl-reachable):
+  `HTTP 200`, `<title>Rose City Futbol Club</title>` — confirmed unaffected.
+- **Diverse City** (`diverse-city-fc-private.vercel.app`, Vercel-SSO-gated —
+  unreachable by this agent's own browser tooling, checked through
+  Christian's authenticated Chrome session instead): loaded correctly on
+  `/`, `/schedule`, `/roster`. Because this was a real browser rather than
+  this session's throttled test harness, every GSAP animation completed
+  normally, giving a genuine visual confirmation rather than the
+  computed-style workaround used throughout today's local verification:
+  - Homepage: hero video playing, `AcademyNextMatch`'s "Next Match"
+    stacked crest/VS/opponent section rendering correctly with real data
+    (Sept 5, 2026 fixture, TBA opponent), `AcademyLeagueStandingsTable`
+    showing all 6 columns with no sort buttons and the Diverse City row
+    highlighted red, `DevelopingNextGeneration` at its corrected larger
+    size, sponsor carousel with real logos.
+  - `/schedule`: full-size italic "Fixtures" hero at the mockup's `144px`/
+    `16px`/`80px` proportions, fixture row showing the 4-column grid with
+    "TBA" spelled out in the opponent crest (not "T").
+  - `/roster`: sky-blue `#B9E3F6` group dividers, untracked count labels,
+    player cards rendering correctly.
+  - Zero console errors on every page checked.
+
+**Not done:** nothing outstanding from this deploy. All of today's
+`staging` work is now live.
+
 ## 2026-08-07 - Component-identity re-audit: 6 more mockup-parity fixes, committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc, direct follow-up requested by Christian
