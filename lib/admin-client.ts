@@ -49,6 +49,7 @@ const MEDIA_REFERENCE_FIELDS: Record<
     { source: "sponsor_logo_url", asset: "sponsor_logo_asset_id" },
   ],
   player_photos: [{ source: "url", asset: "media_asset_id" }],
+  program_media: [{ source: "url", asset: "media_asset_id" }],
   players: [{ source: "photo_url", asset: "photo_asset_id" }],
   shop_carousel_photos: [{ source: "url", asset: "media_asset_id" }],
   shop_kit_photos: [{ source: "url", asset: "media_asset_id" }],

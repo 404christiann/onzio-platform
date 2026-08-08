@@ -5,17 +5,27 @@ import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
-import type { DBProgram } from "@/lib/db-types";
+import type { DBProgram, DBProgramMedia } from "@/lib/db-types";
 import {
+  buildProgramMediaMutationPayload,
   buildProgramMutationPayload,
   emptyProgramDraft,
   moveHighlight,
   moveProgram,
+  moveProgramMedia,
+  programMediaToDraft,
   programToDraft,
   validateProgramDraft,
+  validateProgramMedia,
   type ProgramDraft,
+  type ProgramMediaDraft,
   type ProgramValidationErrors,
 } from "@/lib/program-admin";
+import {
+  DEFAULT_PROGRAM_REGISTRATION_CONTENT,
+  PROGRAM_MEDIA_LIMITS,
+  PROGRAM_REGISTRATION_LIMITS,
+} from "@/lib/program-content";
 
 type MediaRole = "hero" | "detail";
 
@@ -50,21 +60,44 @@ export default function AdminProgramsPage() {
   const [error, setError] = useState<string | null>(null);
   const heroInput = useRef<HTMLInputElement>(null);
   const detailInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
+  // Gallery images live in their own table (onzio.program_media), so they are
+  // loaded and saved alongside — not inside — the program row.
+  const [gallery, setGallery] = useState<ProgramMediaDraft[]>([]);
+  const [galleryByProgram, setGalleryByProgram] = useState<
+    Record<string, ProgramMediaDraft[]>
+  >({});
+  const [removedGalleryIds, setRemovedGalleryIds] = useState<string[]>([]);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
 
   const loadPrograms = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      const { data, error: loadError } = await createClient()
-        .from("programs")
-        .select("*")
-        .order("sort_order", { ascending: true });
+      const [{ data, error: loadError }, mediaResult] = await Promise.all([
+        createClient()
+          .from("programs")
+          .select("*")
+          .order("sort_order", { ascending: true }),
+        createClient()
+          .from("program_media")
+          .select("*")
+          .order("sort_order", { ascending: true }),
+      ]);
       if (loadError) throw new Error(loadError.message);
+      if (mediaResult.error) throw new Error(mediaResult.error.message);
       const next = ((data ?? []) as DBProgram[]).map(programToDraft);
+      const grouped: Record<string, ProgramMediaDraft[]> = {};
+      for (const row of (mediaResult.data ?? []) as DBProgramMedia[]) {
+        (grouped[row.program_id] ??= []).push(programMediaToDraft(row));
+      }
       setPrograms(next);
+      setGalleryByProgram(grouped);
       const selected =
         next.find((program) => program.id === preferredId) ?? next[0] ?? null;
       setDraft(selected ? { ...selected, highlights: [...selected.highlights] } : null);
+      setGallery(selected?.id ? [...(grouped[selected.id] ?? [])] : []);
+      setRemovedGalleryIds([]);
       setDirty(false);
       setErrors({});
     } catch (loadError) {
@@ -96,6 +129,8 @@ export default function AdminProgramsPage() {
   function selectProgram(program: ProgramDraft) {
     if (dirty && !window.confirm("Discard unsaved program changes?")) return;
     setDraft({ ...program, highlights: [...program.highlights] });
+    setGallery(program.id ? [...(galleryByProgram[program.id] ?? [])] : []);
+    setRemovedGalleryIds([]);
     setErrors({});
     setError(null);
     setSaved(false);
@@ -105,6 +140,8 @@ export default function AdminProgramsPage() {
   function startCreate() {
     if (dirty && !window.confirm("Discard unsaved program changes?")) return;
     setDraft(emptyProgramDraft(programs.length));
+    setGallery([]);
+    setRemovedGalleryIds([]);
     setErrors({});
     setError(null);
     setSaved(false);
@@ -183,12 +220,125 @@ export default function AdminProgramsPage() {
     }
   }
 
+  async function uploadGalleryImage(files: FileList | null) {
+    const file = files?.[0];
+    if (!file || !draft) return;
+    if (gallery.length >= PROGRAM_MEDIA_LIMITS.items) {
+      setError(
+        `A program gallery holds at most ${PROGRAM_MEDIA_LIMITS.items} images.`,
+      );
+      return;
+    }
+    setUploadingGallery(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const client = createClient();
+      // Same secured pipeline every other admin image uses: authorize, upload
+      // to private staging, finalize (signature/dimension verification, UUID
+      // versioned immutable path). Nothing here trusts the file extension or
+      // the browser-reported MIME type.
+      const requestedPath = `gallery/${Date.now()}-${file.name}`;
+      const { data, error: uploadError } = await client.storage
+        .from("programs")
+        .upload(requestedPath, file);
+      if (uploadError || !data?.assetId) {
+        throw new Error(uploadError?.message ?? "Upload failed");
+      }
+      const { data: publicData, error: publicError } = client.storage
+        .from("programs")
+        .getPublicUrl(data.path);
+      if (publicError || !publicData.publicUrl) {
+        throw new Error(publicError?.message ?? "Upload failed");
+      }
+      setGallery((current) => [
+        ...current,
+        {
+          id: null,
+          url: publicData.publicUrl,
+          mediaAssetId: data.assetId,
+          alt: "",
+          sortOrder: current.length,
+        },
+      ]);
+      markDirty();
+    } catch (uploadError) {
+      setError(errorMessage(uploadError, "Upload failed"));
+    } finally {
+      setUploadingGallery(false);
+      if (galleryInput.current) galleryInput.current.value = "";
+    }
+  }
+
+  function setGalleryAlt(index: number, value: string) {
+    setGallery((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, alt: value } : item,
+      ),
+    );
+    markDirty();
+  }
+
+  function reorderGallery(index: number, delta: -1 | 1) {
+    const next = moveProgramMedia(gallery, index, delta);
+    if (next === gallery) return;
+    setGallery(next);
+    markDirty();
+  }
+
+  function removeGalleryImage(index: number) {
+    const target = gallery[index];
+    if (!target) return;
+    if (target.id) setRemovedGalleryIds((current) => [...current, target.id!]);
+    setGallery((current) =>
+      current
+        .filter((_, itemIndex) => itemIndex !== index)
+        .map((item, sortOrder) => ({ ...item, sortOrder })),
+    );
+    markDirty();
+  }
+
+  /** Persists the gallery for a saved program: deletes, updates, inserts. */
+  async function saveGallery(programId: string) {
+    const client = createClient();
+    for (const removedId of removedGalleryIds) {
+      const { error: deleteError } = await client
+        .from("program_media")
+        .delete()
+        .eq("id", removedId);
+      if (deleteError) throw new Error(deleteError.message);
+    }
+    const saved: ProgramMediaDraft[] = [];
+    for (const [index, item] of gallery.entries()) {
+      const payload = buildProgramMediaMutationPayload(
+        { ...item, sortOrder: index },
+        programId,
+      );
+      const mutation = item.id
+        ? client.from("program_media").update(payload).eq("id", item.id)
+        : client.from("program_media").insert(payload);
+      const { data, error: mediaError } = await mutation.select("*").single();
+      if (mediaError || !data) {
+        throw new Error(mediaError?.message ?? "Unable to save program media");
+      }
+      saved.push(programMediaToDraft(data as DBProgramMedia));
+    }
+    setGallery(saved);
+    setRemovedGalleryIds([]);
+    setGalleryByProgram((current) => ({ ...current, [programId]: saved }));
+  }
+
   async function saveProgram() {
     if (!draft) return;
     const validation = validateProgramDraft(draft);
     if (Object.keys(validation).length > 0) {
       setErrors(validation);
       setError("Review the highlighted fields before saving.");
+      return;
+    }
+    const galleryError = validateProgramMedia(gallery);
+    if (galleryError) {
+      setError(galleryError);
       return;
     }
 
@@ -208,6 +358,7 @@ export default function AdminProgramsPage() {
       const savedDraft = programToDraft(data as DBProgram);
       savedDraft.heroMediaPreviewUrl = draft.heroMediaPreviewUrl;
       savedDraft.detailMediaPreviewUrl = draft.detailMediaPreviewUrl;
+      if (savedDraft.id) await saveGallery(savedDraft.id);
       setPrograms((current) => {
         const exists = current.some((program) => program.id === savedDraft.id);
         const next = exists
@@ -540,12 +691,236 @@ export default function AdminProgramsPage() {
                 </FormField>
               </div>
 
+              <div className="mt-7 border-t border-white/[0.06] pt-7">
+                <div className="mb-4">
+                  <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                    Registration section
+                  </h3>
+                  <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
+                    The band shown partway down the public program page. Leave a
+                    field empty to keep the standard wording shown as its
+                    placeholder. The button itself comes from the CTA fields
+                    above — with no destination saved, visitors see the
+                    &ldquo;coming soon&rdquo; text instead of a link.
+                  </p>
+                </div>
+
+                <label className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-black/15 p-4">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 flex-none accent-red-600"
+                    checked={draft.registrationEnabled}
+                    onChange={(event) =>
+                      updateDraft("registrationEnabled", event.target.checked)
+                    }
+                  />
+                  <span>
+                    <span className="block font-display text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                      Show the registration section on this program page
+                    </span>
+                    <span className="mt-1 block font-body text-xs text-white/35">
+                      When on, this program leads with the registration band and
+                      its image gallery instead of the standard highlight band.
+                    </span>
+                  </span>
+                </label>
+
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <FormField
+                    label="Registration eyebrow"
+                    error={fieldError(errors, "registrationEyebrow")}
+                  >
+                    <input
+                      className={INPUT_CLASS}
+                      value={draft.registrationEyebrow}
+                      onChange={(event) =>
+                        updateDraft("registrationEyebrow", event.target.value)
+                      }
+                      maxLength={PROGRAM_REGISTRATION_LIMITS.eyebrow}
+                      placeholder={DEFAULT_PROGRAM_REGISTRATION_CONTENT.eyebrow}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Registration headline"
+                    error={fieldError(errors, "registrationHeadline")}
+                  >
+                    <input
+                      className={INPUT_CLASS}
+                      value={draft.registrationHeadline}
+                      onChange={(event) =>
+                        updateDraft("registrationHeadline", event.target.value)
+                      }
+                      maxLength={PROGRAM_REGISTRATION_LIMITS.headline}
+                      placeholder={DEFAULT_PROGRAM_REGISTRATION_CONTENT.headline}
+                    />
+                  </FormField>
+                </div>
+
+                <div className="mt-5 grid gap-5">
+                  <FormField
+                    label="Registration body — link published"
+                    error={fieldError(errors, "registrationBody")}
+                  >
+                    <textarea
+                      className={`${INPUT_CLASS} min-h-24 resize-y`}
+                      value={draft.registrationBody}
+                      onChange={(event) =>
+                        updateDraft("registrationBody", event.target.value)
+                      }
+                      maxLength={PROGRAM_REGISTRATION_LIMITS.body}
+                      placeholder={DEFAULT_PROGRAM_REGISTRATION_CONTENT.body}
+                    />
+                  </FormField>
+                  <FormField
+                    label="Registration body — no link yet"
+                    error={fieldError(errors, "registrationPendingBody")}
+                  >
+                    <textarea
+                      className={`${INPUT_CLASS} min-h-24 resize-y`}
+                      value={draft.registrationPendingBody}
+                      onChange={(event) =>
+                        updateDraft("registrationPendingBody", event.target.value)
+                      }
+                      maxLength={PROGRAM_REGISTRATION_LIMITS.pendingBody}
+                      placeholder={
+                        DEFAULT_PROGRAM_REGISTRATION_CONTENT.pendingBody
+                      }
+                    />
+                  </FormField>
+                  <FormField
+                    label="Placeholder button text — no link yet"
+                    error={fieldError(errors, "registrationPendingLabel")}
+                  >
+                    <input
+                      className={INPUT_CLASS}
+                      value={draft.registrationPendingLabel}
+                      onChange={(event) =>
+                        updateDraft(
+                          "registrationPendingLabel",
+                          event.target.value,
+                        )
+                      }
+                      maxLength={PROGRAM_REGISTRATION_LIMITS.pendingLabel}
+                      placeholder={
+                        DEFAULT_PROGRAM_REGISTRATION_CONTENT.pendingLabel
+                      }
+                    />
+                  </FormField>
+                </div>
+              </div>
+
+              <div className="mt-7 border-t border-white/[0.06] pt-7">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                      Registration image gallery
+                    </h3>
+                    <p className="mt-1 max-w-xl font-body text-xs leading-5 text-white/35">
+                      Photos beside the registration section. Two or more
+                      cross-fade as a slideshow. Up to{" "}
+                      {PROGRAM_MEDIA_LIMITS.items} images; JPEG, PNG, or WebP.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => galleryInput.current?.click()}
+                    disabled={
+                      uploadingGallery ||
+                      gallery.length >= PROGRAM_MEDIA_LIMITS.items
+                    }
+                    className="rounded-lg border border-white/10 px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-white/65 transition hover:bg-white/[0.05] disabled:opacity-30"
+                  >
+                    {uploadingGallery ? "Uploading…" : "Add image"}
+                  </button>
+                  <input
+                    ref={galleryInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={(event) =>
+                      void uploadGalleryImage(event.target.files)
+                    }
+                  />
+                </div>
+
+                {gallery.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-white/[0.08] px-4 py-6 text-center font-body text-sm text-white/30">
+                    No gallery images yet. Without them the registration section
+                    shows this program&rsquo;s detail or hero photo.
+                  </p>
+                ) : (
+                  <ul className="grid gap-3 sm:grid-cols-2">
+                    {gallery.map((item, index) => (
+                      <li
+                        key={item.id ?? `new-${index}`}
+                        className="rounded-xl border border-white/[0.07] bg-black/15 p-3"
+                      >
+                        <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-white/[0.06] bg-black/25">
+                          {item.url ? (
+                            <ResilientImage
+                              src={item.url}
+                              alt={item.alt || `Gallery image ${index + 1}`}
+                              fill
+                              sizes="(max-width: 640px) 100vw, 40vw"
+                              className="object-cover"
+                            />
+                          ) : null}
+                          <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-white/70">
+                            {index + 1}
+                          </span>
+                        </div>
+                        <input
+                          className={`${INPUT_CLASS} mt-3`}
+                          value={item.alt}
+                          onChange={(event) =>
+                            setGalleryAlt(index, event.target.value)
+                          }
+                          maxLength={PROGRAM_MEDIA_LIMITS.alt}
+                          placeholder="Describe this photo"
+                          aria-label={`Gallery image ${index + 1} description`}
+                        />
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => reorderGallery(index, -1)}
+                            disabled={index === 0}
+                            className="flex-1 rounded-md border border-white/[0.06] py-1.5 font-display text-xs uppercase text-white/45 transition hover:bg-white/[0.05] disabled:opacity-20"
+                            aria-label={`Move gallery image ${index + 1} up`}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => reorderGallery(index, 1)}
+                            disabled={index === gallery.length - 1}
+                            className="flex-1 rounded-md border border-white/[0.06] py-1.5 font-display text-xs uppercase text-white/45 transition hover:bg-white/[0.05] disabled:opacity-20"
+                            aria-label={`Move gallery image ${index + 1} down`}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeGalleryImage(index)}
+                            className="rounded-md border border-red-400/15 px-3 py-1.5 font-display text-xs uppercase text-red-300/70"
+                            aria-label={`Remove gallery image ${index + 1}`}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               <div className="mt-8 flex flex-col-reverse gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <AdminSaveFeedback saving={saving} saved={saved} savingLabel="Saving program…" successLabel="Program saved" />
                 <button
                   type="button"
                   onClick={() => void saveProgram()}
-                  disabled={saving || uploadingRole !== null || !dirty}
+                  disabled={
+                    saving || uploadingRole !== null || uploadingGallery || !dirty
+                  }
                   className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   Save changes

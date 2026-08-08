@@ -23,6 +23,7 @@ export const ADMIN_TABLE_FEATURES = {
   player_photos: "roster",
   player_season_stats: "roster",
   players: "roster",
+  program_media: "programs",
   programs: "programs",
   seasons: "roster",
   shop_carousel_photos: "shop",
@@ -136,7 +137,42 @@ const programMutation = z
     detail_media_asset_id: nullableUuid.optional(),
     external_cta_label: optionalText(40),
     external_cta_href: externalHref,
+    // Registration band copy. Ceilings mirror the CHECK constraints added in
+    // 20260808020000_dcfc_program_media_registration_content.sql exactly, so a
+    // rejection surfaces as a field message instead of a database error.
+    registration_enabled: z.boolean().optional(),
+    registration_eyebrow: optionalText(80),
+    registration_headline: optionalText(120),
+    registration_body: optionalText(1_200),
+    registration_pending_body: optionalText(1_200),
+    registration_pending_label: optionalText(60),
     status: z.enum(["active", "hidden"]).optional(),
+    sort_order: z.number().int().optional(),
+  })
+  .strict();
+
+// Ordered gallery image belonging to one program. `url` is rendered as an
+// image source, so mailto: is meaningless and a protocol-relative `//host/...`
+// would resolve to an attacker-controlled origin. Byte-identical to the CHECK
+// constraint on onzio.program_media.url, so a rejection surfaces here as a
+// field message rather than as a database error.
+const PROGRAM_IMAGE_URL_PATTERN = /^(\/[^/\\]|https?:\/\/)/;
+
+const programImageUrl = z
+  .string()
+  .max(2_048)
+  .refine((value) => value === "" || PROGRAM_IMAGE_URL_PATTERN.test(value), {
+    message:
+      "Program image sources must be a local path or an http(s) URL",
+  });
+
+const programMediaMutation = z
+  .object({
+    id: uuid.optional(),
+    program_id: uuid.optional(),
+    url: programImageUrl.optional(),
+    media_asset_id: nullableUuid.optional(),
+    alt: optionalText(200),
     sort_order: z.number().int().optional(),
   })
   .strict();
@@ -197,6 +233,7 @@ const tryoutMutation = z
 
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
   programs: programMutation,
+  program_media: programMediaMutation,
   contact_profile: contactProfileMutation,
   contact_page_content: contactPageMutation,
   tryouts: tryoutMutation,
@@ -287,6 +324,32 @@ export const adminDataRequestSchema = z
               message: `Program ${request.operation} requires ${field}`,
             });
           }
+        }
+      }
+
+      // A gallery image is only meaningful attached to a program and pointing
+      // at something renderable. Both are database constraints too; asserting
+      // them here turns a 23514/23502 into a readable field error.
+      if (
+        request.table === "program_media" &&
+        (request.operation === "insert" || request.operation === "upsert")
+      ) {
+        if (typeof payload.program_id !== "string") {
+          context.addIssue({
+            code: "custom",
+            path: ["payload", "program_id"],
+            message: `Program media ${request.operation} requires program_id`,
+          });
+        }
+        const hasUrl = typeof payload.url === "string" && payload.url !== "";
+        const hasAsset = typeof payload.media_asset_id === "string";
+        if (!hasUrl && !hasAsset) {
+          context.addIssue({
+            code: "custom",
+            path: ["payload", "url"],
+            message:
+              "A program image requires an uploaded asset or a source path",
+          });
         }
       }
     });

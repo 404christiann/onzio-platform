@@ -1,5 +1,18 @@
-import type { DBProgram } from "@/lib/db-types";
+import type { DBProgram, DBProgramMedia } from "@/lib/db-types";
 import { normalizePublicHref } from "@/lib/public-link";
+import {
+  PROGRAM_MEDIA_LIMITS,
+  PROGRAM_REGISTRATION_LIMITS,
+} from "@/lib/program-content";
+
+/** One row of a program's ordered gallery, as edited in /admin/programs. */
+export type ProgramMediaDraft = {
+  id: string | null;
+  url: string;
+  mediaAssetId: string | null;
+  alt: string;
+  sortOrder: number;
+};
 
 export type ProgramDraft = {
   id: string | null;
@@ -17,6 +30,12 @@ export type ProgramDraft = {
   detailMediaPreviewUrl: string;
   externalCtaLabel: string;
   externalCtaHref: string;
+  registrationEnabled: boolean;
+  registrationEyebrow: string;
+  registrationHeadline: string;
+  registrationBody: string;
+  registrationPendingBody: string;
+  registrationPendingLabel: string;
   status: "active" | "hidden";
   sortOrder: number;
 };
@@ -31,7 +50,12 @@ export type ProgramValidationErrors = Partial<
     | "body"
     | "highlights"
     | "externalCtaLabel"
-    | "externalCtaHref",
+    | "externalCtaHref"
+    | "registrationEyebrow"
+    | "registrationHeadline"
+    | "registrationBody"
+    | "registrationPendingBody"
+    | "registrationPendingLabel",
     string
   >
 >;
@@ -53,6 +77,12 @@ export function emptyProgramDraft(sortOrder = 0): ProgramDraft {
     detailMediaPreviewUrl: "",
     externalCtaLabel: "",
     externalCtaHref: "",
+    registrationEnabled: false,
+    registrationEyebrow: "",
+    registrationHeadline: "",
+    registrationBody: "",
+    registrationPendingBody: "",
+    registrationPendingLabel: "",
     status: "active",
     sortOrder,
   };
@@ -82,9 +112,77 @@ export function programToDraft(row: DBProgram): ProgramDraft {
     detailMediaPreviewUrl: "",
     externalCtaLabel: row.external_cta_label,
     externalCtaHref: row.external_cta_href,
+    registrationEnabled: row.registration_enabled === true,
+    registrationEyebrow: row.registration_eyebrow,
+    registrationHeadline: row.registration_headline,
+    registrationBody: row.registration_body,
+    registrationPendingBody: row.registration_pending_body,
+    registrationPendingLabel: row.registration_pending_label,
     status: row.status === "hidden" ? "hidden" : "active",
     sortOrder: row.sort_order,
   };
+}
+
+export function programMediaToDraft(row: DBProgramMedia): ProgramMediaDraft {
+  return {
+    id: row.id,
+    url: row.url,
+    mediaAssetId: row.media_asset_id,
+    alt: row.alt,
+    sortOrder: row.sort_order,
+  };
+}
+
+export function buildProgramMediaMutationPayload(
+  draft: ProgramMediaDraft,
+  programId: string,
+): Record<string, unknown> {
+  return {
+    program_id: programId,
+    url: draft.url.trim(),
+    media_asset_id: draft.mediaAssetId,
+    alt: draft.alt.trim(),
+    sort_order: draft.sortOrder,
+  };
+}
+
+/**
+ * Returns a message when the gallery cannot be saved, or null when it can.
+ * Mirrors the CHECK constraints on onzio.program_media plus the admin-side
+ * ceiling on gallery size.
+ */
+export function validateProgramMedia(
+  media: readonly ProgramMediaDraft[],
+): string | null {
+  if (media.length > PROGRAM_MEDIA_LIMITS.items) {
+    return `A program gallery holds at most ${PROGRAM_MEDIA_LIMITS.items} images.`;
+  }
+  if (media.some((item) => !item.url.trim() && !item.mediaAssetId)) {
+    return "Every gallery image needs an uploaded file.";
+  }
+  if (media.some((item) => item.alt.trim().length > PROGRAM_MEDIA_LIMITS.alt)) {
+    return `Image descriptions must be ${PROGRAM_MEDIA_LIMITS.alt} characters or fewer.`;
+  }
+  return null;
+}
+
+export function moveProgramMedia(
+  media: readonly ProgramMediaDraft[],
+  index: number,
+  delta: -1 | 1,
+): ProgramMediaDraft[] {
+  const destination = index + delta;
+  if (
+    index < 0 ||
+    index >= media.length ||
+    destination < 0 ||
+    destination >= media.length
+  ) {
+    return media as ProgramMediaDraft[];
+  }
+  const next = media.map((item) => ({ ...item }));
+  [next[index], next[destination]] = [next[destination], next[index]];
+  return next.map((item, sortOrder) => ({ ...item, sortOrder }));
 }
 
 function textLengthError(
@@ -121,6 +219,36 @@ export function validateProgramDraft(
     ["summary", draft.summary, 320, "Summary"],
     ["body", draft.body, 6_000, "Body"],
     ["externalCtaLabel", draft.externalCtaLabel, 40, "CTA label"],
+    [
+      "registrationEyebrow",
+      draft.registrationEyebrow,
+      PROGRAM_REGISTRATION_LIMITS.eyebrow,
+      "Registration eyebrow",
+    ],
+    [
+      "registrationHeadline",
+      draft.registrationHeadline,
+      PROGRAM_REGISTRATION_LIMITS.headline,
+      "Registration headline",
+    ],
+    [
+      "registrationBody",
+      draft.registrationBody,
+      PROGRAM_REGISTRATION_LIMITS.body,
+      "Registration body",
+    ],
+    [
+      "registrationPendingBody",
+      draft.registrationPendingBody,
+      PROGRAM_REGISTRATION_LIMITS.pendingBody,
+      "Registration pending body",
+    ],
+    [
+      "registrationPendingLabel",
+      draft.registrationPendingLabel,
+      PROGRAM_REGISTRATION_LIMITS.pendingLabel,
+      "Registration pending label",
+    ],
   ] as const) {
     const error = textLengthError(value, maximum, label);
     if (error) errors[field] = error;
@@ -169,6 +297,14 @@ export function buildProgramMutationPayload(
     detail_media_asset_id: draft.detailMediaAssetId,
     external_cta_label: draft.externalCtaLabel.trim(),
     external_cta_href: draft.externalCtaHref.trim(),
+    registration_enabled: draft.registrationEnabled,
+    // Empty is preserved deliberately: it means "use the academy@1 template
+    // default" (lib/program-content.ts), not "render nothing".
+    registration_eyebrow: draft.registrationEyebrow.trim(),
+    registration_headline: draft.registrationHeadline.trim(),
+    registration_body: draft.registrationBody.trim(),
+    registration_pending_body: draft.registrationPendingBody.trim(),
+    registration_pending_label: draft.registrationPendingLabel.trim(),
     status: draft.status,
     sort_order: draft.sortOrder,
   };
