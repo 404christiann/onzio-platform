@@ -470,12 +470,18 @@ export function buildDiverseCityLocalImportRows(
       club_id: clubId,
       surface,
       kit_variant: "home",
-      eyebrow: surface === "home" ? "Sky Blue" : "Official Club Store",
-      title: "Diverse City FC Match Jersey",
+      // Mockup copy (DCFC-D132 parity pass): the homepage feature reads
+      // "Official Club Store / Sky Blue Match Jersey / Buy Now"; the shop
+      // page keeps the full jersey name with the order CTA.
+      eyebrow: "Official Club Store",
+      title:
+        surface === "home"
+          ? "Sky Blue\nMatch Jersey"
+          : "Diverse City FC Match Jersey",
       description: "The official sky blue match jersey featuring the Diverse City FC crest, academy detailing, and the club's signature inclusive identity.",
       bullet_points: ["Available item: Match Jersey", "Sizing and price: Contact the club"],
       store_note: "Ask the club about current availability, sizing, customization, and ordering details.",
-      cta_label: surface === "home" ? "View the Club Store" : "Contact the Club to Order",
+      cta_label: surface === "home" ? "Buy Now" : "Contact the Club to Order",
       cta_link: surface === "home" ? "/shop" : "mailto:diverse.cityfc@gmail.com?subject=Diverse%20City%20FC%20Jersey%20Order",
       updated_at: FIXED_TIMESTAMP,
     })),
