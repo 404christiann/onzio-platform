@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -111,7 +112,11 @@ export default function AcademyNextMatch() {
 
         <div className="grid items-center gap-7 bg-white px-6 py-10 md:grid-cols-[1fr_auto_1fr] md:px-12">
           <div className="flex flex-col items-center text-center">
-            <OpponentCrest name={club.name} logoUrl={clubLogoUrl} size={144} />
+            <div className="relative h-28 w-28 md:h-36 md:w-36">
+              {clubLogoUrl && (
+                <Image src={clubLogoUrl} alt={`${club.name} crest`} fill sizes="144px" className="object-contain" />
+              )}
+            </div>
             <p className="mt-4 font-display text-xl font-black uppercase italic text-[#1E3653]">
               {club.name}
             </p>
@@ -123,7 +128,12 @@ export default function AcademyNextMatch() {
             </p>
           </div>
           <div className="flex flex-col items-center text-center">
-            <OpponentCrest name={opponentName} logoUrl={nextFixture?.opponentLogoUrl} size={144} />
+            <OpponentCrest
+              name={opponentName}
+              logoUrl={nextFixture?.opponentLogoUrl}
+              size={112}
+              className="[--opponent-crest-size:112px] md:[--opponent-crest-size:144px]"
+            />
             <p className="mt-4 font-display text-xl font-black uppercase italic text-[#1E3653]">
               {opponentLabel}
             </p>

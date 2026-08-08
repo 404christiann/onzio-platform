@@ -13,8 +13,10 @@ interface OpponentCrestProps {
   className?: string;
 }
 
-function initial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || "?";
+function fallbackLabel(name: string): string {
+  const trimmed = name.trim();
+  if (trimmed.toUpperCase() === "TBA") return "TBA";
+  return trimmed.charAt(0).toUpperCase() || "?";
 }
 
 /** Circular opponent crest. Falls back to an initial monogram if no logo is set or the image fails to load. */
@@ -27,6 +29,8 @@ export default function OpponentCrest({ name, logoUrl, size = 96, variant = "lig
 
   const showImage = !!logoUrl && !failed;
   const isDark = variant === "dark";
+  const label = fallbackLabel(name);
+  const fallbackScale = label.length > 1 ? 0.28 : 0.4;
 
   return (
     <div
@@ -53,9 +57,9 @@ export default function OpponentCrest({ name, logoUrl, size = 96, variant = "lig
       ) : (
         <span
           className="font-display font-black uppercase leading-none"
-          style={{ fontSize: `calc(var(--opponent-crest-size, ${size}px) * 0.4)`, color: isDark ? "rgba(255,255,255,0.85)" : "var(--color-gray-mid)" }}
+          style={{ fontSize: `calc(var(--opponent-crest-size, ${size}px) * ${fallbackScale})`, color: isDark ? "rgba(255,255,255,0.85)" : "var(--color-gray-mid)" }}
         >
-          {initial(name)}
+          {label}
         </span>
       )}
     </div>
