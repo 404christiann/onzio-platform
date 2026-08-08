@@ -2,6 +2,44 @@
 
 Last updated: 2026-08-07
 
+## Nav affiliation badges shipped to `staging` (item 1 of the 4-gap handoff); items 2-4 handed back with exact questions for Christian
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: item 1 code
+complete, committed and pushed to `origin/staging`, **not deployed**. Items
+2-4 not coded — re-verified against the mockup and written up with the
+precise decision each one needs from Christian. Full detail in
+`docs/phase-11/diverse-city/STATUS.md`'s entry with this same title.
+
+**Item 1 — nav badges:** Added US Soccer/FIFA/UPSL affiliation badges to
+`components/Nav.tsx`'s generic branch (`academy@1`'s branch), matching the
+mockup. Gated on `club.presentationTemplateKey === "academy@1"`, not
+`club.slug === "diverse-city"` — the latter was my first attempt and it
+failed `tests/contracts/diverse-city-domains.test.ts`'s locked-boundary
+contract (`EPIC.md` forbids per-club presentation branches for Diverse
+City specifically). `tsc` clean, suite `686/686`. Verified live in a real
+browser against a locally-seeded `diverse-city` tenant
+(`npm run migration:import:diverse-city:local`, zero hosted mutations,
+reset afterward) at desktop, scrolled/solid-nav, `/roster`, and mobile —
+matches the mockup pixel-for-pixel. **Committed and pushed to
+`origin/staging`, not deployed** — per this session's brief, deploying to
+production needs Christian's explicit go-ahead in chat first, and then the
+private-hostname re-alias step (`vercel alias set <deployment-id>
+diverse-city-fc-private.vercel.app`) that has bitten every deploy this
+session.
+
+**Items 2-4 — not coded, re-confirmed against mockup source, exact
+questions for Christian below** (also in `STATUS.md`):
+- **Video hero + story section:** build the real Bunny.net Stream pipeline
+  (`DCFC-D105`), or ship the mockup's own approved poster stills
+  (`keeper-save-poster.jpg`, `club-reel-poster.jpg`) as a static interim
+  substitute now? Both legitimate; Christian's call, not a technical one.
+- **Next Match card:** what's the actual next fixture (date, time, opponent,
+  home/away)? The mockup's own card is a "TBA" placeholder; nothing to build
+  without a real fixture.
+- **Standings table:** current UPSL Midwest Central Conference standings to
+  enter, or is it too early in the season to have any? The rendering/admin
+  code already exists; this is purely a missing-data blocker.
+
 ## Handoff: 4 remaining pixel-perfect gaps, precisely scoped — read the full entry in STATUS.md before starting
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: investigation

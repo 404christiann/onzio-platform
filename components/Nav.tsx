@@ -65,6 +65,33 @@ const lionsLocalAffiliations = [
   },
 ];
 
+// Standard US Soccer/FIFA/UPSL federation badges for the academy@1 template.
+// Scoped to the template key, not any single club's slug — see EPIC.md's
+// locked boundary against per-club tenant branches in presentation code.
+const academyAffiliations = [
+  {
+    colorSrc: "/images/logo/affiliations/us-soccer-color.png",
+    whiteSrc: "/images/logo/affiliations/us-soccer-white.png",
+    alt: "US Soccer",
+    className: "h-7 w-7 sm:h-10 sm:w-10",
+    sizes: "(max-width: 639px) 28px, 40px",
+  },
+  {
+    colorSrc: "/images/logo/affiliations/fifa-color.png",
+    whiteSrc: "/images/logo/affiliations/fifa-white.png",
+    alt: "FIFA",
+    className: "h-7 w-11 sm:h-10 sm:w-16",
+    sizes: "(max-width: 639px) 44px, 64px",
+  },
+  {
+    colorSrc: "/images/logo/affiliations/upsl-color.png",
+    whiteSrc: "/images/logo/affiliations/upsl-white.png",
+    alt: "UPSL",
+    className: "h-7 w-7 sm:h-10 sm:w-10",
+    sizes: "(max-width: 639px) 28px, 40px",
+  },
+];
+
 type NavLink = {
   label: string;
   // Omitted for parent items that are hover/tap-only triggers with no page
@@ -296,14 +323,14 @@ export default function Nav() {
             )}
           </Link>
 
-          {club.slug === "rose-city" && <>
+          {(club.slug === "rose-city" || club.presentationTemplateKey === "academy@1") && <>
             <div
               className="flex-shrink-0"
               style={{ width: "1px", height: "28px", backgroundColor: isHero ? "rgba(255,255,255,0.3)" : "rgba(20,20,20,0.15)" }}
             />
 
             <div className="flex items-center gap-1 sm:gap-2">
-              {affiliationLogos.map((logo) => (
+              {(club.slug === "rose-city" ? affiliationLogos : academyAffiliations).map((logo) => (
                 <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
                   <Image
                     src={isHero ? logo.whiteSrc : logo.colorSrc}

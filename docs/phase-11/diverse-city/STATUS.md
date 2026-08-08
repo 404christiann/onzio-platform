@@ -1,5 +1,121 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Nav affiliation badges shipped (item 1); items 2-4 re-confirmed and handed back with exact decisions needed
+
+**Package:** none — ad hoc, acting on the "4 remaining pixel-perfect gaps"
+handoff entry below (same title in `HANDOFF.md`).
+**Status:** item 1 `complete` in code, committed, **not yet deployed**
+(awaiting Christian's go-ahead per this session's instructions); items 2-4
+re-verified against the mockup source and left for Christian, not attempted
+in code.
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+### Item 1 — nav affiliation badges: built, tested, verified live locally
+
+Added US Soccer/FIFA/UPSL badges to `components/Nav.tsx`'s generic branch
+(the one `academy@1` uses), matching the mockup's inline crest-divider-badges
+layout and color/white variant swap tied to the nav's transparent-vs-solid
+state.
+
+**One correction to the prior session's scoping:** the handoff said to key
+the new badges off `academy@1` or gate however seemed simplest, and my first
+attempt gated on `club.slug === "diverse-city"` (mirroring the existing
+`rose-city` block right next to it). That failed
+`tests/contracts/diverse-city-domains.test.ts`'s "no Diverse City tenant
+branches (EPIC.md locked boundary)" contract — `EPIC.md` explicitly forbids
+`club.slug === "diverse-city"` presentation branches so that `academy@1`
+stays a neutral, reusable template rather than a one-off for this club.
+Fixed by gating on `club.presentationTemplateKey === "academy@1"` instead
+(a new `academyAffiliations` array, separate from the existing `rose-city`-
+only `affiliationLogos` array and the `clubhouse@1`-only
+`lionsLocalAffiliations`). Left a comment in the file pointing at this so
+the next session doesn't repeat the mistake. Run the contract suite early if
+you add anything else keyed to Diverse City specifically.
+
+Assets: copied `us-soccer-white.png`, `fifa-white.png`, `upsl-white.png`
+from the mockup's `public/media/affiliations/` into this repo's
+`public/images/logo/affiliations/` (the color variants were already there,
+byte-identical to the mockup's, presumably copied for `lionsLocalAffiliations`
+at some point). Static `/public` files, not Supabase Storage — these are
+standard federation badges, not club-editable content, matching the
+`lionsLocalAffiliations` precedent the handoff pointed at.
+
+**Verified:**
+- `npx tsc --noEmit` clean.
+- Full suite green: `686/686` (`.env.test` exported) — caught and fixed the
+  `diverse-city-domains.test.ts` violation above before it went green.
+- Verified live in a real local browser, not just reasoning about the diff:
+  ran `npm run migration:import:diverse-city:local` (local Supabase, zero
+  hosted mutations) to seed a real `diverse-city` tenant locally, served it
+  at `http://diverse-city.localhost:3020` (the `ONZIO_LOCAL_TENANT_SLUG`/
+  `.localhost` convention this repo already uses), and screenshotted
+  side-by-side against the mockup on port 3012 at desktop (800x500) and
+  mobile (375x812). Confirmed: crest + divider + all three badges render at
+  identical position/size to the mockup on the transparent hero state
+  (white variant), the scrolled/solid state (color variant, confirmed via
+  `getComputedStyle` on the header's class list, not just a screenshot), and
+  a non-hero route (`/roster`). No console errors. Ran
+  `npm run migration:reset:diverse-city:local` afterward to leave local
+  Supabase clean.
+
+**Not deployed.** Per this session's instructions, code is committed and
+pushed to `origin/staging` only — ship to production requires Christian's
+explicit go-ahead in chat, and then the private-hostname re-alias step this
+session's brief and `HANDOFF.md` both call out (`vercel alias set
+<deployment-id> diverse-city-fc-private.vercel.app`).
+
+**Files changed:** `components/Nav.tsx`,
+`public/images/logo/affiliations/us-soccer-white.png`,
+`public/images/logo/affiliations/fifa-white.png`,
+`public/images/logo/affiliations/upsl-white.png`, this file, `HANDOFF.md`.
+
+### Items 2-4 — re-checked against mockup source, still accurate, not coded
+
+Re-read `onzioProspects/diverse-city-fc/site/components/HomeSections.tsx`
+(`MatchPresentation()` and `VerticalStory()`) and `components/Hero.tsx` to
+confirm the prior session's description still matches the mockup as it
+exists today before writing this handback. It does, unchanged. Restating
+each with the exact question Christian needs to answer, so whoever talks to
+him next doesn't have to re-derive it:
+
+**Item 2 — video hero ("One Club, One Community") + "Developing the next
+generation" story section.** Both are hidden per `DCFC-D114`, blocked only
+on video. Confirmed in the mockup: `Hero.tsx` uses
+`/media/video/homepage-hero-edited.mp4` with poster
+`/media/video/keeper-save-poster.jpg`; `HomeSections.tsx`'s `VerticalStory()`
+uses `/media/video/club-reel-portrait.mp4` with poster
+`/media/video/club-reel-poster.jpg`. The story copy itself ("Diverse City FC
+combines professional-level coaching, mentorship, and community support...")
+is real marketing copy, not fabricated, safe to ship independent of the
+video decision.
+**Question for Christian:** build the real Bunny.net Stream pipeline
+approved in `DCFC-D105` (real infrastructure work — account, upload/transcode
+flow, admin video-swap UI), or ship the mockup's own already-approved poster
+stills (`keeper-save-poster.jpg`, `club-reel-poster.jpg`) as a static
+`<Image>` interim substitute now, with video swapped in later at no
+rework cost to the surrounding markup? Both are legitimate; this is a
+scope/cost call only Christian can make, not a technical one.
+
+**Item 3 — Next Match card.** Confirmed in `HomeSections.tsx`'s
+`MatchPresentation()`: still a literal fake — opponent shows a "TBA" badge,
+"Next Opponent" label, "Date and time TBA" text. Only the crest, league name
+("UPSL Midwest Central"), and home city ("Schaumburg, Illinois") are real.
+**Question for Christian:** what's the next real fixture (date, time,
+opponent, home/away)? Nothing to build until he supplies one — showing "TBA"
+on production would be the exact fabrication pattern `/schedule` and
+`/tryouts` already correctly avoid.
+
+**Item 4 — standings table.** Unchanged from the prior entry: hidden because
+`onzio.league_standings` has no rows for Diverse City; the rendering/admin
+code already exists and works (no new engineering). **Question for
+Christian:** current UPSL Midwest Central Conference standings to enter, or
+a decision that the season hasn't progressed far enough yet to show any.
+
+**Exact next step:** get Christian's go-ahead to deploy item 1 (then deploy +
+re-alias the private hostname per the standing process). Ask Christian the
+three questions above for items 2-4; none of them are code-ready until he
+answers.
+
 ## 2026-08-07 - Handoff: 4 remaining pixel-perfect gaps, precisely scoped for the next session
 
 **Package:** none — ad hoc. Christian: "The nav bar is not matching either,
