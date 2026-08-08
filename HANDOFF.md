@@ -2,6 +2,84 @@
 
 Last updated: 2026-08-07
 
+## academy@1 content audit + club-owner editability for program registration copy and program media — committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Opus 5 (Claude Code), 2026-08-07. Status: `complete` for
+everything in scope, committed and pushed to `origin/staging` across five
+commits (`3c4eaa0` … docs), **not deployed**.
+
+Christian wants to edit all the text and images on his public site himself
+through `/admin`. Today's mockup-parity passes produced several new
+`academy@1` components under time pressure — some reading real admin-editable
+content, some carrying copy and image paths hardcoded in component source, and
+nobody had inventoried which was which. Scope was locked with him first:
+Diverse City only, **text and images only** (palette, fonts, template, and
+layout stay operator-controlled per `DCFC-D007`), roster/stats/seasons/schedule
+untouched.
+
+**Audit result, in three buckets.** Eleven surfaces were already fully
+admin-editable and needed nothing (hero, home shop feature, standings table,
+contact, tryouts, fixtures, both programs surfaces, footer, sponsors). Three
+needed only wiring — each had a column with capacity that the component
+ignored: Next Match's competition subtitle (already in
+`league_standings_settings.title`, editable at `/admin/standings`), Next
+Match's fallback location (already in `contact_profile.service_area`, editable
+at `/admin/contact`), and `AcademySponsorsPage`'s intro, which had one tenant's
+name written into a shared template — a real latent bug for any future academy
+club, now a `clubName` prop. Two needed genuinely new schema: the registration
+band's copy, and multi-image program media (the predicted gap — `onzio.programs`
+has exactly one hero and one detail asset reference, so the four-photo
+slideshow shipped as four hardcoded paths).
+
+**Built.** New migration
+`20260808020000_dcfc_program_media_registration_content.sql`: `onzio.program_media`
+(ordered per-program gallery, shaped after the existing
+`homepage_slideshow_photos` `url` + optional `media_asset_id` pairing, composite
+`(club_id, program_id)` and `(club_id, media_asset_id)` foreign keys, RLS,
+grants, and both triggers in the same migration) plus six `registration_*`
+columns on `onzio.programs` with explicit `DCFC-D109`-style ceilings. The
+hardcoded `slug === "special-olympics-soccer"` branch is gone — replaced by
+`registration_enabled`. Approved template wording moved to
+`lib/program-content.ts` as defaults, matching the `standings-content` /
+`homepage-content` convention, so an empty column renders correctly rather than
+blank. `/admin/programs` gained a Registration section fieldset and a gallery
+manager (upload, describe, reorder, remove) riding the existing secured media
+pipeline unchanged.
+
+**One finding worth keeping.** The image-source CHECK started as
+`^(/|https://)` and the new suite caught two real problems with it: it waved
+through protocol-relative `//host/...`, which resolves to an attacker-controlled
+origin, and its HTTPS-only rule rejected local Supabase's own published media
+URLs — which would have broken uploads in local dev, the environment Christian
+actually tests in. Final shape is `^(/[^/\\]|https?://)`, mirrored byte-for-byte
+in the zod schema.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **741/741** (`.env.test`
+exported), up from 686 — 54 new tests including a real end-to-end upload
+(stage → validate → publish → fetch the served bytes) and RLS coverage. Then
+verified as a human would: signed into `/admin` through the actual email-code
+flow against local Supabase, edited the registration headline and reordered a
+gallery image **through the UI only**, confirmed both in the database and on the
+public page, and reverted both. Public output is byte-identical to before, now
+entirely data-driven; other program pages, the homepage Next Match band, and
+`/sponsors` all confirmed unchanged, zero console errors.
+
+**Flagged, not built.** The audit found materially more hardcoded section copy
+than this session's brief predicted — the homepage story section, the programs
+index and pathway bands, the program-detail template chrome, and the footer
+tagline. Covering those needs a schema decision (a general section-copy domain
+versus reusing the live `behind_the_rose_section` singleton) that was not this
+session's to make. Nothing there regressed; full list in
+`docs/phase-11/diverse-city/STATUS.md`.
+
+**Not done:** deployment — Christian's call alone. No hosted Supabase project
+was touched: local Docker Supabase only, no `link`, no `db push`, no hosted
+writes. **Deploy carries a required data step**, same precedent as the
+`shop_kit_section` copy UPDATEs: production needs the migration plus the
+`program_media` seed and `registration_enabled` UPDATE, exact SQL in STATUS.md.
+Degradation before that seed is graceful — the band falls back to the program's
+own real photo.
+
 ## Special Olympics registration section deployed to production, verified live
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.

@@ -1,5 +1,280 @@
 # Diverse City FC Status
 
+## 2026-08-07 - academy@1 content audit + club-owner editability for program registration copy and program media, committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc, planned with Christian first in a full requirements
+interview. Goal: Christian wants to edit all the text and images on his public
+site himself through `/admin`. Today's mockup-parity passes produced several
+new `academy@1` components under time pressure, some reading real
+admin-editable content and some carrying copy and image paths hardcoded in
+component source. Nobody had inventoried which was which.
+
+**Locked scope, from Christian's own answers:** Diverse City only (no generic
+`academy@1` framework); **text and images only** — palette, fonts, template
+choice, and layout structure stay operator-controlled per `DCFC-D007`; roster,
+player/staff stats, seasons, and schedule/fixture admin untouched.
+
+**Status:** `complete` for everything the audit classified as buildable inside
+that scope. Committed and pushed to `origin/staging` across five commits
+(`3c4eaa0` … docs). Not deployed. No hosted Supabase project touched.
+
+### Phase 1 audit — every academy@1 surface, classified
+
+Enumerated by grepping `presentationTemplateKey === "academy@1"` across `app/`
+and `components/` plus everything matching `components/Academy*.tsx`, then
+reading each file in full.
+
+**1. Already admin-editable (reads an existing table through an existing
+`/admin` section) — no work needed:**
+
+| Surface | Content | Admin section |
+| --- | --- | --- |
+| `Hero.tsx` academy branch | eyebrow, both headline lines, intro, both CTA labels/destinations | `/admin/homepage` (`homepage_hero_content`) |
+| `AcademyHomeShopFeature.tsx` | eyebrow, title, description, bullets, store note, CTA label, both jersey photos | `/admin/shop` (`shop_kit_section` / `shop_kit_photos`) |
+| `AcademyLeagueStandingsTable.tsx` | eyebrow, title, intro, every row and crest | `/admin/standings` |
+| `AcademyContactPage.tsx` | eyebrow, headline, intro, hero image, email, phone, location, hours, social links | `/admin/contact`, `/admin/branding` |
+| `AcademyTryoutsPage.tsx` | every published tryout row's eyebrow, headline, intro, date, location, cost, eligibility, CTA, hero image | `/admin/tryouts` |
+| `AcademyFixtureRow.tsx` | date, time, opponent, crest, venue, score, map link | `/admin/schedule` (out of scope, confirmed working) |
+| `AcademyProgramsPathway.tsx` | the program list, its order, and the feature photo | `/admin/programs` |
+| `AcademyProgramsPage.tsx` | every card's kicker, name, and photo | `/admin/programs` |
+| `AcademyProgramDetailPage.tsx` | kicker, display title, body, highlights, hero and detail images, CTA label/destination | `/admin/programs` |
+| `Footer.tsx` academy branch | club name, crest, email, phone, social icons, sponsor logos | `/admin/contact`, `/admin/branding`, `/admin/sponsors` |
+| `AcademySponsorsPage.tsx` / `SponsorCarousel*` | every real sponsor logo and name | `/admin/sponsors` |
+
+**2. Needed wiring (a column with capacity already existed; the component
+ignored it) — all three fixed this session:**
+
+- **`AcademyNextMatch.tsx` league subtitle.** Hardcoded competition name.
+  `onzio.league_standings_settings.title` for this club already held the
+  identical string and is editable at `/admin/standings`. Now read from there;
+  the line hides itself when the title is empty rather than inventing one.
+- **`AcademyNextMatch.tsx` fallback location.** Hardcoded city/state.
+  `onzio.contact_profile.service_area` already held the identical string and is
+  editable at `/admin/contact`. Now read from there.
+- **`AcademySponsorsPage.tsx` intro copy.** Had one tenant's name written into
+  a shared `academy@1` template — a real latent bug for any future academy club,
+  not just an editability gap. Now takes `clubName` as a prop from the tenant
+  route.
+
+**3. Needed new schema — built this session:**
+
+- **Program registration band copy.** The eyebrow, headline, both body variants,
+  and the pending-button text were hardcoded, and the band itself rendered off a
+  hardcoded `slug === "special-olympics-soccer"` branch. No column could hold
+  any of it.
+- **Multi-image program media.** Confirmed as predicted: `onzio.programs` has
+  exactly one `hero_media_asset_id` and one `detail_media_asset_id`, so the
+  four-photo registration slideshow shipped as four hardcoded paths in
+  `AcademyProgramDetailPage.tsx`.
+
+**4. Deliberately not editable — presentation configuration or system strings,
+left alone on purpose:**
+
+- Nav links, the mobile-menu structure, and the US Soccer/FIFA/UPSL federation
+  badges (`Nav.tsx`) — navigation structure and template chrome, `DCFC-D007`.
+- Footer column headings ("Explore", "Connect"), table column labels
+  (`#`/`GP`/`W`/`D`/`L`/`GD`/`PTS`), and fixture-row system fallbacks
+  ("Time TBA", "Venue TBA", "Next", "Final", "Match details", "Home"/"Away").
+- The sponsor-carousel "Sponsor opportunity" placeholder slots — Christian
+  pre-authorized these as template chrome; real sponsors added through
+  `/admin/sponsors` displace them automatically.
+- The `/tryouts` empty state — the `DCFC-D102` no-fabrication posture.
+
+**5. Found, still hardcoded, NOT built — flagged rather than guessed.** The
+audit turned up materially more hardcoded section copy than this session's brief
+predicted, and covering it needs a schema decision this session was not
+authorized to make on its own (a general "section copy" domain versus reusing
+`behind_the_rose_section`, which is a live singleton already mounted on the same
+homepage). Nothing here regressed; all of it renders exactly as it does on
+production today:
+
+- `DevelopingNextGeneration.tsx` — heading, two body paragraphs, CTA label.
+- `AcademyProgramsPathway.tsx` — "Our Programs" eyebrow, heading, intro
+  paragraph.
+- `AcademyProgramsPage.tsx` — hero eyebrow/heading/intro and the closing
+  "Find your pathway." band.
+- `AcademyProgramDetailPage.tsx` remaining template chrome — "The Program",
+  "Grow through the game.", "Ask About This Program", "Program Focus",
+  "Development with purpose.", "Explore other programs." and its paragraph.
+- `AcademySponsorsPage.tsx` hero eyebrow/heading, `Footer.tsx`'s academy
+  tagline, `AcademyContactPage.tsx`'s "Follow Along" heading.
+- **Video, out of scope by definition** (this session was text and images):
+  both Bunny Stream GUIDs are Diverse-City-specific constants in
+  `lib/bunny-video.ts`; there is no admin video-swap UI. Already recorded in
+  `DCFC-D131`.
+
+### Phase 2 — migration
+
+`supabase/migrations/20260808020000_dcfc_program_media_registration_content.sql`.
+
+**`onzio.program_media`** — ordered gallery rows for one program. Shaped after
+the existing `homepage_slideshow_photos`/`shop_kit_photos` pattern (`url` as the
+delivered source plus an optional `media_asset_id` that `resolveMediaReferences`
+overwrites `url` from), which is what lets an existing static club asset be a
+row today and be replaced by a real upload later with no second schema change.
+`club_id` is carried on the row so the composite `(club_id, program_id)` and
+`(club_id, media_asset_id)` foreign keys make a cross-tenant reference
+structurally impossible. RLS, grants, the audit trigger, and the `updated_at`
+trigger are all in the same migration, as `AGENTS.md` requires. `program_id`
+cascades (a gallery image is meaningless without its program, and `restrict`
+would permanently block deleting any program that ever had one); the
+`media_assets` reference stays `restrict` so a published asset is never
+silently orphaned.
+
+Constraints are specified in the migration, not deferred (`DCFC-D109`):
+`char_length(url) <= 2048`, `char_length(alt) <= 200`, a row must carry a `url`
+or an asset, and the source must match `^(/[^/\\]|https?://)`. **That regex is
+the result of a real test finding, not a guess** — a first pass used
+`^(/|https://)` and the suite caught two problems: it waved through
+protocol-relative `//evil.example.test/...` (which resolves to an
+attacker-controlled origin, the exact case `normalizePublicHref` already
+guards), and its HTTPS-only rule rejected local Supabase's own published media
+URLs, which would have broken uploads in local dev — the environment Christian
+tests in.
+
+**`onzio.programs` registration columns** — `registration_enabled boolean not
+null default false` plus five `text not null default ''` copy columns.
+Ceilings: eyebrow 80 (matches this table's existing eyebrow/kicker),
+headline 120 (matches `display_title`), both bodies 1200 (well under `body`'s
+6000 so a fixed-height band cannot be overflowed, well over `intro`'s 320 so a
+club can explain a real process), pending label 60 (above `external_cta_label`'s
+40 because it is a sentence fragment, not a button verb). Empty means "use the
+template default" per `DCFC-D109`'s `<= N` policy — the approved `academy@1`
+wording lives in the new `lib/program-content.ts`, the same convention
+`lib/standings-content.ts` and `lib/homepage-content.ts` already use, so an
+untouched column renders correctly rather than blank.
+
+`registration_enabled` replaces the hardcoded slug branch outright.
+
+### Phase 3-4 — query layer and admin UI
+
+`fetchPrograms`/`fetchProgramBySlug` load the gallery in one batched
+tenant-scoped round trip and resolve published media exactly as every other
+media-bearing table does. `/admin/programs` gained a **Registration section**
+fieldset (visibility toggle, eyebrow, headline, both body variants, pending
+button text — each showing its template default as the input placeholder, so an
+empty field reads as "unchanged", not "blank") and a **Registration image
+gallery** manager (upload, describe, reorder, remove; capped at 12).
+
+Uploads reuse the existing secured pipeline unchanged — authorize, private
+staging, then finalize, which verifies the real file signature and dimensions
+and publishes to a UUID-versioned immutable path. No extension or
+browser-reported MIME type is trusted anywhere, and no
+`/storage/v1/render/image/` endpoint is involved.
+
+### Phase 5 — tests
+
+`tests/database/program-media.test.ts` (24 tests) and
+`tests/contracts/diverse-city-program-registration-admin.test.ts` (30 tests).
+The database file stages and publishes a real PNG through the actual pipeline
+on the `programs` surface, attaches it to a gallery row, and fetches the
+published URL to prove it is served directly; it also asserts a MIME-spoofed
+executable and an SVG are both rejected and leave no gallery row behind. A
+round-trip test edits registration copy and reads it back **anonymously**
+through the same resolution the public page uses. RLS coverage: a member can
+manage only its own club's gallery, the public sees rows only for a publicly
+accessible club, and a cross-tenant program reference is a foreign-key
+violation.
+
+Two existing harness files were updated, **no contract weakened**: the programs
+fixture gained the new columns, and the public-query mock chain gained the
+`.in()` method the batched gallery lookup uses (plus a new assertion that the
+lookup is tenant-scoped).
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **741/741** (`.env.test` exported), up from 686.
+- **Real browser, real admin session, port-3006 dev server against local
+  Supabase.** Signed in as the local `diverse-city` owner through the actual
+  email-code flow (Mailpit), opened `/admin/programs`, selected Special
+  Olympics, and confirmed the form loads the real 4-image gallery with correct
+  alt text and order and the toggle already on. Then, through the UI only:
+  edited the registration headline and clicked Save — "Program saved", verified
+  in the database, verified on the public page. Then reordered image 4 above
+  image 3 and saved — `sort_order` updated in the database and the public page
+  rendered the new order. Both changes reverted afterward and the page
+  reconfirmed byte-identical to its pre-session state.
+- Public page confirmed rendering entirely from the database with output
+  identical to before: eyebrow, italic navy headline, honest pending body, the
+  non-link `DCFC-D102` block (no `<a>` in the section), and all four slides with
+  their real alt text. `/programs/youth-academy` still shows its statement band
+  with no registration section; `/programs/upsl-mens-teams` still shows its
+  detail-focus and Program Focus sections. Homepage Next Match renders the
+  competition name from standings settings, unchanged on screen. `/sponsors`
+  intro unchanged, now from `club.name`. Zero console errors on a fresh tab.
+
+### Local-only data, and the deploy-time step this creates
+
+All schema and data work was against **local Supabase only** (Docker,
+`127.0.0.1:54321`). No `supabase link`, no `db push`, no hosted migration
+apply, no hosted writes. The repository's `supabase/.temp/project-ref` still
+points at a hosted project from an earlier session; nothing in this session
+used it.
+
+**Required at deploy time, same precedent as the `shop_kit_section` copy
+UPDATEs:** production has no `program_media` rows and
+`registration_enabled = false`, so until this SQL is applied the Special
+Olympics registration band would not render. Exact statements, already
+rehearsed locally:
+
+```sql
+update onzio.programs
+set registration_enabled = true
+where club_id = '<production diverse-city club id>'
+  and slug = 'special-olympics-soccer';
+
+insert into onzio.program_media (club_id, program_id, url, alt, sort_order)
+select p.club_id, p.id, slide.url, slide.alt, slide.sort_order
+from onzio.programs p
+cross join (values
+  ('/images/programs/special-olympics-slide-01.webp', 'Diverse City FC athletes greeting competitors on the field', 0),
+  ('/images/programs/special-olympics-slide-02.webp', 'Diverse City FC athletes playing soccer together', 1),
+  ('/images/programs/special-olympics-slide-03.webp', 'Special Olympics field marker beside an active soccer session', 2),
+  ('/images/programs/special-olympics-slide-04.webp', 'Diverse City FC athlete taking a shot during indoor competition', 3)
+) as slide(url, alt, sort_order)
+where p.club_id = '<production diverse-city club id>'
+  and p.slug = 'special-olympics-soccer'
+  and not exists (
+    select 1 from onzio.program_media m
+    where m.program_id = p.id and m.url = slide.url
+  );
+```
+
+The four `.webp` files are already deployed static assets in
+`public/images/programs/`, so the paths resolve immediately. Degradation before
+the seed is graceful and honest, not broken: the band falls back to the
+program's own real detail/hero photo. The migration itself must be applied to
+production before the SQL.
+
+### Files changed
+
+`supabase/migrations/20260808020000_dcfc_program_media_registration_content.sql`
+(new), `lib/program-content.ts` (new),
+`tests/database/program-media.test.ts` (new),
+`tests/contracts/diverse-city-program-registration-admin.test.ts` (new),
+`lib/database.generated.ts`, `lib/db-types.ts`, `lib/queries.ts`,
+`lib/program-admin.ts`, `lib/admin-data-contract.ts`, `lib/admin-client.ts`,
+`app/admin/(protected)/programs/page.tsx`,
+`components/AcademyProgramDetailPage.tsx`, `components/AcademyNextMatch.tsx`,
+`components/AcademySponsorsPage.tsx`,
+`app/%5Fclubs/[slug]/sponsors/page.tsx`,
+`tests/contracts/diverse-city-programs-admin.test.ts`,
+`tests/contracts/diverse-city-query-mutations.test.ts`, `HANDOFF.md`, this file.
+
+### Not done
+
+Deployment — Christian's call alone, not given for this work. No hosted
+Supabase mutation of any kind. The Phase 1 item-5 list above (homepage story
+copy, programs index/pathway band copy, program-detail template chrome, footer
+tagline, video swap) is deliberately unbuilt pending a schema decision.
+
+### Next step
+
+Christian tests the admin flow himself against local dev (`/admin/programs` →
+Empowering Athletes → Registration section / Registration image gallery), then
+decides on deployment, which carries the migration plus the seed SQL above.
+
 ## 2026-08-07 - Special Olympics "Program Registration" section (slideshow + DCFC-D102 TBA button), committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc. Christian pointed at the mockup's
