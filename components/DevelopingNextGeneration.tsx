@@ -27,7 +27,7 @@ export default function DevelopingNextGeneration() {
       </div>
       <div className="flex min-w-0 items-center px-6 py-16 md:px-12 lg:px-20">
         <div className="w-full min-w-0 max-w-2xl">
-          <h2 className="font-display text-[2.35rem] font-black uppercase italic leading-[.92] text-[#1E3653] sm:text-[3.2rem] md:text-[4rem] lg:text-[4.8rem]">
+          <h2 className="font-display text-[2.35rem] font-black uppercase italic leading-[.92] text-[#1E3653] sm:text-[3.2rem] md:text-[4.4rem] lg:text-[5.8rem]">
             Developing the next generation
           </h2>
           <p className="mt-7 font-body text-base leading-8 text-[#51667E]">
