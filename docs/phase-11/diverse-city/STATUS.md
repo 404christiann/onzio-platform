@@ -1,5 +1,97 @@
 # Diverse City FC Status
 
+## 2026-08-08 - Homepage hero link picker + standings preview fix, committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc. Christian raised two things using `/admin`:
+hero links could be saved as broken paths, and the standings tab's
+`is_club` checkbox read "Rose City row." Investigated both before touching
+code; found a third, bigger issue investigating the second.
+
+**Status:** `complete`. Commits `2bd7952`, `1489d96`, `418b20f` on
+`origin/staging`. Not deployed.
+
+**1. Homepage hero Primary/Secondary Link fields could save a broken
+path.** `homepage_hero_content.primary_cta_href`/`secondary_cta_href`
+carry a shape-only DB constraint (`^/[-A-Za-z0-9_/?#=&%.]*$` — must start
+with `/`, safe characters) with no check that the path is a real route.
+Confirmed: production's current values (`/programs`, `/club/about`) are
+both real, but nothing stopped a typo or a never-built page from saving.
+New `lib/site-routes.ts` (`STATIC_SITE_ROUTES`, `programRouteOptions`,
+`siteRouteOptionsWithFallback`) builds the actual route list — 9 static
+pages plus every `status='active'` program, fetched live in the same
+`Promise.all` as the rest of the tab's data — and both fields became
+`<select>` pickers. Handles the legitimate empty-string stored state (site
+falls back to a template default) with a leading "Use template default"
+option, and appends any already-saved value that isn't in the known list
+rather than silently dropping it. 8 new unit tests
+(`lib/__tests__/site-routes.test.ts`). Not template-gated — every route in
+the list exists for any club/template, so this applies platform-wide, same
+as the phone-regex fix earlier today.
+
+**2. Standings admin: "Rose City row" label, then a bigger finding.** The
+`is_club` toggle's label was hardcoded regardless of which club's admin it
+was — fixed to "Our team's row." Investigating it surfaced something not
+on Christian's original list: the preview panel
+(`app/admin/(protected)/standings/page.tsx`) hardcoded an import to
+`components/LeagueStandingsTable` (the generic, Rose-City-styled
+component) for every club, so Diverse City's preview never matched its
+real live table (built earlier today as `AcademyLeagueStandingsTable`).
+Worse, `normalizeStandingsRows`'s empty-data fallback substituted
+`DEFAULT_STANDINGS_ROWS` — a sample table whose top row is literally named
+"Rose City FC" — for any club with nothing entered yet. Same hardcoded-
+club-name bug family as the sponsors page and footer tagline fixed
+earlier today, this time inside a data-shaping fallback rather than
+component JSX.
+
+Flagged to Christian before fixing; he said fix it. Resolution: added an
+opt-in `fallbackToSample` parameter to `normalizeStandingsRows` (default
+`true`, preserving every existing caller's behavior unchanged) and
+branched the standings admin page on `presentationTemplateKey`:
+`academy@1` now renders the real `AcademyLeagueStandingsTable` with
+`fallbackToSample: false`. That component already, by design, renders
+nothing when there's no real data (no fabricated placeholder rows,
+consistent with this project's no-fabrication rule) — so the fix is less
+"invent better sample data" and more "let the real component's own
+correct empty-state behavior show through," plus a plain "Add a team below
+to see a preview of your standings table" message in that case. Rose
+City's admin (and any non-academy@1 template) is completely unchanged —
+same component, same sample-table fallback as before. 3 new unit tests in
+`lib/__tests__/standings-content.test.ts`.
+
+**Noted, not fixed:** this same admin page's `settings` React state
+initializes to `DEFAULT_STANDINGS_SETTINGS` (which includes "UPSL SoCal
+North" and "Follow Rose City FC..." text) before the real fetch resolves —
+a brief loading-placeholder flash, not a persistent issue, and Diverse
+City's real saved settings are already correct so this doesn't actually
+affect current usage. Lower priority than the two above; flagged for
+awareness, not addressed this round.
+
+**Verification:** `npx tsc --noEmit` clean. Full suite `869/869`
+(`.env.test` exported) — 11 new tests total (8 `site-routes`, 3
+`standings-content`). Hit transient failures on the first two `npm test`
+runs from a full day of interactive local-Supabase testing having polluted
+shared fixture state (two *different* pre-existing tests failed on two
+consecutive runs, neither touching anything this session changed) —
+resolved with `supabase db reset` (cleanly reapplies all 30 migrations
+including today's three) and re-running
+`migration:import:diverse-city:local` to restore the local tenant's
+content; confirmed clean afterward: full suite `869/869`, `test:db`
+`145/145`.
+
+**Live verification**, local dev, real admin login (email-code via
+Mailpit): hero link dropdowns pre-populated correctly from real saved
+values (`/programs`, `/club/about`) with no fallback entries needed;
+standings tab shows "Our team's row"; standings preview showed the new
+empty-state message with zero real rows, then — after adding one real team
+locally without saving — DOM inspection confirmed zero sort buttons and
+`#F9FAFD` background (`AcademyLeagueStandingsTable`'s exact palette, not
+the generic component's white/sortable-button version). Discarded the
+unsaved test row before finishing (confirmed via reload it was never
+persisted).
+
+**Not done:** deployment — same standing rule as everything today,
+awaiting Christian's explicit go-ahead.
+
 ## 2026-08-08 - Admin punch-list round deployed to production
 
 **Package:** none — ad hoc. Christian: "Yes" (to deploying).

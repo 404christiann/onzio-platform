@@ -2,6 +2,61 @@
 
 Last updated: 2026-08-08
 
+## Two more admin issues Christian caught: homepage hero links could 404, standings preview was hardcoded to Rose City — fixed, committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete`,
+committed and pushed to `origin/staging` (`2bd7952`, `1489d96`,
+`418b20f`), **not deployed**.
+
+Christian flagged two things while using `/admin` after the punch-list
+deploy: the homepage hero's Primary/Secondary Link fields were free text
+with no real-route validation ("this allows the user to break things"),
+and the standings tab's `is_club` checkbox read "Rose City row" regardless
+of which club's admin it was.
+
+**Homepage hero links.** The DB constraint only checked shape
+(`^/[-A-Za-z0-9_/?#=&%.]*$`) — a typo or a page that was never built saved
+fine and just 404'd for a visitor. New `lib/site-routes.ts` builds the
+site's real route list (static pages + every active program, fetched
+live) and both fields are now `<select>` pickers built from it, with a
+"use template default" option for the legitimate empty state and a
+fallback entry for any unusual already-saved value so nothing gets
+silently dropped. Applies platform-wide (every route exists for any
+club/template) — same reasoning as the earlier phone-regex fix.
+
+**Standings "Rose City row."** Fixed the label (`"Our team's row"`), then
+found something bigger investigating it: the admin preview panel hardcoded
+an import to the generic, Rose-City-styled `LeagueStandingsTable`
+regardless of template, so Diverse City's preview never matched its real
+live table — and its empty-data fallback substituted a hardcoded
+"Rose City FC" sample table for any club with nothing real entered yet,
+same bug family as the sponsors page and footer tagline from earlier
+today. Fixed by branching on `presentationTemplateKey`: `academy@1` now
+renders the real `AcademyLeagueStandingsTable`, which already (by design)
+renders nothing on empty data rather than fabricating placeholder rows —
+so the admin now shows a plain "add a team to see a preview" message
+instead. Rose City's own admin is completely unchanged.
+
+**Also found along the way, not yet fixed:** a `useState` default on this
+same page briefly shows Rose-City-flavored placeholder text (including
+"UPSL SoCal North" as the league name) before real data loads — low
+priority, only visible for an instant on load and only for a club that's
+never saved standings settings before, unlike Diverse City which already
+has real data. Noted for later, not fixed this round.
+
+**Verification:** `npx tsc --noEmit` clean. Full suite `869/869`. Ran into
+transient test-order-dependent failures from a full day of interactive
+local-Supabase testing polluting shared fixtures — resolved with
+`supabase db reset` (reapplies all 30 migrations cleanly) followed by
+re-running `migration:import:diverse-city:local`; confirmed clean
+`869/869` and `test:db` `145/145` afterward, not a real regression.
+Verified all three fixes live: the hero link dropdown pre-populated
+correctly from real saved values; the "Our team's row" label live; the
+standings preview's empty-state message with zero rows, then added a real
+team locally (never saved) and confirmed via DOM inspection zero sort
+buttons and `#F9FAFD` background — genuinely `AcademyLeagueStandingsTable`,
+not the generic component. Discarded the unsaved test row before finishing.
+
 ## Admin punch-list round deployed — the platform-wide media upload fix is now live for every club
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete`.
