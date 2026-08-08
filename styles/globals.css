@@ -73,6 +73,10 @@ body:has([data-font-pack="academy"]) {
   --tw-red-dark-rgb: 215 0 0;
   --tw-gray-light-rgb: 237 242 247;
   --tw-gray-mid-rgb: 107 126 148;
+  /* Sponsor marquee band: mockup's deep navy with the sky eyebrow. Other
+     templates keep the component defaults (#0D0D0D band, white eyebrow). */
+  --sponsor-band-bg: #14283F;
+  --sponsor-band-eyebrow: #B9E3F6;
 }
 
 [data-font-pack="academy"],
@@ -232,6 +236,8 @@ body:has([data-font-pack="academy"]) {
 
   .sponsor-carousel-section {
     overflow: hidden;
+    contain: paint;
+    max-width: 100vw;
     border-block: 1px solid rgba(255, 255, 255, 0.08);
     padding: clamp(2.5rem, 5vw, 4rem) 1.5rem;
     color: var(--color-white);
@@ -253,7 +259,7 @@ body:has([data-font-pack="academy"]) {
   }
 
   .sponsor-carousel-eyebrow {
-    color: rgba(255, 255, 255, 0.62);
+    color: var(--sponsor-band-eyebrow, rgba(255, 255, 255, 0.62));
     font-family: var(--font-display);
     font-size: 0.72rem;
     font-weight: 700;
@@ -264,6 +270,7 @@ body:has([data-font-pack="academy"]) {
   .sponsor-carousel-marquee {
     margin: 1.75rem -1.5rem 0;
     overflow: hidden;
+    contain: paint;
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
     mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   }
@@ -272,8 +279,15 @@ body:has([data-font-pack="academy"]) {
     display: flex;
     width: max-content;
     align-items: center;
+    animation: sponsor-carousel-scroll 42s linear infinite;
+  }
+
+  .sponsor-carousel-group {
+    display: flex;
+    flex: none;
+    align-items: center;
     gap: 4rem;
-    animation: sponsor-carousel-scroll 32s linear infinite;
+    padding-right: 4rem;
   }
 
   .sponsor-carousel-logo {
