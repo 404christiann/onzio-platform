@@ -2,6 +2,66 @@
 
 Last updated: 2026-08-07
 
+## Component-identity re-audit: 6 more mockup-parity fixes — committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+committed and pushed to `origin/staging` across 5 commits (`b41395a` …
+`96ecb5c`), **not deployed**.
+
+After the Next Match/fixture-row fixes below, Christian asked for one more
+pass checking the rest of the site, explicitly applying the lesson from
+those two misses: a visual difference can mean the wrong component is
+mounted, not just a styling gap. A re-audit built specifically around that
+methodology (tracing every data-rendering section to its actual component
+file on both sides, not just screenshot-comparing) found one more
+component-identity mismatch and five smaller styling gaps:
+
+**Homepage league standings (component-identity mismatch).** `academy@1`'s
+homepage mounted the generic `LeagueStandingsTable` (Rose-City styling,
+hardcoded `#E7001B`, sortable column-header buttons, GP/W/D/L hidden on
+mobile) with no academy branch, instead of the mockup's own
+`DiverseLeagueStandings` (static labels, `#F9FAFD` ground, all six stat
+columns visible at every width). Same root cause as the Next Match miss:
+the mockup repo also carries an unused Rose-City leftover
+`LeagueStandingsContainer.tsx` under the same name, so a same-file diff
+showed false parity. New `components/AcademyLeagueStandingsTable.tsx`,
+wired to the same real `fetchLeagueStandings` data, mounted via a
+`presentationTemplateKey === "academy@1"` branch in
+`LeagueStandingsContainer.tsx`.
+
+**Five styling deltas, right component this time:**
+- `/schedule`'s hero shared `/roster`'s clamp()-sized heading instead of the
+  mockup's own fixed `4rem/6.5rem/9rem` steps, DM Sans untracked eyebrow,
+  and wider red rule — academy branch added, verified live at 144px/16px/80px.
+- `/roster`'s group dividers and count labels were hardcoded `#e5e5e5` /
+  `tracking-widest`, literal values the `DCFC-D132` CSS-variable repaint
+  couldn't reach — now sky `#B9E3F6` / untracked `#51667E` for academy.
+- `OpponentCrest`'s no-logo fallback always showed a single initial, so a
+  real (not fabricated) "TBA" opponent rendered as a bare "T" — fixed
+  universally, not just for academy, since showing the full value is
+  correct everywhere. `AcademyNextMatch`'s own club-crest slot also now
+  matches the mockup exactly: unclipped, responsive 112→144px, instead of
+  `OpponentCrest`'s always-circular wrapper (which the mockup never applies
+  to the home team's own crest, only to the placeholder opponent circle).
+- `DevelopingNextGeneration`'s heading capped two steps smaller than the
+  mockup (`lg:4.8rem` vs `lg:5.8rem`).
+- Staff placeholder-crest images rendered edge-to-edge instead of padded —
+  latent until the first staff member without a photo, fixed ahead of time.
+
+**Verified:** `npx tsc --noEmit` clean. Full suite `686/686` (`.env.test`
+exported). Every fix confirmed via direct `getComputedStyle`/DOM inspection
+against the local dev server (port 3006) — not screenshot alone, for the
+same harness-throttling reason noted in the entry below.
+
+**Files changed:** `components/AcademyLeagueStandingsTable.tsx` (new),
+`components/LeagueStandingsContainer.tsx`, `app/(public)/schedule/page.tsx`,
+`app/(public)/roster/page.tsx`, `components/OpponentCrest.tsx`,
+`components/AcademyNextMatch.tsx`, `components/DevelopingNextGeneration.tsx`,
+`components/StaffCard.tsx`, `components/StaffModal.tsx`, this file, and
+`docs/phase-11/diverse-city/STATUS.md`.
+
+**Not done:** deployment — same standing rule as everything else today.
+
 ## Two more mockup-parity gaps Christian caught by eye: Next Match card and /schedule fixture rows — committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,

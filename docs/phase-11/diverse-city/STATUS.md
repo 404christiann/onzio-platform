@@ -1,5 +1,108 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Component-identity re-audit: 6 more mockup-parity fixes, committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc, direct follow-up requested by Christian
+("keep going, check the rest of the site for anything else off") after the
+Next Match/fixture-row entry below.
+
+**Status:** `complete`. Committed `b41395a`, `9ba1355`, `0ba4415`, `57fab45`,
+`96ecb5c` on `origin/staging`. Not deployed.
+
+**Methodology change from the first 18-item audit:** a re-audit was run
+specifically instructed to trace every data-rendering section to its actual
+mounted component file on both sides, not just screenshot-compare — the
+exact gap that let the Next Match and fixture-row mismatches through
+undetected the first time.
+
+**A1 — Homepage league standings, component-identity mismatch.**
+`app/(public)/page.tsx` mounts `LeagueStandingsContainer` unconditionally;
+it rendered `LeagueStandingsTable` (Rose-City styling — hardcoded
+`#E7001B` at 6 call sites, `#FFFFFF` section background, sortable
+`<button>` column headers, `GP`/`W`/`D`/`L` `display:none` below `md`) for
+every template including `academy@1`. The mockup's homepage instead renders
+its own `DiverseLeagueStandings` component: `#F9FAFD` ground, static column
+labels ("PTS" not "Pts"), all six stat columns visible at every width,
+`#FF1616` accents. New `components/AcademyLeagueStandingsTable.tsx`
+reproduces the mockup's exact structure/styling while staying wired to the
+real `fetchLeagueStandings(clubId)` data (same query the shared table
+already used) — mounted via a `presentationTemplateKey === "academy@1"`
+branch added to `components/LeagueStandingsContainer.tsx`.
+
+**Root cause, same as the Next Match miss:** finding #8 of the original
+18-item audit filed this as an empty-data problem; once the standings seed
+landed, nobody re-checked which component was actually rendering the rows.
+The mockup repo also still carries an unused Rose-City leftover
+`components/LeagueStandingsContainer.tsx`/`LeagueStandingsTable.tsx` under
+the same names as production's real components, which makes a same-filename
+diff look like near-parity when the mockup's page doesn't actually import
+either of them.
+
+**B1 — `/schedule` hero didn't match its own mockup page.** The hero above
+the fixture rows (already fixed in the prior round) still used the same
+`clamp(4rem,10vw,8rem)` sizing as `/roster`'s hero — correct for `/roster`,
+wrong for `/schedule`, which the mockup styles with fixed `4rem/6.5rem/9rem`
+steps, a DM Sans (`font-nav`) untracked eyebrow, and an `80px` red rule
+(`mt-8 w-14 sm:w-20`) instead of `64px`/`mt-6`. Added an academy branch in
+`app/(public)/schedule/page.tsx`'s hero block; verified live at 1280px:
+`h1` computes `144px`/navy `#1E3653`, eyebrow `16px` DM Sans untracked, rule
+`80px`.
+
+**B2 — `/roster` hardcoded greys the `DCFC-D132` palette repaint couldn't
+reach.** Group-divider hairlines (`#e5e5e5`) and count labels
+(`tracking-widest`, `var(--color-gray-mid)` → `#6B7E94` for academy) are
+literal values in `app/(public)/roster/page.tsx`'s `RosterGroup` and
+Technical Staff block, not CSS variables, so the earlier palette pass never
+touched them. Now `#B9E3F6` dividers and untracked `#51667E` labels for
+academy@1, verified live across all 4 position groups + Technical Staff (5
+divider instances, 5 count-label instances, all confirmed via
+`getComputedStyle`).
+
+**B3 — `OpponentCrest` TBA fallback + `AcademyNextMatch` club-crest
+treatment.** `OpponentCrest`'s no-logo fallback (`components/OpponentCrest.tsx`)
+always rendered a single initial — a real (seeded, not fabricated) "TBA"
+opponent showed a bare "T" instead of the mockup's spelled-out "TBA" badge.
+Fixed universally (special-cases the exact string `"TBA"`, scales the font
+down to fit) since it's correct for every template, not just academy@1.
+Separately, `components/AcademyNextMatch.tsx`'s club-crest slot now uses a
+plain, unclipped, responsively-sized (`112px` → `144px`) image matching the
+mockup's `MatchPresentation` exactly, instead of `OpponentCrest`'s
+always-`rounded-full` wrapper, which the mockup never applies to the home
+team's own crest (only to the opponent's placeholder circle, which correctly
+keeps `OpponentCrest`, now also stepping `112px` → `144px` instead of a
+fixed `144px`).
+
+**B4 — `DevelopingNextGeneration` heading undersized.** `lg:4.8rem` →
+`lg:5.8rem`, matching the mockup's `VerticalStory` h2. Verified live:
+`92.8px` at 1280px.
+
+**B5 — Staff placeholder-crest padding (latent).** `components/StaffCard.tsx`
+and `components/StaffModal.tsx` rendered a photo-less staff member's
+club-crest placeholder edge-to-edge; mockup pads it (`p-5 sm:p-8` card,
+`p-10` modal). Invisible today — all 4 seeded staff have real photos — fixed
+ahead of the first staff entry without one.
+
+**Verification:** `npx tsc --noEmit` clean. Full suite `686/686` (`.env.test`
+exported). Every fix confirmed via direct `getComputedStyle`/DOM inspection
+against the local dev server (`onzio-platform-bravo-preview`, port 3006,
+`diverse-city.localhost:3006` hostname routing) rather than screenshots
+alone — this session's Browser pane continued to report
+`document.visibilityState: "hidden"`, throttling the same GSAP
+`ScrollTrigger` animations noted in the prior entry.
+
+**Files changed:** `components/AcademyLeagueStandingsTable.tsx` (new),
+`components/LeagueStandingsContainer.tsx`, `app/(public)/schedule/page.tsx`,
+`app/(public)/roster/page.tsx`, `components/OpponentCrest.tsx`,
+`components/AcademyNextMatch.tsx`, `components/DevelopingNextGeneration.tsx`,
+`components/StaffCard.tsx`, `components/StaffModal.tsx`, `HANDOFF.md`, this
+file.
+
+**Not done:** deployment. Same standing rule as every other change today.
+
+**Next step:** Christian reviews (live on port 3006, or a fresh capture) and
+decides whether to bundle all of today's undeployed `staging` commits into
+one deploy.
+
 ## 2026-08-07 - Two more mockup-parity gaps: Next Match section + /schedule fixture rows, committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc, direct follow-up requested by Christian after
