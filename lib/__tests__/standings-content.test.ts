@@ -69,4 +69,17 @@ describe("normalizeStandingsRows", () => {
 
     expect(normalized.team_abbreviation).toBe("PA");
   });
+
+  it("returns an empty array on no data when fallbackToSample is false, instead of the Rose City sample table", () => {
+    expect(normalizeStandingsRows([], { fallbackToSample: false })).toEqual([]);
+  });
+
+  it("still returns the sample table on no data when fallbackToSample is omitted, preserving existing callers' behavior", () => {
+    expect(normalizeStandingsRows([])).toEqual(DEFAULT_STANDINGS_ROWS);
+  });
+
+  it("ignores fallbackToSample entirely when real rows are present", () => {
+    const real = [row("row-a", 5, 1)];
+    expect(normalizeStandingsRows(real, { fallbackToSample: false })).toHaveLength(1);
+  });
 });

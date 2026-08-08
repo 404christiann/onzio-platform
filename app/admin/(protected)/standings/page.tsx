@@ -1,11 +1,12 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
+import AcademyLeagueStandingsTable from "@/components/AcademyLeagueStandingsTable";
 import type {
   DBLeagueStandingRow,
   DBLeagueStandingsSettings,
@@ -69,7 +70,9 @@ async function uploadStandingLogo(file: File): Promise<string> {
 }
 
 export default function AdminStandingsPage() {
+  const club = useClubContext();
   const clubId = useClubId();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const [settings, setSettings] =
     useState<DBLeagueStandingsSettings>(DEFAULT_STANDINGS_SETTINGS);
   const [rows, setRows] = useState<DraftRow[]>([]);
@@ -285,7 +288,12 @@ export default function AdminStandingsPage() {
     }
   }
 
-  const previewRows = normalizeStandingsRows(rows);
+  // academy@1's real public standings table already renders nothing when
+  // there is no real data (no fabricated placeholder rows) — the preview
+  // should match that, rather than substituting the generic sample table,
+  // which hardcodes "Rose City FC" as its example club regardless of which
+  // club is actually being edited.
+  const previewRows = normalizeStandingsRows(rows, { fallbackToSample: !isAcademy });
 
   return (
     <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
@@ -463,7 +471,20 @@ export default function AdminStandingsPage() {
           </section>
 
           <section className="min-w-0 overflow-hidden rounded-xl" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
-            <LeagueStandingsTable settings={settings} rows={previewRows} />
+            {isAcademy ? (
+              previewRows.length > 0 ? (
+                <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
+              ) : (
+                <p
+                  className="font-body p-6 text-sm"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
+                  Add a team below to see a preview of your standings table.
+                </p>
+              )
+            ) : (
+              <LeagueStandingsTable settings={settings} rows={previewRows} />
+            )}
           </section>
         </div>
       )}

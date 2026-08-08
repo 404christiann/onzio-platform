@@ -153,9 +153,21 @@ export function normalizeStandingsSettings(
   };
 }
 
+/**
+ * `fallbackToSample` controls what happens when `rows` is empty:
+ * - `true` (default): substitute `DEFAULT_STANDINGS_ROWS`, the illustrative
+ *   Rose City sample table. Existing callers keep their current behavior.
+ * - `false`: return an empty array. Used by previews for templates (like
+ *   academy@1) whose real standings component already renders nothing on
+ *   empty data rather than fabricated placeholder rows — the sample table
+ *   would otherwise show a hardcoded "Rose City FC" row regardless of which
+ *   club is actually being edited.
+ */
 export function normalizeStandingsRows(
   rows: readonly DBLeagueStandingRow[],
+  options: { fallbackToSample?: boolean } = {},
 ): DBLeagueStandingRow[] {
+  const { fallbackToSample = true } = options;
   const normalized = rows.map((row, index) => ({
     ...row,
     team_name: row.team_name.trim() || `Team ${index + 1}`,
@@ -170,5 +182,6 @@ export function normalizeStandingsRows(
     points: Math.max(0, Number(row.points) || 0),
     sort_order: Number(row.sort_order) || index,
   }));
-  return normalized.length > 0 ? sortStandingsRows(normalized) : DEFAULT_STANDINGS_ROWS;
+  if (normalized.length > 0) return sortStandingsRows(normalized);
+  return fallbackToSample ? DEFAULT_STANDINGS_ROWS : [];
 }
