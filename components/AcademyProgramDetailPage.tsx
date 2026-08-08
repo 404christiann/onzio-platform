@@ -1,10 +1,51 @@
 import Link from "next/link";
+import AcademyProgramRegistrationSlideshow, {
+  type RegistrationSlide,
+} from "@/components/AcademyProgramRegistrationSlideshow";
 import ResilientImage from "@/components/ResilientImage";
 import type { ProgramContent } from "@/lib/queries";
 
 function isExternal(href: string): boolean {
   return href.startsWith("http://") || href.startsWith("https://");
 }
+
+// The mockup's SpecialOlympicsRegistrationSection always renders on the
+// Special Olympics program page, with its 4-photo slideshow, even though the
+// club has not yet provided a real registration destination. `layout_variant`
+// is DB-constrained to `statement_band`/`detail_focus`, so the registration
+// treatment cannot ride the variant column without a migration and hosted
+// data changes; this slug branch mirrors the mockup's own
+// `program.id === "special-olympics-soccer"` branch instead. The CTA itself
+// stays data-driven: with `external_cta_href`/`external_cta_label` empty
+// (their real current state), the button renders as an honest
+// "Registration Link Coming Soon" TBA block per DCFC-D102 — Christian's
+// explicit choice over any placeholder URL — and flips to the real red
+// link automatically once admin supplies an approved destination
+// (DCFC-D109's `programs.external_cta_href`).
+const REGISTRATION_SLIDESHOW_SLUG = "special-olympics-soccer";
+
+// The mockup's approved Special Olympics slideshow photos, copied verbatim
+// from onzioProspects/diverse-city-fc/site/public/media/programs/ into
+// static public assets (same content-gap precedent as the sponsor
+// placeholder slots); admin-managed program media can replace them later.
+const SPECIAL_OLYMPICS_SLIDES: RegistrationSlide[] = [
+  {
+    src: "/images/programs/special-olympics-slide-01.webp",
+    alt: "Diverse City FC athletes greeting competitors on the field",
+  },
+  {
+    src: "/images/programs/special-olympics-slide-02.webp",
+    alt: "Diverse City FC athletes playing soccer together",
+  },
+  {
+    src: "/images/programs/special-olympics-slide-03.webp",
+    alt: "Special Olympics field marker beside an active soccer session",
+  },
+  {
+    src: "/images/programs/special-olympics-slide-04.webp",
+    alt: "Diverse City FC athlete taking a shot during indoor competition",
+  },
+];
 
 // Mockup-parity program detail template (DCFC-D132 pass), rebuilt from the
 // sales mockup's app/(public)/programs/[programId]/page.tsx and driven
@@ -19,9 +60,11 @@ function isExternal(href: string): boolean {
 // - `detail_focus` programs get the detail-image + "Grow through the game."
 //   section and the sky "Program Focus" numbered highlight list;
 // - a program with an external CTA gets the mockup's registration band with
-//   the red CTA (the mockup's Special Olympics registration section; its
-//   placeholder google.com URL never shipped per DCFC-D102, so this renders
-//   only once the club supplies a real registration link through admin);
+//   the red CTA; the Special Olympics program additionally always renders the
+//   band with the mockup's 4-photo slideshow, in a DCFC-D102-honest
+//   "Registration Link Coming Soon" TBA state until the club supplies a real
+//   registration link through admin (the mockup's placeholder google.com URL
+//   never shipped and never will);
 // - every program closes with the "Explore other programs." navy button row.
 export default function AcademyProgramDetailPage({
   program,
@@ -32,6 +75,9 @@ export default function AcademyProgramDetailPage({
 }) {
   const usesStatementBand = program.layoutVariant === "statement_band";
   const programName = program.navLabel || program.displayTitle;
+  const usesRegistrationSlideshow = program.slug === REGISTRATION_SLIDESHOW_SLUG;
+  const showsRegistrationSection =
+    usesRegistrationSlideshow || program.externalCta !== null;
 
   return (
     <div className="bg-[#F9FAFD]">
@@ -70,10 +116,10 @@ export default function AcademyProgramDetailPage({
         </div>
       </section>
 
-      {program.externalCta ? (
+      {showsRegistrationSection ? (
         <section
           id="register"
-          className="scroll-mt-24 bg-[#F9FAFD] px-6 py-12 sm:py-14 lg:scroll-mt-28 lg:px-10"
+          className="scroll-mt-24 bg-[#F9FAFD] px-6 py-12 sm:py-14 lg:min-h-[calc(100svh-7rem)] lg:scroll-mt-28 lg:px-10 lg:py-10"
         >
           <div className="mx-auto grid max-w-7xl gap-9 border-t border-[#1E3653]/15 pt-5 lg:grid-cols-[0.68fr_1.32fr] lg:items-center lg:gap-16">
             <div className="min-w-0 lg:pr-2">
@@ -85,20 +131,37 @@ export default function AcademyProgramDetailPage({
               </h2>
               <div className="mt-7 h-px w-16 bg-[#B9E3F6]" />
               <p className="mt-6 max-w-md font-body text-base leading-8 text-[#1E3653]/70 md:text-lg">
-                Registration is completed through our external registration
-                partner. Continue there to get started.
+                {program.externalCta
+                  ? "Registration is completed through our external registration partner. Continue there to get started."
+                  : "Registration is completed through our external registration partner. The registration link will be posted here as soon as it is available."}
               </p>
-              <a
-                href={program.externalCta.href}
-                {...(isExternal(program.externalCta.href)
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-                className="mt-7 inline-flex min-h-12 items-center justify-center bg-[#FF1616] px-6 text-center font-display text-xs font-bold uppercase text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#D70000] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1E3653]"
-              >
-                {program.externalCta.label}
-              </a>
+              {program.externalCta ? (
+                <a
+                  href={program.externalCta.href}
+                  {...(isExternal(program.externalCta.href)
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                  className="mt-7 inline-flex min-h-12 items-center justify-center bg-[#FF1616] px-6 text-center font-display text-xs font-bold uppercase text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#D70000] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1E3653]"
+                >
+                  {program.externalCta.label}
+                </a>
+              ) : (
+                // DCFC-D102 TBA state: no placeholder destination exists yet,
+                // so this is deliberately not a link — a disabled-style block
+                // that reads honestly until admin publishes a real
+                // `external_cta_href`, which switches the branch above on
+                // its own.
+                <p className="mt-7 inline-flex min-h-12 items-center justify-center border border-[#1E3653]/25 bg-[#1E3653]/5 px-6 text-center font-display text-xs font-bold uppercase text-[#51667E]">
+                  Registration Link Coming Soon
+                </p>
+              )}
             </div>
-            {(program.detailMediaUrl || program.heroMediaUrl) ? (
+            {usesRegistrationSlideshow ? (
+              <AcademyProgramRegistrationSlideshow
+                slides={SPECIAL_OLYMPICS_SLIDES}
+                label={programName}
+              />
+            ) : (program.detailMediaUrl || program.heroMediaUrl) ? (
               <div className="relative aspect-[16/10] overflow-hidden bg-[#1E3653] lg:aspect-auto lg:h-[clamp(24rem,60svh,34rem)]">
                 <ResilientImage
                   src={program.detailMediaUrl || program.heroMediaUrl}
@@ -113,7 +176,9 @@ export default function AcademyProgramDetailPage({
         </section>
       ) : null}
 
-      {usesStatementBand && program.highlights.length > 0 ? (
+      {usesStatementBand &&
+      !usesRegistrationSlideshow &&
+      program.highlights.length > 0 ? (
         <section className="bg-[#1E3653] px-6 pb-20 pt-24 lg:px-10 lg:pb-24 lg:pt-28">
           <ul className="mx-auto grid max-w-7xl divide-y divide-white/20 lg:grid-cols-[1fr_1.15fr_1fr] lg:items-center lg:divide-x lg:divide-y-0">
             {program.highlights.map((highlight) => (
@@ -130,7 +195,7 @@ export default function AcademyProgramDetailPage({
         </section>
       ) : null}
 
-      {!usesStatementBand ? (
+      {!usesStatementBand && !usesRegistrationSlideshow ? (
         <>
           <section className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:px-10 lg:py-24">
             <div className="relative aspect-[4/3] overflow-hidden bg-[#1E3653]">
