@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import AcademyProgramDetailPage from "@/components/AcademyProgramDetailPage";
 import { getClubContextBySlug } from "@/lib/club-context";
-import { fetchPrograms } from "@/lib/queries";
+import { fetchProgramBySlug, fetchPrograms } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
 
 export default async function TenantProgramDetailPage({
@@ -13,10 +13,12 @@ export default async function TenantProgramDetailPage({
   const club = await getClubContextBySlug(slug);
   if (club.presentationTemplateKey !== "academy@1") notFound();
   const onzio = (await createClient()).schema("onzio");
-  // One fetch serves both the page's own program and the mockup-parity
-  // "Explore other programs." button row.
-  const programs = await fetchPrograms(club.id, onzio);
-  const program = programs.find((candidate) => candidate.slug === programSlug);
+  // The sibling list feeds the mockup-parity "Explore other programs."
+  // button row.
+  const [program, programs] = await Promise.all([
+    fetchProgramBySlug(club.id, programSlug, onzio),
+    fetchPrograms(club.id, onzio),
+  ]);
   if (!program) notFound();
   const otherPrograms = programs.filter(
     (candidate) => candidate.slug !== programSlug,
