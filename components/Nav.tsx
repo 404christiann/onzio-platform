@@ -165,6 +165,7 @@ export default function Nav() {
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
   const [academyPrograms, setAcademyPrograms] = useState<ProgramContent[]>([]);
   const navRef = useRef<HTMLElement>(null);
+  const isAcademy = club.presentationTemplateKey === "academy@1";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -176,6 +177,16 @@ export default function Nav() {
     setMenuOpen(false);
     setExpandedMobileLink(null);
   }, [pathname]);
+
+  // academy@1's mobile menu is a full-viewport overlay (mockup parity), so
+  // lock page scroll behind it while it is open.
+  useEffect(() => {
+    if (!isAcademy) return;
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isAcademy, menuOpen]);
 
   useEffect(() => {
     if (club.presentationTemplateKey !== "academy@1") {
@@ -203,8 +214,21 @@ export default function Nav() {
   // transparent/white-text state throughout, since it never needs to
   // contrast against a light background there.
   const isAlwaysTransparentPage = pathname === "/club/logo";
-  const isDarkHeroPage = pathname === "/" || (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
-  const isHero = isAlwaysTransparentPage || (isDarkHeroPage && !scrolled);
+  // academy@1 program detail pages open on a full-bleed photo hero, so the
+  // nav starts transparent over it exactly like the mockup (which lists the
+  // four /programs/<slug> routes in its usesTransparentNav set). The
+  // /programs index page's hero is a solid navy band and keeps a solid nav.
+  const isAcademyProgramDetail =
+    isAcademy && /^\/programs\/[^/]+$/.test(pathname);
+  const isDarkHeroPage =
+    pathname === "/" ||
+    isAcademyProgramDetail ||
+    (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
+  // Mockup parity: an open mobile menu forces the solid light header strip
+  // (mock: `transparent = usesTransparentNav && !scrolled && !open`).
+  const isHero =
+    isAlwaysTransparentPage ||
+    (isDarkHeroPage && !scrolled && !(isAcademy && menuOpen));
   const activeNavLinks = club.presentationTemplateKey === "academy@1"
     ? academyNavLinks(academyPrograms)
     : navLinks;
@@ -470,19 +494,39 @@ export default function Nav() {
         </button>
       </nav>
 
-      {/* Mobile Menu Drawer */}
+      {/* Mobile Menu Drawer — academy@1 gets the mockup's full-viewport
+          overlay panel (page cannot bleed through below the last link);
+          other templates keep the compact drawer. */}
       <div
-        className={`md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
-          menuOpen ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
-        }`}
+        className={
+          isAcademy
+            ? `absolute inset-x-0 top-24 h-[calc(100dvh-6rem)] overflow-hidden bg-white transition-[opacity,visibility] duration-300 sm:top-28 sm:h-[calc(100dvh-7rem)] md:hidden ${
+                menuOpen ? "visible opacity-100" : "invisible opacity-0"
+              }`
+            : `md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
+                menuOpen ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
+              }`
+        }
       >
-        <ul className="flex flex-col px-8 py-6 gap-6">
-          {activeNavLinks.map((link) => {
+        <ul className={isAcademy ? "flex h-full flex-col justify-center px-8 pb-16" : "flex flex-col px-8 py-6 gap-6"}>
+          {activeNavLinks.map((link, index) => {
             const isActive = isNavItemActive(pathname, link);
             const isExpanded = expandedMobileLink === link.label;
-            const labelClassName = `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
-              isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
-            }`;
+            const labelClassName = isAcademy
+              ? `font-display text-3xl font-black uppercase italic block py-4 ${
+                  isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
+                }`
+              : `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
+                  isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
+                }`;
+            const indexBadge = isAcademy ? (
+              <span
+                className="font-body text-xs flex-shrink-0"
+                style={{ fontStyle: "normal", color: "var(--color-gray-mid)" }}
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+            ) : null;
             const chevron = (
               <svg
                 width="12"
@@ -502,22 +546,29 @@ export default function Nav() {
               </svg>
             );
             return (
-              <li key={link.label}>
+              <li
+                key={link.label}
+                className={isAcademy ? "border-b" : undefined}
+                style={isAcademy ? { borderColor: "rgba(30,54,83,0.1)" } : undefined}
+              >
                 {link.href ? (
                   <div className="flex items-center justify-between gap-3">
                     <Link href={link.href} className={labelClassName}>
                       {link.label}
                     </Link>
-                    {link.children && (
-                      <button
-                        type="button"
-                        aria-label={isExpanded ? `Collapse ${link.label} menu` : `Expand ${link.label} menu`}
-                        onClick={() => setExpandedMobileLink(isExpanded ? null : link.label)}
-                        className="p-2 -mr-2"
-                      >
-                        {chevron}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {indexBadge}
+                      {link.children && (
+                        <button
+                          type="button"
+                          aria-label={isExpanded ? `Collapse ${link.label} menu` : `Expand ${link.label} menu`}
+                          onClick={() => setExpandedMobileLink(isExpanded ? null : link.label)}
+                          className="p-2 -mr-2"
+                        >
+                          {chevron}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <button
@@ -527,7 +578,10 @@ export default function Nav() {
                     className="flex items-center justify-between gap-3 w-full text-left"
                   >
                     <span className={labelClassName}>{link.label}</span>
-                    {chevron}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {indexBadge}
+                      {chevron}
+                    </div>
                   </button>
                 )}
 
