@@ -7,7 +7,12 @@ import { useEffect, useRef, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
-import { CLUB_LOGO_BUCKET } from "@/lib/club-branding";
+import {
+  CLUB_LOGO_BUCKET,
+  DEFAULT_ACADEMY_FOOTER_TAGLINE,
+  FOOTER_TAGLINE_LIMIT,
+  validateFooterTagline,
+} from "@/lib/club-branding";
 import { fetchSiteSocialLinks } from "@/lib/queries";
 import {
   DEFAULT_SITE_SOCIAL_LINKS,
@@ -40,6 +45,9 @@ export default function BrandingPage() {
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialLinks, setSocialLinks] =
     useState<DBSiteSocialLink[]>(DEFAULT_SITE_SOCIAL_LINKS);
+  // The club's footer tagline. Stored empty means "use the standard wording",
+  // which is what the textarea shows as its placeholder.
+  const [footerTagline, setFooterTagline] = useState("");
 
   useEffect(() => {
     if (!logoFile) {
@@ -70,6 +78,19 @@ export default function BrandingPage() {
             ? loadError.message
             : "Failed to load social links.",
         );
+      });
+
+    createClient()
+      .from("site_branding")
+      .select("footer_tagline")
+      .limit(1)
+      .then(({ data, error: loadError }) => {
+        if (loadError) {
+          setSocialError(loadError.message);
+          return;
+        }
+        const row = (data ?? [])[0] as { footer_tagline?: string } | undefined;
+        setFooterTagline(row?.footer_tagline ?? "");
       });
   }, [clubId]);
 
@@ -113,6 +134,12 @@ export default function BrandingPage() {
   async function saveSocialLinks() {
     if (savingSocialLinks) return;
 
+    const taglineError = validateFooterTagline(footerTagline);
+    if (taglineError) {
+      setSocialError(taglineError);
+      return;
+    }
+
     setSavingSocialLinks(true);
     setSocialSaved(false);
     setSocialError(null);
@@ -134,6 +161,11 @@ export default function BrandingPage() {
         .upsert(rows);
       if (saveError) throw new Error(saveError.message);
 
+      const { error: taglineSaveError } = await supabase
+        .from("site_branding")
+        .upsert({ footer_tagline: footerTagline.trim(), updated_at: now });
+      if (taglineSaveError) throw new Error(taglineSaveError.message);
+
       setSocialLinks(rows);
       setSocialSaved(true);
     } catch (saveError) {
@@ -154,8 +186,8 @@ export default function BrandingPage() {
       <AdminSaveFeedback
         saving={saving || savingSocialLinks}
         saved={saved || socialSaved}
-        savingLabel={savingSocialLinks ? "Updating social links…" : "Updating club logo…"}
-        successLabel={socialSaved ? "Social links updated" : "Club logo updated"}
+        savingLabel={savingSocialLinks ? "Updating footer…" : "Updating club logo…"}
+        successLabel={socialSaved ? "Footer updated" : "Club logo updated"}
       />
 
       <div className="mb-8">
@@ -281,10 +313,37 @@ export default function BrandingPage() {
               Footer
             </p>
             <h2 id="footer-social-heading" className="mt-2 font-display text-2xl font-black uppercase text-white">
-              Social Media Links
+              Tagline and Social Links
             </h2>
             <p className="mt-2 font-body text-sm leading-relaxed text-white/40">
-              Edit the URLs used by the social icons in the public website footer.
+              Edit the club tagline beside the crest and the URLs used by the social icons in the public website footer.
+            </p>
+          </div>
+
+          <div className="mb-6">
+            <label
+              htmlFor="footer-tagline"
+              className="mb-1 block font-display text-xs uppercase tracking-widest text-white/35"
+            >
+              Footer tagline
+            </label>
+            <textarea
+              id="footer-tagline"
+              value={footerTagline}
+              onChange={(event) => {
+                setFooterTagline(event.target.value);
+                setSocialSaved(false);
+                setSocialError(null);
+              }}
+              rows={2}
+              maxLength={FOOTER_TAGLINE_LIMIT}
+              placeholder={DEFAULT_ACADEMY_FOOTER_TAGLINE}
+              className="w-full resize-y rounded-lg border border-white/10 bg-[#0e0e0e] px-3 py-2.5 font-body text-sm text-white outline-none transition focus:border-white/25"
+              style={{ colorScheme: "dark" }}
+            />
+            <p className="mt-1 font-body text-xs text-white/25">
+              Shown under the club name in the footer. Press Enter for a second
+              line. Leave empty to keep the standard wording shown here.
             </p>
           </div>
 
@@ -334,7 +393,7 @@ export default function BrandingPage() {
             disabled={savingSocialLinks}
             className="mt-6 w-full rounded-lg bg-[#E7001B] px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-[#ff0a25] disabled:cursor-not-allowed disabled:opacity-35"
           >
-            {savingSocialLinks ? "Saving…" : "Save Social Links"}
+            {savingSocialLinks ? "Saving…" : "Save Footer"}
           </button>
         </section>
       </div>

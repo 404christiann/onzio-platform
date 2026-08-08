@@ -1,9 +1,14 @@
-import type { DBProgram, DBProgramMedia } from "@/lib/db-types";
+import type {
+  DBProgram,
+  DBProgramMedia,
+  DBProgramsPageContent,
+} from "@/lib/db-types";
 import { normalizePublicHref } from "@/lib/public-link";
 import {
   PROGRAM_MEDIA_LIMITS,
   PROGRAM_REGISTRATION_LIMITS,
 } from "@/lib/program-content";
+import { PROGRAMS_PAGE_LIMITS } from "@/lib/programs-page-content";
 
 /** One row of a program's ordered gallery, as edited in /admin/programs. */
 export type ProgramMediaDraft = {
@@ -307,6 +312,114 @@ export function buildProgramMutationPayload(
     registration_pending_label: draft.registrationPendingLabel.trim(),
     status: draft.status,
     sort_order: draft.sortOrder,
+  };
+}
+
+/**
+ * The three programs prose bands as edited in /admin/programs.
+ *
+ * Like the registration fields, empty is preserved: it means "use the approved
+ * academy@1 wording" (lib/programs-page-content.ts), which is what the form
+ * shows as each input's placeholder.
+ */
+export type ProgramsPageDraft = {
+  pathwayEyebrow: string;
+  pathwayHeading: string;
+  pathwayIntro: string;
+  heroEyebrow: string;
+  heroHeadlineLineOne: string;
+  heroHeadlineLineTwo: string;
+  heroIntro: string;
+  closingHeadingLineOne: string;
+  closingHeadingLineTwo: string;
+  closingBody: string;
+  closingCtaLabel: string;
+};
+
+export type ProgramsPageValidationErrors = Partial<
+  Record<keyof ProgramsPageDraft, string>
+>;
+
+const PROGRAMS_PAGE_FIELD_LABELS: Record<keyof ProgramsPageDraft, string> = {
+  pathwayEyebrow: "Homepage band eyebrow",
+  pathwayHeading: "Homepage band heading",
+  pathwayIntro: "Homepage band intro",
+  heroEyebrow: "Programs page eyebrow",
+  heroHeadlineLineOne: "Programs page headline line 1",
+  heroHeadlineLineTwo: "Programs page headline line 2",
+  heroIntro: "Programs page intro",
+  closingHeadingLineOne: "Closing heading line 1",
+  closingHeadingLineTwo: "Closing heading line 2",
+  closingBody: "Closing paragraph",
+  closingCtaLabel: "Closing button label",
+};
+
+export function emptyProgramsPageDraft(): ProgramsPageDraft {
+  return {
+    pathwayEyebrow: "",
+    pathwayHeading: "",
+    pathwayIntro: "",
+    heroEyebrow: "",
+    heroHeadlineLineOne: "",
+    heroHeadlineLineTwo: "",
+    heroIntro: "",
+    closingHeadingLineOne: "",
+    closingHeadingLineTwo: "",
+    closingBody: "",
+    closingCtaLabel: "",
+  };
+}
+
+export function programsPageToDraft(
+  row: Partial<DBProgramsPageContent> | null | undefined,
+): ProgramsPageDraft {
+  if (!row) return emptyProgramsPageDraft();
+  return {
+    pathwayEyebrow: row.pathway_eyebrow ?? "",
+    pathwayHeading: row.pathway_heading ?? "",
+    pathwayIntro: row.pathway_intro ?? "",
+    heroEyebrow: row.hero_eyebrow ?? "",
+    heroHeadlineLineOne: row.hero_headline_line_one ?? "",
+    heroHeadlineLineTwo: row.hero_headline_line_two ?? "",
+    heroIntro: row.hero_intro ?? "",
+    closingHeadingLineOne: row.closing_heading_line_one ?? "",
+    closingHeadingLineTwo: row.closing_heading_line_two ?? "",
+    closingBody: row.closing_body ?? "",
+    closingCtaLabel: row.closing_cta_label ?? "",
+  };
+}
+
+export function validateProgramsPageDraft(
+  draft: ProgramsPageDraft,
+): ProgramsPageValidationErrors {
+  const errors: ProgramsPageValidationErrors = {};
+  for (const field of Object.keys(draft) as Array<keyof ProgramsPageDraft>) {
+    const maximum = PROGRAMS_PAGE_LIMITS[field];
+    const error = textLengthError(
+      draft[field],
+      maximum,
+      PROGRAMS_PAGE_FIELD_LABELS[field],
+    );
+    if (error) errors[field] = error;
+  }
+  return errors;
+}
+
+export function buildProgramsPageMutationPayload(
+  draft: ProgramsPageDraft,
+): Record<string, unknown> {
+  return {
+    pathway_eyebrow: draft.pathwayEyebrow.trim(),
+    pathway_heading: draft.pathwayHeading.trim(),
+    pathway_intro: draft.pathwayIntro.trim(),
+    hero_eyebrow: draft.heroEyebrow.trim(),
+    hero_headline_line_one: draft.heroHeadlineLineOne.trim(),
+    hero_headline_line_two: draft.heroHeadlineLineTwo.trim(),
+    hero_intro: draft.heroIntro.trim(),
+    closing_heading_line_one: draft.closingHeadingLineOne.trim(),
+    closing_heading_line_two: draft.closingHeadingLineTwo.trim(),
+    closing_body: draft.closingBody.trim(),
+    closing_cta_label: draft.closingCtaLabel.trim(),
   };
 }
 

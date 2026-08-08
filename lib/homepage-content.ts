@@ -3,7 +3,9 @@ import type {
   DBHomepageHeroContent,
   DBHomepageSlideshowSettings,
   DBHomepageSlideshowPhoto,
+  DBHomepageStorySection,
 } from "@/lib/db-types";
+import { HOMEPAGE_STORY_LIMITS } from "@/lib/homepage-story-content";
 import { onzioMediaStoragePathFromPublicUrl } from "@/lib/media-url";
 
 export const MAX_HOMEPAGE_SLIDESHOW_PHOTOS = 6;
@@ -63,6 +65,88 @@ export const DEFAULT_BEHIND_THE_ROSE_SECTION: DBBehindTheRoseSection = {
   caption: "Rose City FC · 2024 UPSL Final",
   updated_at: "",
 };
+
+/**
+ * The homepage story band as edited in /admin/homepage.
+ *
+ * Empty strings are preserved rather than replaced with the template default:
+ * an empty column means "use the approved academy@1 wording"
+ * (lib/homepage-story-content.ts), so the form shows the default as a
+ * placeholder and saves "" when the club has not overridden it.
+ */
+export type HomepageStoryDraft = {
+  visible: boolean;
+  heading: string;
+  bodyPrimary: string;
+  bodySecondary: string;
+  ctaLabel: string;
+};
+
+export type HomepageStoryValidationErrors = Partial<
+  Record<"heading" | "bodyPrimary" | "bodySecondary" | "ctaLabel", string>
+>;
+
+export function emptyHomepageStoryDraft(): HomepageStoryDraft {
+  return {
+    visible: true,
+    heading: "",
+    bodyPrimary: "",
+    bodySecondary: "",
+    ctaLabel: "",
+  };
+}
+
+export function homepageStoryToDraft(
+  row: Partial<DBHomepageStorySection> | null | undefined,
+): HomepageStoryDraft {
+  if (!row) return emptyHomepageStoryDraft();
+  return {
+    visible: row.visible !== false,
+    heading: row.heading ?? "",
+    bodyPrimary: row.body_primary ?? "",
+    bodySecondary: row.body_secondary ?? "",
+    ctaLabel: row.cta_label ?? "",
+  };
+}
+
+export function validateHomepageStoryDraft(
+  draft: HomepageStoryDraft,
+): HomepageStoryValidationErrors {
+  const errors: HomepageStoryValidationErrors = {};
+  for (const [field, value, maximum, label] of [
+    ["heading", draft.heading, HOMEPAGE_STORY_LIMITS.heading, "Heading"],
+    [
+      "bodyPrimary",
+      draft.bodyPrimary,
+      HOMEPAGE_STORY_LIMITS.bodyPrimary,
+      "First paragraph",
+    ],
+    [
+      "bodySecondary",
+      draft.bodySecondary,
+      HOMEPAGE_STORY_LIMITS.bodySecondary,
+      "Second paragraph",
+    ],
+    ["ctaLabel", draft.ctaLabel, HOMEPAGE_STORY_LIMITS.ctaLabel, "Button label"],
+  ] as const) {
+    if (value.length > maximum) {
+      errors[field] = `${label} must be ${maximum} characters or fewer.`;
+    }
+  }
+  return errors;
+}
+
+export function buildHomepageStoryMutationPayload(
+  draft: HomepageStoryDraft,
+): Record<string, unknown> {
+  return {
+    visible: draft.visible,
+    heading: draft.heading.trim(),
+    body_primary: draft.bodyPrimary.trim(),
+    body_secondary: draft.bodySecondary.trim(),
+    cta_label: draft.ctaLabel.trim(),
+  };
+}
 
 export type DraftHomepagePhoto = {
   id: string | null;

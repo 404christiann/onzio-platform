@@ -5,20 +5,30 @@ import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
-import type { DBProgram, DBProgramMedia } from "@/lib/db-types";
+import type {
+  DBProgram,
+  DBProgramMedia,
+  DBProgramsPageContent,
+} from "@/lib/db-types";
 import {
   buildProgramMediaMutationPayload,
   buildProgramMutationPayload,
+  buildProgramsPageMutationPayload,
   emptyProgramDraft,
+  emptyProgramsPageDraft,
   moveHighlight,
   moveProgram,
   moveProgramMedia,
   programMediaToDraft,
+  programsPageToDraft,
   programToDraft,
   validateProgramDraft,
   validateProgramMedia,
+  validateProgramsPageDraft,
   type ProgramDraft,
   type ProgramMediaDraft,
+  type ProgramsPageDraft,
+  type ProgramsPageValidationErrors,
   type ProgramValidationErrors,
 } from "@/lib/program-admin";
 import {
@@ -26,6 +36,10 @@ import {
   PROGRAM_MEDIA_LIMITS,
   PROGRAM_REGISTRATION_LIMITS,
 } from "@/lib/program-content";
+import {
+  defaultProgramsPageContent,
+  PROGRAMS_PAGE_LIMITS,
+} from "@/lib/programs-page-content";
 
 type MediaRole = "hero" | "detail";
 
@@ -69,23 +83,45 @@ export default function AdminProgramsPage() {
   >({});
   const [removedGalleryIds, setRemovedGalleryIds] = useState<string[]>([]);
   const [uploadingGallery, setUploadingGallery] = useState(false);
+  // The copy wrapped around the programs surfaces is a per-club singleton
+  // (onzio.programs_page_content), not part of any one program, so it has its
+  // own draft, its own validation, and its own save button.
+  const [pageCopy, setPageCopy] = useState<ProgramsPageDraft>(
+    emptyProgramsPageDraft,
+  );
+  const [pageCopyErrors, setPageCopyErrors] =
+    useState<ProgramsPageValidationErrors>({});
+  const [pageCopyDirty, setPageCopyDirty] = useState(false);
+  const [pageCopySaving, setPageCopySaving] = useState(false);
+  const [pageCopySaved, setPageCopySaved] = useState(false);
+  const [pageCopyError, setPageCopyError] = useState<string | null>(null);
 
   const loadPrograms = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      const [{ data, error: loadError }, mediaResult] = await Promise.all([
-        createClient()
-          .from("programs")
-          .select("*")
-          .order("sort_order", { ascending: true }),
-        createClient()
-          .from("program_media")
-          .select("*")
-          .order("sort_order", { ascending: true }),
-      ]);
+      const [{ data, error: loadError }, mediaResult, pageCopyResult] =
+        await Promise.all([
+          createClient()
+            .from("programs")
+            .select("*")
+            .order("sort_order", { ascending: true }),
+          createClient()
+            .from("program_media")
+            .select("*")
+            .order("sort_order", { ascending: true }),
+          createClient().from("programs_page_content").select("*").limit(1),
+        ]);
       if (loadError) throw new Error(loadError.message);
       if (mediaResult.error) throw new Error(mediaResult.error.message);
+      if (pageCopyResult.error) throw new Error(pageCopyResult.error.message);
+      setPageCopy(
+        programsPageToDraft(
+          ((pageCopyResult.data ?? []) as DBProgramsPageContent[])[0] ?? null,
+        ),
+      );
+      setPageCopyErrors({});
+      setPageCopyDirty(false);
       const next = ((data ?? []) as DBProgram[]).map(programToDraft);
       const grouped: Record<string, ProgramMediaDraft[]> = {};
       for (const row of (mediaResult.data ?? []) as DBProgramMedia[]) {
@@ -379,6 +415,59 @@ export default function AdminProgramsPage() {
     }
   }
 
+  function updatePageCopy<K extends keyof ProgramsPageDraft>(
+    field: K,
+    value: ProgramsPageDraft[K],
+  ) {
+    setPageCopy((current) => ({ ...current, [field]: value }));
+    setPageCopyErrors((current) => ({ ...current, [field]: undefined }));
+    setPageCopyDirty(true);
+    setPageCopySaved(false);
+    setPageCopyError(null);
+  }
+
+  async function savePageCopy() {
+    const validation = validateProgramsPageDraft(pageCopy);
+    if (Object.keys(validation).length > 0) {
+      setPageCopyErrors(validation);
+      setPageCopyError("Review the highlighted fields before saving.");
+      return;
+    }
+
+    setPageCopySaving(true);
+    setPageCopySaved(false);
+    setPageCopyError(null);
+    try {
+      const { data, error: saveError } = await createClient()
+        .from("programs_page_content")
+        .upsert(buildProgramsPageMutationPayload(pageCopy))
+        .select("*")
+        .single();
+      if (saveError || !data) {
+        throw new Error(saveError?.message ?? "Unable to save the page copy");
+      }
+      setPageCopy(programsPageToDraft(data as DBProgramsPageContent));
+      setPageCopyDirty(false);
+      setPageCopyErrors({});
+      setPageCopySaved(true);
+    } catch (saveError) {
+      setPageCopyError(errorMessage(saveError, "Unable to save the page copy"));
+    } finally {
+      setPageCopySaving(false);
+    }
+  }
+
+  const pageCopyDefaults = defaultProgramsPageContent(club.name);
+
+  function pageCopyFieldError(field: keyof ProgramsPageDraft) {
+    const message = pageCopyErrors[field];
+    return message ? (
+      <p className="mt-1.5 font-body text-xs text-red-300" role="alert">
+        {message}
+      </p>
+    ) : null;
+  }
+
   async function reorderProgram(index: number, delta: -1 | 1) {
     const next = moveProgram(programs, index, delta);
     if (next === programs) return;
@@ -441,6 +530,176 @@ export default function AdminProgramsPage() {
         <div className="mb-5 rounded-lg border border-red-400/25 bg-red-400/[0.08] px-4 py-3 font-body text-sm text-red-200" role="alert">
           {error}
         </div>
+      )}
+
+      {!loading && (
+        <section className="mb-6 rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                Programs page copy
+              </h2>
+              <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
+                The wording around your programs — the homepage &ldquo;pathway&rdquo;
+                band, the /programs page header, and the closing band at the
+                bottom of /programs. The programs themselves are edited below.
+                Leave a field empty to keep the standard wording shown as its
+                placeholder.
+              </p>
+            </div>
+            {pageCopyDirty && (
+              <span className="self-start rounded-full bg-amber-300/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-amber-200">
+                Unsaved changes
+              </span>
+            )}
+          </div>
+
+          {pageCopyError && (
+            <div className="mb-5 rounded-lg border border-red-400/25 bg-red-400/[0.08] px-4 py-3 font-body text-sm text-red-200" role="alert">
+              {pageCopyError}
+            </div>
+          )}
+
+          <p className="mb-3 font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+            Homepage band
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Eyebrow" error={pageCopyFieldError("pathwayEyebrow")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.pathwayEyebrow}
+                onChange={(event) => updatePageCopy("pathwayEyebrow", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.pathwayEyebrow}
+                placeholder={pageCopyDefaults.pathwayEyebrow}
+              />
+            </FormField>
+            <FormField label="Heading" error={pageCopyFieldError("pathwayHeading")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.pathwayHeading}
+                onChange={(event) => updatePageCopy("pathwayHeading", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.pathwayHeading}
+                placeholder={pageCopyDefaults.pathwayHeading}
+              />
+            </FormField>
+          </div>
+          <div className="mt-5">
+            <FormField label="Intro paragraph" error={pageCopyFieldError("pathwayIntro")}>
+              <textarea
+                className={`${INPUT_CLASS} min-h-24 resize-y`}
+                value={pageCopy.pathwayIntro}
+                onChange={(event) => updatePageCopy("pathwayIntro", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.pathwayIntro}
+                placeholder={pageCopyDefaults.pathwayIntro}
+              />
+            </FormField>
+          </div>
+
+          <p className="mb-3 mt-7 border-t border-white/[0.06] pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+            Programs page header
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Eyebrow" error={pageCopyFieldError("heroEyebrow")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.heroEyebrow}
+                onChange={(event) => updatePageCopy("heroEyebrow", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.heroEyebrow}
+                placeholder={pageCopyDefaults.heroEyebrow}
+              />
+            </FormField>
+            <div className="hidden sm:block" aria-hidden="true" />
+            <FormField label="Headline line 1" error={pageCopyFieldError("heroHeadlineLineOne")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.heroHeadlineLineOne}
+                onChange={(event) => updatePageCopy("heroHeadlineLineOne", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineOne}
+                placeholder={pageCopyDefaults.heroHeadlineLineOne}
+              />
+            </FormField>
+            <FormField label="Headline line 2" error={pageCopyFieldError("heroHeadlineLineTwo")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.heroHeadlineLineTwo}
+                onChange={(event) => updatePageCopy("heroHeadlineLineTwo", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineTwo}
+                placeholder={pageCopyDefaults.heroHeadlineLineTwo}
+              />
+            </FormField>
+          </div>
+          <div className="mt-5">
+            <FormField label="Intro paragraph" error={pageCopyFieldError("heroIntro")}>
+              <textarea
+                className={`${INPUT_CLASS} min-h-24 resize-y`}
+                value={pageCopy.heroIntro}
+                onChange={(event) => updatePageCopy("heroIntro", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.heroIntro}
+                placeholder={pageCopyDefaults.heroIntro}
+              />
+            </FormField>
+          </div>
+
+          <p className="mb-3 mt-7 border-t border-white/[0.06] pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+            Closing band
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Heading line 1" error={pageCopyFieldError("closingHeadingLineOne")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.closingHeadingLineOne}
+                onChange={(event) => updatePageCopy("closingHeadingLineOne", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineOne}
+                placeholder={pageCopyDefaults.closingHeadingLineOne}
+              />
+            </FormField>
+            <FormField label="Heading line 2" error={pageCopyFieldError("closingHeadingLineTwo")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.closingHeadingLineTwo}
+                onChange={(event) => updatePageCopy("closingHeadingLineTwo", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineTwo}
+                placeholder={pageCopyDefaults.closingHeadingLineTwo}
+              />
+            </FormField>
+          </div>
+          <div className="mt-5 grid gap-5">
+            <FormField label="Paragraph" error={pageCopyFieldError("closingBody")}>
+              <textarea
+                className={`${INPUT_CLASS} min-h-24 resize-y`}
+                value={pageCopy.closingBody}
+                onChange={(event) => updatePageCopy("closingBody", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.closingBody}
+                placeholder={pageCopyDefaults.closingBody}
+              />
+            </FormField>
+            <FormField label="Button label" error={pageCopyFieldError("closingCtaLabel")}>
+              <input
+                className={INPUT_CLASS}
+                value={pageCopy.closingCtaLabel}
+                onChange={(event) => updatePageCopy("closingCtaLabel", event.target.value)}
+                maxLength={PROGRAMS_PAGE_LIMITS.closingCtaLabel}
+                placeholder={pageCopyDefaults.closingCtaLabel}
+              />
+            </FormField>
+          </div>
+
+          <div className="mt-6 flex items-center gap-4 border-t border-white/[0.06] pt-6">
+            <button
+              type="button"
+              onClick={() => void savePageCopy()}
+              disabled={pageCopySaving || !pageCopyDirty}
+              className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              {pageCopySaving ? "Saving…" : "Save page copy"}
+            </button>
+            {pageCopySaved && !pageCopyDirty && (
+              <span className="font-body text-xs text-emerald-300" role="status">
+                Page copy saved
+              </span>
+            )}
+          </div>
+        </section>
       )}
 
       {loading ? (

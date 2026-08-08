@@ -16,6 +16,7 @@ export const ADMIN_TABLE_FEATURES = {
   homepage_hero_content: "homepage",
   homepage_slideshow_photos: "homepage",
   homepage_slideshow_settings: "homepage",
+  homepage_story_section: "homepage",
   league_standings: "standings",
   league_standings_settings: "standings",
   matches: "schedule",
@@ -25,6 +26,7 @@ export const ADMIN_TABLE_FEATURES = {
   players: "roster",
   program_media: "programs",
   programs: "programs",
+  programs_page_content: "programs",
   seasons: "roster",
   shop_carousel_photos: "shop",
   shop_kit_photos: "shop",
@@ -231,9 +233,41 @@ const tryoutMutation = z
   })
   .strict();
 
+// academy@1 homepage story band. Ceilings mirror the CHECK constraints in
+// 20260808130000_dcfc_homepage_story_programs_page_content.sql exactly, so an
+// over-long field surfaces as a form message instead of a database error.
+const homepageStoryMutation = z
+  .object({
+    visible: z.boolean().optional(),
+    heading: optionalText(120),
+    body_primary: optionalText(1_200),
+    body_secondary: optionalText(1_200),
+    cta_label: optionalText(40),
+  })
+  .strict();
+
+// Copy wrapped around the academy@1 programs surfaces. Same mirroring rule.
+const programsPageMutation = z
+  .object({
+    pathway_eyebrow: optionalText(80),
+    pathway_heading: optionalText(120),
+    pathway_intro: optionalText(320),
+    hero_eyebrow: optionalText(80),
+    hero_headline_line_one: optionalText(80),
+    hero_headline_line_two: optionalText(80),
+    hero_intro: optionalText(320),
+    closing_heading_line_one: optionalText(80),
+    closing_heading_line_two: optionalText(80),
+    closing_body: optionalText(320),
+    closing_cta_label: optionalText(40),
+  })
+  .strict();
+
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
   programs: programMutation,
   program_media: programMediaMutation,
+  programs_page_content: programsPageMutation,
+  homepage_story_section: homepageStoryMutation,
   contact_profile: contactProfileMutation,
   contact_page_content: contactPageMutation,
   tryouts: tryoutMutation,
@@ -365,7 +399,9 @@ export const SINGLETON_TABLES = new Set<AdminTable>([
   "contact_profile",
   "homepage_hero_content",
   "homepage_slideshow_settings",
+  "homepage_story_section",
   "league_standings_settings",
+  "programs_page_content",
   "shop_purchase_details",
   "site_branding",
 ]);

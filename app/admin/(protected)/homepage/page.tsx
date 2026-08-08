@@ -1,6 +1,6 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import type { CSSProperties, ReactNode } from "react";
@@ -10,23 +10,34 @@ import type {
   DBBehindTheRoseSection,
   DBHomepageHeroContent,
   DBHomepageSlideshowPhoto,
+  DBHomepageStorySection,
 } from "@/lib/db-types";
 import {
+  buildHomepageStoryMutationPayload,
   canAddHomepageSlideshowPhoto,
   DEFAULT_BEHIND_THE_ROSE_SECTION,
   DEFAULT_HOMEPAGE_HERO_CONTENT,
   DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS,
   DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS,
   diffHomepageSlideshowPhotos,
+  emptyHomepageStoryDraft,
   homepageStoragePathFromPublicUrl,
+  homepageStoryToDraft,
   MAX_HOMEPAGE_SLIDESHOW_PHOTOS,
   normalizeYouTubeEmbedUrl,
+  validateHomepageStoryDraft,
   type DraftHomepagePhoto,
+  type HomepageStoryDraft,
+  type HomepageStoryValidationErrors,
 } from "@/lib/homepage-content";
+import {
+  defaultHomepageStoryContent,
+  HOMEPAGE_STORY_LIMITS,
+} from "@/lib/homepage-story-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import { createClient } from "@/lib/admin-client";
 
-type AdminTab = "hero" | "slideshow" | "behind";
+type AdminTab = "hero" | "slideshow" | "story" | "behind";
 
 type HeroFields = {
   eyebrow: string;
@@ -139,6 +150,7 @@ async function deleteHomepageStorageUrls(urls: string[]): Promise<void> {
 
 export default function AdminHomepagePage() {
   const clubId = useClubId();
+  const club = useClubContext();
   const [activeTab, setActiveTab] = useState<AdminTab>("hero");
   const [draftPhotos, setDraftPhotos] = useState<DraftHomepagePhoto[]>(
     DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS.map((photo) => ({
@@ -155,6 +167,15 @@ export default function AdminHomepagePage() {
   );
   const [heroFields, setHeroFields] = useState<HeroFields>(EMPTY_HERO_FIELDS);
   const [behindFields, setBehindFields] = useState<BehindFields>(EMPTY_BEHIND_FIELDS);
+  // The story band lives in its own table (onzio.homepage_story_section) and is
+  // deliberately NOT behind_the_rose_section: both sections are mounted on the
+  // same homepage, so sharing one row would render the same copy twice.
+  const [storyFields, setStoryFields] = useState<HomepageStoryDraft>(
+    emptyHomepageStoryDraft,
+  );
+  const [storyErrors, setStoryErrors] = useState<HomepageStoryValidationErrors>(
+    {},
+  );
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -166,8 +187,21 @@ export default function AdminHomepagePage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetchHomepageContent(clubId)
-      .then(({ hero, slideshowPhotos, slideshowSettings, behindTheRose }) => {
+    Promise.all([
+      fetchHomepageContent(clubId),
+      createClient().from("homepage_story_section").select("*").limit(1),
+    ])
+      .then(([
+        { hero, slideshowPhotos, slideshowSettings, behindTheRose },
+        storyResult,
+      ]) => {
+        if (storyResult.error) throw new Error(storyResult.error.message);
+        setStoryFields(
+          homepageStoryToDraft(
+            ((storyResult.data ?? []) as DBHomepageStorySection[])[0] ?? null,
+          ),
+        );
+        setStoryErrors({});
         setOriginalPhotos(slideshowPhotos);
         setDraftPhotos(
           slideshowPhotos.map((photo) => ({
@@ -199,6 +233,15 @@ export default function AdminHomepagePage() {
 
   function setHeroField(field: keyof HeroFields, value: string) {
     setHeroFields((current) => ({ ...current, [field]: value }));
+    markDirty();
+  }
+
+  function setStoryField(
+    field: Exclude<keyof HomepageStoryDraft, "visible">,
+    value: string,
+  ) {
+    setStoryFields((current) => ({ ...current, [field]: value }));
+    setStoryErrors((current) => ({ ...current, [field]: undefined }));
     markDirty();
   }
 
@@ -296,6 +339,14 @@ export default function AdminHomepagePage() {
       return;
     }
 
+    const storyValidation = validateHomepageStoryDraft(storyFields);
+    if (Object.keys(storyValidation).length > 0) {
+      setStoryErrors(storyValidation);
+      setActiveTab("story");
+      setError("Review the highlighted Story fields before saving.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -326,6 +377,16 @@ export default function AdminHomepagePage() {
           updated_at: new Date().toISOString(),
         }]);
       if (behindError) throw new Error(behindError.message);
+
+      const { data: storyRow, error: storyError } = await supabase
+        .from("homepage_story_section")
+        .upsert(buildHomepageStoryMutationPayload(storyFields))
+        .select("*")
+        .single();
+      if (storyError) throw new Error(storyError.message);
+      if (storyRow) {
+        setStoryFields(homepageStoryToDraft(storyRow as DBHomepageStorySection));
+      }
 
       const { toDelete, toInsert, toUpdate } = diffHomepageSlideshowPhotos(
         originalPhotos,
@@ -382,6 +443,7 @@ export default function AdminHomepagePage() {
   }
 
   const saveDisabled = saving || uploading || !dirty;
+  const storyDefaults = defaultHomepageStoryContent(club.name);
 
   return (
     <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
@@ -421,6 +483,7 @@ export default function AdminHomepagePage() {
               {[
                 { id: "hero" as const, label: "Hero", count: null },
                 { id: "slideshow" as const, label: "Slideshow", count: `${draftPhotos.length}/${MAX_HOMEPAGE_SLIDESHOW_PHOTOS}` },
+                { id: "story" as const, label: "Story", count: null },
                 { id: "behind" as const, label: "Behind the Rose", count: null },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
@@ -641,6 +704,81 @@ export default function AdminHomepagePage() {
                     {MAX_HOMEPAGE_SLIDESHOW_PHOTOS} photo max.
                   </p>
                 )}
+              </div>
+            )}
+
+            {activeTab === "story" && (
+              <div className="space-y-4">
+                <p
+                  className="font-body text-xs"
+                  style={{ color: "rgba(255,255,255,0.28)" }}
+                >
+                  The story section beside the club video on your homepage.
+                  Leave a field empty to keep the standard wording shown as its
+                  placeholder. The video itself is set by Onzio.
+                </p>
+
+                <label className="flex items-center justify-between gap-4 rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+                  <span>
+                    <span className="font-display block text-xs uppercase tracking-widest text-white">
+                      Visible on homepage
+                    </span>
+                    <span className="font-body mt-1 block text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
+                      Turn off to hide the section without deleting its saved content.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={storyFields.visible}
+                    onChange={(event) => {
+                      setStoryFields((current) => ({
+                        ...current,
+                        visible: event.target.checked,
+                      }));
+                      markDirty();
+                    }}
+                    className="h-5 w-5 accent-[#E7001B]"
+                  />
+                </label>
+
+                <Field label="Heading" help={storyErrors.heading}>
+                  <input
+                    value={storyFields.heading}
+                    onChange={(event) => setStoryField("heading", event.target.value)}
+                    maxLength={HOMEPAGE_STORY_LIMITS.heading}
+                    placeholder={storyDefaults.heading}
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="First Paragraph" help={storyErrors.bodyPrimary}>
+                  <textarea
+                    value={storyFields.bodyPrimary}
+                    onChange={(event) => setStoryField("bodyPrimary", event.target.value)}
+                    maxLength={HOMEPAGE_STORY_LIMITS.bodyPrimary}
+                    placeholder={storyDefaults.bodyPrimary}
+                    rows={5}
+                    style={{ ...inputStyle, resize: "vertical" }}
+                  />
+                </Field>
+                <Field label="Second Paragraph" help={storyErrors.bodySecondary}>
+                  <textarea
+                    value={storyFields.bodySecondary}
+                    onChange={(event) => setStoryField("bodySecondary", event.target.value)}
+                    maxLength={HOMEPAGE_STORY_LIMITS.bodySecondary}
+                    placeholder={storyDefaults.bodySecondary}
+                    rows={4}
+                    style={{ ...inputStyle, resize: "vertical" }}
+                  />
+                </Field>
+                <Field label="Button Label" help={storyErrors.ctaLabel}>
+                  <input
+                    value={storyFields.ctaLabel}
+                    onChange={(event) => setStoryField("ctaLabel", event.target.value)}
+                    maxLength={HOMEPAGE_STORY_LIMITS.ctaLabel}
+                    placeholder={storyDefaults.ctaLabel}
+                    style={inputStyle}
+                  />
+                </Field>
               </div>
             )}
 
