@@ -10,6 +10,7 @@ import {
   buildContactProfilePayload,
   contactRowsToDraft,
   emptyContactDraft,
+  isValidPublicPhone,
   validateContactDraft,
 } from "@/lib/contact-admin";
 import { MEDIA_SURFACES } from "@/lib/storage-path";
@@ -109,6 +110,51 @@ describe("DCFC-302 Contact admin state and validation", () => {
           publicEmail: "team@example.test",
           publicPhone: "+44 20 7946 0958 ext. 4",
         },
+      }),
+    ).toEqual({});
+  });
+
+  // Regression: PHONE_PATTERN required the string to begin with `+` or a digit,
+  // so a number written the way North American clubs actually write it —
+  // "(312) 731-9479" — never matched and /admin/contact refused to save it.
+  it.each([
+    "(312) 731-9479",
+    "(312) 731-9479 x12",
+    "(312)731-9479",
+    "+1 (312) 731-9479",
+    "312-731-9479",
+    "312.731.9479",
+    "+44 20 7946 0958 ext. 4",
+    "",
+  ])("accepts the valid public telephone %j", (publicPhone) => {
+    expect(isValidPublicPhone(publicPhone)).toBe(true);
+  });
+
+  it.each([
+    "javascript:alert(1)",
+    "()",
+    "(312) call-now",
+    "(31) 22",
+    "+1 (312) 731-9479 0123456789",
+    "(312) 731-9479 x123456789",
+    "<script>",
+    "()-",
+  ])("rejects the invalid public telephone %j", (publicPhone) => {
+    expect(isValidPublicPhone(publicPhone)).toBe(false);
+  });
+
+  it("surfaces a field error for a phone number the pattern rejects", () => {
+    const draft = emptyContactDraft();
+    expect(
+      validateContactDraft({
+        ...draft,
+        profile: { ...draft.profile, publicPhone: "(312) call-now" },
+      }),
+    ).toMatchObject({ publicPhone: expect.any(String) });
+    expect(
+      validateContactDraft({
+        ...draft,
+        profile: { ...draft.profile, publicPhone: "(312) 731-9479" },
       }),
     ).toEqual({});
   });

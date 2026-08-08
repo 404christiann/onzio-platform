@@ -37,8 +37,15 @@ export type ContactValidationErrors = Partial<
 >;
 
 const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+// The number part must begin with an optional `+`, then either a digit or an
+// opening parenthesis. The original pattern allowed only `+` or a digit there,
+// so the ordinary US format `(312) 731-9479` — which every club types — failed
+// to match at all and was rejected as invalid. Everything after the first
+// character stays restricted to digits, spaces, parentheses, dots, and hyphens,
+// and isValidPublicPhone still enforces a 7-15 digit count, so letters, empty
+// parentheses, and out-of-range numbers are still rejected.
 const PHONE_PATTERN =
-  /^(\+?[0-9][0-9 ().-]*?)(?:\s*(?:x|ext\.?)\s*([0-9]{1,8}))?$/i;
+  /^(\+?[0-9(][0-9 ().-]*?)(?:\s*(?:x|ext\.?)\s*([0-9]{1,8}))?$/i;
 
 export function isValidPublicEmail(value: string): boolean {
   const email = value.trim();
