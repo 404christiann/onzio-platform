@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { CLUB_IDS } from "../fixtures/entities";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { validTransparentPng } from "../fixtures/media";
 import {
   expectPostgrestError,
   expectStorageError,
 } from "../helpers/database-security";
+import { createFreshLocalClient } from "../helpers/mfa";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -84,6 +85,116 @@ describe("storage isolation contract", () => {
         message: "mime type image/svg+xml is not supported",
       },
       "unsupported SVG upload",
+    );
+  });
+});
+
+// Regression contract for the /admin media pipeline. /api/admin/media/authorize
+// asks Storage to sign an upload URL before any bytes exist, so the staging
+// INSERT policy is evaluated against a row with no `metadata`. A prior version
+// of onzio_staging_member_insert required metadata->>'mimetype' to be a known
+// image type, which is unsatisfiable at that moment — every image upload and
+// replace in /admin returned MEDIA_AUTH_FAILED for every club and surface.
+describe("admin media staging signed-upload contract", () => {
+  const SIGNED_UPLOAD_PATHS = [
+    `${CLUB_IDS.alpha}/branding/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa901.webp`,
+    `${CLUB_IDS.alpha}/programs/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa902.webp`,
+  ] as const;
+  const CROSS_CLUB_PATH =
+    `${CLUB_IDS.bravo}/branding/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaa903.webp`;
+  const memberCleanups: Array<() => Promise<void>> = [];
+
+  afterEach(async () => {
+    while (memberCleanups.length > 0) {
+      await memberCleanups.pop()?.();
+    }
+    await clients.service.storage
+      .from("onzio-upload-staging")
+      .remove([...SIGNED_UPLOAD_PATHS, CROSS_CLUB_PATH]);
+  });
+
+  it.each(SIGNED_UPLOAD_PATHS)(
+    "signs a staging upload for a club member at %s",
+    async (path) => {
+      const session = await createFreshLocalClient({
+        email: "owner-aal2@alpha.local",
+        userId: USER_IDS.ownerAal2,
+      });
+      memberCleanups.push(session.cleanup);
+
+      const { data, error } = await session.client.storage
+        .from("onzio-upload-staging")
+        .createSignedUploadUrl(path, { upsert: false });
+
+      expect(
+        error?.message,
+        `signing ${path} must succeed for a fresh club member`,
+      ).toBeUndefined();
+      expect(data?.path).toBe(path);
+      expect(typeof data?.token).toBe("string");
+      expect(data?.token.length ?? 0).toBeGreaterThan(0);
+    },
+  );
+
+  it("still refuses to sign a staging upload for another club", async () => {
+    const session = await createFreshLocalClient({
+      email: "owner-aal2@alpha.local",
+      userId: USER_IDS.ownerAal2,
+    });
+    memberCleanups.push(session.cleanup);
+
+    const { data, error } = await session.client.storage
+      .from("onzio-upload-staging")
+      .createSignedUploadUrl(CROSS_CLUB_PATH, { upsert: false });
+
+    expect(data).toBeNull();
+    expectStorageError(
+      error,
+      {
+        statusCode: "403",
+        message: "new row violates row-level security policy",
+      },
+      "cross-club staging signed upload",
+    );
+  });
+
+  it("still refuses to sign a staging upload for an anonymous caller", async () => {
+    const { data, error } = await clients.anon.storage
+      .from("onzio-upload-staging")
+      .createSignedUploadUrl(SIGNED_UPLOAD_PATHS[0], { upsert: false });
+
+    expect(data).toBeNull();
+    expectStorageError(
+      error,
+      {
+        statusCode: "403",
+        message: "new row violates row-level security policy",
+      },
+      "anonymous staging signed upload",
+    );
+  });
+
+  it("still refuses to sign a staging upload at a malformed path", async () => {
+    const session = await createFreshLocalClient({
+      email: "owner-aal2@alpha.local",
+      userId: USER_IDS.ownerAal2,
+    });
+    memberCleanups.push(session.cleanup);
+
+    const { data, error } = await session.client.storage
+      .from("onzio-upload-staging")
+      .createSignedUploadUrl(`${CLUB_IDS.alpha}/branding/attacker.exe`, {
+        upsert: false,
+      });
+
+    expect(data).toBeNull();
+    expectStorageError(
+      error,
+      {
+        statusCode: "403",
+        message: "new row violates row-level security policy",
+      },
+      "malformed staging signed upload path",
     );
   });
 });
