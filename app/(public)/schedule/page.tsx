@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import FixtureRow from "@/components/FixtureRow";
+import AcademyFixtureRow from "@/components/AcademyFixtureRow";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
@@ -59,7 +60,9 @@ export default function SchedulePage() {
 }
 
 function LegacySchedulePage() {
+  const club = useClubContext();
   const clubId = useClubId();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const heroRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -169,27 +172,40 @@ function LegacySchedulePage() {
             style={{ opacity: 0 }}
           >
             {/* Column headers */}
-            <div
-              className="hidden sm:flex items-center px-6 md:px-8 py-3"
-              style={{ borderBottom: "2px solid var(--color-black)" }}
-            >
-              <span className="w-8 flex-shrink-0" />
-              <span
-                className="font-display font-black text-sm tracking-widest uppercase w-44 flex-shrink-0"
-                style={{ color: "var(--color-black)" }}
+            {isAcademy ? (
+              <div className="hidden grid-cols-[44px_240px_minmax(0,1fr)_160px] items-center border-b-2 border-[#1E3653] px-5 pb-4 md:grid">
+                <span aria-hidden="true" />
+                <span className="font-nav text-sm font-bold uppercase text-[#1E3653]">
+                  Date · Time
+                </span>
+                <span className="font-nav text-sm font-bold uppercase text-[#1E3653]">
+                  Opponent
+                </span>
+                <span aria-hidden="true" />
+              </div>
+            ) : (
+              <div
+                className="hidden sm:flex items-center px-6 md:px-8 py-3"
+                style={{ borderBottom: "2px solid var(--color-black)" }}
               >
-                Date · Time
-              </span>
-              <span
-                className="font-display font-black text-sm tracking-widest uppercase flex-1 px-6"
-                style={{ color: "var(--color-black)" }}
-              >
-                Opponent
-              </span>
-            </div>
+                <span className="w-8 flex-shrink-0" />
+                <span
+                  className="font-display font-black text-sm tracking-widest uppercase w-44 flex-shrink-0"
+                  style={{ color: "var(--color-black)" }}
+                >
+                  Date · Time
+                </span>
+                <span
+                  className="font-display font-black text-sm tracking-widest uppercase flex-1 px-6"
+                  style={{ color: "var(--color-black)" }}
+                >
+                  Opponent
+                </span>
+              </div>
+            )}
 
             {/* Rows */}
-            <div style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+            <div style={isAcademy ? undefined : { borderTop: "1px solid rgba(0,0,0,0.07)" }}>
               {fixtures.length === 0 ? (
                 <div className="px-6 py-14 text-center">
                   <h2 className="font-display text-2xl font-black uppercase text-[var(--color-black)]">
@@ -200,13 +216,23 @@ function LegacySchedulePage() {
                   </p>
                 </div>
               ) : fixtures.map((fixture, i) => (
-                <FixtureRow
-                  key={i}
-                  fixture={fixture}
-                  isNext={i === nextMatchIdx}
-                  isPast={i < nextMatchIdx}
-                  index={i}
-                />
+                isAcademy ? (
+                  <AcademyFixtureRow
+                    key={i}
+                    fixture={fixture}
+                    isNext={i === nextMatchIdx}
+                    isPast={i < nextMatchIdx}
+                    index={i}
+                  />
+                ) : (
+                  <FixtureRow
+                    key={i}
+                    fixture={fixture}
+                    isNext={i === nextMatchIdx}
+                    isPast={i < nextMatchIdx}
+                    index={i}
+                  />
+                )
               ))}
             </div>
 
