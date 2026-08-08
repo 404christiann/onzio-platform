@@ -40,6 +40,7 @@ import {
   defaultProgramsPageContent,
   PROGRAMS_PAGE_LIMITS,
 } from "@/lib/programs-page-content";
+import { deriveProgramSlug } from "@/lib/slugify";
 
 type MediaRole = "hero" | "detail";
 
@@ -63,6 +64,10 @@ function errorMessage(error: unknown, fallback: string): string {
 
 export default function AdminProgramsPage() {
   const club = useClubContext();
+  // Diverse City's admins do not hand-write URL slugs; the slug is derived from
+  // the navigation label the first time a program is saved and then fixed for
+  // the program's lifetime. Every other template keeps the manual field.
+  const hidesSlugField = club.presentationTemplateKey === "academy@1";
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
   const [draft, setDraft] = useState<ProgramDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -366,7 +371,13 @@ export default function AdminProgramsPage() {
 
   async function saveProgram() {
     if (!draft) return;
-    const validation = validateProgramDraft(draft);
+    // A slug is derived once, at creation, and never again: it is the public
+    // URL of the program page. Editing the navigation label later leaves the
+    // slug — and every link to it — exactly as it was.
+    const pending = draft.id
+      ? draft
+      : { ...draft, slug: draft.slug.trim() || derivedSlugForNewProgram(draft) };
+    const validation = validateProgramDraft(pending);
     if (Object.keys(validation).length > 0) {
       setErrors(validation);
       setError("Review the highlighted fields before saving.");
@@ -383,17 +394,19 @@ export default function AdminProgramsPage() {
     setError(null);
     try {
       const client = createClient();
-      const payload = buildProgramMutationPayload(draft);
-      const mutation = draft.id
-        ? client.from("programs").update(payload).eq("id", draft.id)
+      const payload = buildProgramMutationPayload(pending);
+      const mutation = pending.id
+        ? client.from("programs").update(payload).eq("id", pending.id)
         : client.from("programs").insert(payload);
       const { data, error: saveError } = await mutation.select("*").single();
       if (saveError || !data) {
         throw new Error(saveError?.message ?? "Unable to save program");
       }
       const savedDraft = programToDraft(data as DBProgram);
-      savedDraft.heroMediaPreviewUrl = draft.heroMediaPreviewUrl;
-      savedDraft.detailMediaPreviewUrl = draft.detailMediaPreviewUrl;
+      // The mutation response is not media-hydrated the way a select is, so the
+      // preview URLs already resolved for this draft are carried over.
+      savedDraft.heroMediaPreviewUrl = pending.heroMediaPreviewUrl;
+      savedDraft.detailMediaPreviewUrl = pending.detailMediaPreviewUrl;
       if (savedDraft.id) await saveGallery(savedDraft.id);
       setPrograms((current) => {
         const exists = current.some((program) => program.id === savedDraft.id);
@@ -413,6 +426,21 @@ export default function AdminProgramsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  /**
+   * The slug a not-yet-saved program would be created with. Derived from the
+   * navigation label, falling back to the display title when the label is still
+   * blank — the display title is required, so this always has something to work
+   * from — and de-duplicated against the slugs this club already uses.
+   */
+  function derivedSlugForNewProgram(source: ProgramDraft): string {
+    return deriveProgramSlug(
+      source.navLabel.trim() || source.displayTitle.trim(),
+      programs
+        .filter((program) => program.id !== source.id)
+        .map((program) => program.slug),
+    );
   }
 
   function updatePageCopy<K extends keyof ProgramsPageDraft>(
@@ -804,15 +832,35 @@ export default function AdminProgramsPage() {
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <FormField label="Slug" error={fieldError(errors, "slug")}>
-                  <input
-                    className={INPUT_CLASS}
-                    value={draft.slug}
-                    onChange={(event) => updateDraft("slug", event.target.value)}
-                    placeholder="youth-academy"
-                    maxLength={64}
-                  />
-                </FormField>
+                {hidesSlugField ? (
+                  <div>
+                    <span className={LABEL_CLASS}>Page address</span>
+                    <p className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2.5 font-body text-sm text-white/55">
+                      /programs/
+                      <span className="text-white/85">
+                        {draft.id
+                          ? draft.slug
+                          : derivedSlugForNewProgram(draft)}
+                      </span>
+                    </p>
+                    <p className="mt-1.5 font-body text-xs leading-5 text-white/35">
+                      {draft.id
+                        ? "Set when this program was created and fixed from then on, so existing links keep working. Renaming the navigation label does not change it."
+                        : "Created from the navigation label below when you save. It cannot be changed afterwards."}
+                    </p>
+                    {fieldError(errors, "slug")}
+                  </div>
+                ) : (
+                  <FormField label="Slug" error={fieldError(errors, "slug")}>
+                    <input
+                      className={INPUT_CLASS}
+                      value={draft.slug}
+                      onChange={(event) => updateDraft("slug", event.target.value)}
+                      placeholder="youth-academy"
+                      maxLength={64}
+                    />
+                  </FormField>
+                )}
                 <FormField label="Navigation label" error={fieldError(errors, "navLabel")}>
                   <input
                     className={INPUT_CLASS}
