@@ -1,5 +1,231 @@
 # Diverse City FC Status
 
+## 2026-08-08 - Christian's nine-item /admin punch list: three real bugs found and fixed, three surfaces hidden, two previews built, one item confirmed expected. Committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc. Christian used `/admin` himself for the first
+time since the two admin-editability rounds shipped and wrote a nine-item
+list. A requirements interview preceded any code, so the scope below is his
+answers, not assumptions.
+
+**Locked scope:** Diverse City's admin experience only. Every removal is
+branched on `presentationTemplateKey === "academy@1"` and hides UI without
+touching the underlying components, schema, or any other template's editor.
+Two shared bug fixes are included deliberately (items 3 and 8) — the bugs
+were found through Diverse City's admin, but the fixes are simply correct
+code and benefit every club.
+
+**Status:** `complete` for eight items; item 9 is `expected behaviour,
+blocked on Christian` with no code change. Six commits (`57b5ea1` …
+`c3b3bf3` plus docs), pushed to `origin/staging`. **Not deployed.** No
+hosted Supabase write of any kind.
+
+### The three real bugs, with root causes
+
+**A. Every image upload and replace in `/admin` was broken — all clubs, all
+surfaces.** This is the largest finding and it is what item 8 actually was.
+
+`/api/admin/media/authorize` asks Storage to sign an upload URL before any
+bytes exist. Storage evaluates the staging `INSERT` policy at that moment,
+against a row whose `metadata` is still null. `onzio_staging_member_insert`
+required
+
+```
+lower(coalesce(metadata ->> 'mimetype', '')) in ('image/jpeg','image/png','image/webp')
+```
+
+which resolves to `'' in (...)` — false — so the check could never pass. The
+route caught the resulting "new row violates row-level security policy" and
+returned a generic `403 MEDIA_AUTH_FAILED`, which is why nobody had traced
+it: the error names authorization, and authorization was fine.
+
+Reproduced in a real signed-in Diverse City admin session against local
+Supabase, confirmed by temporarily dropping only that one condition (request
+went `403` → `200`), then confirmed end to end by uploading an image through
+the sponsors editor and watching authorize → stage → finalize → publish all
+succeed. Fixed by migration
+`20260808160000_fix_admin_media_signed_upload_authorization.sql`.
+
+Removing the condition is a correction, not a loosening. It trusted
+browser-declared MIME, which `AGENTS.md`'s media rules explicitly say not to
+trust; the real verification is `/api/admin/media/finalize`, which reads the
+staged bytes and checks the actual file signature and dimensions before
+publishing. Staging is still reachable only through a path-scoped signed
+token issued after the route verifies session freshness, club membership and
+the surface entitlement. Bucket, path shape, and the per-surface
+`can_mutate_feature` mapping from DCFC-301/302/303 are byte-identical; the
+SELECT and DELETE policies are untouched. Five new database tests pin it.
+
+**B. Admin editors never resolved published media into URLs (item 2's
+"broken images").** Rows that reference published media store only the asset
+UUID. The public site turns that into a delivery URL through
+`resolveMediaReferences`, but `/api/admin/data` returned the raw row, so
+`programToDraft` hardcoded `heroMediaPreviewUrl: ""` and `/admin/programs`
+showed the words "Published media attached" where all four programs'
+already-uploaded hero images should have been. The admin data route now
+resolves the same references on select, using the `<field>_media_url` naming
+`lib/queries.ts` already produces. Registered for `programs` (hero, detail)
+and `tryouts` (hero). Verified live: the Youth Academy hero now loads at
+2200×1369 from the real published URL.
+
+**C. `/admin/contact` refused to save any edit (item 3).** `PHONE_PATTERN`
+required the string to begin with `+` or a digit, so `(312) 731-9479` — the
+club's actual published number, already in the database from the import —
+never matched, and the whole contact form failed validation on every save.
+The number part now also accepts a leading `(`; the digit-count rule (7-15)
+and restricted character set are unchanged, so letters, `()`, and
+out-of-range numbers are still rejected. Sixteen regression cases added.
+Verified through the UI: edited the phone to `(312) 731-9479 x12`, confirmed
+the row in the database, reverted it.
+
+### Item-by-item
+
+| # | Item | Outcome |
+| --- | --- | --- |
+| 1 | Homepage tab: remove Behind the Rose + slideshow | Both tabs, both preview blocks, and **both writes** hidden for `academy@1`. The writes matter: saving the Homepage tab upserted `behind_the_rose_section` from the shipped defaults, which would have written Rose City's video URL, eyebrow, title and description into Diverse City's row. Preview now shows the hero and the story band — what this homepage actually renders. |
+| 2 | Programs tab: slug, images, preview | Slug field replaced by a read-only "Page address" line for `academy@1`; slug derived from the nav label at creation only. Images fixed (bug B). Optional preview **not built** — see "Not done". |
+| 3 | Contact phone validation | Fixed (bug C), shared, with regression tests. |
+| 4 | Tryouts preview | Built. `ScaledTryoutsPreview` renders the real `AcademyTryoutsPage` at desktop width, scaled, including the unsaved draft. |
+| 5 | Roster: duplicate season-stat fields | Inline panel hidden for `academy@1`. Verified creating a player still seeds its zeroed stat row (the seeding lives in the add-player handler, not the panel), and that `/admin/season-stats` remains the single editor. |
+| 6 | Shop: photo-strip + purchase tabs | Both tabs and the photo-row preview hidden for `academy@1`. `clubhouse@1` verified unchanged. |
+| 7 | About preview sizing | Fixed. The old preview mounted the real page component in the admin column and let it re-flow to that width; it now renders at 1440px and scales, for both the About and Club Logo tabs. |
+| 8 | Sponsors | Root cause was bug A, not the sponsor rows. Logos themselves render correctly in both editor tiles and both previews — reproduced under production-equivalent club state (`lifecycle=onboarding`, `public_access=preview`) and they still rendered. What was broken was **Replace/Add**, which silently did nothing. |
+| 9 | Payments `STRIPE_PRICE_REQUIRED` | **Expected.** No code change. See below. |
+
+### The slugify utility
+
+`lib/slugify.ts`, with 19 unit tests in `lib/__tests__/slugify.test.ts`.
+Implements exactly the confirmed algorithm: lowercase; strip apostrophes
+(straight and typographic) without inserting a hyphen; transliterate accents
+to ASCII (NFD plus a table for the characters NFD cannot decompose — æ, ø,
+ß, đ, ł, þ …); collapse non-alphanumeric runs to one hyphen; trim edges;
+prefix `program-` when the result would not start with a letter; fall back to
+`program` when nothing survives; truncate on a word boundary within the
+64-character ceiling, hard-cutting only a single over-long word; and
+de-duplicate with `-2`, `-3`, … against the club's existing slugs.
+
+Covered edge cases: apostrophe (`Men's Teams` → `mens-teams`, never
+`men-s-teams`), typographic apostrophe, accents (`Fútbol Académie` →
+`futbol-academie`, `Ørsted Straße` → `orsted-strasse`), all-symbol input
+(`!!!` → `program`), leading digit (`2026 Spring Squad` →
+`program-2026-spring-squad`), length overflow on a word boundary and on a
+single long word, `truncateSlug` with no usable boundary and a non-positive
+maximum, collision (`youth-academy` → `youth-academy-2` → `-3`), a collision
+whose suffix must fit inside the ceiling, and a sweep asserting every result
+satisfies `^[a-z][a-z0-9-]*$` and `char_length between 1 and 64`.
+
+**Derived once, at creation, and never again.** The four live slugs
+(`youth-academy`, `special-kickers-program`, `special-olympics-soccer`,
+`upsl-mens-teams`) are untouched and cannot be regenerated by renaming a nav
+label. Where the nav label is still blank the derivation falls back to the
+display title, which is a required field — documented in the helper, since
+otherwise a blank label would produce `program`, `program-2`, …
+
+The derivation logic is safe platform-wide and is applied there: a blank
+slug on a new program is now derived rather than failing validation. Only
+the field's **removal** is scoped to `academy@1`.
+
+### Item 9 in plain language
+
+Not a bug. Diverse City has never had billing switched on.
+
+Read production directly, read-only (`begin transaction read only`, SELECT
+statements only, no write of any kind): `onzio.clubs` for `diverse-city` has
+`stripe_price_id = NULL`, `kind = 'customer'`, `lifecycle = 'onboarding'`,
+`public_access = 'preview'`, and there is **no** `club_subscriptions` row for
+it. The only `club_subscriptions` row in production belongs to Rose City and
+is `canceled`.
+
+`STRIPE_PRICE_REQUIRED` is thrown from exactly one place —
+`clubPriceId()` in `lib/stripe-event-routing.ts:43` — and only when the
+club's `stripe_price_id` is not a `price_…` value. `requireBillingRouteAuthorization`
+passes the full club context through, so the value the route reads is the
+database value. The code path is behaving exactly as designed: it fails
+closed rather than guessing a price.
+
+Turning it on is `DCFC-901` and needs two things only Christian can do:
+setting `clubs.stripe_price_id` to the live Price recorded in `DCFC-D126`
+(`price_1TwbmvK6WajTkwHYueLvjhv5`, $75/month) in **production**, and then an
+owner-driven live-mode Stripe Checkout. Both are explicitly outside what an
+agent may do in this repository, so nothing was attempted.
+
+One related observation, deliberately **not** built: with no price
+configured, the Payments page still renders a "Start subscription" button
+whose only possible outcome is a raw JSON error page. Replacing that with an
+explanatory panel is a small, safe change, but it touches shared billing UI
+and the honest answer may instead be to activate billing. Left for Christian
+to choose.
+
+### Files changed
+
+- `lib/slugify.ts` (new), `lib/__tests__/slugify.test.ts` (new)
+- `supabase/migrations/20260808160000_fix_admin_media_signed_upload_authorization.sql` (new)
+- `components/admin/ScaledTryoutsPreview.tsx` (new), `components/admin/ScaledAboutPreview.tsx` (new)
+- `lib/contact-admin.ts`, `lib/admin-data-contract.ts`, `lib/program-admin.ts`, `lib/tryout-admin.ts`, `lib/queries.ts`
+- `app/api/admin/data/route.ts`
+- `app/admin/(protected)/{homepage,programs,roster,shop,tryouts,about}/page.tsx`
+- `tests/contracts/diverse-city-contact-admin.test.ts`, `tests/database/storage-audit.test.ts`
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **858/858** across 84 files (`.env.test` exported), up from 817.
+- `npm run test:db` **145/145** across 15 files, up from 140 — five new
+  storage-policy tests.
+- `npm run test:contracts` 442/442; `npm run test:architecture` 20/20.
+- One flake seen on the first full run
+  (`tests/database/platform-auth-email-code.test.ts`, `SESSION_EXPIRED`
+  against the local Auth container); passed in isolation on a clean tree,
+  in isolation with these changes, and on two subsequent full runs. Not
+  related to anything here, but recorded rather than hidden.
+- Then verified as a human would: signed into `/admin` through the real
+  email-code flow against local Supabase and walked all nine surfaces.
+  Confirmed the two-tab homepage editor, the derived page address updating
+  live as a nav label is typed (`Men's Élite Teams 2027` →
+  `/programs/mens-elite-teams-2027`), the program hero image loading from
+  its real published URL, the tryouts preview rendering the empty-state
+  public page, the About preview holding desktop proportions, the shop
+  editor down to two tabs, and a created player getting its seeded stat row
+  with no inline stats panel in its edit form.
+- Confirmed **unchanged for Rose City's template** by temporarily publishing
+  alpha's `clubhouse@1` document locally: all four homepage tabs, the
+  original header copy, the slideshow preview, and all four shop tabs came
+  back. Restored afterwards.
+
+### Local database left exactly as found
+
+Every rehearsal artefact was removed and re-verified by query: the temporary
+verification player and its seeded stat row deleted, the upload-probe media
+asset and its storage object deleted (Diverse City back to 10 media assets),
+the contact phone reverted to `(312) 731-9479`, alpha's published
+presentation document restored to `academy@1`, and Diverse City's
+`lifecycle`/`public_access` restored to `active`/`live` after the
+production-state reproduction. The only intended local change is the new
+migration, applied with `supabase migration up --local`.
+
+### Hosted access
+
+One read-only production session, for item 9's investigation and to confirm
+which sponsor surface was actually broken. Connected through the Supabase
+CLI's own temporary login role, ran `begin transaction read only` and SELECT
+statements only, and closed with `commit`. **No write, no migration, no
+`db push`, no seed, no Stripe call, no deploy.** Nothing was changed on
+staging or production.
+
+### Not done
+
+- **Deployment** — Christian's call alone, not given for this work. Note the
+  media-upload fix is a **migration**: deploying the code without applying
+  `20260808160000` to production leaves every admin image upload broken.
+- **The optional programs preview** (item 2's "possibly"). It does not fit
+  the `Scaled*Preview` pattern cleanly: `AcademyProgramDetailPage` reads its
+  own data rather than taking props, and the page already carries three
+  independent editors. Left as the nice-to-have it was described as.
+- **`/admin/contact` and `/admin/tryouts` hero previews on first load.**
+  Tryouts is fixed by this change; contact has the same latent gap as
+  programs did (`contactRowsToDraft` hardcodes an empty preview URL) and
+  needs one more entry in `ADMIN_SELECT_MEDIA_REFERENCES` plus a one-line
+  draft change. Out of this list's scope; flagged rather than built.
+
 ## 2026-08-08 - Both admin-editability rounds deployed to production, with the required Supabase migrations applied first
 
 **Package:** none — ad hoc. Christian: "deploy this too."

@@ -2,6 +2,84 @@
 
 Last updated: 2026-08-08
 
+## Christian's nine-item `/admin` punch list — three real bugs fixed, three surfaces hidden for academy@1, two previews built, Payments confirmed expected. Committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Opus 5 (Claude Code), 2026-08-08. Status: `complete` for
+eight of nine items; item 9 needs no code and is blocked on Christian.
+Six commits (`57b5ea1` … `c3b3bf3` plus docs) on `origin/staging`,
+**not deployed**, no hosted Supabase write.
+
+Christian used `/admin` himself for the first time since the two
+admin-editability rounds shipped and wrote nine items. Scope was locked
+with him first: Diverse City's admin experience only, every removal
+branched on `presentationTemplateKey === "academy@1"` with the underlying
+components, schema, and every other template's editor untouched.
+
+**The biggest finding was not on the list as written. Every image upload
+and replace in `/admin` was broken — every club, every media surface.**
+`/api/admin/media/authorize` asks Storage to sign an upload URL before
+any bytes exist, so the staging `INSERT` policy is evaluated against a
+row with no `metadata`; `onzio_staging_member_insert` required
+`metadata->>'mimetype'` to be a known image type, which resolves to `''`
+and can never pass. The route reported it as a generic
+`403 MEDIA_AUTH_FAILED`, which is why it had gone untraced — the error
+names authorization, and authorization was fine. Reproduced in a real
+signed-in admin session, proven by dropping only that condition (`403` →
+`200`), then confirmed end to end through the sponsors editor. Migration
+`20260808160000` removes it. That is a correction, not a loosening: the
+condition trusted browser-declared MIME, which `AGENTS.md` says not to
+trust, and `/api/admin/media/finalize` still verifies the real file
+signature and dimensions before publishing. Five database tests pin it.
+
+**Two more real bugs.** Admin editors never resolved published media into
+delivery URLs — `/api/admin/data` returned raw rows while the public site
+hydrates them — so `/admin/programs` printed "Published media attached"
+where four already-uploaded hero images should have been; the route now
+resolves the same references on select. And `/admin/contact`'s
+`PHONE_PATTERN` required a leading `+` or digit, so `(312) 731-9479` —
+the club's own published number — failed validation and blocked *every*
+save on that tab. Both fixes are shared code and benefit every club.
+
+**Three surfaces hidden for `academy@1`**: the Homepage tab's Slideshow
+and Behind the Rose editors, the Roster tab's inline season-stat panel,
+and the Shop tab's Photo Row and Purchase tabs. The homepage one also
+skips two writes — saving that tab upserted `behind_the_rose_section`
+from the shipped defaults, which would have written Rose City's video and
+copy into Diverse City's row. Verified Rose City's template is unchanged
+by temporarily publishing a `clubhouse@1` document locally: all four
+homepage tabs and all four shop tabs came back.
+
+**Two previews built** on the established `Scaled*Preview` pattern:
+`/admin/tryouts` had none and now renders the real public page including
+the unsaved draft, mapped through the public `mapTryout` so the content
+rules cannot drift; `/admin/about`'s preview no longer re-flows to the
+admin column's width.
+
+**Programs slugs** are now derived from the navigation label at creation
+only, never regenerated, via a tested `lib/slugify.ts` (19 unit tests
+covering apostrophes, accents, all-symbol input, leading digits, length
+overflow and collisions). The four live slugs are untouched.
+
+**Item 9 is expected, not a bug.** A read-only production query confirmed
+Diverse City's `clubs.stripe_price_id` is `NULL` with no
+`club_subscriptions` row: billing has never been activated for this club.
+`STRIPE_PRICE_REQUIRED` has exactly one thrower and it fails closed by
+design. Switching it on is `DCFC-901` — setting the live Price from
+`DCFC-D126` in production and an owner-driven live-mode Checkout — both
+outside what an agent may do here, so nothing was attempted.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **858/858** across 84
+files, up from 817; `npm run test:db` **145/145** across 15 files, up
+from 140; contracts 442/442; architecture 20/20. Then walked all nine
+surfaces in a real signed-in `/admin` session against local Supabase.
+Every rehearsal artefact was removed and re-verified by query, leaving
+the local database exactly as found.
+
+**Not done:** deployment. Note this round includes a **migration** — a
+code-only deploy leaves every admin image upload broken. Full detail,
+including the per-item table and the plain-language Payments answer, in
+`docs/phase-11/diverse-city/STATUS.md`.
+
 ## Both rounds of admin-editable content work deployed to production — real Supabase migrations applied first, both hostnames verified live
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete`.
