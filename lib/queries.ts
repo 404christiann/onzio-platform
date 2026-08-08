@@ -262,7 +262,7 @@ type HydratedContactPage = DBContactPageContent & {
   hero_media_url?: string;
 };
 
-type HydratedTryout = DBTryout & {
+export type HydratedTryout = DBTryout & {
   hero_media_url?: string;
 };
 
@@ -365,7 +365,13 @@ function contactHref(email: unknown): string {
   return `mailto:${email}`;
 }
 
-function mapTryout(row: HydratedTryout, email: unknown): TryoutContent {
+/**
+ * Exported so /admin/tryouts can render its live-style preview through exactly
+ * the rules the public page uses — which action a status produces, when a
+ * registration link is trusted, and where TBA appears — instead of a second
+ * copy that can drift.
+ */
+export function mapTryout(row: HydratedTryout, email: unknown): TryoutContent {
   const registrationHref = normalizePublicHref(row.registration_href);
   const registrationLabel = row.cta_label.trim();
   const fallbackHref = contactHref(email);

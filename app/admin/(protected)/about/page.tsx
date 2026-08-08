@@ -6,8 +6,7 @@ import Image from "@/components/ResilientImage";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import AboutClubPageClient from "@/components/AboutClubPageClient";
-import ClubLogoPageClient from "@/components/ClubLogoPageClient";
+import ScaledAboutPreview from "@/components/admin/ScaledAboutPreview";
 import type {
   DBAboutPageContent,
   DBClubLogoPageContent,
@@ -637,14 +636,21 @@ export default function AdminAboutPage() {
             >
               {activeTab === "about" ? "About Preview" : "Club Logo Preview"}
             </p>
+            <p
+              className="font-body mb-3 text-xs"
+              style={{ color: "rgba(255,255,255,0.25)" }}
+            >
+              Desktop website view, scaled to fit. The layout stays in the
+              proportions visitors see instead of re-flowing to this panel.
+            </p>
             <div
               className="h-[760px] overflow-auto rounded-lg bg-white"
               style={{ border: "1px solid rgba(255,255,255,0.08)" }}
             >
               {activeTab === "about" ? (
-                <AboutClubPageClient content={aboutDraft} animate={false} />
+                <ScaledAboutPreview variant="about" content={aboutDraft} />
               ) : (
-                <ClubLogoPageClient content={logoDraft} animate={false} />
+                <ScaledAboutPreview variant="logo" content={logoDraft} />
               )}
             </div>
           </section>

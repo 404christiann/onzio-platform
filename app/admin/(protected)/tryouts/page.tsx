@@ -3,13 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
-import type { DBProgram, DBTryout } from "@/lib/db-types";
+import type { DBContactProfile, DBProgram, DBTryout } from "@/lib/db-types";
+import { mapTryout } from "@/lib/queries";
 import {
   buildTryoutMutationPayload,
   emptyTryoutDraft,
   moveTryout,
+  tryoutDraftToRow,
   tryoutToDraft,
   validateTryoutDraft,
   type TryoutDraft,
@@ -48,12 +51,16 @@ export default function AdminTryoutsPage() {
   const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<TryoutValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
+  // The public page turns a missing registration link into a mailto action on
+  // the club's own published address, so the preview needs that address to be
+  // honest about what a visitor would actually see.
+  const [contactEmail, setContactEmail] = useState("");
 
   const loadTryouts = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      const [tryoutsResult, programsResult] = await Promise.all([
+      const [tryoutsResult, programsResult, contactResult] = await Promise.all([
         createClient()
           .from("tryouts")
           .select("*")
@@ -62,9 +69,16 @@ export default function AdminTryoutsPage() {
           .from("programs")
           .select("id, display_title")
           .order("sort_order", { ascending: true }),
+        createClient().from("contact_profile").select("public_email").limit(1),
       ]);
       const loadError = tryoutsResult.error ?? programsResult.error;
       if (loadError) throw new Error(loadError.message);
+      setContactEmail(
+        ((contactResult.data ?? []) as Pick<
+          DBContactProfile,
+          "public_email"
+        >[])[0]?.public_email ?? "",
+      );
       const next = ((tryoutsResult.data ?? []) as DBTryout[]).map(tryoutToDraft);
       setTryouts(next);
       setPrograms((programsResult.data ?? []) as ProgramOption[]);
@@ -238,6 +252,17 @@ export default function AdminTryoutsPage() {
       await loadTryouts(draft?.id);
     }
   }
+
+  // Saved events with the current draft substituted in place, so the preview
+  // reflects unsaved edits — and shows a brand new event before it exists.
+  const previewRows = draft
+    ? draft.id
+      ? tryouts.map((tryout) => (tryout.id === draft.id ? draft : tryout))
+      : [...tryouts, draft]
+    : tryouts;
+  const previewTryouts = previewRows.map((tryout) =>
+    mapTryout(tryoutDraftToRow(tryout), contactEmail),
+  );
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -429,9 +454,31 @@ export default function AdminTryoutsPage() {
                   Save changes
                 </button>
               </div>
+
             </section>
           )}
         </div>
+      )}
+
+      {!loading && (
+        <section className="mt-6 rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+            Tryouts page preview
+          </p>
+          <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/30">
+            The real public page, at desktop proportions and scaled to fit.
+            Every saved event is shown, including the one being edited with its
+            unsaved changes. Blank logistics render as TBA exactly as visitors
+            see them.
+          </p>
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.08]">
+            <ScaledTryoutsPreview
+              tryouts={previewTryouts}
+              clubName={club.name}
+              contactEmail={contactEmail}
+            />
+          </div>
+        </section>
       )}
     </div>
   );
