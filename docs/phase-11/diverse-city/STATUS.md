@@ -1,5 +1,58 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Nav badges + video pipeline deployed to production; all 4 handoff items now closed
+
+**Package:** none — ad hoc, Christian: "Yes, ship both now."
+**Status:** `complete`
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+Deployed both `staging` commits that were sitting ready (`d32db56` nav
+affiliation badges, `405880c` Bunny.net video pipeline): `vercel deploy
+--prod` → `dpl_6Dt8vVuhab2F2YKzEibkzyYQ7wwD`, aliased automatically to
+`onzio-platform.vercel.app`, then `vercel alias set
+dpl_6Dt8vVuhab2F2YKzEibkzyYQ7wwD diverse-city-fc-private.vercel.app` per the
+standing gotcha (private hostname doesn't follow `--prod`'s auto-alias).
+
+Before deploying, independently re-verified the video-pipeline commit
+rather than trusting the background session's report at face value:
+`npx tsc --noEmit` clean, full suite `686/686` (one test —
+`tests/database/platform-auth-email-code.test.ts` — flaked on
+`SESSION_EXPIRED` on the first run, unrelated to this change; passed in
+isolation and on a full re-run, confirming it was timing-flake, not a
+regression), `git grep` for key-shaped strings across tracked files found
+no committed secrets, and read `lib/bunny-video.ts` and the `Hero.tsx` diff
+directly to confirm the `academy@1` branch is properly scoped (no leftover
+dead code from the old static-crest branch it replaced, Rose City/
+`clubhouse@1` untouched).
+
+**Verified live** (Christian's Chrome, via Claude in Chrome), everything
+together on one fresh homepage load:
+- Nav: all three affiliation badges (US Soccer, FIFA, UPSL) rendering next
+  to the crest.
+- Hero: real Bunny Stream video playing full-bleed, replacing the old
+  static crest.
+- Next Match card: still showing the TBA placeholder fixture correctly.
+- New "Developing the Next Generation" section: its own distinct video
+  playing (confirmed via changed frame content between two screenshots
+  taken moments apart), real copy, "Our Story" CTA.
+- Standings table: all 10 teams still correct, Diverse City row still
+  highlighted with its crest.
+- Zero console errors throughout.
+- Rose City sanity check: `onzio-platform.vercel.app` still 200s with Rose
+  City content, unaffected.
+
+This closes every item from the original 4-gap handoff ("Handoff: 4
+remaining pixel-perfect gaps, precisely scoped for the next session",
+further down this file) — nav badges, video hero + story section, Next
+Match, and standings are all now live. `/sponsors` remains intentionally
+unbuilt per `DCFC-D130` (Christian's explicit decision, not an open item).
+
+**Files changed:** none — deploy and verification only, no new commits.
+
+**Exact next step:** none outstanding from this handoff. Diverse City FC's
+production site now reflects every fixable gap found in the pixel-perfect
+comparison sweep against the sales mockup.
+
 ## 2026-08-07 - Real Bunny.net Stream video pipeline built: hero video + "Developing the Next Generation" story section, item 2 of the 4-gap handoff closed
 
 **Package:** none — ad hoc. Christian: "Yes, lets use another session to do

@@ -2,6 +2,23 @@
 
 Last updated: 2026-08-07
 
+## Nav badges + video pipeline deployed — all 4 pixel-perfect handoff items now closed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
+
+Christian: "Yes, ship both now." Deployed the nav affiliation badges
+(`d32db56`) and the Bunny.net video pipeline (`405880c`) together —
+`vercel deploy --prod` → `dpl_6Dt8vVuhab2F2YKzEibkzyYQ7wwD`, re-aliased
+`diverse-city-fc-private.vercel.app` to it. Independently re-verified the
+video commit before deploying (tsc, full suite, secret scan, direct diff
+read) rather than trusting the background session's report alone. Verified
+live: affiliation badges, hero video, Next Match, the new story section's
+own video, and the standings table all render together correctly with zero
+console errors; Rose City confirmed unaffected.
+
+This closes every item from the original 4-gap handoff. Full detail in
+`docs/phase-11/diverse-city/STATUS.md`.
+
 ## Real Bunny.net Stream video pipeline built: hero video + "Developing the Next Generation" story section (item 2 of the 4-gap handoff, closed) — committed, NOT deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
