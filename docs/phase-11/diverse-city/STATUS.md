@@ -1,5 +1,77 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Two more mockup-parity gaps: Next Match section + /schedule fixture rows, committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc, direct follow-up requested by Christian after
+reviewing the 18-finding fix pass artifact below.
+
+**Status:** `complete`. Committed `09fb8ad` (Next Match) and `baf205c`
+(fixture rows) on `origin/staging`. Not deployed.
+
+**Completed work:**
+
+1. **`components/AcademyNextMatch.tsx`** (new) — replaces the shared
+   `NextMatchCard` on `academy@1`'s homepage. Matches the mockup's
+   `MatchPresentation` section (`onzioProspects/diverse-city-fc/site/components/HomeSections.tsx`):
+   "Next Match" headline, three-column crest/VS/opponent grid, divider,
+   date/venue/"Full Schedule" row. Fully driven by the real `fetchSchedule`
+   query (same data source `NextMatchCard` already used) — no hardcoded
+   placeholder copy; the "TBA" text visible is the real seeded fixture's
+   real field values.
+2. **`components/AcademyFixtureRow.tsx`** (new) — replaces the shared
+   `FixtureRow` on `/schedule` for `academy@1`. The mockup's own
+   `/schedule` page turned out to be fully static/hardcoded (3 fake "TBA"
+   rows, no real component to copy per `DCFC-D008`), so this reproduces its
+   `44px/240px/minmax(0,1fr)/160px` grid shape and visual treatment while
+   staying data-driven from the real `Fixture` record. Right column: real
+   W/L score if the match is decided, a real "Match details" link if a
+   street address is on file, otherwise Home/Away — never fabricated.
+3. Wired both into `app/(public)/page.tsx` and
+   `app/(public)/schedule/page.tsx`'s `LegacySchedulePage` behind
+   `presentationTemplateKey === "academy@1"` branches; Rose City/`clubhouse@1`
+   paths unchanged.
+
+**Root cause of the miss:** the earlier 18-finding audit correctly flagged
+that the homepage's Next Match content looked different from the mockup, but
+diagnosed it as "same data, different band" rather than "wrong component" —
+`NextMatchCard` and `MatchPresentation` render entirely different layouts, not
+a styling variant of the same one. The audit never separately checked
+`/schedule`'s row-level layout at all (it was scoped as a content/data
+question by finding #17, not a layout question). Both gaps were only caught
+because Christian did a direct visual side-by-side himself.
+
+**Verification:** `npx tsc --noEmit` clean. Full suite `686/686` (`.env.test`
+exported). Confirmed no other call sites of `NextMatchCard`. Verified
+correctness via direct `getComputedStyle`/DOM-content inspection against a
+locally running dev server (port 3006, `onzio-platform-bravo-preview` config,
+tenant resolved via `diverse-city.localhost:3006` hostname routing) rather
+than trusting source-reading alone, matching this epic's established
+methodology.
+
+**Known test-harness limitation, not a product bug:** this session's Browser
+tool reports `document.visibilityState: "hidden"` even for the fronted tab,
+which throttles the GSAP `ScrollTrigger` fade-in both new sections use (same
+pattern as every other section on this template) to a near-stalled crawl,
+and the active tween kept overwriting a manually-forced `opacity` style on
+each throttled tick — so screenshots taken through this harness show both
+sections blank or partially faded. Confirmed via direct computed-style/DOM
+inspection (h2/paragraph/span text and colors all correct) that the actual
+markup is right; a real browser with a visible, focused tab renders both
+normally within about a second. Same class of limitation already noted for
+the hero-video autoplay check in the prior fix pass.
+
+**Files changed:** `components/AcademyNextMatch.tsx` (new),
+`components/AcademyFixtureRow.tsx` (new), `app/(public)/page.tsx`,
+`app/(public)/schedule/page.tsx`, `HANDOFF.md`, this file.
+
+**Not done:** deployment. Same standing rule as every other change today —
+awaiting Christian's explicit go-ahead plus the private-hostname re-alias
+step.
+
+**Next step:** Christian reviews the fix live (or via a fresh side-by-side
+capture) and decides whether to bundle this with the rest of today's
+undeployed `staging` commits for a single deploy, or deploy separately.
+
 ## 2026-08-07 - Full mockup-parity fix pass: all 18 audit findings implemented (DCFC-D132), committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc, Christian pre-approved fixing the complete

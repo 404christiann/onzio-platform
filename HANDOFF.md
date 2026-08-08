@@ -2,6 +2,68 @@
 
 Last updated: 2026-08-07
 
+## Two more mockup-parity gaps Christian caught by eye: Next Match card and /schedule fixture rows — committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+committed and pushed to `origin/staging` (`09fb8ad`, `baf205c`), **not
+deployed**.
+
+After the 18-finding fix pass below, Christian directly compared the
+mockup's `/schedule` page and its homepage "Next Match" section against
+production screenshots and flagged two more real mismatches the earlier
+audit's screenshot-triage had missed:
+
+**Home "Next Match" section was the wrong component entirely.** `academy@1`'s
+homepage mounted the generic, Rose-City-style `NextMatchCard` (a horizontal
+"TEAM vs TEAM" strip) instead of the mockup's own bespoke `MatchPresentation`
+section — a "Next Match" headline over a three-column crest/VS/opponent grid
+with a TBA fallback state, then a date/venue/"Full Schedule" row. These are
+visually unrelated designs, not a styling delta, which is why the earlier
+screenshot-triage audit logged it as "same data, different band" rather than
+catching the component swap. New `components/AcademyNextMatch.tsx`, driven by
+the same real `fetchSchedule` data as the shared card (no hardcoded
+placeholder text — the "TBA" values visible today are real seeded data, not
+fabricated copy), mounted only for `academy@1` in `app/(public)/page.tsx` in
+place of `NextMatchCard`.
+
+**`/schedule` fixture rows used the shared `FixtureRow` layout, not the
+mockup's grid.** The mockup's own `/schedule` page (`app/(public)/schedule/page.tsx`
+in the mockup repo) turned out to be a fully static, hardcoded 3-row "TBA"
+demo unconnected to any data model — not a real component worth copying
+verbatim per `DCFC-D008`'s no-fabrication rule. Instead, built
+`components/AcademyFixtureRow.tsx`: the same `44px/240px/minmax(0,1fr)/160px`
+grid shape and visual treatment as the mockup, but fully data-driven from the
+real `Fixture` record (real date/time, real opponent, real venue). The
+right-hand column shows a real W/L score when one exists, a real "Match
+details" link when a street address is on file (existing `mapUrl` logic,
+relabeled), or a plain Home/Away fallback otherwise — never invented text.
+Wired in via a `presentationTemplateKey === "academy@1"` branch in
+`LegacySchedulePage`, both for the column header and the row component,
+leaving Rose City/`clubhouse@1` untouched.
+
+**Verification note worth recording:** both new sections use the same
+GSAP `ScrollTrigger` fade-in pattern already used throughout this template.
+This session's Browser-tool test harness reports `document.visibilityState`
+as `"hidden"` even for the fronted tab, which stalls GSAP's `requestAnimationFrame`-driven
+tween partway through and made both sections render as blank/faded in
+screenshots taken through that harness. Confirmed via direct
+`getComputedStyle`/DOM-content inspection (not just a forced style override,
+since the active tween kept re-writing the forced value on each throttled
+tick) that the underlying markup, copy, and colors are all correct — this is
+the same environmental limitation already noted for the hero-video autoplay
+check in the prior fix pass, not a real production bug. Real browsers with a
+visible/focused tab will render both sections normally within about a second
+of scroll.
+
+`npx tsc --noEmit` clean. Full suite `686/686` (`.env.test` exported). No
+other usages of `NextMatchCard` existed outside this one call site. Files
+changed: `components/AcademyNextMatch.tsx` (new),
+`components/AcademyFixtureRow.tsx` (new), `app/(public)/page.tsx`,
+`app/(public)/schedule/page.tsx`, this file, and
+`docs/phase-11/diverse-city/STATUS.md`.
+
+**Not done:** deployment — same standing rule as everything else today.
+
 ## Full mockup-parity fix pass: all 18 audit findings implemented (DCFC-D132) — committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Fable (Claude Code), 2026-08-07. Status: `complete`,
