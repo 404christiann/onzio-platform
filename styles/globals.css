@@ -48,6 +48,29 @@
   font-family: var(--font-body);
 }
 
+/* Mockup parity, confirmed against the sales mockup's actual computed styles
+   (not just its source) at onzioProspects/diverse-city-fc/site: headings are
+   italic, and this rule -- verified live via getComputedStyle, not just
+   grepped from source -- reverts button/link CTAs that carry `.font-display`
+   back to the body font rather than the heavy heading font. Both scoped to
+   `[data-font-pack="academy"]` only; unlayered like the block above so they
+   reliably win over `@layer base`'s `h1..h6 { font-style: normal }` and any
+   `.font-display` utility regardless of source order. */
+[data-font-pack="academy"] h1,
+[data-font-pack="academy"] h2,
+[data-font-pack="academy"] h3,
+[data-font-pack="academy"] h4,
+[data-font-pack="academy"] h5,
+[data-font-pack="academy"] h6 {
+  font-style: italic;
+}
+
+[data-font-pack="academy"] button.font-display,
+[data-font-pack="academy"] a.font-display:not([aria-label$="Home"]),
+[data-font-pack="academy"] [role="button"].font-display {
+  font-family: var(--font-body);
+}
+
 @layer base {
   * {
     box-sizing: border-box;

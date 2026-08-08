@@ -2,6 +2,29 @@
 
 Last updated: 2026-08-07
 
+## Italic academy@1 headings + button-font mockup parity — 2 of 3 CSS-pass judgment calls resolved
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+committed and pushed to `staging`, **not deployed**.
+
+Christian answered two of the three open questions from the CSS/visual-
+fidelity pass: yes to italic `academy@1` headings, and "stick to what we
+have for the mockup" on the button-font question. Worth noting for future
+sessions: a plain source-grep made the button question look like a
+non-issue (the mockup's CTA carries the same `.font-display` class
+production does) — only checking the mockup's actual `getComputedStyle` in
+a live browser revealed a compound override rule reverting buttons back to
+body font regardless of that class. Both fixes added to
+`styles/globals.css`, scoped to `[data-font-pack="academy"]` only. `tsc`
+clean, suite `686/686`, verified by injecting the exact new rules into the
+live production DOM to confirm the cascade behaves correctly ahead of the
+still-undeployed font-pack fix it depends on.
+
+One question remains open (mobile nav menu sizing/weight) — full detail in
+`docs/phase-11/diverse-city/STATUS.md`. This commit and the earlier
+font-pack commit (`628cdf3`) are both ready to ship together once that's
+resolved.
+
 ## CSS/visual-fidelity pass: `academy@1`'s font pack was registered but never wired to rendering — fixed, committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete` for the

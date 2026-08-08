@@ -1,5 +1,83 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Italic academy@1 headings + button-font mockup parity — resolves 2 of the 3 open judgment calls
+
+**Package:** none — ad hoc, Christian's answers to the CSS pass's open
+questions
+**Status:** `complete`, not yet deployed
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+**Christian's answers:**
+- Headings: "Yes! make academy@1 headings italic"
+- Button font: "Stick to what we have for the mockup" (in response to being
+  asked whether to keep the CTA in Montserrat or match the mockup's
+  convention).
+
+**Worth recording: verified against the mockup's actual computed styles,
+not just its source, and the source read alone was misleading.** A plain
+`grep` for "font-display" on the mockup's `/programs` CTA shows it carries
+the `.font-display` class, same as production after the earlier font-pack
+fix — reading only that, the two looked identical and the button-font
+question would seem moot. Live in the mockup's browser (`getComputedStyle`),
+the button actually renders in Inter (body font), not Montserrat. Traced it
+to a compound override rule easy to miss by grepping for "font-display"
+alone:
+`button.font-display, a.font-display:not([aria-label="Diverse City FC home"]), [role="button"].font-display { font-family: var(--font-body); }`
+— buttons/CTA-style links deliberately revert to body font regardless of
+the heading-font class they carry. This is the same class of mistake the
+`/shop` blank-page bug and the font-pack gap itself were: trusting source
+inspection over live computed-style verification.
+
+**Fix, `styles/globals.css`**, both scoped to `[data-font-pack="academy"]`
+and unlayered (matching the existing block above them) so they reliably
+beat `@layer base`'s `h1..h6 { font-style: normal }` and any `.font-display`
+utility regardless of Tailwind's generated source order:
+```css
+[data-font-pack="academy"] h1,
+[data-font-pack="academy"] h2,
+[data-font-pack="academy"] h3,
+[data-font-pack="academy"] h4,
+[data-font-pack="academy"] h5,
+[data-font-pack="academy"] h6 {
+  font-style: italic;
+}
+
+[data-font-pack="academy"] button.font-display,
+[data-font-pack="academy"] a.font-display:not([aria-label$="Home"]),
+[data-font-pack="academy"] [role="button"].font-display {
+  font-family: var(--font-body);
+}
+```
+The `:not()` exclusion is adapted from the mockup's own defensive pattern
+(there, it protects the crest/home link from being caught by the button
+rule) — checked production's actual home link
+(`components/Nav.tsx`: `aria-label={\`${club.name} Home\`}` on the `<Link>`
+itself, no `.font-display` class on that element today) and it wouldn't
+currently match either selector, but kept the guard for the same reason the
+mockup has it: robustness against a future markup change, not a fix for an
+observed bug.
+
+**Verified:** `npx tsc --noEmit` clean, full suite `686/686`. Since this
+fix builds on the not-yet-deployed font-pack commit (`628cdf3`), and no
+local tenant currently has an `academy@1` presentation document to test
+against normally, verified by injecting the exact new CSS rules plus a
+`data-font-pack="academy"` attribute directly into the *live* production
+DOM (Christian's authenticated Chrome session, `/programs`) via
+`javascript_tool`, using placeholder font-family values to isolate the
+cascade logic from whether the real Google Fonts are loaded yet: confirmed
+`h1` computes `font-style: italic` and the "Find Your Program" CTA's
+`font-family` correctly resolves to the body-font placeholder rather than
+the display-font one. Test styles removed after — no lasting change made
+to the live site by this verification step.
+
+**Files changed:** `styles/globals.css`.
+
+**Exact next step:** one judgment call from the original CSS pass remains
+open — the mobile nav menu's link sizing/weight/italic treatment (structural
+difference, not just a font swap) — Christian hasn't weighed in on that one
+yet. Once resolved (or explicitly deferred), this commit plus the earlier
+font-pack commit (`628cdf3`) are both ready to deploy together.
+
 ## 2026-08-07 - CSS/visual-fidelity pass: `academy@1`'s font pack was registered but never wired to rendering — fixed; committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc, Christian: "Can you make sure we all the css and
