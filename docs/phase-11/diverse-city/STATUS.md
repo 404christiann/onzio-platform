@@ -1,5 +1,34 @@
 # Diverse City FC Status
 
+## 2026-08-08 - Hero-link picker + standings-preview fixes deployed to production
+
+**Package:** none — ad hoc. Christian: "Yes, deploy this too."
+
+**Status:** `complete`.
+
+**Deploy:** no new migration this round — `staging` HEAD (`80bf024`) was
+pure admin/component code (the `lib/site-routes.ts` picker utility, the
+standings preview template swap). `vercel deploy --prod` →
+`dpl_6E6GhpE1op7ebJK8vVzCdtihDJdK`, auto-aliased to
+`onzio-platform.vercel.app`. Re-aliased
+`diverse-city-fc-private.vercel.app` to the same deployment.
+
+**Verified live**, both hostnames: Rose City `200`, unaffected. Diverse
+City's `/` and `/programs`, checked through Christian's authenticated
+Chrome session: zero console errors on both, confirmed via
+`read_console_messages` after fresh navigations.
+
+**Not verified by this agent, and cannot be:** the actual `/admin` fixes
+(Homepage tab's Primary/Secondary Link pickers, Standings tab's "Our
+team's row" label and the corrected academy-styled preview) — all behind
+`/admin`'s real email-code login, which needs an email Christian receives.
+**Christian needs to test these himself** in production, same as the last
+admin-focused deploy; steps are in the prior `2026-08-08` entry in this
+file.
+
+**Not done:** nothing outstanding. `staging` and production now match at
+`80bf024`.
+
 ## 2026-08-08 - Homepage hero link picker + standings preview fix, committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc. Christian raised two things using `/admin`:

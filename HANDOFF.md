@@ -2,6 +2,27 @@
 
 Last updated: 2026-08-08
 
+## Hero-link picker + standings-preview fixes deployed to production
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete`.
+
+Christian: "Yes, deploy this too." No new migration this round (pure
+admin/component code — the route-picker utility and the standings preview
+fix), so this was a straightforward code deploy: `vercel deploy --prod` →
+`dpl_6E6GhpE1op7ebJK8vVzCdtihDJdK`, auto-aliased to
+`onzio-platform.vercel.app`; re-aliased `diverse-city-fc-private.vercel.app`
+to the same deployment.
+
+**Verified live**: Rose City `200`, unaffected. Diverse City's `/` and
+`/programs` loaded with zero console errors, checked through Christian's
+authenticated Chrome session. As with the last punch-list deploy, this
+round's actual fixes live inside `/admin` — **Christian needs to test
+those himself** (Homepage tab's link pickers, Standings tab's checkbox
+label and preview) since the real email-code login isn't something this
+agent can complete on his behalf.
+
+Full detail in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## Two more admin issues Christian caught: homepage hero links could 404, standings preview was hardcoded to Rose City — fixed, committed and pushed to `staging`, NOT deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete`,
