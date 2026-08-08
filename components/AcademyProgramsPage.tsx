@@ -2,6 +2,11 @@ import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
 import type { ProgramContent } from "@/lib/queries";
 
+// Mockup-parity programs index (DCFC-D132 pass): navy hero band with the
+// sky second headline line, flat hairline card grid with numbered image
+// overlays and the program *name* (navLabel) as the card title, and the
+// sky-blue "Find your pathway." closing band — all structure/classes from
+// the sales mockup's app/(public)/programs/page.tsx.
 export default function AcademyProgramsPage({
   programs,
   clubName = "the club",
@@ -10,92 +15,104 @@ export default function AcademyProgramsPage({
   clubName?: string;
 }) {
   return (
-    <div className="min-h-screen bg-white pt-24 text-[#141414] sm:pt-28">
-      <section className="bg-[#141414] px-6 py-20 text-white sm:py-28 lg:px-10">
+    <div className="bg-[#F9FAFD]">
+      <section className="bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
         <div className="mx-auto max-w-7xl">
-          <p className="font-display text-xs font-bold uppercase tracking-[0.24em] text-[var(--color-red)]">
+          <p className="font-display text-sm font-bold uppercase text-[#B9E3F6]">
             Our Programs
           </p>
-          <h1 className="mt-5 max-w-4xl text-5xl font-black sm:text-7xl">
-            One pathway. Every athlete belongs.
+          <h1 className="mt-5 max-w-5xl font-display text-[clamp(3.4rem,8vw,7.4rem)] font-black uppercase italic leading-[.88]">
+            One pathway.
+            <br />
+            <span className="text-[#B9E3F6]">Every athlete belongs.</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
-            Explore the club&apos;s current programs and choose the pathway that
-            fits your goals.
+          <p className="mt-8 max-w-3xl font-body text-base leading-8 text-white/75 md:text-lg">
+            {clubName} connects youth development, specialized programming,
+            and high-level competition. Every program helps athletes grow in
+            confidence, skill, teamwork, and character.
           </p>
         </div>
       </section>
 
-      <section className="px-6 py-16 sm:py-24 lg:px-10">
-        <div className="mx-auto max-w-7xl">
-          {programs.length === 0 ? (
-            <div className="rounded-2xl border border-black/10 bg-[#f5f5f5] p-8 sm:p-12">
-              <h2 className="text-3xl font-black">Programs coming soon</h2>
-              <p className="mt-3 max-w-xl text-black/60">
-                The club has not published any programs yet. Contact the club
-                for current opportunities.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {programs.map((program) => (
-                <Link
-                  key={program.id}
-                  href={`/programs/${program.slug}`}
-                  className="group overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
-                >
+      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+        {programs.length === 0 ? (
+          <div className="bg-[#EDF2F7] p-8 sm:p-12">
+            <h2 className="font-display text-3xl font-black uppercase italic text-[#1E3653]">
+              Programs coming soon
+            </h2>
+            <p className="mt-3 max-w-xl font-body text-[#51667E]">
+              The club has not published any programs yet. Contact the club
+              for current opportunities.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-px overflow-hidden bg-[#1E3653]/15 md:grid-cols-2">
+            {programs.map((program, index) => (
+              <Link
+                key={program.id}
+                href={`/programs/${program.slug}`}
+                className="group bg-[#F9FAFD]"
+              >
+                <div className="relative aspect-[16/10] overflow-hidden bg-[#1E3653]">
                   {program.heroMediaUrl ? (
-                    <div className="relative aspect-[16/9] overflow-hidden bg-[#ececec]">
-                      <ResilientImage
-                        src={program.heroMediaUrl}
-                        alt=""
-                        fill
-                        className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                        sizes="(max-width: 767px) 100vw, 50vw"
-                      />
-                    </div>
+                    <ResilientImage
+                      src={program.heroMediaUrl}
+                      alt=""
+                      fill
+                      sizes="(max-width: 767px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    />
                   ) : null}
-                  <div className="p-7 sm:p-9">
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#14283F]/55 via-transparent to-transparent" />
+                  <span className="absolute bottom-5 left-5 font-display text-4xl font-black italic text-white">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </div>
+                <div className="flex min-h-56 flex-col justify-between p-6 sm:p-8">
+                  <div>
                     {program.kicker ? (
-                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--color-red)]">
+                      <p className="font-display text-xs font-bold uppercase text-[#FF1616]">
                         {program.kicker}
                       </p>
                     ) : null}
-                    <h2 className="mt-3 text-3xl font-black sm:text-4xl">
-                      {program.displayTitle}
+                    <h2 className="mt-3 max-w-lg font-display text-[clamp(1.9rem,3vw,3.1rem)] font-black uppercase italic leading-[.95] text-[#1E3653] transition-colors group-hover:text-[#FF1616]">
+                      {program.navLabel || program.displayTitle}
                     </h2>
-                    {program.summary ? (
-                      <p className="mt-4 leading-7 text-black/60">
-                        {program.summary}
-                      </p>
-                    ) : null}
-                    <span className="mt-7 inline-flex font-display text-sm font-black uppercase tracking-[0.16em] text-[var(--color-red)]">
-                      Explore program →
-                    </span>
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+                  <span className="mt-8 flex items-center justify-between border-t border-[#1E3653]/15 pt-5 font-nav text-xs font-bold uppercase text-[#1E3653]">
+                    Explore Program
+                    <span
+                      aria-hidden="true"
+                      className="text-xl transition-transform group-hover:translate-x-1"
+                    >
+                      &rarr;
+                    </span>
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
       {programs.length > 0 && (
-        <section className="bg-[#141414] px-6 py-20 text-white sm:py-28 lg:px-10">
+        <section className="bg-[#B9E3F6] px-6 py-20 lg:px-10 lg:py-24">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-end">
-            <h2 className="text-4xl font-black sm:text-6xl">
-              Find your pathway.
+            <h2 className="font-display text-[2.35rem] font-black uppercase italic leading-[.9] text-[#1E3653] sm:text-[3rem] lg:text-[5rem]">
+              Find your
+              <br />
+              pathway.
             </h2>
             <div>
-              <p className="text-base leading-7 text-white/70 sm:text-lg">
+              <p className="font-body text-base leading-8 text-[#51667E]">
                 Contact {clubName} to find the program that best fits your
                 athlete&apos;s goals and support needs.
               </p>
               <Link
                 href="/contact"
-                className="mt-7 inline-flex bg-[var(--color-red)] px-8 py-4 font-display text-sm font-black uppercase tracking-[0.16em] text-white transition hover:opacity-90"
+                className="mt-7 inline-block bg-[#FF1616] px-7 py-4 font-display text-sm font-bold uppercase text-white transition-colors hover:bg-[#D70000]"
               >
-                Find your program
+                Find Your Program
               </Link>
             </div>
           </div>
