@@ -1,5 +1,277 @@
 # Diverse City FC Status
 
+## 2026-08-08 - academy@1 content audit round two: homepage story copy, programs page copy, and the footer tagline made club-editable, committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc, a direct continuation of the 2026-08-07 audit
+below. That audit's item-5 list ("found, still hardcoded, NOT built") named the
+surfaces it had no budget or schema decision for. Christian authorized round
+two to make the decision and build whatever the audit confirms is real content.
+
+**Locked scope, unchanged from round one:** Diverse City only (no generic
+`academy@1` framework); **text and images only** — palette, fonts, template
+choice, and layout structure stay operator-controlled per `DCFC-D007`; roster,
+player/staff stats, seasons, schedule/fixture admin, and everything round one
+already shipped (program registration copy, program media gallery) untouched.
+Video stays out of scope by definition.
+
+**Status:** `complete` for everything the audit classified as content.
+Committed and pushed to `origin/staging` across five commits (`e825135` …
+docs). Not deployed. No hosted Supabase project touched.
+
+### Phase 1 audit — the remaining hardcoded strings, classified
+
+Re-grepped `presentationTemplateKey === "academy@1"` across `app/` and
+`components/` plus every `components/Academy*.tsx`, then read each remaining
+file in full and classified **per string**, not per file. The test applied is
+round one's: is this a fact or statement about Diverse City FC (→ content, make
+it editable), or wording that would read identically on any club using this
+template (→ chrome, leave it in component source)?
+
+Where a strict reading of that test was ambiguous — a generic-sounding heading
+sitting directly above a club-specific paragraph — the tie-breaker used was
+**what the section's substance is**. A heading over club-authored prose travels
+with that prose: if a club rewrites the paragraphs and cannot change the
+heading above them, the heading goes stale and lies. A heading over structured
+data the club already edits elsewhere does not have that problem, because
+rewriting the data never invalidates the label. That is also the platform's own
+existing convention — `behind_the_rose_section`, `shop_kit_section`,
+`league_standings_settings`, and `contact_page_content` all treat a prose band's
+eyebrow/heading/intro as one editable unit.
+
+**1. Made editable — real club content:**
+
+| Surface | What became editable | Why it is content | Admin section |
+| --- | --- | --- | --- |
+| `DevelopingNextGeneration.tsx` | heading, both paragraphs, CTA label, visibility | Both paragraphs are claims about this club ("...combines professional-level coaching, mentorship, and community support...", "The club's vision is to become one of the nation's leading inclusive soccer organizations") and one names the club. The whole band is prose whose only subject is the club. | `/admin/homepage` → Story tab |
+| `AcademyProgramsPathway.tsx` | eyebrow, heading, intro | The intro names the club and states what its programs are designed around. The eyebrow and heading are the same band and travel with it. | `/admin/programs` → Programs page copy |
+| `AcademyProgramsPage.tsx` hero | eyebrow, both headline lines, intro | Same shape and same reasoning; the intro is a claim about this club's programs. Two headline lines rather than one string because the template colours the second line — the break is a content decision, not a browser wrap. | `/admin/programs` → Programs page copy |
+| `AcademyProgramsPage.tsx` closing band | both heading lines, paragraph, button label | The paragraph mentions the club by name and its athletes' "support needs" — Diverse City's own inclusion framing, not template boilerplate. | `/admin/programs` → Programs page copy |
+| `Footer.tsx` academy branch | the tagline "One Club. One Community. / Endless Opportunities." | Diverse City FC's actual slogan, written into a shared template — the identical latent bug round one fixed in `AcademySponsorsPage`'s intro. | `/admin/branding` → Footer |
+
+**2. Deliberately left as component source — template chrome. The judgment
+calls, each stated:**
+
+- **`AcademyProgramDetailPage.tsx`'s template headings** — "The Program",
+  "Grow through the game.", "Ask About This Program", "Program Focus",
+  "Development with purpose.", "Explore other programs." and its closing
+  paragraph. **Left alone.** These are not a prose band: every one of them
+  labels a section whose substance is already per-program admin content
+  (`programs.body`, `programs.highlights`, the sibling program list). None of
+  them says anything about Diverse City that another academy club could not
+  reuse verbatim. And making a *club-wide* heading editable over *per-program*
+  data would be incoherent — a club editing "Grow through the game." once would
+  be editing it for four different programs at the same time. Christian's own
+  instinct on the brief ("a marketing tagline like 'Grow through the game.'
+  reads more like template copy") matches. A contract test now pins this
+  decision so a later session changes it deliberately rather than by drift.
+- **`AcademySponsorsPage.tsx` hero eyebrow and headline** ("Community
+  Partners", "Backing players. / Building opportunity."). **Left alone.** Same
+  reasoning as the program-detail headings: they sit over structured sponsor
+  data that is already editable at `/admin/sponsors`, and the one genuinely
+  club-specific string in that hero — the intro naming the club — round one
+  already fixed by making it a `clubName` prop.
+- **`AcademyContactPage.tsx`'s "Follow Along"** — a column heading over the
+  social icons, the same category as the footer's "Explore"/"Connect" headings
+  round one already classified as chrome.
+- **CTA destinations.** Every CTA *label* this round made editable; no CTA
+  *href* did. `/club/about` and `/contact` are internal navigation structure,
+  which `DCFC-D007` keeps operator-side, and "text and images only" is about
+  text. (`homepage_hero_content` does carry editable hrefs, so there is
+  precedent both ways; this round chose the narrower reading and is recording
+  it rather than leaving it implicit.)
+- **`AcademyProgramsPage.tsx`'s "Explore Program" card link and "Programs
+  coming soon" empty state**, `AcademyTryoutsPage.tsx`'s state-dependent intro
+  strings, `AcademyNextMatch`/`AcademyFixtureRow` fallbacks ("Time TBA",
+  "Venue TBA", "Next Opponent") — navigation labels and system state strings,
+  the same bucket round one excluded, including the `DCFC-D102` no-fabrication
+  posture.
+- **Video.** `DevelopingNextGeneration`'s Bunny Stream club reel stays a
+  constant in `lib/bunny-video.ts` (`DCFC-D131`). Text and images only.
+
+**3. Nothing else was found.** The re-grep turned up no `academy@1` surface
+that round one missed and this round did not cover.
+
+### Phase 2 — migration
+
+`supabase/migrations/20260808130000_dcfc_homepage_story_programs_page_content.sql`.
+
+**`onzio.homepage_story_section`** — per-club singleton (`club_id primary key`),
+`visible` plus four copy columns. **This is a new table on purpose, and the
+reason is a real bug, not a preference.** Its content shape is nearly identical
+to the existing `onzio.behind_the_rose_section` (visible/eyebrow/title/
+description/video), which is a live singleton — and `components/BehindTheRose.tsx`
+is mounted *unconditionally* on `academy@1`'s own homepage
+(`app/(public)/page.tsx`). It renders nothing for Diverse City today only
+because no row exists for this club. Wiring `DevelopingNextGeneration` to that
+same singleton would mean the first real content a club typed made **both**
+sections appear on one page with the same words. A database test asserts the two
+rows stay independent. There is no video column here and no eyebrow column:
+video is out of scope and the section renders no eyebrow, and `DCFC-D109` rigor
+means columns exist for what is rendered, not for what a similar table happens
+to have.
+
+**`onzio.programs_page_content`** — per-club singleton holding the eleven
+strings of the three prose bands. A singleton rather than more columns on
+`onzio.programs` because none of this copy belongs to any one program. Gated on
+the `programs` feature, matching `onzio.programs` and `onzio.program_media`.
+
+**`onzio.site_branding.footer_tagline`** — one additive `not null default ''`
+column with a 160-character ceiling. `site_branding` is already the club's brand
+lockup table (crest + inverse crest), edited at `/admin/branding`, which already
+carries a "Footer" section; the footer renders crest + name + tagline as one
+lockup. Additive with a default, so every importer and reconciler that writes
+`site_branding` by explicit column list or upserts on `club_id` is unaffected.
+The tagline's line break is stored as a real newline and rendered with
+`whitespace-pre-line`, which is what reproduces the approved two-line lockup
+without markup in the data.
+
+RLS, grants, the audit trigger, and the `updated_at` trigger are all in the same
+migration as each new table, as `AGENTS.md` requires. Every ceiling is stated
+with its reasoning in the migration per `DCFC-D109`: eyebrows 80 (this schema's
+existing eyebrow/kicker ceiling), hero headline lines 80 (exactly
+`homepage_hero_content.headline_line_one/two`, same two-line hero shape),
+headings 120 (`programs.display_title`), band intros 320
+(`homepage_hero_content.intro` / `contact_page_content.intro` /
+`programs.summary`), story paragraphs 1200 (round one's `registration_body`
+reasoning: well under `programs.body`'s 6000 so a fixed-height band beside a
+video cannot be overflowed, well over 320 so a club can tell a real story),
+button labels 40 (`programs.external_cta_label`).
+
+**No deploy-time data step exists this round.** Every text column is
+`not null default ''` meaning "use the approved template default", and the
+approved wording lives in `lib/homepage-story-content.ts`,
+`lib/programs-page-content.ts`, and `lib/club-branding.ts` — the same
+convention as `lib/program-content.ts` and `lib/standings-content.ts`. A club
+with no row renders byte-identically to the copy this migration replaces.
+That is the difference from round one's `program_media`, which had no
+defaultable representation and therefore did need a production seed. Every
+default that names the club builds it from `club.name` rather than a literal,
+so the `academy@1` template stays tenant-neutral — a contract test asserts no
+club name appears in any of the new files.
+
+### Phase 3-4 — query layer and admin UI
+
+`fetchHomepageStorySection` and `fetchProgramsPageContent` are tenant-scoped and
+resolve against the defaults; `fetchClubBranding` gained `footerTagline`, carried
+to the footer through `ClubBrandingProvider`.
+
+- **`/admin/homepage` → Story tab** — visibility toggle, heading, first
+  paragraph, second paragraph, button label.
+- **`/admin/programs` → Programs page copy card** — a standalone card above the
+  program list with its own Save button, grouped Homepage band / Programs page
+  header / Closing band, since it is a per-club singleton rather than part of any
+  program.
+- **`/admin/branding` → Footer** — the tagline textarea beside the social links,
+  saved by the same button (now "Save Footer").
+
+Every field shows its template default as the input placeholder, so an empty
+field reads as "unchanged", not "blank". Every zod ceiling in
+`lib/admin-data-contract.ts` mirrors the migration's CHECK constraints exactly,
+so an over-long value surfaces as a field message rather than a database error.
+Both new tables are registered in `ADMIN_TABLE_FEATURES` (homepage / programs)
+and in `SINGLETON_TABLES`.
+
+One deliberate exception: `site_branding` did **not** get a strict per-table zod
+mutation schema. It is written by the Rose City and Lions/Diverse City import
+planners, the reconciler, and `purge-club`, and a `.strict()` schema would be a
+real regression risk for one column. The tagline is validated client-side
+(`validateFooterTagline`) and the database CHECK remains the final boundary, per
+`AGENTS.md`.
+
+### Phase 5 — tests
+
+`tests/database/homepage-story-programs-page-content.test.ts` (**32 tests**) and
+`tests/contracts/diverse-city-homepage-story-programs-copy-admin.test.ts`
+(**44 tests**).
+
+The database file asserts defaults, singleton uniqueness, every documented CHECK
+including the `site_branding` tagline ceiling, and RLS: an anonymous write is
+denied, a live club's rows are publicly readable, a preview club's are not, a
+club member can write only its own club's row, and a foreign delete leaves the
+other club's row intact. One test exists purely to prove the reason the story
+table is separate — writing it must never populate `behind_the_rose_section`.
+
+The contract file exercises the admin path: resolution against defaults
+(including a missing row resolving to *visible with template copy*, which is what
+removes the need for a seed), draft round trips that carry every column so a save
+cannot silently drop a field, validation ceilings on both sides, and admin-data
+contract acceptance plus rejection of an unknown column, a client-supplied tenant
+identity, and an over-long field. Source assertions confirm the components no
+longer carry the literals — and, in the same file, that the program-detail
+template headings **are** still present, pinning the chrome decision above.
+
+One existing harness file was updated, **no contract weakened**:
+`lib/__tests__/queries.test.ts`'s two `fetchClubBranding` assertions gained the
+new `footerTagline` field.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **817/817** (`.env.test` exported), up from 741.
+- `npm run test:db` **140/140** across 15 files — the real number, up from 108.
+- **Real browser, real admin session, port-3006 dev server against local
+  Supabase.** Signed in as the local `diverse-city` owner through the actual
+  email-code flow (Mailpit). Then, through the admin UI:
+  - `/admin/homepage` → Story tab loaded with every field empty and the approved
+    wording (club name interpolated) as its placeholder. Changed the heading to
+    "Developing tomorrow's players", saved, confirmed the row in the database and
+    the new heading on the public homepage — with the two untouched paragraphs
+    still rendering their template defaults. Cleared the field and saved again;
+    the public heading fell back to "Developing the next generation".
+  - `/admin/programs` → Programs page copy → Closing band → Button label set to
+    "Find Your Fit", saved ("Page copy saved"), confirmed in the database and on
+    `/programs`.
+  - `/admin/branding` → Footer tagline set to a two-line value, saved
+    ("Footer updated"), confirmed the footer rendering both lines.
+- All three edits reverted afterward; the homepage, `/programs`, and the footer
+  reconfirmed byte-identical to their pre-session output, zero console errors on
+  a fresh tab. `/programs/special-olympics-soccer` reconfirmed unchanged
+  (round one's registration band and 4-image slideshow intact).
+
+### Local-only data
+
+All schema and data work was against **local Supabase only** (Docker,
+`127.0.0.1:54321`). No `supabase link`, no `db push`, no hosted migration apply,
+no hosted writes. The local database was reset to apply the migration, so
+round one's local rehearsal data (`registration_enabled` plus the four
+`program_media` rows for Special Olympics) was re-applied from the SQL recorded
+in the entry below, leaving local dev as it was found.
+
+**Nothing is required at deploy time beyond applying the migration.** Unlike
+round one, there is no accompanying data step: an unseeded club renders the
+approved wording from the template defaults.
+
+### Files changed
+
+`supabase/migrations/20260808130000_dcfc_homepage_story_programs_page_content.sql`
+(new), `lib/homepage-story-content.ts` (new), `lib/programs-page-content.ts`
+(new), `tests/database/homepage-story-programs-page-content.test.ts` (new),
+`tests/contracts/diverse-city-homepage-story-programs-copy-admin.test.ts` (new),
+`lib/database.generated.ts`, `lib/db-types.ts`, `lib/club-branding.ts`,
+`lib/queries.ts`, `lib/homepage-content.ts`, `lib/program-admin.ts`,
+`lib/admin-data-contract.ts`, `lib/__tests__/queries.test.ts`,
+`app/admin/(protected)/homepage/page.tsx`,
+`app/admin/(protected)/programs/page.tsx`,
+`app/admin/(protected)/branding/page.tsx`,
+`components/DevelopingNextGeneration.tsx`,
+`components/AcademyProgramsPathway.tsx`, `components/AcademyProgramsPage.tsx`,
+`components/Footer.tsx`, `components/ClubBrandingProvider.tsx`,
+`app/%5Fclubs/[slug]/programs/page.tsx`, `HANDOFF.md`, this file.
+
+### Not done
+
+Deployment — Christian's call alone, not given for this work. No hosted Supabase
+mutation of any kind. The program-detail template headings, the sponsors hero
+headings, and the video swap remain component source by decision, not by
+omission; the reasoning is in the audit above and pinned by a contract test.
+
+### Next step
+
+Christian tests the three admin flows himself against local dev
+(`/admin/homepage` → Story, `/admin/programs` → Programs page copy,
+`/admin/branding` → Footer tagline), then decides on deployment, which this time
+carries the migration only.
+
 ## 2026-08-07 - academy@1 content audit + club-owner editability for program registration copy and program media, committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc, planned with Christian first in a full requirements

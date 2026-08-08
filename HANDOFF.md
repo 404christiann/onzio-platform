@@ -1,6 +1,81 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-07
+Last updated: 2026-08-08
+
+## academy@1 content audit round two: homepage story copy, programs page copy, and the footer tagline made club-editable — committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-08. Status: `complete` for
+everything in scope, committed and pushed to `origin/staging` across five
+commits (`e825135` … docs), **not deployed**.
+
+Round one (below) inventoried every `academy@1` surface and shipped the two
+gaps it had budget for, then flagged a list of surfaces still carrying real
+copy in component source. This round made the schema decision that list was
+waiting on and built everything the audit confirms is content. Scope was
+unchanged: Diverse City only, **text and images only**, video excluded,
+roster/stats/seasons/schedule and round one's own work untouched.
+
+**Audit result, and the judgment calls.** Five surfaces became editable: the
+homepage story band's heading, both paragraphs and CTA label
+(`DevelopingNextGeneration` — its paragraphs are claims about this club and one
+names it); the homepage programs-pathway band and both `/programs` bands
+(eyebrow/heading/intro triples whose intros name the club and describe its
+programs); and the footer tagline "One Club. One Community. / Endless
+Opportunities.", which is Diverse City's actual slogan sitting in a shared
+template — the same latent bug round one fixed on the sponsors page.
+
+**Three things were deliberately left as component source**, and this is the
+part worth reading. `AcademyProgramDetailPage`'s template headings ("The
+Program", "Grow through the game.", "Program Focus", "Development with
+purpose.", "Explore other programs.") stay hardcoded: none of them says
+anything about Diverse City, each merely labels a section whose substance is
+already per-program admin content, and a club-wide heading over per-program
+data would be incoherent — editing "Grow through the game." once would edit it
+for four programs at once. The sponsors-page hero headings stay for the same
+reason. And CTA *labels* became editable while CTA *destinations* did not:
+`/club/about` and `/contact` are navigation structure, which `DCFC-D007` keeps
+operator-side. A contract test now pins the program-detail decision, so a later
+session changes it deliberately rather than by drift.
+
+**Built.** New migration
+`20260808130000_dcfc_homepage_story_programs_page_content.sql`:
+`onzio.homepage_story_section` and `onzio.programs_page_content` (per-club
+singletons, RLS + grants + both triggers in the same migration, every ceiling
+stated with its reasoning per `DCFC-D109`) plus
+`onzio.site_branding.footer_tagline`. `/admin/homepage` gained a Story tab,
+`/admin/programs` a Programs page copy card, `/admin/branding` a tagline field.
+
+**The trap, avoided deliberately.** `DevelopingNextGeneration`'s content shape
+is nearly identical to the live `onzio.behind_the_rose_section` singleton — and
+`BehindTheRose` is mounted *unconditionally* on the same `academy@1` homepage,
+rendering nothing today only because this club has no row. Sharing that
+singleton would have meant the first real content a club typed made **both**
+sections appear on one page with the same words. A dedicated table, and a
+database test that asserts the two rows stay independent.
+
+**One improvement over round one.** There is **no deploy-time data step** this
+time. Every column is `not null default ''` meaning "use the approved template
+default", with the wording in `lib/homepage-story-content.ts`,
+`lib/programs-page-content.ts`, and `lib/club-branding.ts` — so an unseeded club
+renders byte-identically to the copy that was hardcoded. Deploy needs the
+migration and nothing else. Every default names the club from `club.name`, never
+a literal, so the template stays tenant-neutral for a future academy club.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **817/817** (`.env.test`
+exported), up from 741; `npm run test:db` **140/140** across 15 files, up from
+108 — 76 new tests. Then verified as a human would: signed into `/admin`
+through the actual email-code flow against local Supabase, and **through the UI
+only** edited the story heading, the programs closing-band button label, and the
+footer tagline, confirming each in the database and on the public page, then
+reverted all three. Public output reconfirmed byte-identical, zero console
+errors.
+
+**Not done:** deployment — Christian's call alone. No hosted Supabase project
+was touched: local Docker Supabase only, no `link`, no `db push`, no hosted
+writes. The local database was reset to apply the migration, so round one's
+local rehearsal data was re-applied afterward from the SQL in its own STATUS
+entry, leaving local dev as it was found. Full detail, including the per-string
+audit table, in `docs/phase-11/diverse-city/STATUS.md`.
 
 ## academy@1 content audit + club-owner editability for program registration copy and program media — committed and pushed to `staging`, NOT deployed
 
