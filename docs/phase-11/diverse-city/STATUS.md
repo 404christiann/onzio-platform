@@ -1,5 +1,192 @@
 # Diverse City FC Status
 
+## 2026-08-07 - CSS/visual-fidelity pass: `academy@1`'s font pack was registered but never wired to rendering — fixed; committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc, Christian: "Can you make sure we all the css and
+styling is matching. It still doesnt look exactly look like it."
+**Status:** `complete` for the one real bug found; several other differences
+confirmed as deliberate template-identity choices per `DCFC-D104`; three
+items left as explicit judgment calls for Christian below
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+Christian asked for a real CSS/visual-fidelity pass (fonts, colors, spacing,
+hover/animation states, responsive behavior) against the sales mockup —
+distinct from the earlier content/functionality pixel-perfect sweep. Per the
+brief's explicit warning, this was **not** a mechanical repaint to the
+mockup's exact palette: `DCFC-D104` already establishes `academy@1` as its
+own neutral reusable template, not a byte-for-byte clone, specifically so a
+future `academy@1` club isn't locked to Diverse City's branding.
+
+**Bug found and fixed (category a — unambiguous execution bug):**
+`DCFC-D110` registered a dedicated `"montserrat-inter-dmsans"` font pack for
+`academy@1` (Montserrat headings, Inter body/UI, DM Sans desktop nav),
+matching the mockup's actual stack (confirmed against
+`onzioProspects/diverse-city-fc/site/styles/globals.css`, which `@import`s
+Montserrat/Inter/DM Sans from Google Fonts directly). But `fontPack` was only
+ever consumed by `packages/presentation/index.ts`'s document-validation
+logic (`tests/contracts/presentation-system.test.ts`'s compatibility
+contracts) — **nothing in the actual rendered app ever read it.**
+`app/layout.tsx` loaded only Geist/Geist Mono, and `styles/globals.css`
+hardcoded every font variable (`--font-display`, `--font-body`,
+`--font-lemon-milk`, `--font-din-condensed`) to Geist at `:root`, globally,
+for every template. Confirmed live on production before fixing: `h1`,
+nav links, and `body` all computed to `"Geist, \"Geist Fallback\", Arial,
+sans-serif"` on `https://diverse-city-fc-private.vercel.app/`. This is
+exactly the "worth verifying it's actually being applied" risk flagged in
+this session's own brief, and it affects every `academy@1` club, not just
+Diverse City (Rose City/`clubhouse@1` was never affected — it points at the
+`"geist"` pack, so it was already correct, just via the same
+never-actually-reads-fontPack path).
+
+**Fix:** wired the font pack to real rendering, scoped strictly to
+`academy@1` so no other template's typography changes:
+- `app/layout.tsx` — added `next/font/google` loads for Montserrat, Inter,
+  and DM Sans (`--font-academy-heading`, `--font-academy-body`,
+  `--font-academy-nav`), applied as CSS variable classes on `<html>`
+  alongside the existing Geist variables. Self-hosted by `next/font`, no
+  runtime network fetch; loading them globally costs nothing extra since a
+  browser only downloads a font file it actually uses on the page.
+- `styles/globals.css` — added `--font-nav` (new, defaults to
+  `var(--font-body)` everywhere so no template's behavior changes by
+  default) and a `[data-font-pack="academy"]` scope block remapping
+  `--font-display`/`--font-body`/`--font-nav`/`--font-lemon-milk`/
+  `--font-din-condensed` to the academy fonts. Also added a `.font-nav`
+  utility class, matching the existing `.font-display`/`.font-body` pattern.
+  **Real subtlety caught and fixed during verification:** `body`'s own
+  `font-family: var(--font-body)` resolves once against the `:root` value;
+  redeclaring `--font-body` lower in the tree does not retroactively change
+  what `<body>` already resolved, so any element without its own explicit
+  font utility class would have kept inheriting Geist. Fixed by also setting
+  `font-family: var(--font-body)` directly on the `[data-font-pack="academy"]`
+  selector itself, which sits on a wrapper `div` inside `<body>` — this
+  makes that div's own resolved font-family the new inheritance root for
+  everything nested inside it.
+- `components/TemplateFontScope.tsx` (new) — a small server component that
+  renders `<div data-font-pack={templateKey === "academy@1" ? "academy" :
+  undefined} className="contents">`. `display: contents` was chosen
+  deliberately: it adds no box to the layout tree (CSS custom properties and
+  `font-family` still inherit through it normally), so it cannot affect the
+  flex/stacking/DOM-child assumptions any existing CSS makes about
+  Nav/main/Footer being direct children of `<body>`.
+- `app/%5Fclubs/[slug]/layout.tsx` — wraps `<Nav /><main>...<Footer />` in
+  `<TemplateFontScope templateKey={club.presentationTemplateKey}>`. This is
+  the actual production tenant-rendering layout (middleware rewrites every
+  public request to `/_clubs/<slug>/...` — confirmed by reading
+  `middleware.ts`); `app/(public)/...` is a separate, unreachable-in-production
+  route group with no `ClubContextProvider`, so it was left untouched.
+- `components/Nav.tsx` — desktop-only nav link classes (the trigger link and
+  its dropdown children, not the mobile drawer) switched from `font-body` to
+  the new `font-nav`, matching `DCFC-D110`'s "desktop navigation: DM Sans"
+  and the mockup's own `Nav.tsx`, which uses a distinct `.font-nav` class
+  only on those same three elements (confirmed by reading the mockup's
+  source directly). Since `--font-nav` defaults to `var(--font-body)` for
+  every non-academy template, this is a no-op everywhere except
+  `academy@1`.
+
+**Verification (real browser, not just code reading):**
+- Ran the diverse-city local import (`npm run migration:import:diverse-city:local`
+  against local Supabase, which was already running) and `npm run dev`,
+  serving at `http://diverse-city.localhost:3000` (the established local
+  tenant-hostname convention). Via Claude Browser tooling, `getComputedStyle`
+  confirmed: `h1` → `Montserrat, "Montserrat Fallback", Arial, sans-serif`
+  (weight 900, uppercase); desktop nav links → `"DM Sans", "DM Sans
+  Fallback", Arial, sans-serif`; body paragraphs (`.font-body` and plain
+  inherited text alike) → `Inter, "Inter Fallback", Arial, sans-serif`.
+  Verified at both desktop and 375×812 mobile — no overflow, mobile
+  hamburger menu opens/closes correctly (dispatched via the button's real
+  `onClick`, confirming `TemplateFontScope`'s `display: contents` wrapper
+  didn't break the existing interaction), zero console errors on `/`,
+  `/roster`, `/programs`.
+- **Regression check for every other template**, the highest-risk part of
+  this change: the local `alpha` tenant's currently-published presentation
+  document happens to itself be `academy@1` (a pre-existing local seed
+  artifact, unrelated to this session), so it was temporarily repointed
+  (`onzio.presentation_state.published_document_id`) to one of its own
+  existing `clubhouse` documents, reloaded, and confirmed `body`/`h1`/nav all
+  computed to Geist with **no** `data-font-pack` attribute present at all —
+  then repointed back to its original document, verified restored. This is
+  the direct proof that `clubhouse@1`/Rose City is unaffected.
+- `npx tsc --noEmit` clean. Full suite `686/686` (`.env.test` exported),
+  run twice (once after the initial wiring, once after the inheritance-chain
+  fix above).
+- Confirmed the pre-fix bug live on production itself (Christian's
+  authenticated Chrome session): `h1`, nav links, and `body` all computed
+  Geist on `https://diverse-city-fc-private.vercel.app/` before this fix —
+  this is the actual live impact, not a theoretical one.
+
+**Category (b) — deliberate template-identity differences, confirmed and left alone:**
+- **Color palette.** Production's `--color-black: #141414` (near-black) vs.
+  the mockup's navy `#1E3653`/light-blue `#B9E3F6`/off-white `#F9FAFD`/red
+  `#FF1616`. This is `academy@1`'s own configured palette, already used
+  consistently everywhere (not a hardcoded override ignoring a token), and
+  `DCFC-D104` explicitly approved `academy@1` as its own template rather
+  than a mockup clone. Not touched, per this session's explicit brief.
+- Everything already confirmed correct in the earlier 2026-08-07 pixel-perfect
+  sweep entry above (schedule/tryouts no-fabrication empty states, contact
+  copy, `/sponsors` per `DCFC-D130`) is unchanged and still correct.
+
+**Category (c) — judgment calls for Christian, not fixed or guessed at:**
+1. **Heading slant.** The mockup's `h1`–`h6` are `font-style: italic;
+   letter-spacing: 0` (confirmed: "ONE CLUB / ONE COMMUNITY" renders visibly
+   slanted at `localhost:3012`). Production's shared base rule
+   (`styles/globals.css`, used by every template) is `font-style: normal;
+   letter-spacing: -0.01em`. `DCFC-D110` only decided the font *family*
+   stack, not slant — italic is a distinctive brand-identity detail closer
+   to the color-palette question than a "wrong token" bug, and the base
+   heading rule is shared across all templates, so scoping italic to
+   `academy@1` only would be a real, visible style decision I'm not making
+   unilaterally. Does Christian want academy@1 headings italicized?
+2. **CTA button font, a direct side-effect of this fix.** The `/programs`
+   closing CTA ("Find your program", `components/AcademyProgramsPage.tsx`)
+   uses the `.font-display` class, which — now that the font pack actually
+   works — renders in bold black Montserrat instead of its previous
+   (accidentally-Geist) look. The mockup's own CSS has a specific rule for
+   this exact situation: `button.font-display, a.font-display { font-family:
+   var(--font-body); }`, i.e. it deliberately reverts buttons/CTAs back to
+   Inter rather than using the display font, presumably because a heavy
+   italic-capable display face reads worse at small button sizes than body
+   text does. Should academy@1 buttons follow that same
+   reverts-to-body-font convention, or is the current bold-Montserrat CTA
+   fine as its own look? I did not add this override — it wasn't broken
+   before (nothing was), and doing so unilaterally would be a new design
+   decision, not a bug fix.
+3. **Mobile primary nav-link styling.** The mockup's mobile drawer renders
+   its top-level items (Home/About/Roster/...) in `font-display` at
+   `text-3xl font-black uppercase italic`, reserving `font-body` for the
+   smaller secondary/children rows only. Production's mobile drawer uses
+   `font-body` at `text-lg font-semibold` for every row, top-level and
+   child alike. This is a structural nav-styling difference (size/weight/
+   italic treatment), not just a font-family token gap, so I left it as-is
+   rather than guessing at a redesign — flagging in case Christian wants the
+   mobile menu's visual hierarchy to match the mockup's bigger/bolder
+   top-level treatment.
+
+**Files changed:** `app/layout.tsx`, `app/%5Fclubs/[slug]/layout.tsx`,
+`components/Nav.tsx`, `styles/globals.css`,
+`components/TemplateFontScope.tsx` (new), this file, `HANDOFF.md`. No test
+file was added — this repo has no component-rendering test infrastructure
+(vitest runs `environment: "node"`, no jsdom/`@testing-library/react`, and
+`vitest.config.ts`'s `include` glob only picks up `tests/**/*.test.ts` and
+`lib/__tests__/**/*.test.ts`, never `.tsx`); every other UI-behavior change
+in this epic's history has been verified live in a real browser rather than
+via component unit tests, and this fix follows that same established
+verification method rather than introducing new, inconsistent test
+scaffolding for one file.
+
+**Exact next step:** Christian decides the three category (c) items above.
+None require a hosted mutation, migration, or Stripe/Supabase change — pure
+front-end CSS/className changes if approved. Ready to ship: commit is on
+`staging`, `tsc`/full suite green, not deployed — same standing rule as
+every other change today (deploy only after Christian's explicit go-ahead,
+plus the `diverse-city-fc-private.vercel.app` re-alias step).
+
+**Hosted mutations:** none from application changes. Local-only: ran the
+already-established `migration:import:diverse-city:local` script against
+local Supabase (idempotent, zero hosted mutations, matches its own prior
+usage today), and two temporary/reverted local-only UPDATEs to
+`onzio.presentation_state` on the local `alpha` tenant for the regression
+check (verified restored to its original value before finishing).
+
 ## 2026-08-07 - Nav badges + video pipeline deployed to production; all 4 handoff items now closed
 
 **Package:** none — ad hoc, Christian: "Yes, ship both now."

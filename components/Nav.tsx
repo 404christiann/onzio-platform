@@ -358,7 +358,7 @@ export default function Nav() {
           {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const triggerClassName =
-              "font-body text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
+              "font-nav text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
             const triggerStyle = {
               color: isActive
                 ? isHero
@@ -433,7 +433,7 @@ export default function Nav() {
                           <Link
                             key={child.href}
                             href={child.href}
-                            className={`block px-5 py-3 font-body text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${
+                            className={`block px-5 py-3 font-nav text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${
                               isHero
                                 ? isChildActive
                                   ? "text-white"

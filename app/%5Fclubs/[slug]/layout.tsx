@@ -3,6 +3,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
+import TemplateFontScope from "@/components/TemplateFontScope";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
 import type { Metadata } from "next";
@@ -39,9 +40,11 @@ export default async function TenantLayout({
   return (
     <ClubContextProvider club={club}>
       <ClubBrandingProvider>
-        <Nav />
-        <main>{children}</main>
-        <Footer />
+        <TemplateFontScope templateKey={club.presentationTemplateKey}>
+          <Nav />
+          <main>{children}</main>
+          <Footer />
+        </TemplateFontScope>
       </ClubBrandingProvider>
     </ClubContextProvider>
   );

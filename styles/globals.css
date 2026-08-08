@@ -17,9 +17,35 @@
   /* Typography */
   --font-display: var(--font-geist-sans), Arial, sans-serif;
   --font-body: var(--font-geist-sans), Arial, sans-serif;
+  --font-nav: var(--font-body);
   --font-lemon-milk: var(--font-geist-sans), Arial, sans-serif;
   --font-din-condensed: var(--font-geist-sans), Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* DCFC-D110: the `academy@1` template's registered "montserrat-inter-dmsans"
+   font pack (Montserrat headings, Inter body/UI, DM Sans desktop nav).
+   Scoped to `[data-font-pack="academy"]`, set only for academy@1 tenants by
+   `components/TemplateFontScope.tsx`, so no other template's typography
+   changes. `--font-lemon-milk`/`--font-din-condensed` are remapped too since
+   `NextMatchCard` (shared, also rendered on academy@1) uses them and this
+   codebase never shipped real D-DIN Condensed/LEMON MILK font files -- both
+   already silently render as Geist for every template today. */
+[data-font-pack="academy"] {
+  --font-display: var(--font-academy-heading), Arial, sans-serif;
+  --font-body: var(--font-academy-body), Arial, sans-serif;
+  --font-nav: var(--font-academy-nav), Arial, sans-serif;
+  --font-lemon-milk: var(--font-academy-heading), Arial, sans-serif;
+  --font-din-condensed: var(--font-academy-heading), Arial, sans-serif;
+  /* `body`'s own `font-family: var(--font-body)` resolves once against the
+     :root value and that resolved value is what plain descendants inherit
+     -- redeclaring a custom property lower in the tree does not retroactively
+     change what an ancestor already resolved. Any element inside this scope
+     without its own explicit font-family (i.e. not `.font-body`/`.font-display`/
+     `.font-nav`/an h1-h6) would otherwise keep inheriting Geist from <body>
+     instead of picking up Inter here. Setting `font-family` directly on this
+     node fixes the inheritance chain for everything nested inside it. */
+  font-family: var(--font-body);
 }
 
 @layer base {
@@ -77,6 +103,10 @@
 
   .font-body {
     font-family: var(--font-body);
+  }
+
+  .font-nav {
+    font-family: var(--font-nav);
   }
 
   .font-lemon-milk {

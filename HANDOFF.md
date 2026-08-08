@@ -2,6 +2,69 @@
 
 Last updated: 2026-08-07
 
+## CSS/visual-fidelity pass: `academy@1`'s font pack was registered but never wired to rendering — fixed, committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete` for the
+bug found and fixed; three judgment calls handed back to Christian.
+
+Christian: "Can you make sure we all the css and styling is matching. It
+still doesnt look exactly look like it." — a real CSS/visual-fidelity pass
+(fonts, colors, spacing, hover states, responsive behavior), distinct from
+the earlier content/functionality sweep. Per the brief, this deliberately
+did **not** mechanically repaint `academy@1` to the mockup's exact palette —
+`DCFC-D104` already settled that `academy@1` is its own neutral reusable
+template, not a byte-for-byte clone.
+
+**Found and fixed (real bug):** `DCFC-D110`'s `"montserrat-inter-dmsans"`
+font pack was registered for `academy@1` at the presentation-document/schema
+layer only — `fontPack` was validated for template compatibility but never
+actually consumed anywhere to load or apply a font. `app/layout.tsx` only
+ever loaded Geist, and every font CSS variable was hardcoded to Geist at
+`:root` for every template. Confirmed live on production before fixing:
+`h1`, nav links, and `body` all computed to Geist on
+`https://diverse-city-fc-private.vercel.app/` — exactly the risk this
+session's own brief flagged as worth checking. Wired it up scoped strictly
+to `academy@1` (new `TemplateFontScope` component sets a `data-font-pack`
+attribute that `styles/globals.css` keys off of; zero effect on any other
+template by construction — verified by temporarily switching a local test
+tenant between `academy@1`/`clubhouse@1` documents and confirming Geist with
+no `data-font-pack` attribute in the `clubhouse@1` case). Verified live via
+`getComputedStyle` in a real browser: headings now Montserrat, desktop nav
+DM Sans, body copy Inter, at both desktop and mobile widths, zero console
+errors. `tsc` clean, full suite `686/686`.
+
+**Left alone, deliberate template-identity choice:** the color palette
+(production's near-black vs. the mockup's navy/light-blue/red) — already
+consistent everywhere via the template's own tokens, and `DCFC-D104`
+explicitly approved this as its own palette, not a mockup clone.
+
+**Three judgment calls for Christian** (full detail with exact elements in
+`docs/phase-11/diverse-city/STATUS.md`'s entry with this same title): (1)
+should academy@1 headings be italic like the mockup's, (2) should the
+`/programs` CTA button revert to body font like the mockup's own buttons do
+(a direct side-effect of this fix — the button now renders bold Montserrat
+instead of accidentally-Geist), (3) should the mobile nav drawer's top-level
+links get the mockup's larger/bolder/italic treatment instead of the
+current smaller semibold style.
+
+**Files changed:** `app/layout.tsx`, `app/%5Fclubs/[slug]/layout.tsx`,
+`components/Nav.tsx`, `styles/globals.css`,
+`components/TemplateFontScope.tsx` (new), `docs/phase-11/diverse-city/STATUS.md`,
+this file. No test file added — this repo has no component-rendering test
+infrastructure (vitest is `environment: "node"`, no jsdom/RTL); verified live
+in a real browser instead, matching how every other UI change in this epic
+has been verified.
+
+**Not done:** deployment. Committed and pushed to `origin/staging` only —
+same standing rule as every other change today, ships only after Christian's
+explicit go-ahead plus the `diverse-city-fc-private.vercel.app` re-alias step.
+
+**Hosted mutations:** none from application changes. Local-only: the
+already-established `migration:import:diverse-city:local` import against
+local Supabase, and two temporary/reverted local UPDATEs to
+`onzio.presentation_state` on the local `alpha` tenant for the regression
+check (confirmed restored before finishing).
+
 ## Nav badges + video pipeline deployed — all 4 pixel-perfect handoff items now closed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.
