@@ -55,7 +55,7 @@ export default function StaffModal({ member, onClose }: Props) {
               src={imageSrc}
               alt={member.name}
               fill
-              className={isPlaceholderLogo ? "object-contain object-top" : "object-cover object-top"}
+              className={isPlaceholderLogo ? "object-contain p-10" : "object-cover object-top"}
               sizes="(max-width: 768px) 100vw, 480px"
               data-roster-modal-image="true"
               fallback={

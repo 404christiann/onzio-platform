@@ -36,7 +36,7 @@ export default function StaffCard({ member }: { member: Staff }) {
             src={imageSrc}
             alt={member.name}
             fill
-            className={`${isPlaceholderLogo ? "object-contain object-top" : "object-cover object-top"} transition-transform duration-500 group-hover:scale-105`}
+            className={`${isPlaceholderLogo ? "object-contain p-5 sm:p-8" : "object-cover object-top"} transition-transform duration-500 group-hover:scale-105`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             data-roster-card-image="true"
             fallback={
