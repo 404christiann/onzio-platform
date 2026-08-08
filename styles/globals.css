@@ -14,6 +14,20 @@
   --color-gray-light: #F5F5F5;
   --color-gray-mid: #9A9A9A;
 
+  /* RGB triples backing tailwind.config.ts's brand aliases (`bg-white`,
+     `text-black`, `bg-red`, ...). Identical values to the hex colors above;
+     kept as space-separated triples so Tailwind opacity modifiers
+     (`bg-white/95`) keep working via `rgb(var(...) / <alpha-value>)`. */
+  --tw-white-rgb: 255 255 255;
+  --tw-black-rgb: 20 20 20;
+  --tw-green-rgb: 27 77 62;
+  --tw-green-dark-rgb: 22 61 49;
+  --tw-green-light-rgb: 36 102 85;
+  --tw-red-rgb: 231 0 27;
+  --tw-red-dark-rgb: 158 17 35;
+  --tw-gray-light-rgb: 245 245 245;
+  --tw-gray-mid-rgb: 154 154 154;
+
   /* Typography */
   --font-display: var(--font-geist-sans), Arial, sans-serif;
   --font-body: var(--font-geist-sans), Arial, sans-serif;
@@ -31,7 +45,38 @@
    `NextMatchCard` (shared, also rendered on academy@1) uses them and this
    codebase never shipped real D-DIN Condensed/LEMON MILK font files -- both
    already silently render as Geist for every template today. */
-[data-font-pack="academy"] {
+/* DCFC-D132: Christian overrode DCFC-D104's template-owns-its-own-palette
+   stance during a live session — `academy@1` now matches the sales mockup's
+   exact navy/sky/red palette rather than the near-black academy default.
+   Scoped exactly like the font pack: `[data-font-pack="academy"]` covers
+   every rendered descendant, and the `body:has(...)` variant below covers
+   the <body> element itself (its background/color/font-family resolve
+   against :root otherwise, because the scope wrapper is a
+   `display: contents` div *inside* body). No other template changes. */
+[data-font-pack="academy"],
+body:has([data-font-pack="academy"]) {
+  --color-white: #F9FAFD;
+  --color-black: #1E3653;
+  --color-green: #1E3653;
+  --color-green-dark: #14283F;
+  --color-green-light: #B9E3F6;
+  --color-red: #FF1616;
+  --color-red-dark: #D70000;
+  --color-gray-light: #EDF2F7;
+  --color-gray-mid: #6B7E94;
+  --tw-white-rgb: 249 250 253;
+  --tw-black-rgb: 30 54 83;
+  --tw-green-rgb: 30 54 83;
+  --tw-green-dark-rgb: 20 40 63;
+  --tw-green-light-rgb: 185 227 246;
+  --tw-red-rgb: 255 22 22;
+  --tw-red-dark-rgb: 215 0 0;
+  --tw-gray-light-rgb: 237 242 247;
+  --tw-gray-mid-rgb: 107 126 148;
+}
+
+[data-font-pack="academy"],
+body:has([data-font-pack="academy"]) {
   --font-display: var(--font-academy-heading), Arial, sans-serif;
   --font-body: var(--font-academy-body), Arial, sans-serif;
   --font-nav: var(--font-academy-nav), Arial, sans-serif;

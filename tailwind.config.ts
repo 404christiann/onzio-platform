@@ -8,21 +8,27 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Brand aliases are CSS-variable-driven so a presentation template can
+      // repaint them for its own scope only. `styles/globals.css` defines the
+      // `--tw-*-rgb` triples at `:root` with the exact same values these
+      // aliases previously hardcoded, and overrides them under
+      // `[data-font-pack="academy"]` for `academy@1` tenants (DCFC-D132).
+      // Every other template resolves to the identical colors as before.
       colors: {
-        white: "#FFFFFF",
-        black: "#141414",
+        white: "rgb(var(--tw-white-rgb) / <alpha-value>)",
+        black: "rgb(var(--tw-black-rgb) / <alpha-value>)",
         green: {
-          DEFAULT: "#1B4D3E",
-          dark: "#163d31",
-          light: "#246655",
+          DEFAULT: "rgb(var(--tw-green-rgb) / <alpha-value>)",
+          dark: "rgb(var(--tw-green-dark-rgb) / <alpha-value>)",
+          light: "rgb(var(--tw-green-light-rgb) / <alpha-value>)",
         },
         red: {
-          DEFAULT: "#E7001B",
-          dark: "#9e1123",
+          DEFAULT: "rgb(var(--tw-red-rgb) / <alpha-value>)",
+          dark: "rgb(var(--tw-red-dark-rgb) / <alpha-value>)",
         },
         gray: {
-          light: "#F5F5F5",
-          mid: "#9A9A9A",
+          light: "rgb(var(--tw-gray-light-rgb) / <alpha-value>)",
+          mid: "rgb(var(--tw-gray-mid-rgb) / <alpha-value>)",
         },
       },
       fontFamily: {
