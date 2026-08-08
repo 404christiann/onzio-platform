@@ -2,6 +2,43 @@
 
 Last updated: 2026-08-07
 
+## Special Olympics "Program Registration" section: mockup slideshow + DCFC-D102 TBA button — committed and pushed to `staging`, NOT deployed
+
+Agent: Claude Fable 5 (Claude Code), 2026-08-07. Status: `complete`,
+committed and pushed to `origin/staging`, **not deployed**.
+
+Christian flagged the mockup's `/programs/special-olympics-soccer`
+"Program Registration" section (red eyebrow, italic navy "Ready to take the
+field?", body copy, red register button, 4-photo slideshow) as missing from
+production — it was deliberately skipped earlier because the mockup's button
+links to a placeholder `google.com` URL barred by `DCFC-D102`. Christian
+chose the `/tryouts`-style honest TBA state over any placeholder link.
+
+Built: new `components/AcademyProgramRegistrationSlideshow.tsx` (client port
+of the mockup's slideshow — 5s cross-fade, hover/focus pause,
+reduced-motion aware) and an always-on registration band for the
+`special-olympics-soccer` program in
+`components/AcademyProgramDetailPage.tsx`, replacing the generic statement
+band that page wrongly showed. The CTA is fully data-driven off
+`programs.external_cta_href`/`external_cta_label` (`DCFC-D109`): both are
+empty (verified in the local DB), so it renders a non-link
+"Registration Link Coming Soon" disabled-style block with honest body copy;
+setting a real label + approved href through admin flips it to the mockup's
+red external link automatically (round-tripped against the LOCAL dev DB
+only, then reverted). Slideshow photos are the mockup's approved
+`special-olympics-slide-01..04.webp` copied into
+`public/images/programs/` — same content-gap precedent as the sponsor
+placeholder slots.
+
+**Verified:** `npx tsc --noEmit` clean, full suite `686/686` (`.env.test`
+exported), direct DOM/`getComputedStyle` checks on the port-3006 dev server
+plus network-level image validation (the Browser pane's hidden-visibility
+throttling defers lazy image decode; real browsers render fine). Other
+program pages confirmed unchanged; no `google.com` anywhere.
+
+**Not done:** deployment (Christian's explicit call, not given); no hosted
+Supabase writes. Full detail in `docs/phase-11/diverse-city/STATUS.md`.
+
 ## Full day's mockup-parity work deployed to production — Christian approved, both hostnames re-verified live
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`.

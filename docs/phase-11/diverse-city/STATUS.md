@@ -1,5 +1,89 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Special Olympics "Program Registration" section (slideshow + DCFC-D102 TBA button), committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc. Christian pointed at the mockup's
+`/programs/special-olympics-soccer` "Program Registration" section (red
+eyebrow, italic navy "Ready to take the field?", body copy, red "REGISTER FOR
+SPECIAL OLYMPICS" button, 4-photo slideshow) missing from production. It was
+deliberately left out earlier because the mockup's button links to a
+placeholder `google.com` URL barred by `DCFC-D102`; asked directly, Christian
+chose the real TBA/coming-soon treatment already established on `/tryouts`
+over any placeholder link.
+
+**Status:** `complete`. Committed and pushed to `origin/staging`. Not
+deployed.
+
+**What was built:**
+- New `components/AcademyProgramRegistrationSlideshow.tsx` — client port of
+  the mockup's `SpecialOlympicsRegistrationSection` slideshow region: 4-photo
+  cross-fade, 5s auto-advance, pauses on hover/focus, honors
+  `prefers-reduced-motion`, identical carousel semantics and framing classes.
+- `components/AcademyProgramDetailPage.tsx` — the existing registration band
+  (previously gated on `program.externalCta`, so it never rendered for
+  Special Olympics) now also always renders for the
+  `special-olympics-soccer` program, mounting the slideshow in place of the
+  single static image and suppressing the generic statement band the page
+  showed instead (the mockup's Special Olympics page has no statement band).
+  `layout_variant` is DB-check-constrained to
+  `statement_band`/`detail_focus`, so the treatment can't ride the variant
+  column without a migration + hosted data changes; the slug branch mirrors
+  the mockup's own `program.id === "special-olympics-soccer"` branch. Section
+  also picked up the mockup's `lg:min-h-[calc(100svh-7rem)] lg:py-10`
+  classes it had dropped.
+- **CTA is data-driven, per `DCFC-D109`'s `programs.external_cta_href`:**
+  with `external_cta_href`/`external_cta_label` empty (their verified real
+  state in the local DB — `select external_cta_label, external_cta_href from
+  onzio.programs where slug='special-olympics-soccer'` returns `''`/`''`),
+  the button renders as a non-link disabled-style block — navy hairline
+  border, `#1E3653`/5% ground, muted `#51667E` Montserrat uppercase —
+  reading "Registration Link Coming Soon", with the body copy adjusted to
+  "The registration link will be posted here as soon as it is available."
+  No URL is hardcoded anywhere. Once admin publishes a real
+  label + approved href, the branch flips to the mockup's red
+  `#FF1616` link (external hrefs get `target="_blank"
+  rel="noopener noreferrer"`) and the exact mockup body copy, automatically.
+- Slideshow photos: the mockup's approved
+  `special-olympics-slide-01..04.webp`, copied verbatim from
+  `onzioProspects/diverse-city-fc/site/public/media/programs/` into
+  `public/images/programs/` (same static-asset content-gap precedent as the
+  sponsor placeholder slots; admin-managed media can replace them later).
+
+**Verification:** `npx tsc --noEmit` clean. Full suite `686/686`
+(`.env.test` exported). Direct DOM/`getComputedStyle` inspection against the
+already-running port-3006 dev server (`diverse-city.localhost:3006`), not
+screenshots — the Browser pane again reported
+`document.visibilityState: "hidden"`: eyebrow `12px` DM Sans `#FF1616`
+uppercase tracked; h2 `61.44px` at 1280px, Montserrat italic 900 navy
+`#1E3653`; TBA block styles as designed, and **no `<a>` inside the section**;
+carousel region present with correct aria label, 4 slides at opacity
+`1/0/0/0`, section `min-height: 608px` at 1280x720. All four slide images
+verified at the network level (HTTP 200, valid `RIFF`/`WEBP` signatures,
+full byte sizes) since the hidden pane defers lazy image decode. Data-driven
+flip round-tripped against the LOCAL dev DB only: temporarily setting
+label + `https://registration.example.test/...` rendered the real red link
+(correct rel/target) with slideshow intact and no TBA block, then the row
+was reverted to `''`/`''` and the TBA state confirmed back. Other program
+pages confirmed untouched (youth-academy/special-kickers keep their
+statement bands, upsl-mens-teams keeps its detail/focus sections, no
+`google.com` and no registration section anywhere else). A stale
+`OpponentCrest` console error traced to a webpack chunk timestamped before
+the current dev-server start — a fresh load with an error hook captured
+zero errors.
+
+**Files changed:** `components/AcademyProgramRegistrationSlideshow.tsx`
+(new), `components/AcademyProgramDetailPage.tsx`,
+`public/images/programs/special-olympics-slide-0{1,2,3,4}.webp` (new),
+`HANDOFF.md`, this file.
+
+**Not done:** deployment (Christian's call alone, not given for this work);
+no hosted Supabase writes of any kind — the CTA round-trip touched only the
+local Docker dev database.
+
+**Next step:** Christian reviews and decides on deployment; the club enters
+real registration logistics + an approved HTTPS destination through admin
+when available (`DCFC-D102`).
+
 ## 2026-08-07 - Full day's mockup-parity work deployed to production, both hostnames re-verified live
 
 **Package:** none — ad hoc. Christian: "Looks good to me, let's deploy
