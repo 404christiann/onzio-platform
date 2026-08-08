@@ -2,6 +2,60 @@
 
 Last updated: 2026-08-07
 
+## Real Bunny.net Stream video pipeline built: hero video + "Developing the Next Generation" story section (item 2 of the 4-gap handoff, closed) — committed, NOT deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,
+committed and pushed to `origin/staging`, **not deployed**.
+
+Christian chose the real pipeline ("Yes, lets use another session to do
+this") over the static-poster interim. Uploaded both real, already-approved
+videos from the sales mockup to Bunny Stream library `723074` ("onzio") via
+its HTTP API, confirmed both finished transcoding, and wired them up:
+
+- `academy@1`'s homepage hero (`components/Hero.tsx`, new
+  `presentationTemplateKey === "academy@1"` branch, checked before the
+  generic crest-only branch) now plays the real hero video full-bleed,
+  autoplay/muted/loop/no-controls, poster during load, with the same
+  admin-editable headline/intro/CTA content it already had — only the
+  visual treatment changed. Rose City/`clubhouse@1` and the legacy
+  `rose-city` hero branch are untouched.
+- A new "Developing the Next Generation" story section
+  (`components/DevelopingNextGeneration.tsx`, modeled on the mockup's
+  `VerticalStory()` with its real approved copy) is now live on the
+  `academy@1` homepage between `NextMatchCard` and `PhotoSlideshow`, using
+  the second Bunny video.
+- Both degrade to their real, already-approved poster stills as a static
+  image (`components/ResilientBunnyVideo.tsx`, following the existing
+  `ResilientNativeImage` fallback convention) if Bunny playback ever fails
+  — verified live by forcing a video error event in a real browser session.
+
+Key technical finding: Bunny Stream's HTTP API authenticates with the
+**per-library** API key (`BUNNY_VIDEO_LIBRARY_API`), not the account key —
+confirmed against Bunny's own docs and empirically. Delivery uses Bunny's
+per-resolution MP4 fallback as the native `<video>` source rather than
+adding an `hls.js` dependency or using the iframe embed player, since the
+mockup itself already used a plain native `<video>` with a single MP4
+source and this avoids a new dependency entirely. Neither Bunny API key is
+stored anywhere in the repository.
+
+`tsc` clean, full suite `686/686`. Verified live in a real local-dev
+browser session against a locally-seeded `diverse-city` tenant (zero hosted
+mutations, reset afterward): both videos confirmed actually playing (not
+just present in the DOM — screenshots taken apart in time show materially
+different frames), correct GUIDs/dimensions, admin content rendering
+correctly over the hero video, fallback path confirmed. Full detail
+including the exact GUIDs, the Bunny auth/delivery findings, and files
+changed in `docs/phase-11/diverse-city/STATUS.md` and `DECISIONS.md`
+`DCFC-D131` (supersedes `DCFC-D114`'s crest-only/hidden-section
+disposition for `academy@1`).
+
+**Not done:** deployment (`vercel deploy --prod` + the private-hostname
+re-alias) — stopping after push per this session's explicit instruction,
+awaiting Christian's go-ahead like every other deploy today. No admin
+video-swap UI was built; both videos are currently hardcoded to Diverse
+City specifically, not yet generalized for a hypothetical future
+`academy@1` club.
+
 ## Next Match fixture + real UPSL Midwest Central standings live in production (items 3 and 4 of the 4-gap handoff, closed)
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-07. Status: `complete`,

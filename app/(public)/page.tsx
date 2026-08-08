@@ -14,6 +14,7 @@ const LeagueStandings = nextDynamic(() => import("@/components/LeagueStandingsCo
 const ShopKitSection  = nextDynamic(() => import("@/components/ShopKitSectionContainer"), { ssr: false });
 const BehindTheRose   = nextDynamic(() => import("@/components/BehindTheRose"),   { ssr: false });
 const ClubhouseHomePage = nextDynamic(() => import("@/components/ClubhouseHomePage"), { ssr: false });
+const DevelopingNextGeneration = nextDynamic(() => import("@/components/DevelopingNextGeneration"), { ssr: false });
 
 export default function HomePage() {
   const club = useClubContext();
@@ -25,6 +26,7 @@ export default function HomePage() {
       <ShopKitSection surface="home" fadeImageToWhite />
       {club.slug === "rose-city" && <ChampionsBadge />}
       <NextMatchCard />
+      {club.presentationTemplateKey === "academy@1" && <DevelopingNextGeneration />}
       <PhotoSlideshow />
       <SponsorCarousel />
       <LeagueStandings />

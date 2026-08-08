@@ -1,5 +1,179 @@
 # Diverse City FC Status
 
+## 2026-08-07 - Real Bunny.net Stream video pipeline built: hero video + "Developing the Next Generation" story section, item 2 of the 4-gap handoff closed
+
+**Package:** none — ad hoc. Christian: "Yes, lets use another session to do
+this" — choosing to build the real Bunny.net Stream pipeline (`DCFC-D105`)
+over the static-poster interim, per the choice presented in the "Handoff: 4
+remaining pixel-perfect gaps" entry below.
+**Status:** `complete`, committed and pushed to `origin/staging`, **not
+deployed**.
+**Agent:** Claude Sonnet 5 (Claude Code)
+
+### What was built
+
+**Bunny Stream upload.** Uploaded both real, already-approved video files
+from the sales mockup
+(`onzioProspects/diverse-city-fc/site/public/media/video/`) to Bunny Stream
+library `723074` ("onzio") via its HTTP API:
+
+- `homepage-hero-edited.mp4` → GUID `e49b4657-7396-48d7-b55b-09d38d892c72`
+  (1280x720, 9s)
+- `club-reel-portrait.mp4` → GUID `f84f9cbb-4b03-43f8-94f3-33010680533e`
+  (720x1280, 21s)
+
+Both finished transcoding (`status: 4`/"Finished", `encodeProgress: 100`)
+within about 30 seconds of upload — polled and confirmed before wiring
+anything up, per this session's brief. Both have `hasMP4Fallback: true` at
+up to 720p (library confirmed `EnableMP4Fallback: true`). The pull zone's
+CDN hostname (`vz-dab9684b-901.b-cdn.net`, fetched via `GET
+api.bunny.net/pullzone/6293982` using the account API key) serves both
+`playlist.m3u8` (HLS) and `play_{res}p.mp4` (progressive MP4); both require
+a non-empty `Referer` header to pass the library's `BlockNoneReferrer`
+setting — real browser page loads always send one, only bare `curl` without
+a `-H Referer` gets a 403, which briefly looked like a wiring problem
+before this was traced to referrer policy, not authentication.
+
+**Auth finding worth recording:** Bunny's docs state every Stream HTTP API
+request is authenticated with the **per-library** Stream API key
+(`BUNNY_VIDEO_LIBRARY_API`), not the account key — confirmed empirically:
+`BUNNY_VIDEO_LIBRARY_API` as the `AccessKey` header authenticates
+`video.bunnycdn.com/library/723074/...` (create/upload/get video), while
+`BUNNY_API_KEY` (account-level) only worked against `api.bunny.net`
+endpoints (library info, pull zone info) — it was not needed for the video
+create/upload/status calls themselves, only for looking up the CDN
+hostname. Neither key is stored anywhere in this repository; both were read
+from `.env.local` at request time only.
+
+**Delivery approach — direct MP4, not HLS + `hls.js`.** `hls.js` is not a
+dependency in this codebase (`package.json` has no video library at all),
+and the mockup's own `Hero.tsx`/`VerticalStory()` already used a plain
+native `<video>` with a single `<source type="video/mp4">` — not HLS. Bunny
+Stream's MP4-fallback delivery (`.../play_720p.mp4`) gave the same native,
+fully-custom, no-controls/autoplay/muted/loop behavior across every modern
+browser without adding a dependency or building an HLS integration, so that
+was used instead of both `hls.js` and the iframe-embed alternative
+mentioned in this session's brief.
+
+**Files added:**
+- `lib/bunny-video.ts` — GUIDs, CDN hostname, and the MP4-URL helper.
+  Non-secret identifiers only; documents the Bunny key/library boundary
+  found above.
+- `components/ResilientBunnyVideo.tsx` — autoplay/muted/loop/no-controls
+  `<video>` wrapper. On `error` (network failure, blocked request,
+  unsupported source), swaps to the same poster image rendered through
+  `ResilientNativeImage`, matching this codebase's existing
+  resilient-image/fallback convention instead of showing a broken player.
+  Verified live: dispatching a synthetic `error` event on both mounted
+  `<video>` elements in a real browser session correctly unmounted them and
+  rendered the two poster `<img>` fallbacks in their place.
+- `components/DevelopingNextGeneration.tsx` — new "Developing the Next
+  Generation" story section, modeled on the mockup's `VerticalStory()`:
+  same real approved marketing copy (two paragraphs, "Our Story" CTA to
+  `/club/about`), now backed by the Bunny-hosted club-reel video instead of
+  a local file. Not yet generalized beyond Diverse City — see `DCFC-D131`.
+- `public/images/video/diverse-city-hero-poster.jpg`,
+  `diverse-city-club-reel-poster.jpg` — the same real, already-approved
+  poster stills from the mockup (`keeper-save-poster.jpg`,
+  `club-reel-poster.jpg`), copied in as local static assets for the
+  `poster` attribute and the resilient-fallback image.
+
+**Files changed:**
+- `components/Hero.tsx` — added a new `club.presentationTemplateKey ===
+  "academy@1"` branch (checked before the generic non-video crest branch),
+  keeping the same admin-editable `heroContent` fields (headline/intro/CTA
+  labels and hrefs from `homepage_hero_content`) but replacing the
+  diagonal-gradient-plus-crest treatment with the full-bleed Bunny hero
+  video and a dark gradient overlay for text legibility, content anchored
+  bottom-left like the mockup. Rose City's `clubhouse@1` branch and the
+  legacy `rose-city` branch are both untouched. The generic crest branch
+  (`!usesLegacyRoseCityHero`) still exists unchanged for any future
+  non-`academy@1`, non-`clubhouse@1` template.
+- `app/(public)/page.tsx` — added `DevelopingNextGeneration`, gated on
+  `club.presentationTemplateKey === "academy@1"`, placed right after
+  `NextMatchCard` and before `PhotoSlideshow` (matches the mockup's own
+  Hero → Shop → Match → Story ordering; the mockup has no equivalent of
+  `PhotoSlideshow`/`SponsorCarousel`/`LeagueStandings`/`BehindTheRose` to
+  anchor against instead).
+- `.claude/launch.json` (untracked, not committed — matches this repo's
+  existing convention of not versioning local preview configs) — added an
+  `onzio-platform-diverse-city-preview` entry for local visual verification
+  against the `diverse-city` tenant, same pattern as the existing
+  `onzio-platform-bravo-preview`.
+
+### Verification
+
+- `npx tsc --noEmit`: clean.
+- Full suite: `686/686` (`.env.test` exported, local Supabase running).
+  One architecture contract initially failed
+  (`platform-architecture.test.ts`'s "routes application images through
+  resilient components") because a JSDoc comment in
+  `ResilientBunnyVideo.tsx` contained the literal text `<img>`, which the
+  contract's regex-based scanner matched as a direct native-image usage —
+  reworded the comment to avoid the literal tag; suite green after.
+- **Live browser verification** (local dev server on port 3007,
+  `ONZIO_LOCAL_TENANT_SLUG=diverse-city`, tenant seeded via `npm run
+  migration:rehearse:diverse-city:local` then
+  `migration:import:diverse-city:local`, reset via
+  `migration:reset:diverse-city:local` afterward — zero hosted mutations,
+  local Supabase only):
+  - Hero: real video confirmed rendering (screenshots taken several
+    actions apart show materially different frames — players in different
+    positions, a referee's flag appearing/disappearing — proving actual
+    playback, not a frozen poster), correct source
+    (`https://vz-dab9684b-901.b-cdn.net/e49b4657.../play_720p.mp4`),
+    `readyState: 4`, `videoWidth/videoHeight: 1280x720`, `muted`/`loop`/
+    `autoplay` all `true`, `controls: false`, poster resolving to the local
+    fallback image, admin-configured headline/intro/CTA text rendering
+    correctly over the video, nav affiliation badges (from today's earlier
+    session) unaffected.
+  - Story section: renders in the correct position in the homepage's
+    accessibility tree, correct portrait video source
+    (`.../f84f9cbb.../play_720p.mp4`), `readyState: 4`,
+    `videoWidth/videoHeight: 720x1280` (confirms it's the distinct
+    portrait clip, not the hero video reused), headline/copy/CTA render
+    correctly with `club.name` interpolated, screenshot confirms real
+    club-reel footage (a different player/setting than the hero clip)
+    rendering at both mobile (375px) and a narrower desktop viewport.
+  - Fallback: confirmed live, see `ResilientBunnyVideo.tsx` note above.
+  - Zero console errors throughout. Both poster images (`GET
+    /images/video/...` ) and all pre-existing homepage data requests
+    returned `200`.
+  - Not captured by the network-request logger: the Bunny CDN video byte
+    requests themselves (the tool's request interceptor doesn't appear to
+    track native `<video>` element loads) — considered adequately covered
+    by the `readyState`/`videoWidth`/`videoHeight` checks instead, which
+    only populate once the browser has actually fetched and decoded real
+    video data.
+  - One environment limitation hit repeatedly during this verification:
+    the browser automation pane intermittently reported itself "hidden"
+    immediately after a successful action, timing out the next
+    coordinate-based scroll/click. Worked around by re-issuing a
+    `screenshot` action to "wake" the pane before each subsequent
+    interaction, and by using DOM/accessibility-tree reads
+    (`read_page`/JS `getBoundingClientRect`) to confirm section presence
+    independent of scroll state. This is an artifact of the automation
+    harness, not of the application.
+- Not verified: production/hosted rendering (not deployed this session, no
+  hosted mutations made).
+
+### Decision recorded
+
+`DCFC-D131` in `DECISIONS.md` — supersedes `DCFC-D114`'s crest-only hero
+and hidden story section for `academy@1`, records the Bunny auth/delivery
+findings above, and flags that both videos are currently Diverse-City-
+specific (not yet generalized for a hypothetical future `academy@1` club).
+
+### Exact next step
+
+Christian reviews and, when ready, says the word to deploy: `vercel deploy
+--prod`, then the private-hostname re-alias
+(`vercel alias set <deployment-id> diverse-city-fc-private.vercel.app`) —
+not done this session per this session's explicit instruction to stop after
+pushing. No admin video-swap UI was built (out of scope for this task); if
+Christian wants club staff to be able to replace these videos later without
+an engineering session, that's a separate follow-up.
+
 ## 2026-08-07 - Next Match fixture + real UPSL Midwest Central standings seeded to production — items 3 and 4 closed, zero code changes needed
 
 **Package:** none — ad hoc, Christian's explicit direction on the two

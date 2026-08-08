@@ -6,6 +6,8 @@ import { gsap } from "gsap";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
+import ResilientBunnyVideo from "@/components/ResilientBunnyVideo";
+import { DIVERSE_CITY_HERO_VIDEO } from "@/lib/bunny-video";
 import { DEFAULT_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 
@@ -78,6 +80,73 @@ export default function Hero() {
                 className="clubhouse-hero-crest"
               />
             )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (club.presentationTemplateKey === "academy@1") {
+    const headlineOne = heroContent.headline_line_one.trim() || club.name;
+    const headlineTwo = heroContent.headline_line_two.trim();
+    const intro = heroContent.intro.trim();
+    const primaryHref = heroContent.primary_cta_href.trim() || "/schedule";
+    const secondaryHref = heroContent.secondary_cta_href.trim() || "/roster";
+
+    return (
+      <section className="relative flex min-h-[92svh] w-full items-end overflow-hidden text-white">
+        <div className="absolute inset-0 h-full w-full" style={{ zIndex: 0 }}>
+          <ResilientBunnyVideo
+            guid={DIVERSE_CITY_HERO_VIDEO.guid}
+            posterSrc={DIVERSE_CITY_HERO_VIDEO.posterSrc}
+            alt={`${club.name} hero video`}
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(0deg, rgba(0,0,0,0.74) 0%, rgba(0,0,0,0.38) 45%, rgba(0,0,0,0.14) 100%)",
+            zIndex: 1,
+          }}
+        />
+        <div className="relative z-10 mx-auto w-full max-w-[1500px] px-5 pb-14 pt-40 sm:px-8 md:pb-16 lg:px-12">
+          {heroContent.eyebrow.trim() && (
+            <p className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/70">
+              {heroContent.eyebrow}
+            </p>
+          )}
+          <h1 className="font-display max-w-4xl text-4xl font-black not-italic uppercase leading-[0.92] text-white sm:text-6xl lg:text-7xl">
+            <span className="block">{headlineOne}</span>
+            {headlineTwo && (
+              <span className="block" style={{ color: "#F0F0F0" }}>
+                {headlineTwo}
+              </span>
+            )}
+          </h1>
+          {intro && (
+            <p className="font-body mt-6 max-w-xl text-base leading-7 text-white/80">
+              {intro}
+            </p>
+          )}
+          <div
+            ref={ctaRef}
+            className="mt-8 flex flex-col gap-3 sm:flex-row"
+            style={{ opacity: 0 }}
+          >
+            <Link
+              href={primaryHref}
+              className="font-display inline-flex min-h-12 items-center justify-center rounded-md bg-white px-7 py-3 text-xs font-bold uppercase tracking-widest text-[#1B2958] transition-transform duration-200 hover:-translate-y-0.5"
+            >
+              {heroContent.primary_cta_label.trim() || "Next match"}
+            </Link>
+            <Link
+              href={secondaryHref}
+              className="font-display inline-flex min-h-12 items-center justify-center rounded-md border border-white/40 bg-white/10 px-7 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform duration-200 hover:-translate-y-0.5"
+            >
+              {heroContent.secondary_cta_label.trim() || "Meet the squad"}
+            </Link>
           </div>
         </div>
       </section>
