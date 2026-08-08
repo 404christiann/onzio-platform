@@ -1570,6 +1570,64 @@ export type Database = {
           },
         ]
       }
+      program_media: {
+        Row: {
+          alt: string
+          club_id: string
+          created_at: string
+          id: string
+          media_asset_id: string | null
+          program_id: string
+          sort_order: number
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          alt?: string
+          club_id: string
+          created_at?: string
+          id?: string
+          media_asset_id?: string | null
+          program_id: string
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Update: {
+          alt?: string
+          club_id?: string
+          created_at?: string
+          id?: string
+          media_asset_id?: string | null
+          program_id?: string
+          sort_order?: number
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_media_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_media_club_id_media_asset_id_fkey"
+            columns: ["club_id", "media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "program_media_club_id_program_id_fkey"
+            columns: ["club_id", "program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
       programs: {
         Row: {
           body: string
@@ -1585,6 +1643,12 @@ export type Database = {
           kicker: string
           layout_variant: string
           nav_label: string
+          registration_body: string
+          registration_enabled: boolean
+          registration_eyebrow: string
+          registration_headline: string
+          registration_pending_body: string
+          registration_pending_label: string
           slug: string
           sort_order: number
           status: string
@@ -1605,6 +1669,12 @@ export type Database = {
           kicker?: string
           layout_variant?: string
           nav_label?: string
+          registration_body?: string
+          registration_enabled?: boolean
+          registration_eyebrow?: string
+          registration_headline?: string
+          registration_pending_body?: string
+          registration_pending_label?: string
           slug: string
           sort_order?: number
           status?: string
@@ -1625,6 +1695,12 @@ export type Database = {
           kicker?: string
           layout_variant?: string
           nav_label?: string
+          registration_body?: string
+          registration_enabled?: boolean
+          registration_eyebrow?: string
+          registration_headline?: string
+          registration_pending_body?: string
+          registration_pending_label?: string
           slug?: string
           sort_order?: number
           status?: string

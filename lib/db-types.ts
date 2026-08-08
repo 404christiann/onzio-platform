@@ -7,6 +7,7 @@
 import type { Tables } from "@/lib/database.generated";
 
 export type DBProgram = Tables<{ schema: "onzio" }, "programs">;
+export type DBProgramMedia = Tables<{ schema: "onzio" }, "program_media">;
 export type DBContactProfile = Tables<
   { schema: "onzio" },
   "contact_profile"
