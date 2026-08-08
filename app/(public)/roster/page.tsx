@@ -23,6 +23,8 @@ type RosterData = {
 };
 
 function RosterGroup({ label, players, seasonLabel }: { label: string; players: Player[]; seasonLabel: string }) {
+  const club = useClubContext();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const groupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,10 +50,13 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
         >
           {label}
         </h2>
-        <div className="flex-1 h-px" style={{ backgroundColor: "#e5e5e5" }} />
+        <div
+          className="flex-1 h-px"
+          style={{ backgroundColor: isAcademy ? "#B9E3F6" : "#e5e5e5" }}
+        />
         <span
-          className="font-display text-sm font-semibold tracking-widest uppercase"
-          style={{ color: "var(--color-gray-mid)" }}
+          className={`font-display text-sm font-semibold uppercase ${isAcademy ? "" : "tracking-widest"}`}
+          style={{ color: isAcademy ? "#51667E" : "var(--color-gray-mid)" }}
         >
           {players.length}
         </span>
@@ -73,6 +78,8 @@ export default function RosterPage() {
 }
 
 function LegacyRosterPage() {
+  const club = useClubContext();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const clubId = useClubId();
   const heroRef  = useRef<HTMLDivElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
@@ -162,7 +169,7 @@ function LegacyRosterPage() {
             style={{ opacity: 0 }}
           >
             <p
-              className="font-display font-bold tracking-widest uppercase mb-3"
+              className={`font-display font-bold uppercase mb-3 ${isAcademy ? "" : "tracking-widest"}`}
               style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
             >
               {seasonLabel} Season
@@ -202,10 +209,10 @@ function LegacyRosterPage() {
                 >
                   Technical Staff
                 </h2>
-                <div className="flex-1 h-px" style={{ backgroundColor: "#e5e5e5" }} />
+                <div className="flex-1 h-px" style={{ backgroundColor: isAcademy ? "#B9E3F6" : "#e5e5e5" }} />
                 <span
-                  className="font-display text-sm font-semibold tracking-widest uppercase"
-                  style={{ color: "var(--color-gray-mid)" }}
+                  className={`font-display text-sm font-semibold uppercase ${isAcademy ? "" : "tracking-widest"}`}
+                  style={{ color: isAcademy ? "#51667E" : "var(--color-gray-mid)" }}
                 >
                   {staffList.length}
                 </span>

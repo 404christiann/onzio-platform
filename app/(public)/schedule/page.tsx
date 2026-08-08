@@ -150,19 +150,33 @@ function LegacySchedulePage() {
             className="pt-36 pb-14 px-6 lg:px-10 max-w-7xl mx-auto"
             style={{ opacity: 0 }}
           >
-            <p
-              className="font-display font-bold tracking-widest uppercase mb-3"
-              style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
-            >
-              {seasonLabel} Season
-            </p>
-            <h1
-              className="font-display font-black uppercase leading-none"
-              style={{ fontSize: "clamp(4rem, 10vw, 8rem)", color: "var(--color-black)" }}
-            >
-              Fixtures
-            </h1>
-            <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
+            {isAcademy ? (
+              <>
+                <p className="font-nav text-sm font-bold uppercase text-[#FF1616] sm:text-base">
+                  {seasonLabel} Season
+                </p>
+                <h1 className="mt-5 font-display text-[4rem] font-black uppercase italic leading-none text-[#1E3653] sm:text-[6.5rem] lg:text-[9rem]">
+                  Fixtures
+                </h1>
+                <div className="mt-8 h-1 w-14 bg-[#FF1616] sm:w-20" />
+              </>
+            ) : (
+              <>
+                <p
+                  className="font-display font-bold tracking-widest uppercase mb-3"
+                  style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
+                >
+                  {seasonLabel} Season
+                </p>
+                <h1
+                  className="font-display font-black uppercase leading-none"
+                  style={{ fontSize: "clamp(4rem, 10vw, 8rem)", color: "var(--color-black)" }}
+                >
+                  Fixtures
+                </h1>
+                <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
+              </>
+            )}
           </div>
 
           {/* Fixture list */}
