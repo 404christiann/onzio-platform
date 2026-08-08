@@ -1,6 +1,6 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
@@ -123,6 +123,13 @@ const KIT_VARIANTS: Array<{ id: ShopKitVariant; label: string }> = [
 
 export default function AdminShopPage() {
   const clubId = useClubId();
+  const club = useClubContext();
+  // /shop renders AcademyShopPage for academy@1, which has no photo strip and
+  // no purchase-details cards. Both tabs edited content that could never appear
+  // on this club's shop page. Rose City (clubhouse@1) uses ClubhouseShopPage,
+  // which does render both, so its editor is unchanged.
+  const hidesClubhouseShopSections =
+    club.presentationTemplateKey === "academy@1";
   const [selectedSurface, setSelectedSurface] = useState<ShopKitSurface>("home");
   const [selectedKitVariant, setSelectedKitVariant] =
     useState<ShopKitVariant>("home");
@@ -675,7 +682,9 @@ export default function AdminShopPage() {
               style={{ color: "rgba(255,255,255,0.32)" }}
             >
               Editing the {selectedSurface === "home" ? "home page kit" : `${activeKitVariant} shop kit`}.
-              Content, Kit Photos, and Shop Page Photo Row are saved independently.
+              {hidesClubhouseShopSections
+                ? " Content and Kit Photos are saved independently."
+                : " Content, Kit Photos, and Shop Page Photo Row are saved independently."}
             </p>
 
             <div className="mb-4 flex gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
@@ -699,8 +708,8 @@ export default function AdminShopPage() {
                   },
                 ].filter(
                   (tab) =>
-                    selectedSurface === "shop" ||
-                    (tab.id !== "photoStrip" && tab.id !== "purchase"),
+                    (tab.id !== "photoStrip" && tab.id !== "purchase") ||
+                    (selectedSurface === "shop" && !hidesClubhouseShopSections),
                 )
               ).map((tab) => {
                 const hasIssue =
@@ -1354,7 +1363,9 @@ export default function AdminShopPage() {
               )}
             </div>
 
-            {selectedSurface === "shop" && activeTab !== "purchase" && (
+            {selectedSurface === "shop" &&
+              activeTab !== "purchase" &&
+              !hidesClubhouseShopSections && (
             <>
             <div className="mb-3 mt-6 flex flex-wrap items-end justify-between gap-3">
               <div>

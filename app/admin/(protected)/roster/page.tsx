@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import { useEffect, useState, useRef } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -1141,6 +1141,15 @@ function PlayerFormFields({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { clubLogoUrl } = useClubBranding();
+  const club = useClubContext();
+  // The inline panel and the dedicated /admin/season-stats tab write the same
+  // player_season_stats / goalkeeper_season_stats rows, so academy@1 admins had
+  // two places to edit one number. The season-stats tab is the single entry
+  // point for this template; every other template keeps the inline panel.
+  // Nothing else depends on it: the panel only renders for an already-saved
+  // player and never seeds rows as a side effect of creating one.
+  const hidesInlineSeasonStats =
+    club.presentationTemplateKey === "academy@1";
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1284,8 +1293,11 @@ function PlayerFormFields({
         />
       </Field>
 
-      {/* Season stats — only shown when editing an existing player */}
-      {playerId && <SeasonStatsPanel playerId={playerId} position={form.position} />}
+      {/* Season stats — only shown when editing an existing player, and only
+          for templates that do not route this to the Season Stats tab */}
+      {playerId && !hidesInlineSeasonStats && (
+        <SeasonStatsPanel playerId={playerId} position={form.position} />
+      )}
 
       {/* Action photos — only shown when editing an existing player */}
       {playerId && <ActionPhotosPanel playerId={playerId} />}

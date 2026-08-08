@@ -151,6 +151,15 @@ async function deleteHomepageStorageUrls(urls: string[]): Promise<void> {
 export default function AdminHomepagePage() {
   const clubId = useClubId();
   const club = useClubContext();
+  // `academy@1`'s homepage mounts PhotoSlideshow and BehindTheRose but neither
+  // renders anything for this template: the slideshow has no photos and the
+  // Behind the Rose singleton has no row. Editing them here could only ever
+  // create content the club can never see — and saving would have written Rose
+  // City's default video and copy into this club's row — so both tabs, both
+  // preview blocks, and both writes are hidden for academy@1. Every other
+  // template keeps the four-tab editor unchanged.
+  const hidesLegacyHomepageSections =
+    club.presentationTemplateKey === "academy@1";
   const [activeTab, setActiveTab] = useState<AdminTab>("hero");
   const [draftPhotos, setDraftPhotos] = useState<DraftHomepagePhoto[]>(
     DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS.map((photo) => ({
@@ -334,7 +343,11 @@ export default function AdminHomepagePage() {
       caption: behindFields.caption.trim(),
     };
 
-    if (cleanedBehindFields.visible && !cleanedBehindFields.video_url) {
+    if (
+      !hidesLegacyHomepageSections &&
+      cleanedBehindFields.visible &&
+      !cleanedBehindFields.video_url
+    ) {
       setError("Add a video URL or turn off Behind the Rose.");
       return;
     }
@@ -360,23 +373,25 @@ export default function AdminHomepagePage() {
         }]);
       if (heroError) throw new Error(heroError.message);
 
-      const { error: slideshowSettingsError } = await supabase
-        .from("homepage_slideshow_settings")
-        .upsert([{
-          id: 1,
-          season_label: slideshowFields.season_label.trim(),
-          updated_at: new Date().toISOString(),
-        }]);
-      if (slideshowSettingsError) throw new Error(slideshowSettingsError.message);
+      if (!hidesLegacyHomepageSections) {
+        const { error: slideshowSettingsError } = await supabase
+          .from("homepage_slideshow_settings")
+          .upsert([{
+            id: 1,
+            season_label: slideshowFields.season_label.trim(),
+            updated_at: new Date().toISOString(),
+          }]);
+        if (slideshowSettingsError) throw new Error(slideshowSettingsError.message);
 
-      const { error: behindError } = await supabase
-        .from("behind_the_rose_section")
-        .upsert([{
-          id: 1,
-          ...cleanedBehindFields,
-          updated_at: new Date().toISOString(),
-        }]);
-      if (behindError) throw new Error(behindError.message);
+        const { error: behindError } = await supabase
+          .from("behind_the_rose_section")
+          .upsert([{
+            id: 1,
+            ...cleanedBehindFields,
+            updated_at: new Date().toISOString(),
+          }]);
+        if (behindError) throw new Error(behindError.message);
+      }
 
       const { data: storyRow, error: storyError } = await supabase
         .from("homepage_story_section")
@@ -388,10 +403,9 @@ export default function AdminHomepagePage() {
         setStoryFields(homepageStoryToDraft(storyRow as DBHomepageStorySection));
       }
 
-      const { toDelete, toInsert, toUpdate } = diffHomepageSlideshowPhotos(
-        originalPhotos,
-        draftPhotos,
-      );
+      const { toDelete, toInsert, toUpdate } = hidesLegacyHomepageSections
+        ? { toDelete: [], toInsert: [], toUpdate: [] }
+        : diffHomepageSlideshowPhotos(originalPhotos, draftPhotos);
 
       if (toDelete.length > 0) {
         const { error: deleteError } = await supabase
@@ -459,7 +473,9 @@ export default function AdminHomepagePage() {
           className="font-body mt-1"
           style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}
         >
-          Manage homepage slideshow photos and the Behind the Rose video section.
+          {hidesLegacyHomepageSections
+            ? "Manage the homepage hero and the story section beside your club video."
+            : "Manage homepage slideshow photos and the Behind the Rose video section."}
         </p>
       </div>
 
@@ -485,7 +501,11 @@ export default function AdminHomepagePage() {
                 { id: "slideshow" as const, label: "Slideshow", count: `${draftPhotos.length}/${MAX_HOMEPAGE_SLIDESHOW_PHOTOS}` },
                 { id: "story" as const, label: "Story", count: null },
                 { id: "behind" as const, label: "Behind the Rose", count: null },
-              ].map((tab) => {
+              ].filter(
+                (tab) =>
+                  !hidesLegacyHomepageSections ||
+                  (tab.id !== "slideshow" && tab.id !== "behind"),
+              ).map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
                   <button
@@ -914,6 +934,57 @@ export default function AdminHomepagePage() {
               )}
             </div>
 
+            {hidesLegacyHomepageSections ? (
+              <div
+                className="overflow-hidden rounded-lg p-6 sm:p-8"
+                style={{ backgroundColor: "#F9FAFD" }}
+              >
+                <p
+                  className="font-display mb-4 text-xs font-bold uppercase tracking-widest"
+                  style={{ color: "#6B7E94" }}
+                >
+                  Story section
+                </p>
+                <h3
+                  className="font-display text-3xl font-black uppercase italic leading-none sm:text-4xl"
+                  style={{ color: "#1E3653" }}
+                >
+                  {storyFields.heading || storyDefaults.heading}
+                </h3>
+                <p
+                  className="font-body mt-4 text-sm leading-relaxed"
+                  style={{ color: "#51667E" }}
+                >
+                  {storyFields.bodyPrimary || storyDefaults.bodyPrimary}
+                </p>
+                {(storyFields.bodySecondary || storyDefaults.bodySecondary) && (
+                  <p
+                    className="font-body mt-3 text-sm leading-relaxed"
+                    style={{ color: "#51667E" }}
+                  >
+                    {storyFields.bodySecondary || storyDefaults.bodySecondary}
+                  </p>
+                )}
+                {(storyFields.ctaLabel || storyDefaults.ctaLabel) && (
+                  <span
+                    className="font-display mt-6 inline-block px-6 py-3 text-xs font-bold uppercase text-white"
+                    style={{ backgroundColor: "#FF1616" }}
+                  >
+                    {storyFields.ctaLabel || storyDefaults.ctaLabel}
+                  </span>
+                )}
+                {!storyFields.visible && (
+                  <p
+                    className="font-display mt-6 text-xs uppercase tracking-widest"
+                    style={{ color: "#6B7E94" }}
+                  >
+                    Hidden — this section is turned off and will not appear on
+                    your homepage.
+                  </p>
+                )}
+              </div>
+            ) : (
+            <>
             <div className="overflow-hidden rounded-lg" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
               {draftPhotos[0] ? (
                 <div className="relative aspect-[16/9] w-full">
@@ -968,6 +1039,8 @@ export default function AdminHomepagePage() {
                   {behindFields.caption}
                 </p>
               </div>
+            )}
+            </>
             )}
           </section>
         </div>
