@@ -1,5 +1,192 @@
 # Diverse City FC Status
 
+## 2026-08-09 - MEDIA_AUTH_FAILED round two + five admin items. Committed and pushed to `staging`, NOT deployed
+
+**Package:** none — ad hoc. Christian hit `MEDIA_AUTHORIZATION_FAILED` on
+production again after the `20260808160000` storage-policy fix shipped,
+on a fixture logo, a sponsor logo, and an about-page photo, and expected
+standings and branding to fail too. Plus a five-item admin list.
+
+**Status:** `complete` for the five numbered items and for three real
+media-pipeline defects. **The production failure itself is not
+reproduced and not closed** — see "Priority 0: what was actually found"
+below, which is the honest answer and the most important part of this
+entry. Eight commits (`d8d5123` … `8563444`) on `origin/staging`. **Not
+deployed. No hosted Supabase access of any kind this round — no link, no
+read, no write.**
+
+### Priority 0: what was actually found
+
+**The stated hypothesis is wrong, and shipping a migration for it would
+have been a placebo.** The brief suspected the `else 'branding'`
+catch-all in `onzio_staging_member_insert`'s CASE — that surfaces like
+`sponsors`, `about`, and `schedule` resolve to the `'branding'` feature
+and that `can_mutate_feature(club_id, 'branding')` might be false for a
+`tier=starter` club.
+
+That CASE has been **inert since 2026-08-04**. `PLAT-102`
+(`20260804024349_plat_102_billing_entitlement.sql`) deleted
+`onzio_private.club_has_feature` outright and redefined
+`can_mutate_feature` as:
+
+```sql
+select onzio_private.can_mutate_content(p_club_id);
+```
+
+It never reads `p_feature`. Confirmed against the live local database
+with `pg_get_functiondef`, not from the migration text. So no surface
+string — recognized, unrecognized, or the `else 'branding'` default —
+can affect the outcome, `tier` is irrelevant to it, and a new migration
+rewriting that CASE would change nothing. Pinned by test: the new
+all-surface coverage runs against **Bravo (`tier=starter`)** and signs
+uploads on `programs` and `tryouts`, which were Pro-only feature strings
+under the pre-`PLAT-102` model (`DCFC-D108`). Both succeed.
+
+**Every media surface works end to end locally, proven by real upload,
+not by policy read.** Signed into `/admin` as a real Diverse City admin
+against local Supabase and ran the full
+authorize → stage → finalize → publish chain on all **ten** surfaces
+(`about`, `branding`, `contact`, `homepage`, `programs`, `roster`,
+`schedule`, `shop`, `standings`, `tryouts`) — all `200`, all published to
+UUID-versioned `onzio-media` paths. Then repeated it **through the real
+admin UI**, driving the actual file inputs, on the five surfaces
+Christian named:
+
+| Surface | UI control | Result |
+| --- | --- | --- |
+| `/admin/schedule` | Add Match → opponent logo Upload | published `schedule/1ec963f1-…webp` |
+| `/admin/sponsors` | Carousel → Add | published `branding/20e4ba05-…webp`, tile count 1/10 → 2/10 |
+| `/admin/about` | Story → Feature Image → Replace | published `about/3b01f83b-…webp` |
+| `/admin/standings` | Add Team → Replace Logo | published `standings/588f798a-…webp` |
+| `/admin/branding` | Choose New Logo → Save New Club Logo | published `branding/06d6836b-…webp` **and persisted** |
+
+Test images were generated in-page (solid-colour PNG/JPEG via canvas), so
+this exercised the real pipeline with real bytes.
+
+**The one reproduction found.** With the club row at `lifecycle='active'`
++ `kind='customer'` + `public_access='preview'`, `can_mutate_content`
+returns false and **every** surface fails with exactly
+`MEDIA_AUTH_FAILED` — reproduced, then reverted. This is almost certainly
+**not** production's state: `can_mutate_content` also gates
+`/api/admin/data`, so in that state every text save fails too (verified —
+`site_branding` upsert returns "new row violates row-level security
+policy"), and Christian is saving content fine. `HANDOFF.md` also records
+production as `lifecycle=onboarding`, which passes. Recorded because it
+is the only state that produces the exact symptom, and because it is a
+one-column difference away.
+
+**What is genuinely still unknown.** `MEDIA_AUTH_FAILED` can only come
+from `createSignedUploadUrl` failing, and the literal string
+`MEDIA_AUTHORIZATION_FAILED` could only come from the client fallback,
+which fires when the response has no JSON `error` key at all — i.e. the
+request never reached the route (platform error page, tenant 404, gateway
+timeout). Those are two different failures that were previously
+indistinguishable in the UI. Distinguishing them is now the fix; see
+below. **Confirming which one production is hitting needs either a
+production read or Christian's exact on-screen text, and the standing
+rule for this round was local Supabase only.**
+
+### Three real defects found and fixed
+
+**A. `/admin/branding`'s club logo upload could never succeed, for any
+club.** `saveLogo()` was a stub: it set the message "Logo uploads are
+temporarily unavailable until the Phase 4 secure media processor is
+enabled." and returned. That processor shipped in Phase 4; this handler
+is the only image field in the portal that was never reconnected. Christian
+listed branding as an expected failure and he was right — for a completely
+different reason from the others. Now wired to the same pipeline
+(`logos_v2` was already mapped to the `branding` surface) and verified by
+real upload. Commit `a038604`.
+
+**B. Failed uploads said nothing.** `/api/admin/media/authorize` returned
+`{"error":{"code":"MEDIA_AUTH_FAILED"}}` with **no message** for five
+unrelated causes, and the admin pages render `error.message` — which was
+`undefined`, so the UI showed an empty error box. This is the direct
+reason this class of bug has now been diagnosed twice by inference. The
+route now classifies the failure (`lib/media-diagnostics.ts`) and returns
+a specific code plus a short reason naming the failing precondition;
+`lib/admin-client.ts` stops masking a non-JSON response as
+`MEDIA_AUTHORIZATION_FAILED` and reports
+`MEDIA_AUTHORIZATION_UNAVAILABLE` with the HTTP status instead. No
+identifier, token, path, policy body, or SQL is exposed; the caller is
+already an authenticated admin of the club in question. 12 unit tests.
+Commit `d8d5123`.
+
+**C. Two of ten surfaces had signed-upload coverage.** `branding` and
+`programs`. The surfaces in Christian's report — `schedule`, `about`,
+`standings` — had none, so a per-surface regression had nowhere to
+surface. All ten are now covered. `test:db` 145 → 155. Commit `da395d6`.
+
+### The five numbered items
+
+| # | Item | Outcome |
+| --- | --- | --- |
+| 1 | Programs: remove create | Both "Create program" entry points hidden for `academy@1`; empty state now explains programs are set up by Onzio. `startCreate`, the create write path, and `lib/slugify.ts` untouched. Editing/reordering/media unchanged. `7ce879c` |
+| 2 | Contact: remove Hero Image, add preview | Hero field hidden. **Not dead code** — `AcademyContactPage` does render it behind a 70% navy overlay — but `hero_media_asset_id` has never been set and `DCFC-D132`'s approved hero is the flat navy band, so hidden, not deleted. New `ScaledContactPreview` renders the real page from the unsaved draft. `eb7b451` |
+| 3 | Tryouts: four changes | Program association removed (never rendered by `AcademyTryoutsPage`); hero image removed (no row has ever set it); "CTA label" → "Button text"; **preview sizing fixed** — see below. Add/delete untouched. `c3c1142` |
+| 4 | Shop: drop the third kit | Hidden for `academy@1` only. **Rose City's third kit is real** — `ClubhouseShopPage` and `ClubhouseHomePage` both iterate `["home","third","away"]` and the Lions import seeds an actual red third jersey — so `ShopKitVariant` and the `shop_kit_*` constraints are untouched. `2e0c102` |
+| 5 | About: rename + remove CTA Link | "CTA Label" → "Button Text"; the free-text href field removed and pinned to `/schedule`, which is where it already went (stored value **and** the shipped default). Read-only "Button Goes To" line in its place, matching the program-slug pattern. `DCFC-D007`. `8563444` |
+
+**The preview sizing bug (item 3), root cause.** The scaling canvas was
+absolutely positioned with `inset: 0`, which forces its box to the
+wrapper's *already-scaled* height. The page inside was laid out against a
+box shorter than itself, anything sized against that box resolved against
+the wrong number, and `scrollHeight` fed that wrong number back into the
+next measurement. New shared `components/admin/ScaledPagePreview.tsx`
+keeps the canvas in normal flow and only transforms it — `transform` does
+not affect layout, so `offsetHeight` is the true unscaled height. It also
+holds the scale at 1 when the frame has no measurable width (a 0×0
+element never fires another resize, so `scale(0)` was permanent) and
+re-measures on window resize and on the next animation frame, not only on
+`ResizeObserver`.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **891/891** across 86 files (`.env.test` exported), up from
+  869/869 across 84 — +22 (12 `media-diagnostics`, 10 storage surfaces).
+- `npm run test:db` **155/155** across 15 files, up from 145.
+- No flakes; the suite passed first time on a clean local database.
+- Live verification through the real admin UI as described above, on
+  `/admin/programs`, `/admin/contact`, `/admin/tryouts`, `/admin/shop`,
+  `/admin/about`, `/admin/standings`, `/admin/schedule`, `/admin/sponsors`,
+  and `/admin/branding`.
+
+**Rose City scoping — verified by code inspection this round, not by a
+runtime template swap.** Every UI conditional added derives from
+`presentationTemplateKey === "academy@1"`, and each non-academy branch
+preserves the previously-shipped markup verbatim, so `clubhouse@1`
+resolves every guard false. The runtime check the previous round used
+(temporarily publishing a `clubhouse@1` document for alpha locally) could
+not be completed — the local presentation tables reject direct mutation
+(`presentation documents are immutable`) and the scripted insert path was
+blocked by the sandbox after two attempts. Flagged rather than claimed:
+**this is weaker evidence than the previous round's and is worth redoing
+before any Rose City-affecting release.** The two intentionally
+unscoped changes (the media diagnostics and the branding upload fix) are
+platform-wide on purpose, matching the phone-regex precedent — both were
+broken for every club.
+
+### Local database left as found
+
+Diverse City back to **10** media assets (15 probe assets and their
+storage objects deleted), `site_branding.club_logo_path` and
+`club_logo_asset_id` restored to `e733a07d-…`, the temporary
+`dcfc-probe.vercel.app` `club_domains` row deleted, and the club row
+restored to the `pro`/`customer`/`active`/`live` state it was found in
+after the production-state reproduction. No unsaved editor draft was
+committed to the database.
+
+### Not done
+
+- **Deployment** — Christian's call alone, not given for this work. **No
+  migration this round**, so this is code-only.
+- **The production `MEDIA_AUTHORIZATION_FAILED` itself.** Not reproduced,
+  not closed. The next report will now carry a specific code and reason;
+  the exact on-screen text is what closes it. See the "genuinely still
+  unknown" note above.
+- **A runtime `clubhouse@1` regression check.** See the scoping note.
+
 ## 2026-08-08 - Hero-link picker + standings-preview fixes deployed to production
 
 **Package:** none — ad hoc. Christian: "Yes, deploy this too."

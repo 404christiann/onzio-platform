@@ -1,6 +1,79 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-08
+Last updated: 2026-08-09
+
+## MEDIA_AUTH_FAILED round two: hypothesis disproved, three real defects fixed, five admin items shipped
+
+Agent: Claude Opus 5 (Claude Code), 2026-08-09. Status: `complete` for the
+five admin items and three media-pipeline defects; **the production
+`MEDIA_AUTHORIZATION_FAILED` is not reproduced and not closed.**
+
+**No hosted Supabase access of any kind this round** — no `link`, no read,
+no write, no migration, no deploy. Local Supabase only, as instructed.
+**No migration was authored this round**, so the `staging` head is
+code-only.
+
+**The suspected root cause is not the cause.** The brief pointed at the
+`else 'branding'` catch-all in `onzio_staging_member_insert`'s CASE. That
+CASE has been inert since `PLAT-102` (`20260804024349`) dropped
+`onzio_private.club_has_feature` and redefined `can_mutate_feature` as a
+bare `select onzio_private.can_mutate_content(p_club_id)` — it never reads
+its feature argument. Confirmed against the live local database with
+`pg_get_functiondef`. A migration rewriting that CASE would have been a
+placebo, which is the trap this round was told to avoid. Pinned by test:
+the new all-surface coverage runs against a **`tier=starter`** club and
+signs `programs` and `tryouts` uploads, which were Pro-only feature
+strings before `PLAT-102`.
+
+**All ten media surfaces verified working end to end locally by real
+upload** — the full authorize → stage → finalize → publish chain, then
+again through the real admin file inputs on the five surfaces Christian
+named (schedule opponent logo, sponsor logo, about photo, standings team
+logo, branding club logo). Every one published a real UUID-versioned
+asset.
+
+**Three real defects found and fixed.** (1) `/admin/branding`'s club-logo
+upload was a hardcoded stub — "temporarily unavailable until the Phase 4
+secure media processor is enabled" — and could never succeed for any club,
+which is a genuine failure on one of the surfaces Christian named, for a
+different reason from the others. (2) `/api/admin/media/authorize`
+returned one opaque code with **no message** for five unrelated causes,
+and the admin pages render `error.message`, so the UI showed an empty
+error box — the direct reason this class of bug has now been diagnosed
+twice by inference rather than by reading the failure. It now returns a
+specific code and a short, non-sensitive reason. (3) Only two of ten media
+surfaces had signed-upload coverage; all ten now do.
+
+**The one state that reproduces the exact symptom** is `lifecycle='active'`
++ `kind='customer'` + `public_access='preview'`, which makes
+`can_mutate_content` false and fails every surface. It is almost certainly
+not production's state — it also breaks every text save through
+`/api/admin/data` (verified), and `HANDOFF.md` records production as
+`lifecycle=onboarding`. Recorded because it is one column away.
+
+**Five admin items shipped**, all scoped to `presentationTemplateKey ===
+"academy@1"`: programs edit-only, contact hero removed plus a live
+preview, tryouts trimmed and its preview sizing fixed, shop reduced to
+Home/Away (Rose City's third kit is real and untouched), and About's CTA
+link removed with the destination pinned to `/schedule` per `DCFC-D007`.
+
+**Verification:** `npx tsc --noEmit` clean; full suite **891/891** across
+86 files (up from 869/869); `npm run test:db` **155/155** (up from 145).
+No flakes.
+
+**Rose City scoping was verified by code inspection this round, not by the
+runtime template swap the previous round used** — the local presentation
+tables reject direct mutation and the scripted path was sandbox-blocked.
+Weaker evidence than last round; worth redoing before a Rose City-affecting
+release.
+
+Commits `d8d5123`, `a038604`, `da395d6`, `7ce879c`, `c3c1142`, `eb7b451`,
+`2e0c102`, `8563444` on `origin/staging`. **Not deployed.**
+
+Next step: Christian tests `/admin` in production. If an upload still
+fails, the on-screen text now names the failing precondition — that text
+is what closes the investigation.
+
 
 ## Hero-link picker + standings-preview fixes deployed to production
 
