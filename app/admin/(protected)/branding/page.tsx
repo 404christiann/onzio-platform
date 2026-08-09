@@ -111,15 +111,59 @@ export default function BrandingPage() {
     setLogoFile(file);
   }
 
+  /**
+   * Club logo upload.
+   *
+   * This used to be a stub that unconditionally set the error "Logo uploads are
+   * temporarily unavailable until the Phase 4 secure media processor is
+   * enabled." That processor shipped in Phase 4 and every other admin surface
+   * has used it since; only this handler was never reconnected, so /admin/branding
+   * has been the one image field in the portal that could never succeed —
+   * a different failure from MEDIA_AUTH_FAILED, on the same button.
+   *
+   * `logos_v2` is already mapped to the `branding` media surface in
+   * lib/admin-client.ts, so this goes through the same
+   * authorize -> stage -> finalize -> publish chain as every other upload, and
+   * `clubLogoUrl` already resolves a published `<club>/<surface>/<uuid>.<ext>`
+   * path against the public onzio-media bucket.
+   */
   async function saveLogo() {
     if (!logoFile || saving) return;
 
     setSaving(true);
     setSaved(false);
-    setError(
-      "Logo uploads are temporarily unavailable until the Phase 4 secure media processor is enabled.",
-    );
-    setSaving(false);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { data, error: uploadError } = await supabase.storage
+        .from(CLUB_LOGO_BUCKET)
+        .upload(`club-logo/${Date.now()}.${fileExtension(logoFile)}`, logoFile);
+      if (uploadError || !data?.path) {
+        throw new Error(uploadError?.message ?? "The logo could not be uploaded.");
+      }
+
+      const { error: saveError } = await supabase
+        .from("site_branding")
+        .upsert({
+          club_logo_path: data.path,
+          updated_at: new Date().toISOString(),
+        });
+      if (saveError) throw new Error(saveError.message);
+
+      setClubLogoPath(data.path);
+      setLogoFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setSaved(true);
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error && uploadError.message
+          ? uploadError.message
+          : "The logo could not be uploaded.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   function setSocialHref(id: SiteSocialPlatform, href: string) {
