@@ -1,5 +1,68 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Two more platform-wide admin fixes: no more hardcoded "Rose City" in Schedule, and a Remove/logo-fallback fix for Staff and Roster photos
+
+**Package:** none — ad hoc. Handled directly (no grill-me needed) alongside
+dispatching the Tryouts/Programs redesign to a separate Opus-model agent
+(see the grill-me session earlier this same day for that scope).
+
+### Schedule admin no longer says "Rose City" for any club
+
+`app/admin/(protected)/schedule/page.tsx` hardcoded "Rose City Score
+(optional)" as a field label and "Result: Rose City {score} - {score}
+{opponent}" in the match list — visible in **every** club's admin, not just
+Diverse City's, since the underlying `matches.rose_city_score` column name
+(a real, long-standing schema column, unchanged) was never meant to be
+user-facing text. Confirmed first that the public site itself was already
+clean — `components/AcademyFixtureRow.tsx` only ever reads
+`fixture.roseCityScore` as an internal field name, never renders the literal
+string "Rose City" to visitors — so this was purely an admin-portal wording
+bug. Fixed by using the already-available `club.name` from
+`useClubContext()` in both spots instead of the hardcoded string. Now reads
+"Diverse City FC Score (optional)" for this club, and will read correctly
+for any future club too.
+
+### Staff/Roster: photo removal and club-logo fallback
+
+Neither Players nor Staff had any way to clear a set photo back to empty —
+only "Change Photo" (replace), never remove. Separately, Staff's empty-photo
+state showed initials, while Players already fell back to the club's own
+crest via existing `getRosterImageSrc`/`isRosterPlaceholderLogo` helpers
+(`lib/roster-images.ts`). Fixed both:
+
+- Added a "Remove" button to both Players' and Staff's photo pickers,
+  appearing only when there's an actual photo to remove (hidden when
+  already showing the club-logo fallback). Removing clears both the pending
+  file selection and `photo_url` to `""`, which — combined with the
+  platform-wide asset-reference fix from earlier today — correctly clears
+  the paired `photo_asset_id` too, so the removal actually reflects
+  everywhere, not just locally in the admin.
+- Staff's list row and edit-form preview now use the same
+  `getRosterImageSrc`/`isRosterPlaceholderLogo` fallback Players already
+  had, instead of showing initials. Staff's save handlers now also run
+  `photo_url` through `rosterImageForStorage` before saving, matching
+  Players exactly.
+
+Both changes are platform-wide (not academy@1-scoped) since they're pure
+bug fixes with no template-specific behavior — every club's admin was
+affected identically.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **917/917** across 87 files, up from 912 (+5 new tests).
+- `npm run test:db` **155/155**, unchanged.
+- Verified live through a real signed-in local admin session (Diverse City,
+  `owner-aal2@alpha.local`, Mailpit code): confirmed "Diverse City FC Score
+  (optional)" renders correctly in the Schedule admin, and both the New
+  Player and New Staff forms now show the club crest instead of a blank/
+  initials placeholder, with no dead "Remove" button shown when there's
+  nothing to remove yet.
+
+Christian approved committing and deploying these two immediately —
+separate from the larger Tryouts/Programs redesign still in progress on
+another agent, deployed on its own once that finishes.
+
 ## 2026-08-09 - Away kit hidden (confirmed dead), and a real platform-wide bug found: removing an image never cleared its stale asset reference
 
 **Package:** none — ad hoc, two more items from Christian's continued live

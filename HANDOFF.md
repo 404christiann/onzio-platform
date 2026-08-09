@@ -2,6 +2,28 @@
 
 Last updated: 2026-08-09
 
+## Two more platform-wide admin fixes: no more hardcoded "Rose City", and Remove/logo-fallback for Staff and Roster photos
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
+
+Handled directly, in parallel with dispatching the Tryouts/Programs
+redesign (from today's grill-me session) to a separate Opus-model agent.
+
+**Schedule admin's "Rose City Score" label and match-result line** were
+hardcoded regardless of which club's admin was open — confirmed the public
+site itself never showed the literal text, so this was purely an
+admin-portal wording bug, now using `club.name` instead. Platform-wide fix.
+
+**Staff and Roster photo fields** got a "Remove" button (neither had one —
+only replace-by-upload), and Staff's empty-photo state now falls back to
+the club logo like Roster already did, instead of showing initials. Both
+changes are platform-wide, not academy@1-scoped. Full detail in
+`STATUS.md`.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **917/917**; `test:db`
+**155/155** — up from 912, all five new tests pinning the specific fixes.
+Also verified live through a real signed-in local admin session.
+
 ## Away kit hidden (confirmed dead), and a real platform-wide bug fixed: removing an image never cleared its stale asset reference
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
