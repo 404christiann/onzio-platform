@@ -1,5 +1,138 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Tryouts and Programs admin redesign, from today's grill-me session, landed on `staging`
+
+**Package:** none — ad hoc. Implements the resolved decisions from today's
+`/grill-me` session on the Tryouts and Programs admin surfaces. Investigated
+and scoped by this session, implemented by an Opus-model agent from a
+self-contained brief; every diff independently re-reviewed, every
+verification command independently re-run, and a live spot-check done
+myself in a real signed-in session before landing this on `staging`.
+
+### Branch note — a real merge situation, handled
+
+Christian is independently redesigning the admin's visual design (a new
+shadcn/ui-style component system, Tailwind/global-CSS changes) on a local
+branch, `experiment/admin-portal-styling`, cut from this same point in
+`staging`. That work was in-progress and uncommitted in the working tree —
+including on `app/admin/(protected)/programs/page.tsx` and
+`.../tryouts/page.tsx`, the exact two files this round rebuilds — when this
+round's agent finished. Christian confirmed: stash his redesign work aside
+(`git stash push -u`, scoped to exactly the ~20 files/dirs his redesign
+touched, deliberately excluding the `.claude/worktrees/` directory holding
+the agent's own completed work), switch the working tree back to `staging`,
+and land this round there. His redesign is fully preserved in the stash,
+not lost — see the note at the end of this entry for what popping it back
+will need.
+
+### Tryouts admin — simplified per the grill-me resolution
+
+- Eyebrow + Headline merged into a single **Name** field (stored in the
+  existing `headline` column — no schema change for this part). The public
+  event card no longer shows the eyebrow line above the name (this was the
+  "CLUB EVALUATION" over "TRYOUT OPPORTUNITY" clutter Christian flagged).
+- Introduction, Eligibility, What to expect, and Preparation removed from
+  the editor and from the public event card. All four columns stay in the
+  schema; any previously-stored value round-trips untouched through a save —
+  only the UI is gone, matching this repo's standing discipline.
+- Kept as-is: Program association, Status, Event date, Location, Cost,
+  Button text, External registration destination, Closed message, Hero
+  image, Add/Delete/Reorder, and the existing live preview.
+- **New:** a "Tryouts page intro" section at the top of `/admin/tryouts`,
+  its own independent save, for the two paragraphs at the top of the public
+  `/tryouts` page that were previously 100% hardcoded in
+  `components/AcademyTryoutsPage.tsx` — one shown when tryouts are
+  published, one when none are. New singleton table
+  `onzio.tryouts_page_content` (migration `20260809120000`), following the
+  exact `programs_page_content` precedent: RLS gated on the `'tryouts'`
+  feature, `text not null default ''` columns with a 320-char ceiling
+  (matching the ceiling already used by `homepage_hero_content.intro` and
+  siblings), audit + `updated_at` triggers. Blank means "use the approved
+  template default," so a club with no row renders byte-identical to the
+  hardcoded copy this replaces.
+
+### Programs admin — redesigned, no new public-facing behavior
+
+- Reorganized the ~15-field flat form into three tabs: **Content** (nav
+  label, display title, kicker, summary, body, highlights, layout variant,
+  visibility, and slug for non-academy templates), **Media** (hero/detail
+  images), **Registration** (the show/hide toggle, button label/link,
+  registration copy fields, photo gallery) — isolating exactly the group
+  Christian said was hardest to find.
+- **New full-page live preview** (`ScaledProgramPreview`, matching the
+  `Scaled*Preview` pattern used everywhere else in this admin) renders the
+  real public program page from the unsaved draft, registration band
+  included in its real position when the toggle is on.
+- The registration mechanism itself is unchanged — confirmed with Christian
+  during grill-me that this is exactly what he meant by "a register button
+  on each program," not a new feature. Per-program toggle default (off
+  until a club turns it on) is also unchanged.
+- **Real bug found and fixed along the way, not in the original brief:** a
+  validation error on a field inside a now-hidden tab (e.g. a required
+  Content field, while viewing Registration) would have shown "Review the
+  highlighted fields" pointing at nothing visible. Failed saves now reveal
+  the tab holding the first error.
+
+### A pre-existing gap surfaced, not caused by this round — needs a decision
+
+`components/AdminShell.tsx` declares a `feature: "programs"` /
+`feature: "tryouts"` property on these nav items, but the actual filter
+logic never reads `item.feature` — only `ownerOnly` and the billing case are
+checked. Confirmed empirically (temporarily repointed a local `clubhouse@1`
+tenant to verify, then restored it): **`/admin/programs` and
+`/admin/tryouts` are reachable from Rose City's admin today**, and always
+have been — this round didn't introduce it. The **public** routes are
+correctly template-gated (`/programs` and `/tryouts` 404 for `clubhouse@1`
+per the presentation template registry), so there's no public-facing
+exposure and no data-corruption risk (every retired Tryouts column still
+round-trips untouched through a save). But Rose City's admin will now show
+the redesigned Programs tabs and the simplified Tryouts field set for a
+surface its public site can never render. Since `AdminShell.tsx` is also
+one of the files in Christian's in-progress redesign, this is worth fixing
+in that same pass if he wants the nav itself to stop offering these to
+non-academy clubs — not blocking this deploy, flagging it because he's
+already in that file.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **947/947** across 88 files, up from 917 already on `staging`
+  — this round's new/updated tests combined cleanly with the Rose
+  City/Staff-Roster fixes from the previous entry.
+- `npm run test:db` **165/165** across 16 files — one run showed 2
+  transient failures from the same documented interactive-testing
+  pollution as always; a clean rerun confirmed 165/165, not a regression.
+- `npm run db:types:check` passes — the regenerated types are additive
+  only.
+- New migration applied cleanly against a full local reset (all 31
+  migrations, local=remote, no drift).
+- Verified live, independently, in a real signed-in Diverse City admin
+  session (not just the agent's report): the Tryouts page-intro section
+  saves and reflects; the simplified event form shows exactly the eight
+  kept fields; creating a draft event live-switches the preview's intro
+  paragraph and drops the eyebrow line; the Programs tabs render correctly;
+  toggling Registration live-updates the preview to show the real band in
+  its real position.
+
+**Not deployed yet.** This round includes a real migration — production
+needs the same sequence every migration-bearing deploy today has used
+(re-link, verify, check backup posture, `supabase db push --linked`, then
+the code deploy), and both need Christian's explicit go-ahead.
+
+### For whoever resumes `experiment/admin-portal-styling`
+
+The stash is `stash@{0}`, message: *"Christian's admin redesign (shadcn/ui +
+Tailwind restyle) - set aside to land Tryouts/Programs backend work"*. To
+resume: `git checkout experiment/admin-portal-styling` (already up to date
+with this `staging` commit as of when it was cut), then `git stash pop`.
+Expect real conflicts on `app/admin/(protected)/programs/page.tsx` and
+`.../tryouts/page.tsx` specifically — the redesign's visual/styling changes
+and this round's tab/preview restructuring both touched the same files, so
+popping will need a manual reconciliation on those two, applying the visual
+redesign on top of the new tab structure rather than the old flat form.
+Every other stashed file (`AdminShell.tsx`, `package.json`, Tailwind/global
+CSS, the new `components/ui/`) should apply cleanly with no overlap.
+
 ## 2026-08-09 - Two more platform-wide admin fixes: no more hardcoded "Rose City" in Schedule, and a Remove/logo-fallback fix for Staff and Roster photos
 
 **Package:** none — ad hoc. Handled directly (no grill-me needed) alongside

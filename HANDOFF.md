@@ -2,6 +2,56 @@
 
 Last updated: 2026-08-09
 
+## Tryouts and Programs admin redesign landed on `staging` — includes a real merge situation with Christian's in-progress UI redesign, handled via stash
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`, not
+deployed.
+
+Implements today's `/grill-me` session on Tryouts and Programs, built by an
+Opus-model agent from a self-contained brief, independently re-reviewed and
+re-verified (including a live spot-check in a real admin session) before
+landing.
+
+**Tryouts**: Eyebrow+Headline merged into one Name field; Introduction,
+Eligibility, What to expect, and Preparation removed from the editor and
+public card (columns untouched, any stored value round-trips); new
+page-level intro-copy fields backed by a new singleton table
+(`onzio.tryouts_page_content`, migration `20260809120000`, following the
+`programs_page_content` precedent exactly).
+
+**Programs**: redesigned into Content/Media/Registration tabs (no change to
+the registration mechanism itself — confirmed with Christian this is
+exactly what "a register button on each program" already does); new
+full-page live preview; a real bug found and fixed along the way (a
+validation error on a hidden tab now reveals that tab instead of pointing
+at nothing visible).
+
+**A pre-existing gap surfaced, not caused by this round**:
+`components/AdminShell.tsx`'s nav filter never actually reads the
+`feature` property it declares on Programs/Tryouts nav items, so those
+admin pages are reachable from Rose City's admin today (and always have
+been) — public routes are correctly template-gated, so no public exposure,
+but worth a look since Christian is already redesigning that exact file.
+
+**Real merge situation, handled**: Christian is independently redesigning
+the admin's visual design on a separate local branch,
+`experiment/admin-portal-styling`, cut from `staging` — in progress and
+uncommitted on the exact same two files (`programs/page.tsx`,
+`tryouts/page.tsx`) this round rebuilds, plus ~18 other admin pages,
+`AdminShell.tsx`, and the Tailwind/component-library setup. Stashed his
+work precisely (excluding the agent's own worktree directory), switched
+back to `staging`, landed this round there. Full recovery instructions for
+that stash in `STATUS.md` — expect a real, manual conflict on those two
+files when it's popped back, nothing else should conflict.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **947/947**, up from
+917; `test:db` **165/165** (one run hit the documented interactive-testing
+flakiness, clean on rerun); `db:types:check` passes; migration applies
+clean against a full local reset.
+
+**Not deployed** — this round carries a real migration, needs Christian's
+go-ahead for both the hosted Supabase push and the code deploy.
+
 ## Two more platform-wide admin fixes: no more hardcoded "Rose City", and Remove/logo-fallback for Staff and Roster photos
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
