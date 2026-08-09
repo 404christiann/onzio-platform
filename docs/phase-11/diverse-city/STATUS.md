@@ -1,5 +1,64 @@
 # Diverse City FC Status
 
+## 2026-08-09 - The sharp/libvips fix wasn't enough: real cause found by inspecting Next's file-tracing manifest directly, fixed, deployed
+
+**Package:** none — ad hoc, direct continuation of the entry below. Christian
+retested after the previous deploy and got `MEDIA_FINALIZATION_FAILED` on
+every surface — progress (authorize now succeeds), but finalize — the route
+that actually calls `sharp` to normalize pixels — was still crashing.
+
+### `serverExternalPackages` didn't fix the real problem
+
+Checked Vercel's runtime error log again: `/api/admin/media/authorize` had
+zero new errors (that part of the previous fix genuinely worked, because the
+route no longer imports `sharp` at all after the module split). But
+`/api/admin/media/finalize` hit the **identical**
+`ERR_DLOPEN_FAILED: libvips-cpp.so.8.18.3` error, on the deployment that had
+just shipped `serverExternalPackages: ["sharp"]`. That config change had no
+effect on the actual loading problem — it only looked like progress because
+of the unrelated module split.
+
+**Ruled out stale build cache next.** Forced a completely fresh, no-cache
+production deploy (`vercel deploy --prod --force`, confirmed by build time
+roughly doubling). Identical error, same deployment. Not a cache problem.
+
+### The real cause, confirmed directly rather than inferred
+
+Ran a local production build (`next build`) and read Next's own file-tracing
+manifest for the route
+(`.next/server/app/api/admin/media/finalize/route.js.nft.json`). It included
+`@img/sharp-darwin-arm64` (the native `.node` binding `sharp`'s own JS
+requires) but **zero files from `@img/sharp-libvips-darwin-arm64`** — the
+package that actually contains `libvips-cpp.8.18.3.dylib`, confirmed present
+in `node_modules` on disk. That `.dylib`/`.so` file is loaded by the `.node`
+binding's own native code via `dlopen()`, a step Next's JS-level static
+tracer (`@vercel/nft`) cannot see, so it never gets included in the deployed
+function on any platform. This is exactly the file Vercel's runtime error
+names as missing — same version number, `8.18.3`, just the Linux extension
+instead of the Darwin one.
+
+### Fix, verified locally before deploying
+
+Added `outputFileTracingIncludes` to `next.config.mjs` for
+`/api/admin/media/finalize`, `/api/admin/media/cleanup`, and
+`/api/cron/media-cleanup`, forcing in `./node_modules/@img/sharp-libvips-*/**/*`.
+Rebuilt locally and re-read the manifest: `libvips-cpp.8.18.3.dylib` now
+appears (8 libvips-related files traced, up from 0). This is the first time
+in this whole investigation the actual fix mechanism was confirmed locally
+before deploying, rather than only checkable in production.
+
+**Verification:** `npx tsc --noEmit` clean; full suite **891/891**;
+`test:db` **155/155**.
+
+**Deployed:** commit `2ed0253` → `vercel deploy --prod` →
+`dpl_9j4xo9Aeydb6eZhB8V5eGuuTSBQj`, re-aliased
+`diverse-city-fc-private.vercel.app`. Build logs clean. Rose City `200`.
+
+**Next step:** Christian tries an upload again. If this is really it, it
+should just work now — the missing-file mechanism is confirmed, not
+theoretical, so if it still fails the cause is something new, not a variant
+of this one.
+
 ## 2026-08-09 - MEDIA_AUTHORIZATION_FAILED root cause found and fixed: sharp/libvips crashing on Vercel. Deployed. Five more admin punch-list items from Christian's live review
 
 **Package:** none — ad hoc. Christian reproduced the upload failure in

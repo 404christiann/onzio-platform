@@ -2,6 +2,37 @@
 
 Last updated: 2026-08-09
 
+## The sharp fix wasn't enough — real cause found by reading Next's file-tracing manifest directly, fixed and deployed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
+
+Christian retested after the previous deploy: `MEDIA_FINALIZATION_FAILED`
+on every surface. `serverExternalPackages: ["sharp"]` had only masked
+progress — `/authorize` stopped erroring because the module split removed
+its `sharp` import entirely, not because the config fixed loading.
+`/finalize`, which genuinely calls `sharp`, hit the identical
+`ERR_DLOPEN_FAILED` on the same deployment. A forced no-cache redeploy
+(`--force`) ruled out stale build cache — same error.
+
+**Found for real this time:** a local `next build` plus reading
+`.next/server/app/api/admin/media/finalize/route.js.nft.json` directly
+showed Next's file tracer includes `@img/sharp-<platform>` (the `.node`
+binding) but never `@img/sharp-libvips-<platform>` — the package holding
+the actual `libvips-cpp` shared library that binding `dlopen()`s at its own
+native-code load time, invisible to JS-level static tracing on any
+platform. Confirmed the missing file locally (`libvips-cpp.8.18.3.dylib`,
+same version Vercel reports missing as `.so`). Fixed with
+`outputFileTracingIncludes` in `next.config.mjs` for the three
+sharp-touching routes; confirmed locally that the file now appears in the
+rebuilt manifest before deploying at all. Full detail in `STATUS.md`.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **891/891**; `test:db`
+**155/155**.
+
+**Deployed:** commit `2ed0253` → `dpl_9j4xo9Aeydb6eZhB8V5eGuuTSBQj`,
+re-aliased `diverse-city-fc-private.vercel.app`. Build clean, Rose City
+`200`. Next: Christian tries an upload again.
+
 ## MEDIA_AUTHORIZATION_FAILED root cause found: sharp/libvips crashing on Vercel since 2026-07-29. Fixed and deployed, along with five more admin items from Christian's live review
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
