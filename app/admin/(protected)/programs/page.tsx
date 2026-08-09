@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
 import type {
@@ -19,6 +20,7 @@ import {
   moveHighlight,
   moveProgram,
   moveProgramMedia,
+  programDraftToContent,
   programMediaToDraft,
   programsPageToDraft,
   programToDraft,
@@ -43,6 +45,46 @@ import {
 import { deriveProgramSlug } from "@/lib/slugify";
 
 type MediaRole = "hero" | "detail";
+
+/**
+ * The per-program editor is split into three tabs instead of one flat list of
+ * ~15 fields. Registration was the field group that was hardest to find in the
+ * flat form — it sat below the highlights, the media, and the layout controls —
+ * so isolating it is the point of the split. Nothing moved between the database
+ * and the page; this is purely how the same fields are arranged.
+ */
+type ProgramEditorTab = "content" | "media" | "registration";
+
+const PROGRAM_EDITOR_TABS: Array<{ id: ProgramEditorTab; label: string }> = [
+  { id: "content", label: "Content" },
+  { id: "media", label: "Media" },
+  { id: "registration", label: "Registration" },
+];
+
+/**
+ * Which tab owns each validation error, so a failed save can reveal the field
+ * it is complaining about instead of leaving "Review the highlighted fields"
+ * pointing at a panel the admin cannot see.
+ */
+const PROGRAM_FIELD_TABS: Record<
+  keyof ProgramValidationErrors,
+  ProgramEditorTab
+> = {
+  slug: "content",
+  navLabel: "content",
+  displayTitle: "content",
+  kicker: "content",
+  summary: "content",
+  body: "content",
+  highlights: "content",
+  externalCtaLabel: "registration",
+  externalCtaHref: "registration",
+  registrationEyebrow: "registration",
+  registrationHeadline: "registration",
+  registrationBody: "registration",
+  registrationPendingBody: "registration",
+  registrationPendingLabel: "registration",
+};
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 font-body text-sm text-white outline-none transition focus:border-red-500/60 focus:bg-white/[0.06]";
@@ -88,6 +130,7 @@ export default function AdminProgramsPage() {
   const [uploadingRole, setUploadingRole] = useState<MediaRole | null>(null);
   const [errors, setErrors] = useState<ProgramValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ProgramEditorTab>("content");
   const heroInput = useRef<HTMLInputElement>(null);
   const detailInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
@@ -187,6 +230,7 @@ export default function AdminProgramsPage() {
     setError(null);
     setSaved(false);
     setDirty(false);
+    setActiveTab("content");
   }
 
   function startCreate() {
@@ -198,6 +242,7 @@ export default function AdminProgramsPage() {
     setError(null);
     setSaved(false);
     setDirty(false);
+    setActiveTab("content");
   }
 
   function setHighlight(index: number, value: string) {
@@ -391,11 +436,18 @@ export default function AdminProgramsPage() {
     const validation = validateProgramDraft(pending);
     if (Object.keys(validation).length > 0) {
       setErrors(validation);
+      // Reveal the tab holding the first complaint; a highlighted field on a
+      // hidden panel is the same as no message at all.
+      const firstField = (
+        Object.keys(validation) as Array<keyof ProgramValidationErrors>
+      ).find((field) => PROGRAM_FIELD_TABS[field]);
+      if (firstField) setActiveTab(PROGRAM_FIELD_TABS[firstField]);
       setError("Review the highlighted fields before saving.");
       return;
     }
     const galleryError = validateProgramMedia(gallery);
     if (galleryError) {
+      setActiveTab("registration");
       setError(galleryError);
       return;
     }
@@ -497,6 +549,18 @@ export default function AdminProgramsPage() {
   }
 
   const pageCopyDefaults = defaultProgramsPageContent(club.name);
+
+  // The program being edited, rendered through the real public template with
+  // its unsaved changes applied. The sibling row underneath it is built from
+  // the saved list minus this program, matching what
+  // app/_clubs/[slug]/programs/[programSlug]/page.tsx passes.
+  const previewProgram = programDraftToContent(
+    draft ?? emptyProgramDraft(0),
+    gallery,
+  );
+  const previewOtherPrograms = programs
+    .filter((program) => program.id && program.id !== draft?.id)
+    .map((program) => programDraftToContent(program));
 
   function pageCopyFieldError(field: keyof ProgramsPageDraft) {
     const message = pageCopyErrors[field];
@@ -847,7 +911,15 @@ export default function AdminProgramsPage() {
                 )}
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-2">
+              <ProgramTabs
+                value={activeTab}
+                onChange={setActiveTab}
+                disabled={saving || uploadingRole !== null || uploadingGallery}
+              />
+
+              {activeTab === "content" && (
+              <>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 {hidesSlugField ? (
                   <div>
                     <span className={LABEL_CLASS}>Page address</span>
@@ -967,6 +1039,24 @@ export default function AdminProgramsPage() {
               </div>
 
               <div className="mt-7 grid gap-5 border-t border-white/[0.06] pt-7 sm:grid-cols-2">
+                <FormField label="Layout variant">
+                  <select className={INPUT_CLASS} value={draft.layoutVariant} onChange={(event) => updateDraft("layoutVariant", event.target.value as ProgramDraft["layoutVariant"])}>
+                    <option value="statement_band">Statement band</option>
+                    <option value="detail_focus">Detail focus</option>
+                  </select>
+                </FormField>
+                <FormField label="Visibility">
+                  <select className={INPUT_CLASS} value={draft.status} onChange={(event) => updateDraft("status", event.target.value as ProgramDraft["status"])}>
+                    <option value="active">Active — visible publicly</option>
+                    <option value="hidden">Hidden — admin only</option>
+                  </select>
+                </FormField>
+              </div>
+              </>
+              )}
+
+              {activeTab === "media" && (
+              <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 <MediaField
                   label="Hero image"
                   assetId={draft.heroMediaAssetId}
@@ -992,29 +1082,11 @@ export default function AdminProgramsPage() {
                   }}
                 />
               </div>
+              )}
 
-              <div className="mt-7 grid gap-5 border-t border-white/[0.06] pt-7 sm:grid-cols-2">
-                <FormField label="Layout variant">
-                  <select className={INPUT_CLASS} value={draft.layoutVariant} onChange={(event) => updateDraft("layoutVariant", event.target.value as ProgramDraft["layoutVariant"])}>
-                    <option value="statement_band">Statement band</option>
-                    <option value="detail_focus">Detail focus</option>
-                  </select>
-                </FormField>
-                <FormField label="Visibility">
-                  <select className={INPUT_CLASS} value={draft.status} onChange={(event) => updateDraft("status", event.target.value as ProgramDraft["status"])}>
-                    <option value="active">Active — visible publicly</option>
-                    <option value="hidden">Hidden — admin only</option>
-                  </select>
-                </FormField>
-                <FormField label="Button label" error={fieldError(errors, "externalCtaLabel")}>
-                  <input className={INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
-                </FormField>
-                <FormField label="Button link" error={fieldError(errors, "externalCtaHref")}>
-                  <input className={INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
-                </FormField>
-              </div>
-
-              <div className="mt-7 border-t border-white/[0.06] pt-7">
+              {activeTab === "registration" && (
+              <>
+              <div className="mt-6">
                 <div className="mb-4">
                   <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
                     Registration section
@@ -1023,7 +1095,7 @@ export default function AdminProgramsPage() {
                     The band shown partway down the public program page. Leave a
                     field empty to keep the standard wording shown as its
                     placeholder. The button itself comes from the button label
-                    and link fields above — with no link saved, visitors see the
+                    and link fields below — with no link saved, visitors see the
                     &ldquo;coming soon&rdquo; text instead of a link.
                   </p>
                 </div>
@@ -1047,6 +1119,18 @@ export default function AdminProgramsPage() {
                     </span>
                   </span>
                 </label>
+
+                {/* The register button itself. Unchanged fields and unchanged
+                    public behaviour — they simply live beside the section they
+                    drive now, instead of several groups above it. */}
+                <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                  <FormField label="Button label" error={fieldError(errors, "externalCtaLabel")}>
+                    <input className={INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
+                  </FormField>
+                  <FormField label="Button link" error={fieldError(errors, "externalCtaHref")}>
+                    <input className={INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
+                  </FormField>
+                </div>
 
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
                   <FormField
@@ -1235,6 +1319,8 @@ export default function AdminProgramsPage() {
                   </ul>
                 )}
               </div>
+              </>
+              )}
 
               <div className="mt-8 flex flex-col-reverse gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <AdminSaveFeedback saving={saving} saved={saved} savingLabel="Saving program…" successLabel="Program saved" />
@@ -1253,6 +1339,64 @@ export default function AdminProgramsPage() {
           )}
         </div>
       )}
+
+      {!loading && draft && (
+        <section className="mt-6 rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+            Program page preview
+          </p>
+          <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/30">
+            The real public program page, at desktop proportions and scaled to
+            fit, built from the program you are editing including its unsaved
+            changes. Turning the Registration tab&rsquo;s toggle on shows the
+            registration band exactly where visitors would find it.
+          </p>
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.08]">
+            <ScaledProgramPreview
+              program={previewProgram}
+              otherPrograms={previewOtherPrograms}
+            />
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ProgramTabs({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: ProgramEditorTab;
+  onChange: (value: ProgramEditorTab) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div
+      className="mt-3 grid gap-1 rounded-lg p-1 sm:grid-cols-3"
+      style={{ backgroundColor: "rgba(255,255,255,0.025)" }}
+    >
+      {PROGRAM_EDITOR_TABS.map((tab) => {
+        const selected = tab.id === value;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            disabled={disabled}
+            aria-pressed={selected}
+            className="font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors"
+            style={{
+              backgroundColor: selected ? "rgba(231,0,27,0.9)" : "transparent",
+              color: selected ? "white" : "rgba(255,255,255,0.45)",
+              cursor: disabled ? "not-allowed" : "pointer",
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -1,5 +1,9 @@
 import ResilientImage from "@/components/ResilientImage";
 import type { TryoutContent } from "@/lib/queries";
+import {
+  resolveTryoutsPageContent,
+  type TryoutsPageContent,
+} from "@/lib/tryouts-page-content";
 
 function eventDate(value: string | null): string {
   if (!value) return "TBA";
@@ -21,15 +25,24 @@ function eventDate(value: string | null): string {
 // (DCFC-D102's approved no-fabrication pattern — the CTA is a mailto to
 // the club's own published address, never a placeholder registration URL).
 // Published tryout rows render below with their real details and actions.
+//
+// Both hero paragraphs used to be string literals here. They make claims about
+// how this club runs its evaluations, so they are club content: they now come
+// from onzio.tryouts_page_content, editable at /admin/tryouts. `content` is
+// optional and an omitted or blank value resolves to the same approved wording
+// this component used to hardcode (lib/tryouts-page-content.ts).
 export default function AcademyTryoutsPage({
   tryouts,
   clubName = "the club",
   contactEmail = "",
+  content,
 }: {
   tryouts: TryoutContent[];
   clubName?: string;
   contactEmail?: string;
+  content?: TryoutsPageContent;
 }) {
+  const copy = content ?? resolveTryoutsPageContent(null);
   const hero = tryouts.find((item) => item.heroMediaUrl)?.heroMediaUrl ?? "";
   const hasTryouts = tryouts.length > 0;
   const email = contactEmail.trim();
@@ -60,9 +73,7 @@ export default function AcademyTryoutsPage({
             <span className="text-[#B9E3F6]">Join {clubName}</span>
           </h1>
           <p className="mt-8 max-w-2xl font-body text-base leading-8 text-white/75 md:text-lg">
-            {hasTryouts
-              ? "Review current club evaluations below. Registration, waivers, and participant information stay with the club's external provider."
-              : "Tryout dates and locations are still being finalized. Register your interest below to stay informed once details are announced."}
+            {hasTryouts ? copy.introWithTryouts : copy.introNoTryouts}
           </p>
           {!hasTryouts && email ? (
             <>
@@ -128,23 +139,25 @@ export default function AcademyTryoutsPage({
                       />
                     </div>
                   ) : null}
+                  {/* An event card carries a name, a status, logistics, and an
+                      action -- nothing else. The eyebrow label above the name
+                      ("CLUB EVALUATION" over "TRYOUT OPPORTUNITY") and the
+                      intro/eligibility prose blocks read as clutter rather than
+                      as information, so they no longer render. Following this
+                      repo's standing discipline the columns themselves
+                      (tryouts.eyebrow, .intro, .eligibility_copy,
+                      .what_to_expect_copy, .preparation_copy) stay in the
+                      schema and any stored values round-trip untouched through
+                      the admin editor -- only the UI is gone. */}
                   <div className="p-7 sm:p-10">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="font-display text-xs font-bold uppercase tracking-[0.16em] text-[#FF1616]">
-                        {tryout.eyebrow || "Club evaluation"}
-                      </p>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <h2 className="font-display text-[clamp(1.9rem,4vw,3.1rem)] font-black uppercase italic leading-[.95] text-[#1E3653]">
+                        {tryout.headline || "Tryout opportunity"}
+                      </h2>
                       <span className="bg-[#1E3653] px-3 py-1 font-display text-xs font-bold uppercase tracking-[0.14em] text-white">
                         {tryout.status}
                       </span>
                     </div>
-                    <h2 className="mt-4 font-display text-[clamp(1.9rem,4vw,3.1rem)] font-black uppercase italic leading-[.95] text-[#1E3653]">
-                      {tryout.headline || "Tryout opportunity"}
-                    </h2>
-                    {tryout.intro ? (
-                      <p className="mt-5 font-body leading-7 text-[#51667E]">
-                        {tryout.intro}
-                      </p>
-                    ) : null}
                     <dl className="mt-8 grid gap-px overflow-hidden bg-[#1E3653]/15 sm:grid-cols-3">
                       {[
                         ["Date", eventDate(tryout.eventDate)],
@@ -161,12 +174,6 @@ export default function AcademyTryoutsPage({
                         </div>
                       ))}
                     </dl>
-                    {tryout.eligibilityCopy ? (
-                      <p className="mt-7 font-body text-sm leading-6 text-[#51667E]">
-                        <strong className="text-[#1E3653]">Eligibility:</strong>{" "}
-                        {tryout.eligibilityCopy}
-                      </p>
-                    ) : null}
                     {tryout.status === "closed" && tryout.closedMessage ? (
                       <p className="mt-7 border border-[#1E3653]/15 bg-[#EDF2F7] p-5 font-body font-semibold text-[#1E3653]">
                         {tryout.closedMessage}

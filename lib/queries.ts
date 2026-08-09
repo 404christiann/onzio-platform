@@ -28,6 +28,7 @@ import {
   DBTryout,
   DBHomepageStorySection,
   DBProgramsPageContent,
+  DBTryoutsPageContent,
   SponsorLogoPlacement,
 } from "@/lib/db-types";
 import {
@@ -42,6 +43,10 @@ import {
   resolveProgramsPageContent,
   type ProgramsPageContent,
 } from "@/lib/programs-page-content";
+import {
+  resolveTryoutsPageContent,
+  type TryoutsPageContent,
+} from "@/lib/tryouts-page-content";
 import { coerceRating } from "@/lib/db-utils";
 import {
   DEFAULT_BEHIND_THE_ROSE_SECTION,
@@ -695,6 +700,28 @@ export async function fetchProgramsPageContent(
   if (error) throw new Error(`fetchProgramsPageContent: ${error.message}`);
   const row = ((data ?? []) as DBProgramsPageContent[])[0] ?? null;
   return resolveProgramsPageContent(row, clubName);
+}
+
+/**
+ * Fetches the two /tryouts page intro paragraphs for one tenant. The tryout
+ * events themselves come from `fetchTryouts`.
+ *
+ * A club with no row resolves to the approved template defaults, so the page
+ * renders exactly as it did when the copy lived in component source.
+ */
+export async function fetchTryoutsPageContent(
+  clubId: string,
+  client: typeof supabase = supabase,
+): Promise<TryoutsPageContent> {
+  const tenantId = requireVerifiedClubId(clubId);
+  const { data, error } = await client
+    .from("tryouts_page_content")
+    .select("*")
+    .eq("club_id", tenantId)
+    .limit(1);
+  if (error) throw new Error(`fetchTryoutsPageContent: ${error.message}`);
+  const row = ((data ?? []) as DBTryoutsPageContent[])[0] ?? null;
+  return resolveTryoutsPageContent(row);
 }
 
 /** Fetches the singleton shop kit section and its ordered photos. */

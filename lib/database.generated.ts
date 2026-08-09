@@ -2392,6 +2392,35 @@ export type Database = {
           },
         ]
       }
+      tryouts_page_content: {
+        Row: {
+          club_id: string
+          intro_no_tryouts: string
+          intro_with_tryouts: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          intro_no_tryouts?: string
+          intro_with_tryouts?: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          intro_no_tryouts?: string
+          intro_with_tryouts?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tryouts_page_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

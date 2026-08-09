@@ -25,6 +25,10 @@ export type DBProgramsPageContent = Tables<
   { schema: "onzio" },
   "programs_page_content"
 >;
+export type DBTryoutsPageContent = Tables<
+  { schema: "onzio" },
+  "tryouts_page_content"
+>;
 
 export type DBPlayer = {
   id: string;

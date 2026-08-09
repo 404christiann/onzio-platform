@@ -37,6 +37,7 @@ export const ADMIN_TABLE_FEATURES = {
   site_sponsor_logos: "branding",
   staff: "roster",
   tryouts: "tryouts",
+  tryouts_page_content: "tryouts",
 } as const;
 
 export type AdminTable = keyof typeof ADMIN_TABLE_FEATURES;
@@ -263,6 +264,16 @@ const programsPageMutation = z
   })
   .strict();
 
+// The two /tryouts page intro paragraphs. Ceilings mirror the CHECK
+// constraints in 20260809120000_tryouts_page_content.sql exactly, so an
+// over-long field surfaces as a form message instead of a database error.
+const tryoutsPageMutation = z
+  .object({
+    intro_with_tryouts: optionalText(320),
+    intro_no_tryouts: optionalText(320),
+  })
+  .strict();
+
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
   programs: programMutation,
   program_media: programMediaMutation,
@@ -271,6 +282,7 @@ const NEW_DOMAIN_MUTATION_SCHEMAS = {
   contact_profile: contactProfileMutation,
   contact_page_content: contactPageMutation,
   tryouts: tryoutMutation,
+  tryouts_page_content: tryoutsPageMutation,
 } as const;
 
 const filter = z.object({
@@ -426,4 +438,5 @@ export const SINGLETON_TABLES = new Set<AdminTable>([
   "programs_page_content",
   "shop_purchase_details",
   "site_branding",
+  "tryouts_page_content",
 ]);

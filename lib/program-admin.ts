@@ -5,10 +5,13 @@ import type {
 } from "@/lib/db-types";
 import { normalizePublicHref } from "@/lib/public-link";
 import {
+  normalizeProgramMedia,
   PROGRAM_MEDIA_LIMITS,
   PROGRAM_REGISTRATION_LIMITS,
+  resolveProgramRegistration,
 } from "@/lib/program-content";
 import { PROGRAMS_PAGE_LIMITS } from "@/lib/programs-page-content";
+import type { ProgramContent } from "@/lib/queries";
 
 /** One row of a program's ordered gallery, as edited in /admin/programs. */
 export type ProgramMediaDraft = {
@@ -323,6 +326,63 @@ export function buildProgramMutationPayload(
     registration_pending_label: draft.registrationPendingLabel.trim(),
     status: draft.status,
     sort_order: draft.sortOrder,
+  };
+}
+
+/**
+ * Turns an unsaved editor draft plus its gallery into the shape the public
+ * program detail template consumes, so /admin/programs can preview a draft
+ * through the real component and the real content rules instead of a second
+ * copy that can drift.
+ *
+ * Field values are taken from `buildProgramMutationPayload`, so the trimming
+ * matches a save exactly — the preview shows what publishing would produce,
+ * not what is currently typed. Registration copy and gallery images go through
+ * the same resolvers `mapProgram` uses in lib/queries.ts, which is what makes a
+ * blank registration field preview its template default and an unsaved,
+ * just-uploaded image appear in the slideshow.
+ */
+export function programDraftToContent(
+  draft: ProgramDraft,
+  gallery: readonly ProgramMediaDraft[] = [],
+): ProgramContent {
+  const payload = buildProgramMutationPayload(draft) as Record<string, unknown>;
+  const href = normalizePublicHref(String(payload.external_cta_href ?? ""));
+  const label = String(payload.external_cta_label ?? "");
+  return {
+    id: draft.id ?? "draft-program",
+    slug: String(payload.slug ?? ""),
+    navLabel: String(payload.nav_label ?? ""),
+    displayTitle: String(payload.display_title ?? ""),
+    kicker: String(payload.kicker ?? ""),
+    summary: String(payload.summary ?? ""),
+    body: String(payload.body ?? ""),
+    highlights: (payload.highlights as string[]) ?? [],
+    layoutVariant: draft.layoutVariant,
+    heroMediaUrl: draft.heroMediaPreviewUrl,
+    detailMediaUrl: draft.detailMediaPreviewUrl,
+    externalCta: href && label ? { label, href } : null,
+    registration: resolveProgramRegistration({
+      registration_enabled: draft.registrationEnabled,
+      registration_eyebrow: String(payload.registration_eyebrow ?? ""),
+      registration_headline: String(payload.registration_headline ?? ""),
+      registration_body: String(payload.registration_body ?? ""),
+      registration_pending_body: String(
+        payload.registration_pending_body ?? "",
+      ),
+      registration_pending_label: String(
+        payload.registration_pending_label ?? "",
+      ),
+    }),
+    media: normalizeProgramMedia(
+      gallery.map((item, index) => ({
+        id: item.id ?? `draft-media-${index}`,
+        url: item.url,
+        alt: item.alt,
+        sort_order: index,
+      })),
+    ),
+    sortOrder: draft.sortOrder,
   };
 }
 

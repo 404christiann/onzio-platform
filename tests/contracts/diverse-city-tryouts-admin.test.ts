@@ -1,15 +1,28 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { adminDataRequestSchema } from "@/lib/admin-data-contract";
+import {
+  ADMIN_TABLE_FEATURES,
+  adminDataRequestSchema,
+  SINGLETON_TABLES,
+} from "@/lib/admin-data-contract";
 import type { DBTryout } from "@/lib/db-types";
 import {
   buildTryoutMutationPayload,
+  buildTryoutsPageMutationPayload,
+  emptyTryoutsPageDraft,
   emptyTryoutDraft,
   moveTryout,
+  tryoutsPageToDraft,
   tryoutToDraft,
   validateTryoutDraft,
+  validateTryoutsPageDraft,
 } from "@/lib/tryout-admin";
+import {
+  DEFAULT_TRYOUTS_PAGE_CONTENT,
+  resolveTryoutsPageContent,
+  TRYOUTS_PAGE_LIMITS,
+} from "@/lib/tryouts-page-content";
 import { MEDIA_SURFACES } from "@/lib/storage-path";
 
 const TRYOUT_ID = "88888888-8888-4888-8888-888888888801";
@@ -173,6 +186,181 @@ describe("DCFC-303 Tryouts admin state and validation", () => {
   });
 });
 
+describe("Tryouts page intro copy", () => {
+  it("falls back to the approved wording for a missing row and for blanks", () => {
+    expect(resolveTryoutsPageContent(null)).toEqual(
+      DEFAULT_TRYOUTS_PAGE_CONTENT,
+    );
+    expect(
+      resolveTryoutsPageContent({
+        intro_with_tryouts: "",
+        intro_no_tryouts: "   ",
+      }),
+    ).toEqual(DEFAULT_TRYOUTS_PAGE_CONTENT);
+  });
+
+  it("reproduces the previously hardcoded sentences byte for byte", () => {
+    // A club with no row must render exactly what AcademyTryoutsPage used to
+    // hardcode; anything else is a silent copy change at deploy time.
+    expect(DEFAULT_TRYOUTS_PAGE_CONTENT.introWithTryouts).toBe(
+      "Review current club evaluations below. Registration, waivers, and participant information stay with the club's external provider.",
+    );
+    expect(DEFAULT_TRYOUTS_PAGE_CONTENT.introNoTryouts).toBe(
+      "Tryout dates and locations are still being finalized. Register your interest below to stay informed once details are announced.",
+    );
+    const component = readFileSync(
+      resolve(process.cwd(), "components/AcademyTryoutsPage.tsx"),
+      "utf8",
+    );
+    expect(component).not.toContain("Review current club evaluations below.");
+    expect(component).not.toContain("Tryout dates and locations are still");
+    expect(component).toContain(
+      "{hasTryouts ? copy.introWithTryouts : copy.introNoTryouts}",
+    );
+  });
+
+  it("lets a saved value win over the default, independently per field", () => {
+    expect(
+      resolveTryoutsPageContent({ intro_with_tryouts: "  Come and try out.  " }),
+    ).toEqual({
+      introWithTryouts: "Come and try out.",
+      introNoTryouts: DEFAULT_TRYOUTS_PAGE_CONTENT.introNoTryouts,
+    });
+  });
+
+  it("keeps the retired per-event prose off the public event card", () => {
+    const component = readFileSync(
+      resolve(process.cwd(), "components/AcademyTryoutsPage.tsx"),
+      "utf8",
+    );
+    for (const retired of [
+      "tryout.eyebrow",
+      "tryout.intro",
+      "tryout.eligibilityCopy",
+      "Club evaluation",
+      "Eligibility:",
+    ]) {
+      expect(component).not.toContain(retired);
+    }
+    // The name, the status, the logistics, and the action all still render.
+    expect(component).toContain('{tryout.headline || "Tryout opportunity"}');
+    expect(component).toContain("{tryout.status}");
+    expect(component).toContain("tryout.action");
+  });
+
+  it("drafts, validates, and normalizes the page-copy editor state", () => {
+    expect(emptyTryoutsPageDraft()).toEqual({
+      introWithTryouts: "",
+      introNoTryouts: "",
+    });
+    expect(tryoutsPageToDraft(null)).toEqual(emptyTryoutsPageDraft());
+    expect(
+      tryoutsPageToDraft({
+        intro_with_tryouts: "One",
+        intro_no_tryouts: "Two",
+      }),
+    ).toEqual({ introWithTryouts: "One", introNoTryouts: "Two" });
+
+    expect(validateTryoutsPageDraft(emptyTryoutsPageDraft())).toEqual({});
+    expect(
+      validateTryoutsPageDraft({
+        introWithTryouts: "x".repeat(TRYOUTS_PAGE_LIMITS.introWithTryouts + 1),
+        introNoTryouts: "x".repeat(TRYOUTS_PAGE_LIMITS.introNoTryouts),
+      }),
+    ).toMatchObject({ introWithTryouts: expect.any(String) });
+
+    const payload = buildTryoutsPageMutationPayload({
+      introWithTryouts: "  Come and try out.  ",
+      introNoTryouts: "",
+    });
+    expect(payload).toEqual({
+      intro_with_tryouts: "Come and try out.",
+      // Empty is preserved: it means "use the template default", not "render
+      // nothing".
+      intro_no_tryouts: "",
+    });
+    expect(payload).not.toHaveProperty("club_id");
+    expect(payload).not.toHaveProperty("clubId");
+  });
+
+  it("registers the table as a tryouts-gated per-club singleton", () => {
+    expect(ADMIN_TABLE_FEATURES.tryouts_page_content).toBe("tryouts");
+    expect(SINGLETON_TABLES.has("tryouts_page_content")).toBe(true);
+    expect(
+      adminDataRequestSchema.safeParse({
+        table: "tryouts_page_content",
+        operation: "upsert",
+        payload: { intro_with_tryouts: "Come and try out." },
+      }).success,
+    ).toBe(true);
+    // Ceilings mirror the migration's CHECK constraints.
+    expect(
+      adminDataRequestSchema.safeParse({
+        table: "tryouts_page_content",
+        operation: "upsert",
+        payload: { intro_with_tryouts: "x".repeat(321) },
+      }).success,
+    ).toBe(false);
+    // Strict schema: nothing outside the two approved columns.
+    expect(
+      adminDataRequestSchema.safeParse({
+        table: "tryouts_page_content",
+        operation: "upsert",
+        payload: { participant_email: "nope@example.test" },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("creates the table with RLS, feature-scoped policies, and grants", () => {
+    const migration = readFileSync(
+      resolve(
+        process.cwd(),
+        "supabase/migrations/20260809120000_tryouts_page_content.sql",
+      ),
+      "utf8",
+    );
+    expect(migration).toContain("create table onzio.tryouts_page_content");
+    expect(migration).toContain(
+      "club_id uuid primary key references onzio.clubs(id) on delete restrict",
+    );
+    expect(migration).toContain("intro_with_tryouts text not null default ''");
+    expect(migration).toContain("intro_no_tryouts text not null default ''");
+    expect(migration).toContain("check (char_length(intro_with_tryouts) <= 320)");
+    expect(migration).toContain("check (char_length(intro_no_tryouts) <= 320)");
+    expect(migration).toContain(
+      "alter table onzio.tryouts_page_content enable row level security",
+    );
+    expect(migration).toContain(
+      "onzio_private.can_read_feature(club_id, 'tryouts')",
+    );
+    expect(migration).toContain(
+      "onzio_private.can_mutate_feature(club_id, 'tryouts')",
+    );
+    expect(migration).toContain(
+      "grant select on onzio.tryouts_page_content to anon, authenticated",
+    );
+    expect(migration).toContain(
+      "grant insert, update, delete on onzio.tryouts_page_content to authenticated",
+    );
+    expect(migration).toContain(
+      "grant all on onzio.tryouts_page_content to service_role",
+    );
+  });
+
+  it("serves the resolved copy to the public page from the tenant route", () => {
+    const route = readFileSync(
+      resolve(process.cwd(), "app/%5Fclubs/[slug]/tryouts/page.tsx"),
+      "utf8",
+    );
+    expect(route).toContain("fetchTryoutsPageContent");
+    expect(route).toContain("content={content}");
+    // The route stays academy@1-only, exactly as before.
+    expect(route).toContain(
+      'if (club.presentationTemplateKey !== "academy@1") notFound();',
+    );
+  });
+});
+
 describe("DCFC-303 protected Tryouts admin surface", () => {
   const pageSource = readFileSync(
     resolve(process.cwd(), "app/admin/(protected)/tryouts/page.tsx"),
@@ -215,12 +403,9 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     for (const label of [
       "Program association",
       "Status",
-      "Eyebrow",
-      "Headline",
-      "Introduction",
-      "Eligibility",
-      "What to expect",
-      "Preparation",
+      // The merged single name field, stored in the existing `headline`
+      // column. It replaced the Eyebrow + Headline pair.
+      'label="Name"',
       "Event date",
       "Location",
       "Cost",
@@ -240,12 +425,76 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     }
   });
 
+  it("no longer offers the retired per-event copy editors", () => {
+    // The eyebrow/headline pair rendered as a small label stacked over a big
+    // heading, and the four long-form blocks were cut outright. Each is asserted
+    // as a `label="…"` prop so this cannot pass on an unrelated mention of the
+    // word inside a comment or a placeholder.
+    for (const retired of [
+      'label="Eyebrow"',
+      'label="Headline"',
+      'label="Introduction"',
+      'label="Eligibility"',
+      'label="What to expect"',
+      'label="Preparation"',
+    ]) {
+      expect(pageSource).not.toContain(retired);
+    }
+    // No input is bound to any of the retired drafts either.
+    for (const binding of [
+      "draft.eyebrow",
+      "draft.intro",
+      "draft.eligibilityCopy",
+      "draft.whatToExpectCopy",
+      "draft.preparationCopy",
+    ]) {
+      expect(pageSource).not.toContain(binding);
+    }
+    // The event list label falls back straight to "Untitled tryout" — the
+    // eyebrow is no longer a naming source anywhere.
+    expect(pageSource).not.toContain("tryout.eyebrow");
+    expect(pageSource).toContain('{tryout.headline || "Untitled tryout"}');
+  });
+
+  it("keeps the retired columns writable so stored values survive a save", () => {
+    // "Hide the UI, do not drop the column": the payload still round-trips
+    // every retired field, so saving a tryout through the simplified editor
+    // cannot blank content a club entered before the simplification.
+    const payload = buildTryoutMutationPayload(tryoutToDraft(tryout()));
+    expect(payload).toMatchObject({
+      eyebrow: "UPSL tryouts",
+      intro: "Meet the staff and compete in a professional environment.",
+      eligibility_copy: "Open to eligible players age 18 and older.",
+      what_to_expect_copy: "Technical and small-sided evaluation.",
+      preparation_copy: "Bring boots, water, and identification.",
+    });
+  });
+
   it("adds a secure Tryouts media surface", () => {
     expect(MEDIA_SURFACES).toContain("tryouts");
     expect(clientSource).toContain(
       'tryouts: { surface: "tryouts", kind: "photo" }',
     );
     expect(migrationSource).toContain("when 'tryouts' then 'tryouts'");
+  });
+
+  it("edits both page-level intro paragraphs above the event list", () => {
+    for (const label of [
+      "Tryouts page intro",
+      "Intro shown when tryouts are published",
+      "Intro shown when none are published",
+    ]) {
+      expect(pageSource).toContain(label);
+    }
+    // Its own save action, following the "each section saves independently"
+    // pattern the Shop and Programs editors already use.
+    expect(pageSource).toContain("Save page intro");
+    expect(pageSource).toMatch(
+      /createClient\(\)\s*\.from\("tryouts_page_content"\)/,
+    );
+    expect(pageSource).toContain("savePageCopy");
+    // The preview reflects the unsaved page-copy draft, not just saved rows.
+    expect(pageSource).toContain("content={previewPageContent}");
   });
 
   it("keeps registration external and stores no participant, payment, waiver, medical, or FAQ data", () => {

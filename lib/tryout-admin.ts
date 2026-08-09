@@ -1,8 +1,20 @@
-import type { DBTryout } from "@/lib/db-types";
+import type { DBTryout, DBTryoutsPageContent } from "@/lib/db-types";
 import { normalizePublicHref } from "@/lib/public-link";
+import { TRYOUTS_PAGE_LIMITS } from "@/lib/tryouts-page-content";
 
 export type TryoutStatus = "upcoming" | "open" | "closed";
 
+/**
+ * One tryout event as edited in /admin/tryouts.
+ *
+ * `eyebrow`, `intro`, `eligibilityCopy`, `whatToExpectCopy`, and
+ * `preparationCopy` no longer have inputs in the editor and no longer render on
+ * the public page. They stay on the draft — and stay in
+ * `buildTryoutMutationPayload` — deliberately: this repo's discipline is to
+ * hide retired UI without dropping the column, and keeping them here means any
+ * value a club already stored round-trips through a save untouched rather than
+ * being silently blanked. `headline` is the editor's single "Name" field.
+ */
 export type TryoutDraft = {
   id: string | null;
   programId: string | null;
@@ -128,7 +140,9 @@ export function validateTryoutDraft(
   const errors: TryoutValidationErrors = {};
   for (const [field, value, maximum, label] of [
     ["eyebrow", draft.eyebrow, 80, "Eyebrow"],
-    ["headline", draft.headline, 80, "Headline"],
+    // Surfaced in the editor as "Name" since the eyebrow/headline pair was
+    // merged into one field; the column is still `headline`.
+    ["headline", draft.headline, 80, "Name"],
     ["intro", draft.intro, 320, "Introduction"],
     ["eligibilityCopy", draft.eligibilityCopy, 2_000, "Eligibility"],
     ["whatToExpectCopy", draft.whatToExpectCopy, 2_000, "What to expect"],
@@ -201,6 +215,65 @@ export function tryoutDraftToRow(draft: TryoutDraft): AdminTryoutRow {
     club_id: "",
     hero_media_url: draft.heroMediaPreviewUrl,
   } as AdminTryoutRow;
+}
+
+/**
+ * The two /tryouts page intro paragraphs as edited in /admin/tryouts.
+ *
+ * Like the program registration fields, empty is preserved: it means "use the
+ * approved template wording" (lib/tryouts-page-content.ts), which is what the
+ * form shows as each input's placeholder.
+ */
+export type TryoutsPageDraft = {
+  introWithTryouts: string;
+  introNoTryouts: string;
+};
+
+export type TryoutsPageValidationErrors = Partial<
+  Record<keyof TryoutsPageDraft, string>
+>;
+
+const TRYOUTS_PAGE_FIELD_LABELS: Record<keyof TryoutsPageDraft, string> = {
+  introWithTryouts: "Intro shown when tryouts are published",
+  introNoTryouts: "Intro shown when none are published",
+};
+
+export function emptyTryoutsPageDraft(): TryoutsPageDraft {
+  return { introWithTryouts: "", introNoTryouts: "" };
+}
+
+export function tryoutsPageToDraft(
+  row: Partial<DBTryoutsPageContent> | null | undefined,
+): TryoutsPageDraft {
+  if (!row) return emptyTryoutsPageDraft();
+  return {
+    introWithTryouts: row.intro_with_tryouts ?? "",
+    introNoTryouts: row.intro_no_tryouts ?? "",
+  };
+}
+
+export function validateTryoutsPageDraft(
+  draft: TryoutsPageDraft,
+): TryoutsPageValidationErrors {
+  const errors: TryoutsPageValidationErrors = {};
+  for (const field of Object.keys(draft) as Array<keyof TryoutsPageDraft>) {
+    const error = lengthError(
+      draft[field],
+      TRYOUTS_PAGE_LIMITS[field],
+      TRYOUTS_PAGE_FIELD_LABELS[field],
+    );
+    if (error) errors[field] = error;
+  }
+  return errors;
+}
+
+export function buildTryoutsPageMutationPayload(
+  draft: TryoutsPageDraft,
+): Record<string, unknown> {
+  return {
+    intro_with_tryouts: draft.introWithTryouts.trim(),
+    intro_no_tryouts: draft.introNoTryouts.trim(),
+  };
 }
 
 export function moveTryout(

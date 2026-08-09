@@ -6,18 +6,34 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
-import type { DBContactProfile, DBProgram, DBTryout } from "@/lib/db-types";
+import type {
+  DBContactProfile,
+  DBProgram,
+  DBTryout,
+  DBTryoutsPageContent,
+} from "@/lib/db-types";
 import { mapTryout } from "@/lib/queries";
 import {
   buildTryoutMutationPayload,
+  buildTryoutsPageMutationPayload,
   emptyTryoutDraft,
+  emptyTryoutsPageDraft,
   moveTryout,
   tryoutDraftToRow,
+  tryoutsPageToDraft,
   tryoutToDraft,
   validateTryoutDraft,
+  validateTryoutsPageDraft,
   type TryoutDraft,
+  type TryoutsPageDraft,
+  type TryoutsPageValidationErrors,
   type TryoutValidationErrors,
 } from "@/lib/tryout-admin";
+import {
+  DEFAULT_TRYOUTS_PAGE_CONTENT,
+  resolveTryoutsPageContent,
+  TRYOUTS_PAGE_LIMITS,
+} from "@/lib/tryouts-page-content";
 
 type ProgramOption = Pick<DBProgram, "id" | "display_title">;
 
@@ -61,24 +77,48 @@ export default function AdminTryoutsPage() {
   // the club's own published address, so the preview needs that address to be
   // honest about what a visitor would actually see.
   const [contactEmail, setContactEmail] = useState("");
+  // The two /tryouts intro paragraphs are a per-club singleton
+  // (onzio.tryouts_page_content), not part of any one event, so they have their
+  // own draft, their own validation, and their own save button — the same
+  // "each section saves independently" shape /admin/shop and /admin/programs
+  // already use.
+  const [pageCopy, setPageCopy] = useState<TryoutsPageDraft>(
+    emptyTryoutsPageDraft,
+  );
+  const [pageCopyErrors, setPageCopyErrors] =
+    useState<TryoutsPageValidationErrors>({});
+  const [pageCopyDirty, setPageCopyDirty] = useState(false);
+  const [pageCopySaving, setPageCopySaving] = useState(false);
+  const [pageCopySaved, setPageCopySaved] = useState(false);
+  const [pageCopyError, setPageCopyError] = useState<string | null>(null);
 
   const loadTryouts = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      const [tryoutsResult, programsResult, contactResult] = await Promise.all([
-        createClient()
-          .from("tryouts")
-          .select("*")
-          .order("sort_order", { ascending: true }),
-        createClient()
-          .from("programs")
-          .select("id, display_title")
-          .order("sort_order", { ascending: true }),
-        createClient().from("contact_profile").select("public_email").limit(1),
-      ]);
-      const loadError = tryoutsResult.error ?? programsResult.error;
+      const [tryoutsResult, programsResult, contactResult, pageCopyResult] =
+        await Promise.all([
+          createClient()
+            .from("tryouts")
+            .select("*")
+            .order("sort_order", { ascending: true }),
+          createClient()
+            .from("programs")
+            .select("id, display_title")
+            .order("sort_order", { ascending: true }),
+          createClient().from("contact_profile").select("public_email").limit(1),
+          createClient().from("tryouts_page_content").select("*").limit(1),
+        ]);
+      const loadError =
+        tryoutsResult.error ?? programsResult.error ?? pageCopyResult.error;
       if (loadError) throw new Error(loadError.message);
+      setPageCopy(
+        tryoutsPageToDraft(
+          ((pageCopyResult.data ?? []) as DBTryoutsPageContent[])[0] ?? null,
+        ),
+      );
+      setPageCopyErrors({});
+      setPageCopyDirty(false);
       setContactEmail(
         ((contactResult.data ?? []) as Pick<
           DBContactProfile,
@@ -123,6 +163,48 @@ export default function AdminTryoutsPage() {
     setDraft((current) => (current ? { ...current, [field]: value } : current));
     setErrors((current) => ({ ...current, [field]: undefined }));
     markDirty();
+  }
+
+  function updatePageCopy<K extends keyof TryoutsPageDraft>(
+    field: K,
+    value: TryoutsPageDraft[K],
+  ) {
+    setPageCopy((current) => ({ ...current, [field]: value }));
+    setPageCopyErrors((current) => ({ ...current, [field]: undefined }));
+    setPageCopyDirty(true);
+    setPageCopySaved(false);
+    setPageCopyError(null);
+  }
+
+  async function savePageCopy() {
+    const validation = validateTryoutsPageDraft(pageCopy);
+    if (Object.keys(validation).length > 0) {
+      setPageCopyErrors(validation);
+      setPageCopyError("Review the highlighted fields before saving.");
+      return;
+    }
+
+    setPageCopySaving(true);
+    setPageCopySaved(false);
+    setPageCopyError(null);
+    try {
+      const { data, error: saveError } = await createClient()
+        .from("tryouts_page_content")
+        .upsert(buildTryoutsPageMutationPayload(pageCopy))
+        .select("*")
+        .single();
+      if (saveError || !data) {
+        throw new Error(saveError?.message ?? "Unable to save the page copy");
+      }
+      setPageCopy(tryoutsPageToDraft(data as DBTryoutsPageContent));
+      setPageCopyDirty(false);
+      setPageCopyErrors({});
+      setPageCopySaved(true);
+    } catch (saveError) {
+      setPageCopyError(errorMessage(saveError, "Unable to save the page copy"));
+    } finally {
+      setPageCopySaving(false);
+    }
   }
 
   function selectTryout(tryout: TryoutDraft) {
@@ -269,6 +351,11 @@ export default function AdminTryoutsPage() {
   const previewTryouts = previewRows.map((tryout) =>
     mapTryout(tryoutDraftToRow(tryout), contactEmail),
   );
+  // Resolved through the same rule the public page uses, so a blank field
+  // previews the template default rather than an empty paragraph.
+  const previewPageContent = resolveTryoutsPageContent(
+    buildTryoutsPageMutationPayload(pageCopy) as Partial<DBTryoutsPageContent>,
+  );
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -301,6 +388,82 @@ export default function AdminTryoutsPage() {
         </div>
       )}
 
+      {!loading && (
+        <section className="mb-6 rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                Tryouts page intro
+              </h2>
+              <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
+                The paragraph at the top of your public Tryouts page. The page
+                shows one of these two depending on whether you have any events
+                published. Leave a field empty to keep the standard wording
+                shown as its placeholder.
+              </p>
+            </div>
+            {pageCopyDirty && (
+              <span className="self-start rounded-full bg-amber-300/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-amber-200">
+                Unsaved changes
+              </span>
+            )}
+          </div>
+
+          {pageCopyError && (
+            <div className="mb-5 rounded-lg border border-red-400/25 bg-red-400/[0.08] px-4 py-3 font-body text-sm text-red-200" role="alert">
+              {pageCopyError}
+            </div>
+          )}
+
+          <div className="grid gap-5">
+            <Field
+              label="Intro shown when tryouts are published"
+              error={pageCopyErrors.introWithTryouts}
+            >
+              <textarea
+                className={`${INPUT_CLASS} min-h-24 resize-y`}
+                value={pageCopy.introWithTryouts}
+                onChange={(event) =>
+                  updatePageCopy("introWithTryouts", event.target.value)
+                }
+                maxLength={TRYOUTS_PAGE_LIMITS.introWithTryouts}
+                placeholder={DEFAULT_TRYOUTS_PAGE_CONTENT.introWithTryouts}
+              />
+            </Field>
+            <Field
+              label="Intro shown when none are published"
+              error={pageCopyErrors.introNoTryouts}
+            >
+              <textarea
+                className={`${INPUT_CLASS} min-h-24 resize-y`}
+                value={pageCopy.introNoTryouts}
+                onChange={(event) =>
+                  updatePageCopy("introNoTryouts", event.target.value)
+                }
+                maxLength={TRYOUTS_PAGE_LIMITS.introNoTryouts}
+                placeholder={DEFAULT_TRYOUTS_PAGE_CONTENT.introNoTryouts}
+              />
+            </Field>
+          </div>
+
+          <div className="mt-6 flex items-center gap-4 border-t border-white/[0.06] pt-6">
+            <button
+              type="button"
+              onClick={() => void savePageCopy()}
+              disabled={pageCopySaving || !pageCopyDirty}
+              className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              {pageCopySaving ? "Saving…" : "Save page intro"}
+            </button>
+            {pageCopySaved && !pageCopyDirty && (
+              <span className="font-body text-xs text-emerald-300" role="status">
+                Page intro saved
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
       {loading ? (
         <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] px-6 py-16 text-center font-body text-sm text-white/45" role="status">
           Loading tryout events…
@@ -328,7 +491,7 @@ export default function AdminTryoutsPage() {
                 <div key={tryout.id} className={`rounded-xl border p-2 ${draft?.id === tryout.id ? "border-red-500/35 bg-red-500/[0.08]" : "border-white/[0.05] bg-white/[0.02]"}`}>
                   <button type="button" onClick={() => selectTryout(tryout)} className="w-full rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-red-400/60">
                     <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-white">
-                      {tryout.headline || tryout.eyebrow || "Untitled tryout"}
+                      {tryout.headline || "Untitled tryout"}
                     </span>
                     <span className="mt-1 block font-body text-xs text-white/35">
                       {tryout.eventDate || "Date TBA"}
@@ -354,7 +517,7 @@ export default function AdminTryoutsPage() {
                     {draft.id ? "Edit tryout" : "New tryout"}
                   </p>
                   <h2 className="mt-1 font-display text-2xl font-black uppercase text-white">
-                    {draft.headline || draft.eyebrow || "Untitled tryout"}
+                    {draft.headline || "Untitled tryout"}
                   </h2>
                 </div>
                 {dirty && <span className="self-start rounded-full bg-amber-300/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-amber-200">Unsaved changes</span>}
@@ -376,29 +539,18 @@ export default function AdminTryoutsPage() {
                     <option value="closed">Closed — registration is hidden</option>
                   </select>
                 </Field>
-                <Field label="Eyebrow" error={errors.eyebrow}>
-                  <input className={INPUT_CLASS} value={draft.eyebrow} onChange={(event) => updateDraft("eyebrow", event.target.value)} maxLength={80} />
+                {/* One "Name" field, stored in the existing `headline`
+                    column. The separate Eyebrow input was removed with it: the
+                    pair rendered as a small label stacked over a big heading
+                    ("CLUB EVALUATION" over "TRYOUT OPPORTUNITY"), which reads
+                    as clutter rather than as a name. The Introduction,
+                    Eligibility, What to expect, and Preparation editors were
+                    removed for the same reason. Every one of those columns
+                    stays in the schema and any stored value round-trips
+                    untouched through a save — only the inputs are gone. */}
+                <Field label="Name" error={errors.headline}>
+                  <input className={INPUT_CLASS} value={draft.headline} onChange={(event) => updateDraft("headline", event.target.value)} maxLength={80} placeholder="Spring evaluation" />
                 </Field>
-                <Field label="Headline" error={errors.headline}>
-                  <input className={INPUT_CLASS} value={draft.headline} onChange={(event) => updateDraft("headline", event.target.value)} maxLength={80} />
-                </Field>
-              </div>
-
-              <div className="mt-5 space-y-5">
-                <Field label="Introduction" error={errors.intro}>
-                  <textarea className={`${INPUT_CLASS} min-h-24 resize-y`} value={draft.intro} onChange={(event) => updateDraft("intro", event.target.value)} maxLength={320} />
-                </Field>
-                <div className="grid gap-5 lg:grid-cols-3">
-                  <Field label="Eligibility" error={errors.eligibilityCopy}>
-                    <textarea className={`${INPUT_CLASS} min-h-32 resize-y`} value={draft.eligibilityCopy} onChange={(event) => updateDraft("eligibilityCopy", event.target.value)} maxLength={2000} />
-                  </Field>
-                  <Field label="What to expect" error={errors.whatToExpectCopy}>
-                    <textarea className={`${INPUT_CLASS} min-h-32 resize-y`} value={draft.whatToExpectCopy} onChange={(event) => updateDraft("whatToExpectCopy", event.target.value)} maxLength={2000} />
-                  </Field>
-                  <Field label="Preparation" error={errors.preparationCopy}>
-                    <textarea className={`${INPUT_CLASS} min-h-32 resize-y`} value={draft.preparationCopy} onChange={(event) => updateDraft("preparationCopy", event.target.value)} maxLength={2000} />
-                  </Field>
-                </div>
               </div>
 
               <div className="mt-7 grid gap-5 border-t border-white/[0.06] pt-7 sm:grid-cols-3">
@@ -487,6 +639,7 @@ export default function AdminTryoutsPage() {
               tryouts={previewTryouts}
               clubName={club.name}
               contactEmail={contactEmail}
+              content={previewPageContent}
             />
           </div>
         </section>

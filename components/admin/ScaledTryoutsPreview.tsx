@@ -3,6 +3,7 @@
 import AcademyTryoutsPage from "@/components/AcademyTryoutsPage";
 import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
 import type { TryoutContent } from "@/lib/queries";
+import type { TryoutsPageContent } from "@/lib/tryouts-page-content";
 
 /**
  * Live-style preview for /admin/tryouts. The scaling itself lives in
@@ -13,12 +14,15 @@ interface ScaledTryoutsPreviewProps {
   tryouts: TryoutContent[];
   clubName: string;
   contactEmail: string;
+  /** Page-level intro copy, resolved from the unsaved page-copy draft. */
+  content: TryoutsPageContent;
 }
 
 export default function ScaledTryoutsPreview({
   tryouts,
   clubName,
   contactEmail,
+  content,
 }: ScaledTryoutsPreviewProps) {
   return (
     <ScaledPagePreview className="bg-[#F9FAFD]">
@@ -26,6 +30,7 @@ export default function ScaledTryoutsPreview({
         tryouts={tryouts}
         clubName={clubName}
         contactEmail={contactEmail}
+        content={content}
       />
     </ScaledPagePreview>
   );
