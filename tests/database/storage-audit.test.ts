@@ -199,6 +199,75 @@ describe("admin media staging signed-upload contract", () => {
   });
 });
 
+// Every /admin image surface, not just the two that happened to be checked when
+// the staging INSERT policy was last repaired. MEDIA_AUTH_FAILED has now been
+// reported twice, and the second report named surfaces (schedule, about,
+// standings, branding) that had no coverage at all — a per-surface regression
+// could hide indefinitely. `onzio_staging_member_insert` maps the path's second
+// segment through a CASE whose default is 'branding', so these deliberately
+// span both sides of it: contact/programs/tryouts/shop/standings hit named
+// arms, about/branding/homepage/roster/schedule fall through the default.
+//
+// Bravo is the club under test on purpose. It is `tier=starter`, and under the
+// pre-PLAT-102 model 'programs' and 'tryouts' were Pro-only feature strings
+// (DCFC-D108). Those two paths succeeding for a Starter club is the direct
+// proof that `onzio_private.can_mutate_feature` no longer consults its feature
+// argument at all — it delegates straight to `can_mutate_content` — and
+// therefore that the CASE expression in the policy, including its
+// `else 'branding'` default, cannot be the cause of any upload failure.
+describe("admin media staging signed-upload coverage, every surface", () => {
+  const MEDIA_SURFACES = [
+    "about",
+    "branding",
+    "contact",
+    "homepage",
+    "programs",
+    "roster",
+    "schedule",
+    "shop",
+    "standings",
+    "tryouts",
+  ] as const;
+
+  const uploadId = (index: number) =>
+    `bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb${String(9000 + index)}`;
+  const pathFor = (surface: string, index: number) =>
+    `${CLUB_IDS.bravo}/${surface}/${uploadId(index)}.webp`;
+  const sessionCleanups: Array<() => Promise<void>> = [];
+
+  afterEach(async () => {
+    while (sessionCleanups.length > 0) {
+      await sessionCleanups.pop()?.();
+    }
+    await clients.service.storage
+      .from("onzio-upload-staging")
+      .remove(MEDIA_SURFACES.map((surface, index) => pathFor(surface, index)));
+  });
+
+  it.each(MEDIA_SURFACES.map((surface, index) => [surface, index] as const))(
+    "signs a staging upload on the %s surface for a Starter club's member",
+    async (surface, index) => {
+      const session = await createFreshLocalClient({
+        email: "admin@bravo.local",
+        userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa7",
+      });
+      sessionCleanups.push(session.cleanup);
+
+      const path = pathFor(surface, index);
+      const { data, error } = await session.client.storage
+        .from("onzio-upload-staging")
+        .createSignedUploadUrl(path, { upsert: false });
+
+      expect(
+        error?.message,
+        `the ${surface} surface must be signable: /admin cannot upload without it`,
+      ).toBeUndefined();
+      expect(data?.path).toBe(path);
+      expect(typeof data?.token).toBe("string");
+    },
+  );
+});
+
 describe("database audit contract", () => {
   it("records successful content mutations without secrets", async () => {
     const marker = `audit-contract-${Date.now()}`;
