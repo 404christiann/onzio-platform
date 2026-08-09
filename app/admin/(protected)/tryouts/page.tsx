@@ -30,7 +30,6 @@ import {
   type TryoutValidationErrors,
 } from "@/lib/tryout-admin";
 import {
-  DEFAULT_TRYOUTS_PAGE_CONTENT,
   resolveTryoutsPageContent,
   TRYOUTS_PAGE_LIMITS,
 } from "@/lib/tryouts-page-content";
@@ -398,8 +397,9 @@ export default function AdminTryoutsPage() {
               <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
                 The paragraph at the top of your public Tryouts page. The page
                 shows one of these two depending on whether you have any events
-                published. Leave a field empty to keep the standard wording
-                shown as its placeholder.
+                published. Both start filled in with the standard wording —
+                edit it, or clear a field to keep it updating automatically if
+                the standard wording ever changes.
               </p>
             </div>
             {pageCopyDirty && (
@@ -427,7 +427,6 @@ export default function AdminTryoutsPage() {
                   updatePageCopy("introWithTryouts", event.target.value)
                 }
                 maxLength={TRYOUTS_PAGE_LIMITS.introWithTryouts}
-                placeholder={DEFAULT_TRYOUTS_PAGE_CONTENT.introWithTryouts}
               />
             </Field>
             <Field
@@ -441,7 +440,6 @@ export default function AdminTryoutsPage() {
                   updatePageCopy("introNoTryouts", event.target.value)
                 }
                 maxLength={TRYOUTS_PAGE_LIMITS.introNoTryouts}
-                placeholder={DEFAULT_TRYOUTS_PAGE_CONTENT.introNoTryouts}
               />
             </Field>
           </div>

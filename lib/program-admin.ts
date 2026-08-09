@@ -114,6 +114,14 @@ export type AdminProgramRow = DBProgram & {
 };
 
 export function programToDraft(row: AdminProgramRow): ProgramDraft {
+  // The registration copy fields show the real template default as a real,
+  // editable value rather than a placeholder hint that vanishes on focus —
+  // Christian found the placeholder-only pattern confusing (2026-08-09). This
+  // is a display/editing convenience only: an admin who clears a field back
+  // to empty and saves still gets the "use the live template default" blank
+  // state, since the resolver used here treats blank exactly as it always
+  // has (lib/program-content.ts's resolveProgramRegistration).
+  const registration = resolveProgramRegistration(row);
   return {
     id: row.id,
     slug: row.slug,
@@ -132,11 +140,11 @@ export function programToDraft(row: AdminProgramRow): ProgramDraft {
     externalCtaLabel: row.external_cta_label,
     externalCtaHref: row.external_cta_href,
     registrationEnabled: row.registration_enabled === true,
-    registrationEyebrow: row.registration_eyebrow,
-    registrationHeadline: row.registration_headline,
-    registrationBody: row.registration_body,
-    registrationPendingBody: row.registration_pending_body,
-    registrationPendingLabel: row.registration_pending_label,
+    registrationEyebrow: registration.eyebrow,
+    registrationHeadline: registration.headline,
+    registrationBody: registration.body,
+    registrationPendingBody: registration.pendingBody,
+    registrationPendingLabel: registration.pendingLabel,
     status: row.status === "hidden" ? "hidden" : "active",
     sortOrder: row.sort_order,
   };

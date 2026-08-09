@@ -1,6 +1,9 @@
 import type { DBTryout, DBTryoutsPageContent } from "@/lib/db-types";
 import { normalizePublicHref } from "@/lib/public-link";
-import { TRYOUTS_PAGE_LIMITS } from "@/lib/tryouts-page-content";
+import {
+  resolveTryoutsPageContent,
+  TRYOUTS_PAGE_LIMITS,
+} from "@/lib/tryouts-page-content";
 
 export type TryoutStatus = "upcoming" | "open" | "closed";
 
@@ -239,17 +242,21 @@ const TRYOUTS_PAGE_FIELD_LABELS: Record<keyof TryoutsPageDraft, string> = {
 };
 
 export function emptyTryoutsPageDraft(): TryoutsPageDraft {
-  return { introWithTryouts: "", introNoTryouts: "" };
+  return resolveTryoutsPageContent(null);
 }
 
+/**
+ * Shows the resolved template default as a real, editable value rather than
+ * a placeholder hint (Christian found the placeholder-only pattern
+ * confusing, 2026-08-09). This is a display/editing convenience only: a club
+ * that clears a field back to empty and saves still gets the "use the live
+ * template default" blank state, since resolveTryoutsPageContent treats
+ * blank exactly as it always has.
+ */
 export function tryoutsPageToDraft(
   row: Partial<DBTryoutsPageContent> | null | undefined,
 ): TryoutsPageDraft {
-  if (!row) return emptyTryoutsPageDraft();
-  return {
-    introWithTryouts: row.intro_with_tryouts ?? "",
-    introNoTryouts: row.intro_no_tryouts ?? "",
-  };
+  return resolveTryoutsPageContent(row);
 }
 
 export function validateTryoutsPageDraft(

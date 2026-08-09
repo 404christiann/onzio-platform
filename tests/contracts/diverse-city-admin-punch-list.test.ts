@@ -16,6 +16,10 @@ const PUBLIC_SCHEDULE = "app/(public)/schedule/page.tsx";
 const ADMIN_CLIENT = "lib/admin-client.ts";
 const ACADEMY_SHOP_PAGE = "components/AcademyShopPage.tsx";
 const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
+const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
+const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
+const HOMEPAGE_ADMIN = "app/admin/(protected)/homepage/page.tsx";
+const BRANDING_ADMIN = "app/admin/(protected)/branding/page.tsx";
 
 /**
  * Christian reported four admin-portal failures against the live Diverse City
@@ -353,6 +357,58 @@ describe("Diverse City admin punch list", () => {
       const matches = roster.match(/rosterImageForStorage\(\w+\.photo_url\)/g) ?? [];
       // Two for players (add/edit) already existed; two more for staff (add/edit).
       expect(matches.length).toBeGreaterThanOrEqual(4);
+    });
+  });
+
+  describe("template-default text fields show real text, not just a placeholder hint", () => {
+    // Christian: the box looked empty even though the live page showed real
+    // text -- there was no visible difference between "nothing here yet" and
+    // "the real text is on the site." Fixed in four places he named. Choice
+    // confirmed with him: an unedited save now writes the literal default
+    // text (not blank), trading away silent future-template-update
+    // inheritance for a box that never looks empty when it isn't.
+
+    it("Programs Registration tab: no placeholder props remain on the copy fields", () => {
+      const programs = source(PROGRAMS_ADMIN);
+      expect(programs).not.toContain("placeholder={DEFAULT_PROGRAM_REGISTRATION_CONTENT");
+      expect(programs).not.toContain("DEFAULT_PROGRAM_REGISTRATION_CONTENT");
+    });
+
+    it("Programs: programToDraft resolves registration copy against the template default", () => {
+      const admin = source("lib/program-admin.ts");
+      expect(admin).toContain("resolveProgramRegistration(row)");
+      expect(admin).toContain("registrationEyebrow: registration.eyebrow");
+    });
+
+    it("Tryouts page intro: no placeholder props remain on the copy fields", () => {
+      const tryouts = source(TRYOUTS_ADMIN);
+      expect(tryouts).not.toContain("placeholder={DEFAULT_TRYOUTS_PAGE_CONTENT");
+    });
+
+    it("Tryouts: emptyTryoutsPageDraft and tryoutsPageToDraft both resolve against the default", () => {
+      const admin = source("lib/tryout-admin.ts");
+      expect(admin).toContain("return resolveTryoutsPageContent(null)");
+      expect(admin).toContain("return resolveTryoutsPageContent(row)");
+    });
+
+    it("Homepage Story tab: no placeholder props remain on the copy fields", () => {
+      const homepage = source(HOMEPAGE_ADMIN);
+      expect(homepage).not.toContain("placeholder={storyDefaults");
+    });
+
+    it("Homepage: the story draft resolves against the template default, per club name", () => {
+      const content = source("lib/homepage-content.ts");
+      expect(content).toContain("resolveHomepageStorySection(row, clubName)");
+      expect(content).toContain("resolveHomepageStorySection(null, clubName)");
+      const homepage = source(HOMEPAGE_ADMIN);
+      expect(homepage).toContain("emptyHomepageStoryDraft(club.name)");
+      expect(homepage).toContain("homepageStoryToDraft(");
+    });
+
+    it("Branding Footer tagline: no placeholder prop remains, and the load resolves the default", () => {
+      const branding = source(BRANDING_ADMIN);
+      expect(branding).not.toContain("placeholder={DEFAULT_ACADEMY_FOOTER_TAGLINE}");
+      expect(branding).toContain("resolveFooterTagline(row?.footer_tagline)");
     });
   });
 });

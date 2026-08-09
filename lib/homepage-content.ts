@@ -5,7 +5,10 @@ import type {
   DBHomepageSlideshowPhoto,
   DBHomepageStorySection,
 } from "@/lib/db-types";
-import { HOMEPAGE_STORY_LIMITS } from "@/lib/homepage-story-content";
+import {
+  HOMEPAGE_STORY_LIMITS,
+  resolveHomepageStorySection,
+} from "@/lib/homepage-story-content";
 import { onzioMediaStoragePathFromPublicUrl } from "@/lib/media-url";
 
 export const MAX_HOMEPAGE_SLIDESHOW_PHOTOS = 6;
@@ -69,10 +72,12 @@ export const DEFAULT_BEHIND_THE_ROSE_SECTION: DBBehindTheRoseSection = {
 /**
  * The homepage story band as edited in /admin/homepage.
  *
- * Empty strings are preserved rather than replaced with the template default:
- * an empty column means "use the approved academy@1 wording"
- * (lib/homepage-story-content.ts), so the form shows the default as a
- * placeholder and saves "" when the club has not overridden it.
+ * Shows the resolved template default as a real, editable value rather than
+ * a placeholder hint (Christian found the placeholder-only pattern confusing,
+ * 2026-08-09). This is a display/editing convenience only: a club that clears
+ * a field back to empty and saves still gets the "use the live template
+ * default" blank state on the public page, since resolveHomepageStorySection
+ * treats blank exactly as it always has.
  */
 export type HomepageStoryDraft = {
   visible: boolean;
@@ -86,26 +91,28 @@ export type HomepageStoryValidationErrors = Partial<
   Record<"heading" | "bodyPrimary" | "bodySecondary" | "ctaLabel", string>
 >;
 
-export function emptyHomepageStoryDraft(): HomepageStoryDraft {
+export function emptyHomepageStoryDraft(clubName: string): HomepageStoryDraft {
+  const defaults = resolveHomepageStorySection(null, clubName);
   return {
     visible: true,
-    heading: "",
-    bodyPrimary: "",
-    bodySecondary: "",
-    ctaLabel: "",
+    heading: defaults.heading,
+    bodyPrimary: defaults.bodyPrimary,
+    bodySecondary: defaults.bodySecondary,
+    ctaLabel: defaults.ctaLabel,
   };
 }
 
 export function homepageStoryToDraft(
   row: Partial<DBHomepageStorySection> | null | undefined,
+  clubName: string,
 ): HomepageStoryDraft {
-  if (!row) return emptyHomepageStoryDraft();
+  const resolved = resolveHomepageStorySection(row, clubName);
   return {
-    visible: row.visible !== false,
-    heading: row.heading ?? "",
-    bodyPrimary: row.body_primary ?? "",
-    bodySecondary: row.body_secondary ?? "",
-    ctaLabel: row.cta_label ?? "",
+    visible: row ? row.visible !== false : true,
+    heading: resolved.heading,
+    bodyPrimary: resolved.bodyPrimary,
+    bodySecondary: resolved.bodySecondary,
+    ctaLabel: resolved.ctaLabel,
   };
 }
 

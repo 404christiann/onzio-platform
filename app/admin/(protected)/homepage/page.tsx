@@ -180,8 +180,8 @@ export default function AdminHomepagePage() {
   // The story band lives in its own table (onzio.homepage_story_section) and is
   // deliberately NOT behind_the_rose_section: both sections are mounted on the
   // same homepage, so sharing one row would render the same copy twice.
-  const [storyFields, setStoryFields] = useState<HomepageStoryDraft>(
-    emptyHomepageStoryDraft,
+  const [storyFields, setStoryFields] = useState<HomepageStoryDraft>(() =>
+    emptyHomepageStoryDraft(club.name),
   );
   const [storyErrors, setStoryErrors] = useState<HomepageStoryValidationErrors>(
     {},
@@ -226,6 +226,7 @@ export default function AdminHomepagePage() {
         setStoryFields(
           homepageStoryToDraft(
             ((storyResult.data ?? []) as DBHomepageStorySection[])[0] ?? null,
+            club.name,
           ),
         );
         setStoryErrors({});
@@ -418,7 +419,9 @@ export default function AdminHomepagePage() {
         .single();
       if (storyError) throw new Error(storyError.message);
       if (storyRow) {
-        setStoryFields(homepageStoryToDraft(storyRow as DBHomepageStorySection));
+        setStoryFields(
+          homepageStoryToDraft(storyRow as DBHomepageStorySection, club.name),
+        );
       }
 
       const { toDelete, toInsert, toUpdate } = hidesLegacyHomepageSections
@@ -768,8 +771,10 @@ export default function AdminHomepagePage() {
                   style={{ color: "rgba(255,255,255,0.28)" }}
                 >
                   The story section beside the club video on your homepage.
-                  Leave a field empty to keep the standard wording shown as its
-                  placeholder. The video itself is set by Onzio.
+                  Every field below starts filled in with the standard wording
+                  — edit it, or clear a field to keep it updating
+                  automatically if the standard wording ever changes. The
+                  video itself is set by Onzio.
                 </p>
 
                 <label className="flex items-center justify-between gap-4 rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
@@ -800,7 +805,6 @@ export default function AdminHomepagePage() {
                     value={storyFields.heading}
                     onChange={(event) => setStoryField("heading", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.heading}
-                    placeholder={storyDefaults.heading}
                     style={inputStyle}
                   />
                 </Field>
@@ -809,7 +813,6 @@ export default function AdminHomepagePage() {
                     value={storyFields.bodyPrimary}
                     onChange={(event) => setStoryField("bodyPrimary", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.bodyPrimary}
-                    placeholder={storyDefaults.bodyPrimary}
                     rows={5}
                     style={{ ...inputStyle, resize: "vertical" }}
                   />
@@ -819,7 +822,6 @@ export default function AdminHomepagePage() {
                     value={storyFields.bodySecondary}
                     onChange={(event) => setStoryField("bodySecondary", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.bodySecondary}
-                    placeholder={storyDefaults.bodySecondary}
                     rows={4}
                     style={{ ...inputStyle, resize: "vertical" }}
                   />
@@ -829,7 +831,6 @@ export default function AdminHomepagePage() {
                     value={storyFields.ctaLabel}
                     onChange={(event) => setStoryField("ctaLabel", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.ctaLabel}
-                    placeholder={storyDefaults.ctaLabel}
                     style={inputStyle}
                   />
                 </Field>

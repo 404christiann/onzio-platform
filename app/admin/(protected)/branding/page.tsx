@@ -9,8 +9,8 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
 import {
   CLUB_LOGO_BUCKET,
-  DEFAULT_ACADEMY_FOOTER_TAGLINE,
   FOOTER_TAGLINE_LIMIT,
+  resolveFooterTagline,
   validateFooterTagline,
 } from "@/lib/club-branding";
 import { fetchSiteSocialLinks } from "@/lib/queries";
@@ -90,7 +90,13 @@ export default function BrandingPage() {
           return;
         }
         const row = (data ?? [])[0] as { footer_tagline?: string } | undefined;
-        setFooterTagline(row?.footer_tagline ?? "");
+        // Shows the resolved template default as a real, editable value
+        // rather than a placeholder hint (Christian found the
+        // placeholder-only pattern confusing, 2026-08-09). Clearing this back
+        // to empty and saving still gets the "use the live template default"
+        // blank state, since resolveFooterTagline treats blank exactly as it
+        // always has.
+        setFooterTagline(resolveFooterTagline(row?.footer_tagline));
       });
   }, [clubId]);
 
@@ -381,7 +387,6 @@ export default function BrandingPage() {
               }}
               rows={2}
               maxLength={FOOTER_TAGLINE_LIMIT}
-              placeholder={DEFAULT_ACADEMY_FOOTER_TAGLINE}
               className="w-full resize-y rounded-lg border border-white/10 bg-[#0e0e0e] px-3 py-2.5 font-body text-sm text-white outline-none transition focus:border-white/25"
               style={{ colorScheme: "dark" }}
             />

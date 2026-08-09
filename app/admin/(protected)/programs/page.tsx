@@ -34,7 +34,6 @@ import {
   type ProgramValidationErrors,
 } from "@/lib/program-admin";
 import {
-  DEFAULT_PROGRAM_REGISTRATION_CONTENT,
   PROGRAM_MEDIA_LIMITS,
   PROGRAM_REGISTRATION_LIMITS,
 } from "@/lib/program-content";
@@ -1092,11 +1091,13 @@ export default function AdminProgramsPage() {
                     Registration section
                   </h3>
                   <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
-                    The band shown partway down the public program page. Leave a
-                    field empty to keep the standard wording shown as its
-                    placeholder. The button itself comes from the button label
-                    and link fields below — with no link saved, visitors see the
-                    &ldquo;coming soon&rdquo; text instead of a link.
+                    The band shown partway down the public program page. Every
+                    field below starts filled in with the standard wording —
+                    edit it, or clear a field to keep it updating automatically
+                    if the standard wording ever changes. The button itself
+                    comes from the button label and link fields below — with
+                    no link saved, visitors see the &ldquo;coming soon&rdquo;
+                    text instead of a link.
                   </p>
                 </div>
 
@@ -1144,7 +1145,6 @@ export default function AdminProgramsPage() {
                         updateDraft("registrationEyebrow", event.target.value)
                       }
                       maxLength={PROGRAM_REGISTRATION_LIMITS.eyebrow}
-                      placeholder={DEFAULT_PROGRAM_REGISTRATION_CONTENT.eyebrow}
                     />
                   </FormField>
                   <FormField
@@ -1158,7 +1158,6 @@ export default function AdminProgramsPage() {
                         updateDraft("registrationHeadline", event.target.value)
                       }
                       maxLength={PROGRAM_REGISTRATION_LIMITS.headline}
-                      placeholder={DEFAULT_PROGRAM_REGISTRATION_CONTENT.headline}
                     />
                   </FormField>
                 </div>
@@ -1175,7 +1174,6 @@ export default function AdminProgramsPage() {
                         updateDraft("registrationBody", event.target.value)
                       }
                       maxLength={PROGRAM_REGISTRATION_LIMITS.body}
-                      placeholder={DEFAULT_PROGRAM_REGISTRATION_CONTENT.body}
                     />
                   </FormField>
                   <FormField
@@ -1189,9 +1187,6 @@ export default function AdminProgramsPage() {
                         updateDraft("registrationPendingBody", event.target.value)
                       }
                       maxLength={PROGRAM_REGISTRATION_LIMITS.pendingBody}
-                      placeholder={
-                        DEFAULT_PROGRAM_REGISTRATION_CONTENT.pendingBody
-                      }
                     />
                   </FormField>
                   <FormField
@@ -1208,9 +1203,6 @@ export default function AdminProgramsPage() {
                         )
                       }
                       maxLength={PROGRAM_REGISTRATION_LIMITS.pendingLabel}
-                      placeholder={
-                        DEFAULT_PROGRAM_REGISTRATION_CONTENT.pendingLabel
-                      }
                     />
                   </FormField>
                 </div>

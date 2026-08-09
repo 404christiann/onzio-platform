@@ -153,7 +153,7 @@ describe("homepage story copy is real admin content", () => {
       cta_label: "Read more",
     });
     const payload = buildHomepageStoryMutationPayload(
-      homepageStoryToDraft(row),
+      homepageStoryToDraft(row, CLUB_NAME),
     );
     expect(payload).toEqual({
       visible: false,
@@ -165,16 +165,34 @@ describe("homepage story copy is real admin content", () => {
     expect(payload).not.toHaveProperty("club_id");
   });
 
-  it("saves an untouched field as empty so the template default keeps winning", () => {
+  it("shows and saves the resolved template default for a brand-new draft", () => {
+    // Christian found the placeholder-only pattern confusing (2026-08-09):
+    // the box looked empty even though the live page showed real text. The
+    // draft now carries the resolved default as a real, editable value, and
+    // an unedited save writes that literal text -- his explicit choice over
+    // preserving the old "stays blank forever" auto-update behavior.
+    const defaults = defaultHomepageStoryContent(CLUB_NAME);
     expect(
-      buildHomepageStoryMutationPayload(emptyHomepageStoryDraft()),
+      buildHomepageStoryMutationPayload(emptyHomepageStoryDraft(CLUB_NAME)),
     ).toEqual({
       visible: true,
-      heading: "",
-      body_primary: "",
-      body_secondary: "",
-      cta_label: "",
+      heading: defaults.heading,
+      body_primary: defaults.bodyPrimary,
+      body_secondary: defaults.bodySecondary,
+      cta_label: defaults.ctaLabel,
     });
+  });
+
+  it("still lets a club explicitly blank a field to fall back to future template updates", () => {
+    // The escape hatch survives: clearing the box to "" and saving is still
+    // the way to opt back into "always show whatever the template currently
+    // says" for that one field.
+    expect(
+      buildHomepageStoryMutationPayload({
+        ...emptyHomepageStoryDraft(CLUB_NAME),
+        heading: "",
+      }),
+    ).toMatchObject({ heading: "" });
   });
 
   it.each([
@@ -183,7 +201,7 @@ describe("homepage story copy is real admin content", () => {
     ["bodySecondary", HOMEPAGE_STORY_LIMITS.bodySecondary],
     ["ctaLabel", HOMEPAGE_STORY_LIMITS.ctaLabel],
   ] as const)("rejects %s beyond %i characters", (field, maximum) => {
-    const draft = emptyHomepageStoryDraft();
+    const draft = emptyHomepageStoryDraft(CLUB_NAME);
     expect(
       validateHomepageStoryDraft({ ...draft, [field]: "x".repeat(maximum + 1) })[
         field
@@ -342,7 +360,9 @@ describe("new content tables in the admin data contract", () => {
   it("accepts a well-formed save for each table", () => {
     expect(
       request("homepage_story_section", {
-        payload: buildHomepageStoryMutationPayload(emptyHomepageStoryDraft()),
+        payload: buildHomepageStoryMutationPayload(
+          emptyHomepageStoryDraft(CLUB_NAME),
+        ),
       }).success,
     ).toBe(true);
     expect(

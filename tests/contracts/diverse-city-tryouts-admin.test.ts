@@ -249,10 +249,11 @@ describe("Tryouts page intro copy", () => {
   });
 
   it("drafts, validates, and normalizes the page-copy editor state", () => {
-    expect(emptyTryoutsPageDraft()).toEqual({
-      introWithTryouts: "",
-      introNoTryouts: "",
-    });
+    // Shows and saves the resolved template default as a real, editable
+    // value rather than a placeholder hint (Christian found the
+    // placeholder-only pattern confusing, 2026-08-09) — his explicit choice
+    // over preserving the old "stays blank forever" auto-update behavior.
+    expect(emptyTryoutsPageDraft()).toEqual(DEFAULT_TRYOUTS_PAGE_CONTENT);
     expect(tryoutsPageToDraft(null)).toEqual(emptyTryoutsPageDraft());
     expect(
       tryoutsPageToDraft({
