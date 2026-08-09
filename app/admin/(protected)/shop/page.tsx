@@ -130,13 +130,15 @@ export default function AdminShopPage() {
   // which does render both, so its editor is unchanged.
   const hidesClubhouseShopSections =
     club.presentationTemplateKey === "academy@1";
-  // Diverse City offers Home and Away only. The third kit is a real Rose City
-  // product — ClubhouseShopPage and ClubhouseHomePage both render
-  // ["home", "third", "away"], and the Lions import seeds a red third jersey —
-  // so this is hidden for academy@1 rather than removed from ShopKitVariant or
-  // the shop_kit_* CHECK constraints.
+  // AcademyShopPage only ever reads the "home" kit variant — it fetches
+  // fetchShopKitVariants's home/third/away triple and discards third and away
+  // entirely, so neither is displayed anywhere on an academy@1 site. Third and
+  // away are both real Rose City products — ClubhouseShopPage and
+  // ClubhouseHomePage render all three — so this is hidden for academy@1
+  // rather than removed from ShopKitVariant or the shop_kit_* CHECK
+  // constraints.
   const kitVariants = hidesClubhouseShopSections
-    ? KIT_VARIANTS.filter((variant) => variant.id !== "third")
+    ? KIT_VARIANTS.filter((variant) => variant.id === "home")
     : KIT_VARIANTS;
   const [selectedSurface, setSelectedSurface] = useState<ShopKitSurface>("home");
   const [selectedKitVariant, setSelectedKitVariant] =
@@ -666,7 +668,10 @@ export default function AdminShopPage() {
               })}
             </div>
 
-            {selectedSurface === "shop" && (
+            {/* With only "home" left in kitVariants for academy@1, a
+                single-tab switcher would be dead UI, so it's hidden entirely —
+                same pattern as the Sponsors and About Club Logo tab hides. */}
+            {selectedSurface === "shop" && kitVariants.length > 1 && (
               <div
                 className="mb-4 grid grid-cols-2 gap-1 rounded-lg p-1"
                 style={{ backgroundColor: "rgba(255,255,255,0.04)" }}

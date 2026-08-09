@@ -77,8 +77,20 @@ function attachMediaReferences(
     // Select responses include the server-resolved tenant key. Never echo it
     // back from a browser mutation; the admin route injects the verified club.
     for (const { source, asset } of fields) {
+      // Only act when the mutation actually touches this field. A save that
+      // never includes it (e.g. editing an unrelated field) must not disturb
+      // whatever asset reference is already stored.
+      if (!Object.prototype.hasOwnProperty.call(row, source)) continue;
       const sourceValue = row[source];
-      if (typeof sourceValue !== "string") continue;
+      if (typeof sourceValue !== "string" || sourceValue.trim() === "") {
+        // The url was explicitly cleared (an admin removing an image, not
+        // replacing it). Without this, the asset reference survived a removal
+        // and resolveMediaReferences kept re-deriving the old url from it on
+        // every public read -- the admin looked correct because it only shows
+        // local draft state, never re-resolving from the database.
+        row[asset] = null;
+        continue;
+      }
       const media = publishedMedia.get(sourceValue);
       if (media) row[asset] = media.assetId;
     }

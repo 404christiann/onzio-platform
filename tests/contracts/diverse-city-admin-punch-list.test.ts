@@ -13,6 +13,8 @@ const DATA_ROUTE = "app/api/admin/data/route.ts";
 const AUTHORIZE_ROUTE = "app/api/admin/media/authorize/route.ts";
 const ACADEMY_NEXT_MATCH = "components/AcademyNextMatch.tsx";
 const PUBLIC_SCHEDULE = "app/(public)/schedule/page.tsx";
+const ADMIN_CLIENT = "lib/admin-client.ts";
+const ACADEMY_SHOP_PAGE = "components/AcademyShopPage.tsx";
 
 /**
  * Christian reported four admin-portal failures against the live Diverse City
@@ -221,6 +223,83 @@ describe("Diverse City admin punch list", () => {
       const publicSchedule = source(PUBLIC_SCHEDULE);
       expect(publicSchedule).toContain("fetchActiveSeason(clubId)");
       expect(publicSchedule).toContain("fetchSchedule(activeSeason.id, clubId)");
+    });
+  });
+
+  describe("removing an image now clears its stale asset reference, platform-wide", () => {
+    // Christian removed a match's opponent logo: the admin showed it gone
+    // (local draft state), but the public site kept showing the old crest.
+    // attachMediaReferences skipped every field whose value wasn't a string,
+    // so clearing a url (setting it to null) never nulled the paired
+    // *_asset_id column. resolveMediaReferences re-derives the url from that
+    // asset_id on every public read regardless of what the raw url column
+    // says, so the stale asset kept winning forever. This is not
+    // schedule-specific: every table in MEDIA_REFERENCE_FIELDS (matches,
+    // about_page_content, site_branding, players, staff, league_standings,
+    // shop_kit_photos, and more) shared the same bug.
+    it("nulls the asset id when the url is explicitly cleared", () => {
+      const client = source(ADMIN_CLIENT);
+      const loop = client.slice(
+        client.indexOf("for (const { source, asset } of fields)"),
+      );
+      const body = loop.slice(0, loop.indexOf("\n    return row;"));
+      expect(body).toContain(
+        'Object.prototype.hasOwnProperty.call(row, source)',
+      );
+      expect(body).toContain('sourceValue.trim() === ""');
+      expect(body).toContain("row[asset] = null");
+    });
+
+    it("leaves the asset reference alone when a save never touches that field", () => {
+      // The fix must not null out an unrelated image just because a save
+      // (e.g. changing a match's date) didn't include that field at all: the
+      // hasOwnProperty guard must run, and continue, before the clearing
+      // logic below it ever sees a missing field.
+      const client = source(ADMIN_CLIENT);
+      const loop = client.slice(
+        client.indexOf("for (const { source, asset } of fields)"),
+      );
+      const body = loop.slice(0, loop.indexOf("\n    return row;"));
+      const guardIndex = body.indexOf("hasOwnProperty");
+      const clearIndex = body.indexOf("row[asset] = null");
+      expect(guardIndex).toBeGreaterThan(-1);
+      expect(clearIndex).toBeGreaterThan(-1);
+      expect(guardIndex).toBeLessThan(clearIndex);
+      expect(
+        body.slice(guardIndex, body.indexOf("\n", guardIndex)),
+      ).toContain("continue");
+    });
+  });
+
+  describe("Away kit hidden in Shop admin for academy@1 — it's never displayed", () => {
+    // AcademyShopPage fetches fetchShopKitVariants's home/third/away triple
+    // but only ever reads .home; third and away are fetched and discarded.
+    // Confirmed directly, not assumed: nothing in the component reads either.
+    it("confirms AcademyShopPage only ever uses the home kit variant", () => {
+      const page = source(ACADEMY_SHOP_PAGE);
+      expect(page).toContain("setContent(variants.home)");
+      expect(page).not.toContain("variants.away");
+      expect(page).not.toContain("variants.third");
+    });
+
+    it("hides both Third and Away kit tabs for academy@1, keeping only Home", () => {
+      const shop = source(SHOP_ADMIN);
+      expect(shop).toContain(
+        'KIT_VARIANTS.filter((variant) => variant.id === "home")',
+      );
+    });
+
+    it("hides the now-single-option kit switcher instead of leaving dead UI", () => {
+      const shop = source(SHOP_ADMIN);
+      expect(shop).toContain('selectedSurface === "shop" && kitVariants.length > 1');
+    });
+
+    it("still offers Third and Away for every other template", () => {
+      // Rose City (clubhouse@1) uses ClubhouseShopPage/ClubhouseHomePage,
+      // which render all three kits — this must stay reachable.
+      const clubhouseHome = source("components/ClubhouseHomePage.tsx");
+      const clubhouseShop = source("components/ClubhouseShopPage.tsx");
+      expect(clubhouseHome + clubhouseShop).toContain("third");
     });
   });
 });
