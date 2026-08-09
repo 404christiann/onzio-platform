@@ -306,11 +306,27 @@ export function createClient() {
             );
             const authorizeResult = await parseJson(authorizeResponse);
             if (!authorizeResponse.ok) {
+              // A missing `error` key means the response did not come from the
+              // authorize route at all — a platform error page, a tenant 404
+              // from middleware, or a gateway timeout. Reporting a bare
+              // "MEDIA_AUTHORIZATION_FAILED" for that hid which of the two it
+              // was; the HTTP status is what distinguishes them.
+              const fallback = mediaError(
+                "MEDIA_AUTHORIZATION_UNAVAILABLE",
+                `The upload could not be authorized: the server responded ${authorizeResponse.status} ${authorizeResponse.statusText || ""}`.trim() +
+                  ". This is not a permissions error — the request did not reach the upload service.",
+              );
+              const reported = authorizeResult.error as
+                | { code?: string; message?: string }
+                | undefined;
               return {
                 data: null,
-                error:
-                  authorizeResult.error ??
-                  mediaError("MEDIA_AUTHORIZATION_FAILED"),
+                error: reported?.code
+                  ? mediaError(
+                      reported.code,
+                      reported.message ?? reported.code,
+                    )
+                  : fallback,
               };
             }
             const authorization =

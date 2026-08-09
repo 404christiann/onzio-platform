@@ -6,21 +6,58 @@ import {
   createMediaAuthorizationToken,
   type MediaAuthorization,
 } from "@/lib/media-processing";
+import { describeMediaAuthorizationFailure } from "@/lib/media-diagnostics";
 import { requireMediaRouteAuthorization } from "@/lib/media-route-auth";
 import { buildStoragePath } from "@/lib/storage-path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Every failure here used to collapse into a bare `{"error":{"code":
+ * "MEDIA_AUTH_FAILED"}}` with no message. That single opaque code covers at
+ * least five unrelated causes — an expired session, a lost membership, a club
+ * whose lifecycle/public-access state blocks content mutation, a storage RLS
+ * denial, and an unreachable Storage service — and it is why this failure has
+ * now been diagnosed twice by inference rather than by reading the response.
+ *
+ * The response now carries the specific code plus a short, non-sensitive
+ * `reason`. Nothing new is disclosed: the caller is an authenticated club
+ * admin, the values are about their own club, and no identifier, token, path,
+ * or internal SQL is included.
+ */
 function errorResponse(error: unknown) {
-  const code =
-    error instanceof ContractError ? error.code : "MEDIA_AUTH_FAILED";
-  const status = code === "AUTHENTICATION_REQUIRED" ? 401 : 403;
-  return NextResponse.json({ error: { code } }, { status });
+  if (error instanceof ContractError) {
+    const status = error.code === "AUTHENTICATION_REQUIRED" ? 401 : 403;
+    return NextResponse.json(
+      { error: { code: error.code, message: error.code } },
+      { status },
+    );
+  }
+  const { code, reason } = describeMediaAuthorizationFailure(error);
+  return NextResponse.json(
+    { error: { code, message: reason, reason } },
+    { status: 403 },
+  );
 }
 
 export async function POST(request: Request) {
-  const parsed = authorizeMediaRequestSchema.safeParse(await request.json());
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      {
+        error: {
+          code: "INVALID_MEDIA_REQUEST",
+          message: "The upload request body was not valid JSON.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const parsed = authorizeMediaRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       {
@@ -68,7 +105,7 @@ export async function POST(request: Request) {
         .from("onzio-upload-staging")
         .createSignedUploadUrl(stagingPath, { upsert: false });
     if (signedUploadError || !signedUpload) {
-      throw new Error(signedUploadError?.message ?? "Signed upload failed");
+      throw signedUploadError ?? new Error("Signed upload failed");
     }
 
     const authorization: MediaAuthorization = {
