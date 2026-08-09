@@ -601,6 +601,7 @@ function PlayerPositionGroup({
 // ── Staff tab ─────────────────────────────────
 
 function StaffTab() {
+  const { clubLogoUrl } = useClubBranding();
   const [staff, setStaff]         = useState<Staff[]>([]);
   const [loading, setLoading]     = useState(true);
   const [addOpen, setAddOpen]     = useState(false);
@@ -643,7 +644,7 @@ function StaffTab() {
     setSaving(true); setError(null);
     try {
       const supabase = createClient();
-      let photoUrl = addForm.photo_url;
+      let photoUrl = rosterImageForStorage(addForm.photo_url);
       if (addPhoto) photoUrl = await uploadPhoto(addPhoto, "staff-images", "staff");
 
       const { error: e } = await supabase.from("staff").insert([{ ...addForm, photo_url: photoUrl, active: true }]);
@@ -669,7 +670,7 @@ function StaffTab() {
     setSaving(true); setError(null);
     try {
       const supabase = createClient();
-      let photoUrl = editForm.photo_url;
+      let photoUrl = rosterImageForStorage(editForm.photo_url);
       const originalStaff = staff.find((staffMember) => staffMember.id === editingId);
       if (editPhoto) photoUrl = await uploadPhoto(editPhoto, "staff-images", "staff");
 
@@ -770,10 +771,12 @@ function StaffTab() {
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                       <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
                         style={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        {s.photo_url
-                          ? <ResilientNativeImage src={s.photo_url} alt={s.name} fallbackVariant="person" className="w-full h-full object-cover" />
-                          : <span className="font-display font-black text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{s.initials}</span>
-                        }
+                        <ResilientNativeImage
+                          src={getRosterImageSrc(s.photo_url, clubLogoUrl)}
+                          alt={s.name}
+                          fallbackVariant="person"
+                          className={`w-full h-full ${isRosterPlaceholderLogo(s.photo_url) ? "object-contain" : "object-cover"}`}
+                        />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -1183,11 +1186,24 @@ function PlayerFormFields({
           />
         </div>
         <div>
-          <button type="button" onClick={() => fileRef.current?.click()}
-            className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-            style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-            {preview ? "Change Photo" : "Upload Photo"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
+              style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
+              {preview ? "Change Photo" : "Upload Photo"}
+            </button>
+            {!previewIsClubLogo && (
+              <button type="button"
+                onClick={() => {
+                  onPhotoChange(null);
+                  onChange({ ...form, photo_url: "" });
+                }}
+                className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
+                style={{ color: "#E7001B", border: "1px solid rgba(231,0,27,0.45)" }}>
+                Remove
+              </button>
+            )}
+          </div>
           {photoFile && (
             <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{photoFile.name}</p>
           )}
@@ -1316,7 +1332,24 @@ function StaffFormFields({
   onPhotoChange: (f: File | null) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const preview = photoFile ? URL.createObjectURL(photoFile) : form.photo_url || null;
+  const { clubLogoUrl } = useClubBranding();
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(photoFile);
+    setPhotoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [photoFile]);
+
+  // Same fallback-to-club-logo behavior as players (lib/roster-images), rather
+  // than showing initials when no photo is set — a staff member with no photo
+  // should read the same way an empty player slot already does.
+  const preview = photoPreview ?? getRosterImageSrc(form.photo_url, clubLogoUrl);
+  const previewIsClubLogo = !photoFile && isRosterPlaceholderLogo(form.photo_url);
 
   function set(field: string, value: string) {
     onChange({ ...form, [field]: value });
@@ -1328,19 +1361,32 @@ function StaffFormFields({
       <div className="flex items-center gap-4">
         <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
           style={{ backgroundColor: "#0e0e0e", border: "1px solid rgba(255,255,255,0.08)" }}>
-          {preview
-            ? <ResilientNativeImage src={preview} alt="preview" fallbackVariant="person" className="w-full h-full object-cover" />
-            : <span className="font-display font-black text-lg" style={{ color: "rgba(255,255,255,0.2)" }}>
-                {form.initials || "?"}
-              </span>
-          }
+          <ResilientNativeImage
+            src={preview}
+            alt="preview"
+            fallbackVariant="person"
+            className={`w-full h-full ${previewIsClubLogo ? "object-contain" : "object-cover"}`}
+          />
         </div>
         <div>
-          <button type="button" onClick={() => fileRef.current?.click()}
-            className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-            style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-            {preview ? "Change Photo" : "Upload Photo"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => fileRef.current?.click()}
+              className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
+              style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
+              {preview ? "Change Photo" : "Upload Photo"}
+            </button>
+            {!previewIsClubLogo && (
+              <button type="button"
+                onClick={() => {
+                  onPhotoChange(null);
+                  onChange({ ...form, photo_url: "" });
+                }}
+                className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
+                style={{ color: "#E7001B", border: "1px solid rgba(231,0,27,0.45)" }}>
+                Remove
+              </button>
+            )}
+          </div>
           {photoFile && (
             <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{photoFile.name}</p>
           )}

@@ -15,6 +15,7 @@ const ACADEMY_NEXT_MATCH = "components/AcademyNextMatch.tsx";
 const PUBLIC_SCHEDULE = "app/(public)/schedule/page.tsx";
 const ADMIN_CLIENT = "lib/admin-client.ts";
 const ACADEMY_SHOP_PAGE = "components/AcademyShopPage.tsx";
+const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 
 /**
  * Christian reported four admin-portal failures against the live Diverse City
@@ -300,6 +301,58 @@ describe("Diverse City admin punch list", () => {
       const clubhouseHome = source("components/ClubhouseHomePage.tsx");
       const clubhouseShop = source("components/ClubhouseShopPage.tsx");
       expect(clubhouseHome + clubhouseShop).toContain("third");
+    });
+  });
+
+  describe("Schedule admin no longer hardcodes \"Rose City\" for any club", () => {
+    // Every club's own admin was showing "Rose City Score" and
+    // "Result: Rose City X - Y opponent" regardless of which club was actually
+    // using the portal. Platform-wide, not academy@1-specific.
+    it("uses the club's own name in the score label and result line", () => {
+      const schedule = source(SCHEDULE_ADMIN);
+      expect(schedule).not.toContain("Rose City");
+      expect(schedule).toContain("`${club.name} Score (optional)`");
+      expect(schedule).toContain("Result: {club.name}");
+    });
+  });
+
+  describe("Staff/Roster: photo removal and club-logo fallback", () => {
+    // Neither Players nor Staff had a way to clear a photo back to the club
+    // logo once one was set (only "Change Photo", never "Remove"), and Staff's
+    // empty state showed initials instead of the logo Players already fell
+    // back to via getRosterImageSrc/isRosterPlaceholderLogo.
+    it("gives both Players and Staff a Remove control that only shows when there's something to remove", () => {
+      const roster = source(ROSTER_ADMIN);
+      const removeButtonCount = roster.split(">\n                Remove\n").length - 1;
+      expect(removeButtonCount).toBe(2);
+      expect(roster).toContain("!previewIsClubLogo &&");
+    });
+
+    it("removing a photo clears photo_url so the fallback takes over", () => {
+      const roster = source(ROSTER_ADMIN);
+      expect(roster).toContain('onChange({ ...form, photo_url: "" })');
+    });
+
+    it("Staff now falls back to the club logo instead of initials, matching Players", () => {
+      const roster = source(ROSTER_ADMIN);
+      // The old initials-only fallback in the Staff list row and edit form
+      // must be gone; both surfaces resolve through the shared roster-image
+      // helpers instead.
+      expect(roster).not.toContain("{s.initials}");
+      const staffFieldsIndex = roster.indexOf("function StaffFormFields");
+      const staffTabIndex = roster.indexOf("function StaffTab");
+      const staffFields = roster.slice(staffFieldsIndex);
+      const staffTab = roster.slice(staffTabIndex, staffFieldsIndex);
+      expect(staffFields).toContain("getRosterImageSrc(form.photo_url, clubLogoUrl)");
+      expect(staffFields).toContain("isRosterPlaceholderLogo(form.photo_url)");
+      expect(staffTab).toContain("getRosterImageSrc(s.photo_url, clubLogoUrl)");
+    });
+
+    it("Staff saves run photo_url through rosterImageForStorage, matching Players", () => {
+      const roster = source(ROSTER_ADMIN);
+      const matches = roster.match(/rosterImageForStorage\(\w+\.photo_url\)/g) ?? [];
+      // Two for players (add/edit) already existed; two more for staff (add/edit).
+      expect(matches.length).toBeGreaterThanOrEqual(4);
     });
   });
 });

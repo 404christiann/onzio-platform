@@ -448,7 +448,7 @@ export default function SchedulePage() {
                           className="font-display mt-1 font-black uppercase tracking-widest"
                           style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.72)" }}
                         >
-                          Result: Rose City {m.rose_city_score} - {m.opponent_score} {m.opponent}
+                          Result: {club.name} {m.rose_city_score} - {m.opponent_score} {m.opponent}
                         </p>
                       )}
 
@@ -785,7 +785,7 @@ function MatchForm({
         </p>
       </div>
 
-      <Field label="Rose City Score (optional)">
+      <Field label={`${club.name} Score (optional)`}>
         <input
           type="number"
           min="0"
