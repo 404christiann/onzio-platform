@@ -68,6 +68,11 @@ export default function AdminProgramsPage() {
   // the navigation label the first time a program is saved and then fixed for
   // the program's lifetime. Every other template keeps the manual field.
   const hidesSlugField = club.presentationTemplateKey === "academy@1";
+  // Diverse City's four programs are fixed for this rollout: the club edits
+  // them, it does not add new ones. Hiding the creation entry points leaves the
+  // create code path (and lib/slugify.ts) intact for every other template, and
+  // for this club should it ever be re-enabled.
+  const hidesProgramCreation = club.presentationTemplateKey === "academy@1";
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
   const [draft, setDraft] = useState<ProgramDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -545,13 +550,15 @@ export default function AdminProgramsPage() {
             external destinations.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={startCreate}
-          className="rounded-lg bg-red-600 px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
-        >
-          Create program
-        </button>
+        {!hidesProgramCreation && (
+          <button
+            type="button"
+            onClick={startCreate}
+            className="rounded-lg bg-red-600 px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
+          >
+            Create program
+          </button>
+        )}
       </header>
 
       {error && (
@@ -740,16 +747,19 @@ export default function AdminProgramsPage() {
             No programs yet
           </h2>
           <p className="mx-auto mt-2 max-w-md font-body text-sm leading-6 text-white/45">
-            Create the first reusable program page. Nothing is published until a
-            valid program is saved as active.
+            {hidesProgramCreation
+              ? "Your programs are set up by Onzio. Contact us to add one."
+              : "Create the first reusable program page. Nothing is published until a valid program is saved as active."}
           </p>
-          <button
-            type="button"
-            onClick={startCreate}
-            className="mt-6 rounded-lg border border-white/15 px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:border-white/30 hover:bg-white/[0.05]"
-          >
-            Create program
-          </button>
+          {!hidesProgramCreation && (
+            <button
+              type="button"
+              onClick={startCreate}
+              className="mt-6 rounded-lg border border-white/15 px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:border-white/30 hover:bg-white/[0.05]"
+            >
+              Create program
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]">
