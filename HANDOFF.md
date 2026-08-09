@@ -2,6 +2,37 @@
 
 Last updated: 2026-08-09
 
+## Template-default text fields now show real text, not a placeholder hint, in four places Christian named
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`, not
+deployed.
+
+Several admin fields fall back to an approved template default when a club
+hasn't set its own text; until now that default only ever appeared as an
+HTML placeholder hint, never as the field's real value — the box looked
+empty even though the live page showed real text. Confirmed the exact
+tradeoff with Christian before touching anything: pre-fill the box with the
+real, resolved default; saving it unedited now writes that literal text
+instead of staying blank, trading away silent future-template-update
+inheritance for a box that's never misleadingly empty. The blank-field
+escape hatch (clear it, save, get "always current" back) is unchanged and
+tested.
+
+Fixed in the four places he named — Programs' Registration tab (5 fields),
+Homepage's Story tab (4 fields), Tryouts' page-intro fields (added earlier
+today), and Branding's Footer tagline — each by pointing the admin's draft
+initializer at the same `resolveXxx` function the public page already used,
+instead of leaving it blank. Full detail in `STATUS.md`, including the one
+existing test whose premise (not just its call signature) had to change to
+match the new intended behavior.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **955/955**, up from
+947; `test:db` **165/165**. Also verified live in a real signed-in Diverse
+City session, reading actual DOM field values for all four surfaces.
+
+**Not deployed** — no migration, pure admin-UX change, awaiting Christian's
+go-ahead.
+
 ## Tryouts/Programs redesign deployed to production, including a real Supabase migration
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.

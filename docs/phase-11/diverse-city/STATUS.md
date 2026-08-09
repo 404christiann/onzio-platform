@@ -1,5 +1,80 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Template-default text fields now show real text, not a placeholder hint, in four places
+
+**Package:** none — ad hoc, from Christian's continued live review of the
+work just deployed. Not yet deployed.
+
+**The pattern he flagged:** several admin fields fall back to an approved
+template default when a club hasn't set its own text, and until now the
+*only* place that default text appeared was an HTML placeholder — a gray
+hint visible only while the box is empty, gone the instant it's focused.
+The stored value was always blank. Christian: the box looked empty even
+though the live page showed real text — no visible difference between
+"nothing here yet" and "the real text is on the site."
+
+**Decision, confirmed with him before touching anything:** pre-fill the
+box with the real, resolved default as an actual editable value. Saving it
+unedited now writes that literal text — not blank — trading away the old
+"stays blank forever, silently inherits future template-wording
+improvements" property for a box that never looks empty when it isn't.
+Scoped to exactly the four places he named, nothing else.
+
+**Fixed, all following the same shape** (the field's `xxxToDraft`/`emptyXxxDraft`
+initializer now calls the same `resolveXxx` function the public page has
+always used to fill the draft, instead of leaving it blank; the now-dead
+`placeholder={...}` prop removed; stale "leave a field empty" help text
+reworded to describe the new primary behavior while still documenting the
+blank-field escape hatch):
+
+- **Programs → Registration tab**: eyebrow, headline, body, pending-body,
+  pending-label. `lib/program-admin.ts`'s `programToDraft` now resolves
+  through `resolveProgramRegistration` (`lib/program-content.ts`).
+- **Homepage → Story tab**: heading, first/second paragraph, button label.
+  `lib/homepage-content.ts`'s `homepageStoryToDraft`/`emptyHomepageStoryDraft`
+  now take a `clubName` argument and resolve through
+  `resolveHomepageStorySection`, since this default is personalized with the
+  club's own name (confirmed live: "Diverse City FC combines
+  professional-level coaching...").
+- **Tryouts → page intro** (added earlier today): both paragraphs.
+  `lib/tryout-admin.ts`'s `tryoutsPageToDraft`/`emptyTryoutsPageDraft` now
+  delegate directly to `resolveTryoutsPageContent`.
+- **Branding → Footer tagline**: `app/admin/(protected)/branding/page.tsx`'s
+  load handler now calls `resolveFooterTagline` (`lib/club-branding.ts`,
+  pre-existing, unchanged) instead of defaulting to `""`.
+
+**The escape hatch survives everywhere.** Clearing a field back to empty
+and saving still means "use whatever the template currently says," exactly
+as before — confirmed by a dedicated test
+(`diverse-city-homepage-story-programs-copy-admin.test.ts`). Nothing about
+the resolvers themselves changed; only where they're called from.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **955/955** across 88 files, up from 947 (+7 wholesale from
+  this round's test updates and additions, +1 net after accounting for one
+  existing assertion that had to change to match the new intended behavior
+  — see below).
+- `npm run test:db` **165/165** — one run hit the same documented
+  interactive-testing flakiness as always; clean rerun confirmed, not a
+  regression.
+- **One existing test's premise was itself the old behavior and had to
+  change, not just its call signature**:
+  `diverse-city-homepage-story-programs-copy-admin.test.ts`'s "saves an
+  untouched field as empty so the template default keeps winning" —
+  renamed and rewritten to assert the new intended behavior (literal
+  default text gets saved), plus a new sibling test confirming the
+  blank-field escape hatch still works.
+- Verified live in a real signed-in Diverse City admin session, reading
+  actual DOM field values (not just visual screenshots) for all four
+  surfaces: Programs' five Registration fields, Homepage's four Story
+  fields, Tryouts' two intro fields (screenshot), and Branding's Footer
+  tagline all show the real resolved text, not a blank box.
+
+**Not deployed yet** — no migration this round, pure admin-UX/code change,
+awaiting Christian's go-ahead to commit and deploy.
+
 ## 2026-08-09 - Tryouts/Programs redesign deployed to production, including the tryouts_page_content migration
 
 **Package:** none — ad hoc, deploy of the entry below. Christian approved
