@@ -130,11 +130,25 @@ export default function AdminShopPage() {
   // which does render both, so its editor is unchanged.
   const hidesClubhouseShopSections =
     club.presentationTemplateKey === "academy@1";
+  // Diverse City offers Home and Away only. The third kit is a real Rose City
+  // product — ClubhouseShopPage and ClubhouseHomePage both render
+  // ["home", "third", "away"], and the Lions import seeds a red third jersey —
+  // so this is hidden for academy@1 rather than removed from ShopKitVariant or
+  // the shop_kit_* CHECK constraints.
+  const kitVariants = hidesClubhouseShopSections
+    ? KIT_VARIANTS.filter((variant) => variant.id !== "third")
+    : KIT_VARIANTS;
   const [selectedSurface, setSelectedSurface] = useState<ShopKitSurface>("home");
   const [selectedKitVariant, setSelectedKitVariant] =
     useState<ShopKitVariant>("home");
+  // Never leave the editor pointed at a variant its own selector no longer
+  // offers — that would be an unreachable, unswitchable tab.
   const activeKitVariant: ShopKitVariant =
-    selectedSurface === "home" ? "home" : selectedKitVariant;
+    selectedSurface === "home"
+      ? "home"
+      : kitVariants.some((variant) => variant.id === selectedKitVariant)
+        ? selectedKitVariant
+        : "home";
   const [activeTab, setActiveTab] = useState<AdminTab>("content");
   const [fields, setFields] = useState<SectionFields>(EMPTY_FIELDS);
   const [draftPhotos, setDraftPhotos] = useState<DraftKitPhoto[]>([]);
@@ -645,7 +659,7 @@ export default function AdminShopPage() {
                 style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
                 aria-label="Kit type"
               >
-                {KIT_VARIANTS.map((variant) => {
+                {kitVariants.map((variant) => {
                   const isSelected = selectedKitVariant === variant.id;
                   return (
                     <button
