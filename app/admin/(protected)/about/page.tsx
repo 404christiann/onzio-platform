@@ -1,6 +1,6 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import type { CSSProperties } from "react";
@@ -36,6 +36,15 @@ type UploadTarget =
   | { kind: "logoColorCard"; index: number }
   | { kind: "logoFeaturePatch"; index: number }
   | { kind: "logoFeatureIcon"; index: number };
+
+/**
+ * Where academy@1's About closing button points. Operator-owned per DCFC-D007,
+ * so it lives in code rather than in an admin free-text field. This is the
+ * destination the button already resolved to — `about_page_content
+ * .closing_cta_href` is `/schedule` for Diverse City and `/schedule` is also
+ * the shipped default in lib/about-content.ts — not a new destination.
+ */
+const ACADEMY_ABOUT_CLOSING_CTA_HREF = "/schedule";
 
 const inputStyle: CSSProperties = {
   width: "100%",
@@ -84,6 +93,15 @@ async function uploadAboutImage(
 
 export default function AdminAboutPage() {
   const clubId = useClubId();
+  const club = useClubContext();
+  // DCFC-D007: club owners edit copy, Onzio operators own navigation
+  // destinations. The About closing button follows the precedent already set by
+  // DevelopingNextGeneration's "Our Story" button — the label stays editable,
+  // the destination is fixed in code. academy@1's button already resolves to
+  // /schedule (both the stored value and the shipped default), so pinning it
+  // changes nothing about where the button goes; it only removes a free-text
+  // href field that could save a broken path.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const [activeTab, setActiveTab] = useState<AdminTab>("about");
   const [aboutPanel, setAboutPanel] = useState<AboutPanel>("story");
   const [logoPanel, setLogoPanel] = useState<LogoPanel>("images");
@@ -254,7 +272,9 @@ export default function AdminAboutPage() {
         values: normalizeAboutValues(aboutDraft.values),
         closing_text: aboutDraft.closing_text.trim(),
         closing_cta_label: aboutDraft.closing_cta_label.trim(),
-        closing_cta_href: aboutDraft.closing_cta_href.trim() || "/schedule",
+        closing_cta_href: isAcademy
+          ? ACADEMY_ABOUT_CLOSING_CTA_HREF
+          : aboutDraft.closing_cta_href.trim() || "/schedule",
         updated_at: new Date().toISOString(),
       };
       const logoPayload = {
@@ -440,20 +460,32 @@ export default function AdminAboutPage() {
                         />
                       </Field>
                       <div className="grid gap-3">
-                        <Field label="CTA Label" flush>
+                        <Field label={isAcademy ? "Button Text" : "CTA Label"} flush>
                           <input
                             value={aboutDraft.closing_cta_label}
                             onChange={(event) => setAboutField("closing_cta_label", event.target.value)}
                             style={inputStyle}
                           />
                         </Field>
-                        <Field label="CTA Link" flush>
-                          <input
-                            value={aboutDraft.closing_cta_href}
-                            onChange={(event) => setAboutField("closing_cta_href", event.target.value)}
-                            style={inputStyle}
-                          />
-                        </Field>
+                        {isAcademy ? (
+                          <Field label="Button Goes To" flush>
+                            <p
+                              className="font-body text-sm"
+                              style={{ color: "rgba(255,255,255,0.45)" }}
+                            >
+                              {ACADEMY_ABOUT_CLOSING_CTA_HREF} — the Schedule page.
+                              Contact Onzio to change where this button goes.
+                            </p>
+                          </Field>
+                        ) : (
+                          <Field label="CTA Link" flush>
+                            <input
+                              value={aboutDraft.closing_cta_href}
+                              onChange={(event) => setAboutField("closing_cta_href", event.target.value)}
+                              style={inputStyle}
+                            />
+                          </Field>
+                        )}
                       </div>
                     </div>
                   )}
