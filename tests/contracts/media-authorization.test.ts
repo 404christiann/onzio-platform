@@ -4,7 +4,7 @@ import {
   createMediaAuthorizationToken,
   verifyMediaAuthorizationToken,
   type MediaAuthorization,
-} from "@/lib/media-processing";
+} from "@/lib/media-authorization-token";
 
 const originalServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

@@ -414,7 +414,7 @@ export default function AdminTryoutsPage() {
               </div>
 
               <div className="mt-7 grid gap-5 border-t border-white/[0.06] pt-7 sm:grid-cols-2">
-                <Field label={isAcademy ? "Button text" : "CTA label"} error={errors.ctaLabel}>
+                <Field label="Button text" error={errors.ctaLabel}>
                   <input className={INPUT_CLASS} value={draft.ctaLabel} onChange={(event) => updateDraft("ctaLabel", event.target.value)} maxLength={40} placeholder="Register externally" />
                 </Field>
                 <Field label="External registration destination" error={errors.registrationHref}>

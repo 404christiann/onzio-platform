@@ -5,7 +5,7 @@ import { authorizeMediaRequestSchema } from "@/lib/media-api-contract";
 import {
   createMediaAuthorizationToken,
   type MediaAuthorization,
-} from "@/lib/media-processing";
+} from "@/lib/media-authorization-token";
 import { describeMediaAuthorizationFailure } from "@/lib/media-diagnostics";
 import { requireMediaRouteAuthorization } from "@/lib/media-route-auth";
 import { buildStoragePath } from "@/lib/storage-path";

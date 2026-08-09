@@ -1,6 +1,6 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import type { CSSProperties, ReactNode } from "react";
@@ -76,7 +76,13 @@ function toDraft(logos: DBSiteSponsorLogo[]): DraftSponsorLogo[] {
 }
 
 export default function AdminSponsorsPage() {
-  const clubId = useClubId();
+  const club = useClubContext();
+  const clubId = club.id;
+  // academy@1's footer deliberately renders no sponsor strip (DCFC-D132 — it
+  // would duplicate the homepage SponsorCarousel), so footer-placement logos
+  // are never displayed on an academy@1 site. Hide that placement tab and pin
+  // the editor to the carousel; every other template keeps both placements.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const [placement, setPlacement] = useState<SponsorLogoPlacement>("carousel");
   const [originalLogos, setOriginalLogos] = useState<DBSiteSponsorLogo[]>(
     defaultSponsorLogosForPlacement("carousel"),
@@ -298,7 +304,9 @@ export default function AdminSponsorsPage() {
           className="font-body mt-1"
           style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}
         >
-          Manage sponsor logos for the homepage carousel and footer.
+          {isAcademy
+            ? "Manage sponsor logos for the homepage carousel."
+            : "Manage sponsor logos for the homepage carousel and footer."}
         </p>
       </div>
 
@@ -318,6 +326,10 @@ export default function AdminSponsorsPage() {
               border: "1px solid rgba(255,255,255,0.07)",
             }}
           >
+            {/* With the footer placement hidden for academy@1, a single-tab
+                switcher would be dead UI, so the whole switcher is hidden and
+                `placement` stays at its initial "carousel" value. */}
+            {!isAcademy && (
             <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
               {[
                 { id: "carousel" as const, label: "Carousel" },
@@ -348,6 +360,7 @@ export default function AdminSponsorsPage() {
                 );
               })}
             </div>
+            )}
 
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>

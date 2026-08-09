@@ -284,9 +284,13 @@ export default function AdminAboutPage() {
         updated_at: new Date().toISOString(),
       };
 
+      // academy@1 sites have no /club-logo page, so its content row is never
+      // read; skipping the upsert keeps the unreachable editor from writing.
       const [aboutResult, logoResult] = await Promise.all([
         supabase.from("about_page_content").upsert([aboutPayload]),
-        supabase.from("club_logo_page_content").upsert([logoPayload]),
+        isAcademy
+          ? Promise.resolve({ error: null })
+          : supabase.from("club_logo_page_content").upsert([logoPayload]),
       ]);
       const saveError = aboutResult.error ?? logoResult.error;
       if (saveError) throw new Error(saveError.message);
@@ -318,7 +322,9 @@ export default function AdminAboutPage() {
           About
         </h1>
         <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
-          Edit the About Club and Club Logo public pages.
+          {isAcademy
+            ? "Edit the public About page."
+            : "Edit the About Club and Club Logo public pages."}
         </p>
       </div>
 
@@ -332,6 +338,13 @@ export default function AdminAboutPage() {
             className="flex min-w-0 max-h-[calc(100vh-9rem)] flex-col self-start overflow-hidden rounded-xl p-4 sm:p-5"
             style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}
           >
+            {/* academy@1 has no reachable /club-logo route (templateRegistry
+                lists no club-logo in defaultRoutes/supportedRoutes), so the
+                Club Logo editor is unreachable content for that template —
+                same shape as DCFC-D130's sponsors decision. With one tab left
+                the switcher itself is hidden; every other template keeps both
+                tabs untouched. */}
+            {!isAcademy && (
             <div className="grid grid-cols-2 gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
               {[
                 { id: "about" as const, label: "About" },
@@ -359,13 +372,14 @@ export default function AdminAboutPage() {
                 );
               })}
             </div>
+            )}
 
             {activeTab === "about" ? (
               <SectionNav
                 tabs={[
                   { id: "story", label: "Story" },
                   { id: "values", label: "Values" },
-                  { id: "closing", label: "CTA" },
+                  { id: "closing", label: "Closing" },
                 ]}
                 value={aboutPanel}
                 onChange={setAboutPanel}
@@ -460,7 +474,7 @@ export default function AdminAboutPage() {
                         />
                       </Field>
                       <div className="grid gap-3">
-                        <Field label={isAcademy ? "Button Text" : "CTA Label"} flush>
+                        <Field label="Button Text" flush>
                           <input
                             value={aboutDraft.closing_cta_label}
                             onChange={(event) => setAboutField("closing_cta_label", event.target.value)}
@@ -478,7 +492,7 @@ export default function AdminAboutPage() {
                             </p>
                           </Field>
                         ) : (
-                          <Field label="CTA Link" flush>
+                          <Field label="Button Link" flush>
                             <input
                               value={aboutDraft.closing_cta_href}
                               onChange={(event) => setAboutField("closing_cta_href", event.target.value)}

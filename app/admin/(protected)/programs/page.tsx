@@ -73,6 +73,12 @@ export default function AdminProgramsPage() {
   // create code path (and lib/slugify.ts) intact for every other template, and
   // for this club should it ever be re-enabled.
   const hidesProgramCreation = club.presentationTemplateKey === "academy@1";
+  // Diverse City's pathway band, /programs header, and closing band keep their
+  // standard wording; the copy editor is Onzio-managed for this rollout. If
+  // nothing is ever saved the public pages fall back to their placeholder copy
+  // by design, so hiding the editor is purely subtractive. Every other template
+  // keeps the editor.
+  const hidesPageCopyEditor = club.presentationTemplateKey === "academy@1";
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
   const [draft, setDraft] = useState<ProgramDraft | null>(null);
   const [loading, setLoading] = useState(true);
@@ -567,7 +573,7 @@ export default function AdminProgramsPage() {
         </div>
       )}
 
-      {!loading && (
+      {!loading && !hidesPageCopyEditor && (
         <section className="mb-6 rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -1000,10 +1006,10 @@ export default function AdminProgramsPage() {
                     <option value="hidden">Hidden — admin only</option>
                   </select>
                 </FormField>
-                <FormField label="CTA label" error={fieldError(errors, "externalCtaLabel")}>
+                <FormField label="Button label" error={fieldError(errors, "externalCtaLabel")}>
                   <input className={INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
                 </FormField>
-                <FormField label="CTA destination" error={fieldError(errors, "externalCtaHref")}>
+                <FormField label="Button link" error={fieldError(errors, "externalCtaHref")}>
                   <input className={INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
                 </FormField>
               </div>
@@ -1016,8 +1022,8 @@ export default function AdminProgramsPage() {
                   <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
                     The band shown partway down the public program page. Leave a
                     field empty to keep the standard wording shown as its
-                    placeholder. The button itself comes from the CTA fields
-                    above — with no destination saved, visitors see the
+                    placeholder. The button itself comes from the button label
+                    and link fields above — with no link saved, visitors see the
                     &ldquo;coming soon&rdquo; text instead of a link.
                   </p>
                 </div>

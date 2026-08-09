@@ -13,6 +13,10 @@ const configuredOnzioMediaPattern = configuredSupabaseUrl
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   devIndicators: false,
+  // sharp ships a native libvips binary that Next's file tracer mis-bundles on
+  // Vercel's linux-x64 runtime (ERR_DLOPEN_FAILED: libvips-cpp.so). Keeping
+  // sharp external lets Node resolve the correctly installed module at runtime.
+  serverExternalPackages: ["sharp"],
   images: {
     // Onzio publishes normalized, immutable assets. Serve those source files
     // directly so an image-optimization quota or service outage cannot remove

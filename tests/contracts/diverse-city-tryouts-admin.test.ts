@@ -224,7 +224,7 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
       "Event date",
       "Location",
       "Cost",
-      "CTA label",
+      "Button text",
       "External registration destination",
       "Closed message",
       "Hero image",

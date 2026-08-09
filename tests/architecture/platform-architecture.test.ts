@@ -213,6 +213,10 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^lib\/owner-admin-membership\.ts$/,
       /^lib\/migration\//,
       /^lib\/media-cleanup\.ts$/,
+      // Sharp-free token boundary split out of media-processing.ts; it reads
+      // SUPABASE_SERVICE_ROLE_KEY only as the HMAC signing secret and never
+      // constructs a service-role client.
+      /^lib\/media-authorization-token\.ts$/,
       /^lib\/media-processing\.ts$/,
       /^lib\/billing-lifecycle\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
