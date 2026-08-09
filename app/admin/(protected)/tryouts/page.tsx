@@ -40,6 +40,12 @@ function FieldError({ message }: { message?: string }) {
 
 export default function AdminTryoutsPage() {
   const club = useClubContext();
+  // academy@1 keeps this editor to the fields its public page actually shows.
+  // Program association is not rendered anywhere on AcademyTryoutsPage, and no
+  // hero image has ever been attached (tryouts.hero_media_asset_id is null for
+  // every row), so both are hidden here. Nothing is deleted: the column, the
+  // upload pipeline, and every other template's editor are untouched.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const heroInput = useRef<HTMLInputElement>(null);
   const [tryouts, setTryouts] = useState<TryoutDraft[]>([]);
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
@@ -275,8 +281,9 @@ export default function AdminTryoutsPage() {
             Tryouts
           </h1>
           <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-white/45">
-            Manage public event status, logistics, media, program association,
-            and the external registration action. Registration stays on the external destination.
+            {isAcademy
+              ? "Manage public event status, logistics, and the external registration action. Registration stays on the external destination."
+              : "Manage public event status, logistics, media, program association, and the external registration action. Registration stays on the external destination."}
           </p>
         </div>
         <button
@@ -354,12 +361,14 @@ export default function AdminTryoutsPage() {
               </div>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Program association">
-                  <select className={INPUT_CLASS} value={draft.programId ?? ""} onChange={(event) => updateDraft("programId", event.target.value || null)}>
-                    <option value="">General club tryout</option>
-                    {programs.map((program) => <option key={program.id} value={program.id}>{program.display_title}</option>)}
-                  </select>
-                </Field>
+                {!isAcademy && (
+                  <Field label="Program association">
+                    <select className={INPUT_CLASS} value={draft.programId ?? ""} onChange={(event) => updateDraft("programId", event.target.value || null)}>
+                      <option value="">General club tryout</option>
+                      {programs.map((program) => <option key={program.id} value={program.id}>{program.display_title}</option>)}
+                    </select>
+                  </Field>
+                )}
                 <Field label="Status">
                   <select className={INPUT_CLASS} value={draft.status} onChange={(event) => updateDraft("status", event.target.value as TryoutDraft["status"])}>
                     <option value="upcoming">Upcoming — details can be TBA</option>
@@ -405,7 +414,7 @@ export default function AdminTryoutsPage() {
               </div>
 
               <div className="mt-7 grid gap-5 border-t border-white/[0.06] pt-7 sm:grid-cols-2">
-                <Field label="CTA label" error={errors.ctaLabel}>
+                <Field label={isAcademy ? "Button text" : "CTA label"} error={errors.ctaLabel}>
                   <input className={INPUT_CLASS} value={draft.ctaLabel} onChange={(event) => updateDraft("ctaLabel", event.target.value)} maxLength={40} placeholder="Register externally" />
                 </Field>
                 <Field label="External registration destination" error={errors.registrationHref}>
@@ -421,6 +430,7 @@ export default function AdminTryoutsPage() {
                 </div>
               </div>
 
+              {!isAcademy && (
               <div className="mt-7 border-t border-white/[0.06] pt-7">
                 <span className={LABEL_CLASS}>Hero image</span>
                 <div className="overflow-hidden rounded-xl border border-dashed border-white/15 bg-black/20">
@@ -442,6 +452,7 @@ export default function AdminTryoutsPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               <div className="mt-8 flex flex-col-reverse gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
