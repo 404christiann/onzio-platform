@@ -2,6 +2,23 @@
 
 Last updated: 2026-08-09
 
+## Tryouts/Programs redesign deployed to production, including a real Supabase migration
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
+
+Christian: "Yes, deploy those two" (the hosted migration push and the code
+deploy). Re-linked production explicitly, verified, confirmed exactly one
+migration missing (`20260809120000_tryouts_page_content.sql`), checked
+backup posture (~10h old, accepted — this migration only creates a new
+empty table, no existing data at risk), applied it, verified the live
+table's shape matches source exactly. `vercel deploy --prod` →
+`dpl_8DemmAXEENd1got2r93S8i6T5oce`, re-aliased
+`diverse-city-fc-private.vercel.app`. Build clean, Rose City `200`.
+
+Full detail, including the branch/stash situation with Christian's
+in-progress admin visual redesign (`experiment/admin-portal-styling`) and
+its recovery instructions, in `STATUS.md`.
+
 ## Tryouts and Programs admin redesign landed on `staging` — includes a real merge situation with Christian's in-progress UI redesign, handled via stash
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`, not

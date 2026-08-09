@@ -1,5 +1,44 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Tryouts/Programs redesign deployed to production, including the tryouts_page_content migration
+
+**Package:** none — ad hoc, deploy of the entry below. Christian approved
+both the hosted Supabase push and the code deploy.
+
+**Sequence, following `AGENTS.md`'s production-write discipline:**
+
+1. Re-linked explicitly (`supabase link --project-ref ioalthwsdrlzrubomrow`),
+   confirmed with `select current_database(), now()` plus a direct read of
+   Diverse City's known production row (`d7a41762-…`, `lifecycle=onboarding`,
+   matching every earlier record of production state).
+2. `supabase migration list --linked` — exactly the expected one migration
+   missing (`20260809120000`), everything else already applied.
+3. Backup posture: latest completed physical backup
+   `2026-08-09T11:16:20Z`, ~10h old. Accepted — lower risk than usual: this
+   migration only creates a brand-new empty table, no `ALTER` on any
+   existing table and no data mutation, so there is no existing data a
+   rollback could lose.
+4. `supabase db push --linked` — applied cleanly; verified with
+   `migration list` (local=remote) and a direct `information_schema.columns`
+   read confirming the live table's shape matches the migration exactly.
+5. `vercel deploy --prod` → `dpl_8DemmAXEENd1got2r93S8i6T5oce`, auto-aliased
+   to `onzio-platform.vercel.app`; re-aliased
+   `diverse-city-fc-private.vercel.app` to the same deployment.
+
+**Verified live:** Rose City (`onzio-platform.vercel.app`) `200`. Build logs
+clean, no errors. As with every `/admin`-only round today, a full
+click-through on the live Diverse City private hostname still needs
+Christian's own authenticated session — the redesigned Tryouts/Programs
+tabs and the new page-intro fields were already verified locally, live,
+before this deploy (see the entry below); this deploy step confirms only
+that the build shipped clean and both hostnames are healthy.
+
+**Next step:** Christian to confirm the redesigned `/admin/tryouts` and
+`/admin/programs` look right against production, and to resume
+`experiment/admin-portal-styling` per the stash-recovery note below whenever
+he's ready — that branch's redesign will need reconciling with the new tab
+structure now live here.
+
 ## 2026-08-09 - Tryouts and Programs admin redesign, from today's grill-me session, landed on `staging`
 
 **Package:** none — ad hoc. Implements the resolved decisions from today's
