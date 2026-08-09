@@ -2,6 +2,47 @@
 
 Last updated: 2026-08-09
 
+## Rose City non-regression check redone (this time by real runtime, not code inspection); deploy and production repro both still waiting on Christian
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete` for the
+two things this round could do without Christian; the two things that
+actually close out the investigation below are both his call.
+
+**No hosted Supabase access of any kind. No code changes. No deploy.**
+
+**1. Confirmed `staging` HEAD is still a plain code-only deploy.** Migrations
+diff against production's current commit (`80bf0242`, per Vercel's
+deployment history) is empty.
+
+**2. Redid the Rose City `clubhouse@1` non-regression check the last round
+flagged as weaker evidence** (it could only verify by reading the code,
+because its scripted publish attempt was sandbox-blocked). This time it went
+through end to end: derived a real valid `clubhouse@1` document from Diverse
+City's own published config via the platform's `switchPresentationTemplate`,
+published it locally for the Alpha FC test club, signed in for real through
+`/admin/login` using the local Mailpit inbox for the code, and loaded all
+five surfaces this round's unreleased commits touch
+(`/admin/programs`, `/admin/contact`, `/admin/tryouts`, `/admin/shop`,
+`/admin/about`). **All five rendered the original, non-academy editor** —
+nothing this round hid for `academy@1` leaked into Rose City's template.
+Reverted Alpha's presentation state back to its original document afterward.
+Full detail, including why the leftover document row can't be deleted (by
+design — presentation documents are trigger-immutable), in `STATUS.md`.
+
+**Verification:** `npx tsc --noEmit` clean; full suite **891/891**; `test:db`
+**155/155** — both unchanged, confirming the temporary local publish-and-revert
+left no damage.
+
+**Still not done, both on Christian:** the deploy itself (ready to run on his
+go-ahead — `vercel deploy --prod` then re-alias
+`diverse-city-fc-private.vercel.app`), and reproducing the production upload
+failure again once it's live, to get the specific new error code/text the
+last round's diagnostics fix now returns. Also checked whether media uploads
+carry any session-freshness/AAL requirement text-only saves don't
+(`lib/media-route-auth.ts` vs `app/api/admin/data/route.ts`) — both call the
+identical `requireFreshClubSession` and both hardcode `aal: "aal1"`. No
+divergence found; ruled out as a lead, not a new fix.
+
 ## MEDIA_AUTH_FAILED round two: hypothesis disproved, three real defects fixed, five admin items shipped
 
 Agent: Claude Opus 5 (Claude Code), 2026-08-09. Status: `complete` for the

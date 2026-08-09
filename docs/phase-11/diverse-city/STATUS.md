@@ -1,5 +1,89 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Redid the Rose City runtime check the previous round couldn't finish; deploy and repro still waiting on Christian
+
+**Package:** none — ad hoc, continuing the handoff from the MEDIA_AUTH_FAILED
+round-two entry below. No code changes this round. **No hosted Supabase
+access of any kind — no link, no read, no write, no migration, no deploy.**
+
+**1. Confirmed the pending deploy is still code-only.** `git diff
+80bf0242489f3209b17b63be10c3ea31abf53ee0 HEAD -- supabase/migrations/` (that
+commit is production's current HEAD per the Vercel deployment history —
+`dpl_6E6GhpE1op7ebJK8vVzCdtihDJdK`, `target: production`) is empty. The 8
+unreleased commits (`d8d5123` … `8563444`) are admin/component code only, so
+promoting current `staging` HEAD (`1d91734`) is the same plain `vercel
+deploy --prod` + re-alias `diverse-city-fc-private.vercel.app` shape as every
+earlier code-only deploy today. Also confirmed Vercel's own Git-integration
+preview build of `1d91734` (`dpl_CJ3gEDyFMAvUB2JWbCXqb9c2zrir`, auto-triggered
+by the push, not a manual action) is `READY`, so the build itself is known-good
+ahead of any promote decision.
+
+**2. Redid the Rose City non-regression check the previous round flagged as
+weaker evidence.** That round could only verify by code inspection because
+the scripted `clubhouse@1` publish attempt was sandbox-blocked. This round
+completed the actual runtime check:
+
+- Derived a real, schema-valid `clubhouse@1` configuration by running the
+  platform's own `switchPresentationTemplate` (from
+  `packages/presentation/index.ts`) against Diverse City's actual published
+  `academy@1` document, then confirmed `validatePresentationDocument` returns
+  `valid: true` for the result — not a hand-built fixture.
+- Published it for the **Alpha FC test club** (`11111111-…-111`, `kind=test`)
+  by inserting a new `presentation_documents` row and pointing
+  `presentation_state.published_document_id` at it. Local Supabase only;
+  `configuration_digest` has no DB-side content check (confirmed by reading
+  the migration — it's format-only, `^[0-9a-f]{64}$`), so this didn't need to
+  replicate the app's exact digest formula.
+- Signed in for real as Alpha's existing `owner-aal1@alpha.local` fixture
+  through the actual `/admin/login` email-code flow (code read from local
+  Mailpit), against a real `npm run dev` server at `alpha.localhost:3005` —
+  the same pattern `tests/browser/platform-auth-local.spec.ts` uses locally.
+- Loaded `/admin/programs`, `/admin/contact`, `/admin/tryouts`, `/admin/shop`,
+  and `/admin/about` — the five surfaces this round's unreleased commits
+  touch — and read the rendered page text. **All five showed the original,
+  non-academy editor**: Programs had "Create program" and the Slug field;
+  Contact had the free-text Hero Image field; Tryouts had Program Association
+  and Hero Image; Shop's Shop Page tab listed all three kits (Home/Away/Third)
+  plus Photo Row and Purchase; About's CTA tab had the free-text "CTA Link"
+  field, not the fixed "Button Goes To" line. Every one of these is exactly
+  what's hidden when `presentationTemplateKey === "academy@1"` — confirmed
+  false and inert here.
+- Reverted `presentation_state.published_document_id` back to Alpha's
+  original document (`88888888-8888-4888-8888-888888888804`) afterward.
+  The new document row itself cannot be deleted — `presentation_documents`
+  rows are trigger-enforced immutable on update *and delete*, by design
+  (`prevent_presentation_document_mutation`), which is also why ~34 stray
+  rows from earlier contract-test runs were already sitting on this club
+  before this round touched it. Harmless, consistent with existing state,
+  not something `supabase db reset` needs to fix.
+
+**Verification:** `npx tsc --noEmit` clean. Full suite **891/891** across 86
+files, `test:db` **155/155** across 15 files — both unchanged from the prior
+entry, confirming the temporary publish-and-revert left no damage.
+
+**Not done, both waiting on Christian:**
+
+- **The deploy itself.** Ready to run the instant he says go: `vercel deploy
+  --prod` on `staging` HEAD, then re-alias
+  `diverse-city-fc-private.vercel.app` to the new deployment.
+- **The production repro.** The whole point of deploying this round is that
+  failed uploads now return a specific code and reason instead of a bare
+  `MEDIA_AUTHORIZATION_FAILED`. Once live, the fastest real path to root
+  cause is Christian reproducing the upload failure again and reporting the
+  exact new on-screen text — not another round of hypothesis-testing without
+  it.
+- **`is_club_session_fresh` / AAL2 investigated, ruled out as a lead.**
+  Checked whether media uploads carry any session-freshness or AAL
+  requirement text-only saves don't: `lib/media-route-auth.ts`'s
+  `requireMediaRouteAuthorization` and `app/api/admin/data/route.ts` both
+  call the exact same `requireFreshClubSession` (the 30-day JWT-AMR check)
+  and both pass a hardcoded `aal: "aal1"` into `authorizeMutation`/
+  `authorizeAdminAccess`. No divergence exists between the two paths at the
+  application-auth layer — this was already fully covered by round two's
+  finding that the DB-level `can_mutate_content` gate is shared too. Not a
+  lead; the "genuinely still unknown" question from the prior entry stands
+  exactly as written there.
+
 ## 2026-08-09 - MEDIA_AUTH_FAILED round two + five admin items. Committed and pushed to `staging`, NOT deployed
 
 **Package:** none — ad hoc. Christian hit `MEDIA_AUTHORIZATION_FAILED` on
