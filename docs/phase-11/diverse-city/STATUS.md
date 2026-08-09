@@ -1,5 +1,123 @@
 # Diverse City FC Status
 
+## 2026-08-09 - MEDIA_AUTHORIZATION_FAILED root cause found and fixed: sharp/libvips crashing on Vercel. Deployed. Five more admin punch-list items from Christian's live review
+
+**Package:** none — ad hoc. Christian reproduced the upload failure in
+production right after the prior deploy and got the new diagnostic text:
+"The upload could not be authorized: the server responded 500. This is not
+a permissions error — the request did not reach the upload service." on
+roster (action photo, player photo), schedule (opponent logo), sponsors
+(sponsor logo), about (feature image), and standings (team logo) — every
+surface he tried, identically. That "did not reach the upload service"
+phrasing plus the identical failure across every surface was the signal
+this round needed.
+
+**Status:** `complete`. Root cause found via Vercel's runtime error log
+(`get_runtime_errors`), fixed, verified by full local suite, and deployed.
+
+### The actual root cause
+
+`/api/admin/media/authorize` has been crashing on every request since
+**2026-07-29** — eleven days before today's investigation even started —
+with:
+
+```
+Error: Could not load the "sharp" module using the linux-x64 runtime
+ERR_DLOPEN_FAILED: libvips-cpp.so.8.18.3: cannot open shared object file
+```
+
+This is a module-import-time crash: it happens before the route handler
+runs, before any auth/RLS/session code executes. That's exactly why every
+hypothesis this whole day — the `can_mutate_feature` surface mapping, the
+`lifecycle`/`kind`/`public_access` gate, session freshness, AAL — came up
+empty: none of that code was ever reached. And it's exactly why it never
+reproduced locally: sharp's native binary loads fine on a developer's own
+machine; only Vercel's Linux serverless runtime was broken for it.
+
+`lib/media-processing.ts` imports `sharp` at module scope, and
+`app/api/admin/media/authorize/route.ts` only needed
+`createMediaAuthorizationToken` from that module — a pure HMAC signer that
+never touches an image — but importing anything from that module pulled in
+`sharp` anyway, so authorize crashed even though it never does pixel work.
+
+This exact bug class hit this repo once before, for a different boundary:
+Phase 8's `lib/media-cleanup.ts` (see
+`docs/phase-8/rose-city-migration-runbook.md`, `HANDOFF.md` commit
+`a5ad8a0`). That fix isolated the cleanup cron from `sharp`. This round's
+fix follows the same precedent for the authorize route, plus fixes the
+underlying loading problem for real this time (Phase 8's fix only avoided
+the symptom for one boundary; it never fixed sharp's actual Vercel
+bundling).
+
+### Fix
+
+1. `next.config.mjs`: added `serverExternalPackages: ["sharp"]` — the
+   standard fix for this exact Next.js/Vercel/sharp bundling failure; keeps
+   Next's file-tracer from mis-resolving sharp's native `libvips` dependency
+   and lets Node's normal module resolution load the correctly-installed
+   binary at runtime. This is the fix that actually matters — `finalize`
+   still needs real pixel normalization and can't avoid sharp, so this is
+   required regardless of anything else.
+2. New `lib/media-authorization-token.ts`: sharp-free module holding
+   `createMediaAuthorizationToken`/`verifyMediaAuthorizationToken` (verbatim
+   HMAC logic). `authorize/route.ts` now imports only from here;
+   `finalize/route.ts` imports token verification from here and
+   `publishAuthorizedMedia` (sharp-based normalization) from
+   `media-processing.ts`. Defense in depth: authorize can never be taken
+   down by a sharp regression again, matching the Phase 8 precedent.
+   `tests/architecture/platform-architecture.test.ts`'s privileged-boundary
+   allowlist updated to include the new file (it reads
+   `SUPABASE_SERVICE_ROLE_KEY` only as the HMAC secret, same as the
+   `media-processing.ts` entry it split from — not a new capability).
+
+Built by a Fable-model agent (`Agent` tool, `model: "fable"`) from a plan
+this session wrote after reading the Vercel runtime-error log directly;
+every diff was independently re-reviewed and every verification command
+independently re-run in this session before committing, not just trusted
+from the agent's report.
+
+### Five more items from Christian's live `/admin` review
+
+| Item | Fix | Scope |
+| --- | --- | --- |
+| Programs "Page Copy" editor felt unnecessary | Hidden the whole homepage-pathway/`/programs`-header/closing-band copy editor; Program Order + Edit Program untouched. Public pages already fall back to placeholder wording when nothing's saved, so this is purely subtractive. | `academy@1` only |
+| About page still said "CTA" | Sub-tab "CTA" → "Closing" (id unchanged) | platform-wide |
+| "CTA label"/"CTA destination"/"CTA Link" elsewhere in admin | → "Button label"/"Button link" in About, Programs, Tryouts | platform-wide (copy-only, no behavior change — same reasoning as the earlier phone-regex fix) |
+| About's "Club Logo" tab doesn't correspond to a real page | Hidden; `templateRegistry["academy@1"]` has no `club-logo` in its routes. Save no longer upserts `club_logo_page_content` for this template. | `academy@1` only |
+| Sponsors' "Footer" placement tab is dead — that footer renders no sponsor strip | Hidden; confirmed in `components/Footer.tsx`'s academy branch (cites `DCFC-D132`: avoids duplicating the homepage `SponsorCarousel`). `placement` pinned to `"carousel"`. | `academy@1` only |
+
+**Note for `DECISIONS.md`:** `DCFC-D130`'s rationale text ("visible in every
+page footer") is now stale for `academy@1` — the later, undocumented
+`DCFC-D132` footer rewrite removed the footer sponsor strip for this
+template without updating that earlier decision's wording. Not corrected in
+this pass; flagging so a future session doesn't trust the stale sentence.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **891/891** across 86 files — unchanged count, all label-string
+  test updates matched to the new copy, no coverage dropped.
+- `npm run test:db` **155/155** across 15 files — unchanged.
+- Independently re-run in this session (not just the agent's report) after
+  transplanting the changes from the agent's worktree into the main working
+  tree.
+- **The sharp fix itself cannot be verified locally** — it never reproduces
+  outside Vercel's runtime. Real confirmation is a clean Vercel runtime-error
+  log after this deploy, or Christian successfully completing an upload.
+
+### Deployed
+
+Commit `722e7de` on `origin/staging`. `vercel deploy --prod` →
+`dpl_HYATWRyc3EwWZdpZAXymivbzJZcG`, auto-aliased to
+`onzio-platform.vercel.app`; re-aliased
+`diverse-city-fc-private.vercel.app` to the same deployment. Build logs
+clean (no errors). Rose City (`onzio-platform.vercel.app`) `200`.
+
+**Next step:** Christian tries an upload again. If the sharp fix worked,
+it should just succeed. If it still fails, whatever error now appears is
+almost certainly a new, different, real bug — the sharp crash explanation
+should no longer apply once this deployment is live.
+
 ## 2026-08-09 - Deployed to production: five admin items, three media-pipeline defects, and the improved upload diagnostics now live
 
 **Package:** none — ad hoc. Continuation of the same-day entry below.

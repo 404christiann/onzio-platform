@@ -2,6 +2,47 @@
 
 Last updated: 2026-08-09
 
+## MEDIA_AUTHORIZATION_FAILED root cause found: sharp/libvips crashing on Vercel since 2026-07-29. Fixed and deployed, along with five more admin items from Christian's live review
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
+
+Christian reproduced the upload failure in production and reported the new
+diagnostic text: "the server responded 500 — this is not a permissions
+error, the request did not reach the upload service," identically on every
+surface he tried (roster, schedule, sponsors, about, standings). Pulling
+Vercel's runtime error log directly showed why: `/api/admin/media/authorize`
+has been crashing on `sharp`/`libvips` native-binary load failure since
+**2026-07-29**, eleven days before this investigation started — a
+module-import-time crash, before any auth/RLS code runs, which is exactly
+why every hypothesis chased today (RLS mapping, lifecycle gate, session
+freshness, AAL) turned up nothing, and why it never reproduced locally.
+
+**Fix:** `serverExternalPackages: ["sharp"]` in `next.config.mjs` (the
+standard fix for this Next.js/Vercel/sharp bundling failure), plus splitting
+the sharp-free HMAC token functions out of `lib/media-processing.ts` into a
+new `lib/media-authorization-token.ts` so `/authorize` never transitively
+imports `sharp` again — same isolation precedent this repo already used for
+`lib/media-cleanup.ts` in Phase 8. Full root-cause detail, plus five more
+admin punch-list items from the same live review (Programs page-copy editor
+hidden, "CTA" wording replaced with plain language, About's dead Club Logo
+tab hidden, Sponsors' dead Footer tab hidden), in `STATUS.md`.
+
+Planned by this session, implemented by a Fable-model agent from a
+self-contained brief; every diff independently re-reviewed and every
+verification command independently re-run before committing — not just
+trusted from the agent's report.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **891/891**; `test:db`
+**155/155** — unchanged counts, all test updates are label-string matches
+to the new copy.
+
+**Deployed:** commit `722e7de` → `vercel deploy --prod` →
+`dpl_HYATWRyc3EwWZdpZAXymivbzJZcG`, re-aliased
+`diverse-city-fc-private.vercel.app`. Rose City `200`, build logs clean.
+**The sharp fix can't be verified locally** — next real signal is Christian
+trying an upload again, or me checking Vercel's error log for a new
+occurrence.
+
 ## Deployed to production: the five admin items, the three media-pipeline defects, and the improved upload diagnostics are now live — the production MEDIA_AUTHORIZATION_FAILED repro is the next step, and it's Christian's
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
