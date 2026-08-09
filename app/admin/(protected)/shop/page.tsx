@@ -403,16 +403,29 @@ export default function AdminShopPage() {
     setSaved(false);
     try {
       const supabase = createClient();
+      // Upsert, not update. A kit variant the club has never saved before (the
+      // Away kit on a club that only ever filled in Home) has no
+      // `shop_kit_section` row, so an UPDATE matched zero rows and silently
+      // discarded the content while the photos saved. The
+      // (club_id, surface, kit_variant) unique constraint backs the conflict
+      // target, which /api/admin/data already prefixes with the verified
+      // `club_id`. No `club_id` here either: that route rejects any
+      // client-supplied tenant filter or payload key with
+      // UNTRUSTED_TENANT_INPUT and injects the real club itself.
       const { error: sectionError } = await supabase
         .from("shop_kit_section")
-        .update({
-          ...fields,
-          bullet_points: cleanedBulletPoints,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("club_id", clubId)
-        .eq("surface", selectedSurface)
-        .eq("kit_variant", activeKitVariant);
+        .upsert(
+          [
+            {
+              ...fields,
+              bullet_points: cleanedBulletPoints,
+              surface: selectedSurface,
+              kit_variant: activeKitVariant,
+              updated_at: new Date().toISOString(),
+            },
+          ],
+          { onConflict: "surface,kit_variant" },
+        );
       if (sectionError) throw new Error(sectionError.message);
 
       const { toDelete, toInsert, toUpdate } = diffShopKitPhotos(

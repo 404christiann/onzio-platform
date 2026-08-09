@@ -6,7 +6,10 @@ import {
   createMediaAuthorizationToken,
   type MediaAuthorization,
 } from "@/lib/media-authorization-token";
-import { describeMediaAuthorizationFailure } from "@/lib/media-diagnostics";
+import {
+  describeMediaAuthorizationFailure,
+  describeMediaRequestValidationFailure,
+} from "@/lib/media-diagnostics";
 import { requireMediaRouteAuthorization } from "@/lib/media-route-auth";
 import { buildStoragePath } from "@/lib/storage-path";
 
@@ -59,11 +62,17 @@ export async function POST(request: Request) {
 
   const parsed = authorizeMediaRequestSchema.safeParse(body);
   if (!parsed.success) {
+    // `parsed.error.message` is a JSON dump of Zod issue objects. Admins were
+    // being shown that raw array in the upload error banner; say what is wrong
+    // with the file instead.
     return NextResponse.json(
       {
         error: {
           code: "INVALID_MEDIA_REQUEST",
-          message: parsed.error.message,
+          message: describeMediaRequestValidationFailure(
+            parsed.error.issues,
+            body,
+          ),
         },
       },
       { status: 400 },

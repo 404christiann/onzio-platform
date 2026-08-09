@@ -10,6 +10,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import {
+  fetchActiveSeason,
   fetchContactProfile,
   fetchLeagueStandings,
   fetchSchedule,
@@ -73,7 +74,13 @@ export default function AcademyNextMatch() {
   }, [club.id]);
 
   useEffect(() => {
-    fetchSchedule(undefined, club.id)
+    // Matches /schedule's own scope: only the active season's fixtures can
+    // become "next match" here, so the homepage never spotlights a fixture
+    // /schedule itself doesn't list.
+    fetchActiveSeason(club.id)
+      .then((activeSeason) =>
+        activeSeason ? fetchSchedule(activeSeason.id, club.id) : [],
+      )
       .then((fixtures) => {
         const now = Date.now();
         const todayStr = new Date().toISOString().split("T")[0];

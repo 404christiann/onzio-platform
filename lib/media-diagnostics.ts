@@ -34,6 +34,79 @@ const ROW_LEVEL_SECURITY_REASON =
   "changes. Signing out and back in resolves the first; the others need an " +
   "Onzio operator.";
 
+export const ACCEPTED_MEDIA_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
+const ACCEPTED_MEDIA_FORMATS_LABEL = "JPEG, PNG, or WebP";
+
+/**
+ * Names the file type an admin actually picked, in words rather than a MIME
+ * string. Browsers report an empty `file.type` for formats they do not
+ * recognise at all, which is itself the answer to "why was it rejected".
+ */
+function describeMimeType(value: unknown): string | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const subtype = value.split("/")[1]?.split(";")[0]?.trim();
+  if (!subtype) return null;
+  if (subtype === "jpeg") return "JPEG";
+  if (subtype === "svg+xml") return "SVG";
+  return subtype.toUpperCase();
+}
+
+function issuePath(issue: unknown): string {
+  if (!issue || typeof issue !== "object") return "";
+  const path = (issue as { path?: unknown }).path;
+  return Array.isArray(path) ? path.map(String).join(".") : "";
+}
+
+/**
+ * Turns a rejected /api/admin/media/authorize request body into one sentence an
+ * club admin can act on.
+ *
+ * Why this exists. The route used to return `parsed.error.message` verbatim,
+ * which for a Zod failure is a JSON array of issue objects. A club operator who
+ * picked an iPhone HEIC photo saw a raw `{"code":"invalid_value","values":[...],
+ * "path":["mimeType"]}` dump in the admin UI and could not tell that the fix was
+ * simply to convert the photo. The file input offers `image/*` while only three
+ * formats are decodable server-side, so this is a routine, self-inflicted
+ * failure that deserves routine wording.
+ *
+ * Nothing sensitive is exposed: the values echoed back are the caller's own
+ * chosen file type and size.
+ */
+export function describeMediaRequestValidationFailure(
+  issues: readonly unknown[],
+  body: unknown,
+): string {
+  const request = (body ?? {}) as Record<string, unknown>;
+  const paths = new Set(issues.map(issuePath));
+
+  if (paths.has("mimeType")) {
+    const actual = describeMimeType(request.mimeType);
+    return actual
+      ? `Please upload a ${ACCEPTED_MEDIA_FORMATS_LABEL} image. ${actual} isn't supported — convert the file and try again.`
+      : `Please upload a ${ACCEPTED_MEDIA_FORMATS_LABEL} image. This file's type could not be read, so it can't be accepted — convert the file and try again.`;
+  }
+
+  if (paths.has("size")) {
+    const size = request.size;
+    const megabytes =
+      typeof size === "number" && Number.isFinite(size) && size > 0
+        ? ` (this one is ${(size / (1024 * 1024)).toFixed(1)} MB)`
+        : "";
+    return `Images must be under 15 MB${megabytes}. Please resize the file and try again.`;
+  }
+
+  if (paths.has("fileName")) {
+    return "That file's name is missing or too long. Rename it to something shorter and try again.";
+  }
+
+  return "The upload request was not valid. Please reselect the file and try again.";
+}
+
 function messageOf(error: unknown): string {
   if (typeof error === "string") return error;
   if (error && typeof error === "object" && "message" in error) {

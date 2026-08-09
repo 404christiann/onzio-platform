@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import OpponentCrest from "@/components/OpponentCrest";
+import { useClubContext } from "@/components/ClubContextProvider";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
@@ -91,6 +92,12 @@ async function deleteUnusedMatchImageUrls({
 // ── Main component ────────────────────────────
 
 export default function SchedulePage() {
+  const club = useClubContext();
+  // See MatchForm: academy@1 never renders match sponsors, so the fields are
+  // hidden and nothing is copied forward into a new match for that template.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const carrySponsor = (list: Match[], seasonId: string) =>
+    isAcademy ? {} : carrySponsorFromLatestMatch(list, seasonId);
   const {
     seasons,
     selectedSeasonId,
@@ -128,7 +135,7 @@ export default function SchedulePage() {
     setEditingId(null);
     setAddForm({
       ...emptyForm(selectedSeasonId),
-      ...carrySponsorFromLatestMatch(matches, selectedSeasonId),
+      ...carrySponsor(matches, selectedSeasonId),
     });
   }, [matches, selectedSeasonId]);
 
@@ -194,7 +201,7 @@ export default function SchedulePage() {
     if (e) { setError(e.message); setSaving(false); return; }
     setAddForm({
       ...emptyForm(selectedSeasonId),
-      ...carrySponsorFromLatestMatch(matches, selectedSeasonId),
+      ...carrySponsor(matches, selectedSeasonId),
     });
     setAddOpen(false);
     await load();
@@ -319,7 +326,7 @@ export default function SchedulePage() {
               setAddOpen((open) => !open);
               setAddForm({
                 ...emptyForm(selectedSeasonId),
-                ...carrySponsorFromLatestMatch(matches, selectedSeasonId),
+                ...carrySponsor(matches, selectedSeasonId),
               });
               setError(null);
             }}
@@ -452,7 +459,7 @@ export default function SchedulePage() {
                         </p>
                       )}
 
-                      {m.sponsor_logo_url && (
+                      {!isAcademy && m.sponsor_logo_url && (
                         <p className="font-body truncate" style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.3)" }}>
                           Presented by {m.sponsor_name || "match sponsor"}
                         </p>
@@ -521,6 +528,15 @@ function MatchForm({
   seasons: DBSeason[];
   cleanupDraftUploads?: boolean;
 }) {
+  const club = useClubContext();
+  // academy@1 renders fixtures through AcademyNextMatch and AcademyFixtureRow,
+  // neither of which reads sponsor_name, sponsor_logo_url, or sponsor_link, so
+  // anything entered here could never appear on this club's site. Same
+  // dead-admin-surface removal as DCFC-D130. The columns, the upload/cleanup
+  // logic, and every other template's editor are untouched — clubhouse@1 still
+  // renders these through NextMatchCard.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
+
   function set(field: string, value: string | boolean | number | null) {
     onChange({ ...form, [field]: value });
   }
@@ -627,74 +643,78 @@ function MatchForm({
         />
       </Field>
 
-      <div
-        className="mt-2 border-t pt-4 sm:col-span-2"
-        style={{ borderColor: "rgba(255,255,255,0.08)" }}
-      >
-        <p
-          className="font-display text-xs font-black uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          Presented By Sponsor
-        </p>
-        <p
-          className="font-body mt-1 text-xs"
-          style={{ color: "rgba(255,255,255,0.28)" }}
-        >
-          New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage.
-        </p>
-      </div>
+      {!isAcademy && (
+        <>
+          <div
+            className="mt-2 border-t pt-4 sm:col-span-2"
+            style={{ borderColor: "rgba(255,255,255,0.08)" }}
+          >
+            <p
+              className="font-display text-xs font-black uppercase tracking-widest"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Presented By Sponsor
+            </p>
+            <p
+              className="font-body mt-1 text-xs"
+              style={{ color: "rgba(255,255,255,0.28)" }}
+            >
+              New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage.
+            </p>
+          </div>
 
-      <Field label="Sponsor Name (optional)">
-        <input
-          type="text"
-          placeholder="e.g. Tepito Coffee"
-          value={form.sponsor_name ?? ""}
-          onChange={(e) => set("sponsor_name", e.target.value)}
-          style={inputStyle}
-        />
-      </Field>
+          <Field label="Sponsor Name (optional)">
+            <input
+              type="text"
+              placeholder="e.g. Tepito Coffee"
+              value={form.sponsor_name ?? ""}
+              onChange={(e) => set("sponsor_name", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
 
-      <Field label="Sponsor Website Link (optional)">
-        <input
-          type="url"
-          placeholder="https://..."
-          value={form.sponsor_link ?? ""}
-          onChange={(e) => set("sponsor_link", e.target.value)}
-          style={inputStyle}
-        />
-      </Field>
+          <Field label="Sponsor Website Link (optional)">
+            <input
+              type="url"
+              placeholder="https://..."
+              value={form.sponsor_link ?? ""}
+              onChange={(e) => set("sponsor_link", e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
 
-      <div className="sm:col-span-2">
-        <Field label="Sponsor Logo (optional)">
-          <SponsorLogoUpload
-            logoUrl={form.sponsor_logo_url}
-            sponsorName={form.sponsor_name ?? ""}
-            onUploaded={async (url) => {
-              if (cleanupDraftUploads) {
-                await deleteUnusedMatchImageUrls({
-                  bucket: "sponsors",
-                  urls: [form.sponsor_logo_url],
-                  column: "sponsor_logo_url",
-                  allowedPrefixes: ["match-sponsors/"],
-                });
-              }
-              onChange({ ...form, sponsor_logo_url: url });
-            }}
-            onRemove={async () => {
-              if (cleanupDraftUploads) {
-                await deleteUnusedMatchImageUrls({
-                  bucket: "sponsors",
-                  urls: [form.sponsor_logo_url],
-                  column: "sponsor_logo_url",
-                  allowedPrefixes: ["match-sponsors/"],
-                });
-              }
-              onChange({ ...form, sponsor_logo_url: null });
-            }}
-          />
-        </Field>
-      </div>
+          <div className="sm:col-span-2">
+            <Field label="Sponsor Logo (optional)">
+              <SponsorLogoUpload
+                logoUrl={form.sponsor_logo_url}
+                sponsorName={form.sponsor_name ?? ""}
+                onUploaded={async (url) => {
+                  if (cleanupDraftUploads) {
+                    await deleteUnusedMatchImageUrls({
+                      bucket: "sponsors",
+                      urls: [form.sponsor_logo_url],
+                      column: "sponsor_logo_url",
+                      allowedPrefixes: ["match-sponsors/"],
+                    });
+                  }
+                  onChange({ ...form, sponsor_logo_url: url });
+                }}
+                onRemove={async () => {
+                  if (cleanupDraftUploads) {
+                    await deleteUnusedMatchImageUrls({
+                      bucket: "sponsors",
+                      urls: [form.sponsor_logo_url],
+                      column: "sponsor_logo_url",
+                      allowedPrefixes: ["match-sponsors/"],
+                    });
+                  }
+                  onChange({ ...form, sponsor_logo_url: null });
+                }}
+              />
+            </Field>
+          </div>
+        </>
+      )}
 
       <Field label="Home / Away" required>
         <select
