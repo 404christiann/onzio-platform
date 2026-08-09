@@ -1,5 +1,88 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Away kit hidden (confirmed dead), and a real platform-wide bug found: removing an image never cleared its stale asset reference
+
+**Package:** none — ad hoc, two more items from Christian's continued live
+admin review. Not yet deployed at time of writing — pending his go-ahead.
+
+### Away kit hidden for academy@1 — confirmed dead, not assumed
+
+Christian: "we aren't displaying an away kit for them." Verified directly
+before touching anything: `components/AcademyShopPage.tsx` calls
+`fetchShopKitVariants("shop", clubId)` (which fetches home/third/away) but
+`.then((variants) => setContent(variants.home))` — third and away are
+fetched and discarded unconditionally. Neither is displayed anywhere on an
+academy@1 site; this was true even before today, not a regression from
+anything shipped today. (The earlier "Home and Away only" comment in the
+shop admin page was itself wrong — corrected in the diff.)
+
+Fixed in `app/admin/(protected)/shop/page.tsx`: `kitVariants` now filters to
+`variant.id === "home"` for academy@1 (previously excluded only "third").
+With a single option left, the kit-type tab switcher itself is hidden
+rather than left as a dead one-button UI, matching the precedent already
+used for the About Club Logo tab and Sponsors Footer tab. Every other
+template (`ClubhouseShopPage`/`ClubhouseHomePage`, which render all three
+kits) is untouched.
+
+### Real bug: removing an image never propagated to the public site — platform-wide, not schedule-specific
+
+Christian: removing a match's opponent logo showed it gone in the admin, but
+the public site kept showing the old crest. Traced to `lib/admin-client.ts`'s
+`attachMediaReferences`, the function that looks up a just-uploaded file's
+public URL in a local cache and attaches the matching `*_asset_id` field
+before a save POSTs to `/api/admin/data`:
+
+```js
+for (const { source, asset } of fields) {
+  const sourceValue = row[source];
+  if (typeof sourceValue !== "string") continue;   // <- skipped a cleared field entirely
+  ...
+}
+```
+
+When an admin clears an image (setting `opponent_logo_url` to `null`), this
+loop's type guard treats "cleared" identically to "field not present at
+all" and skips it — so the save payload updates `opponent_logo_url` to
+`null` but never touches `opponent_logo_asset_id`, which keeps pointing at
+the old, still-published asset. On every public read,
+`resolveMediaReferences` (`lib/media-assets.ts`) re-derives the display URL
+**from `opponent_logo_asset_id`, unconditionally overwriting whatever the
+raw `opponent_logo_url` column says** — so the stale asset kept winning
+forever. The admin looked correct only because it renders from local draft
+state, never re-resolving from the database like the public site does.
+
+**Not schedule-specific.** Every table in `admin-client.ts`'s
+`MEDIA_REFERENCE_FIELDS` map shares this exact code path — `matches`,
+`about_page_content`, `club_logo_page_content`, `homepage_slideshow_photos`,
+`league_standings`, `player_photos`, `program_media`, `players`,
+`shop_carousel_photos`, `shop_kit_photos`, `site_branding`,
+`site_sponsor_logos`, `staff`. Any admin, on any club, on any of these
+fields, removing (not replacing) an image has been silently ineffective on
+the public site since this pattern was introduced.
+
+**Fix:** the loop now distinguishes "field not present in this payload at
+all" (leave the existing asset reference alone — a save that doesn't touch
+an image field must never disturb it) from "field present and explicitly
+empty" (null the asset reference too, so the removal actually takes). Uses
+`Object.prototype.hasOwnProperty` to tell the two apart, since a missing key
+and an empty value both read as `undefined`/non-string otherwise.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **912/912** across 87 files, up from 906 (+6: 4 pinning the
+  away-kit hide including that other templates keep all three kits, 2 for
+  the media-reference-clearing fix and its "don't touch unrelated fields"
+  guard).
+- `npm run test:db` **155/155**, unchanged.
+- Both changes are source-level fixes verified by targeted tests
+  (`tests/contracts/diverse-city-admin-punch-list.test.ts`) rather than a
+  fresh live reproduction this round — the underlying mechanism was fully
+  traced and confirmed by reading the actual code paths (`resolveMediaReferences`,
+  `attachMediaReferences`, `AcademyShopPage`), not inferred.
+
+**Next step:** Christian's go-ahead to commit and deploy.
+
 ## 2026-08-09 - Four items from Christian's live admin review: two real defects fixed, one confirmed false alarm plus a real scope fix, one wording fix, one dead surface hidden
 
 **Package:** none — ad hoc, from Christian testing `/admin` on the now-working

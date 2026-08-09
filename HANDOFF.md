@@ -2,6 +2,36 @@
 
 Last updated: 2026-08-09
 
+## Away kit hidden (confirmed dead), and a real platform-wide bug fixed: removing an image never cleared its stale asset reference
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
+
+Two more items from Christian's live admin review, on top of the shop/
+schedule/about fixes above. **Away kit hidden in `/admin/shop` for
+academy@1** — confirmed first, not assumed: `AcademyShopPage.tsx` fetches
+home/third/away but only ever renders `.home`, so third and away have
+never been displayed on an academy@1 site. Hid the tab and the now-single-
+option switcher; every other template keeps all three kits.
+
+**Found the real bug behind "removing an image doesn't reflect on the
+public site," and it's much bigger than the schedule tab.**
+`lib/admin-client.ts`'s `attachMediaReferences` skipped clearing an image's
+paired `*_asset_id` column whenever its url was set to null (removed) — the
+same code path as "field never touched," which it must not be. The public
+site's `resolveMediaReferences` always re-derives the display url from that
+asset id regardless of what the raw url column says, so a removed image
+kept reappearing on the public site forever; the admin only looked correct
+because it renders from local draft state, not a fresh database read. This
+is the shared code path for **every** image field on **every** admin
+surface (matches, about, branding, staff, players, standings, shop,
+sponsors, homepage) — not schedule-specific. Fixed by distinguishing "field
+absent from this payload" (leave the reference alone) from "field present
+and explicitly empty" (clear it too), using `hasOwnProperty` to tell them
+apart. Full detail in `STATUS.md`.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **912/912**; `test:db`
+**155/155** — up from 906, all six new tests pinning the specific fixes.
+
 ## Four items from Christian's live admin review, on top of the now-working media pipeline: two real defects fixed, one false alarm plus a real scope fix, one wording fix, one dead surface hidden
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
