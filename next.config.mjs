@@ -17,6 +17,17 @@ const nextConfig = {
   // Vercel's linux-x64 runtime (ERR_DLOPEN_FAILED: libvips-cpp.so). Keeping
   // sharp external lets Node resolve the correctly installed module at runtime.
   serverExternalPackages: ["sharp"],
+  // serverExternalPackages alone isn't enough: confirmed locally that Next's
+  // file tracer includes @img/sharp-<platform>-<arch> (the .node binding sharp
+  // itself requires) but never @img/sharp-libvips-<platform>-<arch> -- the
+  // package holding the actual libvips-cpp shared library that binding
+  // dlopen()s at its own native-code load time, invisible to JS-level static
+  // tracing. That's the exact file Vercel reports missing. Force it in.
+  outputFileTracingIncludes: {
+    "/api/admin/media/finalize": ["./node_modules/@img/sharp-libvips-*/**/*"],
+    "/api/admin/media/cleanup": ["./node_modules/@img/sharp-libvips-*/**/*"],
+    "/api/cron/media-cleanup": ["./node_modules/@img/sharp-libvips-*/**/*"],
+  },
   images: {
     // Onzio publishes normalized, immutable assets. Serve those source files
     // directly so an image-optimization quota or service outage cannot remove
