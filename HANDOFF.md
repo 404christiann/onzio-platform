@@ -2,6 +2,42 @@
 
 Last updated: 2026-08-09
 
+## Four items from Christian's live admin review, on top of the now-working media pipeline: two real defects fixed, one false alarm plus a real scope fix, one wording fix, one dead surface hidden
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
+
+With uploads finally working after the sharp/libvips fix, Christian tested
+`/admin` for real and reported four things. Investigated (initial static
+reading) by this session, implemented by an Opus-model agent, then
+independently re-reviewed and re-verified before committing.
+
+**Not Away-kit-specific**: shop kit saves were failing for *every* variant
+with `UNTRUSTED_TENANT_INPUT` — the admin page sent a client-side `club_id`
+filter that `/api/admin/data` rejects outright (the payload itself was
+clean). Fixed by dropping the filter. Found a second defect in the same
+reproduction: the save used `UPDATE`, which silently drops all content for
+a kit variant with no existing row (e.g. a first-time Away kit save) while
+still saving its photos. Switched to `upsert`.
+
+**Opponent logo "not reflecting on the homepage": no defect**, confirmed by
+direct reproduction (upload → DB → both public pages, all correct). But the
+homepage's Next Match fetched fixtures across every season while
+`/schedule` scopes to the active one — Christian confirmed the homepage
+should match, so `components/AcademyNextMatch.tsx` now scopes to the active
+season too.
+
+**Schedule admin's sponsor fields hidden for `academy@1`** — confirmed dead,
+same `DCFC-D130` shape as earlier hides. **About upload's raw Zod error
+replaced with a plain sentence** naming the actual rejected file type (most
+likely an iPhone HEIC photo hitting the three-format allowlist) — format
+support itself deliberately unchanged, flagged for Christian. Full detail,
+including a minor `authorizeMutation` hardening note (array payloads skip
+its tenant-input check; no live exposure) in `STATUS.md`.
+
+**Verified:** `npx tsc --noEmit` clean; full suite **906/906**; `test:db`
+**155/155** — up from 891, all in new/updated tests pinning the specific
+regressions and the active-season fetch order.
+
 ## The sharp fix wasn't enough — real cause found by reading Next's file-tracing manifest directly, fixed and deployed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.

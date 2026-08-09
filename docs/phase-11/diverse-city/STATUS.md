@@ -1,5 +1,123 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Four items from Christian's live admin review: two real defects fixed, one confirmed false alarm plus a real scope fix, one wording fix, one dead surface hidden
+
+**Package:** none — ad hoc, from Christian testing `/admin` on the now-working
+media pipeline. Investigated and implemented by an Opus-model agent from a
+brief this session wrote after initial static-reading investigation; every
+diff independently re-reviewed and every verification command independently
+re-run in this session before committing, not just trusted from the agent's
+report.
+
+### Item 1 — `UNTRUSTED_TENANT_INPUT` on every shop kit save, plus a second defect it uncovered
+
+Not Away-kit-specific — reproduced live and found it broke saving **any**
+kit variant. `app/admin/(protected)/shop/page.tsx`'s kit-section save sent a
+client-side `.eq("club_id", clubId)` filter on the update call;
+`app/api/admin/data/route.ts` rejects any client-supplied `club_id` filter
+before `authorizeMutation` ever inspects the payload (the payload itself was
+always clean — the leak was the filter, not the row). Fixed by dropping the
+filter; the route already scopes every mutation to the verified club.
+
+**Second defect, found in the same reproduction.** The save used `UPDATE`,
+which matches zero rows for a kit variant that's never had a row before (the
+Away kit, in Christian's case) — so photos saved while title, description,
+and bullet points were silently discarded. Changed to `upsert` against the
+existing `(club_id, surface, kit_variant)` unique constraint; `/api/admin/data`
+already had default `onConflict` handling anticipating exactly this for
+`shop_kit_section`, just never used by this page.
+
+### Item 2 — opponent logo "not showing on the homepage": no code defect, but a real scope inconsistency
+
+Reproduced directly: created a future match, uploaded a crest through the
+real authorize → finalize pipeline, confirmed the row persisted both
+`opponent_logo_asset_id` and `opponent_logo_url`, the asset published, and
+both `/schedule` and the homepage's Next Match section rendered it correctly.
+**No bug in the save or resolve path.**
+
+What the reproduction did surface: `AcademyNextMatch` fetched fixtures across
+**every** season while `/schedule` scopes to the **active** season only —
+so the homepage could spotlight a fixture `/schedule` itself never lists,
+which is almost certainly what Christian actually saw. Christian confirmed
+the homepage should match `/schedule`'s scope. Fixed in
+`components/AcademyNextMatch.tsx`: now calls `fetchActiveSeason(club.id)`
+first (mirroring the exact pattern `app/(public)/schedule/page.tsx` already
+uses), then `fetchSchedule` scoped to that season, falling back to no
+fixtures when no season is active.
+
+### Item 3 — sponsor fields hidden in Schedule admin for `academy@1`
+
+Confirmed dead: `components/AcademyNextMatch.tsx` and
+`components/AcademyFixtureRow.tsx` (both used only by `academy@1`) have zero
+references to `sponsor_name`/`sponsor_logo_url`/`sponsor_link` — anything
+entered via `/admin/schedule`'s sponsor fields could never appear on an
+academy@1 site. Real and rendered for other templates
+(`components/NextMatchCard.tsx` does read `sponsorLogoUrl`/`sponsorName`).
+Hidden behind `presentationTemplateKey === "academy@1"` in both the Add and
+Edit match forms plus the match-list "Presented by" line, matching the
+`DCFC-D130` precedent exactly. Columns, upload/cleanup logic, and every other
+template's editor untouched.
+
+### Item 4 — About-page upload showed a raw Zod dump instead of a message
+
+`/api/admin/media/authorize` returned `parsed.error.message` verbatim on a
+schema-validation failure — a JSON array of Zod issue objects — which is
+what Christian saw when he picked a photo whose browser-reported type isn't
+one of the three accepted (`image/jpeg`/`image/png`/`image/webp`; almost
+certainly an iPhone HEIC photo, since the file input offers `accept="image/*"`
+which invites any image type the OS will hand over). New
+`describeMediaRequestValidationFailure` in `lib/media-diagnostics.ts` turns
+that into one plain sentence naming the actual file type and what's accepted
+(verified live: HEIC → *"Please upload a JPEG, PNG, or WebP image. HEIC
+isn't supported — convert the file and try again."*; also handles an empty
+browser-reported type and an oversized file). **The accepted format list is
+deliberately unchanged** — accepting HEIC needs real sharp/libvips HEIF
+decode support, which is a real architecture decision on top of everything
+already touched today around sharp, not something to fold into a diagnostics
+fix. Flagged for Christian, not decided.
+
+### Also flagged, not acted on
+
+`authorizeMutation` (`lib/authorization.ts`) checks for a client-supplied
+`club_id`/`clubId` key using `Object.prototype.hasOwnProperty`, which only
+inspects object payloads — an array payload (any `.insert([...])` call)
+skips this check entirely. No actual exposure today: the client-side wrapper
+already strips tenant identity before sending, and the server injects the
+verified `club_id` into every row itself afterward regardless. But the check
+doesn't do what it reads as doing. Worth a hardening pass; not urgent.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- Full suite **906/906** across 87 files (904 from the agent's three fixes,
+  +2 for the active-season regression test added after Christian's
+  decision), up from 891.
+- `npm run test:db` **155/155** across 15 files, unchanged.
+- New `tests/contracts/diverse-city-admin-punch-list.test.ts` (15 tests):
+  pins the `club_id`-filter rejection and its absence from both admin pages,
+  the upsert/conflict-target shape, academy sponsor-field deadness *and*
+  its presence for other templates, the readable-message behavior for HEIC/
+  empty-type/oversized files with the raw Zod shape confirmed absent, the
+  accepted-format list staying at three, and the active-season fetch order
+  matching `/schedule`'s own pattern.
+- All four original items also exercised through the real admin UI on a
+  local dev server against local Supabase, signed in as a real Diverse City
+  admin (`owner-aal2@alpha.local`, a fixture that's a member of both Alpha
+  and Diverse City locally) via the actual `/admin/login` email-code flow,
+  reading the code from local Mailpit rather than a real inbox.
+- Local reproduction data (one match, two kit photos, one section row, three
+  media assets and their storage objects) was created and then fully
+  deleted; local DB and the `onzio-media` bucket confirmed back to their
+  prior state.
+
+### Deployed
+
+Commit `4a5bba8` on `origin/staging`. No migration — code and test changes
+only.
+
+**Next step:** Christian to decide on HEIC/HEIF upload support, whenever
+that becomes a priority — flagged above, not blocking.
+
 ## 2026-08-09 - The sharp/libvips fix wasn't enough: real cause found by inspecting Next's file-tracing manifest directly, fixed, deployed
 
 **Package:** none — ad hoc, direct continuation of the entry below. Christian
