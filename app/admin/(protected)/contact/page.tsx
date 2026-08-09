@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import ScaledContactPreview from "@/components/admin/ScaledContactPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
+import type { ContactContent } from "@/lib/queries";
 import {
   buildContactPagePayload,
   buildContactProfilePayload,
@@ -41,6 +43,12 @@ function FieldError({ message }: { message?: string }) {
 
 export default function AdminContactPage() {
   const club = useClubContext();
+  // academy@1's Contact hero is the flat navy band approved in DCFC-D132 and no
+  // hero image has ever been attached (contact_page_content.hero_media_asset_id
+  // is null), so the upload field only ever offered a way to darken that band.
+  // The field is hidden rather than deleted: AcademyContactPage still renders a
+  // hero image when one exists, and every other template keeps the editor.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const heroInput = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<ContactDraft>(emptyContactDraft);
   const [loading, setLoading] = useState(true);
@@ -191,6 +199,25 @@ export default function AdminContactPage() {
       setSaving(false);
     }
   }
+
+  // The preview reads the unsaved draft, so it moves as the fields are typed.
+  // Social links are edited in Branding and are not part of this draft, so the
+  // preview omits that band rather than inventing rows for it.
+  const previewContent: ContactContent = {
+    profile: {
+      publicEmail: draft.profile.publicEmail.trim(),
+      publicPhone: draft.profile.publicPhone.trim(),
+      serviceArea: draft.profile.serviceArea.trim(),
+      hours: draft.profile.hours.trim(),
+    },
+    page: {
+      eyebrow: draft.page.eyebrow.trim(),
+      headline: draft.page.headline.trim(),
+      intro: draft.page.intro.trim(),
+      heroMediaUrl: draft.page.heroMediaPreviewUrl,
+    },
+    socialLinks: [],
+  };
 
   if (loading) {
     return (
@@ -352,7 +379,9 @@ export default function AdminContactPage() {
               Page presentation
             </h2>
             <p className="mt-2 font-body text-sm leading-6 text-white/40">
-              This copy and hero image shape the Contact page without changing shared club destinations.
+              {isAcademy
+                ? "This copy shapes the Contact page without changing shared club destinations."
+                : "This copy and hero image shape the Contact page without changing shared club destinations."}
             </p>
           </div>
 
@@ -400,6 +429,7 @@ export default function AdminContactPage() {
               </div>
             </div>
 
+            {!isAcademy && (
             <div>
               <span className={LABEL_CLASS}>Hero image</span>
               <div className="overflow-hidden rounded-xl border border-dashed border-white/15 bg-black/20">
@@ -452,9 +482,25 @@ export default function AdminContactPage() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </section>
       </div>
+
+      {isAcademy && (
+        <section className="mt-6 rounded-2xl border border-white/10 bg-[#141414] p-5 sm:p-7">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+            Contact page preview
+          </p>
+          <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/30">
+            The real public page, at desktop proportions and scaled to fit,
+            including the changes you have not saved yet.
+          </p>
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.08]">
+            <ScaledContactPreview content={previewContent} clubName={club.name} />
+          </div>
+        </section>
+      )}
 
       <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#141414] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <p className="max-w-xl font-body text-xs leading-5 text-white/35">
