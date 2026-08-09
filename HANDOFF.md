@@ -2,6 +2,34 @@
 
 Last updated: 2026-08-09
 
+## Deployed to production: the five admin items, the three media-pipeline defects, and the improved upload diagnostics are now live — the production MEDIA_AUTHORIZATION_FAILED repro is the next step, and it's Christian's
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete`.
+
+Christian: "Yes, deploy it." Code-only deploy (migrations diff confirmed
+empty against production's prior commit) of `staging` HEAD
+(`0f7c66b`, doc commit on top of `1d91734`).
+
+`vercel deploy --prod` → `dpl_E1e3Rbk1HcpcirZnZfokZzDbFKLd`, auto-aliased to
+`onzio-platform.vercel.app`; re-aliased `diverse-city-fc-private.vercel.app`
+to the same deployment.
+
+**Verified live**: Rose City (`onzio-platform.vercel.app`) `200`, unaffected.
+`diverse-city-fc-private.vercel.app` returns Vercel's SSO-gate `302`
+(expected — this hostname has been SSO-protected since `DCFC-801`), so a
+deeper check needs Christian's authenticated session, same as every prior
+round's Diverse-City verification.
+
+**This deploy is the one that matters for the open investigation.** Every
+media upload on production now returns a specific code and a short,
+non-sensitive reason instead of a bare `MEDIA_AUTHORIZATION_FAILED` — see
+the round-two entry below for what those codes mean. **Next step: Christian
+reproduces the upload failure again (schedule, sponsors, about, standings,
+branding — same surfaces as before) and reports the exact new on-screen
+text.** That's what actually closes this out; see "what is genuinely still
+unknown" in the entry below for why guessing further without it isn't
+productive.
+
 ## Rose City non-regression check redone (this time by real runtime, not code inspection); deploy and production repro both still waiting on Christian
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-09. Status: `complete` for the

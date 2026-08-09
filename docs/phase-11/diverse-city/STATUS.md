@@ -1,5 +1,39 @@
 # Diverse City FC Status
 
+## 2026-08-09 - Deployed to production: five admin items, three media-pipeline defects, and the improved upload diagnostics now live
+
+**Package:** none — ad hoc. Continuation of the same-day entry below.
+
+**Status:** `complete`. Christian confirmed the deploy after reviewing the
+migrations-diff check and the redone Rose City runtime check recorded below.
+
+**Deploy sequence:**
+
+1. Committed and pushed the two verification/investigation writeups below as
+   `0f7c66b` on `origin/staging` (on top of `1d91734`).
+2. `vercel deploy --prod` → `dpl_E1e3Rbk1HcpcirZnZfokZzDbFKLd`, auto-aliased
+   to `onzio-platform.vercel.app`.
+3. `vercel alias set dpl_E1e3Rbk1HcpcirZnZfokZzDbFKLd
+   diverse-city-fc-private.vercel.app` — the re-alias step every round today
+   has had to remember separately.
+
+**Verified live:** `onzio-platform.vercel.app` (Rose City) `200`.
+`diverse-city-fc-private.vercel.app` returns Vercel's SSO-gate `302`
+redirect (`location: https://vercel.com/sso-api?...`) — expected, this
+hostname has been SSO-protected since `DCFC-801`; a full page-level check
+needs Christian's own authenticated session, same limitation every prior
+round's Diverse-City verification has had.
+
+**No Supabase migration in this deploy** — confirmed empty diff against
+production's prior commit before deploying, recorded in the entry below.
+
+**Next step, and it's the one that actually matters:** every media-upload
+failure on production now returns a specific code and reason instead of the
+old bare `MEDIA_AUTHORIZATION_FAILED`. Christian needs to reproduce the
+upload failure again (schedule, sponsors, about, standings, branding) and
+report the exact new on-screen text — that's the fastest real path to root
+cause, per the round-two entry's "what is genuinely still unknown" section.
+
 ## 2026-08-09 - Redid the Rose City runtime check the previous round couldn't finish; deploy and repro still waiting on Christian
 
 **Package:** none — ad hoc, continuing the handoff from the MEDIA_AUTH_FAILED
