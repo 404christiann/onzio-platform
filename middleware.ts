@@ -104,11 +104,19 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const rawHost = request.headers.get("host") ?? "";
   let hostname: string;
   try {
-    hostname = normalizeHostname(request.headers.get("host") ?? "");
-  } catch {
-    return notFound();
+    hostname = normalizeHostname(rawHost);
+  } catch (normalizeError) {
+    return new NextResponse("Not found", {
+      status: 404,
+      headers: {
+        "Cache-Control": "no-store",
+        "x-diag-raw-host": rawHost,
+        "x-diag-normalize-error": String(normalizeError).slice(0, 400),
+      },
+    });
   }
 
   const onzio = supabase.schema("onzio");
