@@ -326,10 +326,17 @@ describe("Diverse City admin punch list", () => {
     // empty state showed initials instead of the logo Players already fell
     // back to via getRosterImageSrc/isRosterPlaceholderLogo.
     it("gives both Players and Staff a Remove control that only shows when there's something to remove", () => {
+      // The Remove button itself now lives in the shared FileUpload
+      // component (rendered only when `onRemove` is passed); roster.tsx
+      // supplies that prop conditionally instead of inlining its own button.
       const roster = source(ROSTER_ADMIN);
-      const removeButtonCount = roster.split(">\n                Remove\n").length - 1;
-      expect(removeButtonCount).toBe(2);
-      expect(roster).toContain("!previewIsClubLogo &&");
+      const conditionalRemoveCount = roster.split(
+        "onRemove={previewIsClubLogo ? undefined :",
+      ).length - 1;
+      expect(conditionalRemoveCount).toBe(2);
+
+      const fileUpload = source("components/admin/FileUpload.tsx");
+      expect(fileUpload).toContain("{onRemove && (");
     });
 
     it("removing a photo clears photo_url so the fallback takes over", () => {

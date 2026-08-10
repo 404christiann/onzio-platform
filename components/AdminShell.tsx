@@ -306,7 +306,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         {/* Nav links */}
         <SidebarContent
-          className="admin-nav-scrollbar overscroll-contain touch-pan-y py-4 px-3 gap-1"
+          className="admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y py-4 px-3 gap-1"
           style={{
             WebkitOverflowScrolling: "touch",
             scrollbarGutter: "stable",

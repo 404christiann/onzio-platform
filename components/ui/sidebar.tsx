@@ -93,7 +93,7 @@ function Sidebar({
         data-slot="sidebar"
         data-state={openMobile ? "expanded" : "collapsed"}
         className={cn(
-          "bg-sidebar text-sidebar-foreground border-sidebar-border fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] w-[--sidebar-width] flex-col overflow-hidden border-r transition-transform duration-200 ease-linear lg:sticky lg:top-0 lg:inset-y-auto lg:z-auto lg:translate-x-0",
+          "bg-sidebar text-sidebar-foreground border-sidebar-border fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-[--sidebar-width] flex-col overflow-hidden border-r transition-transform duration-200 ease-linear lg:sticky lg:top-0 lg:inset-y-auto lg:z-auto lg:flex lg:h-screen lg:h-[100dvh] lg:max-h-screen lg:max-h-[100dvh] lg:self-start lg:translate-x-0",
           openMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           className
         )}

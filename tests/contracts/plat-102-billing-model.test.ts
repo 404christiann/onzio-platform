@@ -207,13 +207,19 @@ describe("PLAT-102 per-club billing intent", () => {
   });
 
   it("tells owners that content editing remains available during grace", async () => {
-    const paymentsPage = await readFile(
-      resolve(process.cwd(), "app/admin/(protected)/payments/page.tsx"),
+    // The grace-period messaging moved into the shared PaymentStatusCard
+    // component that the payments page renders, rather than living inline
+    // in the page itself.
+    const paymentStatusCard = await readFile(
+      resolve(
+        process.cwd(),
+        "components/admin/payments/PaymentStatusCard.tsx",
+      ),
       "utf8",
     );
-    expect(paymentsPage).toContain("Content editing remains available");
-    expect(paymentsPage).toContain("until the grace period ends");
-    expect(paymentsPage).not.toContain("Content changes are paused");
+    expect(paymentStatusCard).toContain("Content editing remains available");
+    expect(paymentStatusCard).toContain("until the grace period ends");
+    expect(paymentStatusCard).not.toContain("Content changes are paused");
   });
 
   it("contains no runtime imports of the deleted tier gate", async () => {

@@ -6,6 +6,13 @@ const source = readFileSync(
   resolve(process.cwd(), "components/AdminShell.tsx"),
   "utf8",
 );
+// The viewport-clamp classes live in the reusable Sidebar primitive
+// (components/ui/sidebar.tsx) rather than AdminShell.tsx directly, since
+// AdminShell composes it instead of hand-rolling the <aside> markup.
+const sidebarPrimitiveSource = readFileSync(
+  resolve(process.cwd(), "components/ui/sidebar.tsx"),
+  "utf8",
+);
 const globalStyles = readFileSync(
   resolve(process.cwd(), "styles/globals.css"),
   "utf8",
@@ -13,13 +20,13 @@ const globalStyles = readFileSync(
 
 describe("admin mobile navigation", () => {
   it("constrains the drawer to the dynamic viewport", () => {
-    expect(source).toContain("h-screen h-[100dvh]");
-    expect(source).toContain("max-h-screen max-h-[100dvh]");
-    expect(source).toContain("overflow-hidden");
-    expect(source).toContain("lg:sticky lg:top-0");
-    expect(source).toContain("lg:h-screen lg:h-[100dvh]");
-    expect(source).toContain("lg:max-h-screen lg:max-h-[100dvh]");
-    expect(source).toContain("lg:self-start");
+    expect(sidebarPrimitiveSource).toContain("h-screen h-[100dvh]");
+    expect(sidebarPrimitiveSource).toContain("max-h-screen max-h-[100dvh]");
+    expect(sidebarPrimitiveSource).toContain("overflow-hidden");
+    expect(sidebarPrimitiveSource).toContain("lg:sticky lg:top-0");
+    expect(sidebarPrimitiveSource).toContain("lg:h-screen lg:h-[100dvh]");
+    expect(sidebarPrimitiveSource).toContain("lg:max-h-screen lg:max-h-[100dvh]");
+    expect(sidebarPrimitiveSource).toContain("lg:self-start");
   });
 
   it("lets the link region shrink and scroll with touch momentum", () => {
