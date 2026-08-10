@@ -40,10 +40,7 @@ type ResolvedTenant = {
 function notFound(): NextResponse {
   return new NextResponse("Not found", {
     status: 404,
-    headers: {
-      "Cache-Control": "no-store",
-      "x-diag-onzio-environment": JSON.stringify(process.env.ONZIO_ENVIRONMENT ?? null),
-    },
+    headers: { "Cache-Control": "no-store" },
   });
 }
 
@@ -104,19 +101,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const rawHost = request.headers.get("host") ?? "";
   let hostname: string;
   try {
-    hostname = normalizeHostname(rawHost);
-  } catch (normalizeError) {
-    return new NextResponse("Not found", {
-      status: 404,
-      headers: {
-        "Cache-Control": "no-store",
-        "x-diag-raw-host": rawHost,
-        "x-diag-normalize-error": String(normalizeError).slice(0, 400),
-      },
-    });
+    hostname = normalizeHostname(request.headers.get("host") ?? "");
+  } catch {
+    return notFound();
   }
 
   const onzio = supabase.schema("onzio");
@@ -145,7 +134,7 @@ export async function middleware(request: NextRequest) {
       };
     }
   } else {
-    const { data: domain, error: domainError } = await onzio
+    const { data: domain } = await onzio
       .from("club_domains")
       .select(
         "club_id, clubs!inner(id, slug, lifecycle, public_access)",
@@ -155,16 +144,6 @@ export async function middleware(request: NextRequest) {
       .eq("active", true)
       .not("verified_at", "is", null)
       .maybeSingle();
-    if (domainError) {
-      return new NextResponse("Not found", {
-        status: 404,
-        headers: {
-          "Cache-Control": "no-store",
-          "x-diag-domain-error": JSON.stringify(domainError).slice(0, 800),
-          "x-diag-hostname": hostname,
-        },
-      });
-    }
     const clubValue = domain?.clubs;
     let club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as
       | {
@@ -191,19 +170,6 @@ export async function middleware(request: NextRequest) {
         lifecycle: club.lifecycle,
         publicAccess: club.public_access,
       };
-    }
-    if (!tenant) {
-      return new NextResponse("Not found", {
-        status: 404,
-        headers: {
-          "Cache-Control": "no-store",
-          "x-diag-hostname-json": JSON.stringify(hostname),
-          "x-diag-hostname-len": String(hostname.length),
-          "x-diag-env-json": JSON.stringify(process.env.ONZIO_ENVIRONMENT ?? null),
-          "x-diag-domain-data": JSON.stringify(domain).slice(0, 400),
-          "x-diag-domain-error": JSON.stringify(domainError).slice(0, 400),
-        },
-      });
     }
   }
 
