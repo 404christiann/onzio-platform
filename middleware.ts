@@ -192,6 +192,19 @@ export async function middleware(request: NextRequest) {
         publicAccess: club.public_access,
       };
     }
+    if (!tenant) {
+      return new NextResponse("Not found", {
+        status: 404,
+        headers: {
+          "Cache-Control": "no-store",
+          "x-diag-hostname-json": JSON.stringify(hostname),
+          "x-diag-hostname-len": String(hostname.length),
+          "x-diag-env-json": JSON.stringify(process.env.ONZIO_ENVIRONMENT ?? null),
+          "x-diag-domain-data": JSON.stringify(domain).slice(0, 400),
+          "x-diag-domain-error": JSON.stringify(domainError).slice(0, 400),
+        },
+      });
+    }
   }
 
   if (
