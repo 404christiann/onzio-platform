@@ -1,6 +1,35 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-09
+Last updated: 2026-08-10
+
+## Admin login fixed-length OTP regression (reintroduced by the restyle) fixed on a local branch
+
+Agent: Claude Fable 5 (Claude Code), 2026-08-10. Status: `complete`, not
+pushed, not deployed — branch `fix/otp-flexible-code-length`, awaiting
+Christian's review.
+
+The admin-portal restyle (`3f4d5fe`) rebuilt the login code entry as a
+6-box grid with a hard-coded `CODE_LENGTH = 6` gating submit on an exact
+match — silently reverting the 2026-08-07 fix (`d4fc6e7`) that widened the
+input to 4-10 digits after production's Supabase Auth drifted to 8-digit
+codes. The PLAT-101 contract test caught it
+(`tests/contracts/platform-auth.test.ts`, the fixed-code-length test).
+
+Fixed by keeping the box-grid look but backing it with a single real
+input (invisible, overlaying the grid) that holds the whole code:
+`minLength={4}` / `maxLength={10}`, plain `autoComplete="one-time-code"`
+(the restyle had split it across per-box inputs, which breaks iOS code
+autofill), submit enabled at 4+ digits, no exact-count gate anywhere. The
+grid renders six boxes by default and grows to match longer codes; boxes
+flex-shrink so even 10 digits fit the card.
+
+**Verified:** contract suite 25/25; `npx tsc --noEmit` clean; lint shows
+only two pre-existing warnings in unrelated files; visually verified in a
+local dev session (6-box default, growth to 8 and 10 digits, cap at 10,
+shrink on delete, submit gating at <4). Four pre-existing contract
+failures (`admin-mobile-navigation`, `diverse-city-admin-punch-list`,
+`plat-102-billing-model`) fail identically on the unmodified restyle
+HEAD — introduced by the restyle, out of scope here.
 
 ## Template-default text fields now show real text, not a placeholder hint, in four places Christian named
 
