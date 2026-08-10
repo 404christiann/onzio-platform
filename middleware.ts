@@ -137,7 +137,7 @@ export async function middleware(request: NextRequest) {
       };
     }
   } else {
-    const { data: domain } = await onzio
+    const { data: domain, error: domainError } = await onzio
       .from("club_domains")
       .select(
         "club_id, clubs!inner(id, slug, lifecycle, public_access)",
@@ -147,6 +147,16 @@ export async function middleware(request: NextRequest) {
       .eq("active", true)
       .not("verified_at", "is", null)
       .maybeSingle();
+    if (domainError) {
+      return new NextResponse("Not found", {
+        status: 404,
+        headers: {
+          "Cache-Control": "no-store",
+          "x-diag-domain-error": JSON.stringify(domainError).slice(0, 800),
+          "x-diag-hostname": hostname,
+        },
+      });
+    }
     const clubValue = domain?.clubs;
     let club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as
       | {
