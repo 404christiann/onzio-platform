@@ -9,12 +9,12 @@ export type SubscriptionMirrorRow = {
 
 export type PaymentsUiState =
   | { state: "no_subscription" }
-  | { state: "active" }
+  | { state: "active"; periodEndsAt: string }
   | { state: "active_canceling"; periodEndsAt: string }
   | { state: "grace"; graceEndsAt: string; daysRemaining: number }
   | { state: "terminal" };
 
-const GRACE_MS = 20 * 24 * 60 * 60 * 1000;
+export const GRACE_MS = 20 * 24 * 60 * 60 * 1000;
 const NONACTIVE_STATUSES = new Set([
   "past_due",
   "canceled",
@@ -41,13 +41,13 @@ export function resolvePaymentsUiState(
     if (row.cancel_at_period_end && beforePeriodEnd) {
       return { state: "active_canceling", periodEndsAt: row.current_period_end! };
     }
-    return { state: "active" };
+    return { state: "active", periodEndsAt: row.current_period_end! };
   }
   if (!NONACTIVE_STATUSES.has(row.status)) return { state: "terminal" };
   if (beforePeriodEnd) {
     return row.cancel_at_period_end
       ? { state: "active_canceling", periodEndsAt: row.current_period_end! }
-      : { state: "active" };
+      : { state: "active", periodEndsAt: row.current_period_end! };
   }
 
   const graceEndsAt = time(row.grace_ends_at) ??

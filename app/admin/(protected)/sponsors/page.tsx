@@ -7,6 +7,7 @@ import { Loader } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import FileUpload from "@/components/admin/FileUpload";
 import SponsorCarousel from "@/components/SponsorCarousel";
 import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
 import { fetchSiteSponsorLogos } from "@/lib/queries";
@@ -97,7 +98,6 @@ export default function AdminSponsorsPage() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
   const replacingIndexRef = useRef<number | null>(null);
 
@@ -178,7 +178,6 @@ export default function AdminSponsorsPage() {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -392,8 +391,7 @@ export default function AdminSponsorsPage() {
               {draftLogos.map((logo, index) => (
                 <div key={logo.id ?? logo.logo_url} className="min-w-0">
                   <div
-                    className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg"
-                    style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "#0D0D0D" }}
+                    className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-background transition-colors hover:border-muted-foreground/40"
                   >
                     <Image
                       src={logo.logo_url}
@@ -405,8 +403,7 @@ export default function AdminSponsorsPage() {
                     <button
                       type="button"
                       onClick={() => void removeLogo(index)}
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                      style={{ backgroundColor: "#E7001B" }}
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       aria-label={`Remove sponsor logo ${index + 1}`}
                     >
                       <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
@@ -450,44 +447,14 @@ export default function AdminSponsorsPage() {
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading || !canAddSponsorLogo(placement, draftLogos.length)}
-                className="flex aspect-[16/9] w-full flex-col items-center justify-center rounded-lg transition-colors"
-                style={{
-                  border: "1px dashed rgba(255,255,255,0.15)",
-                  backgroundColor: uploading ? "rgba(255,255,255,0.03)" : "transparent",
-                  color: "rgba(255,255,255,0.3)",
-                  cursor:
-                    uploading || !canAddSponsorLogo(placement, draftLogos.length)
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: canAddSponsorLogo(placement, draftLogos.length) ? 1 : 0.4,
-                }}
-                aria-label="Add sponsor logos"
-              >
-                {uploading ? (
-                  <Loader className="size-4 animate-spin" />
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                )}
-                <span
-                  className="font-display mt-1 uppercase"
-                  style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}
-                >
-                  {uploading ? "Uploading" : "Add"}
-                </span>
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
+              <FileUpload
+                className="col-span-2"
+                label="Add sponsor logos"
                 accept="image/*"
                 multiple
-                className="hidden"
-                onChange={(event) => handleUpload(event.target.files)}
+                onUpload={(files) => void handleUpload(files)}
+                uploading={uploading}
+                disabled={!canAddSponsorLogo(placement, draftLogos.length)}
               />
               <input
                 ref={replaceFileRef}

@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader } from "lucide-react";
-import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import FileUpload from "@/components/admin/FileUpload";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
@@ -421,26 +423,28 @@ export default function AdminTryoutsPage() {
               label="Intro shown when tryouts are published"
               error={pageCopyErrors.introWithTryouts}
             >
-              <textarea
-                className={`${INPUT_CLASS} min-h-24 resize-y`}
+              <Textarea
+                className="min-h-24"
                 value={pageCopy.introWithTryouts}
                 onChange={(event) =>
                   updatePageCopy("introWithTryouts", event.target.value)
                 }
                 maxLength={TRYOUTS_PAGE_LIMITS.introWithTryouts}
+                aria-invalid={Boolean(pageCopyErrors.introWithTryouts)}
               />
             </Field>
             <Field
               label="Intro shown when none are published"
               error={pageCopyErrors.introNoTryouts}
             >
-              <textarea
-                className={`${INPUT_CLASS} min-h-24 resize-y`}
+              <Textarea
+                className="min-h-24"
                 value={pageCopy.introNoTryouts}
                 onChange={(event) =>
                   updatePageCopy("introNoTryouts", event.target.value)
                 }
                 maxLength={TRYOUTS_PAGE_LIMITS.introNoTryouts}
+                aria-invalid={Boolean(pageCopyErrors.introNoTryouts)}
               />
             </Field>
           </div>
@@ -525,18 +529,18 @@ export default function AdminTryoutsPage() {
               <div className="grid gap-5 sm:grid-cols-2">
                 {!isAcademy && (
                   <Field label="Program association">
-                    <select className={INPUT_CLASS} value={draft.programId ?? ""} onChange={(event) => updateDraft("programId", event.target.value || null)}>
-                      <option value="">General club tryout</option>
-                      {programs.map((program) => <option key={program.id} value={program.id}>{program.display_title}</option>)}
-                    </select>
+                    <NativeSelect value={draft.programId ?? ""} onChange={(event) => updateDraft("programId", event.target.value || null)}>
+                      <NativeSelectOption value="">General club tryout</NativeSelectOption>
+                      {programs.map((program) => <NativeSelectOption key={program.id} value={program.id}>{program.display_title}</NativeSelectOption>)}
+                    </NativeSelect>
                   </Field>
                 )}
                 <Field label="Status">
-                  <select className={INPUT_CLASS} value={draft.status} onChange={(event) => updateDraft("status", event.target.value as TryoutDraft["status"])}>
-                    <option value="upcoming">Upcoming — details can be TBA</option>
-                    <option value="open">Open — registration may be shown</option>
-                    <option value="closed">Closed — registration is hidden</option>
-                  </select>
+                  <NativeSelect value={draft.status} onChange={(event) => updateDraft("status", event.target.value as TryoutDraft["status"])}>
+                    <NativeSelectOption value="upcoming">Upcoming — details can be TBA</NativeSelectOption>
+                    <NativeSelectOption value="open">Open — registration may be shown</NativeSelectOption>
+                    <NativeSelectOption value="closed">Closed — registration is hidden</NativeSelectOption>
+                  </NativeSelect>
                 </Field>
                 {/* One "Name" field, stored in the existing `headline`
                     column. The separate Eyebrow input was removed with it: the
@@ -573,7 +577,7 @@ export default function AdminTryoutsPage() {
                 </Field>
                 <div className="sm:col-span-2">
                   <Field label="Closed message" error={errors.closedMessage}>
-                    <textarea className={`${INPUT_CLASS} min-h-24 resize-y`} value={draft.closedMessage} onChange={(event) => updateDraft("closedMessage", event.target.value)} maxLength={320} />
+                    <Textarea className="min-h-24" value={draft.closedMessage} onChange={(event) => updateDraft("closedMessage", event.target.value)} maxLength={320} aria-invalid={Boolean(errors.closedMessage)} />
                   </Field>
                   <p className="mt-2 font-body text-xs leading-5 text-white/35">
                     Missing or invalid destinations never render as registration actions. Closed events always use the safe Contact fallback when available.
@@ -584,25 +588,15 @@ export default function AdminTryoutsPage() {
               {!isAcademy && (
               <div className="mt-7 border-t border-white/[0.06] pt-7">
                 <span className={LABEL_CLASS}>Hero image</span>
-                <div className="overflow-hidden rounded-xl border border-dashed border-white/15 bg-black/20">
-                  {draft.heroMediaPreviewUrl ? (
-                    <div className="relative aspect-[16/7] w-full border-b border-white/10">
-                      <ResilientImage src={draft.heroMediaPreviewUrl} alt="Tryouts hero preview" fill sizes="(min-width: 1024px) 60vw, 100vw" className="object-cover" />
-                    </div>
-                  ) : (
-                    <div className="flex aspect-[16/5] items-center justify-center px-6 text-center font-body text-xs text-white/30">
-                      {draft.heroMediaAssetId ? "Published hero media attached" : "No hero image attached"}
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                    <button type="button" onClick={() => heroInput.current?.click()} disabled={uploading || saving} className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 font-display text-xs font-black uppercase tracking-[0.15em] text-white/70 disabled:opacity-40">
-                      {uploading && <Loader className="mr-2 inline size-4 animate-spin" />}
-                      {uploading ? "Uploading…" : "Upload hero image"}
-                    </button>
-                    {draft.heroMediaAssetId && <button type="button" onClick={() => { updateDraft("heroMediaAssetId", null); updateDraft("heroMediaPreviewUrl", ""); }} disabled={uploading || saving} className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white/35 transition hover:text-red-300 disabled:opacity-40">Remove image</button>}
-                    <input ref={heroInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => void uploadHero(event.target.files)} />
-                  </div>
-                </div>
+                <FileUpload
+                  label="Upload hero image"
+                  accept="image/jpeg,image/png,image/webp"
+                  onUpload={(files) => void uploadHero(files)}
+                  uploading={uploading}
+                  previewUrl={draft.heroMediaPreviewUrl || null}
+                  onRemove={draft.heroMediaAssetId ? () => { updateDraft("heroMediaAssetId", null); updateDraft("heroMediaPreviewUrl", ""); } : undefined}
+                  disabled={saving}
+                />
               </div>
               )}
 

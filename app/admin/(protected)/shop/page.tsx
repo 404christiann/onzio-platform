@@ -4,8 +4,10 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { Loader } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import FileUpload from "@/components/admin/FileUpload";
+import { Textarea } from "@/components/ui/textarea";
 import ScaledShopKitPreview from "@/components/admin/ScaledShopKitPreview";
 import ScaledShopPhotoStripPreview from "@/components/admin/ScaledShopPhotoStripPreview";
 import ScaledShopPurchaseDetailsPreview from "@/components/admin/ScaledShopPurchaseDetailsPreview";
@@ -166,8 +168,6 @@ export default function AdminShopPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const photoStripFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -358,7 +358,6 @@ export default function AdminShopPage() {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -386,7 +385,6 @@ export default function AdminShopPage() {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (photoStripFileRef.current) photoStripFileRef.current.value = "";
     }
   }
 
@@ -797,12 +795,11 @@ export default function AdminShopPage() {
                 label="Main Product Title"
                 help="Press Enter where you want the title to start a new line."
               >
-                <textarea
+                <Textarea
                   placeholder={"Thorn\nEdition\n2026"}
                   value={fields.title}
                   onChange={(event) => setField("title", event.target.value)}
                   rows={3}
-                  style={{ ...inputStyle, resize: "vertical" }}
                 />
               </Field>
 
@@ -810,12 +807,11 @@ export default function AdminShopPage() {
                 label="Product Description"
                 help="A short description shown below the main title."
               >
-                <textarea
+                <Textarea
                   placeholder="Describe the jersey, its design, and what makes it special."
                   value={fields.description}
                   onChange={(event) => setField("description", event.target.value)}
                   rows={3}
-                  style={{ ...inputStyle, resize: "vertical" }}
                 />
               </Field>
 
@@ -905,7 +901,7 @@ export default function AdminShopPage() {
                 label="Store Information"
                 help="Use Enter to place the store name and address on separate lines."
               >
-                <textarea
+                <Textarea
                   placeholder={DEFAULT_KIT_STORE_NOTE}
                   value={fields.store_note}
                   maxLength={180}
@@ -913,7 +909,6 @@ export default function AdminShopPage() {
                     setField("store_note", event.target.value)
                   }
                   rows={2}
-                  style={{ ...inputStyle, resize: "vertical" }}
                 />
               </Field>
 
@@ -1009,13 +1004,12 @@ export default function AdminShopPage() {
                           />
                         </Field>
                         <Field label="Card Body">
-                          <textarea
+                          <Textarea
                             value={card.body}
                             onChange={(event) =>
                               setPurchaseCardField(index, "body", event.target.value)
                             }
                             rows={3}
-                            style={{ ...inputStyle, resize: "vertical" }}
                           />
                         </Field>
                       </div>
@@ -1035,13 +1029,12 @@ export default function AdminShopPage() {
                   />
                 </Field>
                 <Field label="Footer Text">
-                  <textarea
+                  <Textarea
                     value={previewPurchaseDetails.cta_text}
                     onChange={(event) =>
                       setPurchaseField("cta_text", event.target.value)
                     }
                     rows={2}
-                    style={{ ...inputStyle, resize: "vertical" }}
                   />
                 </Field>
                 <Field label="Button Text">
@@ -1097,8 +1090,7 @@ export default function AdminShopPage() {
               {draftPhotos.map((photo, index) => (
                 <div key={photo.id ?? photo.url} className="min-w-0 min-[420px]:w-[76px]">
                   <div
-                    className="group relative aspect-square w-full overflow-hidden rounded-lg min-[420px]:h-[72px]"
-                    style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+                    className="group relative aspect-square w-full overflow-hidden rounded-lg border border-border transition-colors hover:border-muted-foreground/40 min-[420px]:h-[72px]"
                   >
                     <Image
                       src={photo.url}
@@ -1110,8 +1102,7 @@ export default function AdminShopPage() {
                     <button
                       type="button"
                       onClick={() => void removeKitPhoto(index)}
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                      style={{ backgroundColor: "#E7001B" }}
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       aria-label={`Remove kit photo ${index + 1}`}
                     >
                       <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
@@ -1138,46 +1129,14 @@ export default function AdminShopPage() {
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading || !canAddKitPhoto(draftPhotos.length)}
-                className="flex aspect-square w-full flex-col items-center justify-center rounded-lg transition-colors min-[420px]:h-[72px] min-[420px]:w-[76px]"
-                style={{
-                  border: "1px dashed rgba(255,255,255,0.15)",
-                  backgroundColor: uploading
-                    ? "rgba(255,255,255,0.03)"
-                    : "transparent",
-                  color: "rgba(255,255,255,0.3)",
-                  cursor:
-                    uploading || !canAddKitPhoto(draftPhotos.length)
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: canAddKitPhoto(draftPhotos.length) ? 1 : 0.4,
-                }}
-                aria-label="Add kit photos"
-              >
-                {uploading ? (
-                  <Loader className="size-4 animate-spin" />
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                )}
-                <span
-                  className="font-display mt-1 uppercase"
-                  style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}
-                >
-                  {uploading ? "Uploading" : "Add"}
-                </span>
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
+              <FileUpload
+                className="col-span-3"
+                label="Add kit photos"
                 accept="image/*"
                 multiple
-                className="hidden"
-                onChange={(event) => handleUpload(event.target.files)}
+                onUpload={(files) => void handleUpload(files)}
+                uploading={uploading}
+                disabled={!canAddKitPhoto(draftPhotos.length)}
               />
             </div>
 
@@ -1226,8 +1185,7 @@ export default function AdminShopPage() {
               {draftPhotoStripPhotos.map((photo, index) => (
                 <div key={photo.id ?? photo.url} className="min-w-0 min-[420px]:w-[76px]">
                   <div
-                    className="group relative aspect-square w-full overflow-hidden rounded-lg min-[420px]:h-[72px]"
-                    style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+                    className="group relative aspect-square w-full overflow-hidden rounded-lg border border-border transition-colors hover:border-muted-foreground/40 min-[420px]:h-[72px]"
                   >
                     <Image
                       src={photo.url}
@@ -1239,8 +1197,7 @@ export default function AdminShopPage() {
                     <button
                       type="button"
                       onClick={() => void removePhotoStripPhoto(index)}
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                      style={{ backgroundColor: "#E7001B" }}
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       aria-label={`Remove photo row image ${index + 1}`}
                     >
                       <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
@@ -1267,46 +1224,14 @@ export default function AdminShopPage() {
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => photoStripFileRef.current?.click()}
-                disabled={uploading || !canAddPhotoStripPhoto(draftPhotoStripPhotos.length)}
-                className="flex aspect-square w-full flex-col items-center justify-center rounded-lg transition-colors min-[420px]:h-[72px] min-[420px]:w-[76px]"
-                style={{
-                  border: "1px dashed rgba(255,255,255,0.15)",
-                  backgroundColor: uploading
-                    ? "rgba(255,255,255,0.03)"
-                    : "transparent",
-                  color: "rgba(255,255,255,0.3)",
-                  cursor:
-                    uploading || !canAddPhotoStripPhoto(draftPhotoStripPhotos.length)
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: canAddPhotoStripPhoto(draftPhotoStripPhotos.length) ? 1 : 0.4,
-                }}
-                aria-label="Add photo row images"
-              >
-                {uploading ? (
-                  <Loader className="size-4 animate-spin" />
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  </svg>
-                )}
-                <span
-                  className="font-display mt-1 uppercase"
-                  style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}
-                >
-                  {uploading ? "Uploading" : "Add"}
-                </span>
-              </button>
-              <input
-                ref={photoStripFileRef}
-                type="file"
+              <FileUpload
+                className="col-span-3"
+                label="Add photo row images"
                 accept="image/*"
                 multiple
-                className="hidden"
-                onChange={(event) => handlePhotoStripUpload(event.target.files)}
+                onUpload={(files) => void handlePhotoStripUpload(files)}
+                uploading={uploading}
+                disabled={!canAddPhotoStripPhoto(draftPhotoStripPhotos.length)}
               />
             </div>
 

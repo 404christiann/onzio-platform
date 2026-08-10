@@ -6,11 +6,15 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import { useEffect, useState, useRef } from "react";
 import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import FileUpload from "@/components/admin/FileUpload";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import { fetchActiveSeason } from "@/lib/queries";
 import { getPlayerSeasonSeed } from "@/lib/player-season";
 import { createClient } from "@/lib/admin-client";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } from "@/lib/roster-images";
+import { cn } from "@/lib/utils";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 // ── Nationalities ─────────────────────────────
@@ -499,19 +503,19 @@ function PlayerPositionGroup({
   const { clubLogoUrl } = useClubBranding();
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="rounded-xl overflow-hidden border border-border">
       {/* Position header */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3"
-        style={{ backgroundColor: "#161616" }}
+        className="w-full flex items-center justify-between bg-card px-4 py-3 transition-colors hover:bg-accent/60"
       >
-        <span className="font-display font-black uppercase tracking-widest" style={{ fontSize: "1.15rem", color: "rgba(255,255,255,0.9)" }}>
+        <span className="font-display font-black uppercase tracking-widest text-foreground/90" style={{ fontSize: "1.15rem" }}>
           {pos}s{" "}
-          <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400 }}>{group.length}</span>
+          <span className="font-normal text-muted-foreground/60">{group.length}</span>
         </span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-          style={{ color: "rgba(255,255,255,0.3)", transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}>
+          className="text-muted-foreground/60"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}>
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
@@ -524,9 +528,9 @@ function PlayerPositionGroup({
               const isEditing = editingId === p.id;
               return (
                 <div key={p.id}
-                  style={{ borderTop: "1px solid rgba(255,255,255,0.04)", ...(isEditing ? { border: "1px solid rgba(220,38,38,0.3)" } : {}) }}>
+                  className={cn("border-t border-border/40", isEditing && "border border-destructive/30")}>
                   {isEditing ? (
-                    <div className="p-5" style={{ backgroundColor: "#161616" }}>
+                    <div className="bg-card p-5">
                       <PlayerFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} playerId={p.id} />
                       <div className="mt-4 flex gap-3">
                         <button onClick={handleSaveEdit} disabled={saving}
@@ -543,12 +547,14 @@ function PlayerPositionGroup({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4"
-                      style={{ backgroundColor: p.active ? "#111111" : "#0d0d0d", opacity: p.active ? 1 : 0.5 }}>
+                    <div
+                      className={cn(
+                        "flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 transition-colors",
+                        p.active ? "bg-card hover:bg-accent/40" : "bg-background opacity-50 hover:opacity-75",
+                      )}>
                       {/* Photo + Info */}
                       <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0"
-                          style={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <div className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-muted">
                           <ResilientNativeImage
                             src={getRosterImageSrc(p.photo_url, clubLogoUrl)}
                             alt={p.name}
@@ -560,13 +566,13 @@ function PlayerPositionGroup({
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>#{p.number} {p.name}</span>
                             {!p.active && (
-                              <span className="font-display uppercase px-2 py-0.5 rounded"
-                                style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", fontSize: "0.65rem", letterSpacing: "0.08em" }}>
+                              <span className="font-display uppercase px-2 py-0.5 rounded bg-muted/60 text-muted-foreground"
+                                style={{ fontSize: "0.65rem", letterSpacing: "0.08em" }}>
                                 Inactive
                               </span>
                             )}
                           </div>
-                          <p className="font-body" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.3)" }}>
+                          <p className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>
                             {p.nationality}
                           </p>
                         </div>
@@ -574,18 +580,18 @@ function PlayerPositionGroup({
                       {/* Actions */}
                       <div className="flex gap-2 flex-shrink-0">
                         <button onClick={() => startEdit(p)}
-                          className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                          style={{ fontSize: "0.95rem", backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>
+                          className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border border-border bg-muted/40 text-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
+                          style={{ fontSize: "0.95rem" }}>
                           Edit
                         </button>
                         <button onClick={() => toggleActive(p)} disabled={saving}
-                          className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                          style={{
-                            fontSize: "0.95rem",
-                            backgroundColor: p.active ? "rgba(220,38,38,0.1)" : "rgba(34,197,94,0.1)",
-                            border: `1px solid ${p.active ? "rgba(220,38,38,0.2)" : "rgba(34,197,94,0.2)"}`,
-                            color: p.active ? "rgba(220,38,38,0.8)" : "rgba(34,197,94,0.8)",
-                          }}>
+                          className={cn(
+                            "flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border transition-colors",
+                            p.active
+                              ? "border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20"
+                              : "border-success/20 bg-success/10 text-success/80 hover:bg-success/20",
+                          )}
+                          style={{ fontSize: "0.95rem" }}>
                           {p.active ? "Deactivate" : "Activate"}
                         </button>
                       </div>
@@ -750,10 +756,10 @@ function StaffTab() {
           {staff.map((s) => {
             const isEditing = editingId === s.id;
             return (
-              <div key={s.id} className="rounded-xl overflow-hidden"
-                style={{ border: `1px solid ${isEditing ? "rgba(220,38,38,0.3)" : "rgba(255,255,255,0.07)"}` }}>
+              <div key={s.id}
+                className={cn("rounded-xl overflow-hidden border", isEditing ? "border-destructive/30" : "border-border")}>
                 {isEditing ? (
-                  <div className="p-5" style={{ backgroundColor: "#161616" }}>
+                  <div className="bg-card p-5">
                     <StaffFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} />
                     <div className="mt-4 flex gap-3">
                       <button onClick={handleSaveEdit} disabled={saving}
@@ -770,12 +776,14 @@ function StaffTab() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4"
-                    style={{ backgroundColor: s.active ? "#111111" : "#0d0d0d", opacity: s.active ? 1 : 0.5 }}>
+                  <div
+                    className={cn(
+                      "flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 transition-colors",
+                      s.active ? "bg-card hover:bg-accent/40" : "bg-background opacity-50 hover:opacity-75",
+                    )}>
                     {/* Photo + Info */}
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-                        style={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center bg-muted">
                         <ResilientNativeImage
                           src={getRosterImageSrc(s.photo_url, clubLogoUrl)}
                           alt={s.name}
@@ -787,30 +795,30 @@ function StaffTab() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{s.name}</span>
                           {!s.active && (
-                            <span className="font-display uppercase px-2 py-0.5 rounded"
-                              style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", fontSize: "0.65rem", letterSpacing: "0.08em" }}>
+                            <span className="font-display uppercase px-2 py-0.5 rounded bg-muted/60 text-muted-foreground"
+                              style={{ fontSize: "0.65rem", letterSpacing: "0.08em" }}>
                               Inactive
                             </span>
                           )}
                         </div>
-                        <p className="font-body" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.3)" }}>{s.role}</p>
+                        <p className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>{s.role}</p>
                       </div>
                     </div>
                     {/* Actions */}
                     <div className="flex gap-2 flex-shrink-0">
                       <button onClick={() => { startEdit(s); setError(null); }}
-                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                        style={{ fontSize: "0.95rem", backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border border-border bg-muted/40 text-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
+                        style={{ fontSize: "0.95rem" }}>
                         Edit
                       </button>
                       <button onClick={() => toggleActive(s)} disabled={saving}
-                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                        style={{
-                          fontSize: "0.95rem",
-                          backgroundColor: s.active ? "rgba(220,38,38,0.1)" : "rgba(34,197,94,0.1)",
-                          border: `1px solid ${s.active ? "rgba(220,38,38,0.2)" : "rgba(34,197,94,0.2)"}`,
-                          color: s.active ? "rgba(220,38,38,0.8)" : "rgba(34,197,94,0.8)",
-                        }}>
+                        className={cn(
+                          "flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border transition-colors",
+                          s.active
+                            ? "border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20"
+                            : "border-success/20 bg-success/10 text-success/80 hover:bg-success/20",
+                        )}
+                        style={{ fontSize: "0.95rem" }}>
                         {s.active ? "Deactivate" : "Activate"}
                       </button>
                     </div>
@@ -912,17 +920,17 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
           Season Stats
         </label>
         {/* Season picker */}
-        <select
+        <NativeSelect
           value={selectedId}
           onChange={(e) => handleSeasonChange(e.target.value)}
-          style={{ ...inputStyle, width: "auto", fontSize: "0.75rem", padding: "4px 8px" }}
+          className="px-2 py-1 pr-8 text-xs"
         >
           {seasons.map((s) => (
-            <option key={s.id} value={s.id}>
+            <NativeSelectOption key={s.id} value={s.id}>
               {s.label}{s.active ? " (Active)" : ""}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
       {error && <p className="font-body text-xs mb-2" style={{ color: "#dc2626" }}>{error}</p>}
@@ -1006,7 +1014,6 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
   const [photos, setPhotos]     = useState<ActionPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError]       = useState<string | null>(null);
-  const fileRef                 = useRef<HTMLInputElement>(null);
 
   async function loadPhotos() {
     const supabase = createClient();
@@ -1092,46 +1099,15 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
           </div>
         ))}
 
-        {/* Upload button */}
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="flex flex-col items-center justify-center rounded-lg transition-colors"
-          style={{
-            width: 72, height: 72,
-            border: "1px dashed rgba(255,255,255,0.15)",
-            backgroundColor: uploading ? "rgba(255,255,255,0.03)" : "transparent",
-            color: "rgba(255,255,255,0.3)",
-            cursor: uploading ? "not-allowed" : "pointer",
-          }}
-          aria-label="Add action photo"
-        >
-          {uploading ? (
-            <span className="font-display text-xs tracking-widest uppercase" style={{ fontSize: "0.6rem" }}>…</span>
-          ) : (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 4 }}>
-                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <span className="font-display uppercase" style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}>Add</span>
-            </>
-          )}
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => handleUpload(e.target.files)}
-        />
       </div>
-      {photos.length === 0 && !uploading && (
-        <p className="font-body text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
-          No action photos yet. Click + to upload.
-        </p>
-      )}
+
+      <FileUpload
+        label="Add action photos"
+        accept="image/*"
+        multiple
+        onUpload={(files) => void handleUpload(files)}
+        uploading={uploading}
+      />
     </div>
   );
 }
@@ -1148,7 +1124,6 @@ function PlayerFormFields({
   playerId?: string;
   position?: Position;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const { clubLogoUrl } = useClubBranding();
   const club = useClubContext();
   // The inline panel and the dedicated /admin/season-stats tab write the same
@@ -1180,43 +1155,17 @@ function PlayerFormFields({
 
   return (
     <div className="space-y-4">
-      {/* Photo picker */}
-      <div className="flex items-center gap-4">
-        <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: "#0e0e0e", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <ResilientNativeImage
-            src={preview}
-            alt="preview"
-            fallbackVariant="person"
-            className={`w-full h-full ${previewIsClubLogo ? "object-contain" : "object-cover"}`}
-          />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => fileRef.current?.click()}
-              className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-              style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-              {preview ? "Change Photo" : "Upload Photo"}
-            </button>
-            {!previewIsClubLogo && (
-              <button type="button"
-                onClick={() => {
-                  onPhotoChange(null);
-                  onChange({ ...form, photo_url: "" });
-                }}
-                className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                style={{ color: "#E7001B", border: "1px solid rgba(231,0,27,0.45)" }}>
-                Remove
-              </button>
-            )}
-          </div>
-          {photoFile && (
-            <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{photoFile.name}</p>
-          )}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden"
-            onChange={(e) => onPhotoChange(e.target.files?.[0] ?? null)} />
-        </div>
-      </div>
+      {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
+      <FileUpload
+        label="Upload player photo"
+        accept="image/*"
+        onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
+        previewUrl={previewIsClubLogo ? null : preview}
+        onRemove={previewIsClubLogo ? undefined : () => {
+          onPhotoChange(null);
+          onChange({ ...form, photo_url: "" });
+        }}
+      />
 
       {/* Fields grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1229,9 +1178,9 @@ function PlayerFormFields({
             onChange={(e) => set("number", Number(e.target.value))} style={inputStyle} />
         </Field>
         <Field label="Position" required>
-          <select value={form.position} onChange={(e) => set("position", e.target.value)} style={inputStyle}>
-            {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
+          <NativeSelect value={form.position} onChange={(e) => set("position", e.target.value)}>
+            {POSITIONS.map(p => <NativeSelectOption key={p} value={p}>{p}</NativeSelectOption>)}
+          </NativeSelect>
         </Field>
         <Field label="Nationality" required>
           <NationalitySelect
@@ -1297,21 +1246,20 @@ function PlayerFormFields({
             onChange={(e) => set("pronunciation", e.target.value)} style={inputStyle} />
         </Field>
         <Field label="Preferred Foot (optional)">
-          <select value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)} style={inputStyle}>
-            <option value="">— Select —</option>
-            <option value="Right">Right</option>
-            <option value="Left">Left</option>
-            <option value="Both">Both</option>
-          </select>
+          <NativeSelect value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)}>
+            <NativeSelectOption value="">— Select —</NativeSelectOption>
+            <NativeSelectOption value="Right">Right</NativeSelectOption>
+            <NativeSelectOption value="Left">Left</NativeSelectOption>
+            <NativeSelectOption value="Both">Both</NativeSelectOption>
+          </NativeSelect>
         </Field>
       </div>
       <Field label="Bio (optional)">
-        <textarea
+        <Textarea
           placeholder="Short player bio…"
           value={form.bio ?? ""}
           onChange={(e) => set("bio", e.target.value)}
           rows={3}
-          style={{ ...inputStyle, resize: "vertical" }}
         />
       </Field>
 
@@ -1337,7 +1285,6 @@ function StaffFormFields({
   photoFile: File | null;
   onPhotoChange: (f: File | null) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const { clubLogoUrl } = useClubBranding();
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
@@ -1363,43 +1310,17 @@ function StaffFormFields({
 
   return (
     <div className="space-y-4">
-      {/* Photo picker */}
-      <div className="flex items-center gap-4">
-        <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: "#0e0e0e", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <ResilientNativeImage
-            src={preview}
-            alt="preview"
-            fallbackVariant="person"
-            className={`w-full h-full ${previewIsClubLogo ? "object-contain" : "object-cover"}`}
-          />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => fileRef.current?.click()}
-              className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-              style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-              {preview ? "Change Photo" : "Upload Photo"}
-            </button>
-            {!previewIsClubLogo && (
-              <button type="button"
-                onClick={() => {
-                  onPhotoChange(null);
-                  onChange({ ...form, photo_url: "" });
-                }}
-                className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                style={{ color: "#E7001B", border: "1px solid rgba(231,0,27,0.45)" }}>
-                Remove
-              </button>
-            )}
-          </div>
-          {photoFile && (
-            <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{photoFile.name}</p>
-          )}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden"
-            onChange={(e) => onPhotoChange(e.target.files?.[0] ?? null)} />
-        </div>
-      </div>
+      {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
+      <FileUpload
+        label="Upload staff photo"
+        accept="image/*"
+        onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
+        previewUrl={previewIsClubLogo ? null : preview}
+        onRemove={previewIsClubLogo ? undefined : () => {
+          onPhotoChange(null);
+          onChange({ ...form, photo_url: "" });
+        }}
+      />
 
       {/* Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1424,12 +1345,11 @@ function StaffFormFields({
         </Field>
       </div>
       <Field label="Bio (optional)">
-        <textarea
+        <Textarea
           placeholder="Short bio about this staff member…"
           value={form.bio}
           onChange={(e) => set("bio", e.target.value)}
           rows={3}
-          style={{ ...inputStyle, resize: "vertical" }}
         />
       </Field>
     </div>

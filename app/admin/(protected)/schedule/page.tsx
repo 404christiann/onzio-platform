@@ -4,6 +4,7 @@ import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import SeasonSelect from "@/components/admin/SeasonSelect";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import OpponentCrest from "@/components/OpponentCrest";
 import { useClubContext } from "@/components/ClubContextProvider";
 import type { DBSeason } from "@/lib/db-types";
@@ -11,6 +12,7 @@ import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { cn } from "@/lib/utils";
 import { ChevronDownIcon, Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -411,12 +413,14 @@ export default function SchedulePage() {
             return (
               <div
                 key={m.id}
-                className="rounded-xl overflow-hidden"
-                style={{ border: `1px solid ${isEditing ? "rgba(220,38,38,0.3)" : "rgba(255,255,255,0.07)"}` }}
+                className={cn(
+                  "rounded-xl overflow-hidden border",
+                  isEditing ? "border-destructive/30" : "border-border",
+                )}
               >
                 {isEditing ? (
                   /* Edit mode */
-                  <div className="p-5" style={{ backgroundColor: "#161616" }}>
+                  <div className="bg-card p-5">
                     <MatchForm form={editForm} onChange={setEditForm} seasons={seasons} />
                     <div className="mt-4 flex gap-3">
                       <button
@@ -440,8 +444,7 @@ export default function SchedulePage() {
                 ) : (
                   /* View mode */
                   <div
-                    className="flex items-center justify-between gap-4 px-5 py-4"
-                    style={{ backgroundColor: "#111111" }}
+                    className="flex items-center justify-between gap-4 bg-card px-5 py-4 transition-colors hover:bg-accent/40"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={40} />
@@ -449,12 +452,13 @@ export default function SchedulePage() {
                       {/* Date + home/away badge */}
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-display font-bold text-white" style={{ fontSize: "1.1rem" }}>{m.date}</span>
-                        <span className="font-body" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.3)" }}>{m.time}</span>
+                        <span className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>{m.time}</span>
                         <span
-                          className="font-display font-black uppercase px-2 py-0.5 rounded"
+                          className={cn(
+                            "font-display font-black uppercase px-2 py-0.5 rounded",
+                            m.home ? "bg-success/15 text-success" : "bg-muted/70 text-muted-foreground",
+                          )}
                           style={{
-                            backgroundColor: m.home ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)",
-                            color: m.home ? "rgba(34,197,94,0.9)" : "rgba(255,255,255,0.4)",
                             fontSize: "0.75rem",
                             letterSpacing: "0.08em",
                           }}
@@ -470,8 +474,8 @@ export default function SchedulePage() {
 
                       {(m.rose_city_score !== null && m.opponent_score !== null) && (
                         <p
-                          className="font-display mt-1 font-black uppercase tracking-widest"
-                          style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.72)" }}
+                          className="font-display mt-1 font-black uppercase tracking-widest text-foreground/70"
+                          style={{ fontSize: "0.85rem" }}
                         >
                           Result: {club.name} {m.rose_city_score} - {m.opponent_score} {m.opponent}
                         </p>
@@ -479,19 +483,19 @@ export default function SchedulePage() {
 
                       {/* Competition */}
                       {m.competition && (
-                        <p className="font-body truncate" style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.35)" }}>
+                        <p className="font-body truncate text-muted-foreground" style={{ fontSize: "0.85rem" }}>
                           {m.competition}
                         </p>
                       )}
 
                       {!isAcademy && m.sponsor_logo_url && (
-                        <p className="font-body truncate" style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.3)" }}>
+                        <p className="font-body truncate text-muted-foreground/80" style={{ fontSize: "0.8rem" }}>
                           Presented by {m.sponsor_name || "match sponsor"}
                         </p>
                       )}
 
                       {/* Venue */}
-                      <p className="font-body mt-0.5 truncate" style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.3)" }}>
+                      <p className="font-body mt-0.5 truncate text-muted-foreground" style={{ fontSize: "0.95rem" }}>
                         {m.venue}
                         {m.city ? `, ${m.city}` : ""}
                         {m.state ? `, ${m.state}` : ""}
@@ -504,27 +508,16 @@ export default function SchedulePage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => startEdit(m)}
-                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors"
-                        style={{
-                          fontSize: "0.95rem",
-                          backgroundColor: "#1e1e1e",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          color: "rgba(255,255,255,0.6)",
-                        }}
+                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors border border-border bg-muted/40 text-foreground/60 hover:bg-accent hover:text-foreground"
+                        style={{ fontSize: "0.95rem" }}
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(m.id)}
                         disabled={isDeleting}
-                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors"
-                        style={{
-                          fontSize: "0.95rem",
-                          backgroundColor: "rgba(220,38,38,0.1)",
-                          border: "1px solid rgba(220,38,38,0.2)",
-                          color: isDeleting ? "rgba(220,38,38,0.4)" : "rgba(220,38,38,0.8)",
-                          cursor: isDeleting ? "not-allowed" : "pointer",
-                        }}
+                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors border border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20 disabled:cursor-not-allowed disabled:text-destructive/40 disabled:hover:bg-destructive/10"
+                        style={{ fontSize: "0.95rem" }}
                       >
                         {isDeleting ? "…" : "Delete"}
                       </button>
@@ -575,19 +568,18 @@ function MatchForm({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <Field label="Season" required>
-        <select
+        <NativeSelect
           value={form.season_id}
           onChange={(e) => set("season_id", e.target.value)}
-          style={inputStyle}
           required
         >
-          <option value="">— Select a season —</option>
+          <NativeSelectOption value="">— Select a season —</NativeSelectOption>
           {seasons.map((season) => (
-            <option key={season.id} value={season.id}>
+            <NativeSelectOption key={season.id} value={season.id}>
               {season.label}{season.active ? " (Active)" : ""}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
 
       <Field label="Date" required>
@@ -762,14 +754,13 @@ function MatchForm({
       )}
 
       <Field label="Home / Away" required>
-        <select
+        <NativeSelect
           value={form.home ? "home" : "away"}
           onChange={(e) => set("home", e.target.value === "home")}
-          style={inputStyle}
         >
-          <option value="home">Home</option>
-          <option value="away">Away</option>
-        </select>
+          <NativeSelectOption value="home">Home</NativeSelectOption>
+          <NativeSelectOption value="away">Away</NativeSelectOption>
+        </NativeSelect>
       </Field>
 
       <Field label="Venue" required>

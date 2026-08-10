@@ -8,6 +8,13 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Tailwind's default theme.aria omits "invalid" — without this, every
+      // `aria-invalid:*` utility in components/ui/* (button, checkbox,
+      // textarea) compiles to no CSS rule at all, so the invalid state
+      // silently never renders no matter what the component passes.
+      aria: {
+        invalid: 'invalid="true"',
+      },
       // Brand aliases are CSS-variable-driven so a presentation template can
       // repaint them for its own scope only. `styles/globals.css` defines the
       // `--tw-*-rgb` triples at `:root` with the exact same values these
@@ -65,6 +72,14 @@ const config: Config = {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

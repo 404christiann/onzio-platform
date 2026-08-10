@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import SeasonSelect from "@/components/admin/SeasonSelect";
+import StatInput from "@/components/admin/StatInput";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
+import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────
 
@@ -304,29 +307,23 @@ export default function StatsPage() {
         >
           Match
         </label>
-        <select
-          value={selectedMatch ?? ""}
-          onChange={(e) => setSelectedMatch(e.target.value || null)}
-          disabled={seasonsLoading || !selectedSeasonId}
-          className="w-full rounded-lg px-4 py-3 font-body outline-none"
-          style={{
-            fontSize: "1rem",
-            backgroundColor: "#1a1a1a",
-            border: "1px solid rgba(255,255,255,0.1)",
-            color: "white",
-            maxWidth: 560,
-          }}
-        >
-          <option value="" style={{ backgroundColor: "#1a1a1a" }}>— Select a match —</option>
-          {seasonMatches
-            .slice()
-            .sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime())
-            .map((m) => (
-              <option key={m.id} value={m.id.toString()} style={{ backgroundColor: "#1a1a1a" }}>
-                {m.date} · {m.home ? "vs" : "@"} {m.opponent}
-              </option>
-            ))}
-        </select>
+        <div className="max-w-[560px]">
+          <NativeSelect
+            value={selectedMatch ?? ""}
+            onChange={(e) => setSelectedMatch(e.target.value || null)}
+            disabled={seasonsLoading || !selectedSeasonId}
+          >
+            <NativeSelectOption value="">— Select a match —</NativeSelectOption>
+            {seasonMatches
+              .slice()
+              .sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime())
+              .map((m) => (
+                <NativeSelectOption key={m.id} value={m.id.toString()}>
+                  {m.date} · {m.home ? "vs" : "@"} {m.opponent}
+                </NativeSelectOption>
+              ))}
+          </NativeSelect>
+        </div>
 
         {!seasonsLoading && selectedSeasonId && seasonMatches.length === 0 && (
           <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
@@ -446,19 +443,18 @@ function PositionGroup({
     : "48px 1fr 60px 72px 60px 60px 72px 56px 56px 56px 52px 52px";
 
   return (
-    <div className="mb-4 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="mb-4 rounded-xl overflow-hidden border border-border">
       {/* Position header / toggle */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 transition-colors duration-150"
-        style={{ backgroundColor: "#161616" }}
+        className="w-full flex items-center justify-between bg-card px-4 py-3 transition-colors duration-150 hover:bg-accent/60"
       >
         <span
-          className="font-display font-black uppercase tracking-widest"
-          style={{ fontSize: "1.1rem", color: "rgba(255,255,255,0.9)" }}
+          className="font-display font-black uppercase tracking-widest text-foreground/90"
+          style={{ fontSize: "1.1rem" }}
         >
           {pos}s &nbsp;
-          <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400 }}>
+          <span className="font-normal text-muted-foreground/60">
             {group.length}
           </span>
         </span>
@@ -467,8 +463,8 @@ function PositionGroup({
           height="18"
           viewBox="0 0 24 24"
           fill="none"
+          className="text-muted-foreground/60"
           style={{
-            color: "rgba(255,255,255,0.3)",
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 0.25s ease",
           }}
@@ -491,21 +487,16 @@ function PositionGroup({
             <div style={{ minWidth: 600 }}>
           {/* Column headers */}
           <div
-            className="grid gap-2 px-4 py-2"
-            style={{
-              gridTemplateColumns: gridCols,
-              backgroundColor: "#111111",
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-            }}
+            className="grid gap-2 border-b border-border bg-muted/40 px-4 py-2"
+            style={{ gridTemplateColumns: gridCols }}
           >
             {headers.map((h) => (
               <span
                 key={h}
-                className="font-display font-bold uppercase text-center"
+                className="font-display font-bold uppercase text-center text-foreground/90"
                 style={{
                   fontSize: "0.75rem",
                   letterSpacing: "0.08em",
-                  color: "rgba(255,255,255,0.9)",
                 }}
               >
                 {h}
@@ -521,25 +512,25 @@ function PositionGroup({
             return (
               <div
                 key={p.id}
-                className="grid gap-2 items-center px-4 py-2"
-                style={{
-                  gridTemplateColumns: gridCols,
-                  backgroundColor: i % 2 === 0 ? "#0f0f0f" : "#111111",
-                  borderBottom: i < group.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                }}
+                className={cn(
+                  "grid gap-2 items-center px-4 py-2 transition-colors hover:bg-accent/40",
+                  i % 2 === 1 && "bg-muted/20",
+                  i < group.length - 1 && "border-b border-border/40",
+                )}
+                style={{ gridTemplateColumns: gridCols }}
               >
                 {/* # */}
                 <span
-                  className="font-display font-bold text-center"
-                  style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}
+                  className="font-display font-bold text-center text-muted-foreground/70"
+                  style={{ fontSize: "1rem" }}
                 >
                   {p.number}
                 </span>
 
                 {/* Name */}
                 <span
-                  className="font-body truncate"
-                  style={{ fontSize: "1rem", color: "rgba(255,255,255,0.85)" }}
+                  className="font-body truncate text-foreground/85"
+                  style={{ fontSize: "1rem" }}
                 >
                   {p.name}
                 </span>
@@ -550,8 +541,7 @@ function PositionGroup({
                     type="checkbox"
                     checked={row.starts}
                     onChange={(e) => updateStat(p.id, "starts", e.target.checked)}
-                    className="w-5 h-5 rounded cursor-pointer"
-                    style={{ accentColor: "#dc2626" }}
+                    className="w-5 h-5 rounded cursor-pointer accent-destructive"
                   />
                 </div>
 
@@ -589,33 +579,5 @@ function PositionGroup({
         </div>
       </div>
     </div>
-  );
-}
-
-// ── Reusable number input ─────────────────────
-
-function StatInput({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <input
-      type="number"
-      min={0}
-      value={value}
-      onChange={(e) => onChange(Math.max(0, Number(e.target.value)))}
-      className="w-full rounded text-center font-display font-bold text-white outline-none"
-      style={{
-        fontSize: "1rem",
-        backgroundColor: "#0e0e0e",
-        border: "1px solid rgba(255,255,255,0.08)",
-        padding: "6px 2px",
-      }}
-      onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(220,38,38,0.5)")}
-      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}
-    />
   );
 }

@@ -114,11 +114,10 @@ export default function LeagueStandingsTable({
                 type="button"
                 onClick={() => handleSort(column.key)}
                 className={`font-display h-10 text-center uppercase tracking-widest transition-colors ${
-                  column.mobile ? "" : "hidden md:block"
-                }`}
-                style={{
-                  color: sortKey === column.key ? "#FFFFFF" : "rgba(255,255,255,0.62)",
-                }}
+                  sortKey === column.key
+                    ? "text-white"
+                    : "text-white/[.68] hover:text-white"
+                } ${column.mobile ? "" : "hidden md:block"}`}
                 aria-label={`Sort standings by ${column.label}`}
               >
                 {column.label}

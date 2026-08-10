@@ -5,8 +5,11 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import Image from "@/components/ResilientImage";
 import { Loader } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import FileUpload from "@/components/admin/FileUpload";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import type {
   DBBehindTheRoseSection,
   DBHomepageHeroContent,
@@ -213,7 +216,6 @@ export default function AdminHomepagePage() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -355,7 +357,6 @@ export default function AdminHomepagePage() {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -594,11 +595,10 @@ export default function AdminHomepagePage() {
                   />
                 </Field>
                 <Field label="Intro">
-                  <textarea
+                  <Textarea
                     value={heroFields.intro}
                     onChange={(event) => setHeroField("intro", event.target.value)}
                     rows={4}
-                    style={{ ...inputStyle, resize: "vertical" }}
                   />
                 </Field>
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -610,19 +610,18 @@ export default function AdminHomepagePage() {
                     />
                   </Field>
                   <Field label="Primary Link">
-                    <select
+                    <NativeSelect
                       value={heroFields.primary_cta_href}
                       onChange={(event) => setHeroField("primary_cta_href", event.target.value)}
-                      style={inputStyle}
                     >
                       {siteRouteOptionsWithFallback(linkablePrograms, heroFields.primary_cta_href).map(
                         (option: SiteRouteOption) => (
-                          <option key={option.href} value={option.href}>
+                          <NativeSelectOption key={option.href} value={option.href}>
                             {option.label}
-                          </option>
+                          </NativeSelectOption>
                         ),
                       )}
-                    </select>
+                    </NativeSelect>
                   </Field>
                   <Field label="Secondary Button">
                     <input
@@ -632,19 +631,18 @@ export default function AdminHomepagePage() {
                     />
                   </Field>
                   <Field label="Secondary Link">
-                    <select
+                    <NativeSelect
                       value={heroFields.secondary_cta_href}
                       onChange={(event) => setHeroField("secondary_cta_href", event.target.value)}
-                      style={inputStyle}
                     >
                       {siteRouteOptionsWithFallback(linkablePrograms, heroFields.secondary_cta_href).map(
                         (option: SiteRouteOption) => (
-                          <option key={option.href} value={option.href}>
+                          <NativeSelectOption key={option.href} value={option.href}>
                             {option.label}
-                          </option>
+                          </NativeSelectOption>
                         ),
                       )}
-                    </select>
+                    </NativeSelect>
                   </Field>
                 </div>
               </div>
@@ -735,44 +733,14 @@ export default function AdminHomepagePage() {
                     </div>
                   ))}
 
-                  <button
-                    type="button"
-                    onClick={() => fileRef.current?.click()}
-                    disabled={uploading || !canAddHomepageSlideshowPhoto(draftPhotos.length)}
-                    className="flex aspect-video w-full flex-col items-center justify-center rounded-lg transition-colors"
-                    style={{
-                      border: "1px dashed rgba(255,255,255,0.15)",
-                      backgroundColor: uploading ? "rgba(255,255,255,0.03)" : "transparent",
-                      color: "rgba(255,255,255,0.3)",
-                      cursor:
-                        uploading || !canAddHomepageSlideshowPhoto(draftPhotos.length)
-                          ? "not-allowed"
-                          : "pointer",
-                      opacity: canAddHomepageSlideshowPhoto(draftPhotos.length) ? 1 : 0.4,
-                    }}
-                    aria-label="Add homepage slideshow photos"
-                  >
-                    {uploading ? (
-                      <Loader className="size-4 animate-spin" />
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    )}
-                    <span
-                      className="font-display mt-1 uppercase"
-                      style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}
-                    >
-                      {uploading ? "Uploading" : "Add"}
-                    </span>
-                  </button>
-                  <input
-                    ref={fileRef}
-                    type="file"
+                  <FileUpload
+                    className="col-span-2"
+                    label="Add homepage slideshow photos"
                     accept="image/*"
                     multiple
-                    className="hidden"
-                    onChange={(event) => handleUpload(event.target.files)}
+                    onUpload={(files) => void handleUpload(files)}
+                    uploading={uploading}
+                    disabled={!canAddHomepageSlideshowPhoto(draftPhotos.length)}
                   />
                 </div>
 
@@ -831,21 +799,21 @@ export default function AdminHomepagePage() {
                   />
                 </Field>
                 <Field label="First Paragraph" help={storyErrors.bodyPrimary}>
-                  <textarea
+                  <Textarea
                     value={storyFields.bodyPrimary}
                     onChange={(event) => setStoryField("bodyPrimary", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.bodyPrimary}
                     rows={5}
-                    style={{ ...inputStyle, resize: "vertical" }}
+                    aria-invalid={Boolean(storyErrors.bodyPrimary)}
                   />
                 </Field>
                 <Field label="Second Paragraph" help={storyErrors.bodySecondary}>
-                  <textarea
+                  <Textarea
                     value={storyFields.bodySecondary}
                     onChange={(event) => setStoryField("bodySecondary", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.bodySecondary}
                     rows={4}
-                    style={{ ...inputStyle, resize: "vertical" }}
+                    aria-invalid={Boolean(storyErrors.bodySecondary)}
                   />
                 </Field>
                 <Field label="Button Label" help={storyErrors.ctaLabel}>
@@ -895,11 +863,10 @@ export default function AdminHomepagePage() {
                   />
                 </Field>
                 <Field label="Description">
-                  <textarea
+                  <Textarea
                     value={behindFields.description}
                     onChange={(event) => setBehindField("description", event.target.value)}
                     rows={4}
-                    style={{ ...inputStyle, resize: "vertical" }}
                   />
                 </Field>
                 <Field label="Video URL" help="Paste a YouTube watch, short, or embed URL.">

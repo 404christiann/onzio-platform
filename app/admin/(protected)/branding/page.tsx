@@ -7,6 +7,7 @@ import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { Textarea } from "@/components/ui/textarea";
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
 import {
   CLUB_LOGO_BUCKET,
@@ -379,7 +380,7 @@ export default function BrandingPage() {
             >
               Footer tagline
             </label>
-            <textarea
+            <Textarea
               id="footer-tagline"
               value={footerTagline}
               onChange={(event) => {
@@ -389,8 +390,6 @@ export default function BrandingPage() {
               }}
               rows={2}
               maxLength={FOOTER_TAGLINE_LIMIT}
-              className="w-full resize-y rounded-lg border border-white/10 bg-[#0e0e0e] px-3 py-2.5 font-body text-sm text-white outline-none transition focus:border-white/25"
-              style={{ colorScheme: "dark" }}
             />
             <p className="mt-1 font-body text-xs text-white/25">
               Shown under the club name in the footer. Press Enter for a second

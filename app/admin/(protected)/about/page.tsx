@@ -7,6 +7,7 @@ import { Loader } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { Textarea } from "@/components/ui/textarea";
 import ScaledAboutPreview from "@/components/admin/ScaledAboutPreview";
 import type {
   DBAboutPageContent,
@@ -413,11 +414,10 @@ export default function AdminAboutPage() {
                           />
                         </Field>
                         <Field label="Story Paragraphs" help="Each line becomes one paragraph.">
-                          <textarea
+                          <Textarea
                             value={aboutDraft.story_paragraphs.join("\n")}
                             onChange={(event) => setStoryText(event.target.value)}
                             rows={9}
-                            style={{ ...inputStyle, resize: "vertical" }}
                           />
                         </Field>
                       </div>
@@ -451,11 +451,10 @@ export default function AdminAboutPage() {
                               />
                             </Field>
                             <Field label={`Value ${index + 1} Description`}>
-                              <textarea
+                              <Textarea
                                 value={value.description}
                                 onChange={(event) => setValue(index, "description", event.target.value)}
                                 rows={5}
-                                style={{ ...inputStyle, resize: "vertical" }}
                               />
                             </Field>
                           </div>
@@ -467,11 +466,10 @@ export default function AdminAboutPage() {
                   {aboutPanel === "closing" && (
                     <div className="grid gap-3 lg:grid-cols-2">
                       <Field label="Closing Text">
-                        <textarea
+                        <Textarea
                           value={aboutDraft.closing_text}
                           onChange={(event) => setAboutField("closing_text", event.target.value)}
                           rows={5}
-                          style={{ ...inputStyle, resize: "vertical" }}
                         />
                       </Field>
                       <div className="grid gap-3">
@@ -562,11 +560,10 @@ export default function AdminAboutPage() {
                                 />
                               </Field>
                               <Field label={`Feature ${selectedLogoFeature + 1} Description`}>
-                                <textarea
+                                <Textarea
                                   value={logoDraft.features[selectedLogoFeature].description}
                                   onChange={(event) => setLogoFeature(selectedLogoFeature, "description", event.target.value)}
                                   rows={8}
-                                  style={{ ...inputStyle, resize: "vertical" }}
                                 />
                               </Field>
                             </div>

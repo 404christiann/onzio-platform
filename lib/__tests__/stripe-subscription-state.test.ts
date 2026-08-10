@@ -31,7 +31,10 @@ describe("PLAT-102 payment UI state", () => {
   });
 
   it("keeps active and future-canceling subscriptions available", () => {
-    expect(resolvePaymentsUiState(row(), NOW)).toEqual({ state: "active" });
+    expect(resolvePaymentsUiState(row(), NOW)).toEqual({
+      state: "active",
+      periodEndsAt: FUTURE,
+    });
     expect(
       resolvePaymentsUiState(row({ cancel_at_period_end: true }), NOW),
     ).toEqual({ state: "active_canceling", periodEndsAt: FUTURE });

@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader } from "lucide-react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import FileUpload from "@/components/admin/FileUpload";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
@@ -131,8 +134,6 @@ export default function AdminProgramsPage() {
   const [errors, setErrors] = useState<ProgramValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProgramEditorTab>("content");
-  const heroInput = useRef<HTMLInputElement>(null);
-  const detailInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   // Gallery images live in their own table (onzio.program_media), so they are
   // loaded and saved alongside — not inside — the program row.
@@ -312,8 +313,6 @@ export default function AdminProgramsPage() {
       setError(errorMessage(uploadError, "Upload failed"));
     } finally {
       setUploadingRole(null);
-      if (role === "hero" && heroInput.current) heroInput.current.value = "";
-      if (role === "detail" && detailInput.current) detailInput.current.value = "";
     }
   }
 
@@ -690,12 +689,13 @@ export default function AdminProgramsPage() {
           </div>
           <div className="mt-5">
             <FormField label="Intro paragraph" error={pageCopyFieldError("pathwayIntro")}>
-              <textarea
-                className={`${INPUT_CLASS} min-h-24 resize-y`}
+              <Textarea
+                className="min-h-24"
                 value={pageCopy.pathwayIntro}
                 onChange={(event) => updatePageCopy("pathwayIntro", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.pathwayIntro}
                 placeholder={pageCopyDefaults.pathwayIntro}
+                aria-invalid={Boolean(pageCopyFieldError("pathwayIntro"))}
               />
             </FormField>
           </div>
@@ -735,12 +735,13 @@ export default function AdminProgramsPage() {
           </div>
           <div className="mt-5">
             <FormField label="Intro paragraph" error={pageCopyFieldError("heroIntro")}>
-              <textarea
-                className={`${INPUT_CLASS} min-h-24 resize-y`}
+              <Textarea
+                className="min-h-24"
                 value={pageCopy.heroIntro}
                 onChange={(event) => updatePageCopy("heroIntro", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.heroIntro}
                 placeholder={pageCopyDefaults.heroIntro}
+                aria-invalid={Boolean(pageCopyFieldError("heroIntro"))}
               />
             </FormField>
           </div>
@@ -770,12 +771,13 @@ export default function AdminProgramsPage() {
           </div>
           <div className="mt-5 grid gap-5">
             <FormField label="Paragraph" error={pageCopyFieldError("closingBody")}>
-              <textarea
-                className={`${INPUT_CLASS} min-h-24 resize-y`}
+              <Textarea
+                className="min-h-24"
                 value={pageCopy.closingBody}
                 onChange={(event) => updatePageCopy("closingBody", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.closingBody}
                 placeholder={pageCopyDefaults.closingBody}
+                aria-invalid={Boolean(pageCopyFieldError("closingBody"))}
               />
             </FormField>
             <FormField label="Button label" error={pageCopyFieldError("closingCtaLabel")}>
@@ -978,19 +980,21 @@ export default function AdminProgramsPage() {
 
               <div className="mt-5 grid gap-5">
                 <FormField label="Summary" error={fieldError(errors, "summary")}>
-                  <textarea
-                    className={`${INPUT_CLASS} min-h-24 resize-y`}
+                  <Textarea
+                    className="min-h-24"
                     value={draft.summary}
                     onChange={(event) => updateDraft("summary", event.target.value)}
                     maxLength={320}
+                    aria-invalid={Boolean(fieldError(errors, "summary"))}
                   />
                 </FormField>
                 <FormField label="Body" error={fieldError(errors, "body")}>
-                  <textarea
-                    className={`${INPUT_CLASS} min-h-40 resize-y`}
+                  <Textarea
+                    className="min-h-40"
                     value={draft.body}
                     onChange={(event) => updateDraft("body", event.target.value)}
                     maxLength={6000}
+                    aria-invalid={Boolean(fieldError(errors, "body"))}
                   />
                 </FormField>
               </div>
@@ -1041,16 +1045,16 @@ export default function AdminProgramsPage() {
 
               <div className="mt-7 grid gap-5 border-t border-white/[0.06] pt-7 sm:grid-cols-2">
                 <FormField label="Layout variant">
-                  <select className={INPUT_CLASS} value={draft.layoutVariant} onChange={(event) => updateDraft("layoutVariant", event.target.value as ProgramDraft["layoutVariant"])}>
-                    <option value="statement_band">Statement band</option>
-                    <option value="detail_focus">Detail focus</option>
-                  </select>
+                  <NativeSelect value={draft.layoutVariant} onChange={(event) => updateDraft("layoutVariant", event.target.value as ProgramDraft["layoutVariant"])}>
+                    <NativeSelectOption value="statement_band">Statement band</NativeSelectOption>
+                    <NativeSelectOption value="detail_focus">Detail focus</NativeSelectOption>
+                  </NativeSelect>
                 </FormField>
                 <FormField label="Visibility">
-                  <select className={INPUT_CLASS} value={draft.status} onChange={(event) => updateDraft("status", event.target.value as ProgramDraft["status"])}>
-                    <option value="active">Active — visible publicly</option>
-                    <option value="hidden">Hidden — admin only</option>
-                  </select>
+                  <NativeSelect value={draft.status} onChange={(event) => updateDraft("status", event.target.value as ProgramDraft["status"])}>
+                    <NativeSelectOption value="active">Active — visible publicly</NativeSelectOption>
+                    <NativeSelectOption value="hidden">Hidden — admin only</NativeSelectOption>
+                  </NativeSelect>
                 </FormField>
               </div>
               </>
@@ -1058,30 +1062,34 @@ export default function AdminProgramsPage() {
 
               {activeTab === "media" && (
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
-                <MediaField
-                  label="Hero image"
-                  assetId={draft.heroMediaAssetId}
-                  previewUrl={draft.heroMediaPreviewUrl}
-                  uploading={uploadingRole === "hero"}
-                  inputRef={heroInput}
-                  onUpload={(files) => void uploadMedia("hero", files)}
-                  onRemove={() => {
-                    updateDraft("heroMediaAssetId", null);
-                    updateDraft("heroMediaPreviewUrl", "");
-                  }}
-                />
-                <MediaField
-                  label="Detail image"
-                  assetId={draft.detailMediaAssetId}
-                  previewUrl={draft.detailMediaPreviewUrl}
-                  uploading={uploadingRole === "detail"}
-                  inputRef={detailInput}
-                  onUpload={(files) => void uploadMedia("detail", files)}
-                  onRemove={() => {
-                    updateDraft("detailMediaAssetId", null);
-                    updateDraft("detailMediaPreviewUrl", "");
-                  }}
-                />
+                <div>
+                  <span className={LABEL_CLASS}>Hero image</span>
+                  <FileUpload
+                    label="Upload hero image"
+                    accept="image/jpeg,image/png,image/webp"
+                    onUpload={(files) => void uploadMedia("hero", files)}
+                    uploading={uploadingRole === "hero"}
+                    previewUrl={draft.heroMediaPreviewUrl || null}
+                    onRemove={draft.heroMediaAssetId ? () => {
+                      updateDraft("heroMediaAssetId", null);
+                      updateDraft("heroMediaPreviewUrl", "");
+                    } : undefined}
+                  />
+                </div>
+                <div>
+                  <span className={LABEL_CLASS}>Detail image</span>
+                  <FileUpload
+                    label="Upload detail image"
+                    accept="image/jpeg,image/png,image/webp"
+                    onUpload={(files) => void uploadMedia("detail", files)}
+                    uploading={uploadingRole === "detail"}
+                    previewUrl={draft.detailMediaPreviewUrl || null}
+                    onRemove={draft.detailMediaAssetId ? () => {
+                      updateDraft("detailMediaAssetId", null);
+                      updateDraft("detailMediaPreviewUrl", "");
+                    } : undefined}
+                  />
+                </div>
               </div>
               )}
 
@@ -1169,26 +1177,28 @@ export default function AdminProgramsPage() {
                     label="Registration body — link published"
                     error={fieldError(errors, "registrationBody")}
                   >
-                    <textarea
-                      className={`${INPUT_CLASS} min-h-24 resize-y`}
+                    <Textarea
+                      className="min-h-24"
                       value={draft.registrationBody}
                       onChange={(event) =>
                         updateDraft("registrationBody", event.target.value)
                       }
                       maxLength={PROGRAM_REGISTRATION_LIMITS.body}
+                      aria-invalid={Boolean(fieldError(errors, "registrationBody"))}
                     />
                   </FormField>
                   <FormField
                     label="Registration body — no link yet"
                     error={fieldError(errors, "registrationPendingBody")}
                   >
-                    <textarea
-                      className={`${INPUT_CLASS} min-h-24 resize-y`}
+                    <Textarea
+                      className="min-h-24"
                       value={draft.registrationPendingBody}
                       onChange={(event) =>
                         updateDraft("registrationPendingBody", event.target.value)
                       }
                       maxLength={PROGRAM_REGISTRATION_LIMITS.pendingBody}
+                      aria-invalid={Boolean(fieldError(errors, "registrationPendingBody"))}
                     />
                   </FormField>
                   <FormField
@@ -1417,58 +1427,3 @@ function FormField({
   );
 }
 
-function MediaField({
-  label,
-  assetId,
-  previewUrl,
-  uploading,
-  inputRef,
-  onUpload,
-  onRemove,
-}: {
-  label: string;
-  assetId: string | null;
-  previewUrl: string;
-  uploading: boolean;
-  inputRef: React.RefObject<HTMLInputElement | null>;
-  onUpload: (files: FileList | null) => void;
-  onRemove: () => void;
-}) {
-  return (
-    <section className="rounded-xl border border-white/[0.07] bg-black/15 p-4">
-      <p className={LABEL_CLASS}>{label}</p>
-      <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-white/[0.06] bg-black/25">
-        {previewUrl ? (
-          <ResilientImage src={previewUrl} alt={`${label} preview`} fill sizes="(max-width: 640px) 100vw, 40vw" className="object-cover" />
-        ) : (
-          <div className="flex h-full items-center justify-center px-4 text-center font-body text-xs text-white/30">
-            {assetId ? "Published media attached" : "No media attached"}
-          </div>
-        )}
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="sr-only"
-        onChange={(event) => onUpload(event.target.files)}
-      />
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="flex-1 rounded-lg border border-white/10 px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-white/65 transition hover:bg-white/[0.05] disabled:opacity-40"
-        >
-          {uploading && <Loader className="mr-2 inline size-4 animate-spin" />}
-          {uploading ? "Uploading…" : assetId ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
-        </button>
-        {assetId && (
-          <button type="button" onClick={onRemove} className="rounded-lg border border-red-400/15 px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-red-300/70">
-            Remove
-          </button>
-        )}
-      </div>
-    </section>
-  );
-}

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import ScaledContactPreview from "@/components/admin/ScaledContactPreview";
+import { Textarea } from "@/components/ui/textarea";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { createClient } from "@/lib/admin-client";
 import type { ContactContent } from "@/lib/queries";
@@ -413,13 +414,12 @@ export default function AdminContactPage() {
             </div>
             <div>
               <label htmlFor="intro" className={LABEL_CLASS}>Introduction</label>
-              <textarea
+              <Textarea
                 id="intro"
                 rows={5}
                 value={draft.page.intro}
                 onChange={(event) => updatePage("intro", event.target.value)}
                 maxLength={320}
-                className={`${INPUT_CLASS} resize-y`}
                 aria-invalid={Boolean(errors.intro)}
               />
               <div className="mt-1.5 flex items-start justify-between gap-4">

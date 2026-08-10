@@ -18,6 +18,51 @@ const POSITIONS: PositionKey[] = ["All", "Goalkeeper", "Defender", "Midfielder",
 // Team accent colour — used everywhere
 const RED = "#dc2626";
 
+// ── Chart theme ────────────────────────────────
+// Shared chart.js styling for the ComparisonBar and TrendLine charts below.
+// chart.js needs concrete CSS color/font values (it can't consume Tailwind
+// classes), so the tooltip card/border colors are kept in sync manually with
+// the `--card` / `--border` CSS variables in styles/globals.css (`.dark` block).
+
+// Existing chart configs set no font family (chart.js default); resolve the
+// admin portal's body font from the DOM so canvas text matches the page.
+const CHART_FONT_FAMILY =
+  typeof document !== "undefined"
+    ? getComputedStyle(document.body).fontFamily || "Arial, sans-serif"
+    : "Arial, sans-serif";
+
+const CHART_THEME = {
+  accent: RED, // primary series colour (reuses the team accent)
+  accentFill: RED + "cc", // bar fill for the "player" series
+  accentSoft: RED + "18", // translucent area fill under the trend line
+  comparison: "rgba(255,255,255,0.1)", // secondary "position average" series
+  grid: "rgba(255,255,255,0.06)", // horizontal grid lines
+  tick: "rgba(255,255,255,0.4)", // axis tick/label colour
+  font: { family: CHART_FONT_FAMILY, size: 10 },
+  tooltip: {
+    backgroundColor: "hsl(0 0% 10%)", // = `.dark` --card
+    borderColor: "hsl(0 0% 22%)", // = `.dark` --border
+    borderWidth: 1,
+    titleColor: "#fff",
+    bodyColor: "rgba(255,255,255,0.7)",
+  },
+};
+
+// Shared axis config — charts spread these and layer chart-specific overrides
+// (e.g. tick rotation, step size) on top.
+const CHART_AXES = {
+  x: {
+    ticks: { color: CHART_THEME.tick, font: CHART_THEME.font },
+    grid: { display: false },
+    border: { display: false },
+  },
+  y: {
+    ticks: { color: CHART_THEME.tick, font: CHART_THEME.font },
+    grid: { color: CHART_THEME.grid },
+    border: { display: false },
+  },
+};
+
 // ── Helpers ────────────────────────────────────
 
 function isGK(stats: GoalkeeperStats | FieldStats): stats is GoalkeeperStats {
@@ -567,17 +612,17 @@ function ComparisonBar({ data }: { data: { labels: string[]; player: number[]; p
       data: {
         labels: data.labels,
         datasets: [
-          { label: "Player",   data: data.player, backgroundColor: RED + "cc", borderRadius: 4, barPercentage: 0.55 },
-          { label: "Pos. avg", data: data.posAvg, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, barPercentage: 0.55 },
+          { label: "Player",   data: data.player, backgroundColor: CHART_THEME.accentFill, borderRadius: 4, barPercentage: 0.55 },
+          { label: "Pos. avg", data: data.posAvg, backgroundColor: CHART_THEME.comparison, borderRadius: 4, barPercentage: 0.55 },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: { legend: { display: false }, tooltip: { ...CHART_THEME.tooltip } },
         scales: {
-          x: { ticks: { color: "rgba(255,255,255,0.4)", font: { size: 10 } }, grid: { display: false }, border: { display: false } },
-          y: { ticks: { color: "rgba(255,255,255,0.4)", font: { size: 10 } }, grid: { color: "rgba(255,255,255,0.06)" }, border: { display: false } },
+          x: { ...CHART_AXES.x },
+          y: { ...CHART_AXES.y },
         },
       },
     });
@@ -585,13 +630,13 @@ function ComparisonBar({ data }: { data: { labels: string[]; player: number[]; p
   }, [data]);
 
   return (
-    <div className="rounded-xl p-5" style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-center justify-between mb-3">
         <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>
           vs position average
         </p>
         <div className="flex gap-3">
-          {[{ label: "Player", col: RED + "cc" }, { label: "Pos avg", col: "rgba(255,255,255,0.2)" }].map((l) => (
+          {[{ label: "Player", col: CHART_THEME.accentFill }, { label: "Pos avg", col: "rgba(255,255,255,0.2)" }].map((l) => (
             <span key={l.label} className="flex items-center gap-1.5" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: l.col, display: "inline-block" }} />
               {l.label}
@@ -633,9 +678,9 @@ function TrendLine({
         datasets: [{
           label: metric,
           data: data.map((d) => d.value),
-          borderColor: RED,
-          backgroundColor: RED + "18",
-          pointBackgroundColor: RED,
+          borderColor: CHART_THEME.accent,
+          backgroundColor: CHART_THEME.accentSoft,
+          pointBackgroundColor: CHART_THEME.accent,
           pointRadius: 4,
           pointHoverRadius: 6,
           tension: 0.4,
@@ -649,6 +694,7 @@ function TrendLine({
         plugins: {
           legend: { display: false },
           tooltip: {
+            ...CHART_THEME.tooltip,
             callbacks: {
               title: (items) => data[items[0].dataIndex]?.opponent ?? "",
               label: (ctx)   => ` ${metric}: ${ctx.parsed.y}  ·  ${data[ctx.dataIndex]?.mins ?? 0} min`,
@@ -656,8 +702,8 @@ function TrendLine({
           },
         },
         scales: {
-          x: { ticks: { color: "rgba(255,255,255,0.4)", font: { size: 10 }, maxRotation: 30 }, grid: { display: false }, border: { display: false } },
-          y: { min: 0, ticks: { color: "rgba(255,255,255,0.4)", font: { size: 10 }, stepSize: 1 }, grid: { color: "rgba(255,255,255,0.06)" }, border: { display: false } },
+          x: { ...CHART_AXES.x, ticks: { ...CHART_AXES.x.ticks, maxRotation: 30 } },
+          y: { ...CHART_AXES.y, min: 0, ticks: { ...CHART_AXES.y.ticks, stepSize: 1 } },
         },
       },
     });
@@ -665,7 +711,7 @@ function TrendLine({
   }, [data, loading, metric]);
 
   return (
-    <div className="rounded-xl p-5" style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-center justify-between mb-3">
         <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>
           {gk ? "Saves per match" : "Goal contributions per match"}

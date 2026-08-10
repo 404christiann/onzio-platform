@@ -5,6 +5,7 @@ import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
+import { cn } from "@/lib/utils";
 
 type SeasonDeleteState = { deletable: boolean; reason: string };
 
@@ -263,20 +264,39 @@ export default function SeasonsPage() {
             const deleteState = deleteStates[season.id];
             const canDelete = deleteState?.deletable === true;
             return (
-              <div key={season.id} className="flex flex-col gap-4 px-5 py-4 rounded-xl sm:flex-row sm:items-center sm:justify-between" style={{ backgroundColor: season.active ? "#161616" : "#111111", border: `1px solid ${season.active ? "rgba(220,38,38,0.3)" : "rgba(255,255,255,0.07)"}` }}>
+              <div
+                key={season.id}
+                className={cn(
+                  "flex flex-col gap-4 px-5 py-4 rounded-xl border sm:flex-row sm:items-center sm:justify-between",
+                  season.active
+                    ? "border-primary/30 bg-accent/50"
+                    : "border-border bg-card transition-colors hover:border-muted-foreground/40",
+                )}
+              >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
-                    {season.active && <span className="font-display text-xs tracking-widest uppercase px-3 py-1 rounded-full" style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "rgba(34,197,94,0.9)", border: "1px solid rgba(34,197,94,0.3)" }}>Active</span>}
+                    {season.active && <span className="font-display text-xs tracking-widest uppercase px-3 py-1 rounded-full border border-success/30 bg-success/15 text-success">Active</span>}
                   </div>
-                  <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>{season.start_year} – {season.end_year}</p>
-                  {!season.active && deleteState && <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.26)" }}>{deleteState.reason}</p>}
+                  <p className="font-body text-sm text-muted-foreground">{season.start_year} – {season.end_year}</p>
+                  {!season.active && deleteState && <p className="font-body text-xs mt-1 text-muted-foreground/80">{deleteState.reason}</p>}
                 </div>
 
                 {!season.active && (
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <button onClick={() => handleSetActive(season.id)} disabled={saving} className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest" style={{ fontSize: "0.85rem", backgroundColor: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "rgba(34,197,94,0.8)", opacity: saving ? 0.6 : 1 }}>Set Active</button>
-                    <button onClick={() => confirmDeleteId === season.id ? handleDelete(season.id) : setConfirmDeleteId(season.id)} disabled={saving || !canDelete} title={deleteState?.reason ?? "Checking whether this season can be deleted."} className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest" style={{ fontSize: "0.85rem", backgroundColor: confirmDeleteId === season.id ? "rgba(220,38,38,0.2)" : "transparent", border: `1px solid ${confirmDeleteId === season.id ? "rgba(220,38,38,0.5)" : "rgba(255,255,255,0.08)"}`, color: confirmDeleteId === season.id ? "#dc2626" : "rgba(255,255,255,0.3)", opacity: saving || !canDelete ? 0.4 : 1, cursor: saving || !canDelete ? "not-allowed" : "pointer" }}>{confirmDeleteId === season.id ? "Confirm Delete" : "Delete"}</button>
+                    <button onClick={() => handleSetActive(season.id)} disabled={saving} className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border border-success/20 bg-success/10 text-success/80 transition-colors hover:bg-success/20 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "0.85rem" }}>Set Active</button>
+                    <button
+                      onClick={() => confirmDeleteId === season.id ? handleDelete(season.id) : setConfirmDeleteId(season.id)}
+                      disabled={saving || !canDelete}
+                      title={deleteState?.reason ?? "Checking whether this season can be deleted."}
+                      className={cn(
+                        "px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+                        confirmDeleteId === season.id
+                          ? "border-destructive/50 bg-destructive/20 text-destructive hover:bg-destructive/30"
+                          : "border-border bg-transparent text-muted-foreground hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive/80",
+                      )}
+                      style={{ fontSize: "0.85rem" }}
+                    >{confirmDeleteId === season.id ? "Confirm Delete" : "Delete"}</button>
                   </div>
                 )}
               </div>
