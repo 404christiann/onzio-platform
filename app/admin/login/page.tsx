@@ -11,12 +11,15 @@ const UNKNOWN_ADDRESS_ERROR = "Signups not allowed for otp";
 const UNKNOWN_ADDRESS_INTRO = "We couldn't find an Onzio account for";
 const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
 // The configured otp_length is 6 (supabase/config.toml), but production has
-// drifted from that before (8-digit codes) and silently rejecting a correct
-// code is worse than accepting whatever length the server actually issues.
-// The client therefore accepts 4-10 digits and never hard-codes an exact
-// count anywhere in submit gating. DEFAULT_BOX_COUNT only controls how many
-// boxes render before typing; the grid grows to fit longer codes.
-const DEFAULT_BOX_COUNT = 6;
+// drifted from that before and currently issues 8-digit codes — silently
+// rejecting a correct code is worse than accepting whatever length the
+// server actually issues. The client therefore accepts 4-10 digits and
+// never hard-codes an exact count anywhere in submit gating. DEFAULT_BOX_COUNT
+// only controls how many boxes render before typing; it's set to production's
+// current actual length (8), not the stale config value, so pasting a real
+// code doesn't visibly grow the grid. The grid still grows to fit longer
+// codes if the length drifts again.
+const DEFAULT_BOX_COUNT = 8;
 
 export default function LoginPage() {
   const router = useRouter();
