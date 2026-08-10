@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchActiveSeason } from "@/lib/queries";
 import { createClient } from "@/lib/admin-client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -82,14 +83,15 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <StatCard label="Players" value={loading ? "—" : String(stats?.players ?? 0)} />
-        <StatCard label="Staff"   value={loading ? "—" : String(stats?.staff ?? 0)} />
-        <StatCard label="Matches" value={loading ? "—" : String(stats?.matches ?? 0)} />
+      <div className="dark grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <StatCard label="Players" value={String(stats?.players ?? 0)} loading={loading} />
+        <StatCard label="Staff"   value={String(stats?.staff ?? 0)} loading={loading} />
+        <StatCard label="Matches" value={String(stats?.matches ?? 0)} loading={loading} />
         <StatCard
           label="Next Match"
-          value={loading ? "—" : stats?.nextMatch ? formatDate(stats.nextMatch.date) : "TBD"}
-          sub={!loading && stats?.nextMatch ? `vs ${stats.nextMatch.opponent}` : undefined}
+          value={stats?.nextMatch ? formatDate(stats.nextMatch.date) : "TBD"}
+          sub={stats?.nextMatch ? `vs ${stats.nextMatch.opponent}` : undefined}
+          loading={loading}
           accent
         />
       </div>
@@ -159,11 +161,13 @@ function StatCard({
   value,
   sub,
   accent,
+  loading,
 }: {
   label: string;
   value: string;
   sub?: string;
   accent?: boolean;
+  loading?: boolean;
 }) {
   return (
     <div
@@ -179,16 +183,24 @@ function StatCard({
       >
         {label}
       </p>
-      <p
-        className="font-display font-black text-white leading-none"
-        style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}
-      >
-        {value}
-      </p>
-      {sub && (
-        <p className="font-body mt-1 truncate" style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.4)" }}>
-          {sub}
+      {loading ? (
+        <Skeleton className="h-[clamp(1.8rem,3vw,2.5rem)] w-16" />
+      ) : (
+        <p
+          className="font-display font-black text-white leading-none"
+          style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}
+        >
+          {value}
         </p>
+      )}
+      {loading && accent ? (
+        <Skeleton className="mt-2 h-3 w-24" />
+      ) : (
+        sub && (
+          <p className="font-body mt-1 truncate" style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.4)" }}>
+            {sub}
+          </p>
+        )
       )}
     </div>
   );

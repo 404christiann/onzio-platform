@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import { createClient } from "@/lib/admin-client";
@@ -397,6 +398,7 @@ export default function StatsPage() {
                 cursor: saving || !hasChanges ? "not-allowed" : "pointer",
               }}
             >
+              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save All Stats"}
             </button>
 

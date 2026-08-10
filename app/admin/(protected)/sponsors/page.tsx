@@ -3,6 +3,7 @@
 import { useClubContext } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
+import { Loader } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -466,9 +467,13 @@ export default function AdminSponsorsPage() {
                 }}
                 aria-label="Add sponsor logos"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+                {uploading ? (
+                  <Loader className="size-4 animate-spin" />
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                )}
                 <span
                   className="font-display mt-1 uppercase"
                   style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}
@@ -511,6 +516,7 @@ export default function AdminSponsorsPage() {
                 cursor: saveDisabled ? "not-allowed" : "pointer",
               }}
             >
+              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : `Save ${placement === "carousel" ? "Carousel" : "Footer"} Logos`}
             </button>
           </section>

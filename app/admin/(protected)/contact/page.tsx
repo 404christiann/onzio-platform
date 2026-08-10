@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Loader } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -457,6 +458,7 @@ export default function AdminContactPage() {
                     disabled={uploading || saving}
                     className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 font-display text-xs font-black uppercase tracking-[0.15em] text-white/70 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                   >
+                    {uploading && <Loader className="mr-2 inline size-4 animate-spin" />}
                     {uploading ? "Uploading…" : "Upload hero image"}
                   </button>
                   {draft.page.heroMediaAssetId && (
@@ -512,6 +514,7 @@ export default function AdminContactPage() {
           disabled={saving || uploading}
           className="rounded-lg bg-[#E7001B] px-7 py-3.5 font-display text-sm font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#ff0a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-red-400 disabled:cursor-not-allowed disabled:opacity-40"
         >
+          {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
           {saving ? "Saving…" : "Save contact content"}
         </button>
       </div>

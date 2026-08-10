@@ -11,6 +11,15 @@ import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { ChevronDownIcon, Loader } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverPositioner,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // ── Types ─────────────────────────────────────
 
@@ -48,6 +57,20 @@ function emptyForm(seasonId = ""): FormState {
 
 function normalizeScore(value: number | null): number | null {
   return value === null || Number.isNaN(value) ? null : value;
+}
+
+function parseDateInput(value: string): Date | undefined {
+  if (!value) return undefined;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return undefined;
+  return new Date(year, month - 1, day);
+}
+
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 async function uploadPhoto(file: File, bucket: string, folder: string): Promise<string> {
@@ -363,6 +386,7 @@ export default function SchedulePage() {
               className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
               style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
             >
+              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Match"}
             </button>
           </div>
@@ -401,6 +425,7 @@ export default function SchedulePage() {
                         className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
                         style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
                       >
+                        {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button
@@ -541,6 +566,8 @@ function MatchForm({
     onChange({ ...form, [field]: value });
   }
 
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
   function setScore(field: "rose_city_score" | "opponent_score", value: string) {
     set(field, value === "" ? null : Number(value));
   }
@@ -564,12 +591,30 @@ function MatchForm({
       </Field>
 
       <Field label="Date" required>
-        <input
-          type="date"
-          value={form.date}
-          onChange={(e) => set("date", e.target.value)}
-          style={inputStyle}
-        />
+        <div className="dark">
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger
+              render={<Button variant="outline" />}
+              className="w-full justify-between font-normal"
+            >
+              {parseDateInput(form.date)?.toLocaleDateString() ?? "Select date"}
+              <ChevronDownIcon className="size-4 opacity-50" />
+            </PopoverTrigger>
+            <PopoverPositioner align="start">
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={parseDateInput(form.date)}
+                  captionLayout="dropdown"
+                  onSelect={(date) => {
+                    if (date) set("date", formatDateInput(date));
+                    setDatePickerOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </PopoverPositioner>
+          </Popover>
+        </div>
       </Field>
 
       <Field label="Time" required>

@@ -3,6 +3,7 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
+import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
@@ -466,6 +467,7 @@ export default function AdminStandingsPage() {
                 cursor: saving || uploading || !dirty ? "not-allowed" : "pointer",
               }}
             >
+              {(saving || uploading) && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
             </button>
           </section>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader } from "lucide-react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
@@ -795,6 +796,7 @@ export default function AdminProgramsPage() {
               disabled={pageCopySaving || !pageCopyDirty}
               className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35"
             >
+              {pageCopySaving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {pageCopySaving ? "Saving…" : "Save page copy"}
             </button>
             {pageCopySaved && !pageCopyDirty && (
@@ -1229,6 +1231,7 @@ export default function AdminProgramsPage() {
                     }
                     className="rounded-lg border border-white/10 px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-white/65 transition hover:bg-white/[0.05] disabled:opacity-30"
                   >
+                    {uploadingGallery && <Loader className="mr-2 inline size-4 animate-spin" />}
                     {uploadingGallery ? "Uploading…" : "Add image"}
                   </button>
                   <input
@@ -1324,6 +1327,9 @@ export default function AdminProgramsPage() {
                   }
                   className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35"
                 >
+                  {(saving || uploadingRole !== null || uploadingGallery) && (
+                    <Loader className="mr-2 inline size-4 animate-spin" />
+                  )}
                   Save changes
                 </button>
               </div>
@@ -1454,6 +1460,7 @@ function MediaField({
           disabled={uploading}
           className="flex-1 rounded-lg border border-white/10 px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-white/65 transition hover:bg-white/[0.05] disabled:opacity-40"
         >
+          {uploading && <Loader className="mr-2 inline size-4 animate-spin" />}
           {uploading ? "Uploading…" : assetId ? `Replace ${label.toLowerCase()}` : `Upload ${label.toLowerCase()}`}
         </button>
         {assetId && (

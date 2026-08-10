@@ -7,6 +7,16 @@ import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+} from "@/components/ui/sidebar";
 
 type AdminNavItem = {
   label: string;
@@ -252,32 +262,23 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: "#0e0e0e" }}>
-
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-20 lg:hidden"
-          style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
+    <SidebarProvider
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
+      className="dark"
+      style={{ backgroundColor: "#0e0e0e", "--sidebar-width": "280px" } as React.CSSProperties}
+    >
       {/* Sidebar */}
-      <aside
+      <Sidebar
         id="admin-sidebar"
-        className={`fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] flex-col overflow-hidden lg:sticky lg:top-0 lg:inset-y-auto lg:flex lg:h-screen lg:h-[100dvh] lg:max-h-screen lg:max-h-[100dvh] lg:self-start lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
         style={{
-          width: 280,
           backgroundColor: "#141414",
-          borderRight: "1px solid rgba(255,255,255,0.06)",
-          transition: "transform 0.3s ease",
+          borderRightColor: "rgba(255,255,255,0.06)",
         }}
       >
         {/* Logo */}
-        <div
-          className="flex items-center gap-3 px-5 py-5 flex-shrink-0"
+        <SidebarHeader
+          className="flex-row items-center gap-3 px-5 py-5"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
         >
           {clubLogoUrl ? (
@@ -301,11 +302,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               Admin
             </p>
           </div>
-        </div>
+        </SidebarHeader>
 
         {/* Nav links */}
-        <nav
-          className="admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y py-4 px-3 flex flex-col gap-1"
+        <SidebarContent
+          className="admin-nav-scrollbar overscroll-contain touch-pan-y py-4 px-3 gap-1"
           style={{
             WebkitOverflowScrolling: "touch",
             scrollbarGutter: "stable",
@@ -313,30 +314,33 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           aria-label="Admin navigation"
           tabIndex={0}
         >
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              className="flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-150 font-display font-bold uppercase tracking-widest"
-              style={{
-                fontSize: "1.15rem",
-                color: isActive(item.href) ? "#fff" : "rgba(255,255,255,0.35)",
-                backgroundColor: isActive(item.href) ? "rgba(220,38,38,0.15)" : "transparent",
-                borderLeft: isActive(item.href) ? "2px solid #dc2626" : "2px solid transparent",
-              }}
-            >
-              <span style={{ color: isActive(item.href) ? "#dc2626" : "rgba(255,255,255,0.25)" }}>
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+          <SidebarMenu className="gap-1">
+            {navItems.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  render={<Link href={item.href} />}
+                  onClick={() => setSidebarOpen(false)}
+                  isActive={isActive(item.href)}
+                  className="h-auto gap-4 px-4 py-3 font-display font-bold uppercase tracking-widest hover:bg-transparent data-[active=true]:bg-[rgba(220,38,38,0.15)] data-[active=true]:font-bold data-[active=true]:text-white"
+                  style={{
+                    fontSize: "1.15rem",
+                    color: isActive(item.href) ? "#fff" : "rgba(255,255,255,0.35)",
+                    borderLeft: isActive(item.href) ? "2px solid #dc2626" : "2px solid transparent",
+                  }}
+                >
+                  <span style={{ color: isActive(item.href) ? "#dc2626" : "rgba(255,255,255,0.25)" }}>
+                    {item.icon}
+                  </span>
+                  {item.label}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
 
         {/* User + sign out */}
-        <div
-          className="px-4 py-4 flex-shrink-0"
+        <SidebarFooter
+          className="px-4 py-4"
           style={{
             borderTop: "1px solid rgba(255,255,255,0.06)",
             paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
@@ -361,8 +365,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </svg>
             Sign out
           </button>
-        </div>
-      </aside>
+        </SidebarFooter>
+      </Sidebar>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -401,6 +405,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           {children}
         </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

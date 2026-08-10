@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader } from "lucide-react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
@@ -595,6 +596,7 @@ export default function AdminTryoutsPage() {
                   )}
                   <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
                     <button type="button" onClick={() => heroInput.current?.click()} disabled={uploading || saving} className="rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 font-display text-xs font-black uppercase tracking-[0.15em] text-white/70 disabled:opacity-40">
+                      {uploading && <Loader className="mr-2 inline size-4 animate-spin" />}
                       {uploading ? "Uploading…" : "Upload hero image"}
                     </button>
                     {draft.heroMediaAssetId && <button type="button" onClick={() => { updateDraft("heroMediaAssetId", null); updateDraft("heroMediaPreviewUrl", ""); }} disabled={uploading || saving} className="font-display text-xs font-bold uppercase tracking-[0.15em] text-white/35 transition hover:text-red-300 disabled:opacity-40">Remove image</button>}
@@ -612,6 +614,7 @@ export default function AdminTryoutsPage() {
                   </p>
                 </div>
                 <button type="button" onClick={() => void saveTryout()} disabled={saving || uploading || !dirty} className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35">
+                  {(saving || uploading) && <Loader className="mr-2 inline size-4 animate-spin" />}
                   Save changes
                 </button>
               </div>

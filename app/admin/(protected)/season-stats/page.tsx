@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import { createClient } from "@/lib/admin-client";
@@ -228,6 +229,7 @@ export default function SeasonStatsPage() {
             className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white"
             style={{ fontSize: "1.1rem", backgroundColor: "#dc2626", opacity: saving || !hasChanges || !selectedSeasonId ? 0.4 : 1, cursor: saving || !hasChanges || !selectedSeasonId ? "not-allowed" : "pointer" }}
           >
+            {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
             {saving ? "Saving…" : "Save All"}
           </button>
         </div>

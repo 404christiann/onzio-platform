@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
@@ -230,7 +231,7 @@ export default function SeasonsPage() {
             </ul>
             <p className="font-body text-xs mb-6" style={{ color: "rgba(255,255,255,0.3)" }}>A new season remains removable until matches or recorded stats are added.</p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs" style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>{saving ? "Creating…" : "Create Season"}</button>
+              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs" style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>{saving && <Loader className="mr-2 inline size-4 animate-spin" />}{saving ? "Creating…" : "Create Season"}</button>
               <button onClick={() => setShowCreateConfirm(false)} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-xs" style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}>Cancel</button>
             </div>
           </div>

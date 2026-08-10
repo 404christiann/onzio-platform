@@ -4,6 +4,7 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import { useEffect, useState, useRef } from "react";
+import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { fetchActiveSeason } from "@/lib/queries";
 import { getPlayerSeasonSeed } from "@/lib/player-season";
@@ -436,6 +437,7 @@ function PlayersTab() {
             <button onClick={handleAdd} disabled={saving}
               className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
               style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Player"}
             </button>
           </div>
@@ -530,6 +532,7 @@ function PlayerPositionGroup({
                         <button onClick={handleSaveEdit} disabled={saving}
                           className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
                           style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+                          {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
                           {saving ? "Saving…" : "Save"}
                         </button>
                         <button onClick={cancelEdit}
@@ -732,6 +735,7 @@ function StaffTab() {
             <button onClick={handleAdd} disabled={saving}
               className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
               style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Staff Member"}
             </button>
           </div>
@@ -755,6 +759,7 @@ function StaffTab() {
                       <button onClick={handleSaveEdit} disabled={saving}
                         className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
                         style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+                        {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button onClick={() => { setEditingId(null); setError(null); }}
@@ -959,6 +964,7 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
               className="px-5 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
               style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}
             >
+              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Stats"}
             </button>
           </div>

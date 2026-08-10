@@ -3,6 +3,7 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
+import { Loader } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -670,6 +671,7 @@ export default function AdminAboutPage() {
                   cursor: saveDisabled ? "not-allowed" : "pointer",
                 }}
               >
+                {(saving || uploading) && <Loader className="mr-2 inline size-4 animate-spin" />}
                 {saving ? "Saving..." : uploading ? "Uploading..." : "Save About Pages"}
               </button>
             </div>

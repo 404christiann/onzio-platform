@@ -35,6 +35,70 @@
   --font-lemon-milk: var(--font-geist-sans), Arial, sans-serif;
   --font-din-condensed: var(--font-geist-sans), Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Admin UI design tokens (basecn/shadcn-style primitive layer). These
+     names are new and don't collide with the brand tokens above, which
+     stay authoritative for every public club site/template. Scoped to
+     admin surfaces only by usage: only components/ui/* and app/admin/**
+     reference these classes. */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 12%;
+  --primary: 240 10% 12%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 10% 12%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --accent: 240 5% 96%;
+  --accent-foreground: 240 10% 12%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 240 5% 65%;
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 240 10% 12%;
+  --sidebar-border: 240 6% 90%;
+  --sidebar-accent: 240 5% 96%;
+  --sidebar-accent-foreground: 240 10% 12%;
+  --sidebar-ring: 240 5% 65%;
+}
+
+/* Dark-mode overrides for the same admin token layer, scoped to `.dark`.
+   Several admin pages (e.g. the homepage editor) use inline dark panel
+   styling (`#141414` backgrounds); wrap those panels in className="dark"
+   so any components/ui/* primitive rendered inside resolves to
+   dark-appropriate colors instead of the light defaults above. */
+.dark {
+  --background: 0 0% 8%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 10%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 10% 12%;
+  --secondary: 0 0% 16%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 16%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 0 0% 16%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 22%;
+  --input: 0 0% 22%;
+  --ring: 0 0% 40%;
+  --sidebar: 0 0% 8%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-border: 0 0% 22%;
+  --sidebar-accent: 0 0% 16%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-ring: 0 0% 40%;
 }
 
 /* DCFC-D110: the `academy@1` template's registered "montserrat-inter-dmsans"

@@ -3,6 +3,7 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
+import { Loader } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -35,10 +36,17 @@ import {
   HOMEPAGE_STORY_LIMITS,
 } from "@/lib/homepage-story-content";
 import { fetchHomepageContent } from "@/lib/queries";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/admin-client";
 import { siteRouteOptionsWithFallback, type SiteRouteOption } from "@/lib/site-routes";
 
 type AdminTab = "hero" | "slideshow" | "story" | "behind";
+
+const ADMIN_TAB_ORDER: AdminTab[] = ["hero", "slideshow", "story", "behind"];
 
 type HeroFields = {
   eyebrow: string;
@@ -162,6 +170,16 @@ export default function AdminHomepagePage() {
   const hidesLegacyHomepageSections =
     club.presentationTemplateKey === "academy@1";
   const [activeTab, setActiveTab] = useState<AdminTab>("hero");
+  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
+  const selectTab = (next: AdminTab) => {
+    setActiveTab((current) => {
+      if (next === current) return current;
+      setTabDirection(
+        ADMIN_TAB_ORDER.indexOf(next) > ADMIN_TAB_ORDER.indexOf(current) ? 1 : -1,
+      );
+      return next;
+    });
+  };
   const [draftPhotos, setDraftPhotos] = useState<DraftHomepagePhoto[]>(
     DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS.map((photo) => ({
       id: photo.id,
@@ -374,7 +392,7 @@ export default function AdminHomepagePage() {
     const storyValidation = validateHomepageStoryDraft(storyFields);
     if (Object.keys(storyValidation).length > 0) {
       setStoryErrors(storyValidation);
-      setActiveTab("story");
+      selectTab("story");
       setError("Review the highlighted Story fields before saving.");
       return;
     }
@@ -510,7 +528,7 @@ export default function AdminHomepagePage() {
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
           <section
-            className="min-w-0 self-start rounded-xl p-4 sm:p-5"
+            className="dark min-w-0 self-start rounded-xl p-4 sm:p-5"
             style={{
               backgroundColor: "#141414",
               border: "1px solid rgba(255,255,255,0.07)",
@@ -532,7 +550,7 @@ export default function AdminHomepagePage() {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => selectTab(tab.id)}
                     className="font-display flex-1 rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors"
                     style={{
                       backgroundColor: isActive ? "#FFFFFF" : "transparent",
@@ -551,6 +569,7 @@ export default function AdminHomepagePage() {
               })}
             </div>
 
+            <SlidingPanel activeKey={activeTab} direction={tabDirection}>
             {activeTab === "hero" && (
               <div className="space-y-4">
                 <Field label="Eyebrow">
@@ -733,9 +752,13 @@ export default function AdminHomepagePage() {
                     }}
                     aria-label="Add homepage slideshow photos"
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
+                    {uploading ? (
+                      <Loader className="size-4 animate-spin" />
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    )}
                     <span
                       className="font-display mt-1 uppercase"
                       style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}
@@ -786,17 +809,16 @@ export default function AdminHomepagePage() {
                       Turn off to hide the section without deleting its saved content.
                     </span>
                   </span>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={storyFields.visible}
-                    onChange={(event) => {
+                    onCheckedChange={(checked) => {
                       setStoryFields((current) => ({
                         ...current,
-                        visible: event.target.checked,
+                        visible: checked,
                       }));
                       markDirty();
                     }}
-                    className="h-5 w-5 accent-[#E7001B]"
+                    className="size-5"
                   />
                 </label>
 
@@ -848,14 +870,13 @@ export default function AdminHomepagePage() {
                       Turn off to hide the section without deleting its saved content.
                     </span>
                   </span>
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={behindFields.visible}
-                    onChange={(event) => {
-                      setBehindFields((current) => ({ ...current, visible: event.target.checked }));
+                    onCheckedChange={(checked) => {
+                      setBehindFields((current) => ({ ...current, visible: checked }));
                       markDirty();
                     }}
-                    className="h-5 w-5 accent-[#E7001B]"
+                    className="size-5"
                   />
                 </label>
 
@@ -905,6 +926,7 @@ export default function AdminHomepagePage() {
                 </Field>
               </div>
             )}
+            </SlidingPanel>
 
             {error && (
               <p className="font-body mt-4 text-sm" style={{ color: "#E7001B" }}>
@@ -924,6 +946,7 @@ export default function AdminHomepagePage() {
                 cursor: saveDisabled ? "not-allowed" : "pointer",
               }}
             >
+              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Homepage"}
             </button>
           </section>

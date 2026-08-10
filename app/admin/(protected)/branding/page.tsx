@@ -3,6 +3,7 @@
 import { useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
+import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -319,6 +320,7 @@ export default function BrandingPage() {
             disabled={!logoFile || saving}
             className="mt-6 w-full rounded-lg bg-[#E7001B] px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-[#ff0a25] disabled:cursor-not-allowed disabled:opacity-35"
           >
+            {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
             {saving ? "Saving…" : "Save New Club Logo"}
           </button>
         </section>
@@ -442,6 +444,7 @@ export default function BrandingPage() {
             disabled={savingSocialLinks}
             className="mt-6 w-full rounded-lg bg-[#E7001B] px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-[#ff0a25] disabled:cursor-not-allowed disabled:opacity-35"
           >
+            {savingSocialLinks && <Loader className="mr-2 inline size-4 animate-spin" />}
             {savingSocialLinks ? "Saving…" : "Save Footer"}
           </button>
         </section>
