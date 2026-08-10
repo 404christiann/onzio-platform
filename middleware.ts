@@ -40,7 +40,10 @@ type ResolvedTenant = {
 function notFound(): NextResponse {
   return new NextResponse("Not found", {
     status: 404,
-    headers: { "Cache-Control": "no-store" },
+    headers: {
+      "Cache-Control": "no-store",
+      "x-diag-onzio-environment": JSON.stringify(process.env.ONZIO_ENVIRONMENT ?? null),
+    },
   });
 }
 
