@@ -73,6 +73,14 @@ const config: Config = {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        // Onzio brand accent (#0eb547). Wired exactly like `destructive` so
+        // `bg-brand`/`text-brand`/`border-brand` and opacity modifiers all
+        // work. Admin portal only -- public club-site templates keep their
+        // own per-club palettes (DCFC-D132) and never reference this.
+        brand: {
+          DEFAULT: "hsl(var(--brand))",
+          foreground: "hsl(var(--brand-foreground))",
+        },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",

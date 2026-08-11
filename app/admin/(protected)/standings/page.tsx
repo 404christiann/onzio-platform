@@ -3,9 +3,10 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
 import AcademyLeagueStandingsTable from "@/components/AcademyLeagueStandingsTable";
@@ -308,9 +309,52 @@ export default function AdminStandingsPage() {
       </div>
 
       {loading ? (
-        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
-          Loading...
-        </p>
+        <div
+          role="status"
+          aria-label="Loading standings"
+          className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,520px)_minmax(0,1fr)]"
+        >
+          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
+            <div className="grid gap-3">
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <Skeleton className="h-3.5 w-14" />
+              <Skeleton className="h-8 w-24 rounded-md" />
+            </div>
+
+            <div className="mt-3 space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-lg border border-border bg-card p-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-12 w-12 flex-none rounded-full" />
+                    <Skeleton className="h-9 flex-1 rounded-lg" />
+                    <Skeleton className="h-9 w-16 flex-none rounded-md" />
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border pt-3 sm:grid-cols-7">
+                    {[0, 1, 2, 3, 4, 5, 6].map((j) => (
+                      <Skeleton key={j} className="h-9 w-full rounded-lg" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <Skeleton className="mt-5 h-11 w-full rounded-lg" />
+          </section>
+
+          <section className="min-w-0 overflow-hidden rounded-xl border border-border p-4 sm:p-5">
+            <Skeleton className="mb-4 h-5 w-1/3" />
+            <div className="space-y-2">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-8 w-full rounded" />
+              ))}
+            </div>
+          </section>
+        </div>
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,520px)_minmax(0,1fr)]">
           <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
@@ -446,9 +490,9 @@ export default function AdminStandingsPage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={saving || uploading || !dirty}
-              className="font-display mt-5 w-full rounded-lg bg-destructive py-3 text-sm font-bold uppercase tracking-widest text-destructive-foreground transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="font-display mt-5 w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-brand-foreground transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {(saving || uploading) && <Loader className="mr-2 inline size-4 animate-spin" />}
+              {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
             </button>
           </section>

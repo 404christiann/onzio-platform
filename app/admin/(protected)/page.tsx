@@ -216,9 +216,9 @@ function ActionCard({
   return (
     <Link
       href={href}
-      className="group block rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:border-destructive/30 hover:bg-accent"
+      className="group block rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:border-brand/30 hover:bg-accent"
     >
-      <div className="mb-3 text-destructive">{icon}</div>
+      <div className="mb-3 text-brand">{icon}</div>
       <h3 className="font-display font-black uppercase text-foreground mb-1" style={{ fontSize: "1.5rem" }}>
         {title}
       </h3>

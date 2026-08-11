@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Loader } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import ScaledContactPreview from "@/components/admin/ScaledContactPreview";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
@@ -219,9 +219,9 @@ export default function AdminContactPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl" role="status">
-        <div className="animate-pulse rounded-2xl border border-border bg-background p-8 font-body text-sm text-muted-foreground">
-          Loading contact content…
+      <div className="mx-auto max-w-6xl">
+        <div className="rounded-2xl border border-border bg-background p-8 font-body text-sm text-muted-foreground">
+          <AdminLoading label="Loading contact content" />
         </div>
       </div>
     );
@@ -237,7 +237,7 @@ export default function AdminContactPage() {
       />
 
       <header className="mb-8">
-        <p className="font-display text-xs font-black uppercase tracking-[0.2em] text-destructive">
+        <p className="font-display text-xs font-black uppercase tracking-[0.2em] text-brand">
           Public website
         </p>
         <h1
@@ -275,7 +275,7 @@ export default function AdminContactPage() {
           aria-labelledby="shared-contact-heading"
         >
           <div className="mb-6 border-b border-border pb-5">
-            <span className="inline-flex rounded-full border border-destructive/25 bg-destructive/10 px-3 py-1 font-display text-[0.65rem] font-black uppercase tracking-[0.18em] text-destructive">
+            <span className="inline-flex rounded-full border border-brand/25 bg-brand/10 px-3 py-1 font-display text-[0.65rem] font-black uppercase tracking-[0.18em] text-brand">
               Shared club data
             </span>
             <h2
@@ -355,7 +355,7 @@ export default function AdminContactPage() {
             </p>
             <Link
               href="/admin/branding"
-              className="mt-3 inline-flex font-display text-xs font-black uppercase tracking-[0.16em] text-destructive underline decoration-destructive/30 underline-offset-4 transition hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+              className="mt-3 inline-flex font-display text-xs font-black uppercase tracking-[0.16em] text-brand underline decoration-brand/30 underline-offset-4 transition hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
             >
               Edit social links
             </Link>
@@ -454,7 +454,7 @@ export default function AdminContactPage() {
                     disabled={uploading || saving}
                     className="rounded-lg border border-border bg-card px-4 py-2.5 font-display text-xs font-black uppercase tracking-[0.15em] text-muted-foreground transition hover:border-foreground/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {uploading && <Loader className="mr-2 inline size-4 animate-spin" />}
+                    {uploading && <AdminLoadingDots className="mr-2" />}
                     {uploading ? "Uploading…" : "Upload hero image"}
                   </button>
                   {draft.page.heroMediaAssetId && (
@@ -508,9 +508,9 @@ export default function AdminContactPage() {
           type="button"
           onClick={() => void saveContact()}
           disabled={saving || uploading}
-          className="rounded-lg bg-destructive px-7 py-3.5 font-display text-sm font-black uppercase tracking-[0.16em] text-destructive-foreground transition hover:bg-destructive/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg bg-brand px-7 py-3.5 font-display text-sm font-black uppercase tracking-[0.16em] text-brand-foreground transition hover:bg-brand/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+          {saving && <AdminLoadingDots className="mr-2" />}
           {saving ? "Saving…" : "Save contact content"}
         </button>
       </div>

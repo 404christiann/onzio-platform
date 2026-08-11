@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Loader, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import ResilientImage from "@/components/ResilientImage";
 import { cn } from "@/lib/utils";
 
@@ -219,7 +220,7 @@ function FileUpload({
           className="flex items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card px-6 py-10"
           aria-busy="true"
         >
-          <Loader className="size-5 shrink-0 animate-spin text-muted-foreground" />
+          <AdminLoadingDots className="shrink-0 text-lg text-muted-foreground" />
           <div className="min-w-0 text-left">
             <p className="truncate font-body text-sm font-medium text-foreground">
               Uploading{fileMeta ? ` ${fileMeta.name}` : ""}…

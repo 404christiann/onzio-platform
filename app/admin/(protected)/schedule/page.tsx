@@ -14,8 +14,10 @@ import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, Loader } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -357,7 +359,7 @@ export default function SchedulePage() {
               setError(null);
             }}
             disabled={!selectedSeasonId}
-            className="flex-shrink-0 px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white transition-opacity hover:bg-destructive/90 disabled:opacity-50"
+            className="flex-shrink-0 px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white transition-opacity hover:bg-brand/90 disabled:opacity-50"
           >
             {addOpen ? "Cancel" : "+ Add Match"}
           </button>
@@ -373,7 +375,7 @@ export default function SchedulePage() {
 
       {/* Add form */}
       {addOpen && (
-        <div className="rounded-xl border border-destructive/25 bg-card p-5 mb-6">
+        <div className="rounded-xl border border-brand/25 bg-card p-5 mb-6">
           <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">
             New Match
           </p>
@@ -382,9 +384,9 @@ export default function SchedulePage() {
             <button
               onClick={handleAdd}
               disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white text-xs hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Match"}
             </button>
           </div>
@@ -393,9 +395,27 @@ export default function SchedulePage() {
 
       {/* Match list */}
       {loading || seasonsLoading ? (
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
-          Loading…
-        </p>
+        <div role="status" aria-label="Loading matches" className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Skeleton className="h-10 w-10 flex-shrink-0 rounded-full" />
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-5 w-56" />
+                  <Skeleton className="h-3.5 w-64" />
+                </div>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <Skeleton className="h-9 w-16 rounded-lg" />
+                <Skeleton className="h-9 w-20 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : sorted.length === 0 ? (
         <p className="font-body text-sm text-muted-foreground">
           No matches for {selectedSeason?.label ?? "the selected season"}. Add one above.
@@ -411,7 +431,7 @@ export default function SchedulePage() {
                 key={m.id}
                 className={cn(
                   "rounded-xl overflow-hidden border",
-                  isEditing ? "border-destructive/30" : "border-border",
+                  isEditing ? "border-brand/30" : "border-border",
                 )}
               >
                 {isEditing ? (
@@ -422,9 +442,9 @@ export default function SchedulePage() {
                       <button
                         onClick={handleSaveEdit}
                         disabled={saving}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white text-xs hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+                        {saving && <AdminLoadingDots className="mr-2" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button

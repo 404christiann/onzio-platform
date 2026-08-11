@@ -87,7 +87,7 @@ export default function MembersPage() {
               className={ADMIN_INPUT_CLASS}
             />
           </div>
-          <button className="rounded-lg bg-destructive px-5 py-3 font-display font-black uppercase text-destructive-foreground">
+          <button className="rounded-lg bg-brand px-5 py-3 font-display font-black uppercase text-brand-foreground">
             Send access code
           </button>
         </div>

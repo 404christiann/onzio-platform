@@ -7,6 +7,7 @@ import { Chart, registerables } from "chart.js";
 import { fetchRoster, fetchPlayerMatchTrend, PlayerMatchTrendPoint } from "@/lib/queries";
 import { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
+import AdminLoading from "@/components/admin/AdminLoading";
 
 Chart.register(...registerables);
 
@@ -31,9 +32,9 @@ const CHART_FONT_FAMILY =
     : "Arial, sans-serif";
 
 const CHART_THEME = {
-  accent: "hsl(0 72% 51%)", // = `.dark` --destructive (primary series colour)
-  accentFill: "hsl(0 72% 51% / 0.8)", // bar fill for the "player" series
-  accentSoft: "hsl(0 72% 51% / 0.09)", // translucent area fill under the trend line
+  accent: "hsl(140.5 85.6% 38.2%)", // = `--brand` accent (primary series colour)
+  accentFill: "hsl(140.5 85.6% 38.2% / 0.8)", // = `--brand`; bar fill for the "player" series
+  accentSoft: "hsl(140.5 85.6% 38.2% / 0.09)", // = `--brand`; translucent area fill under the trend line
   comparison: "hsl(0 0% 98% / 0.1)", // = --foreground @ 10%; "position average" series
   grid: "hsl(0 0% 98% / 0.06)", // = --foreground @ 6%; horizontal grid lines
   tick: "hsl(0 0% 98% / 0.4)", // = --foreground @ 40%; axis tick/label colour
@@ -117,9 +118,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
-          Loading analytics…
-        </p>
+        <AdminLoading label="Loading analytics" className="font-display text-sm tracking-widest uppercase" />
       </div>
     );
   }
@@ -157,7 +156,7 @@ export default function AnalyticsPage() {
             onClick={() => setPosFilter(pos)}
             className={`font-display font-black uppercase tracking-widest px-5 py-2.5 rounded-lg border transition-all duration-150 ${
               posFilter === pos
-                ? "border-destructive bg-destructive text-destructive-foreground"
+                ? "border-brand bg-brand text-brand-foreground"
                 : "border-border bg-card text-muted-foreground"
             }`}
             style={{ fontSize: "0.9rem" }}
@@ -182,16 +181,16 @@ export default function AnalyticsPage() {
                   onClick={() => p.id && setSelectedId(p.id)}
                   className={`flex-shrink-0 flex flex-col items-center gap-1 rounded-xl border transition-all duration-150 ${
                     active
-                      ? "border-destructive/30 bg-destructive/10"
+                      ? "border-brand/30 bg-brand/10"
                       : "border-border bg-card"
                   }`}
                   style={{ padding: "10px 14px", minWidth: 72 }}
                 >
-                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-destructive" : "border-transparent"}`} style={{ width: 48, height: 48 }}>
+                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-brand" : "border-transparent"}`} style={{ width: 48, height: 48 }}>
                     {p.image ? (
                       <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     ) : (
-                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
+                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
                         {initials(p.name)}
                       </div>
                     )}
@@ -217,16 +216,16 @@ export default function AnalyticsPage() {
                   onClick={() => p.id && setSelectedId(p.id)}
                   className={`flex items-center gap-3 w-full text-left rounded-xl border transition-all duration-150 ${
                     active
-                      ? "border-destructive/30 bg-destructive/10"
+                      ? "border-brand/30 bg-brand/10"
                       : "border-border bg-transparent"
                   }`}
                   style={{ padding: "10px 12px" }}
                 >
-                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-destructive" : "border-border"}`} style={{ width: 48, height: 48 }}>
+                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-brand" : "border-border"}`} style={{ width: 48, height: 48 }}>
                     {p.image ? (
                       <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     ) : (
-                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
+                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
                         {initials(p.name)}
                       </div>
                     )}
@@ -239,7 +238,7 @@ export default function AnalyticsPage() {
                       {p.name}
                     </p>
                     <p
-                      className={`font-display mt-0.5 ${active ? "text-destructive" : "text-muted-foreground"}`}
+                      className={`font-display mt-0.5 ${active ? "text-brand" : "text-muted-foreground"}`}
                       style={{ fontSize: "0.6rem", letterSpacing: "0.06em" }}
                     >
                       #{p.number} · {p.position.slice(0, 3).toUpperCase()}
@@ -405,11 +404,11 @@ function PlayerDashboard({
 
       {/* Player header */}
       <div className="flex items-center gap-4 rounded-xl border border-border bg-background px-5 py-4">
-        <div className="rounded-xl overflow-hidden flex-shrink-0 border-2 border-destructive" style={{ width: 96, height: 96 }}>
+        <div className="rounded-xl overflow-hidden flex-shrink-0 border-2 border-brand" style={{ width: 96, height: 96 }}>
           {player.image ? (
             <ResilientNativeImage src={player.image} alt={player.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
           ) : (
-            <div className="w-full h-full flex items-center justify-center font-display font-black bg-destructive text-destructive-foreground" style={{ fontSize: "1.5rem" }}>
+            <div className="w-full h-full flex items-center justify-center font-display font-black bg-brand text-brand-foreground" style={{ fontSize: "1.5rem" }}>
               {initials(player.name)}
             </div>
           )}
@@ -485,6 +484,9 @@ function PlayerDashboard({
             <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", marginLeft: 2 }}>Yellow</span>
           </div>
           <div className="flex items-center gap-2">
+            {/* Literal red-card swatch — a real red card, not a brand accent,
+                so this deliberately stays on `destructive` alongside the
+                yellow-card swatch above it. */}
             <span className="bg-destructive" style={{ width: 12, height: 12, borderRadius: 2, display: "inline-block", flexShrink: 0 }} />
             <span className="font-display font-black text-foreground" style={{ fontSize: "1.4rem", lineHeight: 1 }}>{stats.red}</span>
             <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", marginLeft: 2 }}>Red</span>
@@ -540,8 +542,8 @@ function RadarCard({
             <span className="bg-muted-foreground/50" style={{ width: 18, height: 1.5, display: "inline-block", borderRadius: 1 }} />
             Pos avg
           </span>
-          <span className="flex items-center gap-1.5 text-destructive" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            <span className="bg-destructive" style={{ width: 18, height: 2, display: "inline-block", borderRadius: 1 }} />
+          <span className="flex items-center gap-1.5 text-brand" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <span className="bg-brand" style={{ width: 18, height: 2, display: "inline-block", borderRadius: 1 }} />
             Player
           </span>
         </div>
@@ -557,10 +559,10 @@ function RadarCard({
             return <line key={i} x1={cx} y1={cy} x2={x} y2={y} className="stroke-border" strokeWidth="0.5" />;
           })}
           <polygon points={poly(avgVals)} className="fill-card stroke-muted-foreground/50" strokeWidth="1.5" strokeDasharray="4,3" />
-          <polygon points={poly(playerVals)} className="fill-destructive/15 stroke-destructive" strokeWidth="2" />
+          <polygon points={poly(playerVals)} className="fill-brand/15 stroke-brand" strokeWidth="2" />
           {playerVals.map((v, i) => {
             const [x, y] = pt(i, Math.max(v, 2) / 100);
-            return <circle key={i} cx={x} cy={y} r="3.5" className="fill-destructive" />;
+            return <circle key={i} cx={x} cy={y} r="3.5" className="fill-brand" />;
           })}
           {labels.map((l, i) => {
             const [x, y] = pt(i, 1.36);
@@ -580,7 +582,7 @@ function RadarCard({
               </span>
               <div className="bg-muted" style={{ flex: 1, height: 3, borderRadius: 2, overflow: "visible", position: "relative" }}>
                 <div className="bg-muted-foreground/50" style={{ position: "absolute", top: -1, bottom: -1, left: `${avgVals[i]}%`, width: 2, transform: "translateX(-50%)", borderRadius: 1 }} />
-                <div className="bg-destructive" style={{ width: `${playerVals[i]}%`, height: "100%", borderRadius: 2 }} />
+                <div className="bg-brand" style={{ width: `${playerVals[i]}%`, height: "100%", borderRadius: 2 }} />
               </div>
               <span className="font-display font-black text-foreground" style={{ fontSize: "0.68rem", width: 24, textAlign: "right", flexShrink: 0 }}>
                 {playerVals[i]}
@@ -631,7 +633,7 @@ function ComparisonBar({ data }: { data: { labels: string[]; player: number[]; p
           vs position average
         </p>
         <div className="flex gap-3">
-          {[{ label: "Player", swatchClass: "bg-destructive/80" }, { label: "Pos avg", swatchClass: "bg-muted-foreground/30" }].map((l) => (
+          {[{ label: "Player", swatchClass: "bg-brand/80" }, { label: "Pos avg", swatchClass: "bg-muted-foreground/30" }].map((l) => (
             <span key={l.label} className="flex items-center gap-1.5 text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
               <span className={l.swatchClass} style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block" }} />
               {l.label}
@@ -720,7 +722,7 @@ function TrendLine({
       <div style={{ position: "relative", height: 130 }}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">Loading…</p>
+            <AdminLoading className="font-display text-xs tracking-widest uppercase" />
           </div>
         ) : data.length < 2 ? (
           <div className="flex items-center justify-center h-full">

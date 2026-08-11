@@ -12,6 +12,11 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
         destructive:
           "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20",
+        // Onzio brand accent (#0eb547) for primary/affirmative actions —
+        // Save, Sign in, Create. `destructive` is now reserved for genuinely
+        // destructive actions (Delete/Remove) and error states.
+        brand:
+          "bg-brand text-brand-foreground shadow-xs hover:bg-brand/90 focus-visible:ring-brand/20",
         outline:
           "border bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground",
         secondary:

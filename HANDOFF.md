@@ -7682,3 +7682,278 @@ verification, blockers, and the next step.
   verification. No local database rows were created, updated, or deleted
   either — the one attempted local fixture toggle was rejected by the
   database's own immutability trigger and left no change.
+
+## PLAT-104 follow-up — Round 2: loading system, roster dropdown, OTP transition, brand rebrand
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Opus 5) coordinating three
+  parallel Sonnet subagents for the per-page mechanical passes, with the
+  shared component, login page, roster page, and every judgement call about
+  which `destructive` usage is brand-accent vs. genuinely destructive made
+  directly.
+- **Objective:** the four items from Christian's completed `/grill-me`
+  interview — (1) replace the three ad-hoc loading patterns with one shared
+  system, (2) polish the roster nationality dropdown toward Preline's
+  "Advanced Select" look without adding a dependency, (3) make the OTP submit
+  swap the whole code-entry card for a loading state, (4) introduce a real
+  brand token and the real Onzio logo, retiring `destructive`'s double duty
+  as both "error" and "brand accent".
+- **Action class:** Class 1 — local code and test changes only. No hosted
+  mutation, no deploy, no commit, no push.
+
+### Item 1 — shared loading system
+
+- New `components/admin/AdminLoading.tsx`, the single source of truth:
+  - `<AdminLoading label tone className />` — default export, the text loader
+    ("Loading" + three bouncing dots) built from the exact markup Christian
+    supplied, with `role="status"`, `aria-label="loading"`, and an `sr-only`
+    duplicate. `label` defaults to `"Loading"` so pages keep their own
+    surface-specific copy ("Loading programs", "Loading contact content").
+  - `<AdminLoadingDots tone className />` — the compact inline variant: dots
+    only, `aria-hidden`, sized to sit inside a button beside its "Saving…"
+    label. This is what replaced the `Loader` icon.
+  - `tone` is `"default"` (`text-foreground`) or `"brand"` (`text-brand`,
+    i.e. the new `--brand` token, NOT a separately hardcoded hex — the
+    cross-item dependency Christian called out).
+- New top-level `@keyframes spinner-ellipsis` in `styles/globals.css`, placed
+  immediately before the `admin-save-feedback-*` keyframes and referenced
+  only through Tailwind arbitrary `animate-[...]` utilities, matching that
+  established pattern exactly. No component uses an inline `<style>` tag.
+  Confirmed present in the built CSS (`.next/static/css/*.css`).
+- **Pattern 1 (plain-text loaders) → `<AdminLoading />`:** about, analytics
+  (both the full-page loader and the TrendLine `trendLoading` state), contact,
+  homepage, season-stats, stats, and the roster page's inline season-stats
+  panel. `text-muted-foreground` was dropped at each site so the component's
+  own `text-foreground` default applies, per spec; typography classes were
+  preserved. The literal trailing "…" was dropped from labels because the
+  animated dots now supply it.
+- **Pattern 2 (button spinners) → `<AdminLoadingDots className="mr-2" />`:**
+  all 22 occurrences of `<Loader className="mr-2 inline size-4 animate-spin" />`
+  across about, branding, contact, homepage, programs, roster, schedule,
+  season-stats, seasons, shop, standings, stats, tryouts, plus
+  `components/admin/FileUpload.tsx`'s larger inline spinner. The now-unused
+  `import { Loader } from "lucide-react"` was removed from every file (in
+  `schedule/page.tsx` only `Loader` was removed from the
+  `{ ChevronDownIcon, Loader }` import). `grep` confirms zero `animate-spin`
+  and zero `Loader` references remain under `app/admin` or `components/admin`.
+- **Pattern 3 (skeletons) → `<Skeleton>`:** Roster Players tab, Roster Staff
+  tab, Schedule, Standings, Sponsors, Tryouts, Programs, Seasons, Shop — nine
+  surfaces, each sized to that page's real item shape (roster/schedule/seasons
+  get row skeletons with avatar + text lines + action buttons; standings,
+  shop and sponsors mirror their two-column editor/preview grids; programs and
+  tryouts mirror their aside card list). Roster's two use a new shared local
+  `RosterListSkeleton` so the Players and Staff lists cannot drift apart.
+- **Contract-test preservation, worth understanding before touching these
+  again:** `diverse-city-programs-admin.test.ts`,
+  `diverse-city-tryouts-admin.test.ts` and `diverse-city-contact-admin.test.ts`
+  assert the literal substrings `Loading programs`, `Loading tryout events`
+  and `Loading contact content` appear in their page sources. Programs and
+  Tryouts moved to skeletons, which have no text — so every skeleton wrapper
+  carries `role="status"` plus an `aria-label` holding that exact string. The
+  requirement (a labelled loading affordance) is genuinely preserved and
+  arguably improved, the assertions still pass unmodified, and no test needed
+  weakening. Do not remove those `aria-label`s.
+
+### Item 2 — roster nationality dropdown
+
+- `NationalitySelect` in `app/admin/(protected)/roster/page.tsx` (shared by
+  `PlayerFormFields` and `StaffFormFields`, so one component covers Players
+  and Staff) restyled toward the Preline "Advanced Select" search-dropdown
+  reference: pinned search header rendered as a real bordered/filled field
+  with a magnifier icon, panel promoted to `rounded-xl` + `shadow-xl`,
+  options padded into rounded rows, a brand-green check icon on the selected
+  option, `aria-haspopup="listbox"`/`aria-expanded` on the trigger and
+  `role="listbox"`/`role="option"`/`aria-selected` on the panel, and the
+  remaining inline `style` objects folded into Tailwind classes.
+- Behaviour is byte-for-byte unchanged: click-outside-closes, filtering the
+  `NATIONALITIES` list by label **or** flag emoji, custom trigger button. All
+  four were re-verified live (see verification below).
+- No `preline` package, no `data-hs-select` widget, no search added to the
+  Position `NativeSelect`, no Staff-specific dropdown work.
+
+### Item 3 — OTP loading transition
+
+- `app/admin/login/page.tsx`: the `step === "code"` branch is now a
+  `relative` wrapper holding two children. On submit the `<form>` (box grid,
+  Sign-in button, "Use a different address") transitions to `opacity-0` with
+  `pointer-events-none` and `aria-hidden`, while `<AdminLoading tone="brand" />`
+  fades in over the same box. It is a genuine full content swap, not an
+  overlay on top of a still-visible card, and not a button-label change; both
+  children stay mounted so it crossfades rather than jump-cuts.
+- The flexible-length OTP logic is untouched: `DEFAULT_BOX_COUNT = 8`,
+  `pattern="[0-9]{4,10}"`, `minLength={4}`, `maxLength={10}`,
+  `candidate.length < 4`, and the single invisible real `<input>` layered over
+  the visual grid all remain exactly as they were.
+  `tests/contracts/platform-auth.test.ts` passes unmodified, and a live
+  6-digit local code was observed filling 6 of the 8 rendered boxes.
+
+### Item 4 — brand token and real logo
+
+- **New token.** `--brand: 140.5 85.6% 38.2%` and `--brand-foreground: 0 0% 100%`
+  added to both the `:root` and `.dark` blocks of `styles/globals.css`
+  (identical in both, the same treatment `--destructive` gets), wired into
+  `tailwind.config.ts` exactly like `destructive`. **The one-decimal HSL is
+  deliberate:** rounding to whole numbers yields `#0eb445`, not `#0eb547`.
+  Verified in the live browser that `bg-brand` computes to
+  `rgb(14, 181, 71)` — exactly `#0eb547`.
+- A `brand` variant was added to `components/ui/button.tsx` alongside the
+  retained `destructive` variant.
+- **Audit, not find-and-replace.** Every one of the ~26 files referencing
+  `destructive` was classified per usage. Migrated to `brand`: all Save /
+  Create / primary-submit buttons, the active sidebar nav icon, selected- and
+  being-edited-row highlights, section eyebrow labels, dashboard quick-link
+  icons, `accent-destructive` form-control accents, contact's "Shared club
+  data" badge and "Edit social links" link, the analytics chart accent
+  (`CHART_THEME.accent`/`accentFill`/`accentSoft` plus every radar/legend/bar
+  element), the `AdminSaveFeedback` saving pill, and the login page's
+  non-error accents. Left red: every `role="alert"` banner and error string,
+  Delete/Remove/Deactivate controls, required-field asterisks and dots,
+  `aria-invalid:*` in the ui primitives, `PaymentStatusCard`'s error card,
+  shop's per-tab validation dot, and analytics' "High Risk" badge and
+  low-discipline bar.
+- **Three deliberate classification calls worth recording:**
+  - `analytics/page.tsx` — the small swatch beside the red-card count is a
+    *literal red card*, paired with the yellow-card `bg-warning` swatch. It
+    stays `destructive`; a comment in the source now says so. (A subagent
+    initially migrated it on my instruction and flagged it back; corrected.)
+  - `homepage/page.tsx` lines ~967 and ~985 — these sit inside the admin's
+    preview pane that simulates the public club site. Public-site palettes are
+    explicitly out of scope (DCFC-D132), and greening them would make the
+    preview misrepresent the real site. Left red, same reasoning PLAT-104
+    applied to the `Scaled*Preview` panes.
+  - `--brand-foreground` is white to preserve the existing button appearance
+    and match the logo. Worth knowing: white on `#0eb547` is ~2.7:1, below
+    WCAG AA for small text (the old red was ~4.5:1). Christian's spec framed
+    this round as an accent-colour-only swap, so the label colour was left
+    alone rather than flipped to dark text — but if accessibility is raised
+    later, `--brand-foreground` is the single knob to turn.
+- **Logo.** `~/Downloads/white_text_onzio_logo.png` copied to
+  `public/images/onzio/onzio-wordmark-white.png` (alongside the existing
+  `public/images/...` static assets) and rendered on the login page through
+  `@/components/ResilientImage`, the wrapper `AdminShell.tsx` and the public
+  components already use. The source is a 500x500 square whose artwork only
+  occupies x 76-425 / y 196-286 (measured with sharp, recorded in a source
+  comment), so it renders at 132px with negative margins cropping the
+  transparent padding back off, leaving a ~92x24 mark optically flush with
+  the heading. The red text lockup it replaced is gone.
+- The admin sidebar's `clubLogoUrl` slot in `components/AdminShell.tsx` is
+  untouched and still renders each tenant's own logo or initials fallback.
+  Public site templates/components were not touched at all.
+
+### Files changed
+
+New: `components/admin/AdminLoading.tsx`,
+`public/images/onzio/onzio-wordmark-white.png`.
+Modified: `styles/globals.css`, `tailwind.config.ts`, `components/ui/button.tsx`,
+`components/AdminShell.tsx`, `components/admin/AdminSaveFeedback.tsx`,
+`components/admin/FileUpload.tsx`, `app/admin/login/page.tsx`,
+`app/admin/(protected)/page.tsx`, and
+`app/admin/(protected)/{about,analytics,branding,contact,homepage,members,
+programs,roster,schedule,season-stats,seasons,shop,sponsors,standings,stats,
+tryouts}/page.tsx`, plus `tests/contracts/admin-sidebar-groups.test.ts`.
+
+### Test changes
+
+Exactly one assertion moved, and only because the token behind an unchanged
+requirement moved. `tests/contracts/admin-sidebar-groups.test.ts`:
+`'isActive(item.href) ? "text-destructive" : ...'` →
+`'isActive(item.href) ? "text-brand" : ...'`, with the test renamed from
+"icon-red" to "icon-accent" and a comment recording why. The requirement —
+active nav item marked by an accent icon plus a foreground label, with no
+filled bar — is identical; only which token supplies the accent changed. The
+`not.toContain("border-l-destructive")` / `not.toContain("bg-destructive/15")`
+guards were left in place. No test was weakened, skipped, or deleted.
+
+### Verification
+
+- `npx tsc --noEmit` — clean.
+- `npm run test:contracts` — 508/508 passed across 45 files.
+- `npm run test:legacy` — 274/274 passed across 25 files.
+- `npm run test:architecture` — 20/20 passed across 3 files.
+- `npm run lint` — 0 errors; the same 5 pre-existing
+  `react-hooks/exhaustive-deps` warnings in analytics/homepage/schedule,
+  unchanged.
+- `npm run build` — compiled successfully. Built CSS confirmed to contain
+  `@keyframes spinner-ellipsis`, all three staggered
+  `animation:spinner-ellipsis ... 0s/.12s/.24s` utilities, and
+  `--brand:140.5 85.6% 38.2%` in both the `:root` and `.dark` blocks.
+- **Live browser, local Alpha tenant, real email-OTP login via local Supabase
+  + Mailpit (`owner-aal2@alpha.local`):**
+  - Login page renders the real logo image, not red text; `bg-brand` computes
+    to `rgb(14, 181, 71)`.
+  - OTP submit crossfades the entire code-entry card out and renders the green
+    `AdminLoading` in its place; captured mid-transition. A deliberate wrong
+    code confirmed the form fades back in with a **red** `role="alert"` error,
+    proving the brand/destructive split. A 6-digit local code filled 6 of the
+    8 boxes, confirming flexible length survived.
+  - Text loader verified in place on the Contact page with full computed
+    styles: colour `rgb(250, 250, 250)` (= `text-foreground`), all three dots
+    running `spinner-ellipsis` at delays `0s`/`0.12s`/`0.24s` with three
+    different live `translateY` values, `sr-only` text present, and the
+    `Loading contact content` label intact.
+  - Roster Staff-tab skeleton captured rendering 15 `Skeleton` nodes across 3
+    rows matching the real row shape, under `aria-label="Loading staff"`.
+  - `NationalitySelect` re-verified end to end: text search ("braz" →
+    Brazilian), flag-emoji search ("🇯🇵" → Japanese), "No results", select-and-
+    close, selected-row brand tint `rgba(14, 181, 71, 0.1)` with a
+    `rgb(14, 181, 71)` check icon, and click-outside-closes.
+  - Brand colour spot-checked across dashboard, roster, seasons, season-stats,
+    contact and programs: Save buttons, active nav icons, eyebrow labels and
+    selected-card borders all resolve to `rgb(14, 181, 71)` / its alpha
+    variants, while delete/error/required-field states stay red.
+  - Only console errors were four `400`s on `/api/admin/data` that I caused
+    myself — see the table-lock technique below.
+
+### Techniques used for verification, for whoever does this next
+
+Loading states are too fast to screenshot against a local DB, and pausing
+PostgREST does not work because Next's RSC navigation re-runs the protected
+layout, which itself needs Supabase — so a paused REST blocks the navigation
+instead of the page's own fetch. Two things that DO work:
+1. **In-page remounts** while `supabase_rest_*` is `docker pause`d — e.g.
+   switching the Roster Players/Staff tab refetches without navigating, so the
+   skeleton stays up indefinitely.
+2. **A targeted table lock** — `begin; lock table onzio.contact_profile,
+   onzio.contact_page_content in access exclusive mode; select pg_sleep(45);`
+   blocks only the Contact page's own query while the layout keeps working, so
+   the page parks in its real loading state. It eventually surfaces a
+   statement-timeout error banner, which is itself a useful check. Both are
+   read-only and leave no data behind.
+
+### Blockers and pre-existing issues found (not caused by this work, not fixed)
+
+- **Local admin login is broken on `staging` by the already-landed
+  `club_domains` environment filter (`372a8bf`).** `getClubContextBySlug`
+  now does `.eq("environment", process.env.ONZIO_ENVIRONMENT!)`, `.env.local`
+  sets `ONZIO_ENVIRONMENT=staging`, but every `club_domains` row in
+  `supabase/seed.sql` is `environment = 'production'`. The lookup finds
+  nothing, `PRIMARY_DOMAIN_REQUIRED` is thrown, the protected layout's
+  `.catch(() => null)` swallows it, and every admin login bounces to
+  `/admin/login?error=not_authorized` — for every local tenant, not just
+  Alpha. Out of scope here, so it was worked around for verification only by
+  launching the dev server with `ONZIO_ENVIRONMENT=production` prefixed on the
+  command line (Next does not override variables already present in
+  `process.env`, so the shell value wins over `.env.local`). **The real fix is
+  a decision for Christian:** either seed `staging` domain rows locally, or
+  change `.env.local` to `production`, or make the filter fall back when
+  running against local Supabase. Nothing was changed to paper over it.
+- Note this means the currently-running local preview on port 3008 was started
+  with that env override, not from `.claude/launch.json`'s
+  `onzio-platform-alpha-preview` entry — restarting it from launch.json will
+  reproduce the `not_authorized` bounce until the above is resolved.
+
+### Exact next step
+
+None required for this package. These are uncommitted local changes on
+`staging`; the normal review/commit/push flow applies whenever Christian wants
+to land them. Separately, the `club_domains` local-environment mismatch above
+needs a decision before anyone else tries to log into a local admin portal.
+
+### Hosted mutations, commits, pushes, deployments
+
+Zero. No commit, no push, no deploy, and no Supabase/Stripe/Vercel/DNS change
+of any kind. All work was local file edits, local test runs, and local
+dev-server browser verification. No local database rows were created, updated,
+or deleted either — the only database interaction beyond reads was a
+transaction that took a table lock, slept, and committed without touching a
+row, plus a `docker pause`/`unpause` of the local PostgREST container, both
+purely to hold pages in their loading states long enough to inspect.

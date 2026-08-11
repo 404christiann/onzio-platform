@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import StatInput from "@/components/admin/StatInput";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -378,10 +378,10 @@ export default function StatsPage() {
             <button
               onClick={handleSave}
               disabled={saving || !hasChanges}
-              className="px-8 py-3 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground bg-destructive transition-opacity duration-200 hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-8 py-3 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground bg-brand transition-opacity duration-200 hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ fontSize: "1.1rem" }}
             >
-              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save All Stats"}
             </button>
 
@@ -391,9 +391,7 @@ export default function StatsPage() {
 
       {/* Loading state */}
       {loading && (
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
-          Loading players…
-        </p>
+        <AdminLoading label="Loading players" className="font-display text-sm tracking-widest uppercase" />
       )}
     </div>
   );
@@ -524,7 +522,7 @@ function PositionGroup({
                     type="checkbox"
                     checked={row.starts}
                     onChange={(e) => updateStat(p.id, "starts", e.target.checked)}
-                    className="w-5 h-5 rounded cursor-pointer accent-destructive"
+                    className="w-5 h-5 rounded cursor-pointer accent-brand"
                   />
                 </div>
 

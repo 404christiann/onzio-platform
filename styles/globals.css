@@ -57,6 +57,15 @@
   --accent-foreground: 240 10% 12%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
+  /* Onzio brand accent (#0eb547). Carries every non-destructive brand-accent
+     use in the admin portal that previously borrowed `--destructive`: save /
+     primary-action buttons, the active sidebar nav item, the login page's
+     sign-in actions, and the logo accent. `--destructive` stays red and is
+     reserved for genuinely destructive or error states. The HSL triple is
+     carried to one decimal place because that is what round-trips back to
+     exactly #0eb547; rounding to whole numbers lands on #0eb445 instead. */
+  --brand: 140.5 85.6% 38.2%;
+  --brand-foreground: 0 0% 100%;
   --success: 160 84% 30%;
   --success-foreground: 0 0% 98%;
   --warning: 32 95% 38%;
@@ -94,6 +103,10 @@
   --accent-foreground: 0 0% 98%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
+  /* Brand accent is a fixed brand color, so it does not shift between the
+     light and dark token layers — same treatment `--destructive` gets. */
+  --brand: 140.5 85.6% 38.2%;
+  --brand-foreground: 0 0% 100%;
   --success: 158 64% 52%;
   --success-foreground: 240 10% 12%;
   --warning: 43 96% 56%;
@@ -417,6 +430,21 @@ body:has([data-font-pack="academy"]) {
 @keyframes admin-save-feedback-check {
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+/* Keyframe for the shared admin loading indicator
+   (components/admin/AdminLoading.tsx), referenced there through arbitrary
+   `animate-[...]` utilities exactly like the save-feedback keyframes above.
+   Kept outside @layer so Tailwind never tree-shakes it. */
+@keyframes spinner-ellipsis {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-0.4em);
   }
 }
 

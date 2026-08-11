@@ -75,9 +75,14 @@ describe("admin sidebar grouped navigation", () => {
     expect(source).not.toContain("•");
   });
 
-  it("keeps the active treatment icon-red and label-white without a red bar", () => {
+  // The requirement is unchanged — the active nav item is marked by an
+  // accent-coloured icon plus a foreground-coloured label, with no filled
+  // bar/pill treatment. Only the token carrying that accent moved: the admin
+  // portal's brand accent is now `--brand` (#0eb547) rather than the borrowed
+  // `--destructive` red, which is reserved for destructive/error states.
+  it("keeps the active treatment icon-accent and label-white without a filled bar", () => {
     expect(source).toContain(
-      'isActive(item.href) ? "text-destructive" : "text-muted-foreground/60"',
+      'isActive(item.href) ? "text-brand" : "text-muted-foreground/60"',
     );
     expect(source).toContain("data-[active=true]:text-foreground");
     expect(source).toContain("data-[active=true]:bg-transparent");

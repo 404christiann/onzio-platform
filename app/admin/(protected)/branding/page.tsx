@@ -3,10 +3,10 @@
 import { useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
@@ -261,7 +261,7 @@ export default function BrandingPage() {
           aria-labelledby="club-logo-heading"
         >
           <div className="mb-6">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-destructive">
+            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-brand">
               Club Identity
             </p>
             <h2 id="club-logo-heading" className="mt-2 font-display text-2xl font-black uppercase text-foreground">
@@ -320,9 +320,9 @@ export default function BrandingPage() {
             type="button"
             onClick={saveLogo}
             disabled={!logoFile || saving}
-            className="mt-6 w-full rounded-lg bg-destructive px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
+            className="mt-6 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
-            {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+            {saving && <AdminLoadingDots className="mr-2" />}
             {saving ? "Saving…" : "Save New Club Logo"}
           </button>
         </section>
@@ -363,7 +363,7 @@ export default function BrandingPage() {
           aria-labelledby="footer-social-heading"
         >
           <div className="mb-6">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-destructive">
+            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-brand">
               Footer
             </p>
             <h2 id="footer-social-heading" className="mt-2 font-display text-2xl font-black uppercase text-foreground">
@@ -442,9 +442,9 @@ export default function BrandingPage() {
             type="button"
             onClick={saveSocialLinks}
             disabled={savingSocialLinks}
-            className="mt-6 w-full rounded-lg bg-destructive px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
+            className="mt-6 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
-            {savingSocialLinks && <Loader className="mr-2 inline size-4 animate-spin" />}
+            {savingSocialLinks && <AdminLoadingDots className="mr-2" />}
             {savingSocialLinks ? "Saving…" : "Save Footer"}
           </button>
         </section>

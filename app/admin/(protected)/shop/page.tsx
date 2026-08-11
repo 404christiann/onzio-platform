@@ -3,10 +3,11 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import FileUpload from "@/components/admin/FileUpload";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledShopKitPreview from "@/components/admin/ScaledShopKitPreview";
@@ -616,9 +617,26 @@ export default function AdminShopPage() {
       </div>
 
       {loading ? (
-        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
-          Loading…
-        </p>
+        <div
+          className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]"
+          role="status"
+          aria-label="Loading shop content"
+        >
+          <section className="min-w-0 space-y-4 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </div>
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </section>
+          <section className="min-w-0 space-y-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="aspect-video w-full rounded-lg" />
+          </section>
+        </div>
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
           <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
@@ -1202,11 +1220,11 @@ export default function AdminShopPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={saveDisabled}
-                className="font-display w-full rounded-lg bg-destructive px-6 py-3 font-black uppercase tracking-widest text-white transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="font-display w-full rounded-lg bg-brand px-6 py-3 font-black uppercase tracking-widest text-white transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ fontSize: "1rem" }}
               >
                 {(saving || uploading) && (
-                  <Loader className="mr-2 inline size-4 animate-spin" />
+                  <AdminLoadingDots className="mr-2" />
                 )}
                 {saving
                   ? "Saving…"

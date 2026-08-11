@@ -9,7 +9,7 @@ interface AdminSaveFeedbackProps {
 
 /**
  * Floating save-status pill for admin editors. Styled with the admin
- * design-token layer (bg-background, border-border, destructive/success
+ * design-token layer (bg-background, border-border, brand/success
  * accents); its keyframes live in styles/globals.css as
  * `admin-save-feedback-*`.
  */
@@ -27,13 +27,13 @@ export default function AdminSaveFeedback({
   if (saving) {
     return (
       <div
-        className={`${BASE_CLASSES} border-destructive/30 animate-[admin-save-feedback-enter_180ms_ease-out_both] motion-reduce:animate-none`}
+        className={`${BASE_CLASSES} border-brand/30 animate-[admin-save-feedback-enter_180ms_ease-out_both] motion-reduce:animate-none`}
         role="status"
         aria-live="polite"
         aria-atomic="true"
       >
         <span
-          className="h-5 w-5 flex-none rounded-full border-2 border-border border-t-destructive animate-[spin_700ms_linear_infinite] motion-reduce:animate-none"
+          className="h-5 w-5 flex-none rounded-full border-2 border-border border-t-brand animate-[spin_700ms_linear_infinite] motion-reduce:animate-none"
           aria-hidden="true"
         />
         <span className="whitespace-nowrap">{savingLabel}</span>

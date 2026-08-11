@@ -3,10 +3,10 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { Loader } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import FileUpload from "@/components/admin/FileUpload";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -507,9 +507,7 @@ export default function AdminHomepagePage() {
       </div>
 
       {loading ? (
-        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
-          Loading…
-        </p>
+        <AdminLoading className="font-display text-sm uppercase tracking-widest" />
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
           <section className="dark min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
@@ -863,9 +861,9 @@ export default function AdminHomepagePage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={saveDisabled}
-              className="font-display mt-5 w-full rounded-lg bg-destructive py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="font-display mt-5 w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Homepage"}
             </button>
           </section>

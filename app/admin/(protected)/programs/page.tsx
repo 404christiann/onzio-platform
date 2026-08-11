@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader } from "lucide-react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import FileUpload from "@/components/admin/FileUpload";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
@@ -627,7 +628,7 @@ export default function AdminProgramsPage() {
     <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-destructive/75">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-brand/75">
             Content
           </p>
           <h1 className="mt-2 font-display text-4xl font-black uppercase leading-none text-foreground sm:text-5xl">
@@ -642,7 +643,7 @@ export default function AdminProgramsPage() {
           <button
             type="button"
             onClick={startCreate}
-            className="rounded-lg bg-destructive px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded-lg bg-brand px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             Create program
           </button>
@@ -815,9 +816,9 @@ export default function AdminProgramsPage() {
               type="button"
               onClick={() => void savePageCopy()}
               disabled={pageCopySaving || !pageCopyDirty}
-              className="rounded-lg bg-destructive px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
+              className="rounded-lg bg-brand px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {pageCopySaving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              {pageCopySaving && <AdminLoadingDots className="mr-2" />}
               {pageCopySaving ? "Saving…" : "Save page copy"}
             </button>
             {pageCopySaved && !pageCopyDirty && (
@@ -830,8 +831,22 @@ export default function AdminProgramsPage() {
       )}
 
       {loading ? (
-        <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center font-body text-sm text-muted-foreground" role="status">
-          Loading programs…
+        <div
+          className="max-w-sm space-y-2 rounded-2xl border border-border bg-background p-3"
+          role="status"
+          aria-label="Loading programs"
+        >
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} className="rounded-xl border border-border bg-card p-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="mt-2 h-3 w-1/2" />
+              <Skeleton className="mt-2 h-5 w-16 rounded-full" />
+              <div className="mt-2 grid grid-cols-2 gap-1">
+                <Skeleton className="h-7 rounded-md" />
+                <Skeleton className="h-7 rounded-md" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : programs.length === 0 && !draft ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
@@ -867,7 +882,7 @@ export default function AdminProgramsPage() {
                   key={program.id}
                   className={`rounded-xl border p-2 transition ${
                     draft?.id === program.id
-                      ? "border-destructive/35 bg-destructive/10"
+                      ? "border-brand/35 bg-brand/10"
                       : "border-border bg-card"
                   }`}
                 >
@@ -1134,7 +1149,7 @@ export default function AdminProgramsPage() {
                 <label className="flex items-start gap-3 rounded-xl border border-border bg-black/15 p-4">
                   <input
                     type="checkbox"
-                    className="mt-0.5 h-4 w-4 flex-none accent-destructive"
+                    className="mt-0.5 h-4 w-4 flex-none accent-brand"
                     checked={draft.registrationEnabled}
                     onChange={(event) =>
                       updateDraft("registrationEnabled", event.target.checked)
@@ -1261,7 +1276,7 @@ export default function AdminProgramsPage() {
                     }
                     className="rounded-lg border border-border px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:opacity-30"
                   >
-                    {uploadingGallery && <Loader className="mr-2 inline size-4 animate-spin" />}
+                    {uploadingGallery && <AdminLoadingDots className="mr-2" />}
                     {uploadingGallery ? "Uploading…" : "Add image"}
                   </button>
                   <input
@@ -1356,10 +1371,10 @@ export default function AdminProgramsPage() {
                   disabled={
                     saving || uploadingRole !== null || uploadingGallery || !dirty
                   }
-                  className="rounded-lg bg-destructive px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="rounded-lg bg-brand px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   {(saving || uploadingRole !== null || uploadingGallery) && (
-                    <Loader className="mr-2 inline size-4 animate-spin" />
+                    <AdminLoadingDots className="mr-2" />
                   )}
                   Save changes
                 </button>

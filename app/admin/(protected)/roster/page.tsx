@@ -4,11 +4,12 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import { useEffect, useState, useRef } from "react";
-import { Loader } from "lucide-react";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import FileUpload from "@/components/admin/FileUpload";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchActiveSeason } from "@/lib/queries";
 import { getPlayerSeasonSeed } from "@/lib/player-season";
@@ -443,7 +444,7 @@ function PlayersTab() {
         </p>
         <button
           onClick={() => { setAddOpen(o => !o); setAddForm(emptyPlayer()); setAddPhoto(null); setError(null); }}
-          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white hover:bg-destructive/90"
+          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground hover:bg-brand/90"
           style={{ fontSize: "1.1rem" }}
         >
           {addOpen ? "Cancel" : "+ Add Player"}
@@ -454,13 +455,13 @@ function PlayersTab() {
 
       {/* Add form */}
       {addOpen && (
-        <div className="rounded-xl border border-destructive/25 bg-card p-5 mb-6">
+        <div className="rounded-xl border border-brand/25 bg-card p-5 mb-6">
           <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">New Player</p>
           <PlayerFormFields form={addForm} onChange={setAddForm} photoFile={addPhoto} onPhotoChange={setAddPhoto} />
           <div className="mt-4">
             <button onClick={handleAdd} disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
-              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Player"}
             </button>
           </div>
@@ -469,7 +470,7 @@ function PlayersTab() {
 
       {/* Player list grouped by position */}
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">Loading…</p>
+        <RosterListSkeleton label="Loading players" />
       ) : (
         <div className="flex flex-col gap-3">
           {POSITIONS.map((pos) => {
@@ -547,14 +548,14 @@ function PlayerPositionGroup({
               const isEditing = editingId === p.id;
               return (
                 <div key={p.id}
-                  className={cn("border-t border-border/40", isEditing && "border border-destructive/30")}>
+                  className={cn("border-t border-border/40", isEditing && "border border-brand/30")}>
                   {isEditing ? (
                     <div className="bg-card p-5">
                       <PlayerFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} playerId={p.id} />
                       <div className="mt-4 flex gap-3">
                         <button onClick={handleSaveEdit} disabled={saving}
-                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
-                          {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+                          {saving && <AdminLoadingDots className="mr-2" />}
                           {saving ? "Saving…" : "Save"}
                         </button>
                         <button onClick={cancelEdit}
@@ -741,7 +742,7 @@ function StaffTab() {
         </p>
         <button
           onClick={() => { setAddOpen(o => !o); setAddForm(emptyStaff()); setAddPhoto(null); setError(null); }}
-          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white hover:bg-destructive/90"
+          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground hover:bg-brand/90"
           style={{ fontSize: "1.1rem" }}>
           {addOpen ? "Cancel" : "+ Add Staff"}
         </button>
@@ -751,13 +752,13 @@ function StaffTab() {
 
       {/* Add form */}
       {addOpen && (
-        <div className="rounded-xl border border-destructive/25 bg-card p-5 mb-6">
+        <div className="rounded-xl border border-brand/25 bg-card p-5 mb-6">
           <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">New Staff Member</p>
           <StaffFormFields form={addForm} onChange={setAddForm} photoFile={addPhoto} onPhotoChange={setAddPhoto} />
           <div className="mt-4">
             <button onClick={handleAdd} disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
-              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Staff Member"}
             </button>
           </div>
@@ -766,21 +767,21 @@ function StaffTab() {
 
       {/* Staff list */}
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">Loading…</p>
+        <RosterListSkeleton label="Loading staff" rows={3} />
       ) : (
         <div className="flex flex-col gap-3">
           {staff.map((s) => {
             const isEditing = editingId === s.id;
             return (
               <div key={s.id}
-                className={cn("rounded-xl overflow-hidden border", isEditing ? "border-destructive/30" : "border-border")}>
+                className={cn("rounded-xl overflow-hidden border", isEditing ? "border-brand/30" : "border-border")}>
                 {isEditing ? (
                   <div className="bg-card p-5">
                     <StaffFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} />
                     <div className="mt-4 flex gap-3">
                       <button onClick={handleSaveEdit} disabled={saving}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
-                        {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+                        {saving && <AdminLoadingDots className="mr-2" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button onClick={() => { setEditingId(null); setError(null); }}
@@ -950,7 +951,7 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
       {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
 
       {loading ? (
-        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">Loading…</p>
+        <AdminLoading className="font-display text-xs tracking-widest uppercase" />
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
@@ -983,9 +984,9 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-5 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60"
+              className="px-5 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60"
             >
-              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Stats"}
             </button>
           </div>
@@ -1229,14 +1230,14 @@ function PlayerFormFields({
             onClick={() => set("caption", form.caption === "(C)" ? "" : "(C)")}
             className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg border transition-all ${
               form.caption === "(C)"
-                ? "border-destructive/50 bg-destructive/15"
+                ? "border-brand/50 bg-brand/15"
                 : "border-border bg-background"
             }`}
           >
             <span
               className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 ${
                 form.caption === "(C)"
-                  ? "border-destructive bg-destructive"
+                  ? "border-brand bg-brand"
                   : "border-border bg-transparent"
               }`}
             >
@@ -1391,62 +1392,110 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
   }, []);
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div ref={ref} className="relative">
       {/* Trigger */}
       <button
         type="button"
         onClick={() => { setOpen((o) => !o); setSearch(""); }}
-        className={`${ADMIN_INPUT_CLASS} flex items-center gap-3 text-left`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={cn(
+          ADMIN_INPUT_CLASS,
+          "flex items-center gap-2.5 text-left",
+          open && "border-ring bg-input/50",
+        )}
       >
         {selected ? (
           <>
-            <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{selected.flag}</span>
-            <span className="font-body text-sm text-foreground">{selected.label}</span>
+            <span className="text-lg leading-none">{selected.flag}</span>
+            <span className="truncate font-body text-sm text-foreground">{selected.label}</span>
           </>
         ) : (
-          <span className="font-body text-sm text-muted-foreground">Select nationality…</span>
+          <span className="font-body text-sm text-muted-foreground/60">Select nationality…</span>
         )}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-muted-foreground" style={{ marginLeft: "auto", flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          className={cn(
+            "ml-auto flex-shrink-0 text-muted-foreground transition-transform duration-150",
+            open && "rotate-180",
+          )}
+        >
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown. The search row and the option list are flex siblings inside
+          a clipped, height-capped panel, so the search header stays pinned
+          while only the options scroll. */}
       {open && (
-        <div
-          className="absolute left-0 right-0 z-50 flex max-h-60 flex-col overflow-hidden rounded-lg border border-border bg-card"
-          style={{ top: "calc(100% + 4px)" }}
-        >
-          {/* Search */}
-          <div className="border-b border-border px-2.5 py-2">
-            <input
-              autoFocus
-              type="text"
-              placeholder="Search…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full border-none bg-transparent font-body text-sm text-foreground outline-none"
-            />
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 flex max-h-64 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/40">
+          {/* Search header */}
+          <div className="flex-shrink-0 border-b border-border bg-card p-2">
+            <div className="flex items-center gap-2 rounded-lg border border-input bg-input/30 px-2.5 py-2 focus-within:border-ring focus-within:bg-input/50">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+                className="flex-shrink-0 text-muted-foreground"
+              >
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full min-w-0 border-none bg-transparent font-body text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
+              />
+            </div>
           </div>
 
           {/* Options */}
-          <div style={{ overflowY: "auto" }}>
+          <div role="listbox" className="overflow-y-auto p-1">
             {filtered.length === 0 ? (
-              <p className="font-body text-xs px-3 py-3 text-muted-foreground">No results</p>
+              <p className="px-2.5 py-3 text-center font-body text-xs text-muted-foreground">
+                No results
+              </p>
             ) : (
-              filtered.map((n) => (
-                <button
-                  key={n.label}
-                  type="button"
-                  onClick={() => { onChange(n.label); setOpen(false); setSearch(""); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                    value === n.label ? "bg-destructive/15" : "hover:bg-accent"
-                  }`}
-                >
-                  <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{n.flag}</span>
-                  <span className="font-body text-sm text-foreground">{n.label}</span>
-                </button>
-              ))
+              filtered.map((n) => {
+                const isSelected = value === n.label;
+                return (
+                  <button
+                    key={n.label}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => { onChange(n.label); setOpen(false); setSearch(""); }}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+                      isSelected ? "bg-brand/10" : "hover:bg-accent",
+                    )}
+                  >
+                    <span className="text-lg leading-none">{n.flag}</span>
+                    <span className="truncate font-body text-sm text-foreground">{n.label}</span>
+                    {isSelected && (
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        className="ml-auto flex-shrink-0 text-brand"
+                      >
+                        <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -1456,6 +1505,38 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
 }
 
 // ── Shared UI ─────────────────────────────────
+
+/**
+ * Placeholder rows for the Players and Staff lists while they load. Mirrors
+ * the real row shape below — round photo, name + meta lines, and the pair of
+ * row actions — so the list does not reflow when the data arrives. The
+ * `aria-label` carries the surface-specific loading message, since the
+ * skeleton itself has no readable text.
+ */
+function RosterListSkeleton({ label, rows = 4 }: { label: string; rows?: number }) {
+  return (
+    <div className="flex flex-col gap-3" role="status" aria-label={label}>
+      {Array.from({ length: rows }, (_, index) => (
+        <div
+          key={index}
+          className="flex flex-col gap-3 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <Skeleton className="h-20 w-20 flex-shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2.5">
+              <Skeleton className="h-4 w-40 max-w-full" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <div className="flex flex-shrink-0 gap-3">
+            <Skeleton className="h-9 w-24 rounded-lg" />
+            <Skeleton className="h-9 w-28 rounded-lg" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (

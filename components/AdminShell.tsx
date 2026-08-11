@@ -362,7 +362,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         className="h-auto gap-4 px-4 py-3 font-display font-bold uppercase tracking-widest text-muted-foreground hover:bg-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-transparent data-[active=true]:font-bold data-[active=true]:text-foreground"
         style={{ fontSize: "1.15rem" }}
       >
-        <span className={isActive(item.href) ? "text-destructive" : "text-muted-foreground/60"}>
+        <span className={isActive(item.href) ? "text-brand" : "text-muted-foreground/60"}>
           {item.icon}
         </span>
         {item.label}

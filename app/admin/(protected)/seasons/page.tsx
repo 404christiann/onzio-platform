@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
 import { cn } from "@/lib/utils";
@@ -232,7 +233,7 @@ export default function SeasonsPage() {
             </ul>
             <p className="font-body text-xs mb-6 text-muted-foreground">A new season remains removable until matches or recorded stats are added.</p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground text-xs bg-destructive transition-opacity hover:bg-destructive/90 disabled:opacity-60 disabled:cursor-not-allowed">{saving && <Loader className="mr-2 inline size-4 animate-spin" />}{saving ? "Creating…" : "Create Season"}</button>
+              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground text-xs bg-brand transition-opacity hover:bg-brand/90 disabled:opacity-60 disabled:cursor-not-allowed">{saving && <AdminLoadingDots className="mr-2" />}{saving ? "Creating…" : "Create Season"}</button>
               <button onClick={() => setShowCreateConfirm(false)} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-xs bg-secondary text-muted-foreground">Cancel</button>
             </div>
           </div>
@@ -244,7 +245,7 @@ export default function SeasonsPage() {
           <h1 className="font-display font-black uppercase text-foreground leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}>Seasons</h1>
           <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>Create seasons, choose what is active, and protect historical records.</p>
         </div>
-        <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground bg-destructive transition-opacity hover:bg-destructive/90 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "1.1rem" }}>+ Create Next Season</button>
+        <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground bg-brand transition-opacity hover:bg-brand/90 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "1.1rem" }}>+ Create Next Season</button>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-background px-5 py-4">
@@ -255,7 +256,23 @@ export default function SeasonsPage() {
       {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">Loading…</p>
+        <div role="status" aria-label="Loading seasons" className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3.5 w-28" />
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-3">
+                <Skeleton className="h-8 w-24 rounded-lg" />
+                <Skeleton className="h-8 w-20 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : seasons.length === 0 ? (
         <div className="rounded-xl border border-border bg-background px-5 py-6"><p className="font-body text-muted-foreground">No seasons exist yet. Create the first season in Supabase before using this workflow.</p></div>
       ) : (

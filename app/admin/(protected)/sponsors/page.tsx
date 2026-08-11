@@ -3,12 +3,13 @@
 import { useClubContext } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { Loader } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import FileUpload from "@/components/admin/FileUpload";
 import SponsorCarousel from "@/components/SponsorCarousel";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   SlidingPanel,
   type SlidingPanelDirection,
@@ -317,9 +318,28 @@ export default function AdminSponsorsPage() {
       </div>
 
       {loading ? (
-        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
-          Loading…
-        </p>
+        <div
+          className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]"
+          role="status"
+          aria-label="Loading sponsors"
+        >
+          <section className="min-w-0 space-y-4 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <div className="grid grid-cols-2 gap-3">
+              {[0, 1, 2, 3].map((index) => (
+                <div key={index} className="space-y-2">
+                  <Skeleton className="aspect-[16/9] w-full rounded-lg" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </section>
+          <section className="min-w-0 space-y-3 rounded-xl border border-border bg-background p-4 sm:p-5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </section>
+        </div>
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
           <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
@@ -462,9 +482,9 @@ export default function AdminSponsorsPage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={saveDisabled}
-              className="font-display mt-5 w-full rounded-lg bg-destructive py-3 text-sm font-bold uppercase tracking-widest text-destructive-foreground transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="font-display mt-5 w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-brand-foreground transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : `Save ${placement === "carousel" ? "Carousel" : "Footer"} Logos`}
             </button>
           </section>

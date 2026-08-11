@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import FileUpload from "@/components/admin/FileUpload";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
@@ -359,7 +360,7 @@ export default function AdminTryoutsPage() {
     <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-destructive/75">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-brand/75">
             Public website
           </p>
           <h1 className="mt-2 font-display text-4xl font-black uppercase leading-none text-foreground sm:text-5xl">
@@ -374,7 +375,7 @@ export default function AdminTryoutsPage() {
         <button
           type="button"
           onClick={startCreate}
-          className="rounded-lg bg-destructive px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="rounded-lg bg-brand px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-ring"
         >
           Create tryout
         </button>
@@ -450,7 +451,7 @@ export default function AdminTryoutsPage() {
               type="button"
               onClick={() => void savePageCopy()}
               disabled={pageCopySaving || !pageCopyDirty}
-              className="rounded-lg bg-destructive px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
+              className="rounded-lg bg-brand px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
             >
               {pageCopySaving ? "Saving…" : "Save page intro"}
             </button>
@@ -464,8 +465,22 @@ export default function AdminTryoutsPage() {
       )}
 
       {loading ? (
-        <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center font-body text-sm text-muted-foreground" role="status">
-          Loading tryout events…
+        <div
+          className="max-w-sm space-y-2 rounded-2xl border border-border bg-background p-3"
+          role="status"
+          aria-label="Loading tryout events"
+        >
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} className="rounded-xl border border-border bg-card p-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="mt-2 h-3 w-2/5" />
+              <Skeleton className="mt-2 h-5 w-16 rounded-full" />
+              <div className="mt-2 grid grid-cols-2 gap-1">
+                <Skeleton className="h-7 rounded-md" />
+                <Skeleton className="h-7 rounded-md" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : tryouts.length === 0 && !draft ? (
         <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
@@ -487,7 +502,7 @@ export default function AdminTryoutsPage() {
             </p>
             <div className="space-y-2">
               {tryouts.map((tryout, index) => (
-                <div key={tryout.id} className={`rounded-xl border p-2 ${draft?.id === tryout.id ? "border-destructive/35 bg-destructive/10" : "border-border bg-card"}`}>
+                <div key={tryout.id} className={`rounded-xl border p-2 ${draft?.id === tryout.id ? "border-brand/35 bg-brand/10" : "border-border bg-card"}`}>
                   <button type="button" onClick={() => selectTryout(tryout)} className="w-full rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-ring/60">
                     <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-foreground">
                       {tryout.headline || "Untitled tryout"}
@@ -603,8 +618,8 @@ export default function AdminTryoutsPage() {
                     Onzio stores public content only—never registrations, participant details, payment, waiver, or medical data.
                   </p>
                 </div>
-                <button type="button" onClick={() => void saveTryout()} disabled={saving || uploading || !dirty} className="rounded-lg bg-destructive px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35">
-                  {(saving || uploading) && <Loader className="mr-2 inline size-4 animate-spin" />}
+                <button type="button" onClick={() => void saveTryout()} disabled={saving || uploading || !dirty} className="rounded-lg bg-brand px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35">
+                  {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
                   Save changes
                 </button>
               </div>

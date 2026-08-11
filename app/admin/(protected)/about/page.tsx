@@ -3,9 +3,9 @@
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledAboutPreview from "@/components/admin/ScaledAboutPreview";
@@ -364,9 +364,7 @@ export default function AdminAboutPage() {
       </div>
 
       {loading ? (
-        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
-          Loading...
-        </p>
+        <AdminLoading className="font-display text-sm uppercase tracking-widest" />
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(420px,560px)_minmax(0,1fr)]">
           <section
@@ -691,9 +689,9 @@ export default function AdminAboutPage() {
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saveDisabled}
-                className="font-display w-full rounded-lg bg-destructive py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="font-display w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {(saving || uploading) && <Loader className="mr-2 inline size-4 animate-spin" />}
+                {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
                 {saving ? "Saving..." : uploading ? "Uploading..." : "Save About Pages"}
               </button>
             </div>

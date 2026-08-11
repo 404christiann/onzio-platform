@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import StatInput from "@/components/admin/StatInput";
 import { createClient } from "@/lib/admin-client";
@@ -228,10 +228,10 @@ export default function SeasonStatsPage() {
           <button
             onClick={handleSave}
             disabled={saving || loading || !hasChanges || !selectedSeasonId}
-            className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground bg-destructive transition-opacity hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground bg-brand transition-opacity hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ fontSize: "1.1rem" }}
           >
-            {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
+            {saving && <AdminLoadingDots className="mr-2" />}
             {saving ? "Saving…" : "Save All"}
           </button>
         </div>
@@ -242,9 +242,7 @@ export default function SeasonStatsPage() {
       )}
 
       {loading || seasonsLoading ? (
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
-          Loading…
-        </p>
+        <AdminLoading className="font-display text-sm tracking-widest uppercase" />
       ) : !selectedSeasonId ? (
         <p className="font-body text-sm text-muted-foreground">
           Create a season before editing season stats.
