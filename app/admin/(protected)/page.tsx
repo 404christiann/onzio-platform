@@ -183,8 +183,12 @@ function StatCard({
         <Skeleton className="h-[clamp(1.8rem,3vw,2.5rem)] w-16" />
       ) : (
         <p
-          className="font-display font-black text-foreground leading-none"
-          style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)" }}
+          className="font-display font-black text-foreground leading-none break-words"
+          style={{
+            fontSize: accent
+              ? "clamp(1.15rem, 2.4vw, 1.75rem)"
+              : "clamp(1.8rem, 3vw, 2.5rem)",
+          }}
         >
           {value}
         </p>

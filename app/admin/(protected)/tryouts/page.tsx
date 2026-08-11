@@ -72,6 +72,7 @@ export default function AdminTryoutsPage() {
   const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<TryoutValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   // The public page turns a missing registration link into a mailto action on
   // the club's own published address, so the preview needs that address to be
   // honest about what a visitor would actually see.
@@ -340,6 +341,37 @@ export default function AdminTryoutsPage() {
     }
   }
 
+  async function deleteTryout(tryout: TryoutDraft) {
+    if (!tryout.id || deletingId) return;
+    if (!window.confirm("Delete this tryout event? This cannot be undone.")) {
+      return;
+    }
+    const id = tryout.id;
+    setDeletingId(id);
+    setSaved(false);
+    setError(null);
+    try {
+      const { error: deleteError } = await createClient()
+        .from("tryouts")
+        .delete()
+        .eq("id", id);
+      if (deleteError) throw new Error(deleteError.message);
+      const next = tryouts.filter((item) => item.id !== id);
+      setTryouts(next);
+      if (draft?.id === id) {
+        const nextSelected = next[0] ?? null;
+        setDraft(nextSelected ? { ...nextSelected } : null);
+        setErrors({});
+        setDirty(false);
+      }
+      setSaved(true);
+    } catch (deleteErrorCaught) {
+      setError(errorMessage(deleteErrorCaught, "Unable to delete tryout"));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   // Saved events with the current draft substituted in place, so the preview
   // reflects unsaved edits — and shows a brand new event before it exists.
   const previewRows = draft
@@ -518,6 +550,17 @@ export default function AdminTryoutsPage() {
                     <button type="button" onClick={() => void reorderTryout(index, -1)} disabled={index === 0} className="rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground disabled:opacity-20" aria-label={`Move tryout ${index + 1} up`}>Up</button>
                     <button type="button" onClick={() => void reorderTryout(index, 1)} disabled={index === tryouts.length - 1} className="rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground disabled:opacity-20" aria-label={`Move tryout ${index + 1} down`}>Down</button>
                   </div>
+                  {typeof tryout.id === "string" && (
+                    <button
+                      type="button"
+                      onClick={() => void deleteTryout(tryout)}
+                      disabled={deletingId === tryout.id}
+                      className="mt-1 w-full rounded-md border border-destructive/30 py-1.5 font-display text-xs font-bold uppercase text-destructive disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label={`Delete tryout ${index + 1}`}
+                    >
+                      {deletingId === tryout.id ? "Deleting…" : "Delete"}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

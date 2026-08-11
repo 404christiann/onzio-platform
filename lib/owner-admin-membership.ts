@@ -165,23 +165,28 @@ export async function addClubAdmin(
   if (previous.data?.status === "active") failContract("MEMBERSHIP_EXISTS");
 
   const now = new Date().toISOString();
-  const membership = await session.client
-    .schema("onzio")
-    .from("club_members")
-    .upsert(
-      {
-        club_id: session.clubId,
-        user_id: identity.id,
-        role: "admin",
-        status: "active",
-        removed_at: null,
-        updated_at: now,
-      },
-      { onConflict: "user_id,club_id" },
-    );
-  if (membership.error) failContract("MEMBERSHIP_MUTATION_FAILED");
-
+  // The membership write lives inside the rollback boundary: if it fails after
+  // we just provisioned a brand-new auth identity, that identity has to be
+  // deleted too, or it is orphaned in Auth with no club membership.
+  let membershipWritten = false;
   try {
+    const membership = await session.client
+      .schema("onzio")
+      .from("club_members")
+      .upsert(
+        {
+          club_id: session.clubId,
+          user_id: identity.id,
+          role: "admin",
+          status: "active",
+          removed_at: null,
+          updated_at: now,
+        },
+        { onConflict: "user_id,club_id" },
+      );
+    if (membership.error) failContract("MEMBERSHIP_MUTATION_FAILED");
+    membershipWritten = true;
+
     const code = options?.sendCode
       ? await options.sendCode(email)
       : await session.client.auth.signInWithOtp({
@@ -203,21 +208,27 @@ export async function addClubAdmin(
       payload: { role: "admin", recipient_domain: email.split("@")[1] },
     });
   } catch (error) {
-    if (previous.data) {
-      await session.client
-        .schema("onzio")
-        .from("club_members")
-        .update(previous.data)
-        .eq("club_id", session.clubId)
-        .eq("user_id", identity.id);
-    } else {
-      await session.client
-        .schema("onzio")
-        .from("club_members")
-        .delete()
-        .eq("club_id", session.clubId)
-        .eq("user_id", identity.id);
+    // Only revert club_members when this call actually wrote it. When the
+    // upsert itself failed there is nothing to revert, and the pre-existing
+    // row (if any) is already the correct state.
+    if (membershipWritten) {
+      if (previous.data) {
+        await session.client
+          .schema("onzio")
+          .from("club_members")
+          .update(previous.data)
+          .eq("club_id", session.clubId)
+          .eq("user_id", identity.id);
+      } else {
+        await session.client
+          .schema("onzio")
+          .from("club_members")
+          .delete()
+          .eq("club_id", session.clubId)
+          .eq("user_id", identity.id);
+      }
     }
+    // Never delete an identity we did not create in this call.
     if (identityCreated) {
       await session.client.auth.admin.deleteUser(identity.id, false);
     }

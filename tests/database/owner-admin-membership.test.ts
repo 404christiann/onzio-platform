@@ -169,6 +169,42 @@ describe("club owner admin membership", () => {
     ]);
   });
 
+  it("deletes a just-created identity when the membership write fails", async () => {
+    const { service } = createLocalClients();
+    const ownerId = randomUUID();
+    // No club row exists for this id, so the club_members upsert fails its
+    // foreign key *after* addClubAdmin has provisioned a brand-new identity.
+    const missingClubId = randomUUID();
+    const adminEmail = `orphan-${missingClubId}@onzio.local`;
+
+    const findIdentity = async () => {
+      const identities = await service.auth.admin.listUsers({
+        page: 1,
+        perPage: 1_000,
+      });
+      return identities.data.users.find(
+        (user) => user.email?.toLowerCase() === adminEmail,
+      );
+    };
+
+    cleanups.push(async () => {
+      const leaked = await findIdentity();
+      if (leaked) await service.auth.admin.deleteUser(leaked.id, false);
+    });
+
+    await expectContractError(
+      () =>
+        addClubAdmin(
+          { actorId: ownerId, clubId: missingClubId, client: service },
+          { email: adminEmail, role: "admin" },
+          { sendCode: async () => ({ error: null }) },
+        ),
+      "MEMBERSHIP_MUTATION_FAILED",
+    );
+
+    await expect(findIdentity()).resolves.toBeUndefined();
+  });
+
   it("rejects a non-owner even with a valid fresh token", async () => {
     const { service } = createLocalClients();
     const outsiderId = randomUUID();

@@ -5,14 +5,78 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 
 type AdminMember = { userId: string; email: string };
 
+// Every contract code that `app/api/admin/members/route.ts` can return, mapped
+// to a message an owner can act on. Codes must never reach the screen raw.
+const MEMBERSHIP_ERROR_MESSAGES = new Map<string, string>([
+  [
+    "AUTHENTICATION_REQUIRED",
+    "You're signed out. Sign in again, then retry this change.",
+  ],
+  [
+    "SESSION_EXPIRED",
+    "Your session expired — sign in again and retry this change.",
+  ],
+  [
+    "OWNER_REQUIRED",
+    "Only the club owner can add or remove administrators.",
+  ],
+  [
+    "INVALID_MEMBERSHIP_INPUT",
+    "That email address isn't valid. Check it and try again.",
+  ],
+  [
+    "AUTH_IDENTITY_LOOKUP_FAILED",
+    "We couldn't check whether that email already has an account. Nothing changed; try again in a minute.",
+  ],
+  [
+    "AUTH_PROVISIONING_FAILED",
+    "We couldn't create an account for that email address. Check the spelling, then try again.",
+  ],
+  [
+    "MEMBERSHIP_READ_FAILED",
+    "We couldn't load this club's administrators. Nothing changed; try again in a minute.",
+  ],
+  [
+    "OWNER_TRANSFER_OPERATOR_REQUIRED",
+    "Ownership can't be changed here — contact Onzio to transfer ownership.",
+  ],
+  [
+    "MEMBERSHIP_EXISTS",
+    "This person is already an administrator of this club.",
+  ],
+  [
+    "MEMBERSHIP_MUTATION_FAILED",
+    "We couldn't save this change. Nothing was changed; try again in a minute.",
+  ],
+  [
+    "AUTH_CODE_RATE_LIMITED",
+    "A sign-in code was sent recently. Wait one minute, then try adding this administrator again.",
+  ],
+  [
+    "AUTH_CODE_DELIVERY_FAILED",
+    "We couldn't send a sign-in code. The administrator was not added; please try again.",
+  ],
+  [
+    "MEMBERSHIP_AUDIT_FAILED",
+    "We couldn't record this change, so it was undone. Try again in a minute.",
+  ],
+  [
+    "MEMBERSHIP_REQUIRED",
+    "This person is no longer on this club's team. Refresh the page to see the current list.",
+  ],
+  [
+    "MEMBERSHIP_INACTIVE",
+    "This administrator has already been removed. Refresh the page to see the current list.",
+  ],
+  [
+    "MEMBERSHIP_FAILED",
+    "Something went wrong and the change didn't go through. Try again, and contact Onzio if it keeps happening.",
+  ],
+]);
+
 function membershipErrorMessage(code: unknown, fallback: string) {
-  if (code === "AUTH_CODE_RATE_LIMITED") {
-    return "A sign-in code was sent recently. Wait one minute, then try adding this administrator again.";
-  }
-  if (code === "AUTH_CODE_DELIVERY_FAILED") {
-    return "We couldn't send a sign-in code. The administrator was not added; please try again.";
-  }
-  return fallback;
+  if (typeof code !== "string") return fallback;
+  return MEMBERSHIP_ERROR_MESSAGES.get(code) ?? fallback;
 }
 
 export default function MembersPage() {
@@ -23,7 +87,11 @@ export default function MembersPage() {
   async function load() {
     const response = await fetch("/api/admin/members", { cache: "no-store" });
     const body = await response.json();
-    if (!response.ok) throw new Error(body.error ?? "Unable to load administrators");
+    if (!response.ok) {
+      throw new Error(
+        membershipErrorMessage(body.error, "Unable to load administrators"),
+      );
+    }
     setAdmins(body.admins);
   }
 
@@ -58,7 +126,11 @@ export default function MembersPage() {
       body: JSON.stringify({ action: "remove", userId }),
     });
     const body = await response.json();
-    if (!response.ok) return setMessage(body.error ?? "Unable to remove administrator");
+    if (!response.ok) {
+      return setMessage(
+        membershipErrorMessage(body.error, "Unable to remove administrator"),
+      );
+    }
     setMessage("Administrator access removed.");
     await load();
   }
