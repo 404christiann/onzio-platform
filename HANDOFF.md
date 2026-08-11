@@ -8152,3 +8152,130 @@ verification; no application data was created, updated, or deleted.
 - **Exact next step:** none required. Rides with the rest of today's
   uncommitted `staging` work through the normal review/commit/push flow.
 - **Hosted mutations, commits, pushes, deployments:** zero.
+
+## PLAT-104 follow-up — "Powered by Onzio" footer attribution badge
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Opus 5), direct edit.
+- **Objective:** add a "Powered by Onzio" attribution badge to the bottom of
+  every public club site's footer, linking through to that club's own admin
+  login. Spec was locked in advance through a `/grill-me` interview with
+  Christian; every decision below is his explicit answer, implemented as
+  given rather than re-litigated.
+- **Locked spec implemented:**
+  - Appears in all three of `components/Footer.tsx`'s JSX return blocks —
+    `clubhouse@1`, `academy@1` (`isAcademy`), and the default block that
+    covers `cinematic@1` (Rose City) and `heritage@1` (Deportivo Olimpico) —
+    as the last/bottom-most element of each footer, after the existing
+    copyright/legal line.
+  - Its own horizontally-centered row, not inline with the copyright text.
+  - Small muted "Powered by" text immediately followed by the Onzio wordmark,
+    with the whole lockup (text + logo) as a single click target.
+  - Existing asset `public/images/onzio/onzio-wordmark-white.png` reused; no
+    new variant. Every footer in every template is on a dark background
+    (`var(--color-black)` #141414 default, #111936 clubhouse, #1E3653
+    academy), so the white wordmark works everywhere as-is.
+  - `<Link href="/admin/login">`, same tab, no `target="_blank"`. Resolves
+    per-tenant because tenant identity is host-based (`AGENTS.md`, "Resolve
+    tenant identity from a normalized verified domain"); every existing
+    `/admin/login` reference in the repo is likewise a plain relative path.
+  - Sized smaller than the login page's mark, ~70x18 optical, per Christian's
+    answer that this is subtle attribution rather than a brand-forward mark.
+  - Not `priority` (below-the-fold); no `loading="eager"` — lazy-loads.
+- **What changed — `components/Footer.tsx` only** (63 insertions, 1 deletion):
+  - line 5: added `type CSSProperties` to the existing `react` import.
+  - lines 35-81: new local, non-exported `PoweredByOnzio` sub-component,
+    parameterized by `className` (per-branch spacing), `textClassName`, and
+    optional `textStyle`. One shared implementation so the three branches
+    cannot drift apart. Doc comment records the crop math and the host-based
+    link rationale.
+  - Crop: `width={100} height={100}` (500 * 0.2) with
+    `-ml-[15px] -mr-[15px] -mt-[39px] -mb-[43px] max-w-none`. The source PNG
+    is a 500x500 transparent square whose artwork occupies only x 76-425 /
+    y 196-286, so these margins crop the padding off — same technique as
+    `app/admin/login/page.tsx` (~lines 151-158) at a smaller scale. The
+    `-mr-[15px]` is additional to the login precedent: it is needed here so
+    the lockup is *optically* centered rather than sitting ~15px left of
+    true center. Measured result: optical mark exactly 70x18, lockup center
+    x=640.0 against footer center x=640.0 on all three branches.
+  - Hover: `opacity-70 … transition-opacity duration-200 hover:opacity-100`,
+    matching the transition-utility convention Footer.tsx already uses for
+    its social icons in both the academy and default branches.
+  - line 180 (clubhouse@1): after `<p className="clubhouse-footer-copy">`.
+    Muted text `text-[0.72rem] text-white/45`, matching that block's existing
+    `rgba(255,255,255,0.46)` copy color.
+  - line 302 (academy@1): after the bottom copyright bar. Muted text
+    `font-body text-xs text-white/40`, reusing the exact class already on
+    that bar. This stays inside decision `DCFC-D132`: `text-white/40` resolves
+    through the academy pack's own `--color-white` override, measured as
+    `rgba(249, 250, 253, 0.4)` — no new hardcoded hex was introduced, and no
+    `[data-font-pack="academy"]` palette value in `styles/globals.css` was
+    edited.
+  - line 417 (default / cinematic@1 + heritage@1): after the copyright div.
+    Reuses that block's existing token via
+    `textStyle={{ color: "var(--color-gray-mid)" }}` with `font-body text-xs`,
+    measured as `rgb(154, 154, 154)` (#9A9A9A).
+- **Files changed:** `components/Footer.tsx` only. Nothing outside it was
+  modified; no new asset was created; no test was weakened, skipped, or
+  deleted.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508 (45 files); `npm run test:legacy` 274/274 (25 files);
+  `npm run test:architecture` 20/20 (3 files) — all three exactly matching
+  the prior baseline; `npm run lint` 0 errors (same 5 pre-existing
+  `react-hooks/exhaustive-deps` warnings, unchanged); `npm run build`
+  compiled successfully. The two contract tests that read `Footer.tsx` source
+  (`diverse-city-admin-public-acceptance`,
+  `diverse-city-homepage-story-programs-copy-admin`) still pass.
+- **Live browser verification — all three footer branches confirmed**, via
+  real navigation against local Supabase and a local dev server on port 3005
+  (Playwright-driven Chromium; the Browser pane's screenshot surface was
+  returning blank frames, so real page navigation and real element captures
+  were driven through the repo's own installed Playwright instead):
+  - `clubhouse@1` — `lions.localhost:3005`. Badge is the footer's last child,
+    its own centered row below "© 2026 Lions Football Club. All rights
+    reserved.", wordmark crop flush, footer bg `rgb(17, 25, 54)` (#111936).
+  - `academy@1` — `alpha.localhost:3005`. Same, below the copyright bar,
+    footer bg `rgb(30, 54, 83)` (#1E3653).
+  - default branch — `charlie.localhost:3005`. Same, footer bg
+    `rgb(20, 20, 20)` (#141414).
+  - For each: image loaded (natural 500x500, no `ImageFallback`), rendered
+    box exactly 100x100, optical mark 70x18, lockup exactly centered, hover
+    raises opacity 0.7 -> 1.0, and a real click navigates to
+    `/admin/login` **on the same host** (verified final URLs
+    `http://lions.localhost:3005/admin/login`,
+    `http://alpha.localhost:3005/admin/login`,
+    `http://charlie.localhost:3005/admin/login`). Full-footer captures show
+    no visual regression to partners strip, brand lockup, nav links, social
+    icons, or copyright line in any template.
+- **What could not be confirmed as its literal template key, and why:** no
+  local tenant is on `cinematic@1` or `heritage@1` — those keys exist in the
+  presentation registry and are permitted by the DB check constraint, but no
+  seed, migration, or import script ever creates a document with them (Rose
+  City and Deportivo are the real production clubs for those templates, and
+  the local `rose-city` import creates no presentation document at all). This
+  is not a coverage gap in practice: `cinematic@1`, `heritage@1`, and a null
+  template key all fall through the same two `if` guards into the *same*
+  default `return` block, so `charlie` (null key) renders byte-identical JSX
+  to what Rose City renders. The one thing a null key would not have revealed
+  is a per-template token override, and that was checked separately — all 16
+  `[data-font-pack=...]` selectors in `styles/globals.css` are scoped to
+  `"academy"` only, so `cinematic@1`/`heritage@1` inherit the root
+  `--color-black` / `--color-gray-mid` values that the `charlie` render
+  already exercised. Recommend a spot-check on the real Rose City site after
+  deploy regardless, since it is the live production tenant.
+- **Local-only fixture notes (no hosted impact):** to render `clubhouse@1`
+  locally, ran the documented `npm run migration:import:lions-media:local`,
+  which added the `lions` tenant to the local Supabase DB — that is a
+  sanctioned local import script and it was left in place. To make `alpha`
+  and `charlie` resolvable, temporarily inserted staging `*.localhost` rows
+  into local `onzio.club_domains` (their seeded domains are
+  `environment = 'production'` only, and a production-env dev server could
+  not be launched under this session's permissions); **these three rows were
+  deleted afterward and the local domain table is back to its prior state.**
+  `bravo` is deliberately not renderable — it is `onboarding`/`preview`, so
+  its public site correctly 404s.
+- **Blockers:** none.
+- **Exact next step:** none required. Rides with the rest of the uncommitted
+  `staging` work through the normal review/commit/push flow.
+- **Hosted mutations, commits, pushes, deployments:** zero. All work was
+  local file edits plus a local Supabase database; no hosted Supabase, no
+  Stripe, no Vercel, no DNS, no commit, no push.

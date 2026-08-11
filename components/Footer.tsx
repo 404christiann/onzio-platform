@@ -2,7 +2,7 @@
 
 import Image from "@/components/ResilientImage";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import type { DBSiteSocialLink, DBSiteSponsorLogo } from "@/lib/db-types";
 import {
@@ -31,6 +31,40 @@ const academyFooterLinks = [
   { label: "Contact", href: "/contact" },
   { label: "Tryouts", href: "/tryouts" },
 ];
+
+// Shared by all three footer branches below (each passes its own muted-text
+// token — academy@1's is DCFC-D132-governed, so it must reuse rather than
+// hardcode). `/admin/login` resolves per-tenant since identity comes from the
+// request host. Crop is the login page's technique at 0.2x scale (~70x18px).
+function PoweredByOnzio({
+  className,
+  textClassName,
+  textStyle,
+}: {
+  className?: string;
+  textClassName: string;
+  textStyle?: CSSProperties;
+}) {
+  return (
+    <div className={`flex justify-center ${className ?? ""}`}>
+      <Link
+        href="/admin/login"
+        className="inline-flex items-center gap-1.5 opacity-70 transition-opacity duration-200 hover:opacity-100"
+      >
+        <span className={textClassName} style={textStyle}>
+          Powered by
+        </span>
+        <Image
+          src="/images/onzio/onzio-wordmark-white.png"
+          alt="Onzio"
+          width={100}
+          height={100}
+          className="-ml-[15px] -mr-[15px] -mt-[39px] -mb-[43px] max-w-none"
+        />
+      </Link>
+    </div>
+  );
+}
 
 export default function Footer() {
   const club = useClubContext();
@@ -129,6 +163,10 @@ export default function Footer() {
         <p className="clubhouse-footer-copy">
           © {new Date().getFullYear()} {club.name}. All rights reserved.
         </p>
+        <PoweredByOnzio
+          className="pb-6"
+          textClassName="text-[0.72rem] text-white/45"
+        />
       </footer>
     );
   }
@@ -247,6 +285,10 @@ export default function Footer() {
           </span>
           <span>All rights reserved.</span>
         </div>
+        <PoweredByOnzio
+          className="px-6 pb-5 lg:px-10"
+          textClassName="font-body text-xs text-white/40"
+        />
       </footer>
     );
   }
@@ -357,6 +399,12 @@ export default function Footer() {
           © {new Date().getFullYear()} {club.name}. All rights reserved.
         </p>
       </div>
+
+      <PoweredByOnzio
+        className="px-6 pb-6"
+        textClassName="font-body text-xs"
+        textStyle={{ color: "var(--color-gray-mid)" }}
+      />
     </footer>
   );
 }
