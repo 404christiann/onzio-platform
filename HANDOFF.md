@@ -8279,3 +8279,145 @@ verification; no application data was created, updated, or deleted.
 - **Hosted mutations, commits, pushes, deployments:** zero. All work was
   local file edits plus a local Supabase database; no hosted Supabase, no
   Stripe, no Vercel, no DNS, no commit, no push.
+
+## PLAT-104 follow-up — "Powered by Onzio" badge vertical alignment
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Opus 5), direct edit.
+- **Objective:** Christian reported from live staging
+  (`diverse-city-onzio-staging.vercel.app`, academy@1, navy `#1E3653` footer)
+  that the gray "Powered by" text and the white Onzio wordmark in the badge
+  shipped in the previous entry were visibly not vertically aligned — the
+  wordmark sat noticeably low, so the lockup read as sloppy.
+- **Action class:** Class 1 — local code change only. No hosted mutation, no
+  deploy, no commit, no push.
+- **Scope:** the `PoweredByOnzio` sub-component in `components/Footer.tsx`,
+  vertical crop only. The horizontal crop/centering (`-ml-[15px] -mr-[15px]`),
+  the `/admin/login` href, the `opacity-70`/`hover:opacity-100` treatment, the
+  `gap-1.5`, and the "Powered by" copy were all left byte-for-byte unchanged.
+
+### What was actually wrong — not what the handoff for the original badge assumed
+
+The previous entry recorded the wordmark's artwork as occupying source
+`y 196-286` and treated that as one solid block. Re-deriving the PNG's alpha
+profile row by row shows it is **two disjoint ink bands**:
+
+- rows **196-214** — the isolated dot over the "i" (2-18px of ink per row)
+- rows **215-223** — completely empty
+- rows **224-287** — the "onzio" wordmark body (117-292px of ink per row)
+
+The old crop `-mt-[39px] -mb-[43px]` bounded the **full geometric bbox**
+(196-287 at 0.2x = 39.2-57.6px), so `items-center` balanced the
+near-weightless i-dot against the entire wordmark. The margin box's centre
+(48.0px) therefore sat well above the wordmark body's centre (51.2px), and
+flex centring pushed the body **3.2px below the text's centre**. At 12px type
+that is about a quarter of the text height, which is exactly the offset
+Christian saw. (Note the bbox bottom is **288**, not the 286 previously
+recorded — a two-pixel error in the original entry.)
+
+The brief's leading hypothesis — font leading vs. a tight image box — was
+measured and **ruled out**: the span's line-box centre and the image's
+margin-box centre were identical to 0.00px, and the image's *geometric* ink
+centre was only +0.27px off the text's cap-centre. Flex centring was working
+correctly; it was being handed the wrong box.
+
+### The change
+
+`components/Footer.tsx`, one class:
+
+`-mt-[39px] -mb-[43px]` → `-mt-[44.8px] -mb-[42.4px]`
+
+These are the wordmark body's own bounds at 0.2x (`224 * 0.2 = 44.8`,
+`(500 - 288) * 0.2 = 42.4`), so the margin box now equals the mark's optical
+mass and `items-center` becomes correct **by construction** rather than by a
+tuned nudge. That is why no per-branch value was needed: the correction is a
+property of the artwork, not of any branch's type. The i-dot simply overhangs
+the box the way a lowercase ascender would; no footer clips it (checked — no
+`overflow: hidden` on any of the three footers or the badge row). A ~14-line
+comment above the component records the ink-band derivation so the numbers are
+not re-guessed later.
+
+Rejected alternatives, both rendered at 6x and compared: baseline-alignment
+(logo bottom on the text baseline) left the mark floating 5.4px above the cap
+line; a half-way crop still read low (+1.25px). Only the body-centred crop
+reads as a single clean line.
+
+### Measured before → after (`getBoundingClientRect()` + canvas font metrics)
+
+Signed offset of the wordmark body's centre from the text's cap-height centre;
+positive = logo sits low.
+
+| branch | text | before | after |
+|---|---|---|---|
+| academy@1 (`alpha.localhost`) | Inter 12px / lh 16 | **+3.07px** | **-0.14px** |
+| clubhouse@1 (`lions.localhost`) | Geist 11.52px / lh 18.42 | **+2.78px** | **-0.43px** |
+| default (cinematic@1/heritage@1 props) | Geist 12px / lh 16 | **+3.46px** | **+0.26px** |
+
+Against the text's line-box centre the after value is **0.00px on all three**.
+After the fix the mark overhangs the text band by 1.9-2.7px above the cap and
+1.9-2.4px below the baseline — balanced. Horizontal geometry is untouched:
+mark still exactly 70px wide, lockup centre 640.09 vs row centre 640.00 at
+1280px and 187.59 vs 187.50 at 375px, computed margins confirmed in the live
+DOM as `-44.8px / -42.4px / -15px / -15px` (fractional Tailwind arbitrary
+values do compile).
+
+Visual proof: 6x-zoom captures of the badge before and after on both academy@1
+and clubhouse@1, at 1280x900 and 375x812. The "before" captures were produced
+by setting the *old* margins back on the live element in the same page session,
+so each pair is identical except for the crop.
+
+### Coverage note — the default branch
+
+`cinematic@1`/`heritage@1` share the default `return` block, and no local
+tenant can reach it: `charlie` has no `onzio.club_domains` row in either
+environment, so page-level tenant resolution 404s. Inserting a temporary local
+row was attempted and **declined by the permission classifier; it was not
+worked around.** Instead that branch's exact props
+(`textClassName="font-body text-xs"`, `textStyle={{color:"var(--color-gray-mid)"}}`)
+were applied to the live badge on `lions` — a non-academy page, so the same
+root font tokens the default branch would inherit — and measured. Colour
+resolved to the expected `rgb(154, 154, 154)` (#9A9A9A). Since alignment
+depends only on the text's font/size/line-height, this exercises the real
+variable. Still worth a spot-check on Rose City after deploy.
+
+### Verification
+
+- `npx tsc --noEmit` — clean, exit 0.
+- `npm run test:contracts` — 508/508 across 45 files.
+- `npm run test:legacy` — 274/274 across 25 files.
+- `npm run test:architecture` — 20/20 across 3 files.
+- All three match the prior baseline exactly; nothing skipped or weakened.
+- `npm run lint` — exit 0, 0 errors, the same 5 pre-existing
+  `react-hooks/exhaustive-deps` warnings (analytics 3, homepage 1, schedule 1).
+- `npm run build` — exit 0, `✓ Compiled successfully`.
+- No test was added, modified, skipped, or weakened.
+
+### Files changed
+
+`components/Footer.tsx` only — 15 insertions, 2 deletions (one class, plus the
+explanatory comment). `git status` shows exactly one modified file.
+
+### Local-environment notes
+
+academy@1 was rendered at `alpha.localhost:3005` with the documented
+`ONZIO_ENVIRONMENT=production` override; clubhouse@1 at `lions.localhost:3005`
+on the default staging env (its only domain row is `environment=staging`, so
+the two cannot be served by one process). Running two `next dev` processes
+against this repo simultaneously corrupts the shared `.next` directory and
+makes the running server start returning 500s — run them one at a time and
+`rm -rf .next` if it happens. Local `onzio.club_domains` verified unchanged at
+4 rows, exactly as found.
+
+### Blockers
+
+None new. The `club_domains`/`ONZIO_ENVIRONMENT` local mismatch documented in
+earlier entries is still present and was again only worked around for
+verification.
+
+### Exact next step
+
+None required. Rides with the normal review/commit/push flow.
+
+### Hosted mutations, commits, pushes, deployments
+
+Zero. No commit, no push, no deploy, no Supabase/Stripe/Vercel/DNS change. The
+local database was read only and is byte-identical to how it was found.

@@ -35,7 +35,13 @@ const academyFooterLinks = [
 // Shared by all three footer branches below (each passes its own muted-text
 // token — academy@1's is DCFC-D132-governed, so it must reuse rather than
 // hardcode). `/admin/login` resolves per-tenant since identity comes from the
-// request host. Crop is the login page's technique at 0.2x scale (~70x18px).
+// request host.
+//
+// The vertical crop bounds the wordmark's "onzio" body only (rows 224-287 of
+// the 500x500 source), not its full bbox including the separate i-dot above
+// it — bounding the dot too made `items-center` balance it against the whole
+// mark and pushed the body ~3px below the text's centre. The dot overhangs
+// the crop box like a lowercase ascender; nothing clips it.
 function PoweredByOnzio({
   className,
   textClassName,
@@ -59,7 +65,7 @@ function PoweredByOnzio({
           alt="Onzio"
           width={100}
           height={100}
-          className="-ml-[15px] -mr-[15px] -mt-[39px] -mb-[43px] max-w-none"
+          className="-ml-[15px] -mr-[15px] -mt-[44.8px] -mb-[42.4px] max-w-none"
         />
       </Link>
     </div>
