@@ -8688,3 +8688,284 @@ after deploy.
 
 Zero. No commit, no push, no deploy, no hosted Supabase, Stripe, Vercel, or DNS
 change. Local Supabase only, and restored to its pre-session digest.
+
+## Route-level page transitions (fade + rise) across the public site and admin portal
+
+- **Status:** `complete`, 2026-08-11, Claude Code (Opus 5), direct edit.
+- **Objective:** every navigation in both surfaces was an instant, static page
+  swap with no motion at all. Christian wanted page-to-page navigation to feel
+  smooth, on both mobile and desktop, on the public club site and in the admin
+  portal.
+- **Action class:** Class 1 — local code change only. No hosted mutation, no
+  deploy, no commit, no push.
+
+### Locked spec — from a `/grill-me` interview with Christian
+
+Every decision below is Christian's explicit answer in that interview, not an
+inference, and was implemented as stated without re-litigation:
+
+1. **Fade + slight rise.** Incoming page fades in while rising ~8-12px from
+   below; outgoing page fades out in place. No directional slide — navigation
+   is between unrelated pages, so there is no left/right relationship.
+2. **Snappy, ~200ms.** Deliberately *not* the spring physics of
+   `components/ui/sliding-panel.tsx` (built earlier the same day for in-page
+   admin tab switching). That is a different kind of transition and stays
+   untouched.
+3. **Delayed spinner only.** The motion plays on every navigation, always. The
+   spinner appears only if the destination has not rendered after ~150-200ms,
+   so fast navigations get pure motion with no spinner flash.
+4. **Each surface reuses its own existing accent. No new colours anywhere.**
+5. **Mobile drawer: instant close, then the same transition.** No coordinated
+   two-stage sequence — existing close behaviour kept exactly as-is.
+6. **Respect `prefers-reduced-motion`**, reusing the `useReducedMotion` import
+   from `motion/react` already established in
+   `components/admin/payments/PaymentStatusCard.tsx`.
+7. **Route changes only.** `SlidingPanel` usages, the public "Club" hover
+   dropdown, and the public site's `gsap` scroll/reveal animations are all out
+   of scope and were not touched.
+
+### What was built
+
+Two new components plus a three-line-shaped wrap in three layouts. **No
+existing component's internals were modified** — in particular `Nav.tsx`,
+`AdminShell.tsx`, `components/ui/sidebar.tsx`, `Footer.tsx`, `SlidingPanel`,
+and `AdminLoading` are byte-for-byte unchanged.
+
+1. **`components/RouteTransition.tsx`** (new, client). Shared mechanics for
+   both surfaces: `AnimatePresence mode="wait"` keyed on `usePathname()`, a
+   `motion.div` carrying the fade+rise, reduced-motion handling, and the
+   delayed-indicator hook. Takes an `indicator` slot so each surface supplies
+   its own spinner. Enter is 200ms (`opacity` + `y: 10px -> 0`); exit is a
+   120ms opacity-only fade. `initial={false}` so the first page load does not
+   animate and does not fight the existing `gsap` hero reveals.
+2. **`components/SiteLoading.tsx`** (new, client). The public site's first
+   shared loading indicator. Reuses the existing top-level
+   `@keyframes spinner-ellipsis` in `styles/globals.css` through Tailwind
+   `animate-[...]` utilities — exactly how `AdminLoading` consumes it — so no
+   new keyframes and no inline `<style>`.
+3. **`app/%5Fclubs/[slug]/layout.tsx`** — wraps `{children}` inside `<main>`.
+4. **`app/(public)/layout.tsx`** — same wrap.
+5. **`app/admin/(protected)/layout.tsx`** — wraps `{children}` passed into
+   `AdminShell`, which renders it inside its own `<main>`, so the sidebar,
+   mobile top bar and billing banner stay put across navigations.
+
+**Both public layouts were wrapped, which the original brief did not
+anticipate.** `middleware.ts:228` rewrites every public tenant path to
+`/_clubs/{slug}/...`, so `app/%5Fclubs/[slug]/layout.tsx` — not
+`app/(public)/layout.tsx` — is the layout that actually serves live tenant
+traffic. Both carry the wrapper so the two cannot diverge.
+
+### Technical approach for the delayed spinner — and why not `useLinkStatus()`
+
+`useLinkStatus()` **does** exist in the installed Next 15.5.22
+(`node_modules/next/dist/client/link.d.ts:103`), so availability was never the
+issue. It was rejected for a structural reason found by reading its
+implementation: `node_modules/next/dist/client/app-dir/link.js:375` defines it
+as literally `useContext(LinkStatusContext)`, and that context is provided
+*inside* `<Link>`. It therefore only reports anything to components rendered as
+**descendants of a `<Link>`**; called anywhere else it returns the default
+`{ pending: false }` forever.
+
+Using it would have meant rendering a status child inside every `<Link>` in
+`Nav.tsx`, `AdminShell.tsx`, `Footer.tsx` and `sidebar.tsx` — precisely the
+files pinned by contract tests asserting their exact link markup and class
+strings as literal source text, and precisely the rewrite this work was
+required to avoid. So the pending window is derived at the layout level
+instead:
+
+- **Start** — one capture-phase delegated `click` listener on `document`.
+  Capture phase is required: `<Link>` calls `preventDefault()` in its own
+  handler on the anchor, so by bubble phase every link of interest already
+  looks handled and `defaultPrevented` is useless as a filter. The listener
+  applies the same conditions Next itself uses to decide whether to
+  client-navigate (primary button, no modifier keys, same-origin, not
+  `target=_blank`, not a download, not a bare hash, and an actually different
+  pathname).
+- **End** — `usePathname()` changing. There are **no `loading.tsx` boundaries
+  anywhere in this app** (verified by `find`), so the App Router holds the
+  current page on screen until the destination's payload has arrived and the
+  transition commits. A pathname change therefore means "the new page is
+  rendered" — which is both the moment to stop the indicator and the moment
+  the fade+rise should start. This is also why the motion lands on ready
+  content rather than on an empty box.
+
+Cost: one delegated listener, zero `<Link>` changes. An 8s ceiling
+(`INDICATOR_MAX_MS`) exists purely so a click another handler cancels after we
+started counting cannot strand a spinner on screen.
+
+### Colour resolution — no new colours, and one useful discovery
+
+- **Admin:** existing `AdminLoading` with `tone="brand"`, unmodified, wrapped
+  in a `bg-background` / `border-border` pill (both existing shadcn tokens).
+- **Public:** branches on `club.presentationTemplateKey` via
+  `useOptionalClubContext()`, the same way `Nav.tsx`/`Footer.tsx` branch.
+
+The useful discovery: **`--color-red` already resolves per template by itself.**
+`styles/globals.css:12` sets `#E7001B` at `:root` (cinematic@1 / Rose City,
+heritage@1 / Deportivo Olimpico) and line 148 overrides it to `#FF1616` under
+the `[data-font-pack="academy"]` scope — the `DCFC-D132`-locked academy value.
+`components/TemplateFontScope.tsx` puts that attribute on an ancestor of the
+indicator and custom properties inherit, so academy@1 picks up its own red
+**with no branch and without restating the locked hex anywhere in new code.**
+
+`--clubhouse-accent` needed different handling: it is declared on the
+`.clubhouse-prospect-home` / `.clubhouse-site-header` / `.clubhouse-route-page`
+component classes, *not* globally, and the indicator is a fixed overlay outside
+all three. It is consumed as `var(--clubhouse-accent, #AD3234)`, falling back to
+the identical literal those same rules already declare.
+
+`useOptionalClubContext()` (not `useClubContext()`) is used because
+`app/(public)/layout.tsx` renders outside a `ClubContextProvider`; the indicator
+must not be the thing that throws there.
+
+### Verification
+
+All static gates match the prior baseline exactly. No test was added, modified,
+skipped, weakened, or deleted.
+
+- `npx tsc --noEmit` — clean, exit 0.
+- `npm run test:contracts` — **508/508** across 45 files.
+- `npm run test:legacy` — **274/274** across 25 files.
+- `npm run test:architecture` — **20/20** across 3 files.
+- `npm run lint` — **0 errors**, the same 5 pre-existing
+  `react-hooks/exhaustive-deps` warnings (analytics 3, homepage 1, schedule 1).
+- `npm run build` — `✓ Compiled successfully`.
+
+A contract-literal audit was run before implementing: **no test in the repo
+reads either wrapped `layout.tsx`, or `AdminLoading.tsx`.** The architecture
+suite's only constraints reaching new `components/*.tsx` files are the
+`next/image`/`<img>` ban, the service-role ban, and the Image-Transformation
+endpoint ban — none of which the new files touch.
+
+#### Live browser verification
+
+Driven through the repo's own installed Playwright rather than the Browser
+pane: the pane runs its tab hidden (`document.visibilityState === "hidden"`,
+confirmed directly), which pauses `requestAnimationFrame` and makes animation
+sampling impossible — consistent with the capture problems recorded in the
+three prior entries. All numbers below are `getComputedStyle()` sampled per
+animation frame from the live DOM, not estimates. Dev server on port 3005,
+default env — **no `ONZIO_ENVIRONMENT` override was needed**, because both
+tenants used here (`diverse-city`, `lions`) have `club_domains.environment =
+staging`, matching `.env.local`. That also means one process could serve both
+templates, which the earlier alpha-vs-lions note said was impossible for *that*
+pair.
+
+**Public — academy@1 (`diverse-city.localhost:3005`), 1440x900:**
+
+| navigation | route commit | rise | indicator |
+|---|---|---|---|
+| `/` -> `/programs` | 378ms | peak y **10.00px**, ~200ms | shown from 187ms |
+| `/programs` -> `/roster` | 219ms | peak y **10.00px** | shown from 187ms |
+
+**Public — clubhouse@1 (`lions.localhost:3005`), 1440x900:**
+
+| navigation | route commit | rise | indicator |
+|---|---|---|---|
+| `/` -> `/roster` | **191ms** | peak y 10.00px, **200ms** | **never appeared** |
+| `/roster` -> `/schedule` | **1461ms** | peak y 10.00px, 183ms | shown from 195ms, `rgb(173,50,52)` |
+
+Those two clubhouse rows are the clearest single demonstration of the locked
+behaviour: the **191ms** navigation played the full fade+rise with **no spinner
+flash at all**, and the **1461ms** one played the same motion *and* showed the
+spinner — same code path, behaviour driven purely by how long the destination
+took.
+
+**Admin (`diverse-city.localhost:3005/admin`), 1440x900.** Logged in for real
+via passwordless email OTP: `owner-aal2@alpha.local`, code read from Mailpit at
+`127.0.0.1:54324` (subject `"465934 is your Onzio sign-in code"`). No bypass.
+
+| navigation | route commit | rise | indicator |
+|---|---|---|---|
+| `/admin` -> `/admin/roster` | 363ms | peak y 10.00px, **201ms** | shown from 187ms, `rgb(14,181,71)` |
+| `/admin/roster` -> `/admin/schedule` | 261ms | peak y 10.00px, 182ms | shown from 194ms |
+| `/admin/schedule` -> `/admin` | **125ms** | peak y 10.00px, 183ms | **never appeared** |
+
+`rgb(14,181,71)` is `#0EB547`, the shared `--brand` green — i.e. `AdminLoading`
+`tone="brand"` reused as-is.
+
+**Delayed-spinner check under deliberate throttling** (CDP
+`Network.emulateNetworkConditions`, 900ms latency / 30KB/s), which forces the
+slow path on demand rather than waiting for a naturally slow route:
+
+| template | indicator appeared | dot colour | pill background |
+|---|---|---|---|
+| academy@1 | after 352ms | `rgb(255,22,22)` = **#FF1616** | `rgb(249,250,253)` = #F9FAFD |
+| clubhouse@1 | after 339ms | `rgb(173,50,52)` = **#AD3234** | `rgb(255,255,255)` = #FFFFFF |
+
+Both accents are exactly the values the spec named. Note the **pill background
+differs too** — `--color-white` is `#FFFFFF` at `:root` but `#F9FAFD` under the
+academy scope — which independently proves the indicator is inheriting each
+template's palette through the CSS cascade rather than hardcoding anything.
+Screenshots of both captured in the session scratchpad.
+
+**`prefers-reduced-motion: reduce`** (Playwright context `reducedMotion:
+"reduce"`; `matchMedia(...).matches === true` asserted in-page before
+measuring):
+
+| surface | navigation | peak translateY | min opacity | result |
+|---|---|---|---|---|
+| public academy@1 | `/` -> `/programs` | **0.00px** | **1** | instant swap at 181ms |
+| admin | `/admin` -> `/admin/roster` | **0.00px** | **1** | instant swap at 198ms |
+
+Peak translateY of exactly 0 and minimum opacity of exactly 1 mean the element
+never received a transform and never faded — the rise is genuinely suppressed,
+not merely shortened.
+
+**Mobile, 390x844.**
+
+- *Admin drawer* — opened via `[aria-controls="admin-sidebar"]`
+  (`aria-expanded=true`, `body.overflow="hidden"`), then tapped
+  `/admin/roster`: drawer closed at **dt=16ms** while the route committed at
+  **193ms** and the destination still rose the full **10.00px**. That is
+  spec item 5 exactly: instant close, then the same transition plays.
+- *Public drawer* — the academy@1 nav drawer closes at route commit rather than
+  on click. **This is pre-existing and was proven unchanged by A/B:** with the
+  three layout changes stashed (`git stash push -- <layouts>`), baseline closed
+  at 408ms against a 394ms commit; with them restored, 299ms against a 285ms
+  commit — the same ~14ms offset both times. `menuOpen` is Nav's own state,
+  outside the wrapper, and Nav.tsx was not touched. The baseline run also
+  recorded **peak translateY = 0px**, which is the "instant, static page swap"
+  Christian reported, and the direct before/after evidence that the fix works.
+
+### Files changed
+
+- **New:** `components/RouteTransition.tsx`, `components/SiteLoading.tsx`
+- **Modified:** `app/%5Fclubs/[slug]/layout.tsx`, `app/(public)/layout.tsx`,
+  `app/admin/(protected)/layout.tsx`
+
+`git status` shows exactly those five entries (plus untracked `.claude/`, which
+predates this work).
+
+### Blockers
+
+None.
+
+### Notes for whoever reviews this
+
+- All timings above are **dev-server** timings, where routes compile on demand
+  and the public site is `force-dynamic`. Production navigations will be
+  faster, which means *more* of them will land under the 180ms threshold and
+  show no spinner at all. The behaviour is threshold-driven, so this is
+  self-correcting rather than something to retune.
+- `mode="wait"` runs exit then enter, so a full navigation reads as ~320ms
+  total (120ms out + 200ms in) even though the entrance itself is the locked
+  200ms. The alternative — overlapping them — would need the exiting page
+  pulled out of normal flow and risks a layout jump on full-page content, so
+  the sequential form was chosen deliberately.
+- The `data-route-transition-page` / `data-route-transition-indicator`
+  attributes on the wrapper exist to make this measurable from the DOM; no test
+  depends on them.
+
+### Exact next step
+
+None required. Rides with the normal review/commit/push flow. The local dev
+server on port 3005 was left running for spot-checking
+(`diverse-city.localhost:3005`, `lions.localhost:3005`, and
+`diverse-city.localhost:3005/admin`).
+
+### Hosted mutations, commits, pushes, deployments
+
+Zero. No commit, no push, no deploy, no hosted Supabase, Stripe, Vercel, or DNS
+change. Local Supabase only; the sole local write was the passwordless sign-in
+for `owner-aal2@alpha.local` against local Auth, plus clearing local Mailpit.

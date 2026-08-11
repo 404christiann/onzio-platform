@@ -3,6 +3,8 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
+import RouteTransition from "@/components/RouteTransition";
+import SiteLoading from "@/components/SiteLoading";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
@@ -42,7 +44,16 @@ export default async function TenantLayout({
       <ClubBrandingProvider>
         <TemplateFontScope templateKey={club.presentationTemplateKey}>
           <Nav />
-          <main>{children}</main>
+          {/* Route-level fade+rise page transition. Wraps `children` only, so
+              Nav and Footer stay put across navigations and neither
+              component's source is touched (contract tests assert their link
+              markup as literal strings). Rendered inside TemplateFontScope so
+              SiteLoading inherits this template's `--color-red`. */}
+          <main>
+            <RouteTransition indicator={<SiteLoading />}>
+              {children}
+            </RouteTransition>
+          </main>
           <Footer />
         </TemplateFontScope>
       </ClubBrandingProvider>

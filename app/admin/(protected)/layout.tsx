@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
+import RouteTransition from "@/components/RouteTransition";
+import AdminLoading from "@/components/admin/AdminLoading";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
@@ -36,5 +38,23 @@ export default async function ProtectedLayout({
     redirect("/admin/login?error=not_authorized");
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  // Route-level fade+rise page transition, wrapping only the page content.
+  // AdminShell renders `children` inside its own `<main>`, so the sidebar,
+  // mobile top bar and billing banner all stay put across navigations and
+  // AdminShell.tsx itself is untouched (contract tests assert its nav markup
+  // as literal source strings). The delayed indicator reuses the existing
+  // AdminLoading in its `brand` tone (the shared `--brand` green, #0eb547).
+  return (
+    <AdminShell>
+      <RouteTransition
+        indicator={
+          <div className="rounded-full border border-border bg-background px-5 py-3 shadow-lg">
+            <AdminLoading tone="brand" />
+          </div>
+        }
+      >
+        {children}
+      </RouteTransition>
+    </AdminShell>
+  );
 }
