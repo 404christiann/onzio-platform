@@ -8470,3 +8470,221 @@ local database was read only and is byte-identical to how it was found.
 - **Exact next step:** none required. Rides with the normal review/commit/push
   flow.
 - **Hosted mutations, commits, pushes, deployments:** zero.
+
+## academy@1 program detail — divider above "Explore other programs." + removing the registration band's dead space
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Opus 5), direct edit.
+- **Objective:** Christian, from the live academy@1 (Diverse City FC) public
+  program-detail page, reported two things in one ask: the
+  "EXPLORE OTHER PROGRAMS." section is preceded by a large run of blank
+  whitespace, and it needs a divider above it like the thin rule that already
+  sits above the "PROGRAM REGISTRATION" eyebrow. "We need a divider similar to
+  the one above the program registration... It needs to be above the Explore
+  other programs section. Additionally we should make it tighter and eliminate
+  that white space."
+- **Action class:** Class 1 — local code change only. No hosted mutation, no
+  deploy, no commit, no push.
+- **Scope:** `components/AcademyProgramDetailPage.tsx` only, className-only.
+  No logic change, no new colour, no new component, no copy change. The
+  `"Explore other programs."` heading text, the
+  `registration.enabled || program.externalCta !== null` conditional's literal
+  form, and every `registration.*` reference were left byte-for-byte unchanged
+  (contract tests assert each of those literals exists in this file's source).
+
+### What was actually wrong — the gap is an oversized forced height, not missing padding
+
+The instinct on a "gap looks wrong" report is that spacing is too small or too
+large. Neither was true here. Measured live at 1440px wide:
+
+The registration band (`id="register"`) carried
+`lg:min-h-[calc(100svh-7rem)]`, forcing it to nearly the full viewport on
+desktop. Its actual content is only ~561px tall, and the `<section>` is a plain
+block, so the entire surplus collapsed into **dead space at the bottom** of the
+section:
+
+| viewport | section min-height | content height | dead space below content | blank run to the "Explore" heading |
+|---|---|---|---|---|
+| 1440x900 | 788px | 561px | 187px | **283px** |
+| 1440x1200 | 1088px | 565px | 483px | **579px** |
+
+The blank run grows **1:1 with viewport height** — that is the signature of the
+min-height, and it is the proof this was not a padding value. On top of that
+dead space, "Explore other programs." then added its own `lg:py-24` (96px) top
+padding, and both sections sit on the **identical `#F9FAFD` background** with no
+rule between them, so nothing in the design justified the void. At 1200px tall
+that is 579px — more than half a screen of nothing. A viewport-clipped capture
+of the boundary at 1440x1200 before the change is a completely empty frame.
+
+The `min-h` was presumably added so the `#register` anchor lands on a
+full-height band. That intent survives without it: the band's own slideshow is
+already sized `clamp(24rem,60svh,34rem)`, i.e. viewport-relative, so the section
+still scales with the viewport — it just no longer overshoots its content.
+
+**Vertical centring (`flex flex-col justify-center`) was considered and
+rejected.** It does not remove the surplus, it only splits it: at 1440x1200 it
+would put ~241px above the content as well as below, pushing the registration
+band's *own* top divider down away from the hero and creating a second gap where
+there wasn't one. Reducing the min-height to a fixed smaller value was also
+rejected as an arbitrary number that would still overshoot on tall viewports.
+Sizing to content is the only option that makes the gap independent of viewport
+height.
+
+### The change — two edits
+
+1. **`components/AcademyProgramDetailPage.tsx:116`** (registration band):
+   removed `lg:min-h-[calc(100svh-7rem)]`. Nothing else on that section
+   changed — `scroll-mt-24`/`lg:scroll-mt-28`, the padding, and the background
+   are untouched, so **nothing above the fold moves**; only the trailing dead
+   space disappears. A 15-line comment above the section records the
+   measurements and the rejected alternatives so the min-height is not
+   reinstated later. Grepped first: this was the only
+   `min-h-[calc(100svh-7rem)]` in the repo (`AcademyShopPage.tsx:68` has its own
+   separate `lg:h-[calc(100svh-7rem)]`, untouched), and no test asserts it.
+
+2. **`components/AcademyProgramDetailPage.tsx:271-272`** ("Explore other
+   programs."): added the divider and tightened the top padding.
+   - `<section className="px-6 py-16 lg:px-10 lg:py-24">` →
+     `<section className="px-6 pb-16 pt-10 lg:px-10 lg:pb-24 lg:pt-12">`
+   - `<div className="mx-auto max-w-7xl">` →
+     `<div className="mx-auto max-w-7xl border-t border-[#1E3653]/15 pt-5">`
+
+   The divider is the **exact established academy@1 idiom**, not a new
+   treatment: `border-t border-[#1E3653]/15` + `pt-5` on the inset `max-w-7xl`
+   wrapper, identical to this same file's registration band (line 118) and to
+   `AcademyProgramsPage.tsx:102`, `AcademyProgramsPathway.tsx:91`, and
+   `AcademyNextMatch.tsx:180`. `#1E3653` is the DCFC-D132-locked palette's ink
+   navy, reused at 15% — **no new colour was introduced**. Inset to
+   `max-w-7xl` (measured 1280px at desktop, 342px at 390px mobile) rather than
+   edge-to-edge, matching the registration band it was asked to resemble.
+
+   Top padding was tightened because the rule now does the separating work;
+   leaving `lg:pt-24` would have stacked a large gap *and* a divider into
+   something worse than before. The **bottom** keeps its original
+   `pb-16 lg:pb-24` — that is page-end breathing room before the footer, not
+   part of the reported problem.
+
+### Live verification — all four conditional branches
+
+The closing section is unconditional but follows four different predecessors,
+so all four were rendered and measured, not just the one screenshotted.
+Local Diverse City fixture via `npm run migration:import:diverse-city:local`,
+dev server on port 3007 (`ONZIO_LOCAL_TENANT_SLUG=diverse-city`,
+`diverse-city.localhost:3007`). Note this tenant's imported `club_domains` row
+is `environment=staging`, matching `.env.local`, so the
+`ONZIO_ENVIRONMENT=production` workaround documented in earlier entries was
+**not** needed here.
+
+Section gap = predecessor section bottom to the "Explore other programs."
+heading top.
+
+| branch | program | before (blank run to heading) | after | divider |
+|---|---|---|---|---|
+| registration band | `youth-academy` @1440x900 | **283px** | **109px** | yes |
+| registration band | `youth-academy` @1440x1200 | **579px** | **109px** | yes |
+| navy highlights band (`statement_band`) | `special-kickers-program` | 192px | 165px | yes |
+| sky "Program Focus" band (`detail_focus`) | `upsl-mens-teams` | 176px | 149px | yes |
+| "Grow through the game." only (no highlights) | `upsl-mens-teams`, highlights emptied | — | 165px | yes |
+
+The headline result: the registration branch's blank run **no longer scales
+with viewport height** (283/579 → 109/109), which is the actual defect being
+fixed. The three non-registration branches were only modestly tightened
+(-27px/-27px) — they were never broken, they sit across a real colour boundary,
+and they were deliberately not over-tightened. Section gap is now a uniform
+69px on every branch at desktop and 61px at mobile, so the page has one rhythm
+instead of four.
+
+Divider measured in the live DOM on every branch as
+`1px rgba(30, 54, 83, 0.15)` with `padding-top: 20px` — i.e. exactly
+`border-[#1E3653]/15` + `pt-5` — width 1280px at 1440 desktop and 342px at
+390px mobile. Mobile (390x844) was checked on the registration branch and the
+"Grow through the game." branch; both read correctly, divider inset to the
+`px-6` gutter.
+
+The white-on-white case is worth calling out: after "Grow through the game."
+the closing section previously had **no** visual boundary at all (both
+transparent over the page's `#F9FAFD`). That branch benefits from the divider
+as much as the registration one does.
+
+**Screenshot evidence:** clipped boundary captures before and after for each
+branch at 1440x900 and 1440x1200, plus mobile, in the session scratchpad. The
+before capture for `youth-academy` at 1440x1200 is an entirely blank frame,
+which is the clearest statement of the bug.
+
+**Capture tooling note:** the Browser pane's screenshot surface again returned
+blank frames for scrolled content (verified deliberately — a capture at
+`scrollY=0` rendered the hero correctly, while a capture at `scrollY=1330` with
+the heading confirmed at viewport y=454 came back empty). Per the precedent in
+the two "Powered by Onzio" entries, real geometry and captures were driven
+through the repo's own installed Playwright instead. Geometry numbers above are
+`getBoundingClientRect()` + `getComputedStyle()` from the live DOM, not
+estimates.
+
+### Admin preview spot-check
+
+`components/admin/ScaledProgramPreview.tsx` imports this same component for the
+`/admin/programs` live-preview pane. It is a thin wrapper — it passes `program`
+and `otherPrograms` straight through to `AcademyProgramDetailPage` inside
+`ScaledPagePreview` and asserts nothing about spacing — so it is unaffected.
+Removing the min-height is in fact strictly better there: a
+`min-h-[calc(100svh-7rem)]` inside a scaled preview pane was injecting the same
+viewport-height dead space into the admin preview.
+
+### Verification
+
+- `npx tsc --noEmit` — clean, exit 0.
+- `npm run test:contracts` — 508/508 across 45 files.
+- `npm run test:legacy` — 274/274 across 25 files.
+- `npm run test:architecture` — 20/20 across 3 files.
+- All three match the prior baseline exactly. No test was added, modified,
+  skipped, weakened, or deleted.
+- `npm run lint` — 0 errors, the same 5 pre-existing
+  `react-hooks/exhaustive-deps` warnings (analytics 3, homepage 1, schedule 1),
+  unchanged.
+- `npm run build` — `✓ Compiled successfully`.
+- The four contract tests that read this file's source
+  (`diverse-city-programs-admin`, `diverse-city-program-registration-admin`,
+  `diverse-city-homepage-story-programs-copy-admin`,
+  `diverse-city-admin-public-acceptance`) all still pass; the literals they
+  assert were not touched.
+
+### Files changed
+
+`components/AcademyProgramDetailPage.tsx` only — 32 insertions, 3 deletions
+(two className changes plus the two explanatory comments). `git status` shows
+exactly one modified file.
+
+### Local-environment notes (no hosted impact)
+
+`npm run migration:import:diverse-city:local` was run to create the local
+fixture (the sanctioned local import script; it reports `hostedMutations: 0`).
+All four imported programs have `registration_enabled = false` and **empty
+string** `external_cta_label`/`external_cta_href` — empty strings, not NULL, so
+`externalCta` resolves to `null` and the registration band does not render for
+any of them out of the box. To reproduce Christian's screenshot,
+`registration_enabled` was temporarily set true on `youth-academy`, and
+`highlights` temporarily emptied on `upsl-mens-teams` to expose the fourth
+branch. **Both were reverted**; the fixture was replayed and
+`npm run migration:rehearse:diverse-city:local` re-reports the original digest
+`71414bc3d5e3d499a96e7c3e5b588be018faeae9e94d11d6b0a9f564a8238869` with
+`baselineIsolation: true`, so the local database is byte-identical to how the
+import left it.
+
+Worth flagging for whoever checks the live site: because the local fixture has
+registration off everywhere, the branch Christian screenshotted is one a club
+admin turned on through the admin UI on staging/production. The fix is branch-
+independent, but the live spot-check should be done on that same program.
+
+### Blockers
+
+None.
+
+### Exact next step
+
+None required. Rides with the normal review/commit/push flow. Recommend
+Christian eyeball the live staging page for the registration-enabled program
+after deploy.
+
+### Hosted mutations, commits, pushes, deployments
+
+Zero. No commit, no push, no deploy, no hosted Supabase, Stripe, Vercel, or DNS
+change. Local Supabase only, and restored to its pre-session digest.

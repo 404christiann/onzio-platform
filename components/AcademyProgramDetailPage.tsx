@@ -96,9 +96,13 @@ export default function AcademyProgramDetailPage({
       </section>
 
       {showsRegistrationSection ? (
+        // No lg:min-h-[calc(100svh-7rem)] here: it forced near-full-viewport
+        // height while content is only ~560px tall, leaving dead space below
+        // that stacked with "Explore other programs."'s own top padding.
+        // Centering the content was rejected — it just splits the same gap.
         <section
           id="register"
-          className="scroll-mt-24 bg-[#F9FAFD] px-6 py-12 sm:py-14 lg:min-h-[calc(100svh-7rem)] lg:scroll-mt-28 lg:px-10 lg:py-10"
+          className="scroll-mt-24 bg-[#F9FAFD] px-6 py-12 sm:py-14 lg:scroll-mt-28 lg:px-10 lg:py-10"
         >
           <div className="mx-auto grid max-w-7xl gap-9 border-t border-[#1E3653]/15 pt-5 lg:grid-cols-[0.68fr_1.32fr] lg:items-center lg:gap-16">
             <div className="min-w-0 lg:pr-2">
@@ -239,8 +243,12 @@ export default function AcademyProgramDetailPage({
         </>
       ) : null}
 
-      <section className="px-6 py-16 lg:px-10 lg:py-24">
-        <div className="mx-auto max-w-7xl">
+      {/* Follows four different predecessors, so it marks its own boundary
+          with the same border-t/pt-5 idiom used elsewhere in academy@1
+          (registration band above, AcademyProgramsPage, AcademyNextMatch).
+          Top padding tightened since the divider now does that job. */}
+      <section className="px-6 pb-16 pt-10 lg:px-10 lg:pb-24 lg:pt-12">
+        <div className="mx-auto max-w-7xl border-t border-[#1E3653]/15 pt-5">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-end">
             <h2 className="font-display text-[clamp(2.5rem,5vw,5rem)] font-black uppercase italic leading-[.9] text-[#1E3653]">
               Explore other programs.
