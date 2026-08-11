@@ -128,14 +128,13 @@ function academyNavLinks(programs: ProgramContent[]): NavLink[] {
     { label: "Roster", href: "/roster" },
     {
       label: "Schedule",
-      href: "/schedule",
       children: [
         { label: "Fixtures", href: "/schedule" },
         { label: "Tryouts", href: "/tryouts" },
       ],
     },
     {
-      label: "Programs", href: "/programs",
+      label: "Programs",
       children: programs.map((program) => ({
         label: program.navLabel || program.displayTitle,
         href: `/programs/${program.slug}`,
@@ -519,7 +518,7 @@ export default function Nav() {
         }
       >
         <ul className={isAcademy ? "flex h-full flex-col justify-center px-8 pb-16" : "flex flex-col px-8 py-6 gap-6"}>
-          {activeNavLinks.map((link, index) => {
+          {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const isExpanded = expandedMobileLink === link.label;
             const labelClassName = isAcademy
@@ -529,14 +528,6 @@ export default function Nav() {
               : `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
                   isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
                 }`;
-            const indexBadge = isAcademy ? (
-              <span
-                className="font-body text-xs flex-shrink-0"
-                style={{ fontStyle: "normal", color: "var(--color-gray-mid)" }}
-              >
-                {String(index + 1).padStart(2, "0")}
-              </span>
-            ) : null;
             const chevron = (
               <svg
                 width="12"
@@ -567,7 +558,6 @@ export default function Nav() {
                       {link.label}
                     </Link>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {indexBadge}
                       {link.children && (
                         <button
                           type="button"
@@ -589,7 +579,6 @@ export default function Nav() {
                   >
                     <span className={labelClassName}>{link.label}</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {indexBadge}
                       {chevron}
                     </div>
                   </button>

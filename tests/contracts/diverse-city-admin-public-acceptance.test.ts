@@ -87,7 +87,11 @@ describe("DCFC-304 reusable public route acceptance", () => {
     const footer = source("components/Footer.tsx");
     expect(nav).toContain("fetchPrograms(club.id)");
     expect(nav).toContain('label: "Tryouts", href: "/tryouts"');
-    expect(nav).toContain('label: "Programs", href: "/programs"');
+    // Programs is now an intentional hover/tap-only dropdown trigger with no
+    // page of its own (matching the existing "Club" pattern), per Christian's
+    // explicit request — so it must exist but must NOT carry its own href.
+    expect(nav).toContain('label: "Programs",');
+    expect(nav).not.toContain('label: "Programs", href:');
     for (const href of [
       'href: "/programs"',
       'href: "/roster"',

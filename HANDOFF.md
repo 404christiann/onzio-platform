@@ -8730,3 +8730,88 @@ change. Local Supabase only, and restored to its pre-session digest.
 - **Exact next step:** none required. Rides with the normal
   review/commit/push flow.
 - **Hosted mutations, commits, pushes, deployments:** zero.
+
+## Academy@1 nav — remove mobile numbers, make Schedule/Programs non-navigable
+
+- **Status:** `complete`, 2026-08-11, Claude Code (Fable subagent implemented,
+  Sonnet 5 independently re-verified after the subagent's own connection
+  dropped mid-live-verification).
+- **Objective:** Christian sent a screenshot of the academy@1 (Diverse City
+  FC) mobile nav overlay showing small "01"-"07" index numbers next to each
+  item and asked for them removed. He also asked, for both mobile and
+  desktop, that "Schedule" and "Programs" stop being directly clickable —
+  they should only reveal their dropdown/expand children, not navigate to
+  `/schedule` or `/programs` themselves.
+- **Change 1 — index numbers.** `components/Nav.tsx`'s shared mobile-menu
+  render block had an `indexBadge` variable, `isAcademy ? <span>...</span> :
+  null` (rendering `String(index + 1).padStart(2, "0")`). Already `null` for
+  every non-academy template, so removing it (and the now-unused `index` map
+  param) only affects academy@1's mobile drawer, matching the screenshot
+  exactly. The clubhouse@1 branch has its own separate, similarly-styled
+  numbering earlier in the file — untouched, wasn't part of this ask.
+- **Change 2 — Schedule/Programs non-navigable.** `academyNavLinks()`
+  (~lines 124-147): removed `href: "/schedule"` from the Schedule entry and
+  `href: "/programs"` from the Programs entry. This is a pre-existing,
+  already-working pattern — the `NavLink` type's own comment documents it
+  ("Omitted for parent items that are hover/tap-only triggers... 'Club'
+  exists purely to reveal its dropdown children"), and the non-academy
+  `navLinks` array already uses it for "Club". All three render sites already
+  branched correctly on `link.href` presence with no changes needed: desktop
+  trigger (`<Link>` vs. non-clickable `<span>`), desktop dropdown reveal
+  (unconditional on `children`, not `href`), mobile (`<Link>`+expand-button
+  vs. full-width tap-to-expand `<button>`), and `isNavItemActive()` (already
+  falls back to checking `children`'s hrefs when `href` is absent, so
+  Schedule/Programs still highlight active on `/schedule`, `/tryouts`, or a
+  `/programs/[slug]` page). Net diff: two `href` properties deleted, nothing
+  else added.
+- **Test update:** `tests/contracts/diverse-city-admin-public-acceptance.test.ts`
+  asserted the literal `'label: "Programs", href: "/programs"'` existed in
+  `Nav.tsx` — no longer true once that `href` is removed. Replaced with
+  `expect(nav).toContain('label: "Programs",')` +
+  `expect(nav).not.toContain('label: "Programs", href:')`, with a comment
+  explaining Programs is now an intentional hover/tap-only trigger per
+  Christian's request. The same test's separate `footer` loop (checking
+  `Footer.tsx` for `href: "/programs"` etc.) is unrelated and unmodified —
+  Footer.tsx wasn't touched.
+- **Files changed:** `components/Nav.tsx`,
+  `tests/contracts/diverse-city-admin-public-acceptance.test.ts`.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508; `npm run test:legacy` 274/274; `npm run test:architecture` 20/20;
+  `npm run lint` 0 errors (same 5 pre-existing warnings); `npm run build`
+  compiled successfully. Live-verified against the local `diverse-city`
+  tenant (`diverse-city.localhost:3005` — this club's local `club_domains`
+  row is `environment=staging`, unlike Alpha/Bravo which are
+  `environment=production`, so the dev server must run WITHOUT the
+  `ONZIO_ENVIRONMENT=production` override documented elsewhere in this file
+  for those other tenants; using that override here reproduces
+  `PRIMARY_DOMAIN_REQUIRED` instead — worth remembering for whoever hits this
+  next). Desktop (1920px): confirmed via DOM inspection that Schedule and
+  Programs render as `<span>` with `cursor: default` (not `<a>`,
+  `cursor: pointer`), while every child (Fixtures, Tryouts, each program) and
+  every other top-level item (Home, About, Roster, Store, Contact) remain
+  real `<a>` links. Mobile (390px): confirmed the drawer's rendered text
+  contains no "01"-"07" pattern anywhere; confirmed Schedule's own label
+  renders inside a `<button>` (not an `<a>`), matching the source's
+  conditional; confirmed clicking that button leaves `location.pathname`
+  unchanged (`/` before and after) — no navigation occurs. Note: this
+  session's browser pane runs its tab hidden, which stalls
+  paint/transition-dependent reads (`getComputedStyle` opacity/visibility on
+  the drawer read stale mid-transition, a pre-existing pane limitation also
+  hit earlier today verifying `RouteTransition`) — verification here relied
+  on DOM structure and navigation-outcome checks instead, which aren't
+  affected by that limitation.
+- **Local fixture note:** a `diverse-city` club row and its
+  `diverse-city.localhost` (`environment=staging`) domain row already existed
+  in the local database before this task started (lineage unclear — likely
+  from an earlier today's `migration:import:diverse-city:local` run or a
+  prior session, per an earlier HANDOFF entry noting the same). Nothing was
+  seeded, reset, or torn down for this task; the local DB was used read-only
+  for verification.
+- **Blockers:** none. The original implementing subagent's connection
+  dropped mid-live-verification (after the code and test edits were already
+  complete and correct) — Sonnet 5 independently ran the full verification
+  suite above from scratch rather than trusting the subagent's incomplete
+  run.
+- **Exact next step:** none required. Rides with the normal review/commit/push
+  flow whenever Christian wants to land it.
+- **Hosted mutations, commits, pushes, deployments:** zero.
