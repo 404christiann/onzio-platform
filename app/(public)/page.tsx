@@ -2,7 +2,10 @@
 
 import nextDynamic from "next/dynamic";
 import { useClubContext } from "@/components/ClubContextProvider";
-import EditorialHomePlaceholder from "@/components/editorial/EditorialHomePlaceholder";
+
+const EditorialHomePlaceholder = nextDynamic(
+  () => import("@/components/editorial/EditorialHomePlaceholder"),
+);
 
 export const dynamic = "force-dynamic";
 

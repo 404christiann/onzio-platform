@@ -179,6 +179,17 @@ describe("template dispatch", () => {
     );
     expect(classic).not.toContain("editorial-placeholder");
 
+    // The homepage reaches the placeholder through a code-split dynamic
+    // import (so classic tenants never load the editorial chunk), which
+    // only resolves inside a real Next.js server render. Assert the branch
+    // in source and render the placeholder itself directly.
+    const page = read("app/(public)/page.tsx");
+    expect(page).toContain('club.siteTemplate === "editorial"');
+    expect(page).toContain("EditorialHomePlaceholder");
+
+    const { default: EditorialHomePlaceholder } = await import(
+      "@/components/editorial/EditorialHomePlaceholder"
+    );
     const editorial = renderToStaticMarkup(
       createElement(ClubContextProvider, {
         club: {
@@ -188,7 +199,7 @@ describe("template dispatch", () => {
           tier: "starter" as const,
           siteTemplate: "editorial" as const,
         },
-        children: createElement(HomePage),
+        children: createElement(EditorialHomePlaceholder),
       }),
     );
     expect(editorial).toContain("editorial-placeholder");

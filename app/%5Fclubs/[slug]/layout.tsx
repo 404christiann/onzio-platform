@@ -3,16 +3,8 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
-import EditorialShell from "@/components/editorial/EditorialShell";
-import { editorialFontClassName } from "@/components/editorial/fonts";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
-import {
-  fetchClubIdentity,
-  fetchClubThemeColors,
-  fetchEditorialCrests,
-} from "@/lib/club-identity";
-import { fetchSiteSocialLinks } from "@/lib/queries";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -46,8 +38,21 @@ export default async function TenantLayout({
 
   // The site template is tenant data: `editorial` renders the separate
   // editorial component package; every other club renders the classic
-  // shared components exactly as before.
+  // shared components exactly as before. The editorial modules (component
+  // package, scoped stylesheet, and Geist font scope) are imported
+  // dynamically so classic-template requests never load editorial assets.
   if (club.siteTemplate === "editorial") {
+    const [
+      { default: EditorialShell },
+      { editorialFontClassName },
+      { fetchClubIdentity, fetchClubThemeColors, fetchEditorialCrests },
+      { fetchSiteSocialLinks },
+    ] = await Promise.all([
+      import("@/components/editorial/EditorialShell"),
+      import("@/components/editorial/fonts"),
+      import("@/lib/club-identity"),
+      import("@/lib/queries"),
+    ]);
     const [identity, theme, crests, socialLinks] = await Promise.all([
       fetchClubIdentity(club.id),
       fetchClubThemeColors(club.id),
