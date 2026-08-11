@@ -297,31 +297,25 @@ export default function AdminStandingsPage() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       <div className="mb-4 sm:mb-6">
         <h1
-          className="font-display font-black uppercase leading-none text-white"
+          className="font-display font-black uppercase leading-none text-foreground"
           style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
         >
           Standings
         </h1>
-        <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
           Edit the homepage league table and optional team logos.
         </p>
       </div>
 
       {loading ? (
-        <p className="font-display text-sm uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
           Loading...
         </p>
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,520px)_minmax(0,1fr)]">
-          <section
-            className="min-w-0 self-start rounded-xl p-4 sm:p-5"
-            style={{
-              backgroundColor: "#141414",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
+          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
             <div className="grid gap-3">
-              <label className="font-body text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <label className="font-body text-xs text-muted-foreground">
                 Eyebrow
                 <input
                   value={settings.eyebrow}
@@ -329,7 +323,7 @@ export default function AdminStandingsPage() {
                   className={`mt-1 ${fieldClass}`}
                 />
               </label>
-              <label className="font-body text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <label className="font-body text-xs text-muted-foreground">
                 Table Title
                 <input
                   value={settings.title}
@@ -337,7 +331,7 @@ export default function AdminStandingsPage() {
                   className={`mt-1 ${fieldClass}`}
                 />
               </label>
-              <label className="font-body text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <label className="font-body text-xs text-muted-foreground">
                 Intro
                 <Textarea
                   value={settings.intro}
@@ -349,14 +343,13 @@ export default function AdminStandingsPage() {
             </div>
 
             <div className="mt-5 flex items-center justify-between gap-3">
-              <p className="font-display text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.35)" }}>
+              <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                 Teams
               </p>
               <button
                 type="button"
                 onClick={addRow}
-                className="font-display rounded-md px-3 py-2 text-xs font-bold uppercase tracking-widest"
-                style={{ backgroundColor: "#FFFFFF", color: "#141414" }}
+                className="font-display rounded-md bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground"
               >
                 Add Team
               </button>
@@ -444,7 +437,7 @@ export default function AdminStandingsPage() {
             />
 
             {error && (
-              <p className="font-body mt-4 text-sm" style={{ color: "#E7001B" }}>
+              <p className="font-body mt-4 text-sm text-destructive">
                 {error}
               </p>
             )}
@@ -453,28 +446,19 @@ export default function AdminStandingsPage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={saving || uploading || !dirty}
-              className="font-display mt-5 w-full rounded-lg py-3 text-sm font-bold uppercase tracking-widest transition-opacity"
-              style={{
-                backgroundColor: "#E7001B",
-                color: "white",
-                opacity: saving || uploading || !dirty ? 0.5 : 1,
-                cursor: saving || uploading || !dirty ? "not-allowed" : "pointer",
-              }}
+              className="font-display mt-5 w-full rounded-lg bg-destructive py-3 text-sm font-bold uppercase tracking-widest text-destructive-foreground transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {(saving || uploading) && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
             </button>
           </section>
 
-          <section className="min-w-0 overflow-hidden rounded-xl" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+          <section className="min-w-0 overflow-hidden rounded-xl border border-border">
             {isAcademy ? (
               previewRows.length > 0 ? (
                 <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
               ) : (
-                <p
-                  className="font-body p-6 text-sm"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
-                >
+                <p className="font-body p-6 text-sm text-muted-foreground">
                   Add a team below to see a preview of your standings table.
                 </p>
               )

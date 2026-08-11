@@ -338,7 +338,7 @@ describe("DCFC-301 protected Programs admin surface", () => {
       "utf8",
     );
     const switcherClass =
-      'className="mt-3 grid gap-1 rounded-lg p-1 sm:grid-cols-3"';
+      'className="mt-3 grid gap-1 rounded-lg bg-card p-1 sm:grid-cols-3"';
     expect(aboutSource).toContain(switcherClass);
     expect(pageSource).toContain(switcherClass);
   });

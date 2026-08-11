@@ -7,6 +7,7 @@ import { Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import FileUpload from "@/components/admin/FileUpload";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledShopKitPreview from "@/components/admin/ScaledShopKitPreview";
 import ScaledShopPhotoStripPreview from "@/components/admin/ScaledShopPhotoStripPreview";
@@ -588,38 +589,25 @@ export default function AdminShopPage() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       <div className="mb-4 sm:mb-6">
         <h1
-          className="font-display font-black uppercase leading-none text-white"
+          className="font-display font-black uppercase leading-none text-foreground"
           style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
         >
           Shop
         </h1>
-        <p
-          className="font-body mt-1"
-          style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}
-        >
+        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
           Manage independent kit content and photos for each public page.
         </p>
       </div>
 
       {loading ? (
-        <p
-          className="font-display text-sm uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.3)" }}
-        >
+        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
           Loading…
         </p>
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
-          <section
-            className="min-w-0 self-start rounded-xl p-4 sm:p-5"
-            style={{
-              backgroundColor: "#141414",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
+          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
             <div
-              className="mb-4 grid grid-cols-2 gap-1 rounded-lg p-1"
-              style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+              className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1"
               aria-label="Kit placement"
             >
               {(
@@ -655,11 +643,9 @@ export default function AdminShopPage() {
                       }
                       setSaved(false);
                     }}
-                    className="font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors"
-                    style={{
-                      backgroundColor: isSelected ? "#FFFFFF" : "transparent",
-                      color: isSelected ? "#141414" : "rgba(255,255,255,0.5)",
-                    }}
+                    className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
+                      isSelected ? "bg-foreground text-background" : "text-muted-foreground"
+                    }`}
                   >
                     {surface.label}
                   </button>
@@ -672,8 +658,7 @@ export default function AdminShopPage() {
                 same pattern as the Sponsors and About Club Logo tab hides. */}
             {selectedSurface === "shop" && kitVariants.length > 1 && (
               <div
-                className="mb-4 grid grid-cols-2 gap-1 rounded-lg p-1"
-                style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+                className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1"
                 aria-label="Kit type"
               >
                 {kitVariants.map((variant) => {
@@ -695,11 +680,9 @@ export default function AdminShopPage() {
                         setSelectedKitVariant(variant.id);
                         setSaved(false);
                       }}
-                      className="font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors"
-                      style={{
-                        backgroundColor: isSelected ? "#E7001B" : "transparent",
-                        color: isSelected ? "white" : "rgba(255,255,255,0.5)",
-                      }}
+                      className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
+                        isSelected ? "bg-destructive text-white" : "text-muted-foreground"
+                      }`}
                     >
                       {variant.label}
                     </button>
@@ -708,17 +691,14 @@ export default function AdminShopPage() {
               </div>
             )}
 
-            <p
-              className="font-body mb-4 text-xs leading-relaxed"
-              style={{ color: "rgba(255,255,255,0.32)" }}
-            >
+            <p className="font-body mb-4 text-xs leading-relaxed text-muted-foreground">
               Editing the {selectedSurface === "home" ? "home page kit" : `${activeKitVariant} shop kit`}.
               {hidesClubhouseShopSections
                 ? " Content and Kit Photos are saved independently."
                 : " Content, Kit Photos, and Shop Page Photo Row are saved independently."}
             </p>
 
-            <div className="mb-4 flex gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+            <div className="mb-4 flex gap-1 rounded-lg bg-card p-1">
               {(
                 [
                   { id: "content" as const, label: "Content", count: null },
@@ -752,20 +732,18 @@ export default function AdminShopPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className="font-display flex-1 rounded-md px-2 py-2.5 text-[0.65rem] uppercase tracking-widest transition-colors sm:text-xs"
-                    style={{
-                      backgroundColor: isActive ? "#E7001B" : "transparent",
-                      color: isActive ? "white" : "rgba(255,255,255,0.5)",
-                    }}
+                    className={`font-display flex-1 rounded-md px-2 py-2.5 text-[0.65rem] uppercase tracking-widest transition-colors sm:text-xs ${
+                      isActive ? "bg-destructive text-white" : "text-muted-foreground"
+                    }`}
                   >
                     {tab.label}
                     {tab.count && (
-                      <span style={{ opacity: 0.75 }}> {tab.count}</span>
+                      <span className="opacity-75"> {tab.count}</span>
                     )}
                     {hasIssue && (
                       <span
                         aria-hidden="true"
-                        style={{ color: isActive ? "white" : "#E7001B" }}
+                        className={isActive ? "text-white" : "text-destructive"}
                       >
                         {" "}
                         •
@@ -787,7 +765,7 @@ export default function AdminShopPage() {
                   placeholder="2026 Kit · Available Now"
                   value={fields.eyebrow}
                   onChange={(event) => setField("eyebrow", event.target.value)}
-                  style={inputStyle}
+                  className={ADMIN_INPUT_CLASS}
                 />
               </Field>
 
@@ -834,7 +812,7 @@ export default function AdminShopPage() {
                         onChange={(event) =>
                           setBulletPoint(index, event.target.value)
                         }
-                        style={inputStyle}
+                        className={ADMIN_INPUT_CLASS}
                       />
                       <div className="flex gap-1">
                         <BulletActionButton
@@ -868,19 +846,7 @@ export default function AdminShopPage() {
                     disabled={
                       fields.bullet_points.length >= MAX_KIT_BULLET_POINTS
                     }
-                    className="font-display flex w-full items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-2.5 text-xs uppercase tracking-widest transition-colors"
-                    style={{
-                      borderColor: "rgba(255,255,255,0.14)",
-                      color: "rgba(255,255,255,0.5)",
-                      opacity:
-                        fields.bullet_points.length >= MAX_KIT_BULLET_POINTS
-                          ? 0.4
-                          : 1,
-                      cursor:
-                        fields.bullet_points.length >= MAX_KIT_BULLET_POINTS
-                          ? "not-allowed"
-                          : "pointer",
-                    }}
+                    className="font-display flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-2.5 text-xs uppercase tracking-widest text-muted-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <span aria-hidden="true">+</span>
                     Add Bullet Point ({fields.bullet_points.length}/
@@ -888,10 +854,7 @@ export default function AdminShopPage() {
                   </button>
                 </div>
                 {!hasBulletPoint && (
-                  <p
-                    className="font-body mt-2 text-xs"
-                    style={{ color: "#E7001B" }}
-                  >
+                  <p className="font-body mt-2 text-xs text-destructive">
                     Add at least one bullet point.
                   </p>
                 )}
@@ -922,7 +885,7 @@ export default function AdminShopPage() {
                     placeholder="Buy Now →"
                     value={fields.cta_label}
                     onChange={(event) => setField("cta_label", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field
@@ -939,11 +902,7 @@ export default function AdminShopPage() {
                     value={fields.cta_link}
                     onChange={(event) => setField("cta_link", event.target.value)}
                     disabled={selectedSurface === "home"}
-                    style={
-                      selectedSurface === "home"
-                        ? { ...inputStyle, opacity: 0.4, cursor: "not-allowed" }
-                        : inputStyle
-                    }
+                    className={`${ADMIN_INPUT_CLASS} disabled:cursor-not-allowed disabled:opacity-40`}
                   />
                 </Field>
               </div>
@@ -960,7 +919,7 @@ export default function AdminShopPage() {
                   type="text"
                   value={previewPurchaseDetails.heading}
                   onChange={(event) => setPurchaseField("heading", event.target.value)}
-                  style={inputStyle}
+                  className={ADMIN_INPUT_CLASS}
                 />
               </Field>
 
@@ -970,16 +929,9 @@ export default function AdminShopPage() {
                   .map((card, index) => (
                     <div
                       key={`purchase-card-${index}`}
-                      className="rounded-lg p-3"
-                      style={{
-                        backgroundColor: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.07)",
-                      }}
+                      className="rounded-lg border border-border bg-card p-3"
                     >
-                      <p
-                        className="font-display mb-3 text-xs uppercase tracking-widest"
-                        style={{ color: "rgba(255,255,255,0.35)" }}
-                      >
+                      <p className="font-display mb-3 text-xs uppercase tracking-widest text-muted-foreground">
                         Detail Card {index + 1}
                       </p>
                       <div className="space-y-3">
@@ -990,7 +942,7 @@ export default function AdminShopPage() {
                             onChange={(event) =>
                               setPurchaseCardField(index, "label", event.target.value)
                             }
-                            style={inputStyle}
+                            className={ADMIN_INPUT_CLASS}
                           />
                         </Field>
                         <Field label="Card Title">
@@ -1000,7 +952,7 @@ export default function AdminShopPage() {
                             onChange={(event) =>
                               setPurchaseCardField(index, "title", event.target.value)
                             }
-                            style={inputStyle}
+                            className={ADMIN_INPUT_CLASS}
                           />
                         </Field>
                         <Field label="Card Body">
@@ -1025,7 +977,7 @@ export default function AdminShopPage() {
                     onChange={(event) =>
                       setPurchaseField("cta_eyebrow", event.target.value)
                     }
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Footer Text">
@@ -1044,7 +996,7 @@ export default function AdminShopPage() {
                     onChange={(event) =>
                       setPurchaseField("cta_label", event.target.value)
                     }
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Button Link">
@@ -1054,7 +1006,7 @@ export default function AdminShopPage() {
                     onChange={(event) =>
                       setPurchaseField("cta_link", event.target.value)
                     }
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
               </div>
@@ -1065,23 +1017,14 @@ export default function AdminShopPage() {
             <div>
             <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p
-                  className="font-display text-xs uppercase tracking-widest"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
+                <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                   Kit Photos
                 </p>
-                <p
-                  className="font-body mt-1 text-xs"
-                  style={{ color: "rgba(255,255,255,0.22)" }}
-                >
+                <p className="font-body mt-1 text-xs text-muted-foreground">
                   Drag-free ordering with arrow controls.
                 </p>
               </div>
-              <span
-                className="font-display text-xs uppercase tracking-widest"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
+              <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                 {draftPhotos.length}/{MAX_KIT_PHOTOS}
               </span>
             </div>
@@ -1141,15 +1084,12 @@ export default function AdminShopPage() {
             </div>
 
             {!canAddKitPhoto(draftPhotos.length) && (
-              <p
-                className="font-body mt-2 text-xs"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
+              <p className="font-body mt-2 text-xs text-muted-foreground">
                 {MAX_KIT_PHOTOS} photo max.
               </p>
             )}
             {draftPhotos.length === 0 && (
-              <p className="font-body mt-2 text-xs" style={{ color: "#E7001B" }}>
+              <p className="font-body mt-2 text-xs text-destructive">
                 At least 1 photo is required.
               </p>
             )}
@@ -1160,23 +1100,14 @@ export default function AdminShopPage() {
             <div>
             <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p
-                  className="font-display text-xs uppercase tracking-widest"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
+                <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                   {activeKitVariant === "home" ? "Home Kit" : "Away Kit"} Photo Row
                 </p>
-                <p
-                  className="font-body mt-1 text-xs"
-                  style={{ color: "rgba(255,255,255,0.22)" }}
-                >
+                <p className="font-body mt-1 text-xs text-muted-foreground">
                   Static photo row shown below the selected shop kit. Leave empty to hide it.
                 </p>
               </div>
-              <span
-                className="font-display text-xs uppercase tracking-widest"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
+              <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                 {draftPhotoStripPhotos.length}/{MAX_PHOTO_STRIP_PHOTOS}
               </span>
             </div>
@@ -1236,22 +1167,16 @@ export default function AdminShopPage() {
             </div>
 
             {!canAddPhotoStripPhoto(draftPhotoStripPhotos.length) && (
-              <p
-                className="font-body mt-2 text-xs"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
+              <p className="font-body mt-2 text-xs text-muted-foreground">
                 {MAX_PHOTO_STRIP_PHOTOS} photo max.
               </p>
             )}
             </div>
             )}
 
-            <div
-              className="mt-4 border-t pt-4"
-              style={{ borderColor: "rgba(255,255,255,0.07)" }}
-            >
+            <div className="mt-4 border-t border-border pt-4">
               {error && (
-                <p className="font-body mb-3 text-sm" style={{ color: "#E7001B" }}>
+                <p className="font-body mb-3 text-sm text-destructive">
                   Error: {error}
                 </p>
               )}
@@ -1259,13 +1184,8 @@ export default function AdminShopPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={saveDisabled}
-                className="font-display w-full rounded-lg px-6 py-3 font-black uppercase tracking-widest text-white transition-opacity"
-                style={{
-                  backgroundColor: "#E7001B",
-                  fontSize: "1rem",
-                  opacity: saveDisabled ? 0.5 : 1,
-                  cursor: saveDisabled ? "not-allowed" : "pointer",
-                }}
+                className="font-display w-full rounded-lg bg-destructive px-6 py-3 font-black uppercase tracking-widest text-white transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ fontSize: "1rem" }}
               >
                 {(saving || uploading) && (
                   <Loader className="mr-2 inline size-4 animate-spin" />
@@ -1283,33 +1203,21 @@ export default function AdminShopPage() {
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p
-                  className="font-display font-bold uppercase tracking-widest text-white"
+                  className="font-display font-bold uppercase tracking-widest text-foreground"
                   style={{ fontSize: "0.9rem" }}
                 >
                   {previewLabel} Preview
                 </p>
-                <p
-                  className="font-body mt-1 text-xs"
-                  style={{ color: "rgba(255,255,255,0.3)" }}
-                >
+                <p className="font-body mt-1 text-xs text-muted-foreground">
                   Desktop website view, scaled to fit.
                 </p>
               </div>
-              <span
-                className="font-display rounded-full px-3 py-1 text-xs uppercase tracking-widest"
-                style={{
-                  color: "rgba(255,255,255,0.4)",
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                }}
-              >
+              <span className="font-display rounded-full bg-card px-3 py-1 text-xs uppercase tracking-widest text-muted-foreground">
                 Draft
               </span>
             </div>
 
-            <div
-              className="overflow-hidden rounded-lg"
-              style={{ border: "1px solid rgba(255,255,255,0.08)" }}
-            >
+            <div className="overflow-hidden rounded-lg border border-border">
               {activeTab === "purchase" ? (
                 <ScaledShopPurchaseDetailsPreview details={previewPurchaseDetails} />
               ) : previewPhotos.length > 0 ? (
@@ -1318,14 +1226,8 @@ export default function AdminShopPage() {
                   photos={previewPhotos}
                 />
               ) : (
-                <div
-                  className="flex min-h-72 items-center justify-center p-8 text-center"
-                  style={{ backgroundColor: "#141414" }}
-                >
-                  <p
-                    className="font-body text-sm"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
-                  >
+                <div className="flex min-h-72 items-center justify-center bg-background p-8 text-center">
+                  <p className="font-body text-sm text-muted-foreground">
                     Add at least one kit photo to preview the public section.
                   </p>
                 </div>
@@ -1339,35 +1241,23 @@ export default function AdminShopPage() {
             <div className="mb-3 mt-6 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p
-                  className="font-display font-bold uppercase tracking-widest text-white"
+                  className="font-display font-bold uppercase tracking-widest text-foreground"
                   style={{ fontSize: "0.9rem" }}
                 >
                   Shop Page Photo Row Preview
                 </p>
-                <p
-                  className="font-body mt-1 text-xs"
-                  style={{ color: "rgba(255,255,255,0.3)" }}
-                >
+                <p className="font-body mt-1 text-xs text-muted-foreground">
                   Desktop website view, scaled to fit.
                 </p>
               </div>
             </div>
 
-            <div
-              className="overflow-hidden rounded-lg"
-              style={{ border: "1px solid rgba(255,255,255,0.08)" }}
-            >
+            <div className="overflow-hidden rounded-lg border border-border">
               {previewPhotoStripPhotos.length > 0 ? (
                 <ScaledShopPhotoStripPreview photos={previewPhotoStripPhotos} />
               ) : (
-                <div
-                  className="flex min-h-40 items-center justify-center p-8 text-center"
-                  style={{ backgroundColor: "#141414" }}
-                >
-                  <p
-                    className="font-body text-sm"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
-                  >
+                <div className="flex min-h-40 items-center justify-center bg-background p-8 text-center">
+                  <p className="font-body text-sm text-muted-foreground">
                     Empty — the photo row stays hidden on the shop page until you add a photo.
                   </p>
                 </div>
@@ -1393,18 +1283,12 @@ function Field({
 }) {
   return (
     <div>
-      <label
-        className="font-display mb-1 block text-xs uppercase tracking-widest"
-        style={{ color: "rgba(255,255,255,0.35)" }}
-      >
+      <label className={ADMIN_LABEL_CLASS}>
         {label}
       </label>
       {children}
       {help && (
-        <p
-          className="font-body mt-1.5 text-xs leading-relaxed"
-          style={{ color: "rgba(255,255,255,0.25)" }}
-        >
+        <p className="font-body mt-1.5 text-xs leading-relaxed text-muted-foreground">
           {help}
         </p>
       )}
@@ -1432,18 +1316,9 @@ function BulletActionButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-10 w-8 items-center justify-center rounded-lg text-base"
-      style={{
-        backgroundColor: danger
-          ? "rgba(231,0,27,0.12)"
-          : "rgba(255,255,255,0.05)",
-        color: disabled
-          ? "rgba(255,255,255,0.12)"
-          : danger
-            ? "#E7001B"
-            : "rgba(255,255,255,0.55)",
-        cursor: disabled ? "not-allowed" : "pointer",
-      }}
+      className={`flex h-10 w-8 items-center justify-center rounded-lg text-base disabled:cursor-not-allowed disabled:opacity-30 ${
+        danger ? "bg-destructive/10 text-destructive" : "bg-card text-muted-foreground hover:bg-accent"
+      }`}
     >
       {children}
     </button>
@@ -1467,27 +1342,9 @@ function OrderButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-9 flex-1 items-center justify-center rounded sm:h-6"
-      style={{
-        backgroundColor: "rgba(255,255,255,0.05)",
-        color: disabled ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.5)",
-        cursor: disabled ? "not-allowed" : "pointer",
-      }}
+      className="flex h-9 flex-1 items-center justify-center rounded bg-card text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-30 sm:h-6"
     >
       {children}
     </button>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  backgroundColor: "#0e0e0e",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "8px",
-  padding: "9px 12px",
-  color: "white",
-  fontSize: "1rem",
-  fontFamily: "inherit",
-  outline: "none",
-  colorScheme: "dark",
-};

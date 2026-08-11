@@ -281,12 +281,12 @@ export default function StatsPage() {
       {/* Header */}
       <div className="mb-8">
         <h1
-          className="font-display font-black uppercase text-white leading-none"
+          className="font-display font-black uppercase text-foreground leading-none"
           style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
         >
           Match Stats
         </h1>
-        <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
           Select a match to enter or update player statistics.
         </p>
       </div>
@@ -302,8 +302,8 @@ export default function StatsPage() {
           className="w-full"
         />
         <label
-          className="block font-display tracking-widest uppercase mb-2"
-          style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.4)" }}
+          className="block font-display tracking-widest uppercase mb-2 text-muted-foreground"
+          style={{ fontSize: "0.9rem" }}
         >
           Match
         </label>
@@ -326,7 +326,7 @@ export default function StatsPage() {
         </div>
 
         {!seasonsLoading && selectedSeasonId && seasonMatches.length === 0 && (
-          <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+          <p className="font-body text-sm text-muted-foreground">
             No matches are assigned to this season.
           </p>
         )}
@@ -339,20 +339,11 @@ export default function StatsPage() {
           {/* Match label */}
           {selectedMatchData && (
             <div className="mb-6 flex items-center gap-3">
-              <div
-                className="h-px flex-1"
-                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-              />
-              <span
-                className="font-display text-xs tracking-widest uppercase"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
+              <div className="h-px flex-1 bg-border" />
+              <span className="font-display text-xs tracking-widest uppercase text-muted-foreground">
                 {selectedMatchData.date} · {selectedMatchData.home ? "vs" : "@"} {selectedMatchData.opponent}
               </span>
-              <div
-                className="h-px flex-1"
-                style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-              />
+              <div className="h-px flex-1 bg-border" />
             </div>
           )}
 
@@ -377,7 +368,7 @@ export default function StatsPage() {
 
           {/* Error */}
           {error && (
-            <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>
+            <p className="font-body text-sm mb-4 text-destructive">
               Error saving: {error}
             </p>
           )}
@@ -387,13 +378,8 @@ export default function StatsPage() {
             <button
               onClick={handleSave}
               disabled={saving || !hasChanges}
-              className="px-8 py-3 rounded-lg font-display font-black uppercase tracking-widest text-white transition-opacity duration-200"
-              style={{
-                fontSize: "1.1rem",
-                backgroundColor: "#dc2626",
-                opacity: saving || !hasChanges ? 0.4 : 1,
-                cursor: saving || !hasChanges ? "not-allowed" : "pointer",
-              }}
+              className="px-8 py-3 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground bg-destructive transition-opacity duration-200 hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ fontSize: "1.1rem" }}
             >
               {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save All Stats"}
@@ -405,10 +391,7 @@ export default function StatsPage() {
 
       {/* Loading state */}
       {loading && (
-        <p
-          className="font-display text-sm tracking-widest uppercase"
-          style={{ color: "rgba(255,255,255,0.3)" }}
-        >
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
           Loading players…
         </p>
       )}

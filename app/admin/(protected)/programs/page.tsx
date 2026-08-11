@@ -9,6 +9,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Textarea } from "@/components/ui/textarea";
 import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type {
   DBProgram,
@@ -89,15 +90,10 @@ const PROGRAM_FIELD_TABS: Record<
   registrationPendingLabel: "registration",
 };
 
-const INPUT_CLASS =
-  "w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 font-body text-sm text-white outline-none transition focus:border-red-500/60 focus:bg-white/[0.06]";
-const LABEL_CLASS =
-  "mb-2 block font-display text-xs font-bold uppercase tracking-[0.18em] text-white/45";
-
 function fieldError(errors: ProgramValidationErrors, field: keyof ProgramValidationErrors) {
   const message = errors[field];
   return message ? (
-    <p className="mt-1.5 font-body text-xs text-red-300" role="alert">
+    <p className="mt-1.5 font-body text-xs text-destructive" role="alert">
       {message}
     </p>
   ) : null;
@@ -564,7 +560,7 @@ export default function AdminProgramsPage() {
   function pageCopyFieldError(field: keyof ProgramsPageDraft) {
     const message = pageCopyErrors[field];
     return message ? (
-      <p className="mt-1.5 font-body text-xs text-red-300" role="alert">
+      <p className="mt-1.5 font-body text-xs text-destructive" role="alert">
         {message}
       </p>
     ) : null;
@@ -608,13 +604,13 @@ export default function AdminProgramsPage() {
     <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-red-400/75">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-destructive/75">
             Content
           </p>
-          <h1 className="mt-2 font-display text-4xl font-black uppercase leading-none text-white sm:text-5xl">
+          <h1 className="mt-2 font-display text-4xl font-black uppercase leading-none text-foreground sm:text-5xl">
             Programs
           </h1>
-          <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-white/45">
+          <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-muted-foreground">
             Manage program pages, their order, media, highlights, visibility, and
             external destinations.
           </p>
@@ -623,7 +619,7 @@ export default function AdminProgramsPage() {
           <button
             type="button"
             onClick={startCreate}
-            className="rounded-lg bg-red-600 px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400"
+            className="rounded-lg bg-destructive px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             Create program
           </button>
@@ -631,19 +627,19 @@ export default function AdminProgramsPage() {
       </header>
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-400/25 bg-red-400/[0.08] px-4 py-3 font-body text-sm text-red-200" role="alert">
+        <div className="mb-5 rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
           {error}
         </div>
       )}
 
       {!loading && !hidesPageCopyEditor && (
-        <section className="mb-6 rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
+        <section className="mb-6 rounded-2xl border border-border bg-background p-5 sm:p-7">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="font-display text-sm font-black uppercase tracking-wider text-white">
+              <h2 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
                 Programs page copy
               </h2>
-              <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
+              <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
                 The wording around your programs — the homepage &ldquo;pathway&rdquo;
                 band, the /programs page header, and the closing band at the
                 bottom of /programs. The programs themselves are edited below.
@@ -652,25 +648,25 @@ export default function AdminProgramsPage() {
               </p>
             </div>
             {pageCopyDirty && (
-              <span className="self-start rounded-full bg-amber-300/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-amber-200">
+              <span className="self-start rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
                 Unsaved changes
               </span>
             )}
           </div>
 
           {pageCopyError && (
-            <div className="mb-5 rounded-lg border border-red-400/25 bg-red-400/[0.08] px-4 py-3 font-body text-sm text-red-200" role="alert">
+            <div className="mb-5 rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
               {pageCopyError}
             </div>
           )}
 
-          <p className="mb-3 font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+          <p className="mb-3 font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
             Homepage band
           </p>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Eyebrow" error={pageCopyFieldError("pathwayEyebrow")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.pathwayEyebrow}
                 onChange={(event) => updatePageCopy("pathwayEyebrow", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.pathwayEyebrow}
@@ -679,7 +675,7 @@ export default function AdminProgramsPage() {
             </FormField>
             <FormField label="Heading" error={pageCopyFieldError("pathwayHeading")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.pathwayHeading}
                 onChange={(event) => updatePageCopy("pathwayHeading", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.pathwayHeading}
@@ -700,13 +696,13 @@ export default function AdminProgramsPage() {
             </FormField>
           </div>
 
-          <p className="mb-3 mt-7 border-t border-white/[0.06] pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+          <p className="mb-3 mt-7 border-t border-border pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
             Programs page header
           </p>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Eyebrow" error={pageCopyFieldError("heroEyebrow")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.heroEyebrow}
                 onChange={(event) => updatePageCopy("heroEyebrow", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.heroEyebrow}
@@ -716,7 +712,7 @@ export default function AdminProgramsPage() {
             <div className="hidden sm:block" aria-hidden="true" />
             <FormField label="Headline line 1" error={pageCopyFieldError("heroHeadlineLineOne")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.heroHeadlineLineOne}
                 onChange={(event) => updatePageCopy("heroHeadlineLineOne", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineOne}
@@ -725,7 +721,7 @@ export default function AdminProgramsPage() {
             </FormField>
             <FormField label="Headline line 2" error={pageCopyFieldError("heroHeadlineLineTwo")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.heroHeadlineLineTwo}
                 onChange={(event) => updatePageCopy("heroHeadlineLineTwo", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineTwo}
@@ -746,13 +742,13 @@ export default function AdminProgramsPage() {
             </FormField>
           </div>
 
-          <p className="mb-3 mt-7 border-t border-white/[0.06] pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+          <p className="mb-3 mt-7 border-t border-border pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
             Closing band
           </p>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormField label="Heading line 1" error={pageCopyFieldError("closingHeadingLineOne")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.closingHeadingLineOne}
                 onChange={(event) => updatePageCopy("closingHeadingLineOne", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineOne}
@@ -761,7 +757,7 @@ export default function AdminProgramsPage() {
             </FormField>
             <FormField label="Heading line 2" error={pageCopyFieldError("closingHeadingLineTwo")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.closingHeadingLineTwo}
                 onChange={(event) => updatePageCopy("closingHeadingLineTwo", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineTwo}
@@ -782,7 +778,7 @@ export default function AdminProgramsPage() {
             </FormField>
             <FormField label="Button label" error={pageCopyFieldError("closingCtaLabel")}>
               <input
-                className={INPUT_CLASS}
+                className={ADMIN_INPUT_CLASS}
                 value={pageCopy.closingCtaLabel}
                 onChange={(event) => updatePageCopy("closingCtaLabel", event.target.value)}
                 maxLength={PROGRAMS_PAGE_LIMITS.closingCtaLabel}
@@ -791,18 +787,18 @@ export default function AdminProgramsPage() {
             </FormField>
           </div>
 
-          <div className="mt-6 flex items-center gap-4 border-t border-white/[0.06] pt-6">
+          <div className="mt-6 flex items-center gap-4 border-t border-border pt-6">
             <button
               type="button"
               onClick={() => void savePageCopy()}
               disabled={pageCopySaving || !pageCopyDirty}
-              className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35"
+              className="rounded-lg bg-destructive px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
             >
               {pageCopySaving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {pageCopySaving ? "Saving…" : "Save page copy"}
             </button>
             {pageCopySaved && !pageCopyDirty && (
-              <span className="font-body text-xs text-emerald-300" role="status">
+              <span className="font-body text-xs text-success" role="status">
                 Page copy saved
               </span>
             )}
@@ -811,15 +807,15 @@ export default function AdminProgramsPage() {
       )}
 
       {loading ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] px-6 py-16 text-center font-body text-sm text-white/45" role="status">
+        <div className="rounded-2xl border border-border bg-card px-6 py-16 text-center font-body text-sm text-muted-foreground" role="status">
           Loading programs…
         </div>
       ) : programs.length === 0 && !draft ? (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-16 text-center">
-          <h2 className="font-display text-xl font-black uppercase text-white">
+        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
+          <h2 className="font-display text-xl font-black uppercase text-foreground">
             No programs yet
           </h2>
-          <p className="mx-auto mt-2 max-w-md font-body text-sm leading-6 text-white/45">
+          <p className="mx-auto mt-2 max-w-md font-body text-sm leading-6 text-muted-foreground">
             {hidesProgramCreation
               ? "Your programs are set up by Onzio. Contact us to add one."
               : "Create the first reusable program page. Nothing is published until a valid program is saved as active."}
@@ -828,7 +824,7 @@ export default function AdminProgramsPage() {
             <button
               type="button"
               onClick={startCreate}
-              className="mt-6 rounded-lg border border-white/15 px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:border-white/30 hover:bg-white/[0.05]"
+              className="mt-6 rounded-lg border border-border px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-foreground transition hover:bg-accent"
             >
               Create program
             </button>
@@ -836,9 +832,9 @@ export default function AdminProgramsPage() {
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]">
-          <aside className="self-start rounded-2xl border border-white/[0.06] bg-[#151515] p-3 lg:sticky lg:top-8">
+          <aside className="self-start rounded-2xl border border-border bg-background p-3 lg:sticky lg:top-8">
             <div className="px-3 pb-3 pt-2">
-              <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+              <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 Program order
               </p>
             </div>
@@ -848,25 +844,25 @@ export default function AdminProgramsPage() {
                   key={program.id}
                   className={`rounded-xl border p-2 transition ${
                     draft?.id === program.id
-                      ? "border-red-500/35 bg-red-500/[0.08]"
-                      : "border-white/[0.05] bg-white/[0.02]"
+                      ? "border-destructive/35 bg-destructive/10"
+                      : "border-border bg-card"
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => selectProgram(program)}
-                    className="w-full rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-red-400/60"
+                    className="w-full rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-ring/60"
                   >
-                    <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-white">
+                    <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-foreground">
                       {program.displayTitle || "Untitled program"}
                     </span>
-                    <span className="mt-1 block truncate font-body text-xs text-white/35">
+                    <span className="mt-1 block truncate font-body text-xs text-muted-foreground">
                       /programs/{program.slug}
                     </span>
                     <span className={`mt-2 inline-flex rounded-full px-2 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${
                       program.status === "active"
-                        ? "bg-emerald-400/10 text-emerald-300"
-                        : "bg-white/[0.06] text-white/40"
+                        ? "bg-success/10 text-success"
+                        : "bg-card text-muted-foreground"
                     }`}>
                       {program.status}
                     </span>
@@ -876,7 +872,7 @@ export default function AdminProgramsPage() {
                       type="button"
                       onClick={() => void reorderProgram(index, -1)}
                       disabled={index === 0}
-                      className="rounded-md border border-white/[0.06] py-1.5 font-display text-xs uppercase text-white/45 transition hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-20"
+                      className="rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-20"
                       aria-label={`Move ${program.displayTitle} up`}
                     >
                       Up
@@ -885,7 +881,7 @@ export default function AdminProgramsPage() {
                       type="button"
                       onClick={() => void reorderProgram(index, 1)}
                       disabled={index === programs.length - 1}
-                      className="rounded-md border border-white/[0.06] py-1.5 font-display text-xs uppercase text-white/45 transition hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-20"
+                      className="rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-20"
                       aria-label={`Move ${program.displayTitle} down`}
                     >
                       Down
@@ -897,18 +893,18 @@ export default function AdminProgramsPage() {
           </aside>
 
           {draft && (
-            <section className="rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
-              <div className="mb-7 flex flex-col gap-3 border-b border-white/[0.06] pb-6 sm:flex-row sm:items-center sm:justify-between">
+            <section className="rounded-2xl border border-border bg-background p-5 sm:p-7">
+              <div className="mb-7 flex flex-col gap-3 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+                  <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                     {draft.id ? "Edit program" : "New program"}
                   </p>
-                  <h2 className="mt-1 font-display text-2xl font-black uppercase text-white">
+                  <h2 className="mt-1 font-display text-2xl font-black uppercase text-foreground">
                     {draft.displayTitle || "Untitled program"}
                   </h2>
                 </div>
                 {dirty && (
-                  <span className="self-start rounded-full bg-amber-300/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-amber-200">
+                  <span className="self-start rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
                     Unsaved changes
                   </span>
                 )}
@@ -925,16 +921,16 @@ export default function AdminProgramsPage() {
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 {hidesSlugField ? (
                   <div>
-                    <span className={LABEL_CLASS}>Page address</span>
-                    <p className="rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2.5 font-body text-sm text-white/55">
+                    <span className={ADMIN_LABEL_CLASS}>Page address</span>
+                    <p className="rounded-lg border border-border bg-black/20 px-3 py-2.5 font-body text-sm text-muted-foreground">
                       /programs/
-                      <span className="text-white/85">
+                      <span className="text-foreground">
                         {draft.id
                           ? draft.slug
                           : derivedSlugForNewProgram(draft)}
                       </span>
                     </p>
-                    <p className="mt-1.5 font-body text-xs leading-5 text-white/35">
+                    <p className="mt-1.5 font-body text-xs leading-5 text-muted-foreground">
                       {draft.id
                         ? "Set when this program was created and fixed from then on, so existing links keep working. Renaming the navigation label does not change it."
                         : "Created from the navigation label below when you save. It cannot be changed afterwards."}
@@ -944,7 +940,7 @@ export default function AdminProgramsPage() {
                 ) : (
                   <FormField label="Slug" error={fieldError(errors, "slug")}>
                     <input
-                      className={INPUT_CLASS}
+                      className={ADMIN_INPUT_CLASS}
                       value={draft.slug}
                       onChange={(event) => updateDraft("slug", event.target.value)}
                       placeholder="youth-academy"
@@ -954,7 +950,7 @@ export default function AdminProgramsPage() {
                 )}
                 <FormField label="Navigation label" error={fieldError(errors, "navLabel")}>
                   <input
-                    className={INPUT_CLASS}
+                    className={ADMIN_INPUT_CLASS}
                     value={draft.navLabel}
                     onChange={(event) => updateDraft("navLabel", event.target.value)}
                     maxLength={40}
@@ -962,7 +958,7 @@ export default function AdminProgramsPage() {
                 </FormField>
                 <FormField label="Display title" error={fieldError(errors, "displayTitle")}>
                   <input
-                    className={INPUT_CLASS}
+                    className={ADMIN_INPUT_CLASS}
                     value={draft.displayTitle}
                     onChange={(event) => updateDraft("displayTitle", event.target.value)}
                     maxLength={120}
@@ -970,7 +966,7 @@ export default function AdminProgramsPage() {
                 </FormField>
                 <FormField label="Kicker" error={fieldError(errors, "kicker")}>
                   <input
-                    className={INPUT_CLASS}
+                    className={ADMIN_INPUT_CLASS}
                     value={draft.kicker}
                     onChange={(event) => updateDraft("kicker", event.target.value)}
                     maxLength={80}
@@ -999,13 +995,13 @@ export default function AdminProgramsPage() {
                 </FormField>
               </div>
 
-              <div className="mt-7 border-t border-white/[0.06] pt-7">
+              <div className="mt-7 border-t border-border pt-7">
                 <div className="mb-4 flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                    <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
                       Highlights
                     </h3>
-                    <p className="mt-1 font-body text-xs text-white/35">
+                    <p className="mt-1 font-body text-xs text-muted-foreground">
                       Ordered short points used by the public program layout.
                     </p>
                   </div>
@@ -1013,14 +1009,14 @@ export default function AdminProgramsPage() {
                     type="button"
                     onClick={addHighlight}
                     disabled={draft.highlights.length >= 200}
-                    className="rounded-lg border border-white/10 px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-white/65 transition hover:bg-white/[0.05] disabled:opacity-30"
+                    className="rounded-lg border border-border px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:opacity-30"
                   >
                     Add highlight
                   </button>
                 </div>
                 {fieldError(errors, "highlights")}
                 {draft.highlights.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-white/[0.08] px-4 py-6 text-center font-body text-sm text-white/30">
+                  <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center font-body text-sm text-muted-foreground">
                     No highlights added.
                   </p>
                 ) : (
@@ -1028,22 +1024,22 @@ export default function AdminProgramsPage() {
                     {draft.highlights.map((highlight, index) => (
                       <div key={`${index}-${draft.highlights.length}`} className="flex items-start gap-2">
                         <input
-                          className={INPUT_CLASS}
+                          className={ADMIN_INPUT_CLASS}
                           value={highlight}
                           onChange={(event) => setHighlight(index, event.target.value)}
                           maxLength={320}
                           aria-label={`Highlight ${index + 1}`}
                         />
-                        <button type="button" onClick={() => reorderHighlight(index, -1)} disabled={index === 0} className="rounded-lg border border-white/[0.08] px-3 py-2.5 text-xs text-white/45 disabled:opacity-20" aria-label={`Move highlight ${index + 1} up`}>↑</button>
-                        <button type="button" onClick={() => reorderHighlight(index, 1)} disabled={index === draft.highlights.length - 1} className="rounded-lg border border-white/[0.08] px-3 py-2.5 text-xs text-white/45 disabled:opacity-20" aria-label={`Move highlight ${index + 1} down`}>↓</button>
-                        <button type="button" onClick={() => removeHighlight(index)} className="rounded-lg border border-red-400/15 px-3 py-2.5 text-xs text-red-300/70" aria-label={`Remove highlight ${index + 1}`}>×</button>
+                        <button type="button" onClick={() => reorderHighlight(index, -1)} disabled={index === 0} className="rounded-lg border border-border px-3 py-2.5 text-xs text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} up`}>↑</button>
+                        <button type="button" onClick={() => reorderHighlight(index, 1)} disabled={index === draft.highlights.length - 1} className="rounded-lg border border-border px-3 py-2.5 text-xs text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} down`}>↓</button>
+                        <button type="button" onClick={() => removeHighlight(index)} className="rounded-lg border border-destructive/15 px-3 py-2.5 text-xs text-destructive/70" aria-label={`Remove highlight ${index + 1}`}>×</button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              <div className="mt-7 grid gap-5 border-t border-white/[0.06] pt-7 sm:grid-cols-2">
+              <div className="mt-7 grid gap-5 border-t border-border pt-7 sm:grid-cols-2">
                 <FormField label="Layout variant">
                   <NativeSelect value={draft.layoutVariant} onChange={(event) => updateDraft("layoutVariant", event.target.value as ProgramDraft["layoutVariant"])}>
                     <NativeSelectOption value="statement_band">Statement band</NativeSelectOption>
@@ -1063,7 +1059,7 @@ export default function AdminProgramsPage() {
               {activeTab === "media" && (
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
                 <div>
-                  <span className={LABEL_CLASS}>Hero image</span>
+                  <span className={ADMIN_LABEL_CLASS}>Hero image</span>
                   <FileUpload
                     label="Upload hero image"
                     accept="image/jpeg,image/png,image/webp"
@@ -1077,7 +1073,7 @@ export default function AdminProgramsPage() {
                   />
                 </div>
                 <div>
-                  <span className={LABEL_CLASS}>Detail image</span>
+                  <span className={ADMIN_LABEL_CLASS}>Detail image</span>
                   <FileUpload
                     label="Upload detail image"
                     accept="image/jpeg,image/png,image/webp"
@@ -1097,10 +1093,10 @@ export default function AdminProgramsPage() {
               <>
               <div className="mt-6">
                 <div className="mb-4">
-                  <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                  <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
                     Registration section
                   </h3>
-                  <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/35">
+                  <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
                     The band shown partway down the public program page. Every
                     field below starts filled in with the standard wording —
                     edit it, or clear a field to keep it updating automatically
@@ -1111,20 +1107,20 @@ export default function AdminProgramsPage() {
                   </p>
                 </div>
 
-                <label className="flex items-start gap-3 rounded-xl border border-white/[0.07] bg-black/15 p-4">
+                <label className="flex items-start gap-3 rounded-xl border border-border bg-black/15 p-4">
                   <input
                     type="checkbox"
-                    className="mt-0.5 h-4 w-4 flex-none accent-red-600"
+                    className="mt-0.5 h-4 w-4 flex-none accent-destructive"
                     checked={draft.registrationEnabled}
                     onChange={(event) =>
                       updateDraft("registrationEnabled", event.target.checked)
                     }
                   />
                   <span>
-                    <span className="block font-display text-xs font-bold uppercase tracking-[0.16em] text-white/70">
+                    <span className="block font-display text-xs font-bold uppercase tracking-[0.16em] text-foreground">
                       Show the registration section on this program page
                     </span>
-                    <span className="mt-1 block font-body text-xs text-white/35">
+                    <span className="mt-1 block font-body text-xs text-muted-foreground">
                       When on, this program leads with the registration band and
                       its image gallery instead of the standard highlight band.
                     </span>
@@ -1136,10 +1132,10 @@ export default function AdminProgramsPage() {
                     drive now, instead of several groups above it. */}
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
                   <FormField label="Button label" error={fieldError(errors, "externalCtaLabel")}>
-                    <input className={INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
+                    <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
                   </FormField>
                   <FormField label="Button link" error={fieldError(errors, "externalCtaHref")}>
-                    <input className={INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
+                    <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
                   </FormField>
                 </div>
 
@@ -1149,7 +1145,7 @@ export default function AdminProgramsPage() {
                     error={fieldError(errors, "registrationEyebrow")}
                   >
                     <input
-                      className={INPUT_CLASS}
+                      className={ADMIN_INPUT_CLASS}
                       value={draft.registrationEyebrow}
                       onChange={(event) =>
                         updateDraft("registrationEyebrow", event.target.value)
@@ -1162,7 +1158,7 @@ export default function AdminProgramsPage() {
                     error={fieldError(errors, "registrationHeadline")}
                   >
                     <input
-                      className={INPUT_CLASS}
+                      className={ADMIN_INPUT_CLASS}
                       value={draft.registrationHeadline}
                       onChange={(event) =>
                         updateDraft("registrationHeadline", event.target.value)
@@ -1206,7 +1202,7 @@ export default function AdminProgramsPage() {
                     error={fieldError(errors, "registrationPendingLabel")}
                   >
                     <input
-                      className={INPUT_CLASS}
+                      className={ADMIN_INPUT_CLASS}
                       value={draft.registrationPendingLabel}
                       onChange={(event) =>
                         updateDraft(
@@ -1220,13 +1216,13 @@ export default function AdminProgramsPage() {
                 </div>
               </div>
 
-              <div className="mt-7 border-t border-white/[0.06] pt-7">
+              <div className="mt-7 border-t border-border pt-7">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-display text-sm font-black uppercase tracking-wider text-white">
+                    <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
                       Registration image gallery
                     </h3>
-                    <p className="mt-1 max-w-xl font-body text-xs leading-5 text-white/35">
+                    <p className="mt-1 max-w-xl font-body text-xs leading-5 text-muted-foreground">
                       Photos beside the registration section. Two or more
                       cross-fade as a slideshow. Up to{" "}
                       {PROGRAM_MEDIA_LIMITS.items} images; JPEG, PNG, or WebP.
@@ -1239,7 +1235,7 @@ export default function AdminProgramsPage() {
                       uploadingGallery ||
                       gallery.length >= PROGRAM_MEDIA_LIMITS.items
                     }
-                    className="rounded-lg border border-white/10 px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-white/65 transition hover:bg-white/[0.05] disabled:opacity-30"
+                    className="rounded-lg border border-border px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:opacity-30"
                   >
                     {uploadingGallery && <Loader className="mr-2 inline size-4 animate-spin" />}
                     {uploadingGallery ? "Uploading…" : "Add image"}
@@ -1256,7 +1252,7 @@ export default function AdminProgramsPage() {
                 </div>
 
                 {gallery.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-white/[0.08] px-4 py-6 text-center font-body text-sm text-white/30">
+                  <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center font-body text-sm text-muted-foreground">
                     No gallery images yet. Without them the registration section
                     shows this program&rsquo;s detail or hero photo.
                   </p>
@@ -1265,9 +1261,9 @@ export default function AdminProgramsPage() {
                     {gallery.map((item, index) => (
                       <li
                         key={item.id ?? `new-${index}`}
-                        className="rounded-xl border border-white/[0.07] bg-black/15 p-3"
+                        className="rounded-xl border border-border bg-black/15 p-3"
                       >
-                        <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-white/[0.06] bg-black/25">
+                        <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-border bg-black/25">
                           {item.url ? (
                             <ResilientImage
                               src={item.url}
@@ -1277,12 +1273,12 @@ export default function AdminProgramsPage() {
                               className="object-cover"
                             />
                           ) : null}
-                          <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-white/70">
+                          <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">
                             {index + 1}
                           </span>
                         </div>
                         <input
-                          className={`${INPUT_CLASS} mt-3`}
+                          className={`${ADMIN_INPUT_CLASS} mt-3`}
                           value={item.alt}
                           onChange={(event) =>
                             setGalleryAlt(index, event.target.value)
@@ -1296,7 +1292,7 @@ export default function AdminProgramsPage() {
                             type="button"
                             onClick={() => reorderGallery(index, -1)}
                             disabled={index === 0}
-                            className="flex-1 rounded-md border border-white/[0.06] py-1.5 font-display text-xs uppercase text-white/45 transition hover:bg-white/[0.05] disabled:opacity-20"
+                            className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
                             aria-label={`Move gallery image ${index + 1} up`}
                           >
                             ↑
@@ -1305,7 +1301,7 @@ export default function AdminProgramsPage() {
                             type="button"
                             onClick={() => reorderGallery(index, 1)}
                             disabled={index === gallery.length - 1}
-                            className="flex-1 rounded-md border border-white/[0.06] py-1.5 font-display text-xs uppercase text-white/45 transition hover:bg-white/[0.05] disabled:opacity-20"
+                            className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
                             aria-label={`Move gallery image ${index + 1} down`}
                           >
                             ↓
@@ -1313,7 +1309,7 @@ export default function AdminProgramsPage() {
                           <button
                             type="button"
                             onClick={() => removeGalleryImage(index)}
-                            className="rounded-md border border-red-400/15 px-3 py-1.5 font-display text-xs uppercase text-red-300/70"
+                            className="rounded-md border border-destructive/15 px-3 py-1.5 font-display text-xs uppercase text-destructive/70"
                             aria-label={`Remove gallery image ${index + 1}`}
                           >
                             Remove
@@ -1327,7 +1323,7 @@ export default function AdminProgramsPage() {
               </>
               )}
 
-              <div className="mt-8 flex flex-col-reverse gap-4 border-t border-white/[0.06] pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-8 flex flex-col-reverse gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <AdminSaveFeedback saving={saving} saved={saved} savingLabel="Saving program…" successLabel="Program saved" />
                 <button
                   type="button"
@@ -1335,7 +1331,7 @@ export default function AdminProgramsPage() {
                   disabled={
                     saving || uploadingRole !== null || uploadingGallery || !dirty
                   }
-                  className="rounded-lg bg-red-600 px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="rounded-lg bg-destructive px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
                 >
                   {(saving || uploadingRole !== null || uploadingGallery) && (
                     <Loader className="mr-2 inline size-4 animate-spin" />
@@ -1349,17 +1345,17 @@ export default function AdminProgramsPage() {
       )}
 
       {!loading && draft && (
-        <section className="mt-6 rounded-2xl border border-white/[0.06] bg-[#151515] p-5 sm:p-7">
-          <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+        <section className="mt-6 rounded-2xl border border-border bg-background p-5 sm:p-7">
+          <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
             Program page preview
           </p>
-          <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-white/30">
+          <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
             The real public program page, at desktop proportions and scaled to
             fit, built from the program you are editing including its unsaved
             changes. Turning the Registration tab&rsquo;s toggle on shows the
             registration band exactly where visitors would find it.
           </p>
-          <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.08]">
+          <div className="mt-4 overflow-hidden rounded-xl border border-border">
             <ScaledProgramPreview
               program={previewProgram}
               otherPrograms={previewOtherPrograms}
@@ -1381,10 +1377,7 @@ function ProgramTabs({
   disabled: boolean;
 }) {
   return (
-    <div
-      className="mt-3 grid gap-1 rounded-lg p-1 sm:grid-cols-3"
-      style={{ backgroundColor: "rgba(255,255,255,0.025)" }}
-    >
+    <div className="mt-3 grid gap-1 rounded-lg bg-card p-1 sm:grid-cols-3">
       {PROGRAM_EDITOR_TABS.map((tab) => {
         const selected = tab.id === value;
         return (
@@ -1394,12 +1387,9 @@ function ProgramTabs({
             onClick={() => onChange(tab.id)}
             disabled={disabled}
             aria-pressed={selected}
-            className="font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors"
-            style={{
-              backgroundColor: selected ? "rgba(231,0,27,0.9)" : "transparent",
-              color: selected ? "white" : "rgba(255,255,255,0.45)",
-              cursor: disabled ? "not-allowed" : "pointer",
-            }}
+            className={`font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors disabled:cursor-not-allowed ${
+              selected ? "bg-destructive/90 text-white" : "text-muted-foreground"
+            }`}
           >
             {tab.label}
           </button>
@@ -1420,7 +1410,7 @@ function FormField({
 }) {
   return (
     <label className="block">
-      <span className={LABEL_CLASS}>{label}</span>
+      <span className={ADMIN_LABEL_CLASS}>{label}</span>
       {children}
       {error}
     </label>

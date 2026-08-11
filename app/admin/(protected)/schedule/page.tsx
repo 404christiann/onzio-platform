@@ -4,6 +4,7 @@ import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import SeasonSelect from "@/components/admin/SeasonSelect";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import OpponentCrest from "@/components/OpponentCrest";
 import { useClubContext } from "@/components/ClubContextProvider";
@@ -328,12 +329,12 @@ export default function SchedulePage() {
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1
-            className="font-display font-black uppercase text-white leading-none"
+            className="font-display font-black uppercase text-foreground leading-none"
             style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
           >
             Schedule
           </h1>
-          <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
+          <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
             Add, edit, or remove matches.
           </p>
         </div>
@@ -356,8 +357,7 @@ export default function SchedulePage() {
               setError(null);
             }}
             disabled={!selectedSeasonId}
-            className="flex-shrink-0 px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white transition-opacity"
-            style={{ backgroundColor: "#dc2626", fontSize: "1.1rem", opacity: selectedSeasonId ? 1 : 0.5 }}
+            className="flex-shrink-0 px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white transition-opacity hover:bg-destructive/90 disabled:opacity-50"
           >
             {addOpen ? "Cancel" : "+ Add Match"}
           </button>
@@ -366,18 +366,15 @@ export default function SchedulePage() {
 
       {/* Global feedback */}
       {error && (
-        <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>
+        <p className="font-body text-sm mb-4 text-destructive">
           Error: {error}
         </p>
       )}
 
       {/* Add form */}
       {addOpen && (
-        <div
-          className="rounded-xl p-5 mb-6"
-          style={{ backgroundColor: "#161616", border: "1px solid rgba(220,38,38,0.25)" }}
-        >
-          <p className="font-display font-black uppercase text-xs tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <div className="rounded-xl border border-destructive/25 bg-card p-5 mb-6">
+          <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">
             New Match
           </p>
           <MatchForm form={addForm} onChange={setAddForm} seasons={seasons} cleanupDraftUploads />
@@ -385,8 +382,7 @@ export default function SchedulePage() {
             <button
               onClick={handleAdd}
               disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Match"}
@@ -397,11 +393,11 @@ export default function SchedulePage() {
 
       {/* Match list */}
       {loading || seasonsLoading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
           Loading…
         </p>
       ) : sorted.length === 0 ? (
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           No matches for {selectedSeason?.label ?? "the selected season"}. Add one above.
         </p>
       ) : (
@@ -426,16 +422,14 @@ export default function SchedulePage() {
                       <button
                         onClick={handleSaveEdit}
                         disabled={saving}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-                        style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                        style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent"
                       >
                         Cancel
                       </button>
@@ -451,7 +445,7 @@ export default function SchedulePage() {
                       <div className="min-w-0">
                       {/* Date + home/away badge */}
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-display font-bold text-white" style={{ fontSize: "1.1rem" }}>{m.date}</span>
+                        <span className="font-display font-bold text-foreground" style={{ fontSize: "1.1rem" }}>{m.date}</span>
                         <span className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>{m.time}</span>
                         <span
                           className={cn(
@@ -468,7 +462,7 @@ export default function SchedulePage() {
                       </div>
 
                       {/* Opponent */}
-                      <p className="font-display font-black uppercase text-white" style={{ fontSize: "1.25rem" }}>
+                      <p className="font-display font-black uppercase text-foreground" style={{ fontSize: "1.25rem" }}>
                         {m.home ? "vs" : "@"} {m.opponent}
                       </p>
 
@@ -614,7 +608,7 @@ function MatchForm({
           type="time"
           value={form.time}
           onChange={(e) => set("time", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -624,7 +618,7 @@ function MatchForm({
           placeholder="e.g. Portland FC"
           value={form.opponent}
           onChange={(e) => set("opponent", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -637,7 +631,7 @@ function MatchForm({
           placeholder="e.g. LA Galaxy Reserves"
           value={form.opponent_short_name ?? ""}
           onChange={(e) => set("opponent_short_name", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -647,7 +641,7 @@ function MatchForm({
           placeholder="e.g. UPSL 2027 Premier SoCal North"
           value={form.competition ?? ""}
           onChange={(e) => set("competition", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -682,20 +676,11 @@ function MatchForm({
 
       {!isAcademy && (
         <>
-          <div
-            className="mt-2 border-t pt-4 sm:col-span-2"
-            style={{ borderColor: "rgba(255,255,255,0.08)" }}
-          >
-            <p
-              className="font-display text-xs font-black uppercase tracking-widest"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
+          <div className="mt-2 border-t border-border pt-4 sm:col-span-2">
+            <p className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
               Presented By Sponsor
             </p>
-            <p
-              className="font-body mt-1 text-xs"
-              style={{ color: "rgba(255,255,255,0.28)" }}
-            >
+            <p className="font-body mt-1 text-xs text-muted-foreground">
               New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage.
             </p>
           </div>
@@ -706,7 +691,7 @@ function MatchForm({
               placeholder="e.g. Tepito Coffee"
               value={form.sponsor_name ?? ""}
               onChange={(e) => set("sponsor_name", e.target.value)}
-              style={inputStyle}
+              className={ADMIN_INPUT_CLASS}
             />
           </Field>
 
@@ -716,7 +701,7 @@ function MatchForm({
               placeholder="https://..."
               value={form.sponsor_link ?? ""}
               onChange={(e) => set("sponsor_link", e.target.value)}
-              style={inputStyle}
+              className={ADMIN_INPUT_CLASS}
             />
           </Field>
 
@@ -769,7 +754,7 @@ function MatchForm({
           placeholder="e.g. Delta Park"
           value={form.venue}
           onChange={(e) => set("venue", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -779,7 +764,7 @@ function MatchForm({
           placeholder="e.g. 1234 N Broadacre St"
           value={form.address ?? ""}
           onChange={(e) => set("address", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -789,7 +774,7 @@ function MatchForm({
           placeholder="e.g. Irvine"
           value={form.city ?? ""}
           onChange={(e) => set("city", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -799,24 +784,15 @@ function MatchForm({
           placeholder="e.g. CA"
           value={form.state ?? ""}
           onChange={(e) => set("state", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
-      <div
-        className="mt-2 border-t pt-4 sm:col-span-2"
-        style={{ borderColor: "rgba(255,255,255,0.08)" }}
-      >
-        <p
-          className="font-display text-xs font-black uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
+      <div className="mt-2 border-t border-border pt-4 sm:col-span-2">
+        <p className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
           Match Result
         </p>
-        <p
-          className="font-body mt-1 text-xs"
-          style={{ color: "rgba(255,255,255,0.28)" }}
-        >
+        <p className="font-body mt-1 text-xs text-muted-foreground">
           Leave both scores blank until the match is complete. The public schedule updates automatically once both scores are saved.
         </p>
       </div>
@@ -830,7 +806,7 @@ function MatchForm({
           placeholder="e.g. 2"
           value={form.rose_city_score ?? ""}
           onChange={(e) => setScore("rose_city_score", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -843,7 +819,7 @@ function MatchForm({
           placeholder="e.g. 1"
           value={form.opponent_score ?? ""}
           onChange={(e) => setScore("opponent_score", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
     </div>
@@ -886,13 +862,7 @@ function OpponentLogoUpload({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="px-3 py-2 rounded-lg font-display font-bold uppercase tracking-widest text-xs"
-        style={{
-          backgroundColor: "#1e1e1e",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: uploading ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.7)",
-          cursor: uploading ? "not-allowed" : "pointer",
-        }}
+        className="px-3 py-2 rounded-lg font-display font-bold uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
       </button>
@@ -900,8 +870,7 @@ function OpponentLogoUpload({
         <button
           type="button"
           onClick={() => void onRemove()}
-          className="font-display font-bold uppercase tracking-widest text-xs"
-          style={{ color: "rgba(220,38,38,0.8)" }}
+          className="font-display font-bold uppercase tracking-widest text-xs text-destructive/80"
         >
           Remove
         </button>
@@ -914,7 +883,7 @@ function OpponentLogoUpload({
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
       {error && (
-        <p className="font-body text-xs" style={{ color: "#dc2626" }}>{error}</p>
+        <p className="font-body text-xs text-destructive">{error}</p>
       )}
     </div>
   );
@@ -952,11 +921,7 @@ function SponsorLogoUpload({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div
-        className="relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-lg"
-        style={{
-          backgroundColor: "#FFFFFF",
-          border: "1px solid rgba(255,255,255,0.12)",
-        }}
+        className="relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-lg border border-border bg-white"
       >
         {logoUrl ? (
           <Image
@@ -967,10 +932,7 @@ function SponsorLogoUpload({
             className="object-contain p-2"
           />
         ) : (
-          <span
-            className="font-display text-[0.55rem] font-bold uppercase tracking-widest"
-            style={{ color: "rgba(0,0,0,0.35)" }}
-          >
+          <span className="font-display text-[0.55rem] font-bold uppercase tracking-widest text-black/35">
             No Logo
           </span>
         )}
@@ -979,13 +941,7 @@ function SponsorLogoUpload({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="rounded-lg px-3 py-2 font-display text-xs font-bold uppercase tracking-widest"
-        style={{
-          backgroundColor: "#1e1e1e",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: uploading ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.7)",
-          cursor: uploading ? "not-allowed" : "pointer",
-        }}
+        className="rounded-lg border border-border bg-card px-3 py-2 font-display text-xs font-bold uppercase tracking-widest text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
       </button>
@@ -993,8 +949,7 @@ function SponsorLogoUpload({
         <button
           type="button"
           onClick={() => void onRemove()}
-          className="font-display text-xs font-bold uppercase tracking-widest"
-          style={{ color: "rgba(220,38,38,0.8)" }}
+          className="font-display text-xs font-bold uppercase tracking-widest text-destructive/80"
         >
           Remove
         </button>
@@ -1007,7 +962,7 @@ function SponsorLogoUpload({
         onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
       />
       {error && (
-        <p className="font-body w-full text-xs" style={{ color: "#dc2626" }}>
+        <p className="font-body w-full text-xs text-destructive">
           {error}
         </p>
       )}
@@ -1018,32 +973,16 @@ function SponsorLogoUpload({
 function Field({ label, required, help, children }: { label: string; required?: boolean; help?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label
-        className="block font-display text-xs tracking-widest uppercase mb-1"
-        style={{ color: "rgba(255,255,255,0.35)" }}
-      >
+      <label className={ADMIN_LABEL_CLASS}>
         {label}
-        {required && <span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>}
+        {required && <span className="ml-1 text-destructive">*</span>}
       </label>
       {children}
       {help && (
-        <p className="font-body mt-1.5 text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.25)" }}>
+        <p className="font-body mt-1.5 text-xs leading-relaxed text-muted-foreground">
           {help}
         </p>
       )}
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  backgroundColor: "#0e0e0e",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "8px",
-  padding: "8px 12px",
-  color: "white",
-  fontSize: "0.875rem",
-  fontFamily: "inherit",
-  outline: "none",
-  colorScheme: "dark",
-};

@@ -207,12 +207,12 @@ export default function SeasonStatsPage() {
       <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h1
-            className="font-display font-black uppercase text-white leading-none"
+            className="font-display font-black uppercase text-foreground leading-none"
             style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
           >
             Season Stats
           </h1>
-          <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
+          <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
             Edit season totals for each player. Changes apply to the public roster page.
           </p>
         </div>
@@ -228,8 +228,8 @@ export default function SeasonStatsPage() {
           <button
             onClick={handleSave}
             disabled={saving || loading || !hasChanges || !selectedSeasonId}
-            className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white"
-            style={{ fontSize: "1.1rem", backgroundColor: "#dc2626", opacity: saving || !hasChanges || !selectedSeasonId ? 0.4 : 1, cursor: saving || !hasChanges || !selectedSeasonId ? "not-allowed" : "pointer" }}
+            className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground bg-destructive transition-opacity hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ fontSize: "1.1rem" }}
           >
             {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
             {saving ? "Saving…" : "Save All"}
@@ -238,19 +238,19 @@ export default function SeasonStatsPage() {
       </div>
 
       {error && (
-        <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>Error: {error}</p>
+        <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>
       )}
 
       {loading || seasonsLoading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
           Loading…
         </p>
       ) : !selectedSeasonId ? (
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           Create a season before editing season stats.
         </p>
       ) : players.length === 0 ? (
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           No players are assigned to this season.
         </p>
       ) : (

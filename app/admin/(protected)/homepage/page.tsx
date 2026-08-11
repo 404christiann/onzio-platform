@@ -4,9 +4,10 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { Loader } from "lucide-react";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import FileUpload from "@/components/admin/FileUpload";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,17 +102,6 @@ const EMPTY_HERO_FIELDS: HeroFields = {
   primary_cta_href: DEFAULT_HOMEPAGE_HERO_CONTENT.primary_cta_href,
   secondary_cta_label: DEFAULT_HOMEPAGE_HERO_CONTENT.secondary_cta_label,
   secondary_cta_href: DEFAULT_HOMEPAGE_HERO_CONTENT.secondary_cta_href,
-};
-
-const inputStyle: CSSProperties = {
-  width: "100%",
-  backgroundColor: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "0.5rem",
-  color: "white",
-  padding: "0.75rem 0.85rem",
-  fontSize: "0.95rem",
-  outline: "none",
 };
 
 function behindSectionToFields(section: DBBehindTheRoseSection): BehindFields {
@@ -504,15 +494,12 @@ export default function AdminHomepagePage() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       <div className="mb-4 sm:mb-6">
         <h1
-          className="font-display font-black uppercase leading-none text-white"
+          className="font-display font-black uppercase leading-none text-foreground"
           style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
         >
           Homepage
         </h1>
-        <p
-          className="font-body mt-1"
-          style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}
-        >
+        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
           {hidesLegacyHomepageSections
             ? "Manage the homepage hero and the story section beside your club video."
             : "Manage homepage slideshow photos and the Behind the Rose video section."}
@@ -520,22 +507,13 @@ export default function AdminHomepagePage() {
       </div>
 
       {loading ? (
-        <p
-          className="font-display text-sm uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.3)" }}
-        >
+        <p className="font-display text-sm uppercase tracking-widest text-muted-foreground">
           Loading…
         </p>
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
-          <section
-            className="dark min-w-0 self-start rounded-xl p-4 sm:p-5"
-            style={{
-              backgroundColor: "#141414",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
-            <div className="mb-4 flex gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+          <section className="dark min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
+            <div className="mb-4 flex gap-1 rounded-lg bg-card p-1">
               {[
                 { id: "hero" as const, label: "Hero", count: null },
                 { id: "slideshow" as const, label: "Slideshow", count: `${draftPhotos.length}/${MAX_HOMEPAGE_SLIDESHOW_PHOTOS}` },
@@ -552,15 +530,13 @@ export default function AdminHomepagePage() {
                     key={tab.id}
                     type="button"
                     onClick={() => selectTab(tab.id)}
-                    className="font-display flex-1 rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors"
-                    style={{
-                      backgroundColor: isActive ? "#FFFFFF" : "transparent",
-                      color: isActive ? "#141414" : "rgba(255,255,255,0.45)",
-                    }}
+                    className={`font-display flex-1 rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
+                      isActive ? "bg-foreground text-background" : "text-muted-foreground"
+                    }`}
                   >
                     {tab.label}
                     {tab.count && (
-                      <span style={{ color: isActive ? "rgba(20,20,20,0.45)" : "rgba(255,255,255,0.25)" }}>
+                      <span className={isActive ? "text-background/60" : "text-muted-foreground/60"}>
                         {" "}
                         {tab.count}
                       </span>
@@ -577,21 +553,21 @@ export default function AdminHomepagePage() {
                   <input
                     value={heroFields.eyebrow}
                     onChange={(event) => setHeroField("eyebrow", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Headline Line One">
                   <input
                     value={heroFields.headline_line_one}
                     onChange={(event) => setHeroField("headline_line_one", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Headline Line Two">
                   <input
                     value={heroFields.headline_line_two}
                     onChange={(event) => setHeroField("headline_line_two", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Intro">
@@ -606,7 +582,7 @@ export default function AdminHomepagePage() {
                     <input
                       value={heroFields.primary_cta_label}
                       onChange={(event) => setHeroField("primary_cta_label", event.target.value)}
-                      style={inputStyle}
+                      className={ADMIN_INPUT_CLASS}
                     />
                   </Field>
                   <Field label="Primary Link">
@@ -627,7 +603,7 @@ export default function AdminHomepagePage() {
                     <input
                       value={heroFields.secondary_cta_label}
                       onChange={(event) => setHeroField("secondary_cta_label", event.target.value)}
-                      style={inputStyle}
+                      className={ADMIN_INPUT_CLASS}
                     />
                   </Field>
                   <Field label="Secondary Link">
@@ -652,23 +628,14 @@ export default function AdminHomepagePage() {
               <div>
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                   <div>
-                    <p
-                      className="font-display text-xs uppercase tracking-widest"
-                      style={{ color: "rgba(255,255,255,0.35)" }}
-                    >
+                    <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                       Homepage Slideshow
                     </p>
-                    <p
-                      className="font-body mt-1 text-xs"
-                      style={{ color: "rgba(255,255,255,0.22)" }}
-                    >
+                    <p className="font-body mt-1 text-xs text-muted-foreground">
                       Up to 6 ordered photos. Remove one before adding another.
                     </p>
                   </div>
-                  <span
-                    className="font-display text-xs uppercase tracking-widest"
-                    style={{ color: "rgba(255,255,255,0.25)" }}
-                  >
+                  <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                     {draftPhotos.length}/{MAX_HOMEPAGE_SLIDESHOW_PHOTOS}
                   </span>
                 </div>
@@ -677,7 +644,7 @@ export default function AdminHomepagePage() {
                   <input
                     value={slideshowFields.season_label}
                     onChange={(event) => setSlideshowField("season_label", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
 
@@ -685,8 +652,7 @@ export default function AdminHomepagePage() {
                   {draftPhotos.map((photo, index) => (
                     <div key={photo.id ?? photo.url} className="min-w-0">
                       <div
-                        className="group relative aspect-video w-full overflow-hidden rounded-lg"
-                        style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+                        className="group relative aspect-video w-full overflow-hidden rounded-lg border border-border"
                       >
                         <Image
                           src={photo.url}
@@ -698,8 +664,7 @@ export default function AdminHomepagePage() {
                         <button
                           type="button"
                           onClick={() => void removePhoto(index)}
-                          className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                          style={{ backgroundColor: "#E7001B" }}
+                          className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                           aria-label={`Remove homepage slide ${index + 1}`}
                         >
                           <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
@@ -711,8 +676,7 @@ export default function AdminHomepagePage() {
                         value={photo.alt}
                         onChange={(event) => setPhotoAlt(index, event.target.value)}
                         placeholder={`Slide ${index + 1} alt text`}
-                        className="mt-2"
-                        style={{ ...inputStyle, padding: "0.55rem 0.65rem", fontSize: "0.82rem" }}
+                        className={`mt-2 ${ADMIN_INPUT_CLASS}`}
                       />
                       <div className="mt-1 flex gap-1">
                         <OrderButton
@@ -745,10 +709,7 @@ export default function AdminHomepagePage() {
                 </div>
 
                 {!canAddHomepageSlideshowPhoto(draftPhotos.length) && (
-                  <p
-                    className="font-body mt-2 text-xs"
-                    style={{ color: "rgba(255,255,255,0.25)" }}
-                  >
+                  <p className="font-body mt-2 text-xs text-muted-foreground">
                     {MAX_HOMEPAGE_SLIDESHOW_PHOTOS} photo max.
                   </p>
                 )}
@@ -757,10 +718,7 @@ export default function AdminHomepagePage() {
 
             {activeTab === "story" && (
               <div className="space-y-4">
-                <p
-                  className="font-body text-xs"
-                  style={{ color: "rgba(255,255,255,0.28)" }}
-                >
+                <p className="font-body text-xs text-muted-foreground">
                   The story section beside the club video on your homepage.
                   Every field below starts filled in with the standard wording
                   — edit it, or clear a field to keep it updating
@@ -768,12 +726,12 @@ export default function AdminHomepagePage() {
                   video itself is set by Onzio.
                 </p>
 
-                <label className="flex items-center justify-between gap-4 rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+                <label className="flex items-center justify-between gap-4 rounded-lg bg-card p-3">
                   <span>
-                    <span className="font-display block text-xs uppercase tracking-widest text-white">
+                    <span className="font-display block text-xs uppercase tracking-widest text-foreground">
                       Visible on homepage
                     </span>
-                    <span className="font-body mt-1 block text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
+                    <span className="font-body mt-1 block text-xs text-muted-foreground">
                       Turn off to hide the section without deleting its saved content.
                     </span>
                   </span>
@@ -795,7 +753,7 @@ export default function AdminHomepagePage() {
                     value={storyFields.heading}
                     onChange={(event) => setStoryField("heading", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.heading}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="First Paragraph" help={storyErrors.bodyPrimary}>
@@ -821,7 +779,7 @@ export default function AdminHomepagePage() {
                     value={storyFields.ctaLabel}
                     onChange={(event) => setStoryField("ctaLabel", event.target.value)}
                     maxLength={HOMEPAGE_STORY_LIMITS.ctaLabel}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
               </div>
@@ -829,12 +787,12 @@ export default function AdminHomepagePage() {
 
             {activeTab === "behind" && (
               <div className="space-y-4">
-                <label className="flex items-center justify-between gap-4 rounded-lg p-3" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+                <label className="flex items-center justify-between gap-4 rounded-lg bg-card p-3">
                   <span>
-                    <span className="font-display block text-xs uppercase tracking-widest text-white">
+                    <span className="font-display block text-xs uppercase tracking-widest text-foreground">
                       Visible on homepage
                     </span>
-                    <span className="font-body mt-1 block text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
+                    <span className="font-body mt-1 block text-xs text-muted-foreground">
                       Turn off to hide the section without deleting its saved content.
                     </span>
                   </span>
@@ -852,14 +810,14 @@ export default function AdminHomepagePage() {
                   <input
                     value={behindFields.eyebrow}
                     onChange={(event) => setBehindField("eyebrow", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Title">
                   <input
                     value={behindFields.title}
                     onChange={(event) => setBehindField("title", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Description">
@@ -874,21 +832,21 @@ export default function AdminHomepagePage() {
                     type="url"
                     value={behindFields.video_url}
                     onChange={(event) => setBehindField("video_url", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Video Title">
                   <input
                     value={behindFields.video_title}
                     onChange={(event) => setBehindField("video_title", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
                 <Field label="Caption">
                   <input
                     value={behindFields.caption}
                     onChange={(event) => setBehindField("caption", event.target.value)}
-                    style={inputStyle}
+                    className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
               </div>
@@ -896,7 +854,7 @@ export default function AdminHomepagePage() {
             </SlidingPanel>
 
             {error && (
-              <p className="font-body mt-4 text-sm" style={{ color: "#E7001B" }}>
+              <p className="font-body mt-4 text-sm text-destructive">
                 {error}
               </p>
             )}
@@ -905,40 +863,24 @@ export default function AdminHomepagePage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={saveDisabled}
-              className="font-display mt-5 w-full rounded-lg py-3 text-sm font-bold uppercase tracking-widest transition-opacity"
-              style={{
-                backgroundColor: "#E7001B",
-                color: "white",
-                opacity: saveDisabled ? 0.5 : 1,
-                cursor: saveDisabled ? "not-allowed" : "pointer",
-              }}
+              className="font-display mt-5 w-full rounded-lg bg-destructive py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Homepage"}
             </button>
           </section>
 
-          <section
-            className="min-w-0 overflow-hidden rounded-xl p-4 sm:p-5"
-            style={{
-              backgroundColor: "#141414",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
+          <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-background p-4 sm:p-5">
             <div className="mb-4">
-              <p
-                className="font-display text-xs uppercase tracking-widest"
-                style={{ color: "rgba(255,255,255,0.35)" }}
-              >
+              <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                 Homepage Preview
               </p>
             </div>
 
             <div
-              className="mb-6 overflow-hidden rounded-lg p-5 sm:p-7"
+              className="mb-6 overflow-hidden rounded-lg border border-border p-5 sm:p-7"
               style={{
                 background: "linear-gradient(132deg, #1B2958 0%, #1B2958 48%, #AD3234 142%)",
-                border: "1px solid rgba(255,255,255,0.08)",
               }}
             >
               {heroFields.eyebrow && (
@@ -1010,7 +952,7 @@ export default function AdminHomepagePage() {
               </div>
             ) : (
             <>
-            <div className="overflow-hidden rounded-lg" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="overflow-hidden rounded-lg border border-border">
               {draftPhotos[0] ? (
                 <div className="relative aspect-[16/9] w-full">
                   <Image
@@ -1024,31 +966,31 @@ export default function AdminHomepagePage() {
                     <span className="font-display text-xs tracking-widest text-white/60">
                       01 / {String(draftPhotos.length).padStart(2, "0")}
                     </span>
-                    <div className="h-0.5 w-8" style={{ backgroundColor: "#E7001B" }} />
+                    <div className="h-0.5 w-8 bg-destructive" />
                   </div>
                 </div>
               ) : (
                 <div className="flex aspect-[16/9] items-center justify-center">
-                  <p className="font-display text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                     Slideshow hidden until a photo is added.
                   </p>
                 </div>
               )}
             </div>
 
-            <p className="font-display mt-3 text-xs font-semibold tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.5)" }}>
+            <p className="font-display mt-3 text-xs font-semibold tracking-widest uppercase text-muted-foreground">
               {slideshowFields.season_label}
             </p>
 
             {behindFields.visible && (
-              <div className="mt-6 rounded-lg p-5 text-center" style={{ backgroundColor: "#0e0e0e" }}>
-                <p className="font-display mb-2 text-xs font-bold uppercase tracking-widest" style={{ color: "#E7001B" }}>
+              <div className="mt-6 rounded-lg bg-background p-5 text-center">
+                <p className="font-display mb-2 text-xs font-bold uppercase tracking-widest text-destructive">
                   {behindFields.eyebrow}
                 </p>
-                <h2 className="font-display text-3xl font-black uppercase leading-none text-white sm:text-5xl">
+                <h2 className="font-display text-3xl font-black uppercase leading-none text-foreground sm:text-5xl">
                   {behindFields.title}
                 </h2>
-                <p className="font-body mx-auto mt-4 max-w-xl text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.5)" }}>
+                <p className="font-body mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
                   {behindFields.description}
                 </p>
                 <div className="mt-5 aspect-video w-full bg-black" style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.55)" }}>
@@ -1060,7 +1002,7 @@ export default function AdminHomepagePage() {
                     allowFullScreen
                   />
                 </div>
-                <p className="font-display mt-4 text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.2)" }}>
+                <p className="font-display mt-4 text-xs uppercase tracking-widest text-muted-foreground">
                   {behindFields.caption}
                 </p>
               </div>
@@ -1085,12 +1027,12 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="font-display mb-1 block text-xs uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.38)" }}>
+      <span className={ADMIN_LABEL_CLASS}>
         {label}
       </span>
       {children}
       {help && (
-        <span className="font-body mt-1 block text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
+        <span className="font-body mt-1 block text-xs text-muted-foreground">
           {help}
         </span>
       )}
@@ -1115,13 +1057,7 @@ function OrderButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-7 flex-1 items-center justify-center rounded-md text-xs transition-opacity"
-      style={{
-        backgroundColor: "rgba(255,255,255,0.05)",
-        color: "rgba(255,255,255,0.45)",
-        opacity: disabled ? 0.35 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-      }}
+      className="flex h-7 flex-1 items-center justify-center rounded-md bg-card text-xs text-muted-foreground transition-opacity hover:bg-accent disabled:cursor-not-allowed disabled:opacity-35"
     >
       {children}
     </button>

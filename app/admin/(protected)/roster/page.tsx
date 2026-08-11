@@ -7,6 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { Loader } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import FileUpload from "@/components/admin/FileUpload";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchActiveSeason } from "@/lib/queries";
@@ -186,12 +187,12 @@ export default function RosterPage() {
       {/* Header */}
       <div className="mb-8">
         <h1
-          className="font-display font-black uppercase text-white leading-none"
+          className="font-display font-black uppercase text-foreground leading-none"
           style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
         >
           Roster
         </h1>
-        <p className="font-body text-sm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body text-sm mt-1 text-muted-foreground">
           Manage players and staff.
         </p>
       </div>
@@ -202,13 +203,12 @@ export default function RosterPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest transition-all"
-            style={{
-              fontSize: "1.1rem",
-              backgroundColor: tab === t ? "#dc2626" : "#1a1a1a",
-              color: tab === t ? "white" : "rgba(255,255,255,0.4)",
-              border: `1px solid ${tab === t ? "#dc2626" : "rgba(255,255,255,0.07)"}`,
-            }}
+            className={`px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest border transition-all ${
+              tab === t
+                ? "border-destructive bg-destructive text-white"
+                : "border-border bg-card text-muted-foreground"
+            }`}
+            style={{ fontSize: "1.1rem" }}
           >
             {t}
           </button>
@@ -418,29 +418,28 @@ function PlayersTab() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6">
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           {players.filter(p => p.active).length} active · {players.filter(p => !p.active).length} inactive
         </p>
         <button
           onClick={() => { setAddOpen(o => !o); setAddForm(emptyPlayer()); setAddPhoto(null); setError(null); }}
-          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white"
-          style={{ backgroundColor: "#dc2626", fontSize: "1.1rem" }}
+          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white hover:bg-destructive/90"
+          style={{ fontSize: "1.1rem" }}
         >
           {addOpen ? "Cancel" : "+ Add Player"}
         </button>
       </div>
 
-      {error  && <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>Error: {error}</p>}
+      {error  && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {/* Add form */}
       {addOpen && (
-        <div className="rounded-xl p-5 mb-6" style={{ backgroundColor: "#161616", border: "1px solid rgba(220,38,38,0.25)" }}>
-          <p className="font-display font-black uppercase text-xs tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>New Player</p>
+        <div className="rounded-xl border border-destructive/25 bg-card p-5 mb-6">
+          <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">New Player</p>
           <PlayerFormFields form={addForm} onChange={setAddForm} photoFile={addPhoto} onPhotoChange={setAddPhoto} />
           <div className="mt-4">
             <button onClick={handleAdd} disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
               {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Player"}
             </button>
@@ -450,7 +449,7 @@ function PlayersTab() {
 
       {/* Player list grouped by position */}
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">Loading…</p>
       ) : (
         <div className="flex flex-col gap-3">
           {POSITIONS.map((pos) => {
@@ -534,14 +533,12 @@ function PlayerPositionGroup({
                       <PlayerFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} playerId={p.id} />
                       <div className="mt-4 flex gap-3">
                         <button onClick={handleSaveEdit} disabled={saving}
-                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-                          style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
                           {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
                           {saving ? "Saving…" : "Save"}
                         </button>
                         <button onClick={cancelEdit}
-                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                          style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}>
+                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent">
                           Cancel
                         </button>
                       </div>
@@ -564,7 +561,7 @@ function PlayerPositionGroup({
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>#{p.number} {p.name}</span>
+                            <span className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>#{p.number} {p.name}</span>
                             {!p.active && (
                               <span className="font-display uppercase px-2 py-0.5 rounded bg-muted/60 text-muted-foreground"
                                 style={{ fontSize: "0.65rem", letterSpacing: "0.08em" }}>
@@ -719,28 +716,27 @@ function StaffTab() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6">
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           {staff.filter(s => s.active).length} active · {staff.filter(s => !s.active).length} inactive
         </p>
         <button
           onClick={() => { setAddOpen(o => !o); setAddForm(emptyStaff()); setAddPhoto(null); setError(null); }}
-          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white"
-          style={{ backgroundColor: "#dc2626", fontSize: "1.1rem" }}>
+          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white hover:bg-destructive/90"
+          style={{ fontSize: "1.1rem" }}>
           {addOpen ? "Cancel" : "+ Add Staff"}
         </button>
       </div>
 
-      {error && <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>Error: {error}</p>}
+      {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {/* Add form */}
       {addOpen && (
-        <div className="rounded-xl p-5 mb-6" style={{ backgroundColor: "#161616", border: "1px solid rgba(220,38,38,0.25)" }}>
-          <p className="font-display font-black uppercase text-xs tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>New Staff Member</p>
+        <div className="rounded-xl border border-destructive/25 bg-card p-5 mb-6">
+          <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">New Staff Member</p>
           <StaffFormFields form={addForm} onChange={setAddForm} photoFile={addPhoto} onPhotoChange={setAddPhoto} />
           <div className="mt-4">
             <button onClick={handleAdd} disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
               {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Staff Member"}
             </button>
@@ -750,7 +746,7 @@ function StaffTab() {
 
       {/* Staff list */}
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">Loading…</p>
       ) : (
         <div className="flex flex-col gap-3">
           {staff.map((s) => {
@@ -763,14 +759,12 @@ function StaffTab() {
                     <StaffFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} />
                     <div className="mt-4 flex gap-3">
                       <button onClick={handleSaveEdit} disabled={saving}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-                        style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60">
                         {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button onClick={() => { setEditingId(null); setError(null); }}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                        style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}>
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent">
                         Cancel
                       </button>
                     </div>
@@ -793,7 +787,7 @@ function StaffTab() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{s.name}</span>
+                          <span className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{s.name}</span>
                           {!s.active && (
                             <span className="font-display uppercase px-2 py-0.5 rounded bg-muted/60 text-muted-foreground"
                               style={{ fontSize: "0.65rem", letterSpacing: "0.08em" }}>
@@ -914,9 +908,9 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
         savingLabel="Saving season stats…"
         successLabel="Season stats saved"
       />
-      <div className="mb-3" style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)" }} />
+      <div className="mb-3 h-px bg-border" />
       <div className="flex items-center justify-between mb-3">
-        <label className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <label className="font-display text-xs tracking-widest uppercase text-muted-foreground">
           Season Stats
         </label>
         {/* Season picker */}
@@ -933,10 +927,10 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
         </NativeSelect>
       </div>
 
-      {error && <p className="font-body text-xs mb-2" style={{ color: "#dc2626" }}>{error}</p>}
+      {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
 
       {loading ? (
-        <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">Loading…</p>
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
@@ -969,8 +963,7 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-5 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}
+              className="px-5 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-destructive text-white text-xs hover:bg-destructive/90 disabled:opacity-60"
             >
               {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
               {saving ? "Saving…" : "Save Stats"}
@@ -992,7 +985,7 @@ function StatField({
 }) {
   return (
     <div>
-      <label className="block font-display text-xs tracking-widest uppercase mb-1" style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.6rem" }}>
+      <label className="block font-display text-xs tracking-widest uppercase mb-1 text-muted-foreground" style={{ fontSize: "0.6rem" }}>
         {label}
       </label>
       <input
@@ -1000,7 +993,7 @@ function StatField({
         min={0}
         value={stats[field] ?? 0}
         onChange={(e) => onChange(field, Number(e.target.value))}
-        style={{ ...inputStyle, padding: "6px 10px" }}
+        className={ADMIN_INPUT_CLASS}
       />
     </div>
   );
@@ -1068,12 +1061,12 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
 
   return (
     <div>
-      <div className="mb-3" style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)" }} />
-      <label className="block font-display text-xs tracking-widest uppercase mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>
+      <div className="mb-3 h-px bg-border" />
+      <label className="block font-display text-xs tracking-widest uppercase mb-3 text-muted-foreground">
         Action Photos
       </label>
 
-      {error && <p className="font-body text-xs mb-2" style={{ color: "#dc2626" }}>{error}</p>}
+      {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
 
       <div className="flex flex-wrap gap-2 mb-3">
         {photos.map((photo) => (
@@ -1082,14 +1075,12 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
               src={photo.url}
               alt="Action photo"
               fallbackVariant="person"
-              className="w-full h-full object-cover rounded-lg"
-              style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+              className="w-full h-full rounded-lg border border-border object-cover"
             />
             <button
               type="button"
               onClick={() => void handleDelete(photo)}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ backgroundColor: "#dc2626" }}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label="Delete photo"
             >
               <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
@@ -1171,11 +1162,11 @@ function PlayerFormFields({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Name" required>
           <input type="text" placeholder="e.g. Christian Alcala" value={form.name}
-            onChange={(e) => set("name", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Jersey #" required>
           <input type="number" min={1} value={form.number || ""}
-            onChange={(e) => set("number", Number(e.target.value))} style={inputStyle} />
+            onChange={(e) => set("number", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Position" required>
           <NativeSelect value={form.position} onChange={(e) => set("position", e.target.value)}>
@@ -1190,45 +1181,44 @@ function PlayerFormFields({
         </Field>
         <Field label="Hometown" required>
           <input type="text" placeholder="e.g. Portland, OR" value={form.hometown}
-            onChange={(e) => set("hometown", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("hometown", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Age" required>
           <input type="number" min={1} value={form.age || ""}
-            onChange={(e) => set("age", Number(e.target.value))} style={inputStyle} />
+            onChange={(e) => set("age", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Height" required>
           <input type="text" placeholder={"e.g. 5'10\""} value={form.height}
-            onChange={(e) => set("height", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("height", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Weight" required>
           <input type="text" placeholder="e.g. 165 lbs" value={form.weight}
-            onChange={(e) => set("weight", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("weight", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="School (optional)">
           <input type="text" placeholder="e.g. University of Portland" value={form.school ?? ""}
-            onChange={(e) => set("school", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("school", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Previous Club (optional)">
           <input type="text" placeholder="e.g. Portland FC" value={form.previous_club ?? ""}
-            onChange={(e) => set("previous_club", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("previous_club", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Captain">
           <button
             type="button"
             onClick={() => set("caption", form.caption === "(C)" ? "" : "(C)")}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
-            style={{
-              backgroundColor: form.caption === "(C)" ? "rgba(220,38,38,0.15)" : "#0e0e0e",
-              border: `1px solid ${form.caption === "(C)" ? "rgba(220,38,38,0.5)" : "rgba(255,255,255,0.08)"}`,
-              width: "100%",
-            }}
+            className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg border transition-all ${
+              form.caption === "(C)"
+                ? "border-destructive/50 bg-destructive/15"
+                : "border-border bg-background"
+            }`}
           >
             <span
-              className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
-              style={{
-                backgroundColor: form.caption === "(C)" ? "#dc2626" : "transparent",
-                border: `2px solid ${form.caption === "(C)" ? "#dc2626" : "rgba(255,255,255,0.2)"}`,
-              }}
+              className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 ${
+                form.caption === "(C)"
+                  ? "border-destructive bg-destructive"
+                  : "border-border bg-transparent"
+              }`}
             >
               {form.caption === "(C)" && (
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -1236,14 +1226,14 @@ function PlayerFormFields({
                 </svg>
               )}
             </span>
-            <span className="font-body text-sm" style={{ color: form.caption === "(C)" ? "white" : "rgba(255,255,255,0.4)" }}>
+            <span className={`font-body text-sm ${form.caption === "(C)" ? "text-foreground" : "text-muted-foreground"}`}>
               {form.caption === "(C)" ? "Captain — displays (C) next to name" : "Not a captain"}
             </span>
           </button>
         </Field>
         <Field label="Pronunciation (optional)">
           <input type="text" placeholder='e.g. "duh-MORE-ee-uh"' value={form.pronunciation ?? ""}
-            onChange={(e) => set("pronunciation", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("pronunciation", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Preferred Foot (optional)">
           <NativeSelect value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)}>
@@ -1326,19 +1316,19 @@ function StaffFormFields({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Name" required>
           <input type="text" placeholder="e.g. John Smith" value={form.name}
-            onChange={(e) => set("name", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Initials" required>
           <input type="text" placeholder="e.g. JS" maxLength={3} value={form.initials}
-            onChange={(e) => set("initials", e.target.value.toUpperCase())} style={inputStyle} />
+            onChange={(e) => set("initials", e.target.value.toUpperCase())} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Role" required>
           <input type="text" placeholder="e.g. Head Coach" value={form.role}
-            onChange={(e) => set("role", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("role", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Hometown" required>
           <input type="text" placeholder="e.g. Portland, OR" value={form.hometown}
-            onChange={(e) => set("hometown", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("hometown", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Nationality">
           <NationalitySelect value={form.nationality} onChange={(v) => set("nationality", v)} />
@@ -1386,18 +1376,17 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
       <button
         type="button"
         onClick={() => { setOpen((o) => !o); setSearch(""); }}
-        className="w-full flex items-center gap-3 text-left"
-        style={{ ...inputStyle, cursor: "pointer" }}
+        className={`${ADMIN_INPUT_CLASS} flex items-center gap-3 text-left`}
       >
         {selected ? (
           <>
             <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{selected.flag}</span>
-            <span className="font-body text-sm text-white">{selected.label}</span>
+            <span className="font-body text-sm text-foreground">{selected.label}</span>
           </>
         ) : (
-          <span className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>Select nationality…</span>
+          <span className="font-body text-sm text-muted-foreground">Select nationality…</span>
         )}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ marginLeft: "auto", color: "rgba(255,255,255,0.3)", flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-muted-foreground" style={{ marginLeft: "auto", flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
@@ -1405,54 +1394,37 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
       {/* Dropdown */}
       {open && (
         <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            backgroundColor: "#1a1a1a",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 8,
-            zIndex: 50,
-            maxHeight: 240,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
+          className="absolute left-0 right-0 z-50 flex max-h-60 flex-col overflow-hidden rounded-lg border border-border bg-card"
+          style={{ top: "calc(100% + 4px)" }}
         >
           {/* Search */}
-          <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="border-b border-border px-2.5 py-2">
             <input
               autoFocus
               type="text"
               placeholder="Search…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full font-body text-sm text-white outline-none"
-              style={{ backgroundColor: "transparent", border: "none" }}
+              className="w-full border-none bg-transparent font-body text-sm text-foreground outline-none"
             />
           </div>
 
           {/* Options */}
           <div style={{ overflowY: "auto" }}>
             {filtered.length === 0 ? (
-              <p className="font-body text-xs px-3 py-3" style={{ color: "rgba(255,255,255,0.3)" }}>No results</p>
+              <p className="font-body text-xs px-3 py-3 text-muted-foreground">No results</p>
             ) : (
               filtered.map((n) => (
                 <button
                   key={n.label}
                   type="button"
                   onClick={() => { onChange(n.label); setOpen(false); setSearch(""); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-left transition-colors"
-                  style={{
-                    backgroundColor: value === n.label ? "rgba(220,38,38,0.15)" : "transparent",
-                    border: "none",
-                  }}
-                  onMouseEnter={(e) => { if (value !== n.label) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.05)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = value === n.label ? "rgba(220,38,38,0.15)" : "transparent"; }}
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                    value === n.label ? "bg-destructive/15" : "hover:bg-accent"
+                  }`}
                 >
                   <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{n.flag}</span>
-                  <span className="font-body text-sm text-white">{n.label}</span>
+                  <span className="font-body text-sm text-foreground">{n.label}</span>
                 </button>
               ))
             )}
@@ -1468,23 +1440,10 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block font-display text-xs tracking-widest uppercase mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-        {label}{required && <span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>}
+      <label className={ADMIN_LABEL_CLASS}>
+        {label}{required && <span className="ml-1 text-destructive">*</span>}
       </label>
       {children}
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  backgroundColor: "#0e0e0e",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "8px",
-  padding: "8px 12px",
-  color: "white",
-  fontSize: "0.875rem",
-  fontFamily: "inherit",
-  outline: "none",
-  colorScheme: "dark",
-};

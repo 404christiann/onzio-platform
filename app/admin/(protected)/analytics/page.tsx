@@ -15,14 +15,13 @@ Chart.register(...registerables);
 type PositionKey = "All" | "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
 const POSITIONS: PositionKey[] = ["All", "Goalkeeper", "Defender", "Midfielder", "Forward"];
 
-// Team accent colour — used everywhere
-const RED = "#dc2626";
-
 // ── Chart theme ────────────────────────────────
 // Shared chart.js styling for the ComparisonBar and TrendLine charts below.
 // chart.js needs concrete CSS color/font values (it can't consume Tailwind
-// classes), so the tooltip card/border colors are kept in sync manually with
-// the `--card` / `--border` CSS variables in styles/globals.css (`.dark` block).
+// classes), so every colour here is kept in sync manually with the semantic
+// CSS variables in styles/globals.css (`.dark` block); the token each value
+// mirrors is noted inline. All DOM styling on this page uses the token
+// classes directly.
 
 // Existing chart configs set no font family (chart.js default); resolve the
 // admin portal's body font from the DOM so canvas text matches the page.
@@ -32,19 +31,19 @@ const CHART_FONT_FAMILY =
     : "Arial, sans-serif";
 
 const CHART_THEME = {
-  accent: RED, // primary series colour (reuses the team accent)
-  accentFill: RED + "cc", // bar fill for the "player" series
-  accentSoft: RED + "18", // translucent area fill under the trend line
-  comparison: "rgba(255,255,255,0.1)", // secondary "position average" series
-  grid: "rgba(255,255,255,0.06)", // horizontal grid lines
-  tick: "rgba(255,255,255,0.4)", // axis tick/label colour
+  accent: "hsl(0 72% 51%)", // = `.dark` --destructive (primary series colour)
+  accentFill: "hsl(0 72% 51% / 0.8)", // bar fill for the "player" series
+  accentSoft: "hsl(0 72% 51% / 0.09)", // translucent area fill under the trend line
+  comparison: "hsl(0 0% 98% / 0.1)", // = --foreground @ 10%; "position average" series
+  grid: "hsl(0 0% 98% / 0.06)", // = --foreground @ 6%; horizontal grid lines
+  tick: "hsl(0 0% 98% / 0.4)", // = --foreground @ 40%; axis tick/label colour
   font: { family: CHART_FONT_FAMILY, size: 10 },
   tooltip: {
     backgroundColor: "hsl(0 0% 10%)", // = `.dark` --card
     borderColor: "hsl(0 0% 22%)", // = `.dark` --border
     borderWidth: 1,
-    titleColor: "#fff",
-    bodyColor: "rgba(255,255,255,0.7)",
+    titleColor: "hsl(0 0% 98%)", // = `.dark` --foreground
+    bodyColor: "hsl(0 0% 98% / 0.7)", // = --foreground @ 70%
   },
 };
 
@@ -118,7 +117,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
           Loading analytics…
         </p>
       </div>
@@ -128,7 +127,7 @@ export default function AnalyticsPage() {
   if (!allPlayers.length) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
           No players found.
         </p>
       </div>
@@ -140,12 +139,12 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="mb-8">
         <h1
-          className="font-display font-black uppercase text-white leading-none"
+          className="font-display font-black uppercase text-foreground leading-none"
           style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
         >
           Analytics
         </h1>
-        <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
           {seasonLabel} · Player performance dashboard
         </p>
       </div>
@@ -156,13 +155,12 @@ export default function AnalyticsPage() {
           <button
             key={pos}
             onClick={() => setPosFilter(pos)}
-            className="font-display font-black uppercase tracking-widest px-5 py-2.5 rounded-lg transition-all duration-150"
-            style={{
-              fontSize: "0.9rem",
-              backgroundColor: posFilter === pos ? RED : "#1a1a1a",
-              color: posFilter === pos ? "#fff" : "rgba(255,255,255,0.4)",
-              border: `1px solid ${posFilter === pos ? RED : "rgba(255,255,255,0.08)"}`,
-            }}
+            className={`font-display font-black uppercase tracking-widest px-5 py-2.5 rounded-lg border transition-all duration-150 ${
+              posFilter === pos
+                ? "border-destructive bg-destructive text-destructive-foreground"
+                : "border-border bg-card text-muted-foreground"
+            }`}
+            style={{ fontSize: "0.9rem" }}
           >
             {pos}
           </button>
@@ -182,26 +180,25 @@ export default function AnalyticsPage() {
                 <button
                   key={p.id ?? p.name}
                   onClick={() => p.id && setSelectedId(p.id)}
-                  className="flex-shrink-0 flex flex-col items-center gap-1 rounded-xl transition-all duration-150"
-                  style={{
-                    padding: "10px 14px",
-                    backgroundColor: active ? "rgba(220,38,38,0.12)" : "#1a1a1a",
-                    border: `1px solid ${active ? RED + "55" : "rgba(255,255,255,0.07)"}`,
-                    minWidth: 72,
-                  }}
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 rounded-xl border transition-all duration-150 ${
+                    active
+                      ? "border-destructive/30 bg-destructive/10"
+                      : "border-border bg-card"
+                  }`}
+                  style={{ padding: "10px 14px", minWidth: 72 }}
                 >
-                  <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 48, height: 48, border: `2px solid ${active ? RED : "transparent"}` }}>
+                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-destructive" : "border-transparent"}`} style={{ width: 48, height: 48 }}>
                     {p.image ? (
                       <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center font-display font-black" style={{ backgroundColor: active ? RED : "rgba(255,255,255,0.08)", color: active ? "#fff" : "rgba(255,255,255,0.45)", fontSize: "0.75rem" }}>
+                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
                         {initials(p.name)}
                       </div>
                     )}
                   </div>
                   <span
-                    className="font-display font-black uppercase"
-                    style={{ fontSize: "0.55rem", letterSpacing: "0.05em", color: active ? "#fff" : "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}
+                    className={`font-display font-black uppercase ${active ? "text-foreground" : "text-muted-foreground"}`}
+                    style={{ fontSize: "0.55rem", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
                   >
                     #{p.number}
                   </span>
@@ -218,32 +215,32 @@ export default function AnalyticsPage() {
                 <button
                   key={p.id ?? p.name}
                   onClick={() => p.id && setSelectedId(p.id)}
-                  className="flex items-center gap-3 w-full text-left rounded-xl transition-all duration-150"
-                  style={{
-                    padding: "10px 12px",
-                    backgroundColor: active ? "rgba(220,38,38,0.12)" : "transparent",
-                    border: `1px solid ${active ? RED + "55" : "rgba(255,255,255,0.06)"}`,
-                  }}
+                  className={`flex items-center gap-3 w-full text-left rounded-xl border transition-all duration-150 ${
+                    active
+                      ? "border-destructive/30 bg-destructive/10"
+                      : "border-border bg-transparent"
+                  }`}
+                  style={{ padding: "10px 12px" }}
                 >
-                  <div className="rounded-full overflow-hidden flex-shrink-0" style={{ width: 48, height: 48, border: `2px solid ${active ? RED : "rgba(255,255,255,0.08)"}` }}>
+                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-destructive" : "border-border"}`} style={{ width: 48, height: 48 }}>
                     {p.image ? (
                       <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center font-display font-black" style={{ backgroundColor: active ? RED : "rgba(255,255,255,0.08)", color: active ? "#fff" : "rgba(255,255,255,0.45)", fontSize: "0.75rem" }}>
+                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
                         {initials(p.name)}
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p
-                      className="font-display font-black uppercase truncate leading-none"
-                      style={{ fontSize: "0.9rem", color: active ? "#fff" : "rgba(255,255,255,0.65)" }}
+                      className={`font-display font-black uppercase truncate leading-none ${active ? "text-foreground" : "text-muted-foreground"}`}
+                      style={{ fontSize: "0.9rem" }}
                     >
                       {p.name}
                     </p>
                     <p
-                      className="font-display mt-0.5"
-                      style={{ fontSize: "0.6rem", letterSpacing: "0.06em", color: active ? RED : "rgba(255,255,255,0.3)" }}
+                      className={`font-display mt-0.5 ${active ? "text-destructive" : "text-muted-foreground"}`}
+                      style={{ fontSize: "0.6rem", letterSpacing: "0.06em" }}
                     >
                       #{p.number} · {p.position.slice(0, 3).toUpperCase()}
                     </p>
@@ -266,7 +263,7 @@ export default function AnalyticsPage() {
             />
           ) : (
             <div className="flex items-center justify-center h-64">
-              <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
+              <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
                 Select a player
               </p>
             </div>
@@ -407,30 +404,27 @@ function PlayerDashboard({
     <div className="flex flex-col gap-4">
 
       {/* Player header */}
-      <div
-        className="flex items-center gap-4 rounded-xl px-5 py-4"
-        style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}
-      >
-        <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 96, height: 96, border: `2px solid ${RED}` }}>
+      <div className="flex items-center gap-4 rounded-xl border border-border bg-background px-5 py-4">
+        <div className="rounded-xl overflow-hidden flex-shrink-0 border-2 border-destructive" style={{ width: 96, height: 96 }}>
           {player.image ? (
             <ResilientNativeImage src={player.image} alt={player.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
           ) : (
-            <div className="w-full h-full flex items-center justify-center font-display font-black text-white" style={{ backgroundColor: RED, fontSize: "1.5rem" }}>
+            <div className="w-full h-full flex items-center justify-center font-display font-black bg-destructive text-destructive-foreground" style={{ fontSize: "1.5rem" }}>
               {initials(player.name)}
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-display font-black uppercase text-white" style={{ fontSize: "1.6rem", lineHeight: 1.1 }}>
+          <p className="font-display font-black uppercase text-foreground" style={{ fontSize: "1.6rem", lineHeight: 1.1 }}>
             {player.name}
           </p>
-          <p className="font-display tracking-widest uppercase mt-1" style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.35)" }}>
+          <p className="font-display tracking-widest uppercase mt-1 text-muted-foreground" style={{ fontSize: "0.85rem" }}>
             {player.position} · #{player.number} · {seasonLabel}
           </p>
         </div>
         <span
-          className="font-display font-black select-none flex-shrink-0"
-          style={{ fontSize: "3.5rem", lineHeight: 1, color: "rgba(255,255,255,0.05)" }}
+          className="font-display font-black select-none flex-shrink-0 text-foreground/5"
+          style={{ fontSize: "3.5rem", lineHeight: 1 }}
         >
           {player.number}
         </span>
@@ -441,16 +435,15 @@ function PlayerDashboard({
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="rounded-xl px-4 py-4 text-center"
-            style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}
+            className="rounded-xl border border-border bg-background px-4 py-4 text-center"
           >
-            <p className="font-display font-black text-white" style={{ fontSize: "2rem", lineHeight: 1 }}>
+            <p className="font-display font-black text-foreground" style={{ fontSize: "2rem", lineHeight: 1 }}>
               {k.value.toLocaleString()}
             </p>
-            <p className="font-display text-xs tracking-widest uppercase mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+            <p className="font-display text-xs tracking-widest uppercase mt-1 text-muted-foreground">
               {k.label}
             </p>
-            <p className="font-body text-xs mt-2" style={{ color: RED }}>
+            <p className="font-body text-xs mt-2 text-destructive">
               {k.delta}
             </p>
           </div>
@@ -467,44 +460,46 @@ function PlayerDashboard({
       <TrendLine data={trend} loading={trendLoading} gk={gk} />
 
       {/* Discipline */}
-      <div
-        className="rounded-xl px-5 py-4"
-        style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}
-      >
+      <div className="rounded-xl border border-border bg-background px-5 py-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
             Discipline
           </p>
           <span
-            className="font-display font-black uppercase tracking-widest rounded-full"
-            style={{
-              fontSize: "0.6rem",
-              padding: "3px 10px",
-              backgroundColor: disciplineScore >= 85 ? "rgba(34,197,94,0.15)" : disciplineScore >= 60 ? "rgba(234,179,8,0.15)" : "rgba(220,38,38,0.15)",
-              color: disciplineScore >= 85 ? "#22c55e" : disciplineScore >= 60 ? "#eab308" : RED,
-            }}
+            className={`font-display font-black uppercase tracking-widest rounded-full ${
+              disciplineScore >= 85
+                ? "bg-success/15 text-success"
+                : disciplineScore >= 60
+                  ? "bg-warning/15 text-warning"
+                  : "bg-destructive/15 text-destructive"
+            }`}
+            style={{ fontSize: "0.6rem", padding: "3px 10px" }}
           >
             {disciplineScore >= 85 ? "Clean" : disciplineScore >= 60 ? "Caution" : "High Risk"} · {disciplineScore}/100
           </span>
         </div>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <span style={{ width: 12, height: 12, backgroundColor: "#eab308", borderRadius: 2, display: "inline-block", flexShrink: 0 }} />
-            <span className="font-display font-black text-white" style={{ fontSize: "1.4rem", lineHeight: 1 }}>{stats.yellow}</span>
-            <span style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginLeft: 2 }}>Yellow</span>
+            <span className="bg-warning" style={{ width: 12, height: 12, borderRadius: 2, display: "inline-block", flexShrink: 0 }} />
+            <span className="font-display font-black text-foreground" style={{ fontSize: "1.4rem", lineHeight: 1 }}>{stats.yellow}</span>
+            <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", marginLeft: 2 }}>Yellow</span>
           </div>
           <div className="flex items-center gap-2">
-            <span style={{ width: 12, height: 12, backgroundColor: RED, borderRadius: 2, display: "inline-block", flexShrink: 0 }} />
-            <span className="font-display font-black text-white" style={{ fontSize: "1.4rem", lineHeight: 1 }}>{stats.red}</span>
-            <span style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginLeft: 2 }}>Red</span>
+            <span className="bg-destructive" style={{ width: 12, height: 12, borderRadius: 2, display: "inline-block", flexShrink: 0 }} />
+            <span className="font-display font-black text-foreground" style={{ fontSize: "1.4rem", lineHeight: 1 }}>{stats.red}</span>
+            <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", marginLeft: 2 }}>Red</span>
           </div>
           <div className="flex-1">
-            <div style={{ height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" }}>
-              <div style={{
-                width: `${disciplineScore}%`, height: "100%", borderRadius: 2,
-                backgroundColor: disciplineScore >= 85 ? "#22c55e" : disciplineScore >= 60 ? "#eab308" : RED,
-                transition: "width 0.4s ease",
-              }} />
+            <div className="bg-muted" style={{ height: 4, borderRadius: 2, overflow: "hidden" }}>
+              <div
+                className={
+                  disciplineScore >= 85 ? "bg-success" : disciplineScore >= 60 ? "bg-warning" : "bg-destructive"
+                }
+                style={{
+                  width: `${disciplineScore}%`, height: "100%", borderRadius: 2,
+                  transition: "width 0.4s ease",
+                }}
+              />
             </div>
           </div>
         </div>
@@ -535,18 +530,18 @@ function RadarCard({
     vals.map((v, i) => pt(i, Math.max(v, 2) / 100).join(",")).join(" ");
 
   return (
-    <div className="rounded-xl p-5" style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="rounded-xl border border-border bg-background p-5">
       <div className="flex items-center justify-between mb-4">
-        <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>
+        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
           Player profile
         </p>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
-            <span style={{ width: 18, height: 1.5, backgroundColor: "rgba(255,255,255,0.3)", display: "inline-block", borderRadius: 1 }} />
+          <span className="flex items-center gap-1.5 text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <span className="bg-muted-foreground/50" style={{ width: 18, height: 1.5, display: "inline-block", borderRadius: 1 }} />
             Pos avg
           </span>
-          <span className="flex items-center gap-1.5" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", color: RED }}>
-            <span style={{ width: 18, height: 2, backgroundColor: RED, display: "inline-block", borderRadius: 1 }} />
+          <span className="flex items-center gap-1.5 text-destructive" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <span className="bg-destructive" style={{ width: 18, height: 2, display: "inline-block", borderRadius: 1 }} />
             Player
           </span>
         </div>
@@ -555,22 +550,22 @@ function RadarCard({
       <div className="flex items-center gap-4">
         <svg viewBox="-10 -10 240 240" width="170" height="170" role="img" aria-label="Radar chart showing player profile vs position average">
           {[0.25, 0.5, 0.75, 1].map((s) => (
-            <polygon key={s} points={labels.map((_, i) => pt(i, s).join(",")).join(" ")} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" />
+            <polygon key={s} points={labels.map((_, i) => pt(i, s).join(",")).join(" ")} className="fill-none stroke-border" strokeWidth="0.5" />
           ))}
           {labels.map((_, i) => {
             const [x, y] = pt(i, 1);
-            return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" />;
+            return <line key={i} x1={cx} y1={cy} x2={x} y2={y} className="stroke-border" strokeWidth="0.5" />;
           })}
-          <polygon points={poly(avgVals)} fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.28)" strokeWidth="1.5" strokeDasharray="4,3" />
-          <polygon points={poly(playerVals)} fill={RED + "28"} stroke={RED} strokeWidth="2" />
+          <polygon points={poly(avgVals)} className="fill-card stroke-muted-foreground/50" strokeWidth="1.5" strokeDasharray="4,3" />
+          <polygon points={poly(playerVals)} className="fill-destructive/15 stroke-destructive" strokeWidth="2" />
           {playerVals.map((v, i) => {
             const [x, y] = pt(i, Math.max(v, 2) / 100);
-            return <circle key={i} cx={x} cy={y} r="3.5" fill={RED} />;
+            return <circle key={i} cx={x} cy={y} r="3.5" className="fill-destructive" />;
           })}
           {labels.map((l, i) => {
             const [x, y] = pt(i, 1.36);
             return (
-              <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.45)" fontSize="9" fontFamily="sans-serif">
+              <text key={i} x={x} y={y} textAnchor="middle" dominantBaseline="middle" className="fill-muted-foreground" fontSize="9" fontFamily="sans-serif">
                 {l}
               </text>
             );
@@ -580,14 +575,14 @@ function RadarCard({
         <div className="flex flex-col gap-2.5 flex-1">
           {labels.map((l, i) => (
             <div key={l} className="flex items-center gap-2">
-              <span style={{ fontSize: "0.58rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", width: 60, flexShrink: 0 }}>
+              <span className="text-muted-foreground" style={{ fontSize: "0.58rem", letterSpacing: "0.08em", textTransform: "uppercase", width: 60, flexShrink: 0 }}>
                 {l}
               </span>
-              <div style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.07)", overflow: "visible", position: "relative" }}>
-                <div style={{ position: "absolute", top: -1, bottom: -1, left: `${avgVals[i]}%`, width: 2, backgroundColor: "rgba(255,255,255,0.28)", transform: "translateX(-50%)", borderRadius: 1 }} />
-                <div style={{ width: `${playerVals[i]}%`, height: "100%", borderRadius: 2, backgroundColor: RED }} />
+              <div className="bg-muted" style={{ flex: 1, height: 3, borderRadius: 2, overflow: "visible", position: "relative" }}>
+                <div className="bg-muted-foreground/50" style={{ position: "absolute", top: -1, bottom: -1, left: `${avgVals[i]}%`, width: 2, transform: "translateX(-50%)", borderRadius: 1 }} />
+                <div className="bg-destructive" style={{ width: `${playerVals[i]}%`, height: "100%", borderRadius: 2 }} />
               </div>
-              <span className="font-display font-black text-white" style={{ fontSize: "0.68rem", width: 24, textAlign: "right", flexShrink: 0 }}>
+              <span className="font-display font-black text-foreground" style={{ fontSize: "0.68rem", width: 24, textAlign: "right", flexShrink: 0 }}>
                 {playerVals[i]}
               </span>
             </div>
@@ -632,13 +627,13 @@ function ComparisonBar({ data }: { data: { labels: string[]; player: number[]; p
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>
+        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
           vs position average
         </p>
         <div className="flex gap-3">
-          {[{ label: "Player", col: CHART_THEME.accentFill }, { label: "Pos avg", col: "rgba(255,255,255,0.2)" }].map((l) => (
-            <span key={l.label} className="flex items-center gap-1.5" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: l.col, display: "inline-block" }} />
+          {[{ label: "Player", swatchClass: "bg-destructive/80" }, { label: "Pos avg", swatchClass: "bg-muted-foreground/30" }].map((l) => (
+            <span key={l.label} className="flex items-center gap-1.5 text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              <span className={l.swatchClass} style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block" }} />
               {l.label}
             </span>
           ))}
@@ -713,11 +708,11 @@ function TrendLine({
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.4)" }}>
+        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
           {gk ? "Saves per match" : "Goal contributions per match"}
         </p>
         {data.length > 0 && !loading && (
-          <span style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)" }}>
+          <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
             {data.length} match{data.length !== 1 ? "es" : ""}
           </span>
         )}
@@ -725,11 +720,11 @@ function TrendLine({
       <div style={{ position: "relative", height: 130 }}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.2)" }}>Loading…</p>
+            <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">Loading…</p>
           </div>
         ) : data.length < 2 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.2)" }}>
+            <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
               {data.length === 0 ? "No match data yet" : "Need 2+ matches for trend"}
             </p>
           </div>

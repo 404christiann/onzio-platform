@@ -7,6 +7,7 @@ import { Loader } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
 import {
@@ -244,36 +245,36 @@ export default function BrandingPage() {
 
       <div className="mb-8">
         <h1
-          className="font-display font-black uppercase leading-none text-white"
+          className="font-display font-black uppercase leading-none text-foreground"
           style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
         >
           Branding
         </h1>
-        <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-white/40">
+        <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-muted-foreground">
           Manage the club crest used across the public website and admin portal. Clubs can also carry an inverse crest for dark presentation surfaces.
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.8fr)]">
         <section
-          className="rounded-xl border border-white/10 bg-[#141414] p-5 sm:p-7"
+          className="rounded-xl border border-border bg-background p-5 sm:p-7"
           aria-labelledby="club-logo-heading"
         >
           <div className="mb-6">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-[#E7001B]">
+            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-destructive">
               Club Identity
             </p>
-            <h2 id="club-logo-heading" className="mt-2 font-display text-2xl font-black uppercase text-white">
+            <h2 id="club-logo-heading" className="mt-2 font-display text-2xl font-black uppercase text-foreground">
               Main Club Logo
             </h2>
-            <p className="mt-2 font-body text-sm leading-relaxed text-white/40">
+            <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
               For the cleanest result, use a square PNG with a transparent background. PNG, JPG, and WebP files up to 5 MB are accepted.
             </p>
           </div>
 
-          <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-5 sm:p-6">
+          <div className="rounded-xl border border-dashed border-border bg-black/20 p-5 sm:p-6">
             <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
-              <div className="relative h-32 w-32 flex-none overflow-hidden rounded-full border border-white/10 bg-white/5 p-3">
+              <div className="relative h-32 w-32 flex-none overflow-hidden rounded-full border border-border bg-card p-3">
                 <Image
                   src={previewUrl}
                   alt="Club logo preview"
@@ -284,17 +285,17 @@ export default function BrandingPage() {
                 />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-display text-lg font-black uppercase text-white">
+                <p className="font-display text-lg font-black uppercase text-foreground">
                   {logoFile ? "New logo selected" : "Current logo"}
                 </p>
-                <p className="mt-1 truncate font-body text-xs text-white/35">
+                <p className="mt-1 truncate font-body text-xs text-muted-foreground">
                   {logoFile?.name ?? "This is the logo currently shown throughout the site."}
                 </p>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={saving}
-                  className="mt-4 rounded-lg border border-white/10 bg-white/5 px-5 py-2.5 font-display text-sm font-black uppercase tracking-widest text-white/70 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 rounded-lg border border-border bg-card px-5 py-2.5 font-display text-sm font-black uppercase tracking-widest text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {logoFile ? "Choose Different Image" : "Choose New Logo"}
                 </button>
@@ -310,7 +311,7 @@ export default function BrandingPage() {
           </div>
 
           {error && (
-            <p className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 font-body text-sm text-red-300" role="alert">
+            <p className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
               {error}
             </p>
           )}
@@ -319,7 +320,7 @@ export default function BrandingPage() {
             type="button"
             onClick={saveLogo}
             disabled={!logoFile || saving}
-            className="mt-6 w-full rounded-lg bg-[#E7001B] px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-[#ff0a25] disabled:cursor-not-allowed disabled:opacity-35"
+            className="mt-6 w-full rounded-lg bg-destructive px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
             {saving && <Loader className="mr-2 inline size-4 animate-spin" />}
             {saving ? "Saving…" : "Save New Club Logo"}
@@ -327,48 +328,48 @@ export default function BrandingPage() {
         </section>
 
         <aside className="space-y-4" aria-label="Logo previews and usage">
-          <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-white/10">
+          <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-border">
             <div className="flex aspect-square items-center justify-center bg-white p-5">
               <div className="relative h-full w-full">
                 <Image src={previewUrl} alt="Logo on a light background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
               </div>
             </div>
-            <div className="flex aspect-square items-center justify-center bg-[#141414] p-5">
+            <div className="flex aspect-square items-center justify-center bg-background p-5">
               <div className="relative h-full w-full">
                 <Image src={inverseLogoUrl || previewUrl} alt="Logo on a dark background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-[#141414] p-5">
-            <h2 className="font-display text-lg font-black uppercase text-white">Where it updates</h2>
-            <ul className="mt-4 space-y-3 font-body text-sm text-white/45">
+          <div className="rounded-xl border border-border bg-background p-5">
+            <h2 className="font-display text-lg font-black uppercase text-foreground">Where it updates</h2>
+            <ul className="mt-4 space-y-3 font-body text-sm text-muted-foreground">
               {["Website navigation", "Website footer", "Next match card", "Admin login and menu", "Players without a photo", "Browser tab icon"].map((location) => (
                 <li key={location} className="flex items-center gap-3">
-                  <span className="h-1.5 w-1.5 flex-none rounded-full bg-[#E7001B]" aria-hidden="true" />
+                  <span className="h-1.5 w-1.5 flex-none rounded-full bg-destructive" aria-hidden="true" />
                   {location}
                 </li>
               ))}
             </ul>
           </div>
 
-          <p className="font-body text-xs leading-relaxed text-white/25">
+          <p className="font-body text-xs leading-relaxed text-muted-foreground">
             When you replace an admin-uploaded logo, the previous uploaded file is removed after the new logo is saved.
           </p>
         </aside>
 
         <section
-          className="rounded-xl border border-white/10 bg-[#141414] p-5 sm:p-7 lg:col-span-2"
+          className="rounded-xl border border-border bg-background p-5 sm:p-7 lg:col-span-2"
           aria-labelledby="footer-social-heading"
         >
           <div className="mb-6">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-[#E7001B]">
+            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-destructive">
               Footer
             </p>
-            <h2 id="footer-social-heading" className="mt-2 font-display text-2xl font-black uppercase text-white">
+            <h2 id="footer-social-heading" className="mt-2 font-display text-2xl font-black uppercase text-foreground">
               Tagline and Social Links
             </h2>
-            <p className="mt-2 font-body text-sm leading-relaxed text-white/40">
+            <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
               Edit the club tagline beside the crest and the URLs used by the social icons in the public website footer.
             </p>
           </div>
@@ -376,7 +377,7 @@ export default function BrandingPage() {
           <div className="mb-6">
             <label
               htmlFor="footer-tagline"
-              className="mb-1 block font-display text-xs uppercase tracking-widest text-white/35"
+              className={ADMIN_LABEL_CLASS}
             >
               Footer tagline
             </label>
@@ -391,7 +392,7 @@ export default function BrandingPage() {
               rows={2}
               maxLength={FOOTER_TAGLINE_LIMIT}
             />
-            <p className="mt-1 font-body text-xs text-white/25">
+            <p className="mt-1 font-body text-xs text-muted-foreground">
               Shown under the club name in the footer. Press Enter for a second
               line. Leave empty to keep the standard wording shown here.
             </p>
@@ -405,7 +406,7 @@ export default function BrandingPage() {
               >
                 <label
                   htmlFor={`social-${link.id}`}
-                  className="col-start-2 mb-1 block font-display text-xs uppercase tracking-widest text-white/35"
+                  className={`col-start-2 ${ADMIN_LABEL_CLASS}`}
                 >
                   {link.label}
                 </label>
@@ -424,7 +425,7 @@ export default function BrandingPage() {
                   value={link.href}
                   onChange={(event) => setSocialHref(link.id, event.target.value)}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-white/10 bg-[#0e0e0e] px-3 py-2.5 font-body text-sm text-white outline-none transition focus:border-white/25"
+                  className={ADMIN_INPUT_CLASS}
                   style={{ colorScheme: "dark" }}
                 />
               </div>
@@ -432,7 +433,7 @@ export default function BrandingPage() {
           </div>
 
           {socialError && (
-            <p className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 font-body text-sm text-red-300" role="alert">
+            <p className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
               {socialError}
             </p>
           )}
@@ -441,7 +442,7 @@ export default function BrandingPage() {
             type="button"
             onClick={saveSocialLinks}
             disabled={savingSocialLinks}
-            className="mt-6 w-full rounded-lg bg-[#E7001B] px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-[#ff0a25] disabled:cursor-not-allowed disabled:opacity-35"
+            className="mt-6 w-full rounded-lg bg-destructive px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-destructive/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
             {savingSocialLinks && <Loader className="mr-2 inline size-4 animate-spin" />}
             {savingSocialLinks ? "Saving…" : "Save Footer"}

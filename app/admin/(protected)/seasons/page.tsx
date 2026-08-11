@@ -221,19 +221,19 @@ export default function SeasonsPage() {
         successLabel="Season changes saved"
       />
       {showCreateConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 200, backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }} onClick={() => setShowCreateConfirm(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="create-season-title" className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ backgroundColor: "#161616", border: "1px solid rgba(255,255,255,0.1)" }} onClick={(event) => event.stopPropagation()}>
-            <h2 id="create-season-title" className="font-display font-black uppercase text-white mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
-            <p className="font-body text-sm leading-relaxed mb-1" style={{ color: "rgba(255,255,255,0.55)" }}>This will:</p>
-            <ul className="font-body text-sm mb-5 space-y-1" style={{ color: "rgba(255,255,255,0.45)" }}>
-              <li>• Create the <strong style={{ color: "white" }}>{nextLabel}</strong> season</li>
+        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm" style={{ zIndex: 200 }} onClick={() => setShowCreateConfirm(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="create-season-title" className="rounded-2xl p-8 max-w-sm w-full mx-4 border border-border bg-background" onClick={(event) => event.stopPropagation()}>
+            <h2 id="create-season-title" className="font-display font-black uppercase text-foreground mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
+            <p className="font-body text-sm leading-relaxed mb-1 text-muted-foreground">This will:</p>
+            <ul className="font-body text-sm mb-5 space-y-1 text-muted-foreground">
+              <li>• Create the <strong className="text-foreground">{nextLabel}</strong> season</li>
               <li>• Seed zero stats for all active players</li>
               <li>• Keep the current season active until you change it</li>
             </ul>
-            <p className="font-body text-xs mb-6" style={{ color: "rgba(255,255,255,0.3)" }}>A new season remains removable until matches or recorded stats are added.</p>
+            <p className="font-body text-xs mb-6 text-muted-foreground">A new season remains removable until matches or recorded stats are added.</p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs" style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>{saving && <Loader className="mr-2 inline size-4 animate-spin" />}{saving ? "Creating…" : "Create Season"}</button>
-              <button onClick={() => setShowCreateConfirm(false)} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-xs" style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}>Cancel</button>
+              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground text-xs bg-destructive transition-opacity hover:bg-destructive/90 disabled:opacity-60 disabled:cursor-not-allowed">{saving && <Loader className="mr-2 inline size-4 animate-spin" />}{saving ? "Creating…" : "Create Season"}</button>
+              <button onClick={() => setShowCreateConfirm(false)} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-xs bg-secondary text-muted-foreground">Cancel</button>
             </div>
           </div>
         </div>
@@ -241,23 +241,23 @@ export default function SeasonsPage() {
 
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display font-black uppercase text-white leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}>Seasons</h1>
-          <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>Create seasons, choose what is active, and protect historical records.</p>
+          <h1 className="font-display font-black uppercase text-foreground leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}>Seasons</h1>
+          <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>Create seasons, choose what is active, and protect historical records.</p>
         </div>
-        <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white" style={{ backgroundColor: "#dc2626", fontSize: "1.1rem", opacity: saving || seasons.length === 0 ? 0.6 : 1 }}>+ Create Next Season</button>
+        <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-destructive-foreground bg-destructive transition-opacity hover:bg-destructive/90 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "1.1rem" }}>+ Create Next Season</button>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl px-5 py-4" style={{ backgroundColor: "#161616", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div><p className="font-display uppercase tracking-widest" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)" }}>Active Season</p><p className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{activeSeason?.label ?? "Not set"}</p></div>
-        <div><p className="font-display uppercase tracking-widest" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)" }}>Season Records</p><p className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{seasons.length}</p></div>
+      <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-background px-5 py-4">
+        <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{activeSeason?.label ?? "Not set"}</p></div>
+        <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{seasons.length}</p></div>
       </div>
 
-      {error && <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>Error: {error}</p>}
+      {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">Loading…</p>
       ) : seasons.length === 0 ? (
-        <div className="rounded-xl px-5 py-6" style={{ backgroundColor: "#111", border: "1px solid rgba(255,255,255,0.07)" }}><p className="font-body" style={{ color: "rgba(255,255,255,0.5)" }}>No seasons exist yet. Create the first season in Supabase before using this workflow.</p></div>
+        <div className="rounded-xl border border-border bg-background px-5 py-6"><p className="font-body text-muted-foreground">No seasons exist yet. Create the first season in Supabase before using this workflow.</p></div>
       ) : (
         <div className="flex flex-col gap-3">
           {seasons.map((season) => {
@@ -275,7 +275,7 @@ export default function SeasonsPage() {
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
+                    <p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
                     {season.active && <span className="font-display text-xs tracking-widest uppercase px-3 py-1 rounded-full border border-success/30 bg-success/15 text-success">Active</span>}
                   </div>
                   <p className="font-body text-sm text-muted-foreground">{season.start_year} – {season.end_year}</p>

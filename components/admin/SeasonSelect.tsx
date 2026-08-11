@@ -41,8 +41,8 @@ export default function SeasonSelect({
   return (
     <label className="flex flex-col gap-1.5">
       <span
-        className="font-display tracking-widest uppercase"
-        style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)" }}
+        className="font-display tracking-widest uppercase text-muted-foreground"
+        style={{ fontSize: "0.8rem" }}
       >
         {label}
       </span>

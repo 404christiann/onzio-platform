@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 
 type AdminMember = { userId: string; email: string };
 
@@ -63,24 +64,30 @@ export default function MembersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl text-white">
+    <div className="mx-auto max-w-3xl text-foreground">
       <h1 className="font-display text-4xl font-black uppercase">Team access</h1>
-      <p className="mt-2 text-sm text-white/50">
+      <p className="mt-2 text-sm text-muted-foreground">
         Owners can add or remove administrators. Ownership changes still require Onzio.
       </p>
 
-      <form onSubmit={add} className="mt-8 rounded-xl border border-white/10 bg-[#141414] p-5">
+      <form onSubmit={add} className="mt-8 rounded-xl border border-border bg-background p-5">
         <h2 className="font-display text-xl font-black uppercase">Add administrator</h2>
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="administrator@example.com"
-            className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black px-4 py-3 outline-none focus:border-red-500"
-          />
-          <button className="rounded-lg bg-red-600 px-5 py-3 font-display font-black uppercase">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <label htmlFor="new-admin-email" className={ADMIN_LABEL_CLASS}>
+              Email
+            </label>
+            <input
+              id="new-admin-email"
+              type="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="administrator@example.com"
+              className={ADMIN_INPUT_CLASS}
+            />
+          </div>
+          <button className="rounded-lg bg-destructive px-5 py-3 font-display font-black uppercase text-destructive-foreground">
             Send access code
           </button>
         </div>
@@ -88,12 +95,12 @@ export default function MembersPage() {
 
       <section className="mt-6 space-y-3">
         {admins.map((admin) => (
-          <div key={admin.userId} className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-[#141414] p-4">
+          <div key={admin.userId} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4">
             <span className="min-w-0 truncate text-sm">{admin.email}</span>
             <button
               type="button"
               onClick={() => void remove(admin.userId)}
-              className="rounded-lg border border-red-500/30 px-3 py-2 text-xs font-bold uppercase text-red-300"
+              className="rounded-lg border border-destructive/30 px-3 py-2 text-xs font-bold uppercase text-destructive"
             >
               Remove
             </button>
@@ -101,7 +108,7 @@ export default function MembersPage() {
         ))}
       </section>
 
-      {message && <p role="status" className="mt-5 text-sm text-white/65">{message}</p>}
+      {message && <p role="status" className="mt-5 text-sm text-muted-foreground">{message}</p>}
     </div>
   );
 }

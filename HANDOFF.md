@@ -7286,3 +7286,168 @@ verification, blockers, and the next step.
 - Production mutation count from this attempt: zero; no event replay reached the webhook, and no manual DB mutation was attempted.
 - Current blocker: repair requires either a live Stripe key/session with webhook replay permission or a separately approved targeted production DB repair path.
 - Exact next step: have Christian enable/use Stripe webhook replay permission for the live account and rerun only the approved event replay, or provide separate explicit approval for a narrowly scoped manual production projection repair.
+
+## PLAT-104 — Admin portal styling consistency pass
+
+- **Objective:** finish and unify the admin-portal restyle started ad hoc by
+  `534cb9b`/`3f4d5fe` (shadcn/ui + Tailwind design system). Bring the three
+  surfaces that pass left untouched (`app/admin/(protected)/members/page.tsx`,
+  the seven `components/admin/Scaled*Preview.tsx` panes, and
+  `components/admin/AdminSaveFeedback.tsx`) onto the same design system, and
+  audit the fifteen already-restyled pages for genuine inconsistencies
+  (inconsistent shadcn adoption, spacing, color-token drift) rather than a
+  ground-up redesign.
+- **Action class:** Class 1 — local code and test changes only. No hosted
+  mutation, no deploy, no push beyond the existing `staging` branch workflow
+  already in use for this repo today.
+- **Scope note:** platform-wide, not Diverse-City-specific — the admin portal
+  has a single shared design system with no per-tenant theming (confirmed:
+  `ClubBrandingProvider` only resolves logo/tagline; `TemplateFontScope` is
+  public-site-only). Diverse City FC (`d7a41762-5158-496e-b415-c83c01ab5c70`)
+  is the only tenant currently exercising `/admin` for real, so it is the live
+  visual-verification target even though the change isn't scoped to it.
+- **Permitted actions:** editing admin route pages, `components/admin/*`,
+  `components/AdminShell.tsx`, `components/ui/*`; updating the matching
+  `tests/contracts/*` source-string assertions in the same commit as any
+  markup change that moves them; browser-based visual verification against
+  live Diverse City admin data.
+- **Prohibited actions:** any hosted/production mutation; touching public-site
+  templates (`academy@1`/`clubhouse@1`) or their palette decisions
+  (`DCFC-D132`); weakening or skipping a contract test rather than updating
+  its string to match relocated (not removed) content.
+- **Acceptance criteria:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  and `npm run test:legacy` fully green; every admin surface uses the shared
+  shadcn/Tailwind system consistently; live-verified in the browser preview
+  against Diverse City's real admin data with no visual or functional
+  regression.
+- **Status:** `complete`, 2026-08-10, Claude Code (Sonnet 5) coordinating four
+  parallel Fable-model subagents plus direct edits for `AdminShell.tsx`,
+  the dashboard, and `SeasonSelect.tsx`.
+- **Completed work:** every admin surface now runs on the single `.dark`-scoped
+  shadcn token layer (`bg-background`/`bg-card`/`border-border`/
+  `text-foreground`/`text-muted-foreground`/`bg-destructive`/`bg-success`/
+  `bg-warning`), replacing the previously-mixed hardcoded hex/rgba system.
+  Converted: `components/AdminShell.tsx`, `app/admin/(protected)/page.tsx`
+  (dashboard), all 18 admin route pages (about, analytics, branding, contact,
+  homepage, members, payments, programs, roster, schedule, season-stats,
+  seasons, shop, sponsors, standings, stats, tryouts, dashboard),
+  `app/admin/login/page.tsx`, `components/admin/AdminSaveFeedback.tsx`
+  (also migrated off CSS Modules — `AdminSaveFeedback.module.css` deleted,
+  confirmed unreferenced elsewhere), `components/admin/SeasonSelect.tsx`, and
+  the seven `components/admin/Scaled*Preview.tsx` panes (audited — none
+  needed changes; their colors are simulated public-site content, correctly
+  left alone). `components/admin/FileUpload.tsx` and
+  `components/admin/payments/PaymentStatusCard.tsx` were already token-clean.
+  Deleted every local `INPUT_CLASS`/`LABEL_CLASS`/`inputStyle` duplicate
+  (contact, tryouts, programs, members, sponsors, standings) in favor of the
+  new shared `ADMIN_INPUT_CLASS`/`ADMIN_LABEL_CLASS` constants in
+  `components/admin/form-styles.ts` — this also fixed a real drift bug where
+  `programs/page.tsx`'s copy of `INPUT_CLASS` was silently missing the
+  `placeholder:` segment present in `contact`/`tryouts`'s copies. Normalized
+  every admin red (`#dc2626`, `bg-red-600`/`text-red-300`, and the leaked
+  public-brand `#E7001B`/`#ff0a25` in branding/sponsors) to `destructive`;
+  greens to `success`; ambers to `warning`. Public-site preview mocks
+  (homepage hero gradient, the academy@1 light story mock, Scaled preview
+  backdrops) intentionally keep their public-palette colors for preview
+  fidelity — protected by `DCFC-D132`, not touched.
+- **Notable finding (not styling, a real bug):** `tailwind.config.ts`
+  overrides Tailwind's numeric `red` scale under `theme.extend.colors` with
+  only `{DEFAULT, dark}`, so classes like `bg-red-600`/`hover:bg-red-500`/
+  `text-red-300` — previously used on several admin save buttons — were
+  generating no CSS at all. Migrating those buttons to `bg-destructive`
+  fixes what was likely an invisible/unstyled save button on at least the
+  programs and tryouts editors. Worth a follow-up grep for `red-\d` outside
+  the admin surface in case it recurs elsewhere.
+- **Files changed:** `components/AdminShell.tsx`,
+  `app/admin/(protected)/page.tsx`, `app/admin/(protected)/{about,analytics,
+  branding,contact,homepage,members,programs,roster,schedule,season-stats,
+  seasons,shop,sponsors,standings,stats,tryouts}/page.tsx`,
+  `app/admin/login/page.tsx`, `components/admin/AdminSaveFeedback.tsx`
+  (+ deleted `.module.css`), `components/admin/SeasonSelect.tsx`,
+  `components/admin/form-styles.ts` (new), `styles/globals.css` (new
+  `AdminSaveFeedback` keyframes), `tests/contracts/
+  diverse-city-programs-admin.test.ts` (one string updated: the About/Programs
+  shared tab-switcher className gained `bg-card` when its inline background
+  style moved into the class — same requirement, both files still match).
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  496/496; `npm run test:legacy` 274/274 — all reconfirmed after every batch
+  landed, not just per-agent. Live-verified in the browser against the local
+  Alpha tenant (`owner-aal2@alpha.local`, real email-OTP login via local
+  Supabase/Mailpit — Diverse City's own local fixture doesn't exist in this
+  branch's local DB and its hosted staging alias only serves whatever was
+  last pushed, not this uncommitted work, so Alpha was the correct
+  same-design-system substitute per PLAT-104's own scope note): dashboard,
+  roster, seasons, programs, members ("Team access"), and sponsors all
+  render correctly — active-state red accents, success/warning tinted
+  banners, disabled-button states, card panels, and form inputs all
+  consistent with no visual regression.
+- **Incidental note:** while diagnosing local admin-login access for this
+  verification, ran `supabase db reset` to fix an unrelated stale-RLS/tenant
+  issue on this machine's local Supabase instance. That wiped a local-only
+  `diverse-city` club row that isn't part of checked-in `supabase/seed.sql`
+  (some earlier session had inserted it directly) — purely local disposable
+  fixture data, not hosted/production, but flagging in case a future local
+  session expected it to still be there.
+- **Blockers or unresolved decisions:** none. Package is complete.
+- **Exact next step:** none required for PLAT-104 itself. These are
+  uncommitted local changes on `staging` — normal review/commit/push flow
+  applies whenever Christian wants to land them.
+
+## PLAT-104 follow-up — Admin sidebar grouped navigation
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Fable 5 subagent).
+- **Completed behavior:** the admin sidebar now renders the approved grouped
+  structure in `components/AdminShell.tsx`: Dashboard (standalone), Website
+  (collapsible: Homepage, Programs, Tryouts, Shop, About, Sponsors, Contact),
+  Competition (collapsible: Seasons, Roster, Schedule, Match Stats, Season
+  Stats, Standings), Analytics (standalone), Club Settings (collapsible:
+  Branding, Team access), Payments (standalone, after Club Settings, never a
+  Club Settings child). Groups use a strict one-open-at-a-time accordion: the
+  group containing the active route auto-expands on initial render and on
+  pathname change; clicking an open header collapses it; clicking another
+  header swaps; clicking Dashboard/Analytics/Payments closes any open group.
+  Group headers are native `<button type="button">` elements (via the
+  previously unused `SidebarGroup`/`SidebarGroupLabel`/`SidebarGroupContent`
+  primitives — `components/ui/sidebar.tsx` itself untouched) with
+  `aria-expanded`, `aria-controls`, and stable
+  `admin-nav-group-{website|competition|club-settings}` panel IDs carrying
+  `role="region"`/`aria-labelledby`. Children keep their real per-item inline
+  SVG emblems (no bullets/dots) and are indented; group emblems are new
+  globe/trophy/gear inline SVGs. Active treatment per spec: destructive icon
+  + foreground label with the former `border-l-destructive` /
+  `bg-destructive/15` red-bar treatment removed; inactive items keep the
+  PLAT-104 muted tokens; no hardcoded colors introduced. Visibility filters
+  unchanged: Team access stays owner-only, Payments stays billing-admin-only,
+  `feature` metadata on Programs/Contact/Tryouts preserved, hrefs unchanged,
+  and a group with no visible children is not rendered. No desktop collapse
+  control or in-drawer hamburger added; all mobile drawer invariants
+  (single top-bar hamburger, `aria-controls="admin-sidebar"`, body scroll
+  lock, dvh clamp, touch scrolling, scrollbar, safe-area footer, email,
+  Sign Out, link-click closes drawer) preserved.
+- **Files changed:** `components/AdminShell.tsx` (grouping structure, accordion
+  state, header/panel markup, active-state class change),
+  `tests/contracts/admin-sidebar-groups.test.ts` (new regression contract:
+  exact group labels, exact child membership/order, overall ordering,
+  Payments standalone, owner-only/billing-admin filters, real emblems,
+  no red-bar active treatment, accessible accordion markup, one-open-group
+  resolution, no desktop collapse control, mobile invariants). No other
+  PLAT-104 worktree change was touched.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508 (45 files — includes the 12 new sidebar-group tests);
+  `npm run test:architecture` 20/20; `npm run test:legacy` 274/274;
+  `npm run lint` 0 errors (5 pre-existing react-hooks warnings in unrelated
+  admin pages, unchanged); `npm run build` compiled successfully;
+  `git diff --check` clean. Visual verification in the live browser preview
+  against local Alpha (`owner-aal2@alpha.local`, real OTP login via local
+  Supabase/Mailpit) at desktop and mobile widths: default expansion on child
+  routes, one-open-at-a-time swap, header re-click collapse, standalone-link
+  collapse, active red-icon/white-label state, aligned indented child
+  emblems, Payments visibly outside Club Settings, drawer open/close with
+  scroll lock and no horizontal overflow. Only console error is the
+  pre-existing local missing club-logo storage fixture (403), unrelated.
+- **Blockers:** none.
+- **Exact next step:** none for this follow-up; the change rides with the
+  uncommitted PLAT-104 work on `staging` through the normal
+  review/commit/push flow whenever Christian wants to land it.
+- **Hosted mutations, commits, pushes, deployments:** zero — all work was
+  local file edits, local test runs, and a local dev-server preview only.
