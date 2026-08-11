@@ -97,10 +97,6 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   let hostname: string;
   try {
     hostname = normalizeHostname(request.headers.get("host") ?? "");
@@ -109,69 +105,80 @@ export async function middleware(request: NextRequest) {
   }
 
   const onzio = supabase.schema("onzio");
-  let tenant: ResolvedTenant | null = null;
 
-  if (
-    hostname.endsWith(".localhost") ||
-    (hostname === "localhost" &&
-      process.env.NODE_ENV === "development" &&
-      process.env.ONZIO_LOCAL_TENANT_SLUG)
-  ) {
-    const slug = hostname.endsWith(".localhost")
-      ? hostname.slice(0, -".localhost".length)
-      : process.env.ONZIO_LOCAL_TENANT_SLUG!;
-    const { data } = await onzio
-      .from("clubs")
-      .select("id, slug, lifecycle, public_access")
-      .eq("slug", slug)
-      .maybeSingle();
-    if (data) {
-      tenant = {
-        id: data.id,
-        slug: data.slug,
-        lifecycle: data.lifecycle,
-        publicAccess: data.public_access,
-      };
-    }
-  } else {
-    const { data: domain } = await onzio
-      .from("club_domains")
-      .select(
-        "club_id, clubs!inner(id, slug, lifecycle, public_access)",
-      )
-      .eq("hostname", hostname)
-      .eq("environment", process.env.ONZIO_ENVIRONMENT!)
-      .eq("active", true)
-      .not("verified_at", "is", null)
-      .maybeSingle();
-    const clubValue = domain?.clubs;
-    let club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as
-      | {
-          id: string;
-          slug: string;
-          lifecycle: string;
-          public_access: string;
-        }
-      | null
-      | undefined;
-    if (!club && (isAdminRequest || isBillingRequest)) {
-      const { data: resolved } = await onzio
-        .rpc("resolve_verified_tenant", {
-          p_hostname: hostname,
-          p_environment: process.env.ONZIO_ENVIRONMENT!,
-        })
+  const resolveTenant = async (): Promise<ResolvedTenant | null> => {
+    let resolved: ResolvedTenant | null = null;
+
+    if (
+      hostname.endsWith(".localhost") ||
+      (hostname === "localhost" &&
+        process.env.NODE_ENV === "development" &&
+        process.env.ONZIO_LOCAL_TENANT_SLUG)
+    ) {
+      const slug = hostname.endsWith(".localhost")
+        ? hostname.slice(0, -".localhost".length)
+        : process.env.ONZIO_LOCAL_TENANT_SLUG!;
+      const { data } = await onzio
+        .from("clubs")
+        .select("id, slug, lifecycle, public_access")
+        .eq("slug", slug)
         .maybeSingle();
-      club = resolved as typeof club;
+      if (data) {
+        resolved = {
+          id: data.id,
+          slug: data.slug,
+          lifecycle: data.lifecycle,
+          publicAccess: data.public_access,
+        };
+      }
+    } else {
+      const { data: domain } = await onzio
+        .from("club_domains")
+        .select(
+          "club_id, clubs!inner(id, slug, lifecycle, public_access)",
+        )
+        .eq("hostname", hostname)
+        .eq("environment", process.env.ONZIO_ENVIRONMENT!)
+        .eq("active", true)
+        .not("verified_at", "is", null)
+        .maybeSingle();
+      const clubValue = domain?.clubs;
+      let club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as
+        | {
+            id: string;
+            slug: string;
+            lifecycle: string;
+            public_access: string;
+          }
+        | null
+        | undefined;
+      if (!club && (isAdminRequest || isBillingRequest)) {
+        const { data: rpcResolved } = await onzio
+          .rpc("resolve_verified_tenant", {
+            p_hostname: hostname,
+            p_environment: process.env.ONZIO_ENVIRONMENT!,
+          })
+          .maybeSingle();
+        club = rpcResolved as typeof club;
+      }
+      if (club) {
+        resolved = {
+          id: club.id,
+          slug: club.slug,
+          lifecycle: club.lifecycle,
+          publicAccess: club.public_access,
+        };
+      }
     }
-    if (club) {
-      tenant = {
-        id: club.id,
-        slug: club.slug,
-        lifecycle: club.lifecycle,
-        publicAccess: club.public_access,
-      };
-    }
-  }
+    return resolved;
+  };
+
+  const [
+    {
+      data: { user },
+    },
+    tenant,
+  ] = await Promise.all([supabase.auth.getUser(), resolveTenant()]);
 
   if (
     !tenant ||

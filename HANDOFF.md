@@ -8946,3 +8946,113 @@ change. Local Supabase only, and restored to its pre-session digest.
   separate and NOT yet approved by Christian.
 - **Hosted mutations, commits, pushes, deployments:** zero. Local file edits
   only; local database used read-only.
+
+## Middleware — parallelize getUser() + tenant lookup with Promise.all
+
+- **Status:** `complete`, 2026-08-11, Claude Code (Fable 5), direct edit.
+- **Objective:** overlap the two independent await waves at the top of
+  `middleware.ts` — `supabase.auth.getUser()` and the tenant lookup — which
+  previously ran sequentially on every request to the entire platform. This is
+  the narrowly-scoped concurrency fix only; the bigger middleware options from
+  the research pass (combined tenant+runtime-access RPC, trusting
+  middleware-set headers in `/api/admin/data`, `getClaims()` local JWT
+  verification, signed-cookie tenant cache) remain separate, NOT-yet-approved
+  future work and were not touched.
+- **Change (one file: `middleware.ts`), three moves:**
+  1. Hoisted the hostname `try/catch` (`normalizeHostname`, `return
+     notFound()` on throw) and `const onzio = supabase.schema("onzio");`
+     above the parallel block (both pure/synchronous; the fail-closed return
+     cannot live inside a `Promise.all` leg).
+  2. Wrapped the tenant-lookup block (`.localhost` dev branch + real-hostname
+     `club_domains` branch + `resolve_verified_tenant` RPC fallback) verbatim
+     in a local `const resolveTenant = async (): Promise<ResolvedTenant |
+     null>` helper; only renames are the internal accumulator `tenant` →
+     `resolved` (avoids shadowing the outer `tenant`) and the RPC destructure
+     `resolved` → `rpcResolved` (avoids colliding with the accumulator).
+  3. Replaced the two sequential awaits with:
+     ```ts
+     const [
+       {
+         data: { user },
+       },
+       tenant,
+     ] = await Promise.all([supabase.auth.getUser(), resolveTenant()]);
+     ```
+  Everything from the fail-closed `if (!tenant || tenant.lifecycle ===
+  "archived")` check onward is untouched; `tenant` keeps its exact name and
+  `ResolvedTenant | null` type. `get_club_runtime_access` remains sequential,
+  after the parallel block, unchanged (it depends on `tenant.id`). No new
+  error handling was added anywhere — today's exact error-handling shape
+  (including `getUser()`'s ignored `error`) is preserved.
+- **Two accepted, deliberate behavioral deltas:**
+  1. An invalid `Host` header now 404s WITHOUT calling `getUser()` first
+     (hostname validation is hoisted). Not client-observable — the discarded
+     cookie refresh on that path never reached the `notFound()` response.
+  2. If `getUser()` throws, the read-only tenant-lookup leg is already in
+     flight and its result is discarded when `Promise.all` rejects — same
+     class of plain 500 as today.
+- **Timing evidence (measured, not assumed; temporary `performance.now()`
+  marks around `getUser()` and inside the tenant leg, logged per request via
+  dev-server stdout on port 3005, seeded local Supabase, `diverse-city`
+  tenant; instrumentation removed afterward — final file grep-verified
+  clean):**
+  - BEFORE (sequential, 12 warm anonymous `/contact` requests):
+    `tenantLeg.start` was at-or-after `getUser.end` on every request (e.g.
+    getUser 0.1→0.3ms, tenantLeg 0.3→5.3ms). Median middleware-internal
+    total **9.55ms** (range 5.5–17.6).
+  - AFTER (parallel, 11 warm anonymous `/contact` requests): `tenantLeg.start`
+    fires at the same instant as `getUser.start` and BEFORE `getUser.end` on
+    every request (e.g. both legs start at 0.2ms, getUser.end 0.4ms). Median
+    middleware-internal total **8.5ms** (range 7.4–15.3). Anonymous win is
+    modest because a session-less `getUser()` resolves in ~0.2–0.5ms without
+    a network call.
+  - AFTER, authenticated (owner session — where `getUser()` performs a real
+    auth round trip): the overlap is decisive. `/admin` document: tenantLeg
+    0.4→24.3ms while getUser ran 0.3→64.5ms; `POST /api/admin/data`:
+    tenantLeg done at ~30ms while getUser landed at ~98–121ms; another
+    `/admin`: tenantLeg 8.3→85.0ms vs getUser.end 96.5ms. Sequentially these
+    would have been additive (~60–120ms of getUser latency in front of every
+    tenant lookup); now the tenant leg completes inside getUser's window.
+- **Verification:** `npx tsc --noEmit` clean. Narrow first:
+  `tests/contracts/tenant-robots.test.ts` +
+  `tests/contracts/tenant-routing.test.ts` +
+  `tests/contracts/diverse-city-admin-public-acceptance.test.ts` = 3 files,
+  41/41. Then `npm run test:contracts` 508/508; `npm run test:legacy`
+  274/274; `npm run test:architecture` 20/20; `npm run test:db` 165/165
+  (with `set -a && . ./.env.test && set +a` sourced first, per
+  `tests/README.md`); `npm test` 967/967; `npm run lint` 0 errors (same 5
+  pre-existing `react-hooks/exhaustive-deps` warnings); `npm run build`
+  compiled successfully, exit 0 (no dev server was running against this
+  directory during the build — the process found on port 3013 belongs to
+  `~/Downloads/onzio`, a different folder). All seven contract-matched
+  literal substrings confirmed present verbatim after the edit
+  (`target.hostname = hostname`, `if (internalSlug !== tenant.slug) return
+  notFound()`, `"/programs"`, `"/contact"`, `"/tryouts"`,
+  `PROGRAM_DETAIL_PATH`, `PROGRAM_SLUG_PATTERN`).
+- **Live fail-closed/auth/cross-tenant checks (local dev on 3005, seeded
+  local Supabase; unknown-tenant checks captured in the BEFORE state too and
+  identical):**
+  - Unknown tenant `no-such-club.localhost:3005` → 404 on `/` and `/contact`
+    (before AND after).
+  - Invalid Host header (`curl -H "Host: bad host"`) → 404, not 500.
+  - Anonymous `diverse-city.localhost:3005/contact` → 200 with correct
+    Diverse City FC content.
+  - Real email-OTP login via local Mailpit as `owner-aal2@alpha.local`
+    (diverse-city owner): `/admin` dashboard 200, six `POST /api/admin/data`
+    → 200 and `GET /api/stripe/billing-admin` → 200 (proves
+    `x-onzio-user-id` still flows to downstream API routes) — re-verified on
+    the final uninstrumented code after a clean dev-server restart.
+  - Mangled `sb-127-auth-token` cookie + reload: public `/contact` still 200
+    as anonymous, `/admin` falls back to the login screen, zero 500s
+    anywhere (ignored-`getUser`-error path behaves identically).
+  - Cross-tenant interleave `diverse-city` → `lions` → `diverse-city` →
+    `lions` homepages: each response contains only its own club name/brand
+    color (Diverse City FC/#FF1616 vs Lions Football Club/#AD3234), zero
+    bleed-through.
+- **Blockers:** none.
+- **Exact next step:** none required for this scope — rides with the normal
+  review/commit/push flow. The larger middleware round-trip reductions
+  (combined RPC, header-trusting in API routes, `getClaims()`, signed-cookie
+  tenant cache) remain separate future work awaiting Christian's approval.
+- **Hosted mutations, commits, pushes, deployments:** zero. Local file edits
+  only; local database used read-only.
