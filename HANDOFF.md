@@ -7451,3 +7451,108 @@ verification, blockers, and the next step.
   review/commit/push flow whenever Christian wants to land it.
 - **Hosted mutations, commits, pushes, deployments:** zero — all work was
   local file edits, local test runs, and a local dev-server preview only.
+
+## 2026-08-10 - Staging alias staleness discovered and repointed for Diverse City
+
+- **Context:** committed (`cf97d2b`) and pushed the PLAT-104 admin restyle +
+  sidebar-grouping follow-up to `origin/staging`, then checked the resulting
+  Preview deployment on Vercel per Christian's request.
+- **Found, not caused by this session's code changes:** the raw branch/
+  deployment URLs are correctly unregistered (404 by design — no
+  `club_domains` row for them). But the intended checking domain,
+  `diverse-city-onzio-staging.vercel.app`, IS a registered `club_domains`
+  row (`environment=staging`, verified, active) yet was a manually-pinned
+  Vercel alias (`vercel alias set`, not git-integration auto-follow)
+  pointing at a deployment from **~4 days prior** (`dpl_7SFZhVNaKwkoQTuvayTCZbU476G9`,
+  commit "Record staging billing configuration state", deployed by an actor
+  labeled `codex`). `alpha-onzio-staging.vercel.app` and
+  `bravo-onzio-staging.vercel.app` are worse: both currently point at
+  deployments in a **different Vercel project** (`onzio-rcfc`, not
+  `onzio-platform`) on ~1-week-old PLAT-102-era commits. This is the same
+  stale-manually-pinned-alias failure mode already root-caused and fixed for
+  `diverse-city-fc-private.vercel.app` (production) earlier today — just
+  recurring on the staging side, across three domains, likely because
+  neither the `alpha`/`bravo` nor `diverse-city` staging aliases were ever
+  converted to proper auto-following project Domains the way the production
+  one was.
+- **What was fixed:** with Christian's explicit approval (asked which of
+  three options; he chose the immediate repoint over registering it as a
+  true auto-following Domain, since branch-scoped Domain assignment turned
+  out to require the Vercel dashboard UI — not exposed by `vercel domains
+  add` or any available API/CLI tool, and defaulting a `domains add` call
+  would have silently bound "staging" to track **Production** instead,
+  which would have been worse than the status quo). Ran
+  `vercel alias set onzio-platform-rnns7rhw6-404christianns-projects.vercel.app
+  diverse-city-onzio-staging.vercel.app`. Confirmed via the Vercel API that
+  the alias now resolves to `dpl_gAxLAPZU4koN2y5nrxy3MKivNrcS` (`cf97d2b`),
+  and visually confirmed in a real browser that `/admin/login` renders
+  correctly on the current token-based design system.
+- **Not fixed, flagged only:** `alpha-onzio-staging.vercel.app` and
+  `bravo-onzio-staging.vercel.app` still point at the wrong project
+  entirely. Neither was touched — out of scope for what was asked, and the
+  wrong-project situation needs its own investigation (was `onzio-rcfc`
+  ever supposed to serve these, or is this leftover from an earlier
+  restructuring?) before blindly repointing.
+- **Recurring risk, unresolved:** none of the three staging aliases
+  auto-follow future `staging` pushes — today's fix will itself go stale on
+  the next push, exactly like before. The durable fix (assign each domain
+  to auto-follow the `staging` Git branch in Project Settings → Domains) can
+  only be done in the Vercel dashboard.
+- **Verification:** `GET /admin/login` on `diverse-city-onzio-staging.vercel.app`
+  confirmed 200 (was 404) via Vercel runtime logs; `get_deployment` by
+  hostname confirmed it resolves to commit `cf97d2b`; browser screenshot
+  confirmed the login page renders on the new token design system.
+- **Hosted mutation performed:** one Vercel alias repoint
+  (`vercel alias set`), explicitly approved by Christian in-session. No
+  database, Stripe, DNS, or other infrastructure change. No login attempted
+  against the hosted staging tenant (would send a real OTP email).
+- **Exact next step:** if durable auto-follow tracking is wanted, Christian
+  (or a session with dashboard access) needs to assign
+  `diverse-city-onzio-staging.vercel.app` (and decide on `alpha`/`bravo`) to
+  the `staging` Git branch under Project Settings → Domains. Separately,
+  `alpha-onzio-staging.vercel.app`/`bravo-onzio-staging.vercel.app` pointing
+  at the `onzio-rcfc` project needs its own investigation before any fix.
+
+## 2026-08-10 - Staging Supabase project was 5 migrations behind, now applied
+
+- **Context:** immediately after the alias repoint above, Christian checked
+  the now-current staging admin portal and hit
+  `Could not find the table 'onzio.X' in the schema cache` on the Homepage,
+  Programs, and Tryouts editor tabs.
+- **Root cause, not related to PLAT-104:** the hosted staging Supabase
+  project (`fxefqnoqxbezeccjvrsw`, "Onzio Platform Staging") had not had any
+  migration applied since `20260804061257_plat_102_grace_content_edits`. Five
+  checked-in migrations dated 2026-08-07–09 had never been run against it:
+  `fix_resolve_verified_tenant_grants`,
+  `dcfc_301_programs_media_entitlement` (creates `onzio.program_media`,
+  adds `programs.registration_*` columns),
+  `dcfc_homepage_story_programs_page_content` (creates
+  `onzio.homepage_story_section`, `onzio.programs_page_content`, adds
+  `site_branding.footer_tagline`), `fix_admin_media_signed_upload_authorization`,
+  and `tryouts_page_content` (creates `onzio.tryouts_page_content`).
+- **Action taken, with Christian's explicit approval:** applied all five to
+  the staging project in their original chronological order via
+  `apply_migration`, each verbatim from its committed file. Followed with
+  `select pg_notify('pgrst', 'reload schema');` to force PostgREST's schema
+  cache to pick up the new tables immediately rather than waiting for its
+  own reload cycle.
+- **Verification:** re-queried `information_schema.tables` after each batch —
+  `homepage_story_section`, `program_media`, `programs_page_content`, and
+  `tryouts_page_content` all now exist in `onzio`. `get_advisors` (security)
+  shows no new findings from these migrations — the only items present are
+  five pre-existing `rls_enabled_no_policy` INFOs on unrelated legacy tables
+  (`audit_events`, `club_exports`, `email_delivery_events`,
+  `media_cleanup_queue`, `stripe_events`) and two pre-existing account-level
+  WARNs (OTP expiry, leaked-password-protection), none introduced today.
+- **Hosted mutation performed:** five schema migrations applied directly to
+  the hosted staging Supabase project, explicitly approved by Christian
+  in-session. No production database touched. No data seeded or mutated —
+  every new table/column is additive with safe defaults, matching what's
+  already true of these migrations locally.
+- **Blockers or unresolved decisions:** none for this fix. Whether staging
+  has a recurring pattern of drifting behind checked-in migrations (this is
+  the second time today staging turned out to be stale, after the alias
+  issue above) might be worth a standing process — not decided here.
+- **Exact next step:** none required. Christian should refresh the Homepage/
+  Programs/Tryouts admin tabs on `diverse-city-onzio-staging.vercel.app` to
+  confirm the schema-cache errors are gone.
