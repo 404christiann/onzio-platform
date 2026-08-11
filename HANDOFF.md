@@ -7957,3 +7957,198 @@ or deleted either — the only database interaction beyond reads was a
 transaction that took a table lock, slept, and committed without touching a
 row, plus a `docker pause`/`unpause` of the local PostgREST container, both
 purely to hold pages in their loading states long enough to inspect.
+
+## PLAT-104 follow-up — Login page: minimum loading-state duration, "Admin Portal" heading removal
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Opus 5).
+- **Objective:** two small, independent changes Christian asked for on
+  `/admin/login`: (1) make the post-OTP `AdminLoading` state actually visible
+  for about a second before navigating, and (2) remove the "Admin Portal"
+  heading and the whitespace it left behind.
+- **Action class:** Class 1 — local code changes only. No hosted mutation, no
+  deploy, no commit, no push.
+- **Scope:** `app/admin/login/page.tsx` only. `AdminLoading.tsx`, the OTP
+  box-grid logic, the sliding-panel component, and every other admin page were
+  left untouched.
+
+### Change 1 — minimum-visible-duration floor on OTP verification
+
+- New top-level `const MIN_VERIFY_LOADING_MS = 900;` beside `DEFAULT_BOX_COUNT`,
+  with a comment recording *why* it exists rather than only what it does.
+- In `verifyCode`, the bare `await supabase.auth.verifyOtp(...)` became a
+  `Promise.all([verifyOtp(...), new Promise(r => setTimeout(r, MIN_VERIFY_LOADING_MS))])`
+  with the auth result destructured out of position 0. Everything downstream —
+  the `if (verificationError) throw`, `router.replace("/admin")`,
+  `router.refresh()`, the `catch` that clears `lastSubmittedCode` and sets the
+  red error, and the `finally` that clears `loading` — is byte-for-byte
+  unchanged.
+- **Why a floor was needed at all, with numbers:** measured live against local
+  Supabase, the `/auth/v1/verify` request itself completes in **73ms** on the
+  success path and **78ms** on the invalid-code path. The crossfade is a
+  `duration-300` transition, so before this change the loading state was
+  unmounting roughly 200ms *before* the fade-in would even have finished — the
+  spinner was never actually perceptible. With the floor it is held **952ms**
+  (success) and **1120ms** (invalid code).
+- The floor applies to both outcomes by construction: Supabase returns invalid
+  codes as a resolved `{ error }` rather than a rejection, so the invalid-code
+  path also passes through the `Promise.all` before throwing. A genuine network
+  rejection would still short-circuit, which is the desired behaviour.
+- **Deliberately not floored:** `requestCode` (the email-send step). This is the
+  only artificial delay in the file. The crossfade's own `duration-300` timing
+  was not touched.
+
+### Change 2 — "Admin Portal" heading removed
+
+- The `<h1>` is now wrapped in `{step !== "email" && (...)}`, and its ternary
+  collapsed from three branches to two (`"Enter your code"` /
+  `"No account for that address"`). The `"Admin Portal"` string is gone from
+  the repository — `grep` across `tests/`, `app/` and `components/` returns
+  zero hits, and no contract test ever asserted it, so nothing needed changing
+  or weakening on the test side.
+- **No spacing adjustment turned out to be needed, and this was verified
+  numerically rather than guessed.** Measured in the live browser: removing the
+  heading shrinks the card from 435.19px to 391.19px, i.e. exactly the 44px the
+  `h1` occupied (36px box + its `mt-2`), so no dead space is left behind. The
+  logo's `-mb-[56px]` already lands the flow cursor at the wordmark's visible
+  baseline, so the email form's existing `mt-8` becomes the entire visible gap:
+  **32.5px between the wordmark's visible bottom and the form**, against the
+  card's own `p-8`/32px padding. The gap below the mark therefore equals the
+  padding around it, which reads as intentional. Changing `mt-8` or the logo's
+  negative margin would have *broken* that rhythm, so both were left alone and
+  no step-specific margin override was introduced.
+- The wordmark's own position is unchanged: its visible artwork still starts
+  0.74px below the card's padding edge, exactly as before.
+- The `code` and `unknown` steps keep their headings with the original `mt-2`
+  tight-to-wordmark spacing, and were confirmed visually unaffected.
+
+### Files changed
+
+Modified: `app/admin/login/page.tsx`. Nothing else — `git status` shows exactly
+one modified file.
+
+### Test changes
+
+None. No test was added, modified, skipped, or weakened.
+
+### Verification
+
+- `npx tsc --noEmit` — clean, exit 0.
+- `npm run test:contracts` — 508/508 passed across 45 files.
+- `npm run test:legacy` — 274/274 passed across 25 files.
+- `npm run test:architecture` — 20/20 passed across 3 files.
+- All three match the previous entry's baseline exactly; nothing skipped.
+- `npm run lint` — 0 errors, and the same 5 pre-existing
+  `react-hooks/exhaustive-deps` warnings in analytics (3), homepage (1) and
+  schedule (1), unchanged.
+- `npm run build` — `✓ Compiled successfully`, exit 0.
+- **Live browser, local Alpha tenant, real email-OTP login via local Supabase +
+  Mailpit (`owner-aal2@alpha.local`, `ONZIO_ENVIRONMENT=production` override —
+  see the standing blocker in the previous entry):**
+  - Email step: no heading, no leftover gap, at both 1280x720 and 375x812.
+    `document.querySelector('h1')` returns `null` on that step, confirming the
+    element is absent rather than rendered empty.
+  - Code step: "ENTER YOUR CODE" renders correctly and unaffected. Unknown step:
+    "NO ACCOUNT FOR THAT ADDRESS" renders correctly and unaffected (reached with
+    a deliberately unregistered address).
+  - Real 6-digit code from Mailpit filled 6 of the 8 boxes — flexible-length OTP
+    behaviour still intact — and signed in to the Alpha FC dashboard.
+  - Loading floor timed with a `MutationObserver` (a polled `setInterval` probe
+    was useless here: background-tab throttling clamps it to 1000ms ticks and
+    silently fabricates ~1s of apparent duration — worth knowing before anyone
+    re-measures this). Success path: spinner mounted at +7ms, unmounted at
+    +952ms, navigated to `/admin` afterwards. Invalid-code path: spinner mounted
+    at +7ms, unmounted with the red `role="alert"` banner at +1120ms — held for
+    about a second, not stuck waiting artificially long.
+  - Crossfade confirmed still a real fade, not a jump-cut: captured mid-flight
+    with the form at intermediate opacities (0.007 → 0.033 → 0.090 → 0.184), and
+    separately caught in a state where the form's class was already `opacity-100`
+    while its computed opacity was still `0`, which only happens during an
+    in-flight CSS transition. The form's computed transition is still
+    `opacity 0.3s`.
+  - Settled loading state captured: `AdminLoading` mounted with computed colour
+    `rgb(14, 181, 71)` (= `#0eb547`, the `--brand` token), all three dots running
+    `spinner-ellipsis` at delays `0s`/`0.12s`/`0.24s`, with the form at
+    `aria-hidden="true"` and `pointer-events: none`.
+  - Invalid-code error still renders red: `rgb(220, 40, 40)`, text unchanged.
+  - Only console errors were self-inflicted by the negative tests: one `422`
+    from the unregistered-address check and five `403`s from the deliberate
+    wrong-code submissions.
+
+### Technique note, for whoever verifies this next
+
+The floor is ~1s, which is shorter than a screenshot round-trip, so the spinner
+cannot be photographed by simply submitting and screenshotting — you will
+reliably catch the state *after* it. Two things that work: schedule the DOM
+snapshot **inside** the page (`setTimeout` writing to a `window` global, read
+back afterwards), or temporarily wrap `window.fetch` to delay only
+`/auth/v1/verify` so the genuine loading state holds open long enough to
+capture. The fetch wrapper was restored immediately after
+(`window.fetch === fetch` re-confirmed true) and only ever delayed a request
+carrying a deliberately wrong code.
+
+### Blockers and pre-existing issues
+
+- No new blockers. The `club_domains` / `ONZIO_ENVIRONMENT` local-login mismatch
+  documented in the previous entry is still unresolved and was again worked
+  around for verification only, by launching the dev server with
+  `ONZIO_ENVIRONMENT=production` on the command line. Nothing was changed to
+  paper over it.
+- **Observation, pre-existing and deliberately not fixed (out of scope):** on
+  the success path `setLoading(false)` runs in `finally`, immediately after
+  `router.replace("/admin")` is *issued* but long before the navigation lands.
+  The code form therefore fades back in for the remainder of the navigation
+  (~1.6s in dev, where `/admin` is compiled on demand; expected to be far
+  shorter in a production build) before the dashboard appears. This behaviour
+  predates this change and is unaffected by it — the floor only governs how long
+  the spinner is held *before* `router.replace` is called. If Christian wants
+  the spinner to persist all the way through to `/admin`, that is a separate
+  change: keep `loading` true on the success path instead of clearing it in
+  `finally`.
+
+### Exact next step
+
+None required for this package. These are uncommitted local changes on
+`staging`, stacked on top of the previous entry's uncommitted work; the normal
+review/commit/push flow applies whenever Christian wants to land them.
+
+### Hosted mutations, commits, pushes, deployments
+
+Zero. No commit, no push, no deploy, and no Supabase/Stripe/Vercel/DNS change of
+any kind. All work was local file edits, local test runs, and local dev-server
+browser verification. The only database side effects were ordinary auth reads
+plus the OTP rows local Supabase created for the sign-in codes requested during
+verification; no application data was created, updated, or deleted.
+
+## PLAT-104 follow-up — Spinner now holds through the /admin navigation
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Sonnet 5), direct edit.
+- **Objective:** the previous entry's own "not fixed" note — on the success
+  path, `setLoading(false)` ran in a `finally` block immediately after
+  `router.replace("/admin")` was issued, so the code-entry form faded back in
+  for the remainder of the navigation before the dashboard appeared, instead
+  of the spinner holding the whole way through. Christian asked for the
+  spinner to persist through navigation.
+- **Fix:** `app/admin/login/page.tsx`, `verifyCode` — removed the `finally`
+  block. `setLoading(false)` now only runs in the `catch` branch (invalid/
+  expired code). On success, `loading` is deliberately left `true`; the
+  component unmounts on navigation, so there is nothing to reset. A one-line
+  comment records why. No other logic changed — the `MIN_VERIFY_LOADING_MS`
+  floor from the previous entry, the crossfade markup, and the error path are
+  untouched.
+- **Files changed:** `app/admin/login/page.tsx` only.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508 (45 files); `npm run test:legacy` 274/274 (25 files);
+  `npm run test:architecture` 20/20 (3 files); `npm run lint` 0 errors (same 5
+  pre-existing `react-hooks/exhaustive-deps` warnings, unchanged);
+  `npm run build` compiled successfully. Live-verified in the browser against
+  local Alpha (`owner-aal2@alpha.local`, real OTP via local Supabase +
+  Mailpit, launched with the documented `ONZIO_ENVIRONMENT=production`
+  override): submitted a valid code, screenshotted immediately after and
+  again a moment later — both captures show the fully-settled green `LOADING…`
+  state with the code form completely gone (not fading back in), then the
+  next capture lands cleanly on the Alpha FC dashboard. No flash of the form
+  reappearing.
+- **Blockers:** none.
+- **Exact next step:** none required. Rides with the rest of today's
+  uncommitted `staging` work through the normal review/commit/push flow.
+- **Hosted mutations, commits, pushes, deployments:** zero.

@@ -22,6 +22,15 @@ const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
 // code doesn't visibly grow the grid. The grid still grows to fit longer
 // codes if the length drifts again.
 const DEFAULT_BOX_COUNT = 8;
+// Floor on how long the post-submit loading state stays up. `verifyOtp` can
+// resolve in a few dozen milliseconds locally and on fast hosted connections,
+// which makes the code-card → AdminLoading crossfade imperceptible — it reads
+// as a jump-cut straight to /admin rather than as a deliberate transition.
+// Racing the request against this timer guarantees the spinner is actually
+// seen, on both the success and the invalid-code path. This is the only
+// artificial delay in the file; the email-send step is deliberately not
+// floored, and the crossfade's own duration-300 timing is unrelated to it.
+const MIN_VERIFY_LOADING_MS = 900;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -98,18 +107,24 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const { error: verificationError } = await supabase.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
-        token: candidate,
-        type: "email",
-      });
+      const [{ error: verificationError }] = await Promise.all([
+        supabase.auth.verifyOtp({
+          email: email.trim().toLowerCase(),
+          token: candidate,
+          type: "email",
+        }),
+        new Promise((resolve) => setTimeout(resolve, MIN_VERIFY_LOADING_MS)),
+      ]);
       if (verificationError) throw verificationError;
+      // Deliberately leave `loading` true on success: the spinner should
+      // stay up through the /admin navigation instead of the form fading
+      // back in for the remainder of it. This unmounts with the page, or
+      // clears in the catch block below if verification actually failed.
       router.replace("/admin");
       router.refresh();
     } catch {
       lastSubmittedCode.current = null;
       setError("That code is invalid or expired. Request a new code and try again.");
-    } finally {
       setLoading(false);
     }
   }
@@ -156,13 +171,18 @@ export default function LoginPage() {
           priority
           className="-ml-[20px] -mt-[52px] -mb-[56px] max-w-none"
         />
-        <h1 className="mt-2 font-display text-3xl font-black uppercase">
-          {step === "code"
-            ? "Enter your code"
-            : step === "unknown"
-              ? "No account for that address"
-              : "Admin Portal"}
-        </h1>
+        {/* The email step deliberately has no heading — the wordmark above is
+            the only title that screen needs. Rendering nothing (rather than an
+            empty h1) also removes the heading's own 36px box and its mt-2, so
+            no dead space is left behind; the logo's negative bottom margin
+            already lands the flow cursor at the wordmark's visible baseline,
+            so the email form's own top margin becomes the whole visible gap.
+            The code and unknown steps keep their headings unchanged. */}
+        {step !== "email" && (
+          <h1 className="mt-2 font-display text-3xl font-black uppercase">
+            {step === "code" ? "Enter your code" : "No account for that address"}
+          </h1>
+        )}
 
         {step === "unknown" ? (
           <div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground">
