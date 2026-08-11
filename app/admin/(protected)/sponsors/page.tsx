@@ -9,6 +9,10 @@ import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import FileUpload from "@/components/admin/FileUpload";
 import SponsorCarousel from "@/components/SponsorCarousel";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
 import { fetchSiteSponsorLogos } from "@/lib/queries";
 import {
@@ -20,6 +24,8 @@ import {
   type DraftSponsorLogo,
 } from "@/lib/sponsor-content";
 import { createClient } from "@/lib/admin-client";
+
+const PLACEMENT_ORDER: SponsorLogoPlacement[] = ["carousel", "footer"];
 
 const inputClass =
   "w-full rounded-lg border border-input bg-background px-3 py-2.5 font-body text-sm text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -78,6 +84,17 @@ export default function AdminSponsorsPage() {
   // the editor to the carousel; every other template keeps both placements.
   const isAcademy = club.presentationTemplateKey === "academy@1";
   const [placement, setPlacement] = useState<SponsorLogoPlacement>("carousel");
+  const [placementDirection, setPlacementDirection] =
+    useState<SlidingPanelDirection>(1);
+  const selectPlacement = (next: SponsorLogoPlacement) => {
+    setPlacement((current) => {
+      if (next === current) return current;
+      setPlacementDirection(
+        PLACEMENT_ORDER.indexOf(next) > PLACEMENT_ORDER.indexOf(current) ? 1 : -1,
+      );
+      return next;
+    });
+  };
   const [originalLogos, setOriginalLogos] = useState<DBSiteSponsorLogo[]>(
     defaultSponsorLogosForPlacement("carousel"),
   );
@@ -326,12 +343,12 @@ export default function AdminSponsorsPage() {
                       if (dirty && !window.confirm("Discard unsaved sponsor changes before switching placements?")) {
                         return;
                       }
-                      setPlacement(tab.id);
+                      selectPlacement(tab.id);
                       setSaved(false);
                     }}
                     className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
                       isSelected
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-foreground text-background"
                         : "bg-transparent text-muted-foreground"
                     }`}
                   >
@@ -457,6 +474,7 @@ export default function AdminSponsorsPage() {
               {placement === "carousel" ? "Carousel Preview" : "Footer Preview"}
             </p>
 
+            <SlidingPanel activeKey={placement} direction={placementDirection}>
             {placement === "carousel" ? (
               <SponsorCarousel sponsors={previewLogos} compact />
             ) : (
@@ -484,6 +502,7 @@ export default function AdminSponsorsPage() {
                 </div>
               </div>
             )}
+            </SlidingPanel>
           </section>
         </div>
       )}

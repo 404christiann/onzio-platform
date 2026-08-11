@@ -18,6 +18,10 @@ import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } fro
 import { cn } from "@/lib/utils";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 // ── Nationalities ─────────────────────────────
 
 const NATIONALITIES = [
@@ -179,8 +183,24 @@ async function uploadPhoto(file: File, bucket: string, folder: string): Promise<
 
 // ── Main component ────────────────────────────
 
+type RosterTab = "players" | "staff";
+
+const ROSTER_TAB_ORDER: RosterTab[] = ["players", "staff"];
+
 export default function RosterPage() {
-  const [tab, setTab] = useState<"players" | "staff">("players");
+  const [tab, setTab] = useState<RosterTab>("players");
+  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
+  const selectTab = (next: RosterTab) => {
+    setTab((current) => {
+      if (next === current) return current;
+      setTabDirection(
+        ROSTER_TAB_ORDER.indexOf(next) > ROSTER_TAB_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -198,24 +218,24 @@ export default function RosterPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8">
-        {(["players", "staff"] as const).map((t) => (
+      <div className="mb-8 flex gap-1 rounded-lg bg-card p-1">
+        {ROSTER_TAB_ORDER.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className={`px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest border transition-all ${
-              tab === t
-                ? "border-destructive bg-destructive text-white"
-                : "border-border bg-card text-muted-foreground"
+            type="button"
+            onClick={() => selectTab(t)}
+            className={`font-display flex-1 rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
+              tab === t ? "bg-foreground text-background" : "text-muted-foreground"
             }`}
-            style={{ fontSize: "1.1rem" }}
           >
             {t}
           </button>
         ))}
       </div>
 
-      {tab === "players" ? <PlayersTab /> : <StaffTab />}
+      <SlidingPanel activeKey={tab} direction={tabDirection}>
+        {tab === "players" ? <PlayersTab /> : <StaffTab />}
+      </SlidingPanel>
     </div>
   );
 }

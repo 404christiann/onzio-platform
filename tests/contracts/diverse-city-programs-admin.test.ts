@@ -355,7 +355,10 @@ describe("DCFC-301 protected Programs admin surface", () => {
 
   it("reveals the tab owning a validation error instead of hiding it", () => {
     expect(pageSource).toContain("PROGRAM_FIELD_TABS");
-    expect(pageSource).toContain("setActiveTab(PROGRAM_FIELD_TABS[firstField])");
+    // Tab switching now goes through `selectTab`, which additionally records
+    // the slide direction for the shared SlidingPanel transition before
+    // setting `activeTab`. Same requirement, same reveal, renamed setter.
+    expect(pageSource).toContain("selectTab(PROGRAM_FIELD_TABS[firstField])");
   });
 
   it("renders a full-page live preview from the unsaved draft", () => {

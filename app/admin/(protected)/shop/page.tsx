@@ -12,6 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import ScaledShopKitPreview from "@/components/admin/ScaledShopKitPreview";
 import ScaledShopPhotoStripPreview from "@/components/admin/ScaledShopPhotoStripPreview";
 import ScaledShopPurchaseDetailsPreview from "@/components/admin/ScaledShopPurchaseDetailsPreview";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 import type {
   DBShopCarouselPhoto,
   DBShopKitPhoto,
@@ -113,6 +117,8 @@ async function uploadPhoto(file: File, bucket: string, folder: string): Promise<
 }
 
 type AdminTab = "content" | "kit" | "photoStrip" | "purchase";
+
+const ADMIN_TAB_ORDER: AdminTab[] = ["content", "kit", "photoStrip", "purchase"];
 type PurchaseTextField = Exclude<
   keyof DBShopPurchaseDetails,
   "id" | "cards" | "updated_at"
@@ -156,6 +162,16 @@ export default function AdminShopPage() {
         ? selectedKitVariant
         : "home";
   const [activeTab, setActiveTab] = useState<AdminTab>("content");
+  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
+  const selectTab = (next: AdminTab) => {
+    setActiveTab((current) => {
+      if (next === current) return current;
+      setTabDirection(
+        ADMIN_TAB_ORDER.indexOf(next) > ADMIN_TAB_ORDER.indexOf(current) ? 1 : -1,
+      );
+      return next;
+    });
+  };
   const [fields, setFields] = useState<SectionFields>(EMPTY_FIELDS);
   const [draftPhotos, setDraftPhotos] = useState<DraftKitPhoto[]>([]);
   const [originalPhotos, setOriginalPhotos] = useState<DBShopKitPhoto[]>([]);
@@ -639,7 +655,7 @@ export default function AdminShopPage() {
                         surface.id === "home" &&
                         (activeTab === "photoStrip" || activeTab === "purchase")
                       ) {
-                        setActiveTab("content");
+                        selectTab("content");
                       }
                       setSaved(false);
                     }}
@@ -681,7 +697,7 @@ export default function AdminShopPage() {
                         setSaved(false);
                       }}
                       className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
-                        isSelected ? "bg-destructive text-white" : "text-muted-foreground"
+                        isSelected ? "bg-foreground text-background" : "text-muted-foreground"
                       }`}
                     >
                       {variant.label}
@@ -731,9 +747,9 @@ export default function AdminShopPage() {
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => selectTab(tab.id)}
                     className={`font-display flex-1 rounded-md px-2 py-2.5 text-[0.65rem] uppercase tracking-widest transition-colors sm:text-xs ${
-                      isActive ? "bg-destructive text-white" : "text-muted-foreground"
+                      isActive ? "bg-foreground text-background" : "text-muted-foreground"
                     }`}
                   >
                     {tab.label}
@@ -743,7 +759,7 @@ export default function AdminShopPage() {
                     {hasIssue && (
                       <span
                         aria-hidden="true"
-                        className={isActive ? "text-white" : "text-destructive"}
+                        className="text-destructive"
                       >
                         {" "}
                         •
@@ -754,6 +770,7 @@ export default function AdminShopPage() {
               })}
             </div>
 
+            <SlidingPanel activeKey={activeTab} direction={tabDirection}>
             {activeTab === "content" && (
             <div className="space-y-3">
               <Field
@@ -1173,6 +1190,7 @@ export default function AdminShopPage() {
             )}
             </div>
             )}
+            </SlidingPanel>
 
             <div className="mt-4 border-t border-border pt-4">
               {error && (

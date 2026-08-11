@@ -8,6 +8,10 @@ import FileUpload from "@/components/admin/FileUpload";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
@@ -63,6 +67,12 @@ const PROGRAM_EDITOR_TABS: Array<{ id: ProgramEditorTab; label: string }> = [
   { id: "content", label: "Content" },
   { id: "media", label: "Media" },
   { id: "registration", label: "Registration" },
+];
+
+const PROGRAM_EDITOR_TAB_ORDER: ProgramEditorTab[] = [
+  "content",
+  "media",
+  "registration",
 ];
 
 /**
@@ -130,6 +140,19 @@ export default function AdminProgramsPage() {
   const [errors, setErrors] = useState<ProgramValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ProgramEditorTab>("content");
+  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
+  const selectTab = useCallback((next: ProgramEditorTab) => {
+    setActiveTab((current) => {
+      if (next === current) return current;
+      setTabDirection(
+        PROGRAM_EDITOR_TAB_ORDER.indexOf(next) >
+          PROGRAM_EDITOR_TAB_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  }, []);
   const galleryInput = useRef<HTMLInputElement>(null);
   // Gallery images live in their own table (onzio.program_media), so they are
   // loaded and saved alongside — not inside — the program row.
@@ -227,7 +250,7 @@ export default function AdminProgramsPage() {
     setError(null);
     setSaved(false);
     setDirty(false);
-    setActiveTab("content");
+    selectTab("content");
   }
 
   function startCreate() {
@@ -239,7 +262,7 @@ export default function AdminProgramsPage() {
     setError(null);
     setSaved(false);
     setDirty(false);
-    setActiveTab("content");
+    selectTab("content");
   }
 
   function setHighlight(index: number, value: string) {
@@ -436,13 +459,13 @@ export default function AdminProgramsPage() {
       const firstField = (
         Object.keys(validation) as Array<keyof ProgramValidationErrors>
       ).find((field) => PROGRAM_FIELD_TABS[field]);
-      if (firstField) setActiveTab(PROGRAM_FIELD_TABS[firstField]);
+      if (firstField) selectTab(PROGRAM_FIELD_TABS[firstField]);
       setError("Review the highlighted fields before saving.");
       return;
     }
     const galleryError = validateProgramMedia(gallery);
     if (galleryError) {
-      setActiveTab("registration");
+      selectTab("registration");
       setError(galleryError);
       return;
     }
@@ -912,10 +935,11 @@ export default function AdminProgramsPage() {
 
               <ProgramTabs
                 value={activeTab}
-                onChange={setActiveTab}
+                onChange={selectTab}
                 disabled={saving || uploadingRole !== null || uploadingGallery}
               />
 
+              <SlidingPanel activeKey={activeTab} direction={tabDirection}>
               {activeTab === "content" && (
               <>
               <div className="mt-6 grid gap-5 sm:grid-cols-2">
@@ -1322,6 +1346,7 @@ export default function AdminProgramsPage() {
               </div>
               </>
               )}
+              </SlidingPanel>
 
               <div className="mt-8 flex flex-col-reverse gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <AdminSaveFeedback saving={saving} saved={saved} savingLabel="Saving program…" successLabel="Program saved" />
@@ -1388,7 +1413,7 @@ function ProgramTabs({
             disabled={disabled}
             aria-pressed={selected}
             className={`font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors disabled:cursor-not-allowed ${
-              selected ? "bg-destructive/90 text-white" : "text-muted-foreground"
+              selected ? "bg-foreground text-background" : "text-muted-foreground"
             }`}
           >
             {tab.label}

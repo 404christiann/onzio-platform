@@ -7556,3 +7556,129 @@ verification, blockers, and the next step.
 - **Exact next step:** none required. Christian should refresh the Homepage/
   Programs/Tryouts admin tabs on `diverse-city-onzio-staging.vercel.app` to
   confirm the schema-cache errors are gone.
+
+## PLAT-104 follow-up — Admin tab-switcher style + slide-animation unification
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Opus 5).
+- **Objective:** Christian noticed the Homepage editor's
+  Hero/Slideshow/Story/Behind the Rose switcher was the only admin
+  tab-switcher with a white-pill active state and a sliding content-panel
+  transition; every other switcher was red (or another token) and/or swapped
+  content instantly. Unify all of them on the Homepage pattern so the
+  active-tab color never changes between admin pages.
+- **Reference pattern (unchanged, read-only):**
+  `app/admin/(protected)/homepage/page.tsx` — explicit `*_ORDER` array used
+  only to compute slide direction, a `SlidingPanelDirection` state, a
+  `selectTab(next)` that sets direction from the order-array index comparison
+  before setting the active tab, active class `bg-foreground text-background`
+  / inactive `text-muted-foreground`, and content wrapped in
+  `<SlidingPanel activeKey={...} direction={...}>`.
+  `components/ui/sliding-panel.tsx` was reused as-is and NOT modified.
+- **Switchers fixed (before → after):**
+  - `about/page.tsx` About / Club Logo — color already correct; added
+    `ADMIN_TAB_ORDER` + `tabDirection` + `selectTab`, and wrapped the two
+    content branches in `SlidingPanel` (was a plain ternary, no animation).
+  - `about/page.tsx` local `SectionNav` (used twice: Story/Values/Closing and
+    Images/Features/Colors) — `bg-destructive/90 text-white` →
+    `bg-foreground text-background`; each of the two groups got its own order
+    array, direction state (`aboutPanelDirection` / `logoPanelDirection`) and
+    its own `SlidingPanel`, nested inside the About/Club Logo panel. The
+    wrapper className string stayed byte-identical
+    (`"mt-3 grid gap-1 rounded-lg bg-card p-1 sm:grid-cols-3"`) so the
+    shared-string contract with `programs.tsx` still holds.
+  - `programs/page.tsx` `ProgramTabs` (Content/Media/Registration) —
+    `bg-destructive/90 text-white` → `bg-foreground text-background`; added
+    `PROGRAM_EDITOR_TAB_ORDER`, `tabDirection`, a `useCallback` `selectTab`,
+    and wrapped the three content panels in `SlidingPanel`. All existing
+    programmatic tab jumps (program select, new program, validation-error
+    reveal, gallery-error reveal) now route through `selectTab` so the slide
+    direction is correct for those too.
+  - `shop/page.tsx` surface switcher (Home Page / Shop Page) — color was
+    already correct; no `SlidingPanel` added because that control only
+    reloads the same editor with different data, it has no separate
+    conditional content panel (per scope note).
+  - `shop/page.tsx` kit-variant switcher (Home/Away/Third Kit) —
+    `bg-destructive text-white` → `bg-foreground text-background`.
+  - `shop/page.tsx` main switcher (Content / Kit Photos / Photo Row /
+    Purchase) — `bg-destructive text-white` → `bg-foreground text-background`;
+    added `ADMIN_TAB_ORDER` + `tabDirection` + `selectTab` and wrapped all
+    four content panels in one `SlidingPanel`. The per-tab issue-dot marker
+    was `isActive ? "text-white" : "text-destructive"`; with the active pill
+    now light, white would have been invisible, so the dot is
+    `text-destructive` unconditionally — verified visibly readable on both
+    the light active pill and the dark inactive track.
+  - `sponsors/page.tsx` placement switcher (Carousel / Footer) —
+    `bg-primary text-primary-foreground` → `bg-foreground text-background`
+    (the primary pairing only looked right in dark mode by coincidence);
+    added `PLACEMENT_ORDER` + `placementDirection` + `selectPlacement` and
+    wrapped the carousel/footer preview content in `SlidingPanel`.
+  - `roster/page.tsx` Players / Staff — the structural outlier: bordered
+    red-fill pills (`border-destructive bg-destructive text-white`, 1.1rem,
+    `px-6 py-2.5`) in a plain `flex gap-2 mb-8` wrapper with a bare ternary
+    content swap. Replaced with the standard track
+    (`mb-8 flex gap-1 rounded-lg bg-card p-1`) and standard unbordered pill
+    buttons (`font-display flex-1 rounded-md px-3 py-3 text-xs uppercase
+    tracking-widest transition-colors`, active `bg-foreground
+    text-background`); added `RosterTab` type, `ROSTER_TAB_ORDER`,
+    `tabDirection`, `selectTab`, and wrapped `<PlayersTab />`/`<StaffTab />`
+    in `SlidingPanel`.
+- **Deliberately not touched:** `analytics/page.tsx` position-filter chips
+  (a list filter, not a panel switcher); every `bg-destructive` on real
+  action buttons (Save/Delete/Remove) and error banners;
+  `components/ui/sliding-panel.tsx`; `homepage/page.tsx` (read-only
+  reference); anything else from the PLAT-104 restyle.
+- **Files changed:** `app/admin/(protected)/about/page.tsx`,
+  `app/admin/(protected)/programs/page.tsx`,
+  `app/admin/(protected)/shop/page.tsx`,
+  `app/admin/(protected)/sponsors/page.tsx`,
+  `app/admin/(protected)/roster/page.tsx`,
+  `tests/contracts/diverse-city-programs-admin.test.ts` (one assertion:
+  `setActiveTab(PROGRAM_FIELD_TABS[firstField])` →
+  `selectTab(PROGRAM_FIELD_TABS[firstField])`, with a comment recording why —
+  the requirement "reveal the tab owning a validation error" is unchanged,
+  only the setter name moved because tab changes now record slide direction
+  first). No test was weakened, skipped, or deleted. A pre-edit grep of
+  `tests/contracts/` for the four active-state class strings being changed
+  found zero references, so no color assertion needed updating.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508 across 45 files; `npm run test:legacy` 274/274 across 25 files;
+  `npm run test:architecture` 20/20; `npm run lint` 0 errors (the same 5
+  pre-existing `react-hooks/exhaustive-deps` warnings in analytics/homepage/
+  schedule, unchanged).
+- **Visual verification (real browser, local dev server, real email-OTP
+  login via local Supabase + Mailpit):** every switcher was clicked and both
+  the white/light active pill and the sliding panel transition were captured
+  mid-animation.
+  - Local Alpha (`owner-aal2@alpha.local`, port 3008): About
+    Story/Values/Closing, Programs Content/Media/Registration, Shop
+    Home Page/Shop Page + Content/Kit Photos (issue dot legible on the light
+    active pill), Roster Players/Staff.
+  - Local Bravo (port 3006) for the switchers Alpha's `academy@1` template
+    hides: Sponsors Carousel/Footer, About About/Club Logo (+ its nested
+    Images/Features/Colors), Shop Home/Third/Away Kit and the full four-tab
+    Content/Kit Photos/Photo Row/Purchase switcher. Bravo's admin is
+    unreachable from a cold start (it is `public_access = preview`, so
+    `can_read_club` hides it from anon and even `/admin/login` 404s); it was
+    reached without any data change by signing in as the seeded
+    `multiclub@local.test` on Alpha first and reusing that host-scoped
+    session on Bravo's port.
+  - Only console errors seen are the pre-existing local ones (About's
+    seeded `feature_image_url` is empty, so `next/image` logs a missing-src
+    error) — unrelated to this change and present before it.
+- **Notes for the next agent:** the two dev-server configs share one `.next`
+  directory, so running the Alpha and Bravo previews at the same time
+  corrupts the build output and renders admin pages unstyled. Run them one at
+  a time (`rm -rf .next` if it happens). Also confirmed in passing:
+  `onzio.presentation_documents` rows are immutable at the database level
+  (`prevent_presentation_document_mutation`), so a club's template cannot be
+  toggled locally to reveal template-gated UI — use a second tenant instead.
+- **Blockers or unresolved decisions:** none.
+- **Exact next step:** none required. These are uncommitted local changes on
+  `staging`; normal review/commit/push flow applies whenever Christian wants
+  to land them.
+- **Hosted mutations, commits, pushes, deployments:** zero. No commit, no
+  push, no deploy, and no Supabase/Stripe/Vercel/DNS change of any kind. All
+  work was local file edits, local test runs, and local dev-server browser
+  verification. No local database rows were created, updated, or deleted
+  either — the one attempted local fixture toggle was rejected by the
+  database's own immutability trigger and left no change.

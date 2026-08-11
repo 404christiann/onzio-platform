@@ -9,6 +9,10 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledAboutPreview from "@/components/admin/ScaledAboutPreview";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 import type {
   DBAboutPageContent,
   DBClubLogoPageContent,
@@ -31,6 +35,10 @@ import { createClient } from "@/lib/admin-client";
 type AdminTab = "about" | "logo";
 type AboutPanel = "story" | "values" | "closing";
 type LogoPanel = "images" | "features" | "colors";
+
+const ADMIN_TAB_ORDER: AdminTab[] = ["about", "logo"];
+const ABOUT_PANEL_ORDER: AboutPanel[] = ["story", "values", "closing"];
+const LOGO_PANEL_ORDER: LogoPanel[] = ["images", "features", "colors"];
 type UploadTarget =
   | { kind: "aboutFeature" }
   | { kind: "logoAnnotated" }
@@ -94,8 +102,44 @@ export default function AdminAboutPage() {
   // href field that could save a broken path.
   const isAcademy = club.presentationTemplateKey === "academy@1";
   const [activeTab, setActiveTab] = useState<AdminTab>("about");
+  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
   const [aboutPanel, setAboutPanel] = useState<AboutPanel>("story");
+  const [aboutPanelDirection, setAboutPanelDirection] =
+    useState<SlidingPanelDirection>(1);
   const [logoPanel, setLogoPanel] = useState<LogoPanel>("images");
+  const [logoPanelDirection, setLogoPanelDirection] =
+    useState<SlidingPanelDirection>(1);
+  const selectTab = (next: AdminTab) => {
+    setActiveTab((current) => {
+      if (next === current) return current;
+      setTabDirection(
+        ADMIN_TAB_ORDER.indexOf(next) > ADMIN_TAB_ORDER.indexOf(current) ? 1 : -1,
+      );
+      return next;
+    });
+  };
+  const selectAboutPanel = (next: AboutPanel) => {
+    setAboutPanel((current) => {
+      if (next === current) return current;
+      setAboutPanelDirection(
+        ABOUT_PANEL_ORDER.indexOf(next) > ABOUT_PANEL_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  };
+  const selectLogoPanel = (next: LogoPanel) => {
+    setLogoPanel((current) => {
+      if (next === current) return current;
+      setLogoPanelDirection(
+        LOGO_PANEL_ORDER.indexOf(next) > LOGO_PANEL_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  };
   const [selectedLogoFeature, setSelectedLogoFeature] = useState(0);
   const [aboutDraft, setAboutDraft] = useState<DBAboutPageContent>(
     toAboutDraft(DEFAULT_ABOUT_PAGE_CONTENT),
@@ -346,9 +390,15 @@ export default function AdminAboutPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => {
-                      setActiveTab(tab.id);
-                      if (tab.id === "about") setAboutPanel("story");
-                      if (tab.id === "logo") setLogoPanel("images");
+                      selectTab(tab.id);
+                      if (tab.id === "about") {
+                        setAboutPanel("story");
+                        setAboutPanelDirection(1);
+                      }
+                      if (tab.id === "logo") {
+                        setLogoPanel("images");
+                        setLogoPanelDirection(1);
+                      }
                     }}
                     disabled={saving || uploading}
                     className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
@@ -370,7 +420,7 @@ export default function AdminAboutPage() {
                   { id: "closing", label: "Closing" },
                 ]}
                 value={aboutPanel}
-                onChange={setAboutPanel}
+                onChange={selectAboutPanel}
                 disabled={saving || uploading}
               />
             ) : (
@@ -381,14 +431,15 @@ export default function AdminAboutPage() {
                   { id: "colors", label: "Colors" },
                 ]}
                 value={logoPanel}
-                onChange={setLogoPanel}
+                onChange={selectLogoPanel}
                 disabled={saving || uploading}
               />
             )}
 
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+              <SlidingPanel activeKey={activeTab} direction={tabDirection}>
               {activeTab === "about" ? (
-                <div>
+                <SlidingPanel activeKey={aboutPanel} direction={aboutPanelDirection}>
                   {aboutPanel === "story" && (
                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]">
                       <div className="space-y-3">
@@ -485,9 +536,9 @@ export default function AdminAboutPage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </SlidingPanel>
               ) : (
-                <div>
+                <SlidingPanel activeKey={logoPanel} direction={logoPanelDirection}>
                   {logoPanel === "images" && (
                     <div className="grid gap-3 lg:grid-cols-2">
                       <ImageControl
@@ -616,8 +667,9 @@ export default function AdminAboutPage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </SlidingPanel>
               )}
+              </SlidingPanel>
             </div>
 
             <div className="mt-4 border-t border-border pt-4">
@@ -717,7 +769,7 @@ function SectionNav<T extends string>({
             onClick={() => onChange(tab.id)}
             disabled={disabled}
             className={`font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors disabled:cursor-not-allowed ${
-              selected ? "bg-destructive/90 text-white" : "text-muted-foreground"
+              selected ? "bg-foreground text-background" : "text-muted-foreground"
             }`}
           >
             {tab.label}
