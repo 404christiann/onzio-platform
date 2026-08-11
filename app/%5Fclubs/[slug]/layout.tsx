@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -14,10 +15,32 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const club = await getClubContextBySlug((await params).slug);
+  const description = `Official website for ${club.name}.`;
+  const host = (await headers()).get("host");
+  // Link-preview crawlers (iMessage, Slack, etc.) need an absolute image
+  // URL — a relative one either fails outright or resolves against the
+  // wrong origin. /club-logo already resolves to this tenant's real crest
+  // per-request, so reuse it rather than duplicating that lookup here.
+  const logoUrl = host ? `https://${host}/club-logo` : undefined;
+
   return {
     title: club.name,
-    description: `Official website for ${club.name}.`,
+    description,
     icons: { icon: "/club-logo" },
+    openGraph: {
+      title: club.name,
+      description,
+      ...(host ? { url: `https://${host}` } : {}),
+      images: logoUrl ? [{ url: logoUrl }] : undefined,
+    },
+    twitter: {
+      // The crest is a square patch, not a wide banner, so "summary" (not
+      // summary_large_image) is the card shape that won't stretch it.
+      card: "summary",
+      title: club.name,
+      description,
+      images: logoUrl ? [logoUrl] : undefined,
+    },
   };
 }
 
