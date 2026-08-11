@@ -116,6 +116,27 @@ npm run db:types:check
 Never copy or execute the Rose City runbooks under `db/migrations` as Onzio
 production migrations. They are legacy source evidence only.
 
+## Lions fixture
+
+The synthetic Starter-tier `lions` tenant (site template `editorial`) is a
+two-step local setup:
+
+```bash
+npm run db:reset
+eval "$(supabase status -o env 2>/dev/null)"
+NEXT_PUBLIC_SUPABASE_URL="$API_URL" \
+SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+node scripts/seed-lions-media.mjs
+```
+
+The reset applies migrations plus `supabase/seed.sql` (club, identity, roster,
+staff, fixtures, story, social links). The media script then processes the
+checked-in originals under `supabase/fixtures/lions-media` through the real
+validation/normalization pipeline into the local `onzio-media` bucket and
+wires `site_branding` and `homepage_slideshow_photos`. It refuses non-loopback
+Supabase hosts and is idempotent. Browse the tenant at
+`lions.localhost:3000`.
+
 ## Operator workflows
 
 Operator provisioning, membership, lifecycle, export, purge, and MFA recovery

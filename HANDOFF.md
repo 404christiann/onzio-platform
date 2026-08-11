@@ -313,7 +313,84 @@ local contract, architecture, database, legacy, and combined suites.
 - No editorial UI package, Lions seed data, or shop tier gating was added;
   those are later phases.
 
+### Lions L2 — synthetic Lions tenant seed and real media fixture (2026-08-11)
+
+- Checked in the six mockup-source originals under
+  `supabase/fixtures/lions-media/` (`crest.png`, `crest-white.png`,
+  `gallery-1.jpg`–`gallery-4.jpg`).
+- Extended `supabase/seed.sql` with the local-dev-only `lions` tenant in the
+  existing Alpha/Bravo statement shapes: active/live Starter club with
+  `site_template = 'editorial'` and the Lions palette, verified primary
+  `lions-onzio.vercel.app` domain, synthetic Starter `stripe_events` +
+  `club_subscriptions` projection, `owner@lions.local` Auth user and owner
+  membership, one active `2026 Season`, a full `club_identity` row with the
+  mockup's verbatim hero/slideshow/identity/story copy, Instagram/YouTube
+  social links, 18 first-team players with the mockup's deterministic
+  hometown/height/bio derivations and per-player season stats
+  (goalkeeper stats for the two keepers), 5 staff (the U23 coach is out of
+  scope for the Starter-only build), 11 first-team 2026 matches with
+  attendance/scorers/home-away parity transcribed from the mockup config, the
+  two-paragraph about story, and 4 slideshow placeholder rows wired later by
+  the media script. Player ages are synthetic (the mockup defines none) and
+  the mockup's `yearJoined`/`appearances` values have no `onzio` columns, so
+  they are not stored.
+- Added guarded, loopback-only `scripts/seed-lions-media.mjs`, which runs the
+  six checked-in originals through the real staging → `validateMediaUpload` →
+  `normalizePhoto`/`normalizeGraphic` → `publishAuthorizedMedia` pipeline into
+  local `onzio-media` (crests as graphics, gallery as photographs), then wires
+  `site_branding.club_logo_*`/`club_logo_dark_*` and the four
+  `homepage_slideshow_photos` rows in gallery order. Re-running publishes
+  nothing new and duplicates no rows, storage objects, or audit events.
+- Documented the two-step Lions setup in `docs/local-development.md`.
+- No editorial UI components and no shop-gating changes; existing tests were
+  not deleted, skipped, loosened, or mocked.
+
 ## Verification
+
+### Lions L2 gate — 2026-08-11
+
+```text
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run lint
+  passed with the pre-existing legacy warnings
+
+npm run test:db
+  61/61 passed across 7 files
+
+npm run test:contracts
+  190/190 passed across 17 files
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  512/512 passed across 46 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values
+```
+
+Manual end-to-end proof on a clean `supabase db reset`:
+
+- `node scripts/seed-lions-media.mjs` published 6 assets on the first run and
+  reported `published: 0, alreadyPublished: 6` on the second, with exactly six
+  `onzio-media` objects, six `media.publish` audit events, and no staging
+  leftovers.
+- The `lions` club row is `editorial`/`live`/`starter`; `club_identity`,
+  18 players, 5 staff, 11 matches (7 with scores/attendance), 4 wired
+  slideshow photos, and both branding assets exist with real processed byte
+  sizes, dimensions, and SHA-256 checksums.
+- `http://lions.localhost:3000/` resolves the Lions tenant (HTTP 200,
+  Lions-titled classic rendering, as expected before the editorial package
+  exists) and the published storage objects serve directly as `image/webp`.
 
 ### Lions L0+L1 gate — 2026-08-11
 
@@ -514,11 +591,10 @@ Known non-blocking warnings:
 
 Phase 8 full local import rehearsal and production-provisioning gate.
 
-On the parallel Lions track, the next phase is L2: local-dev-only Lions
-Football Club seed data (Starter tier, `editorial` template) followed by the
-separate `components/editorial/*` presentation package. Nothing in L0/L1
-requires it; existing tenants keep rendering through the untouched classic
-components.
+On the parallel Lions track, L2 (local-dev-only Lions Football Club seed data
+and real media fixture) is complete. The next Lions phase is the separate
+`components/editorial/*` presentation package; until it exists the Lions
+tenant intentionally renders through the untouched classic components.
 
 First, create the immutable Rose City database/Auth/Storage export and complete
 the full local transformation/import/rollback rehearsal. Before any production
