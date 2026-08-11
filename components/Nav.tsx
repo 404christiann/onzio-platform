@@ -387,7 +387,7 @@ export default function Nav() {
             right edge (header is fixed, already the containing block) so
             they keep hugging the true page edge instead of stopping at the
             1280px box. Logo position is untouched either way. */}
-        <ul className="hidden md:flex items-center gap-8 xl:absolute xl:right-10 xl:top-1/2 xl:-translate-y-1/2">
+        <ul className="hidden md:flex items-center gap-8 xl:absolute xl:right-[6.5rem] xl:top-1/2 xl:-translate-y-1/2">
           {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const triggerClassName =

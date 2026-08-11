@@ -8815,3 +8815,26 @@ change. Local Supabase only, and restored to its pre-session digest.
 - **Exact next step:** none required. Rides with the normal review/commit/push
   flow whenever Christian wants to land it.
 - **Hosted mutations, commits, pushes, deployments:** zero.
+
+## Nav — widen the desktop tabs' right offset to 6.5rem
+
+- **Status:** `complete`, 2026-08-11, Claude Code (Sonnet 5), direct edit.
+- **Objective:** Christian tweaked the `xl:right-10` offset (2.5rem) live in
+  devtools to `right: 6.5rem` and liked that spacing better.
+- **Change:** `components/Nav.tsx`'s "Desktop Links" `<ul>` —
+  `xl:right-10` -> `xl:right-[6.5rem]` (Tailwind's scale has no built-in step
+  at 6.5rem, so this uses the same arbitrary-value bracket syntax already
+  used elsewhere in this file). Nothing else changed.
+- **Files changed:** `components/Nav.tsx` only.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508; `npm run test:legacy` 274/274; `npm run test:architecture` 20/20;
+  `npm run lint` 0 errors (same 5 pre-existing warnings); `npm run build`
+  compiled successfully. Live-verified against local Alpha:
+  `getComputedStyle` confirms `right: 104px` (= 6.5rem) at 1920px; re-checked
+  the two previously-tight widths for regressions — 1280px (`position:
+  absolute`, no overlap) and 820px (`position: static`, unaffected, below
+  the `xl` breakpoint where this offset doesn't apply).
+- **Blockers:** none.
+- **Exact next step:** none required. Rides with the normal
+  review/commit/push flow.
+- **Hosted mutations, commits, pushes, deployments:** zero.
