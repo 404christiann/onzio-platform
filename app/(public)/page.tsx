@@ -2,6 +2,7 @@
 
 import nextDynamic from "next/dynamic";
 import { useClubContext } from "@/components/ClubContextProvider";
+import EditorialHomePlaceholder from "@/components/editorial/EditorialHomePlaceholder";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,12 @@ const BehindTheRose   = nextDynamic(() => import("@/components/BehindTheRose"), 
 
 export default function HomePage() {
   const club = useClubContext();
+  // Editorial-template tenants render a temporary placeholder body until
+  // later phases add the real editorial home sections; classic tenants
+  // render exactly what they rendered before.
+  if (club.siteTemplate === "editorial") {
+    return <EditorialHomePlaceholder />;
+  }
   return (
     <>
       <Hero />
