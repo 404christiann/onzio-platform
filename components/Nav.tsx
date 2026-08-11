@@ -377,8 +377,18 @@ export default function Nav() {
           </>}
         </div>
 
-        {/* Desktop Links */}
-        <ul className="hidden md:flex items-center gap-8">
+        {/* Desktop Links. Below xl (1280px, where max-w-7xl caps out) this
+            stays a normal flex sibling of the logo, same as before — at
+            those widths the nav content already spans the full viewport, so
+            the links already sit flush against the true right edge and
+            there's no room to spare (an absolute right-anchor here would
+            overlap the logo on narrower "desktop" widths like ~820px).
+            Only past xl, once mx-auto starts centering the capped content
+            and leaving real margin, do the links pin to the header's own
+            right edge (header is fixed, already the containing block) so
+            they keep hugging the true page edge instead of stopping at the
+            1280px box. Logo position is untouched either way. */}
+        <ul className="hidden md:flex items-center gap-8 xl:absolute xl:right-10 xl:top-1/2 xl:-translate-y-1/2">
           {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const triggerClassName =

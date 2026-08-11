@@ -8688,3 +8688,45 @@ after deploy.
 
 Zero. No commit, no push, no deploy, no hosted Supabase, Stripe, Vercel, or DNS
 change. Local Supabase only, and restored to its pre-session digest.
+
+## Nav — pin desktop links to the true right edge past 1280px
+
+- **Status:** `complete`, 2026-08-11, Claude Code (Sonnet 5), direct edit.
+- **Objective:** Christian asked to move the desktop nav's tab links to the
+  right, keeping the logo untouched. The nav's `max-w-7xl mx-auto` content
+  box caps at 1280px, so on wider viewports the links (a normal
+  `justify-between` flex sibling of the logo) stopped well short of the
+  browser's true right edge — 367.5px of empty margin measured at 1920px
+  wide, for example.
+- **Change:** `components/Nav.tsx`'s "Desktop Links" `<ul>` gained
+  `xl:absolute xl:right-10 xl:top-1/2 xl:-translate-y-1/2` (Tailwind's `xl`
+  breakpoint is exactly 1280px, matching `max-w-7xl`'s cap). Below `xl` the
+  `<ul>` stays a normal flex sibling of the logo, unchanged — at those
+  widths the nav content already spans the full viewport, so the links
+  already sit flush against the true edge with no room to spare. `header` is
+  already `position: fixed`, so it's already a valid containing block for
+  the `xl:absolute` anchor with no extra wrapper needed. Logo markup
+  untouched.
+- **A first attempt was wrong and caught before shipping:** switching to
+  absolute positioning at the `md` breakpoint (768px) instead of `xl`
+  overlapped the logo at in-between "desktop" widths like ~820px, since the
+  links list (682px wide, 7 items) doesn't fit beside the logo once it's
+  pulled out of normal flex flow at that width. Measured and confirmed
+  before landing on `xl` instead.
+- **Files changed:** `components/Nav.tsx` only.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508; `npm run test:legacy` 274/274; `npm run test:architecture` 20/20;
+  `npm run lint` 0 errors (same 5 pre-existing warnings); `npm run build`
+  compiled successfully. Live-verified against local Alpha across five
+  widths via `getBoundingClientRect()`: 390px (mobile, `ul` display:none,
+  unaffected), 820px (`position: static`, no overlap — matches original
+  behavior, confirmed identical via a temporary `git stash` A/B), 1024px
+  (`position: static`, no overlap), 1280px (`position: absolute`, tabs 55px
+  from the true edge), 1920px (`position: absolute`, tabs 55px from the true
+  edge, logo position byte-identical to before at every width checked).
+  Academy@1 (Diverse City) shares this exact code path — not separately
+  re-verified live in this pass, but no template-specific logic is involved.
+- **Blockers:** none.
+- **Exact next step:** none required. Rides with the normal
+  review/commit/push flow.
+- **Hosted mutations, commits, pushes, deployments:** zero.
