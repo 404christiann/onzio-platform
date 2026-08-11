@@ -182,7 +182,7 @@ test("mobile unknown-address flow is explicit and has no error overlay", async (
   await page.getByLabel("Email").fill(`unknown-${randomUUID()}@onzio.local`);
   await page.getByRole("button", { name: "Send sign-in code" }).click();
   await expect(
-    page.getByRole("heading", { name: "No account for that address" }),
+    page.getByText("We couldn't find an Onzio account for"),
   ).toBeVisible();
   await expect(page.getByText("Onzio accounts are set up by us")).toBeVisible();
   await expect(page.getByText("onziofutbol@gmail.com")).toBeVisible();

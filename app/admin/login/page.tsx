@@ -171,21 +171,25 @@ export default function LoginPage() {
           priority
           className="-ml-[20px] -mt-[52px] -mb-[56px] max-w-none"
         />
-        {/* The email step deliberately has no heading — the wordmark above is
-            the only title that screen needs. Rendering nothing (rather than an
+        {/* The email and unknown-address steps deliberately have no heading —
+            the wordmark above is the only title the email step needs, and the
+            unknown-address step's own intro paragraph ("We couldn't find an
+            Onzio account for...") already states the same thing the removed
+            heading did, so nothing is lost. Rendering nothing (rather than an
             empty h1) also removes the heading's own 36px box and its mt-2, so
             no dead space is left behind; the logo's negative bottom margin
             already lands the flow cursor at the wordmark's visible baseline,
-            so the email form's own top margin becomes the whole visible gap.
-            The code and unknown steps keep their headings unchanged. */}
-        {step !== "email" && (
+            so the following element's own top margin becomes the whole
+            visible gap — both steps use mt-8 for that reason, matching each
+            other. Only the code step keeps a heading. */}
+        {step === "code" && (
           <h1 className="mt-2 font-display text-3xl font-black uppercase">
-            {step === "code" ? "Enter your code" : "No account for that address"}
+            Enter your code
           </h1>
         )}
 
         {step === "unknown" ? (
-          <div className="mt-5 space-y-4 text-sm leading-6 text-muted-foreground">
+          <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
             <p>
               {UNKNOWN_ADDRESS_INTRO}{" "}
               <strong className="break-all text-foreground">{email.trim()}</strong>.

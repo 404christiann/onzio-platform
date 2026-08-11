@@ -8421,3 +8421,52 @@ None required. Rides with the normal review/commit/push flow.
 
 Zero. No commit, no push, no deploy, no Supabase/Stripe/Vercel/DNS change. The
 local database was read only and is byte-identical to how it was found.
+
+## Login page — removed redundant "No account for that address" heading
+
+- **Status:** `complete`, 2026-08-10, Claude Code (Sonnet 5), direct edit.
+- **Objective:** Christian asked to remove the "No account for that address"
+  heading on the login page's unknown-address step and eliminate the
+  whitespace left behind — same pattern as the earlier "Admin Portal" heading
+  removal on the email step.
+- **Change:** `app/admin/login/page.tsx` — the `<h1>` now renders only for
+  `step === "code"`; the unknown step no longer has one. The heading was
+  redundant with the step's own intro paragraph ("We couldn't find an Onzio
+  account for {email}."), which already states the same thing, so no
+  information was lost. The unknown-step content `<div>` moved from `mt-5`
+  (assumed a heading above it) to `mt-8`, matching the email step's existing
+  no-heading spacing convention so the paragraph sits directly and flush
+  below the logo with no gap.
+- **Test updates (both touched in the same commit as the markup change,
+  requirement preserved not weakened):**
+  - `tests/contracts/platform-auth.test.ts` — removed the
+    `toContain("No account for that address")` assertion (that literal string
+    no longer exists in the source); the test still asserts the substantive
+    unknown-address messaging (`"We couldn't find an Onzio account for"`,
+    `"Onzio accounts are set up by us"`, contact email) is present.
+  - `tests/browser/platform-auth-local.spec.ts` — the
+    `getByRole("heading", { name: "No account for that address" })`
+    assertion was replaced with `getByText("We couldn't find an Onzio account
+    for")`; the test's actual requirement (the unknown-address flow is
+    explicit, with no error overlay) is unchanged, only checked via the
+    paragraph that already carries that meaning instead of the removed
+    heading.
+- **Files changed:** `app/admin/login/page.tsx`,
+  `tests/contracts/platform-auth.test.ts`,
+  `tests/browser/platform-auth-local.spec.ts`.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508; `npm run test:legacy` 274/274; `npm run test:architecture` 20/20;
+  `npm run lint` 0 errors (same 5 pre-existing warnings); `npm run build`
+  compiled successfully. Live-verified in the browser against local Alpha
+  (`ONZIO_ENVIRONMENT=production` override, per the documented local-only
+  workaround): submitted an email with no matching account and confirmed the
+  card shows the intro paragraph flush below the logo with no heading and no
+  leftover gap, contact email and "Try another address" button unaffected.
+  `tests/browser/platform-auth-local.spec.ts` itself was not run (Playwright,
+  needs its own local Supabase/Mailpit setup outside this session's routine
+  verification loop) — the assertion change was reasoned through and the
+  underlying markup was visually confirmed instead.
+- **Blockers:** none.
+- **Exact next step:** none required. Rides with the normal review/commit/push
+  flow.
+- **Hosted mutations, commits, pushes, deployments:** zero.

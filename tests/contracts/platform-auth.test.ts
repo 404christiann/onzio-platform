@@ -39,7 +39,8 @@ describe("PLAT-101 passwordless authentication contract", () => {
 
   it("maps an unknown address to the exact accepted message", () => {
     expect(loginPage).toContain("Signups not allowed for otp");
-    expect(loginPage).toContain("No account for that address");
+    // The redundant "No account for that address" heading was removed by
+    // design request — the intro paragraph below already states this.
     expect(loginPage).toContain("We couldn't find an Onzio account for");
     expect(loginPage).toContain("Onzio accounts are set up by us");
     expect(loginPage).toContain("onziofutbol@gmail.com");
