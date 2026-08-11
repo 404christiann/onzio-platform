@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { failContract } from "@/lib/contract-error";
 import { normalizeHostname } from "@/lib/tenant";
 import {
@@ -66,82 +67,91 @@ const TEST_ROLES: Record<string, Record<string, "owner" | "admin">> = {
   },
 };
 
-async function getDatabaseContext(
-  hostname: string,
-  userId?: string | null,
-): Promise<ClubContext> {
-  const { createClient } = await import("@/lib/supabase-server");
-  const supabase = await createClient();
-  const onzio = supabase.schema("onzio");
-  const { data: domain, error } = await onzio
-    .from("club_domains")
-    .select(
-      "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color)",
-    )
-    .eq("hostname", hostname)
-    .eq("active", true)
-    .not("verified_at", "is", null)
-    .maybeSingle();
-
-  if (error || !domain) failContract("UNKNOWN_TENANT");
-  const clubValue = domain.clubs;
-  const club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as {
-    id: string;
-    slug: string;
-    name: string;
-    lifecycle: ClubContext["lifecycle"];
-    public_access: ClubContext["publicAccess"];
-    kind: ClubContext["kind"];
-    stripe_price_id: string | null;
-    tier: ClubContext["tier"];
-    primary_color: string | null;
-    secondary_color: string | null;
-  };
-
-  const { data: primary } = await onzio
-    .from("club_domains")
-    .select("hostname")
-    .eq("club_id", club.id)
-    .eq("environment", process.env.ONZIO_ENVIRONMENT!)
-    .eq("is_primary", true)
-    .eq("active", true)
-    .not("verified_at", "is", null)
-    .single();
-
-  let role: ClubContext["role"] = null;
-  if (userId) {
-    const { data: membership } = await onzio
-      .from("club_members")
-      .select("role")
-      .eq("club_id", club.id)
-      .eq("user_id", userId)
-      .eq("status", "active")
+// React's request-scoped cache() memoizes per (primitive) argument tuple for
+// the duration of a single server render, so layout + metadata + page calls
+// for the same tenant collapse to one resolution. Next.js seeds a fresh cache
+// per incoming request, so nothing leaks across requests or users; outside a
+// React dispatcher (e.g. vitest) cache() is a passthrough. The wrappers below
+// normalize userId to null so every caller hits the same cache entry.
+const resolveDatabaseContext = cache(
+  async (hostname: string, userId: string | null): Promise<ClubContext> => {
+    const { createClient } = await import("@/lib/supabase-server");
+    const supabase = await createClient();
+    const onzio = supabase.schema("onzio");
+    const { data: domain, error } = await onzio
+      .from("club_domains")
+      .select(
+        "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color)",
+      )
+      .eq("hostname", hostname)
+      .eq("active", true)
+      .not("verified_at", "is", null)
       .maybeSingle();
+
+    if (error || !domain) failContract("UNKNOWN_TENANT");
+    const clubValue = domain.clubs;
+    const club = (Array.isArray(clubValue) ? clubValue[0] : clubValue) as {
+      id: string;
+      slug: string;
+      name: string;
+      lifecycle: ClubContext["lifecycle"];
+      public_access: ClubContext["publicAccess"];
+      kind: ClubContext["kind"];
+      stripe_price_id: string | null;
+      tier: ClubContext["tier"];
+      primary_color: string | null;
+      secondary_color: string | null;
+    };
+
+    // These three depend only on club.id/userId, not on each other, so they
+    // run concurrently. Supabase queries resolve to { data, error } objects
+    // rather than throwing, so no leg can reject the Promise.all.
+    const [{ data: primary }, membership, presentationTemplateKey] =
+      await Promise.all([
+        onzio
+          .from("club_domains")
+          .select("hostname")
+          .eq("club_id", club.id)
+          .eq("environment", process.env.ONZIO_ENVIRONMENT!)
+          .eq("is_primary", true)
+          .eq("active", true)
+          .not("verified_at", "is", null)
+          .single(),
+        userId
+          ? onzio
+              .from("club_members")
+              .select("role")
+              .eq("club_id", club.id)
+              .eq("user_id", userId)
+              .eq("status", "active")
+              .maybeSingle()
+              .then(({ data }) => data)
+          : Promise.resolve(null),
+        resolvePublishedPresentationTemplateKey(onzio, club.id),
+      ]);
+
+    let role: ClubContext["role"] = null;
     if (membership?.role === "owner" || membership?.role === "admin") {
       role = membership.role;
     }
-  }
 
-  const presentationTemplateKey = await resolvePublishedPresentationTemplateKey(
-    onzio,
-    club.id,
-  );
-  return {
-    id: club.id,
-    slug: club.slug,
-    name: club.name,
-    primaryDomain: primary?.hostname ?? hostname,
-    lifecycle: club.lifecycle,
-    publicAccess: club.public_access,
-    kind: club.kind,
-    stripePriceId: club.stripe_price_id,
-    tier: club.tier,
-    role,
-    primaryColor: club.primary_color,
-    secondaryColor: club.secondary_color,
-    presentationTemplateKey,
-  };
-}
+    return {
+      id: club.id,
+      slug: club.slug,
+      name: club.name,
+      primaryDomain: primary?.hostname ?? hostname,
+      lifecycle: club.lifecycle,
+      publicAccess: club.public_access,
+      kind: club.kind,
+      stripePriceId: club.stripe_price_id,
+      tier: club.tier,
+      role,
+      primaryColor: club.primary_color,
+      secondaryColor: club.secondary_color,
+      presentationTemplateKey,
+    };
+  },
+);
 
 async function resolvePublishedPresentationTemplateKey(
   onzio: ReturnType<Awaited<ReturnType<typeof import("@/lib/supabase-server").createClient>>["schema"]>,
@@ -175,67 +185,77 @@ async function resolvePublishedPresentationTemplateKey(
   }
 }
 
+const resolveClubContextBySlug = cache(
+  async (slug: string, userId: string | null): Promise<ClubContext> => {
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(slug)) {
+      failContract("UNKNOWN_TENANT");
+    }
+    const { createClient } = await import("@/lib/supabase-server");
+    const supabase = await createClient();
+    const onzio = supabase.schema("onzio");
+    const { data: club, error } = await onzio
+      .from("clubs")
+      .select("id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !club) failContract("UNKNOWN_TENANT");
+
+    // These three depend only on club.id/userId, not on each other, so they
+    // run concurrently. Supabase queries resolve to { data, error } objects
+    // rather than throwing, so no leg can reject the Promise.all.
+    const [{ data: primary }, membership, presentationTemplateKey] =
+      await Promise.all([
+        onzio
+          .from("club_domains")
+          .select("hostname")
+          .eq("club_id", club.id)
+          .eq("environment", process.env.ONZIO_ENVIRONMENT!)
+          .eq("is_primary", true)
+          .eq("active", true)
+          .not("verified_at", "is", null)
+          .single(),
+        userId
+          ? onzio
+              .from("club_members")
+              .select("role")
+              .eq("club_id", club.id)
+              .eq("user_id", userId)
+              .eq("status", "active")
+              .maybeSingle()
+              .then(({ data }) => data)
+          : Promise.resolve(null),
+        resolvePublishedPresentationTemplateKey(onzio, club.id),
+      ]);
+    if (!primary) failContract("PRIMARY_DOMAIN_REQUIRED");
+
+    let role: ClubContext["role"] = null;
+    if (membership?.role === "owner" || membership?.role === "admin") {
+      role = membership.role;
+    }
+
+    return {
+      id: club.id,
+      slug: club.slug,
+      name: club.name,
+      primaryDomain: primary.hostname,
+      lifecycle: club.lifecycle as ClubContext["lifecycle"],
+      publicAccess: club.public_access as ClubContext["publicAccess"],
+      kind: club.kind as ClubContext["kind"],
+      stripePriceId: club.stripe_price_id,
+      tier: club.tier as ClubContext["tier"],
+      role,
+      primaryColor: club.primary_color,
+      secondaryColor: club.secondary_color,
+      presentationTemplateKey,
+    };
+  },
+);
+
 export async function getClubContextBySlug(
   slug: string,
   userId?: string | null,
 ): Promise<ClubContext> {
-  if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(slug)) {
-    failContract("UNKNOWN_TENANT");
-  }
-  const { createClient } = await import("@/lib/supabase-server");
-  const supabase = await createClient();
-  const onzio = supabase.schema("onzio");
-  const { data: club, error } = await onzio
-    .from("clubs")
-    .select("id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color")
-    .eq("slug", slug)
-    .maybeSingle();
-  if (error || !club) failContract("UNKNOWN_TENANT");
-
-  const { data: primary } = await onzio
-    .from("club_domains")
-    .select("hostname")
-    .eq("club_id", club.id)
-    .eq("environment", process.env.ONZIO_ENVIRONMENT!)
-    .eq("is_primary", true)
-    .eq("active", true)
-    .not("verified_at", "is", null)
-    .single();
-  if (!primary) failContract("PRIMARY_DOMAIN_REQUIRED");
-
-  let role: ClubContext["role"] = null;
-  if (userId) {
-    const { data: membership } = await onzio
-      .from("club_members")
-      .select("role")
-      .eq("club_id", club.id)
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .maybeSingle();
-    if (membership?.role === "owner" || membership?.role === "admin") {
-      role = membership.role;
-    }
-  }
-
-  const presentationTemplateKey = await resolvePublishedPresentationTemplateKey(
-    onzio,
-    club.id,
-  );
-  return {
-    id: club.id,
-    slug: club.slug,
-    name: club.name,
-    primaryDomain: primary.hostname,
-    lifecycle: club.lifecycle as ClubContext["lifecycle"],
-    publicAccess: club.public_access as ClubContext["publicAccess"],
-    kind: club.kind as ClubContext["kind"],
-    stripePriceId: club.stripe_price_id,
-    tier: club.tier as ClubContext["tier"],
-    role,
-    primaryColor: club.primary_color,
-    secondaryColor: club.secondary_color,
-    presentationTemplateKey,
-  };
+  return resolveClubContextBySlug(slug, userId ?? null);
 }
 
 export async function getClubContext(input: {
@@ -271,5 +291,5 @@ export async function getClubContext(input: {
     );
   }
 
-  return getDatabaseContext(hostname, input.userId);
+  return resolveDatabaseContext(hostname, input.userId ?? null);
 }

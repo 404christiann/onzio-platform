@@ -8838,3 +8838,111 @@ change. Local Supabase only, and restored to its pre-session digest.
 - **Exact next step:** none required. Rides with the normal
   review/commit/push flow.
 - **Hosted mutations, commits, pushes, deployments:** zero.
+
+## Tenant resolution — request-scoped cache() + stage-2 Promise.all in club-context
+
+- **Status:** `complete`, 2026-08-11, Claude Code (Fable 5), direct edit.
+- **Objective:** collapse the duplicate tenant-context resolutions that every
+  navigation performs (layout `generateMetadata` + layout body + page each
+  call `getClubContextBySlug`/`getClubContext` independently) and stop running
+  the stage-2 queries (primary domain, membership, presentation template) as
+  a sequential await chain. Approved scope was exactly the `cache()` +
+  `Promise.all` work in `lib/club-context.ts`; `middleware.ts`'s own
+  3-round-trips-per-request issue is explicitly a separate, not-yet-approved
+  future fix and was NOT touched.
+- **Change (one file: `lib/club-context.ts`):**
+  - Added `import { cache } from "react"` (line 1).
+  - New module-private `resolveDatabaseContext = cache(async (hostname:
+    string, userId: string | null) => ...)` (line 76) holding the old
+    `getDatabaseContext` body; new module-private `resolveClubContextBySlug =
+    cache(async (slug: string, userId: string | null) => ...)` (line 188)
+    holding the old `getClubContextBySlug` body. Cached functions take only
+    primitive args because `cache()` keys objects by identity — wrapping the
+    exported `getClubContext({hostname, userId})` itself would never hit.
+  - Exported `getClubContextBySlug(slug, userId?)` (line 254) is now a thin
+    wrapper delegating with `userId ?? null` (arg-count/undefined
+    normalization so every call site shares one cache entry). Exported
+    `getClubContext` (line 261) keeps its exact signature and dispatcher
+    logic (TEST_CONTEXTS, `.localhost` routing, ONZIO_LOCAL_TENANT_SLUG); its
+    final line now calls `resolveDatabaseContext(hostname, input.userId ??
+    null)`.
+  - In BOTH cached resolvers, stage 1 (club row lookup, fail-closed
+    `UNKNOWN_TENANT`) is unchanged and sequential; stage 2 is now one
+    `await Promise.all([primary-domain query, membership query (or
+    `Promise.resolve(null)` when no userId), `resolvePublishedPresentationTemplateKey`])`
+    (lines 110 and 207) — three legs that depend only on `club.id`/`userId`.
+    `resolvePublishedPresentationTemplateKey`'s body is untouched (its two
+    queries are genuinely dependent). Role derivation logic unchanged, now fed
+    from the parallelized membership result. `getClubContextBySlug`'s
+    `if (!primary) failContract("PRIMARY_DOMAIN_REQUIRED")` now sits after the
+    `Promise.all`; `resolveDatabaseContext` keeps its `primary?.hostname ??
+    hostname` fallback. Accepted deliberate delta: when the primary domain is
+    missing, the read-only membership/presentation queries run concurrently
+    before the failure surfaces (Supabase queries resolve to `{error}` objects,
+    never reject, so no unhandled-rejection risk).
+  - No call sites changed. No schema/config/test changes.
+- **Round-trip evidence (the point of this entry — measured, not assumed;
+  local dev server on 3005, seeded local Supabase, `diverse-city` tenant;
+  temporary `console.count` inside the resolver, Kong access-log deltas for
+  REST counts; instrumentation removed afterward):**
+  - Public `/contact` document (warm): resolver executions **3 → 1** per
+    request (pre-change counter stepped +3 per request across five requests;
+    post-change +1 per request across three requests).
+  - Authenticated `/admin` document (warm, owner session): resolver
+    executions **2 → 1** per request (repeated at 4 separate reloads each).
+    Full admin navigation (document + 3x `POST /api/admin/data` +
+    `GET /api/stripe/billing-admin`): **6 → 5** — the API routes are separate
+    HTTP requests with their own per-request caches, correctly NOT shared.
+  - HTTP-level REST calls per navigation were **unchanged** (11 for
+    `/contact`, 44 for the admin navigation, identical per-endpoint
+    profiles): Next/React's per-render fetch dedupe was already collapsing the
+    duplicate identical GETs the duplicate executions issued. Honest framing:
+    the observable wins are (a) duplicate resolver executions eliminated
+    (guaranteed by `cache()` rather than incidental fetch-layer dedupe, and
+    covers the non-fetch work too), and (b) stage-2 latency — 4 sequential
+    await round-trips per resolution collapsed to 2 concurrent waves
+    (`Promise.all` + the dependent presentation pair). Of the 3 `clubs` GETs
+    seen per `/contact` request, only 1 was ever the resolver's; the other 2
+    (`select=id,slug,lifecycle,public_access`) are `middleware.ts`'s — that is
+    the separate future fix.
+- **Fail-closed check (before AND after, same results):** unknown
+  `.localhost` slug (`no-such-club.localhost:3005`) returns **404** on `/`
+  and `/contact` in both states; slug-regex and `UNKNOWN_TENANT` paths
+  untouched.
+- **Cross-tenant isolation (empirical, interleaved):**
+  `diverse-city.localhost` → `lions.localhost` → `diverse-city.localhost`
+  homepages: each response contains only its own club name and brand colors
+  (Diverse City FC/#FF1616 vs Lions Football Club/#AD3234), zero
+  bleed-through in either direction. `tests/contracts/tenant-routing.test.ts`
+  (the cross-tenant role-isolation contract) passes unchanged.
+- **Admin path:** real email-OTP login as `owner-aal2@alpha.local` (local
+  Mailpit) into the diverse-city admin; dashboard, `POST /api/admin/data`,
+  and `GET /api/stripe/billing-admin` all 200 with role resolution working
+  through the parallelized membership leg — verified again on the final
+  uninstrumented code after a clean dev-server restart.
+- **Verification:** `npx tsc --noEmit` clean; `npm run test:contracts`
+  508/508; `npm run test:legacy` 274/274; `npm run test:architecture` 20/20;
+  `npm run test:db` 165/165 (requires `set -a && . ./.env.test && set +a`
+  first — the 157-failure `Invalid supabaseUrl`/`Expected 3 parts in JWT`
+  signature is the documented un-sourced-env symptom from `tests/README.md`,
+  hit and resolved exactly as documented); `npm test` 967/967; `npm run lint`
+  0 errors (same 5 pre-existing `react-hooks/exhaustive-deps` warnings);
+  `npm run build` compiled successfully, exit 0.
+  `tests/contracts/diverse-city-query-mutations.test.ts`'s literal
+  `"getClubContext({"` source match on `app/api/admin/data/route.ts` is
+  unaffected (that file untouched).
+- **Gotcha for the next agent:** running `npm run build` while `next dev` is
+  serving corrupts the shared `.next/` and makes the dev server 500 — restart
+  the dev server after building; the 500 seen (and resolved) here was that,
+  not the code change. Also: the local `club_domains` rows for
+  `diverse-city` and `lions` are `environment=staging`, so both work with the
+  plain dev server (no `ONZIO_ENVIRONMENT=production` override needed —
+  earlier entries describing lions under the production override are stale);
+  alpha/bravo remain `environment=production`.
+- **Blockers:** none.
+- **Exact next step:** none required for this scope — rides with the normal
+  review/commit/push flow. `middleware.ts` still performs its own 2x `clubs`
+  + 1x `get_club_runtime_access` round-trips per request; that fix is
+  separate and NOT yet approved by Christian.
+- **Hosted mutations, commits, pushes, deployments:** zero. Local file edits
+  only; local database used read-only.
