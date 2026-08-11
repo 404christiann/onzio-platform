@@ -9056,3 +9056,31 @@ change. Local Supabase only, and restored to its pre-session digest.
   tenant cache) remain separate future work awaiting Christian's approval.
 - **Hosted mutations, commits, pushes, deployments:** zero. Local file edits
   only; local database used read-only.
+
+## Roadmap — further nav-speed options, deferred, not approved
+
+Follow-ups to the `b2d78ef`/`2c955b1` performance work. Christian said "leave
+it for now" on all three — noted here so they aren't lost, not scheduled:
+
+- **Combine the tenant lookup and `get_club_runtime_access` into one database
+  call.** `middleware.ts` still makes two sequential round trips after this
+  round's fix: resolve the tenant, then a separate RPC to check
+  billing/subscription runtime access (active/grace/suspended). Merging them
+  into one new Postgres function would remove that second wait. Needs a new
+  migration, not just a code rearrangement — real review weight.
+- **Let API routes trust `middleware.ts`'s `x-onzio-club-id` header instead of
+  re-resolving tenant context per call.** A single admin action can fire 3-6
+  separate `POST /api/admin/data` calls; each currently re-derives tenant
+  identity from scratch even though middleware already resolved it once and
+  stamped it onto the request (middleware already strips any client-supplied
+  copy of that header before setting its own, so it can't be spoofed). This
+  is a real defense-in-depth tradeoff against `AGENTS.md`'s "re-check
+  tenant/membership/role at mutation time" posture, not a mechanical
+  optimization — needs an explicit decision, not a bundled fix.
+- **Swap `middleware.ts`'s `supabase.auth.getUser()` for local JWT
+  verification (`getClaims()`).** `getUser()` makes a real network call to
+  Supabase's Auth server on every request; `getClaims()` verifies the token's
+  signature locally, no round trip. The tradeoff: `getUser()` catches an
+  explicitly revoked session immediately, while local verification would
+  keep honoring that token until it naturally expires. Faster, but trades
+  away instant revocation — a security decision, not a free win.
