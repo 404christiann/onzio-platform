@@ -221,8 +221,25 @@ describe("tenant context and cache isolation contract", () => {
       lifecycle: "active",
       publicAccess: "live",
       tier: "pro",
+      siteTemplate: "classic",
       role: "owner",
     });
+  });
+
+  it("defaults every existing tenant to the classic site template", async () => {
+    const getClubContext = await loadContract<GetClubContext>(
+      "@/lib/club-context",
+      "getClubContext",
+    );
+    const alpha = await getClubContext({
+      hostname: clubs.alpha.primaryDomain,
+    });
+    const bravo = await getClubContext({
+      hostname: clubs.bravo.primaryDomain,
+      userId: USER_IDS.multiClub,
+    });
+    expect(alpha.siteTemplate).toBe("classic");
+    expect(bravo.siteTemplate).toBe("classic");
   });
 
   it("does not leak a multi-club user's role across hosts", async () => {

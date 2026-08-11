@@ -243,6 +243,101 @@ export type Database = {
         }
         Relationships: []
       }
+      club_identity: {
+        Row: {
+          city: string
+          club_id: string
+          contact_address: string
+          contact_email: string
+          contact_phone: string
+          created_at: string
+          division: string
+          founded_year: number
+          hero_headline_em: string
+          hero_headline_top: string
+          hero_intro: string
+          highlights: Json
+          identity_heading_em: string
+          identity_heading_top: string
+          initials: string
+          league: string
+          mission: string
+          short_name: string
+          slideshow_heading_em: string
+          slideshow_heading_top: string
+          state: string
+          story_heading_em: string
+          story_heading_top: string
+          time_zone: string
+          updated_at: string
+          venue: string
+        }
+        Insert: {
+          city?: string
+          club_id: string
+          contact_address?: string
+          contact_email?: string
+          contact_phone?: string
+          created_at?: string
+          division?: string
+          founded_year: number
+          hero_headline_em?: string
+          hero_headline_top?: string
+          hero_intro?: string
+          highlights?: Json
+          identity_heading_em?: string
+          identity_heading_top?: string
+          initials: string
+          league?: string
+          mission?: string
+          short_name: string
+          slideshow_heading_em?: string
+          slideshow_heading_top?: string
+          state?: string
+          story_heading_em?: string
+          story_heading_top?: string
+          time_zone?: string
+          updated_at?: string
+          venue?: string
+        }
+        Update: {
+          city?: string
+          club_id?: string
+          contact_address?: string
+          contact_email?: string
+          contact_phone?: string
+          created_at?: string
+          division?: string
+          founded_year?: number
+          hero_headline_em?: string
+          hero_headline_top?: string
+          hero_intro?: string
+          highlights?: Json
+          identity_heading_em?: string
+          identity_heading_top?: string
+          initials?: string
+          league?: string
+          mission?: string
+          short_name?: string
+          slideshow_heading_em?: string
+          slideshow_heading_top?: string
+          state?: string
+          story_heading_em?: string
+          story_heading_top?: string
+          time_zone?: string
+          updated_at?: string
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_identity_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_logo_page_content: {
         Row: {
           annotated_image_asset_id: string | null
@@ -394,6 +489,7 @@ export type Database = {
       }
       clubs: {
         Row: {
+          accent_color: string | null
           archived_at: string | null
           created_at: string
           id: string
@@ -402,11 +498,13 @@ export type Database = {
           primary_color: string | null
           public_access: string
           secondary_color: string | null
+          site_template: string
           slug: string
           tier: string
           updated_at: string
         }
         Insert: {
+          accent_color?: string | null
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -415,11 +513,13 @@ export type Database = {
           primary_color?: string | null
           public_access?: string
           secondary_color?: string | null
+          site_template?: string
           slug: string
           tier?: string
           updated_at?: string
         }
         Update: {
+          accent_color?: string | null
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -428,6 +528,7 @@ export type Database = {
           primary_color?: string | null
           public_access?: string
           secondary_color?: string | null
+          site_template?: string
           slug?: string
           tier?: string
           updated_at?: string
@@ -749,6 +850,7 @@ export type Database = {
       matches: {
         Row: {
           address: string | null
+          attendance: number | null
           city: string | null
           club_id: string
           competition: string | null
@@ -762,6 +864,7 @@ export type Database = {
           opponent_score: number | null
           opponent_short_name: string | null
           rose_city_score: number | null
+          scorers: Json
           season_id: string
           sponsor_link: string | null
           sponsor_logo_asset_id: string | null
@@ -774,6 +877,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          attendance?: number | null
           city?: string | null
           club_id: string
           competition?: string | null
@@ -787,6 +891,7 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           rose_city_score?: number | null
+          scorers?: Json
           season_id: string
           sponsor_link?: string | null
           sponsor_logo_asset_id?: string | null
@@ -799,6 +904,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          attendance?: number | null
           city?: string | null
           club_id?: string
           competition?: string | null
@@ -812,6 +918,7 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           rose_city_score?: number | null
+          scorers?: Json
           season_id?: string
           sponsor_link?: string | null
           sponsor_logo_asset_id?: string | null
@@ -1491,18 +1598,24 @@ export type Database = {
         Row: {
           club_id: string
           club_logo_asset_id: string | null
+          club_logo_dark_asset_id: string | null
+          club_logo_dark_path: string
           club_logo_path: string
           updated_at: string
         }
         Insert: {
           club_id: string
           club_logo_asset_id?: string | null
+          club_logo_dark_asset_id?: string | null
+          club_logo_dark_path?: string
           club_logo_path?: string
           updated_at?: string
         }
         Update: {
           club_id?: string
           club_logo_asset_id?: string | null
+          club_logo_dark_asset_id?: string | null
+          club_logo_dark_path?: string
           club_logo_path?: string
           updated_at?: string
         }
@@ -1510,6 +1623,13 @@ export type Database = {
           {
             foreignKeyName: "site_branding_club_id_club_logo_asset_id_fkey"
             columns: ["club_id", "club_logo_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "site_branding_club_id_club_logo_dark_asset_id_fkey"
+            columns: ["club_id", "club_logo_dark_asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["club_id", "id"]

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CLUB_IDS } from "../fixtures/entities";
 import {
   createLocalClients,
@@ -52,6 +52,7 @@ describe("planned schema contract", () => {
     "seasons",
     "player_photos",
     "player_match_stats",
+    "club_identity",
   ])("exposes onzio.%s", async (table) => {
     await tableExists(clients.service, table);
   });
@@ -107,6 +108,165 @@ describe("planned schema contract", () => {
   it("restricts direct club deletion", async () => {
     await expectDenied(
       clients.anon.from("clubs").delete().eq("id", CLUB_IDS.alpha),
+    );
+  });
+});
+
+describe("site template contract", () => {
+  const templateClubId = "99999999-1111-4111-8111-111111111191";
+
+  afterEach(async () => {
+    await clients.service.from("clubs").delete().eq("id", templateClubId);
+  });
+
+  it("defaults new clubs to the classic template", async () => {
+    await expectAllowed(
+      clients.service.from("clubs").insert({
+        id: templateClubId,
+        slug: "template-contract",
+        name: "Template Contract Club",
+      }),
+    );
+    const { data, error } = await clients.service
+      .from("clubs")
+      .select("site_template")
+      .eq("id", templateClubId)
+      .single();
+    expect(error?.message).toBeUndefined();
+    expect(data?.site_template).toBe("classic");
+  });
+
+  it("accepts the editorial template", async () => {
+    await expectAllowed(
+      clients.service.from("clubs").insert({
+        id: templateClubId,
+        slug: "template-contract",
+        name: "Template Contract Club",
+        site_template: "editorial",
+      }),
+    );
+    const { data } = await clients.service
+      .from("clubs")
+      .select("site_template")
+      .eq("id", templateClubId)
+      .single();
+    expect(data?.site_template).toBe("editorial");
+  });
+
+  it("rejects unknown template values", async () => {
+    await expectDenied(
+      clients.service.from("clubs").insert({
+        id: templateClubId,
+        slug: "template-contract",
+        name: "Template Contract Club",
+        site_template: "brutalist",
+      }),
+    );
+  });
+
+  it("keeps every seeded club on the classic template", async () => {
+    const { data, error } = await clients.service
+      .from("clubs")
+      .select("id, site_template")
+      .in("id", [CLUB_IDS.alpha, CLUB_IDS.bravo]);
+    expect(error?.message).toBeUndefined();
+    expect(data).toEqual(
+      expect.arrayContaining([
+        { id: CLUB_IDS.alpha, site_template: "classic" },
+        { id: CLUB_IDS.bravo, site_template: "classic" },
+      ]),
+    );
+  });
+
+  it("rejects a malformed accent color and accepts a hex accent color", async () => {
+    await expectDenied(
+      clients.service.from("clubs").insert({
+        id: templateClubId,
+        slug: "template-contract",
+        name: "Template Contract Club",
+        accent_color: "red",
+      }),
+    );
+    await expectAllowed(
+      clients.service.from("clubs").insert({
+        id: templateClubId,
+        slug: "template-contract",
+        name: "Template Contract Club",
+        accent_color: "#C8102E",
+      }),
+    );
+  });
+});
+
+describe("match attendance and scorers contract", () => {
+  const matchIds = [
+    "99999999-2222-4222-8222-222222222291",
+    "99999999-2222-4222-8222-222222222292",
+  ] as const;
+  const alphaSeasonId = "33333333-3333-4333-8333-333333333331";
+
+  afterEach(async () => {
+    await clients.service
+      .from("matches")
+      .delete()
+      .in("id", [...matchIds]);
+  });
+
+  it("leaves rows written without the new columns unaffected", async () => {
+    await expectAllowed(
+      clients.service.from("matches").insert({
+        id: matchIds[0],
+        club_id: CLUB_IDS.alpha,
+        season_id: alphaSeasonId,
+        date: "2026-08-15",
+        time: "19:00",
+        opponent: "Legacy Shape FC",
+      }),
+    );
+    const { data, error } = await clients.service
+      .from("matches")
+      .select("attendance, scorers")
+      .eq("id", matchIds[0])
+      .single();
+    expect(error?.message).toBeUndefined();
+    expect(data).toEqual({ attendance: null, scorers: [] });
+  });
+
+  it("accepts attendance and scorers", async () => {
+    await expectAllowed(
+      clients.service.from("matches").insert({
+        id: matchIds[1],
+        club_id: CLUB_IDS.alpha,
+        season_id: alphaSeasonId,
+        date: "2026-08-16",
+        time: "19:00",
+        opponent: "Stat Line United",
+        attendance: 1250,
+        scorers: [{ name: "A. Striker", minute: 27 }],
+      }),
+    );
+    const { data } = await clients.service
+      .from("matches")
+      .select("attendance, scorers")
+      .eq("id", matchIds[1])
+      .single();
+    expect(data).toEqual({
+      attendance: 1250,
+      scorers: [{ name: "A. Striker", minute: 27 }],
+    });
+  });
+
+  it("rejects negative attendance", async () => {
+    await expectDenied(
+      clients.service.from("matches").insert({
+        id: matchIds[1],
+        club_id: CLUB_IDS.alpha,
+        season_id: alphaSeasonId,
+        date: "2026-08-17",
+        time: "19:00",
+        opponent: "Negative Crowd FC",
+        attendance: -1,
+      }),
     );
   });
 });

@@ -1,6 +1,6 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-07-27
+Last updated: 2026-08-11
 
 ## Current State
 
@@ -286,7 +286,65 @@ local contract, architecture, database, legacy, and combined suites.
   so the exposed service-role JWT is no longer trusted. The current signer is
   ECC P-256.
 
+### Lions L0+L1 — site template and club identity schema (2026-08-11)
+
+- Named `site_template` (`classic` default, `editorial`) as a first-class part
+  of the tenant model in the architecture plan: it selects which shared
+  presentation component package renders a club's public site, chosen by data
+  rather than slug branching. Existing tenants stay on `classic` unchanged.
+- Added migration `20260811000100_site_template_club_identity.sql`:
+  `clubs.site_template` (checked `classic|editorial`, default `classic`),
+  nullable `clubs.accent_color` mirroring the existing hex color checks,
+  `site_branding.club_logo_dark_path`/`club_logo_dark_asset_id` with the
+  existing composite media FK pattern, the new `onzio.club_identity` singleton
+  (short name, initials, founded year, league/venue/contact fields, hero and
+  section headings, mission, highlights) with grants, per-operation RLS on the
+  `branding` feature, audit and `updated_at` triggers, and nullable
+  `matches.attendance` plus defaulted `matches.scorers`.
+- Extended `ClubContext` with `siteTemplate: "classic" | "editorial"`,
+  selected in both database lookups and defaulted to `classic`.
+- Added red-then-green contracts: `tests/database/club-identity.test.ts`
+  (anon read only for publicly accessible clubs, AAL2 member insert/update,
+  cross-club and AAL1 rejection), site-template/accent-color/matches contracts
+  in `tests/database/schema-rls.test.ts`, and `siteTemplate` context coverage
+  in `tests/contracts/tenant-routing.test.ts`. All were verified failing
+  against the prior schema/implementation before turning green.
+- Regenerated and committed `lib/database.generated.ts`.
+- No editorial UI package, Lions seed data, or shop tier gating was added;
+  those are later phases.
+
 ## Verification
+
+### Lions L0+L1 gate — 2026-08-11
+
+```text
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run lint
+  passed with the pre-existing legacy warnings
+
+npm run test:db
+  61/61 passed across 7 files
+
+npm run test:contracts
+  190/190 passed across 17 files
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  512/512 passed across 46 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values
+```
 
 ### Phase 6 green gates
 
@@ -455,6 +513,12 @@ Known non-blocking warnings:
 ## Next Milestone
 
 Phase 8 full local import rehearsal and production-provisioning gate.
+
+On the parallel Lions track, the next phase is L2: local-dev-only Lions
+Football Club seed data (Starter tier, `editorial` template) followed by the
+separate `components/editorial/*` presentation package. Nothing in L0/L1
+requires it; existing tenants keep rendering through the untouched classic
+components.
 
 First, create the immutable Rose City database/Auth/Storage export and complete
 the full local transformation/import/rollback rehearsal. Before any production

@@ -53,8 +53,15 @@ Create the following core tables in the `onzio` schema:
 - `lifecycle onboarding|active|archived`
 - `public_access preview|live|grace|suspended`
 - `tier starter|pro`
+- `site_template classic|editorial`
 - safe public branding/runtime fields
 - created and updated timestamps
+
+`site_template` selects which shared presentation component package renders a
+club's public site. `classic` is the default and serves every existing tenant
+unchanged; `editorial` is a second reusable package selected per tenant by
+data, never by slug branching. `ClubContext` carries the value as
+`siteTemplate`.
 
 Lifecycle behavior:
 
@@ -254,6 +261,7 @@ type ClubContext = {
   lifecycle: "onboarding" | "active" | "archived";
   publicAccess: "preview" | "live" | "grace" | "suspended";
   tier: "starter" | "pro";
+  siteTemplate: "classic" | "editorial";
   role: "owner" | "admin" | null;
 };
 ```

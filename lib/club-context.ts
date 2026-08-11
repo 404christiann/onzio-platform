@@ -9,6 +9,7 @@ export type ClubContext = {
   lifecycle: "onboarding" | "active" | "archived";
   publicAccess: "preview" | "live" | "grace" | "suspended";
   tier: "starter" | "pro";
+  siteTemplate: "classic" | "editorial";
   role: "owner" | "admin" | null;
 };
 
@@ -21,6 +22,7 @@ const TEST_CONTEXTS = {
     lifecycle: "active",
     publicAccess: "live",
     tier: "pro",
+    siteTemplate: "classic",
   },
   "bravo-onzio.vercel.app": {
     id: "22222222-2222-4222-8222-222222222222",
@@ -30,6 +32,7 @@ const TEST_CONTEXTS = {
     lifecycle: "onboarding",
     publicAccess: "preview",
     tier: "starter",
+    siteTemplate: "classic",
   },
 } as const;
 
@@ -56,7 +59,7 @@ async function getDatabaseContext(
   const { data: domain, error } = await onzio
     .from("club_domains")
     .select(
-      "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, tier)",
+      "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, tier, site_template)",
     )
     .eq("hostname", hostname)
     .eq("active", true)
@@ -72,6 +75,7 @@ async function getDatabaseContext(
     lifecycle: ClubContext["lifecycle"];
     public_access: ClubContext["publicAccess"];
     tier: ClubContext["tier"];
+    site_template?: ClubContext["siteTemplate"] | null;
   };
 
   const { data: primary } = await onzio
@@ -105,6 +109,7 @@ async function getDatabaseContext(
     lifecycle: club.lifecycle,
     publicAccess: club.public_access,
     tier: club.tier,
+    siteTemplate: club.site_template ?? "classic",
     role,
   };
 }
@@ -121,7 +126,7 @@ export async function getClubContextBySlug(
   const onzio = supabase.schema("onzio");
   const { data: club, error } = await onzio
     .from("clubs")
-    .select("id, slug, name, lifecycle, public_access, tier")
+    .select("id, slug, name, lifecycle, public_access, tier, site_template")
     .eq("slug", slug)
     .maybeSingle();
   if (error || !club) failContract("UNKNOWN_TENANT");
@@ -158,6 +163,8 @@ export async function getClubContextBySlug(
     lifecycle: club.lifecycle as ClubContext["lifecycle"],
     publicAccess: club.public_access as ClubContext["publicAccess"],
     tier: club.tier as ClubContext["tier"],
+    siteTemplate:
+      (club.site_template as ClubContext["siteTemplate"] | null) ?? "classic",
     role,
   };
 }
