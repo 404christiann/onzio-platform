@@ -1,6 +1,19 @@
 import { defineConfig, type Plugin } from "vitest/config";
+import { loadEnv } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { transformSync } from "rolldown/utils";
+
+// Next.js auto-loads `.env.test` (NODE_ENV=test) for `app`/`lib` code, but
+// plain `vitest` does not share that pipeline, so any module a contract test
+// imports that reads `process.env.NEXT_PUBLIC_SUPABASE_URL` (e.g.
+// lib/supabase.ts) would otherwise throw at import time. Load the same
+// loopback-only `.env.test` values Next.js would, without overriding
+// anything a real shell/CI already exported (tests/helpers/environment.ts
+// still rejects non-loopback URLs regardless of source).
+const testEnv = loadEnv("test", process.cwd(), "");
+for (const [key, value] of Object.entries(testEnv)) {
+  if (process.env[key] === undefined) process.env[key] = value;
+}
 
 // tsconfig.json keeps `jsx: preserve` for Next.js, which the default
 // transform honors and therefore leaves JSX uncompiled. Compile .tsx here

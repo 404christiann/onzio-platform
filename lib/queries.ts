@@ -737,3 +737,30 @@ export async function fetchSchedule(seasonId?: string, clubId?: string): Promise
     return ka < kb ? -1 : ka > kb ? 1 : 0;
   });
 }
+
+/** Parses a fixture's local stored date/time into a Date for comparison and display. */
+export function fixtureKickoff(fixture: Fixture): Date {
+  const [year, month, day] = fixture.date.split("-").map(Number);
+  const [hours, minutes] = (fixture.time ?? "00:00").split(":").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0);
+}
+
+/** Returns the earliest fixture with a kickoff strictly after `now`, or null. */
+export function findNextFixture(fixtures: Fixture[], now: Date = new Date()): Fixture | null {
+  const nowMs = now.getTime();
+  return (
+    fixtures
+      .filter((fixture) => fixture.date && fixtureKickoff(fixture).getTime() > nowMs)
+      .sort((a, b) => fixtureKickoff(a).getTime() - fixtureKickoff(b).getTime())[0] ?? null
+  );
+}
+
+/** Returns the most recently played fixture (a recorded score on both sides), or null. */
+export function findLatestResult(fixtures: Fixture[]): Fixture | null {
+  return (
+    fixtures
+      .filter((fixture) => fixture.roseCityScore != null && fixture.opponentScore != null)
+      .sort((a, b) => fixtureKickoff(a).getTime() - fixtureKickoff(b).getTime())
+      .pop() ?? null
+  );
+}
