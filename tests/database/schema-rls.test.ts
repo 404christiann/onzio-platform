@@ -42,6 +42,7 @@ describe("planned schema contract", () => {
     "club_exports",
     "site_branding",
     "homepage_hero_content",
+    "club_identity",
     "players",
     "matches",
     "seasons",
@@ -153,6 +154,67 @@ describe("anonymous RLS contract", () => {
         .select("*")
         .eq("club_id", CLUB_IDS.alpha),
     );
+  });
+
+  it("keeps club_identity content isolated per tenant", async () => {
+    const seeded = await clients.service.from("club_identity").upsert([
+      {
+        club_id: CLUB_IDS.alpha,
+        short_name: "Alpha",
+        initials: "AFC",
+        founded_year: 2015,
+      },
+      {
+        club_id: CLUB_IDS.bravo,
+        short_name: "Bravo",
+        initials: "BU",
+        founded_year: 2019,
+      },
+    ]);
+    expect(seeded.error?.message).toBeUndefined();
+
+    const alphaRead = await clients.anon
+      .from("club_identity")
+      .select("club_id, short_name")
+      .eq("club_id", CLUB_IDS.alpha);
+    expect(alphaRead.error?.message).toBeUndefined();
+    expect(alphaRead.data).toEqual([
+      { club_id: CLUB_IDS.alpha, short_name: "Alpha" },
+    ]);
+
+    // Bravo is onboarding/preview, not publicly accessible, so anon sees no
+    // rows for it even though the row exists.
+    const bravoRead = await clients.anon
+      .from("club_identity")
+      .select("club_id")
+      .eq("club_id", CLUB_IDS.bravo);
+    expect(bravoRead.error?.message).toBeUndefined();
+    expect(bravoRead.data).toEqual([]);
+
+    await clients.service
+      .from("club_identity")
+      .delete()
+      .in("club_id", [CLUB_IDS.alpha, CLUB_IDS.bravo]);
+  });
+
+  it("allows anon to read store_enabled through the existing clubs select policy", async () => {
+    const update = await clients.service
+      .from("clubs")
+      .update({ store_enabled: true })
+      .eq("id", CLUB_IDS.alpha);
+    expect(update.error?.message).toBeUndefined();
+
+    const { data, error } = await clients.anon
+      .from("clubs")
+      .select("id, store_enabled")
+      .eq("id", CLUB_IDS.alpha);
+    expect(error?.message).toBeUndefined();
+    expect(data).toEqual([{ id: CLUB_IDS.alpha, store_enabled: true }]);
+
+    await clients.service
+      .from("clubs")
+      .update({ store_enabled: false })
+      .eq("id", CLUB_IDS.alpha);
   });
 
   it.each([

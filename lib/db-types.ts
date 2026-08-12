@@ -210,6 +210,30 @@ export type DBHomepageHeroContent = {
   updated_at: string;
 };
 
+export type DBClubIdentity = {
+  club_id: string;
+  short_name: string;
+  initials: string;
+  founded_year: number;
+  league: string;
+  division: string;
+  city: string;
+  state: string;
+  venue: string;
+  time_zone: string;
+  contact_address: string;
+  slideshow_heading_top: string;
+  slideshow_heading_em: string;
+  identity_heading_top: string;
+  identity_heading_em: string;
+  story_heading_top: string;
+  story_heading_em: string;
+  mission: string;
+  highlights: unknown;
+  created_at: string;
+  updated_at: string;
+};
+
 export type DBAboutPageContent = {
   id: number;
   hero_title: string;

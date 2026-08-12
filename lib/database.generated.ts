@@ -243,6 +243,86 @@ export type Database = {
         }
         Relationships: []
       }
+      club_identity: {
+        Row: {
+          city: string
+          club_id: string
+          contact_address: string
+          created_at: string
+          division: string
+          founded_year: number
+          highlights: Json
+          identity_heading_em: string
+          identity_heading_top: string
+          initials: string
+          league: string
+          mission: string
+          short_name: string
+          slideshow_heading_em: string
+          slideshow_heading_top: string
+          state: string
+          story_heading_em: string
+          story_heading_top: string
+          time_zone: string
+          updated_at: string
+          venue: string
+        }
+        Insert: {
+          city?: string
+          club_id: string
+          contact_address?: string
+          created_at?: string
+          division?: string
+          founded_year: number
+          highlights?: Json
+          identity_heading_em?: string
+          identity_heading_top?: string
+          initials: string
+          league?: string
+          mission?: string
+          short_name: string
+          slideshow_heading_em?: string
+          slideshow_heading_top?: string
+          state?: string
+          story_heading_em?: string
+          story_heading_top?: string
+          time_zone?: string
+          updated_at?: string
+          venue?: string
+        }
+        Update: {
+          city?: string
+          club_id?: string
+          contact_address?: string
+          created_at?: string
+          division?: string
+          founded_year?: number
+          highlights?: Json
+          identity_heading_em?: string
+          identity_heading_top?: string
+          initials?: string
+          league?: string
+          mission?: string
+          short_name?: string
+          slideshow_heading_em?: string
+          slideshow_heading_top?: string
+          state?: string
+          story_heading_em?: string
+          story_heading_top?: string
+          time_zone?: string
+          updated_at?: string
+          venue?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_identity_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_logo_page_content: {
         Row: {
           annotated_image_asset_id: string | null
@@ -394,6 +474,7 @@ export type Database = {
       }
       clubs: {
         Row: {
+          accent_color: string | null
           archived_at: string | null
           created_at: string
           id: string
@@ -404,11 +485,13 @@ export type Database = {
           public_access: string
           secondary_color: string | null
           slug: string
+          store_enabled: boolean
           stripe_price_id: string | null
           tier: string
           updated_at: string
         }
         Insert: {
+          accent_color?: string | null
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -419,11 +502,13 @@ export type Database = {
           public_access?: string
           secondary_color?: string | null
           slug: string
+          store_enabled?: boolean
           stripe_price_id?: string | null
           tier?: string
           updated_at?: string
         }
         Update: {
+          accent_color?: string | null
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -434,6 +519,7 @@ export type Database = {
           public_access?: string
           secondary_color?: string | null
           slug?: string
+          store_enabled?: boolean
           stripe_price_id?: string | null
           tier?: string
           updated_at?: string
@@ -944,6 +1030,7 @@ export type Database = {
       matches: {
         Row: {
           address: string | null
+          attendance: number | null
           city: string | null
           club_id: string
           competition: string | null
@@ -957,6 +1044,7 @@ export type Database = {
           opponent_score: number | null
           opponent_short_name: string | null
           rose_city_score: number | null
+          scorers: Json
           season_id: string
           sponsor_link: string | null
           sponsor_logo_asset_id: string | null
@@ -969,6 +1057,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          attendance?: number | null
           city?: string | null
           club_id: string
           competition?: string | null
@@ -982,6 +1071,7 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           rose_city_score?: number | null
+          scorers?: Json
           season_id: string
           sponsor_link?: string | null
           sponsor_logo_asset_id?: string | null
@@ -994,6 +1084,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          attendance?: number | null
           city?: string | null
           club_id?: string
           competition?: string | null
@@ -1007,6 +1098,7 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           rose_city_score?: number | null
+          scorers?: Json
           season_id?: string
           sponsor_link?: string | null
           sponsor_logo_asset_id?: string | null
