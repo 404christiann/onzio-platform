@@ -5,10 +5,15 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import nextDynamic from "next/dynamic";
 import FixtureRow from "@/components/FixtureRow";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+
+const EditorialSchedule = nextDynamic(
+  () => import("@/components/editorial/EditorialSchedule"),
+);
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -52,7 +57,7 @@ function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
   return idx === -1 ? fixtures.length : idx;
 }
 
-export default function SchedulePage() {
+function ClassicSchedulePage() {
   const clubId = useClubId();
   const heroRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -207,4 +212,15 @@ export default function SchedulePage() {
       )}
     </div>
   );
+}
+
+export default function SchedulePage() {
+  const club = useClubContext();
+  // Editorial-template tenants render the real editorial schedule page (month
+  // rail, status tabs, solid-color matchup cards); classic tenants render
+  // exactly what they rendered before.
+  if (club.siteTemplate === "editorial") {
+    return <EditorialSchedule />;
+  }
+  return <ClassicSchedulePage />;
 }

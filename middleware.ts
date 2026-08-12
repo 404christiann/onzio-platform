@@ -13,6 +13,18 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/club-logo",
 ]);
 
+/**
+ * `PUBLIC_TENANT_PATHS` is an exact-match allowlist, which cannot express
+ * the dynamic `/schedule/[fixtureId]` match-area route. Anything under
+ * `/schedule/` also needs the tenant rewrite so `ClubContextProvider`
+ * exists there — a strictly additive check that does not change any
+ * existing exact-match path's behavior.
+ */
+function isPublicTenantPath(pathname: string): boolean {
+  if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
+  return pathname.startsWith("/schedule/") && pathname !== "/schedule/";
+}
+
 type ResolvedTenant = {
   id: string;
   slug: string;
@@ -186,7 +198,7 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-onzio-club-slug", tenant.slug);
   if (user) requestHeaders.set("x-onzio-user-id", user.id);
 
-  if (PUBLIC_TENANT_PATHS.has(request.nextUrl.pathname)) {
+  if (isPublicTenantPath(request.nextUrl.pathname)) {
     const target = request.nextUrl.clone();
     target.pathname = `/_clubs/${tenant.slug}${request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname}`;
     const rewritten = NextResponse.rewrite(target, {
