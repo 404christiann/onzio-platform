@@ -70,6 +70,26 @@ export function playersByPosition(roster: RosterData, position: Position): Playe
   }
 }
 
+/**
+ * Pure filter logic, extracted from render so it stays independently
+ * testable (unit tests, not full render/animation simulation).
+ */
+export function visibleGroupsForFilter(
+  filter: RosterFilter,
+): Array<[Position, string, string]> {
+  return GROUPS.filter(([position]) => filter === "all" || filter === position);
+}
+
+export function showsStaffSection(filter: RosterFilter): boolean {
+  return filter === "all" || filter === "staff";
+}
+
+export function resultLabelForFilter(filter: RosterFilter): string {
+  if (filter === "all") return "All squad";
+  if (filter === "staff") return "Technical staff";
+  return GROUPS.find(([position]) => position === filter)?.[1] ?? "Squad";
+}
+
 export default function EditorialRosterView({
   roster,
   staffList,
@@ -82,15 +102,8 @@ export default function EditorialRosterView({
   const [filter, setFilter] = useState<RosterFilter>("all");
   const prefersReducedMotion = useReducedMotion();
 
-  const visibleGroups = GROUPS.filter(
-    ([position]) => filter === "all" || filter === position,
-  );
-  const resultLabel =
-    filter === "all"
-      ? "All squad"
-      : filter === "staff"
-        ? "Technical staff"
-        : (GROUPS.find(([position]) => position === filter)?.[1] ?? "Squad");
+  const visibleGroups = visibleGroupsForFilter(filter);
+  const resultLabel = resultLabelForFilter(filter);
 
   return (
     <div className="roster-page">
@@ -194,7 +207,7 @@ export default function EditorialRosterView({
               );
             })}
 
-            {(filter === "all" || filter === "staff") && (
+            {showsStaffSection(filter) && (
               <motion.section
                 className="staff-section"
                 id="staff"
