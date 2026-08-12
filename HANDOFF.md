@@ -1,6 +1,6 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
 
 ## Current State
 
@@ -345,7 +345,131 @@ local contract, architecture, database, legacy, and combined suites.
 - No editorial UI components and no shop-gating changes; existing tests were
   not deleted, skipped, loosened, or mocked.
 
+### Lions L3 — editorial component package and template dispatch (2026-08-12)
+
+A prior session was killed mid-run for reliability reasons unrelated to code
+quality, having just finished the implementation and begun final
+verification. This session verified that work, completed it, corrected one
+inaccurate claim in it, and ran the full gate.
+
+Shipped in total (prior session plus this one):
+
+- `components/editorial/*`: `EditorialHeader` (scroll-transition brand
+  reveal, homepage-only transparent state, Home/Roster/Schedule nav with no
+  Store link, full-viewport anchored mobile menu with background scroll
+  lock), `EditorialFooter` (four-column Explore/Matchday/Follow layout, no
+  sponsors block), `EditorialMotion` (GSAP/ScrollTrigger orchestration,
+  `gsap.matchMedia` desktop/mobile branching, full
+  `prefers-reduced-motion` exit, route-change cleanup), `EditorialShell`
+  (wrapper injecting `data-site-template="editorial"` and the
+  `--club-primary`/`--club-secondary`/`--club-accent` custom properties),
+  vendored Geist fonts, and `EditorialHomePlaceholder` — all ported from the
+  approved `soccerplatformmockups` concept mockup and verified line-by-line
+  against `SiteHeader.tsx`/`SiteFooter.tsx`/`PublicMotion.tsx` in this
+  session; no behavioral drift found beyond the deliberate Starter-scope
+  trims (no Store link, no Admin Preview control, no sponsors) already
+  called out in the mockup's own `CLAUDE.md`.
+- `lib/club-identity.ts`: identity, theme color, and crest queries backing
+  the shell.
+- `styles/editorial.css`: every rule scoped under
+  `[data-site-template="editorial"]`.
+- `app/%5Fclubs/[slug]/layout.tsx` dispatches on `club.siteTemplate`
+  (tenant data, never slug branching); the editorial branch reaches the
+  component package, stylesheet, and font scope through dynamic `import()`
+  instead of static imports, and `app/(public)/page.tsx` reaches
+  `EditorialHomePlaceholder` through a client-side `next/dynamic` import.
+- Corrected an inaccurate code comment inherited from the prior session:
+  dynamic `import()` inside the shared `/_clubs/[slug]` Server Component
+  keeps classic-template requests from evaluating the editorial
+  data-fetching modules or constructing the editorial React tree on the
+  server (a real, verified benefit), but — verified by diffing shipped
+  CSS/JS chunk hashes for a classic-tenant page between a static-import
+  build and this dynamic-import build (identical in both) — it does **not**
+  keep the editorial CSS, Geist font, or header/footer/motion component
+  JavaScript out of the client bundle classic tenants download. Next.js
+  computes one static client-reference/CSS manifest per compiled route, and
+  both templates share this one route file, so everything reachable from
+  either branch lands in that route's shared chunk regardless of import
+  style; `next/dynamic` in place of a plain `import()` was tried and made no
+  measurable difference (identical shipped chunk hashes in both). The
+  editorial CSS stays visually inert for classic tenants because every rule
+  is scoped under the wrapper's `data-site-template="editorial"` selector,
+  which classic markup never carries — so there is no visual or functional
+  regression — but true client-asset isolation would need separate route
+  files per template, which is out of this phase's scope. The one editorial
+  chunk genuinely absent from the classic client bundle is
+  `EditorialHomePlaceholder`, reached through `next/dynamic` from a Client
+  Component, where Next.js's ordinary client-side code-splitting applies.
+  Documented this precisely in `app/%5Fclubs/[slug]/layout.tsx` so a future
+  phase doesn't rediscover it the hard way.
+- No existing test was deleted, skipped, marked todo, loosened, or broadly
+  mocked. `tests/contracts/editorial-template.test.ts` (24 tests) is green
+  and its layout-source assertions match the corrected comment.
+
 ## Verification
+
+### Lions L3 gate — 2026-08-12
+
+```text
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run lint
+  passed with the pre-existing legacy warnings
+
+npm run test:db
+  61/61 passed across 7 files
+
+npm run test:contracts
+  214/214 passed across 18 files
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  536/536 passed across 47 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values;
+  25 routes generated
+```
+
+Manual regression proof, production build (`npm run build` + `npm run start`)
+against the already-running local Supabase stack:
+
+- Classic tenants unaffected: `alpha.localhost:3000/` returns HTTP 200 with
+  the untouched classic `Nav`/`Footer`, zero occurrences of
+  `data-site-template="editorial"` anywhere in the served markup, and (real
+  Chromium check) zero `[data-site-template="editorial"]` or `.site-header`
+  elements in the live DOM. `bravo.localhost:3000/` returns HTTP 404 for an
+  anonymous request — pre-existing private-preview gating for its
+  `onboarding`/`preview` lifecycle from the Phase 2 Alpha/Bravo fixtures,
+  unrelated to this phase (Rose City has no local tenant fixture — it is
+  production-only and not yet migrated — so `npm test`'s full legacy
+  regression suite, green above, stands in for its local manual proof).
+- Lions editorial shell verified correct in a real headless-Chromium
+  session at `lions.localhost:3000/`: at scroll position 0 the header is
+  transparent (`background-color: rgba(0,0,0,0)`) with white
+  (`--on-dark`) nav text and the crest lockup at `opacity:0`/
+  `visibility:hidden`; after scrolling, the header becomes solid/white and
+  the crest reaches `opacity:1`/`visibility:visible`. Theme custom
+  properties resolve to the seeded Lions palette
+  (`--club-primary:#1B2958`, `--club-secondary:#AD3234`). The footer shows
+  Explore (Roster/Schedule), Matchday (Scioto Field, the seeded street
+  address, `mailto:hello@lionsfc.example`), and Follow (the real seeded
+  Instagram/YouTube URLs), with no sponsors block anywhere in the markup.
+  No "Store" text appears anywhere in the page. At a 390×844 mobile
+  viewport, opening the menu renders a ~780px-tall (near-full-viewport)
+  panel and sets `document.body.style.overflow: hidden`; closing it
+  restores the prior value.
+- Dev/production server processes were stopped after verification; `ps aux`
+  confirmed no `next-server` process remained.
 
 ### Lions L2 gate — 2026-08-11
 
@@ -591,10 +715,12 @@ Known non-blocking warnings:
 
 Phase 8 full local import rehearsal and production-provisioning gate.
 
-On the parallel Lions track, L2 (local-dev-only Lions Football Club seed data
-and real media fixture) is complete. The next Lions phase is the separate
-`components/editorial/*` presentation package; until it exists the Lions
-tenant intentionally renders through the untouched classic components.
+On the parallel Lions track, L3 (the `components/editorial/*` presentation
+package and template dispatch) is complete; the Lions tenant now renders the
+editorial shell described above. The homepage body is still the temporary
+`EditorialHomePlaceholder` — the next Lions phase is the real editorial home
+sections (hero, next match, matchday gallery, identity, story), followed by
+roster and schedule pages once Starter scope for those is defined.
 
 First, create the immutable Rose City database/Auth/Storage export and complete
 the full local transformation/import/rollback rehearsal. Before any production
