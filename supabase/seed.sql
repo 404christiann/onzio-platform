@@ -743,6 +743,41 @@ set
   mission = excluded.mission,
   highlights = excluded.highlights;
 
+insert into onzio.tryout_page_content (
+  club_id,
+  hero_headline_top,
+  hero_headline_em,
+  hero_intro,
+  sessions,
+  what_to_bring,
+  fee_note,
+  cta_label
+)
+values
+  (
+    '55555555-5555-4555-8555-555555555555',
+    'Open Trials.',
+    'Wear the Badge.',
+    'Lions FC runs open tryouts every year across three pathways — Academy, U23s, and First Team. Bring your boots and come compete for the Capital City.',
+    '[
+      {"ageGroup": "Academy (U10–U17)", "dateRange": "August 18–19, 2026", "dayTime": "Tue–Wed, 5:30–7:30 PM", "notes": "Open to all skill levels. Check in at the Scioto Field north gate."},
+      {"ageGroup": "U23s", "dateRange": "August 22, 2026", "dayTime": "Sat, 9:00–11:30 AM", "notes": "Prior competitive experience recommended."},
+      {"ageGroup": "First Team", "dateRange": "August 29, 2026", "dayTime": "Sat, 8:00–10:30 AM", "notes": "By invitation and open trial slots — email to request a slot."}
+    ]'::jsonb,
+    '["Boots (cleats) and shin guards","Water and a light snack","A signed waiver (available at check-in)","Photo ID for players 16 and older"]'::jsonb,
+    'Tryouts are free to attend. No registration required — just show up ready to play.',
+    'Questions? Contact the club'
+  )
+on conflict (club_id) do update
+set
+  hero_headline_top = excluded.hero_headline_top,
+  hero_headline_em = excluded.hero_headline_em,
+  hero_intro = excluded.hero_intro,
+  sessions = excluded.sessions,
+  what_to_bring = excluded.what_to_bring,
+  fee_note = excluded.fee_note,
+  cta_label = excluded.cta_label;
+
 insert into onzio.site_social_links (
   club_id,
   id,

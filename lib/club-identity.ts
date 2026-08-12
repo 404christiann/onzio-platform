@@ -210,3 +210,90 @@ export async function fetchEditorialCrests(
     crestOnDarkUrl: crestOnDarkUrl || crestUrl,
   };
 }
+
+/**
+ * Informational tryout/recruitment page content for the editorial
+ * presentation package. No public form or mutation; backed by the singleton
+ * `onzio.tryout_page_content` row and readable by anonymous visitors under
+ * the same `branding` feature gate as `club_identity`.
+ */
+export type TryoutSession = {
+  ageGroup: string;
+  dateRange: string;
+  dayTime: string;
+  notes: string;
+};
+
+export type TryoutPageContent = {
+  heroHeadlineTop: string;
+  heroHeadlineEm: string;
+  heroIntro: string;
+  sessions: TryoutSession[];
+  whatToBring: string[];
+  feeNote: string;
+  ctaLabel: string;
+};
+
+type TryoutPageContentRow = {
+  club_id: string;
+  hero_headline_top: string;
+  hero_headline_em: string;
+  hero_intro: string;
+  sessions: unknown;
+  what_to_bring: unknown;
+  fee_note: string;
+  cta_label: string;
+};
+
+function normalizeTryoutSessions(value: unknown): TryoutSession[] {
+  if (!Array.isArray(value)) return [];
+  const sessions: TryoutSession[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const candidate = item as Record<string, unknown>;
+    const { ageGroup, dateRange, dayTime, notes } = candidate;
+    if (
+      typeof ageGroup === "string" &&
+      typeof dateRange === "string" &&
+      typeof dayTime === "string" &&
+      typeof notes === "string"
+    ) {
+      sessions.push({ ageGroup, dateRange, dayTime, notes });
+    }
+  }
+  return sessions;
+}
+
+function normalizeWhatToBring(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+/** Fetches the singleton tryout page content row, or null when none exists. */
+export async function fetchTryoutPageContent(
+  clubId: string,
+): Promise<TryoutPageContent | null> {
+  if (!clubId) {
+    throw new Error("fetchTryoutPageContent requires an explicit clubId");
+  }
+  const { data, error } = await supabase
+    .from("tryout_page_content")
+    .select("*")
+    .eq("club_id", clubId)
+    .maybeSingle();
+  if (error) {
+    console.error("fetchTryoutPageContent:", error.message);
+    return null;
+  }
+  if (!data) return null;
+  const row = data as unknown as TryoutPageContentRow;
+  return {
+    heroHeadlineTop: row.hero_headline_top,
+    heroHeadlineEm: row.hero_headline_em,
+    heroIntro: row.hero_intro,
+    sessions: normalizeTryoutSessions(row.sessions),
+    whatToBring: normalizeWhatToBring(row.what_to_bring),
+    feeNote: row.fee_note,
+    ctaLabel: row.cta_label,
+  };
+}

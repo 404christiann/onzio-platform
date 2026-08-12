@@ -1747,6 +1747,123 @@
   font-weight: 700;
 }
 
+/* ============ TRYOUTS PAGE ============
+   Informational-only page: hero, tryout-sessions grid, a "what to bring"
+   checklist, and a closing CTA with contact info. No form, no mutation,
+   per Christian's already-approved scope decision. */
+[data-site-template="editorial"] .tryouts-intro {
+  margin: 18px 0 0;
+  max-width: 62ch;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--on-dark);
+  opacity: 0.85;
+}
+[data-site-template="editorial"] .tryout-sessions,
+[data-site-template="editorial"] .tryout-checklist,
+[data-site-template="editorial"] .tryout-cta {
+  margin: 0 var(--pad-x);
+  padding-top: clamp(48px, 6vw, 72px);
+}
+[data-site-template="editorial"] .tryout-sessions h2,
+[data-site-template="editorial"] .tryout-checklist h2 {
+  margin: 14px 0 0;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 800;
+  color: var(--display);
+  text-wrap: balance;
+}
+[data-site-template="editorial"] .tryout-sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  margin-top: 28px;
+}
+[data-site-template="editorial"] .tryout-session-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+[data-site-template="editorial"] .tryout-session-card h3 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.58rem;
+  font-weight: 780;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .tryout-session-detail {
+  display: block;
+  margin: 10px 0 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+[data-site-template="editorial"] .tryout-session-notes {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+[data-site-template="editorial"] .tryout-checklist ul {
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  max-width: 62ch;
+}
+[data-site-template="editorial"] .tryout-checklist li {
+  position: relative;
+  padding-left: 26px;
+  color: var(--ink);
+  font-size: 0.98rem;
+  font-weight: 620;
+  line-height: 1.5;
+}
+[data-site-template="editorial"] .tryout-checklist li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 12px;
+  height: 2px;
+  background: var(--accent);
+}
+[data-site-template="editorial"] .tryout-cta {
+  padding-bottom: 40px;
+}
+[data-site-template="editorial"] .tryout-cta > p {
+  margin: 14px 0 0;
+  max-width: 62ch;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+[data-site-template="editorial"] .tryout-cta h2 {
+  margin: 14px 0 0;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 800;
+  color: var(--display);
+  text-wrap: balance;
+}
+[data-site-template="editorial"] .tryout-cta a,
+[data-site-template="editorial"] .tryout-cta h2 + p,
+[data-site-template="editorial"] .tryout-cta a + p {
+  display: block;
+  margin: 14px 0 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
 /* ============ FOOTER ============ */
 [data-site-template="editorial"] .site-footer {
   background: var(--primary-deep);

@@ -17,15 +17,16 @@ import { imageDeliveryProps } from "@/lib/image-delivery";
  * crest is hidden. As soon as the visitor scrolls, the header becomes
  * white and reveals the full-color crest.
  *
- * Starter scope: navigation is Home / Roster / Schedule with no Store link.
- * The mockup's Admin Preview control and concept-preview affordances are
- * intentionally not ported.
+ * Starter scope: navigation is Home / Roster / Schedule / Tryouts with no
+ * Store link. The mockup's Admin Preview control and concept-preview
+ * affordances are intentionally not ported.
  */
 
 const NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/", label: "Home" },
   { href: "/roster", label: "Roster" },
   { href: "/schedule", label: "Schedule" },
+  { href: "/tryouts", label: "Tryouts" },
 ];
 
 export default function EditorialHeader({

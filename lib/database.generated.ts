@@ -1839,6 +1839,53 @@ export type Database = {
           },
         ]
       }
+      tryout_page_content: {
+        Row: {
+          club_id: string
+          created_at: string
+          cta_label: string
+          fee_note: string
+          hero_headline_em: string
+          hero_headline_top: string
+          hero_intro: string
+          sessions: Json
+          updated_at: string
+          what_to_bring: Json
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          cta_label?: string
+          fee_note?: string
+          hero_headline_em?: string
+          hero_headline_top?: string
+          hero_intro?: string
+          sessions?: Json
+          updated_at?: string
+          what_to_bring?: Json
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          cta_label?: string
+          fee_note?: string
+          hero_headline_em?: string
+          hero_headline_top?: string
+          hero_intro?: string
+          sessions?: Json
+          updated_at?: string
+          what_to_bring?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tryout_page_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

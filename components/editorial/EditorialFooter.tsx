@@ -47,6 +47,7 @@ export default function EditorialFooter({
           <span className="footer-label">Explore</span>
           <Link href="/roster">Roster</Link>
           <Link href="/schedule">Schedule</Link>
+          <Link href="/tryouts">Tryouts</Link>
         </div>
 
         <div className="footer-matchday">

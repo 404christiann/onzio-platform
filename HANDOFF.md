@@ -1018,7 +1018,155 @@ tenants:
 No existing test was deleted, skipped, marked todo, loosened, or broadly
 mocked. No ad hoc verification script was checked into the repository.
 
+### Lions L9 — real Starter editorial tryouts page (2026-08-12)
+
+Adds the informational `/tryouts` page Christian requested after L0–L8
+shipped, closing one of the two items the L7+L8 milestone note explicitly
+listed as deferred (the other, a real `/club` contact form, remains
+deferred). Per Christian's explicit scope decision, this is informational
+only — session dates/ages/location, a "what to bring" checklist, and a
+closing contact CTA reusing the club's existing `club_identity` contact
+info — no registration form, no mutation, no new public API surface. The
+platform has no precedent anywhere for accepting public unauthenticated
+input, and building one was out of scope for this pass.
+
+- Migration `supabase/migrations/20260812000100_lions_l9_tryouts_content.sql`
+  adds a new singleton `onzio.tryout_page_content` table (`club_id` primary
+  key), mirroring `onzio.club_identity`'s exact RLS/grants/trigger shape:
+  `tryout_page_content_tenant_{read,insert,update,delete}` policies gated on
+  `onzio_private.can_{read,mutate}_feature(club_id, 'branding')` (the same
+  feature key `club_identity` uses — no new feature key introduced),
+  `audit_tryout_page_content` and `set_tryout_page_content_updated_at`
+  triggers. `sessions` and `what_to_bring` are `jsonb` arrays. Lions seed data
+  added to `supabase/seed.sql` immediately after the existing `club_identity`
+  insert: 3 sessions (Academy, U23s, First Team) and a 4-item checklist.
+- `lib/club-identity.ts`: added `TryoutSession`/`TryoutPageContent` types and
+  `fetchTryoutPageContent(clubId)`, following `fetchClubIdentity`'s exact
+  shape (guard clause, `.maybeSingle()`, `console.error` on failure,
+  defensive jsonb-array normalization) — no existing export in the file was
+  touched.
+- `components/editorial/EditorialTryouts.tsx` (fetch container) +
+  `EditorialTryoutsView.tsx` (presentational): the same container/view split
+  every prior editorial page uses. Content: interior hero, a session-card
+  grid, a "what to bring" checklist (omitted entirely when empty, mirroring
+  `EditorialClubStoryView`'s empty-highlights omission), and a closing CTA
+  with `mailto:`/phone pulled from the shared `club_identity` via
+  `useEditorialIdentity()` — no duplicate contact fetch. No `<form>`,
+  `useState` for input, or mutation call anywhere in either file (verified
+  by both render and source assertions, mirroring `EditorialClubStoryView`'s
+  no-contact-form check).
+- **Bug found and fixed during manual browser verification**: the hero
+  `<h1>` was initially written conditionally (`{(headlineTop || headlineEm)
+  && <h1>...}`), copying `EditorialClubStoryView`'s pattern verbatim. That
+  pattern is safe on `/club` only because `club_identity` is prefetched once
+  at the tenant-layout level, so it's already non-null by the time
+  `EditorialClubStoryView` first renders. `EditorialTryoutsView`'s heading
+  text instead comes from this page's own container fetch, which is
+  guaranteed `null` on first paint — so the `<h1>` did not exist in the DOM
+  yet when `EditorialMotion`'s mount-time `useLayoutEffect` queried
+  `.interior-hero`'s children to build its entrance timeline, and the
+  element never received an animation once it mounted later. Fixed by
+  rendering the `<h1>` unconditionally, matching the already-established
+  pattern in `EditorialHero.tsx` and `EditorialScheduleView.tsx` (both
+  always render their heading and rely on empty-string/fallback content
+  rather than gating the element itself). This is the same category of bug
+  Phase L5's reduced-motion hydration fix was — invisible to the render-only
+  contract suite, caught only by real browser verification.
+- `app/(public)/tryouts/page.tsx` (+ `app/%5Fclubs/[slug]/tryouts/page.tsx`
+  mirror): the same `club.siteTemplate === "editorial"` dispatch / classic
+  `notFound()` precedent as `/club`. `middleware.ts`: added the exact-match
+  `"/tryouts"` entry to `PUBLIC_TENANT_PATHS`.
+- Nav: unlike `/club` (deliberately CTA-only, no nav entry), Christian asked
+  for `/tryouts` to be a primary nav item — added to `EditorialHeader.tsx`'s
+  `NAV_ITEMS` (Home, Roster, Schedule, Tryouts) and `EditorialFooter.tsx`'s
+  Explore column.
+- `styles/editorial.css`: new scoped block for `.tryouts-intro`,
+  `.tryout-sessions`/`.tryout-session-card`, `.tryout-checklist`, and
+  `.tryout-cta`, reusing the file's existing spacing/typography/color tokens
+  — no new hex values, all scoped under `[data-site-template="editorial"]`.
+- Added `tests/contracts/editorial-tryouts.test.ts` (16 tests): real renders
+  of the hero/sessions/checklist/CTA against a fixture transcribed verbatim
+  from the real seeded `supabase/seed.sql`; a safe null-content loading
+  state; the empty-checklist omission case; no-form and no-hardcoded-copy
+  source assertions; the container's fetch/context source assertions; the
+  dispatch/mirror/middleware/nav wiring; and a classic-component regression
+  check. No existing test was deleted, skipped, marked todo, loosened, or
+  broadly mocked.
+- **Separately, found and fixed a pre-existing, unrelated defect while
+  running the full gate**: `lib/supabase.ts` (the anon client every public
+  page uses, both classic and editorial) created its Supabase client with no
+  `realtime` transport, and Node 20 has no native `WebSocket` global —
+  `@supabase/realtime-js` throws on client construction. This was breaking
+  36 tests across 4 contract-test files, unrelated to this phase
+  (`lib/supabase.ts` had not been touched since the initial commit).
+  `lib/supabase-service-role.ts` already carried the fix (passing the `ws`
+  package as the realtime transport) but that file is architecture-scanned
+  as server-only, so its fix could not simply be copied — `lib/supabase.ts`
+  is imported by browser-rendered `"use client"` components. Fixed with a
+  runtime-guarded `require("ws")`, only reached when
+  `typeof globalThis.WebSocket === "undefined"` (true in Node <22, never
+  true in a real browser or Node 22+). Verified empirically, not just by
+  reasoning, that this does not bundle the real `ws` implementation into the
+  client build: `ws`'s own `package.json` declares a `"browser"` field
+  pointing at a ~130-byte throwing stub, and a clean `rm -rf .next && npm
+  run build` followed by grepping the compiled `.next/static/chunks/**`
+  output confirmed only that stub (never `ws`'s real Node internals) landed
+  in client bundles. This fix was applied with the concurrent Diverse City
+  FC session's awareness, since it touches a file shared platform-wide.
+
 ## Verification
+
+### Lions L9 gate — 2026-08-12
+
+```text
+npx tsc --noEmit
+  passed
+
+npm run lint
+  passed with the same pre-existing legacy warnings (3 useMemo dependency
+  warnings in app/admin/(protected)/analytics/page.tsx, unrelated to this
+  phase)
+
+npm run test:db
+  65/65 passed across 8 files (unchanged — no existing table altered, only
+  a new table added)
+
+npm run test:contracts
+  333/333 passed across 24 files (added tests/contracts/editorial-
+  tryouts.test.ts; the lib/supabase.ts WebSocket fix also cleared 36
+  previously-failing, unrelated tests in 4 pre-existing files)
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  659/659 passed across 54 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values;
+  one new route generated versus L7+L8: /tryouts and its
+  /_clubs/[slug]/tryouts mirror
+```
+
+Manual browser verification (desktop 1280px and mobile 375px, real
+`lions.localhost:3005`, local Supabase + `scripts/seed-lions-media.mjs`):
+hero, session cards, checklist, CTA, and contact info all render with the
+real seeded content; nav shows Tryouts as the active link on both desktop
+and mobile; no console errors beyond the pre-existing, unrelated Vercel
+Analytics 404 (present on every page in local dev). The `<h1>` entrance-
+animation bug above was caught and fixed during this pass; GSAP/ScrollTrigger
+timing itself could not be pixel-verified with full confidence in this
+session's browser-automation environment (it exhibited unrelated rendering
+flakiness — stale zero-size viewports, inconsistent screenshot capture — when
+scrolling), so entrance-animation completion was confirmed by clearing
+GSAP-applied inline styles and inspecting the settled DOM/layout instead of
+by screenshotting the animation mid-flight.
 
 ### Lions L7+L8 gate — 2026-08-12
 
@@ -1566,17 +1714,22 @@ Known non-blocking warnings:
 
 Phase 8 full local import rehearsal and production-provisioning gate.
 
-**The parallel Lions FC Starter-tier public site project (L0 through L7+L8)
-is now complete.** The local-dev-only synthetic `lions` tenant renders a
-full Starter-tier `editorial` template public site — home, roster, schedule
-+ per-fixture match area, and club story — provably isolated from every
-classic tenant, with `/shop` now correctly tier-gated platform-wide (closing
-a real gap where a classic Starter tenant, Bravo, previously showed Shop
-unguarded). What remains explicitly deferred and out of scope, per the
-originally approved plan:
+**The parallel Lions FC Starter-tier public site project (L0 through L9) is
+now complete.** The local-dev-only synthetic `lions` tenant renders a full
+Starter-tier `editorial` template public site — home, roster, schedule +
+per-fixture match area, club story, and an informational tryouts page —
+provably isolated from every classic tenant, with `/shop` now correctly
+tier-gated platform-wide (closing a real gap where a classic Starter tenant,
+Bravo, previously showed Shop unguarded). What remains explicitly deferred
+and out of scope, per the originally approved plan and Christian's L9 scope
+decision:
 
 - admin portal work for the Lions tenant (content is currently seed-only)
-- a tryout/recruitment page
+- a real tryout registration form with persisted submissions — L9 shipped
+  informational content only; the platform has no precedent anywhere for
+  accepting public unauthenticated input, and adding one (a new anon-insert
+  table, a new public API route, spam/rate-limit handling) is a genuinely
+  new, unscoped decision
 - a real contact page/form (the `/club` page intentionally omits the
   mockup's decorative form)
 - Pro-tier editorial features: sponsors, stats, a Pro store, season
