@@ -154,7 +154,7 @@ describe("template dispatch", () => {
     }
   });
 
-  it("classic home renders without editorial markup and editorial home renders the placeholder", async () => {
+  it("classic home renders without editorial markup and editorial home renders the real sections", async () => {
     mockPathname = "/";
     const { default: HomePage } = await import("@/app/(public)/page");
     const { ClubContextProvider } = await import(
@@ -177,18 +177,20 @@ describe("template dispatch", () => {
         children: createElement(HomePage),
       }),
     );
-    expect(classic).not.toContain("editorial-placeholder");
+    expect(classic).not.toMatch(
+      /class="hero"|hero-crest|match-feature|matchday-slideshow|club-story/,
+    );
 
-    // The homepage reaches the placeholder through a code-split dynamic
-    // import (so classic tenants never load the editorial chunk), which
-    // only resolves inside a real Next.js server render. Assert the branch
-    // in source and render the placeholder itself directly.
+    // The homepage reaches the real editorial sections through a code-split
+    // dynamic import (so classic tenants never load the editorial chunk),
+    // which only resolves inside a real Next.js server render. Assert the
+    // branch in source and render the composed home component directly.
     const page = read("app/(public)/page.tsx");
     expect(page).toContain('club.siteTemplate === "editorial"');
-    expect(page).toContain("EditorialHomePlaceholder");
+    expect(page).toContain("EditorialHome");
 
-    const { default: EditorialHomePlaceholder } = await import(
-      "@/components/editorial/EditorialHomePlaceholder"
+    const { default: EditorialHome } = await import(
+      "@/components/editorial/EditorialHome"
     );
     const editorial = renderToStaticMarkup(
       createElement(ClubContextProvider, {
@@ -199,10 +201,12 @@ describe("template dispatch", () => {
           tier: "starter" as const,
           siteTemplate: "editorial" as const,
         },
-        children: createElement(EditorialHomePlaceholder),
+        children: createElement(EditorialHome),
       }),
     );
-    expect(editorial).toContain("editorial-placeholder");
+    // Rendered without EditorialShell's EditorialIdentityProvider, the hero
+    // still renders safely, falling back to the club name for the headline.
+    expect(editorial).toContain('class="hero"');
     expect(editorial).toContain("Lions");
   });
 });
