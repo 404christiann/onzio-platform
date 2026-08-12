@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import EditorialHeader from "@/components/editorial/EditorialHeader";
 import EditorialFooter from "@/components/editorial/EditorialFooter";
 import EditorialMotion from "@/components/editorial/EditorialMotion";
+import { EditorialIdentityProvider } from "@/components/editorial/EditorialIdentityContext";
 import type { ClubIdentityContent, ClubThemeColors } from "@/lib/club-identity";
 import type { DBSiteSocialLink } from "@/lib/db-types";
 import "@/styles/editorial.css";
@@ -56,7 +57,9 @@ export default function EditorialShell({
         crestUrl={crestUrl}
       />
       <EditorialMotion />
-      <main className="public-main">{children}</main>
+      <EditorialIdentityProvider value={{ identity, crestUrl }}>
+        <main className="public-main">{children}</main>
+      </EditorialIdentityProvider>
       <EditorialFooter
         clubName={clubName}
         crestOnDarkUrl={crestOnDarkUrl}
