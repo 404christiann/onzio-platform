@@ -6,6 +6,7 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/",
   "/roster",
   "/schedule",
+  "/staff",
   "/shop",
   "/club/about",
   "/club/logo",

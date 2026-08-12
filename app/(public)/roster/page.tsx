@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import nextDynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -9,7 +10,11 @@ import PlayerCard from "@/components/PlayerCard";
 import StaffCard from "@/components/StaffCard";
 import { fetchRoster, fetchStaff } from "@/lib/queries";
 import { Player, Staff } from "@/lib/data";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+
+const EditorialRoster = nextDynamic(
+  () => import("@/components/editorial/EditorialRoster"),
+);
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -65,7 +70,7 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
   );
 }
 
-export default function RosterPage() {
+function ClassicRosterPage() {
   const clubId = useClubId();
   const heroRef  = useRef<HTMLDivElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
@@ -205,4 +210,15 @@ export default function RosterPage() {
       )}
     </div>
   );
+}
+
+export default function RosterPage() {
+  const club = useClubContext();
+  // Editorial-template tenants render the real editorial roster page (a
+  // compact filter control plus non-interactive player/staff cards);
+  // classic tenants render exactly what they rendered before.
+  if (club.siteTemplate === "editorial") {
+    return <EditorialRoster />;
+  }
+  return <ClassicRosterPage />;
 }
