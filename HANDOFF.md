@@ -4,8 +4,12 @@ Last updated: 2026-08-12
 
 ## Roster nationality flags fixed platform-wide — 68 of 74 nationalities silently rendered no flag
 
-Agent: Claude Fable 5 (Claude Code), 2026-08-12. Status: implemented and
-verified on `staging` (worktree), pending review/deploy.
+Agent: Claude Fable 5 (Claude Code), implemented in a separate `staging`
+worktree (`~/Downloads/onzio-platform-diverse-city`, kept isolated from the
+concurrent Lions FC session's uncommitted work in the shared checkout);
+orchestrating Sonnet 5 session independently re-verified before committing.
+2026-08-12. Status: `complete` — committed, pushed, deployed to production,
+and live-verified.
 
 **Root cause** (reported live on diversecityfc.com's roster, e.g. "Polish"
 showing no flag): `lib/flags.ts`'s hardcoded `FLAG_COUNTRY_CODES` covered
@@ -30,7 +34,22 @@ warnings); `test:legacy` 279/279; `test:contracts` 522/522 (incl.
 `lions-roster-presentation.test.ts`, unmodified); `test:architecture`
 20/20; `build` clean. `test:db` not runnable — no local Supabase in this
 environment (`[RED CONTRACT] Local Supabase is unavailable`), and this
-change touches no database code.
+change touches no database code. All of the above re-run fresh by the
+orchestrating session, not taken on the subagent's report alone.
+
+**Shipped to production:** committed and pushed to `origin/staging` as
+`26da2a6` ("Fix roster nationality flags rendering blank for 68 of 74
+countries"). Confirmed via the Vercel API that pushing to `staging` only
+builds a **preview** (`target: null`) — every prior production update in
+this project's history was a separate explicit deploy — so, with Christian's
+explicit go-ahead, ran `vercel --prod` from the worktree (linked to the
+`onzio-platform` project via a copied `.vercel/project.json`), producing
+`dpl_2Mi33ahNh6RCWqoHqnK2Fs663E3g`, `target: "production"`, `readyState:
+READY`, aliased to `www.diversecityfc.com`. Live-verified immediately after
+via a real browser session against `https://diversecityfc.com/roster`: the
+`fi-pl` flag span on Lukasz Szczesniak's card resolves a real, visible
+34×20px SVG (`.../_next/static/media/pl.4ca59b6d.svg`), confirmed via
+`getComputedStyle(...).backgroundImage`, not just DOM/alt-text presence.
 
 ## Diverse City FC is publicly live — domain, real owner, real billing, all confirmed working
 
