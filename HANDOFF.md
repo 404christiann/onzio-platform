@@ -2,6 +2,127 @@
 
 Last updated: 2026-08-11
 
+## Diverse City FC is publicly live — domain, real owner, real billing, all confirmed working
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-11. Status: `complete` and
+verified live in production. This entry is the session wrap-up; the three
+entries below it (`Cross-tenant "Rose City FC"...`, `Stripe portal-config env
+gap...`) are this same session's own detailed sub-entries, written by Fable
+subagents this session dispatched and independently re-verified before being
+committed — read those for implementation detail, this one for the overall
+arc and current state.
+
+**What shipped, in order:**
+
+1. **Custom domain live.** Christian bought `diversecityfc.com` +
+   `www.diversecityfc.com` directly through Vercel (nameservers auto-correct,
+   no manual DNS). New reusable operator function `lib/operator/
+   attach-club-domain.ts` (tested against real local Postgres, 8/8 passing —
+   handles demoting the prior primary under the
+   `club_domains_one_active_primary_per_environment` partial unique index,
+   with rollback-on-conflict) plus a one-time guarded script attached both
+   hostnames to Diverse City FC in **production**, `diversecityfc.com` as
+   primary. The old `diverse-city-fc-private.vercel.app` alias still works
+   (demoted, not removed).
+2. **Real owner provisioned.** `scripts/invite-diverse-city-owner-production.ts`
+   (new, mirrors the staging template) invited the real club owner as a
+   second production `owner` — Christian explicitly decided to remain
+   co-owner rather than the original one-owner-only plan, recorded as
+   `DCFC-D133` in `docs/phase-11/diverse-city/DECISIONS.md` (supersedes only
+   `DCFC-D113`'s owner-count clause; the "admins added via `PLAT-101`, not
+   pre-provisioned" clause is unchanged).
+3. **Real billing completed by the owner.** He logged in and completed real
+   Stripe Checkout. `onzio.clubs` for `diverse-city`
+   (`d7a41762-5158-496e-b415-c83c01ab5c70`) is now genuinely
+   `lifecycle=active`, `public_access=live` — verified via
+   `apply_stripe_projection`'s atomic case logic (both columns flip together
+   on `p_status='active'`), and live via curl (`diversecityfc.com/` serves
+   real content, no auth wall, `og:image`/`twitter:image` resolve to the
+   real crest).
+4. **Production incident hit and fixed same-day**, first time a real
+   customer clicked "Manage billing": `STRIPE_PORTAL_CONFIGURATION_ID` was
+   never set in Production (was correctly set in Preview 8 days earlier —
+   pure oversight, not a Stripe-side problem; the Portal Configuration
+   itself, `bpc_1TwEQzK6WajTkwHYFu37sJnF`, already existed and was fine).
+   Fixed live (env var added, redeployed) within the same conversation turn
+   the report came in, then hardened in code — see the Stripe entry below.
+   Also live-verified and fixed a related drift: the Stripe Portal's actual
+   `subscription_cancel.enabled` was `true`, contradicting the app's own copy
+   ("Self-serve cancellation... disabled — contact Onzio"); disabled directly
+   in the Stripe Dashboard (Settings → Billing → Portal) since the available
+   Stripe MCP tools only exposed reading Portal configurations, not writing —
+   confirmed re-read afterward, now matches `lib/stripe-portal.ts`'s
+   `stripePortalCapabilities()` exactly.
+5. **Real, separate bug found and fixed**: the Payments page's price display
+   read a global `STRIPE_PRICE_ID` env var that doesn't exist in production
+   at all — completely ignoring `clubs.stripe_price_id`, the per-club value
+   every club actually uses (Diverse City's is a bespoke $85/mo price,
+   `DCFC-D129`). This was never going to show a price for *any* club. Fixed
+   to use the club's own price id; confirmed live.
+6. **Real, separate bug found and fixed** (customer-reported): every club's
+   homepage first-painted Rose City FC's real branding
+   ("ROSE CITY FC"/"Team Store"/"Meet the Squad") for one client render
+   before swapping to the real tenant's content — `components/Hero.tsx`
+   initialized React state from a hardcoded Rose City default. Fixed
+   architecturally (hero content now resolves server-side, passed down as a
+   **required** prop so no consumer can silently default to another club's
+   branding again), plus two more instances of the exact same root cause
+   found in the same audit and fixed the same way (a blank club's
+   `/club/logo` page serving Rose City's real crest-story map image
+   server-side; an admin saving a homepage photo with blank alt text writing
+   `"Rose City FC homepage slide N"` into *their own* club's saved data).
+   Full detail in the dedicated entry below.
+
+**Verification discipline used throughout:** every one of the four Fable
+subagent dispatches this session (domain-attach tooling aside, which I built
+directly) was independently re-verified by the orchestrating session before
+being committed — full diffs read, not just the subagent's self-report;
+`tsc`/lint/`test:contracts`/`test:legacy`/`test:architecture`/`test:db`/
+`build` all re-run fresh each time; live curl/browser checks against
+production after each deploy. Nothing was committed on the subagent's word
+alone.
+
+**Current confirmed-live state (2026-08-11, checked via curl/browser):**
+`https://diversecityfc.com` and `https://www.diversecityfc.com` both serve
+the real public site with no auth wall; `/admin/login` works; the real owner
+has signed in and completed Checkout; "Manage billing" opens a working
+Stripe Portal session with self-serve cancellation correctly disabled; the
+Payments page shows the real $85/mo price; the homepage no longer flashes
+Rose City branding (confirmed via raw HTML — zero "Rose City" occurrences in
+the initial server response). Production is deployed from `staging`
+commit `6366f47`.
+
+**Known gap, not addressed this session:** the `diverse-city-onzio-staging.vercel.app`
+alias was last manually repointed mid-session (around the `c1ef933`
+og-image-metadata commit) and was **not** repointed again after the later
+commits in this entry — it is likely stale relative to current `staging`
+HEAD (`6366f47`). Per this repo's own note (this alias does not auto-follow
+pushes, unlike production's), repoint it with `vercel deploy` (no `--prod`)
++ `vercel alias set` before relying on it, same as always — only do this when
+explicitly asked.
+
+**Process note, read before doing anything in `~/Downloads/onzio-platform`:**
+that directory's working tree was found checked out to an unrelated branch
+(`claude/lions-fc-website-setup-ij0p7t`, Lions FC editorial-template work,
+commit `a53852e` at the time this was written) partway through this session
+— almost certainly a concurrent session using the same local clone, not
+anything this session did. This entry itself was written from a *separate*
+`git worktree` (`staging` checked out cleanly, no disruption to whatever the
+shared directory is currently on) specifically to avoid touching that
+concurrent work. If picking up `staging` work in the shared directory,
+confirm the checked-out branch first (`git branch --show-current`) rather
+than assuming it's still `staging`.
+
+**Exact next step:** none required — this session's Diverse City work is
+complete and confirmed live. Open, unprompted items only: the staging alias
+repoint noted above, and the two minor same-class content-leak items noted
+in the Rose City entry below that were deliberately left unaddressed
+(admin *draft editor* for a brand-new club still seeds Rose City copy into
+the About/Logo edit forms specifically — not the public site; and an
+unconfirmed question of whether any live club besides Rose City already has
+a `homepage_slideshow_photos` row with the old branded alt text baked in
+from before today's fix — nobody has checked production data for this).
+
 ## Cross-tenant "Rose City FC" homepage hero flash fixed platform-wide
 
 Agent: Claude Fable 5 (Claude Code), 2026-08-11. Status: `complete` locally on
