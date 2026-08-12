@@ -11,6 +11,7 @@ import { fetchRoster, fetchStaff } from "@/lib/queries";
 import { Player, Staff } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
+import EditorialRoster from "@/components/editorial/EditorialRoster";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -73,6 +74,7 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
 
 export default function RosterPage() {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "editorial@1") return <EditorialRoster />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseRosterPage />;
   return <LegacyRosterPage />;
 }

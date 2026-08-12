@@ -11,6 +11,7 @@ import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
+import EditorialSchedule from "@/components/editorial/EditorialSchedule";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -56,7 +57,9 @@ function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
 
 export default function SchedulePage() {
   const club = useClubContext();
-  return club.presentationTemplateKey === "clubhouse@1" ? <ClubhouseSchedulePage /> : <LegacySchedulePage />;
+  if (club.presentationTemplateKey === "editorial@1") return <EditorialSchedule />;
+  if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSchedulePage />;
+  return <LegacySchedulePage />;
 }
 
 function LegacySchedulePage() {

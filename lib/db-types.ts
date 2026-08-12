@@ -81,6 +81,10 @@ export type DBMatch = {
   rose_city_score: number | null;
   opponent_score: number | null;
   season_id: string | null;
+  // Lions E1 (onzio.matches.attendance/scorers). Nullable/defaulted so every
+  // pre-E1 row still parses; scorers is jsonb and defaults to `[]`.
+  attendance: number | null;
+  scorers: unknown;
 };
 
 export type DBSeason = {

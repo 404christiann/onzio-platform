@@ -496,6 +496,11 @@ describe('fetchSchedule sponsor mapping', () => {
       state: undefined,
       roseCityScore: 2,
       opponentScore: 1,
+      // Lions E1/E4: onzio.matches.attendance/scorers, additively mapped by
+      // mapFixture(). This mock row predates those columns, so attendance
+      // resolves to the DB null default and scorers to its jsonb `[]` default.
+      attendance: undefined,
+      scorers: [],
     }])
   })
 })

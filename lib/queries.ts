@@ -140,6 +140,8 @@ function mapFixture(row: DBMatch): Fixture {
     city: row.city, state: row.state,
     roseCityScore: row.rose_city_score,
     opponentScore: row.opponent_score,
+    attendance: row.attendance,
+    scorers: Array.isArray(row.scorers) ? (row.scorers as string[]) : [],
   };
 }
 

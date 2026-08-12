@@ -2628,3 +2628,453 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============ STORE (Lions E6) ============
+   editorial@1's /shop page (components/editorial/EditorialShopPage.tsx),
+   only reachable when the operator has switched onzio.clubs.store_enabled
+   on for this club -- app/(public)/shop/page.tsx gates the route with
+   notFound() otherwise, and EditorialHeader already hides the "Store" nav
+   item when the flag is off. Reuses this file's existing structural
+   language (--pad-x/--sec-y section rhythm, --line/--muted detail
+   typography, the .hero-cta button treatment) rather than introducing new
+   visual primitives. */
+[data-site-template="editorial"] .shop-state {
+  min-height: 60svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: var(--sec-y) var(--pad-x);
+  text-align: center;
+}
+[data-site-template="editorial"] .shop-state h1 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+[data-site-template="editorial"] .shop-state p {
+  margin: 0;
+  color: var(--muted);
+}
+
+[data-site-template="editorial"] .shop-kit {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  min-height: calc(100svh - 96px);
+}
+[data-site-template="editorial"] .shop-kit-visual {
+  position: relative;
+  overflow: hidden;
+  min-height: 420px;
+  background: var(--tile);
+}
+[data-site-template="editorial"] .shop-kit-photo {
+  object-fit: contain;
+  padding: clamp(20px, 4vw, 56px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+[data-site-template="editorial"] .shop-kit-photo.is-active {
+  opacity: 1;
+}
+[data-site-template="editorial"] .shop-kit-photo-empty {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+[data-site-template="editorial"] .shop-kit-visual[data-empty="true"]::after {
+  content: "No photos yet";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .shop-kit-toggle {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  width: min(260px, 80%);
+  padding: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+[data-site-template="editorial"] .shop-kit-toggle button {
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+[data-site-template="editorial"] .shop-kit-toggle button[data-active="true"] {
+  background: var(--primary);
+  color: var(--on-dark);
+}
+
+[data-site-template="editorial"] .shop-kit-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(48px, 6vw, 88px) var(--pad-x);
+}
+[data-site-template="editorial"] .shop-kit-details h1 {
+  margin-top: 14px;
+  max-width: 22ch;
+  font-size: clamp(2.1rem, 4vw, 3.1rem);
+}
+[data-site-template="editorial"] .shop-kit-description {
+  margin-top: 18px;
+  max-width: 46ch;
+  color: var(--muted);
+}
+[data-site-template="editorial"] .shop-kit-bullets {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 24px;
+  margin-top: 28px;
+  padding-block: 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+[data-site-template="editorial"] .shop-kit-bullets dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .shop-kit-bullets dd {
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+[data-site-template="editorial"] .shop-kit-note {
+  margin-top: 20px;
+  max-width: 46ch;
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: pre-line;
+}
+[data-site-template="editorial"] .shop-kit-cta {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 30px;
+  padding: 14px 28px;
+  border-radius: 7px;
+  background: var(--primary);
+  color: var(--on-dark);
+  font-size: 0.72rem;
+  font-weight: 780;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  transition: transform 0.2s ease;
+}
+[data-site-template="editorial"] .shop-kit-cta:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 1050px) {
+  [data-site-template="editorial"] .shop-kit {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  [data-site-template="editorial"] .shop-kit-visual {
+    min-height: 380px;
+  }
+}
+
+/* ============ TRYOUTS PAGE (E5 real-data render) ============
+   components/editorial/EditorialTryouts.tsx renders the SAME per-event
+   onzio.tryouts rows (via fetchTryouts) that components/AcademyTryoutsPage.tsx
+   already renders -- status badge, date/location/cost, registration/contact
+   action, closedMessage, and an empty state driven by
+   onzio.tryouts_page_content. This is a different data shape than the
+   informational sessions[]/whatToBring[] copy the "TRYOUTS PAGE" section
+   above was ported from (a table that no longer exists), so it gets its own
+   class names rather than reusing .tryout-session-card/.tryout-checklist --
+   those rules above stay untouched and unused. */
+[data-site-template="editorial"] .tryouts-hero-cta,
+[data-site-template="editorial"] .contact-hero-cta {
+  display: inline-block;
+  margin-top: clamp(20px, 3vw, 28px);
+  padding: 14px 26px;
+  border-radius: 7px;
+  background: var(--on-dark);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 780;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  transition: transform 0.2s ease;
+}
+[data-site-template="editorial"] .tryouts-hero-cta:hover,
+[data-site-template="editorial"] .contact-hero-cta:hover {
+  transform: translateY(-2px);
+}
+[data-site-template="editorial"] .tryout-events {
+  margin: 0 var(--pad-x);
+  padding-top: clamp(48px, 6vw, 72px);
+  padding-bottom: 40px;
+}
+[data-site-template="editorial"] .tryout-events h2 {
+  margin: 14px 0 0;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 800;
+  color: var(--display);
+  text-wrap: balance;
+}
+[data-site-template="editorial"] .tryout-events-list {
+  display: grid;
+  gap: 24px;
+  margin-top: 28px;
+}
+[data-site-template="editorial"] .tryout-event-card {
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+[data-site-template="editorial"] .tryout-event-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+[data-site-template="editorial"] .tryout-event-head h3 {
+  margin: 0;
+  color: var(--display);
+  font-size: 1.5rem;
+  font-weight: 820;
+  letter-spacing: -0.03em;
+}
+[data-site-template="editorial"] .tryout-event-status {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--tile);
+  color: var(--ink);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .tryout-event-status[data-status="open"] {
+  background: var(--accent);
+  color: var(--on-dark);
+}
+[data-site-template="editorial"] .tryout-event-status[data-status="closed"] {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+[data-site-template="editorial"] .tryout-event-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+[data-site-template="editorial"] .tryout-event-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+[data-site-template="editorial"] .tryout-event-meta dt {
+  color: var(--accent);
+  font-size: 0.58rem;
+  font-weight: 780;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .tryout-event-meta dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+[data-site-template="editorial"] .tryout-event-closed {
+  margin: 20px 0 0;
+  padding: 16px 18px;
+  border-radius: 8px;
+  background: var(--line-soft);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 620;
+  line-height: 1.55;
+}
+[data-site-template="editorial"] .tryout-event-action {
+  display: inline-block;
+  margin-top: 22px;
+  padding: 13px 24px;
+  border-radius: 7px;
+  background: var(--primary);
+  color: var(--on-dark);
+  font-size: 0.7rem;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: transform 0.2s ease;
+}
+[data-site-template="editorial"] .tryout-event-action:hover {
+  transform: translateY(-2px);
+}
+[data-site-template="editorial"] .tryout-event-unavailable {
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 620;
+}
+[data-site-template="editorial"] .tryouts-empty-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 28px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+}
+[data-site-template="editorial"] .tryouts-empty-detail-grid > div {
+  padding: 20px;
+  background: var(--panel);
+}
+[data-site-template="editorial"] .tryouts-empty-detail-grid dt {
+  color: var(--accent);
+  font-size: 0.58rem;
+  font-weight: 780;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .tryouts-empty-detail-grid dd {
+  margin: 8px 0 0;
+  color: var(--faint);
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .tryouts-empty-copy {
+  margin: 20px 0 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+[data-site-template="editorial"] .tryouts-empty-copy a {
+  color: var(--ink);
+  font-weight: 750;
+  text-decoration: underline;
+}
+
+/* ============ CONTACT PAGE (E5) ============
+   components/editorial/EditorialContactPage.tsx -- no reference-branch
+   implementation exists for this page, so its layout is modeled directly on
+   this section plus the interior-hero / find-us patterns above. */
+[data-site-template="editorial"] .contact-intro {
+  margin: 18px 0 0;
+  max-width: 62ch;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--on-dark);
+  opacity: 0.85;
+}
+[data-site-template="editorial"] .contact-details,
+[data-site-template="editorial"] .contact-social {
+  margin: 0 var(--pad-x);
+  padding-top: clamp(48px, 6vw, 72px);
+}
+[data-site-template="editorial"] .contact-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1px;
+  margin-top: 28px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--line);
+}
+[data-site-template="editorial"] .contact-detail-item {
+  padding: 22px;
+  background: var(--panel);
+}
+[data-site-template="editorial"] .contact-detail-item > span {
+  color: var(--accent);
+  font-size: 0.58rem;
+  font-weight: 780;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .contact-detail-item p,
+[data-site-template="editorial"] .contact-detail-item a {
+  display: block;
+  margin: 10px 0 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 750;
+  line-height: 1.4;
+  word-break: break-word;
+}
+[data-site-template="editorial"] .contact-detail-item a:hover {
+  color: var(--accent);
+}
+[data-site-template="editorial"] .contact-social-links {
+  display: flex;
+  gap: 18px;
+  margin-top: 24px;
+}
+[data-site-template="editorial"] .contact-social-icon {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  opacity: 0.72;
+  transition: opacity 0.2s ease;
+}
+[data-site-template="editorial"] .contact-social-icon:hover {
+  opacity: 1;
+}
+[data-site-template="editorial"] .contact-empty {
+  margin: 0 var(--pad-x);
+  padding-top: clamp(48px, 6vw, 72px);
+  padding-bottom: 40px;
+}
+[data-site-template="editorial"] .contact-empty h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 800;
+  color: var(--display);
+}
+[data-site-template="editorial"] .contact-empty p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+@media (max-width: 800px) {
+  [data-site-template="editorial"] .tryout-event-meta {
+    grid-template-columns: 1fr;
+  }
+  [data-site-template="editorial"] .tryouts-empty-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
