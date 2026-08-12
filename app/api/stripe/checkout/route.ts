@@ -7,14 +7,25 @@ import {
   buildCheckoutDecision,
 } from "@/lib/stripe-event-routing";
 import {
-  getStripePortalConfigurationId,
   getStripeRuntimeConfig,
+  stripeConfigurationErrorCode,
   verifiedClubOrigin,
 } from "@/lib/stripe-config";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  let config: ReturnType<typeof getStripeRuntimeConfig>;
+  try {
+    // Validated before anything else so a misdeployed environment fails fast
+    // and loud on the first hit, exactly like the webhook and portal routes.
+    config = getStripeRuntimeConfig();
+  } catch (error) {
+    const code = stripeConfigurationErrorCode(error);
+    console.error(`stripe checkout configuration rejected: ${code}`);
+    return NextResponse.json({ error: code }, { status: 500 });
+  }
+
   try {
     const { supabase, user, club } =
       await requireBillingRouteAuthorization(request);
@@ -28,7 +39,6 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (error) throw error;
 
-    const config = getStripeRuntimeConfig();
     const decision = buildCheckoutDecision({
       club,
       currentSubscription,
@@ -43,10 +53,10 @@ export async function POST(request: Request) {
       }
       const portal = await stripe.billingPortal.sessions.create({
         customer: currentSubscription.stripe_customer_id,
-        configuration: getStripePortalConfigurationId(),
+        configuration: config.portalConfigurationId,
         return_url: `${origin}/admin/payments`,
       });
-      return NextResponse.redirect(portal.url, 303);
+      return NextResponse.json({ url: portal.url });
     }
 
     const metadata = decision.metadata!;
@@ -82,7 +92,9 @@ export async function POST(request: Request) {
         idempotencyKey: idempotencyKeys.checkout,
       },
     );
-    return NextResponse.redirect(session.url!, 303);
+    // The payments page calls this route with fetch and navigates itself, so
+    // failures render as a friendly message instead of raw JSON in the tab.
+    return NextResponse.json({ url: session.url! });
   } catch (error) {
     const status =
       error instanceof ContractError &&

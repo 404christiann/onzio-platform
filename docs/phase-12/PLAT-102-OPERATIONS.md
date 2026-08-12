@@ -24,6 +24,18 @@ The protected Preview needs these private values before hosted acceptance:
 - `LIFECYCLE_CRON_HEARTBEAT_URL` — HTTPS endpoint accepting a JSON POST with
   `status` (`success` or `failure`) and a non-sensitive `detail` code
 
+All four Stripe values (`ONZIO_ENVIRONMENT`, `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`, `STRIPE_PORTAL_CONFIGURATION_ID`) are validated
+together by the shared runtime config on every Stripe route. After changing
+any of them in any Vercel environment — or changing the Stripe Billing Portal
+configuration itself — run `npm run stripe:verify-portal-config` with that
+environment's variables exported. The check is read-only and confirms the
+configured Portal configuration is real, active, in the matching mode, and
+carries the approved capabilities. Added after the August 2026 production
+incident where the Portal ID was set in Preview but never mirrored to
+Production, and nothing failed until a paying customer clicked
+"Manage billing".
+
 `RESEND_WEBHOOK_SECRET` is required only after separate approval creates and
 configures the hosted Resend webhook. The local receiver exists at
 `/api/webhooks/resend`; do not configure it under the PLAT-102 migration/push

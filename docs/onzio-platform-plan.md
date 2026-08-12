@@ -433,6 +433,27 @@ onzio_club_id
 onzio_environment
 ```
 
+### Configuration validation and verification
+
+- `ONZIO_ENVIRONMENT`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and
+  `STRIPE_PORTAL_CONFIGURATION_ID` are unconditionally required. Every Stripe
+  route validates the full set up front through the shared
+  `getStripeRuntimeConfig()` and surfaces a fault-specific error code, so a
+  bad deploy fails fast and loud on the first Stripe request, not weeks later
+  on the one route that needs the missing piece.
+- No route may read a required Stripe variable outside the shared runtime
+  config. A variable only one route validates can go live unset — checkout
+  and the webhook succeed, and the gap surfaces as a customer-facing error
+  (production, August 2026: `STRIPE_PORTAL_CONFIGURATION_ID` was set in
+  Preview but never mirrored to Production).
+- After any Stripe environment-variable change in any Vercel environment, and
+  after any Stripe Billing Portal configuration change, run
+  `npm run stripe:verify-portal-config` with that environment's variables
+  exported. It is read-only: it confirms against the live Stripe API that the
+  configured Portal configuration exists, is active, matches the environment's
+  mode, and carries the approved capabilities — faults an env-var presence
+  check cannot catch.
+
 ### Webhook processing
 
 - Verify Stripe signatures against the raw request body.

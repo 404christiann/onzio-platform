@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  getStripePortalConfigurationId,
   getStripeRuntimeConfig,
   verifiedClubOrigin,
 } from "@/lib/stripe-config";
@@ -25,8 +24,8 @@ describe("Stripe runtime configuration", () => {
     expect(getStripeRuntimeConfig()).toMatchObject({
       environment: "staging",
       ledgerEnvironment: "test",
+      portalConfigurationId: "bpc_contract",
     });
-    expect(getStripePortalConfigurationId()).toBe("bpc_contract");
   });
 
   it.each([
@@ -60,16 +59,16 @@ describe("Stripe runtime configuration", () => {
     expect(config).not.toHaveProperty("grandfatheredProPriceIds");
   });
 
-  it("keeps webhook configuration independent from the Portal", () => {
+  it("fails the shared configuration when the Portal configuration is missing", () => {
+    // Regression for the August 2026 production incident: the Portal ID was
+    // validated only by the portal route, so Checkout and the webhook went
+    // live with it unset and the gap surfaced as a customer-facing error.
+    // The fault keeps its own code so it stays identifiable (DCFC-701).
     configureEnvironment("staging", "sk_test_safe");
     vi.stubEnv("STRIPE_PORTAL_CONFIGURATION_ID", "");
 
-    expect(getStripeRuntimeConfig()).toMatchObject({
-      environment: "staging",
-      webhookSecret: "whsec_test",
-    });
-    expect(() => getStripePortalConfigurationId()).toThrowError(
-      expect.objectContaining({ code: "STRIPE_CONFIGURATION_MISSING" }),
+    expect(() => getStripeRuntimeConfig()).toThrowError(
+      expect.objectContaining({ code: "STRIPE_PORTAL_CONFIGURATION_MISSING" }),
     );
   });
 

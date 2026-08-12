@@ -1,6 +1,62 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-10
+Last updated: 2026-08-11
+
+## Stripe portal-config env gap hardened after the production "Manage billing" incident
+
+Agent: Claude Fable 5 (Claude Code), 2026-08-11. Status: `complete`, not
+committed, not deployed — code-level follow-up to the incident Christian
+already fixed live (the missing `STRIPE_PORTAL_CONFIGURATION_ID` was added to
+Vercel Production and redeployed before this work; no Vercel or live Stripe
+change was made here).
+
+Incident: `/api/stripe/portal` returned raw
+`{"error":"STRIPE_CONFIGURATION_MISSING"}` to a paying customer clicking
+"Manage billing" because `STRIPE_PORTAL_CONFIGURATION_ID` was set in Preview
+but never mirrored to Production, and only the portal route validated it —
+Checkout and the webhook worked, so nothing failed until that click.
+
+Four changes, all local:
+
+1. **Shared validation widened** (`lib/stripe-config.ts`): the Portal ID is
+   now validated inside `getStripeRuntimeConfig()` with its own
+   `STRIPE_PORTAL_CONFIGURATION_MISSING` code (DCFC-701 discipline — no
+   generic catch-all) and returned as `portalConfigurationId`;
+   `getStripePortalConfigurationId()` is deleted. Portal and checkout routes
+   now validate the full config up front and surface configuration faults as
+   500s via `stripeConfigurationErrorCode`, matching the webhook route.
+2. **Live verification script**: `npm run stripe:verify-portal-config`
+   (`scripts/verify-stripe-portal-config.ts`, logic in
+   `lib/stripe-portal-verification.ts` with an injectable
+   `retrievePortalConfiguration` dependency). Read-only Stripe API check that
+   the configured Portal configuration exists, is `active`, matches the
+   environment's livemode, and carries the exact `stripePortalCapabilities()`
+   feature set — catches stale/wrong IDs the env-var check cannot. Run it
+   after every Stripe env-var or Portal-config change, per
+   `docs/onzio-platform-plan.md` ("Configuration validation and
+   verification") and `docs/phase-12/PLAT-102-OPERATIONS.md`.
+3. **Customer-facing failure mode fixed**
+   (`components/admin/payments/PaymentStatusCard.tsx`): "Manage billing" and
+   "Start subscription" were plain form POSTs navigating the browser to the
+   API route, so any error rendered as raw JSON. Both now fetch the route and
+   navigate to the returned `{url}`; failures render friendly messages via a
+   `BILLING_ERROR_MESSAGES` map (same pattern as the members page). Both
+   routes now return JSON `{url}` on success instead of a 303.
+4. **Tests**: `tests/contracts/stripe-webhook-configuration.test.ts` gained
+   portal-fault and route-wiring contracts; new
+   `tests/contracts/stripe-portal-verification.test.ts` covers every
+   verification fault with mocked Stripe responses;
+   `lib/__tests__/stripe-config.test.ts` updated for the widened config.
+
+**Verified:** `npx tsc --noEmit` clean; contracts **518/518**; legacy
+**274/274**; architecture **20/20**; `npm run build` clean; lint shows only
+the pre-existing warnings in unrelated files. The verification script was
+deliberately **not** executed here (real env files are present and it calls
+the live Stripe API); its logic is covered by the mocked contract tests.
+
+**Next step:** on the next staging deploy, run
+`npm run stripe:verify-portal-config` once against staging and once against
+production env vars to baseline both environments.
 
 ## Admin login fixed-length OTP regression (reintroduced by the restyle) fixed on a local branch
 

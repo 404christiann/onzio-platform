@@ -3,16 +3,27 @@ import { requireBillingRouteAuthorization } from "@/lib/billing-route-auth";
 import { ContractError } from "@/lib/contract-error";
 import { getStripeClient } from "@/lib/stripe-client";
 import {
-  getStripePortalConfigurationId,
   getStripeRuntimeConfig,
+  stripeConfigurationErrorCode,
   verifiedClubOrigin,
 } from "@/lib/stripe-config";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  let config: ReturnType<typeof getStripeRuntimeConfig>;
   try {
-    getStripeRuntimeConfig();
+    config = getStripeRuntimeConfig();
+  } catch (error) {
+    // Same discipline as the webhook route: a configuration fault is an
+    // operator problem, not a caller problem, so surface the specific code
+    // with a 500 instead of folding it into the 403 contract mapping below.
+    const code = stripeConfigurationErrorCode(error);
+    console.error(`stripe portal configuration rejected: ${code}`);
+    return NextResponse.json({ error: code }, { status: 500 });
+  }
+
+  try {
     const { supabase, club } = await requireBillingRouteAuthorization(request);
     const { data: subscription, error } = await supabase
       .schema("onzio")
@@ -27,10 +38,12 @@ export async function POST(request: Request) {
 
     const session = await getStripeClient().billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
-      configuration: getStripePortalConfigurationId(),
+      configuration: config.portalConfigurationId,
       return_url: `${verifiedClubOrigin(club.primaryDomain)}/admin/payments`,
     });
-    return NextResponse.redirect(session.url, 303);
+    // The payments page calls this route with fetch and navigates itself, so
+    // failures render as a friendly message instead of raw JSON in the tab.
+    return NextResponse.json({ url: session.url });
   } catch (error) {
     const status =
       error instanceof ContractError &&

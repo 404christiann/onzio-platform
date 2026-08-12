@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { AlertTriangle, Lock } from "lucide-react";
 import { animate, motion, useReducedMotion } from "motion/react";
 
@@ -135,11 +135,143 @@ function SupportEmailLink() {
   );
 }
 
+// Every contract code the billing routes can return, mapped to a message an
+// owner can act on. Codes must never reach the screen raw: before this map, a
+// configuration fault navigated a paying customer's browser to raw JSON.
+// Mirrors MEMBERSHIP_ERROR_MESSAGES in app/admin/(protected)/members/page.tsx.
+const BILLING_ERROR_MESSAGES = new Map<string, string>([
+  [
+    "AUTHENTICATION_REQUIRED",
+    "You're signed out. Sign in again, then retry.",
+  ],
+  [
+    "SESSION_EXPIRED",
+    "Your session expired — sign in again and retry.",
+  ],
+  ["MFA_REQUIRED", "Sign in again to confirm it's you, then retry."],
+  ["OWNER_REQUIRED", "Only the club owner can manage billing."],
+  [
+    "MEMBERSHIP_REQUIRED",
+    "You're no longer on this club's team. Refresh the page, or contact Onzio if this looks wrong.",
+  ],
+  [
+    "MEMBERSHIP_INACTIVE",
+    "Your administrator access has been removed. Contact the club owner if this looks wrong.",
+  ],
+  [
+    "CLUB_ARCHIVED",
+    `This club has been archived, so billing can't be changed here. Contact Onzio at ${SUPPORT_EMAIL}.`,
+  ],
+  [
+    "CLUB_INACTIVE",
+    `This club isn't active right now, so billing can't be changed here. Contact Onzio at ${SUPPORT_EMAIL}.`,
+  ],
+  [
+    "UNKNOWN_TENANT",
+    "We couldn't match this address to a club. Reload the page, and contact Onzio if it keeps happening.",
+  ],
+  [
+    "STRIPE_CUSTOMER_REQUIRED",
+    `We couldn't find this club's billing account. Nothing was charged — contact Onzio at ${SUPPORT_EMAIL}.`,
+  ],
+  [
+    "BILLING_NOT_REQUIRED",
+    "This club doesn't require a paid subscription, so there's nothing to set up.",
+  ],
+  [
+    "STRIPE_PRICE_REQUIRED",
+    `This club's subscription price hasn't been set up yet. Contact Onzio at ${SUPPORT_EMAIL} to finish setup.`,
+  ],
+  [
+    "CHECKOUT_ATTEMPT_INVALID",
+    "We couldn't start checkout from this session. Sign in again, then retry.",
+  ],
+  // The four shared configuration faults keep distinct codes server-side (the
+  // DCFC-701 discipline); the owner-facing sentence is the same because the
+  // fix is always on Onzio's side.
+  [
+    "STRIPE_CONFIGURATION_MISSING",
+    `Billing isn't fully set up on our side right now. Your subscription is unaffected — contact Onzio at ${SUPPORT_EMAIL}.`,
+  ],
+  [
+    "STRIPE_PORTAL_CONFIGURATION_MISSING",
+    `Billing isn't fully set up on our side right now. Your subscription is unaffected — contact Onzio at ${SUPPORT_EMAIL}.`,
+  ],
+  [
+    "STRIPE_MODE_MISMATCH",
+    `Billing isn't fully set up on our side right now. Your subscription is unaffected — contact Onzio at ${SUPPORT_EMAIL}.`,
+  ],
+  [
+    "STRIPE_ENVIRONMENT_INVALID",
+    `Billing isn't fully set up on our side right now. Your subscription is unaffected — contact Onzio at ${SUPPORT_EMAIL}.`,
+  ],
+]);
+
+function billingErrorMessage(code: unknown, fallback: string) {
+  if (typeof code !== "string") return fallback;
+  return BILLING_ERROR_MESSAGES.get(code) ?? fallback;
+}
+
+/** Calls a billing route with fetch and navigates to the returned Stripe URL,
+ *  so a failure shows a friendly message here instead of the browser landing
+ *  on the route's raw JSON error body. */
+function BillingActionForm({
+  endpoint,
+  fallbackMessage,
+  children,
+}: {
+  endpoint: "/api/stripe/portal" | "/api/stripe/checkout";
+  fallbackMessage: string;
+  children: React.ReactNode;
+}) {
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (pending) return;
+    setPending(true);
+    setMessage(null);
+    try {
+      const response = await fetch(endpoint, { method: "POST" });
+      const body: unknown = await response.json().catch(() => ({}));
+      const record =
+        body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+      if (!response.ok || typeof record.url !== "string") {
+        setPending(false);
+        setMessage(billingErrorMessage(record.error, fallbackMessage));
+        return;
+      }
+      // Stay pending while the browser leaves for Stripe.
+      window.location.assign(record.url);
+    } catch {
+      setPending(false);
+      setMessage(fallbackMessage);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-6">
+      <fieldset disabled={pending} className="contents">
+        {children}
+      </fieldset>
+      {message && (
+        <p role="alert" className="mt-3 font-body text-sm text-destructive">
+          {message}
+        </p>
+      )}
+    </form>
+  );
+}
+
 function PortalForm({ children }: { children: React.ReactNode }) {
   return (
-    <form action="/api/stripe/portal" method="POST" className="mt-6">
+    <BillingActionForm
+      endpoint="/api/stripe/portal"
+      fallbackMessage={`We couldn't open the billing portal. Try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
+    >
       {children}
-    </form>
+    </BillingActionForm>
   );
 }
 
@@ -176,15 +308,14 @@ export function PaymentStatusCard({
                 Start one to activate billing and keep the club&apos;s site
                 live once it launches.
               </p>
-              <form
-                action="/api/stripe/checkout"
-                method="POST"
-                className="mt-6"
+              <BillingActionForm
+                endpoint="/api/stripe/checkout"
+                fallbackMessage={`We couldn't start checkout. Nothing was charged — try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
               >
                 <Button type="submit" size="lg" className="w-full sm:w-auto">
                   Start subscription
                 </Button>
-              </form>
+              </BillingActionForm>
             </>
           )}
         </section>
