@@ -294,10 +294,13 @@
   overflow: hidden;
 }
 
-/* Placeholder home shell for the phase before the real editorial homepage
-   lands. Uses the mockup hero's gradient so the transparent homepage header
-   state reads correctly against a dark surface. */
-[data-site-template="editorial"] .editorial-placeholder {
+/* ============ HERO ============
+   Locked two-line headline ("span" + "em" each forced to their own line at
+   every breakpoint via display:block + white-space:nowrap) over the
+   continuous --club-primary -> --club-secondary gradient, with an oversized
+   full-color crest optically centered on the right. Ported from the
+   approved concept mockup's `.hero`. */
+[data-site-template="editorial"] .hero {
   min-height: 100svh;
   position: relative;
   display: flex;
@@ -312,35 +315,471 @@
   );
   color: var(--on-dark);
 }
-[data-site-template="editorial"] .editorial-placeholder > div {
+[data-site-template="editorial"] .hero-content {
   width: min(100%, 1500px);
+  min-height: 100svh;
   margin-inline: auto;
   padding: clamp(126px, 12vh, 170px) var(--pad-x) clamp(38px, 5vw, 68px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.06fr) minmax(420px, 0.94fr);
+  align-items: stretch;
+  gap: clamp(24px, 3vw, 48px);
 }
-[data-site-template="editorial"] .editorial-placeholder h1 {
+[data-site-template="editorial"] .hero-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(8px, 2vw, 30px) 0;
+}
+[data-site-template="editorial"] .hero h1 {
   margin: 0;
+  max-width: none;
   font-size: clamp(3.45rem, 6vw, 6.8rem);
   line-height: 0.9;
   letter-spacing: -0.055em;
   font-weight: 840;
   color: var(--on-dark);
 }
-[data-site-template="editorial"] .editorial-placeholder h1 em {
+[data-site-template="editorial"] .hero h1 span,
+[data-site-template="editorial"] .hero h1 em {
   display: block;
+  white-space: nowrap;
+}
+[data-site-template="editorial"] .hero h1 em {
   color: var(--accent-bright);
   font-style: normal;
 }
-[data-site-template="editorial"] .editorial-placeholder p {
+[data-site-template="editorial"] .hero-intro {
   max-width: 49ch;
   margin: clamp(24px, 3vh, 34px) 0 0;
   color: var(--on-dark-muted);
   font-size: clamp(0.9rem, 1.1vw, 1.02rem);
   line-height: 1.65;
 }
-[data-site-template="editorial"] .editorial-placeholder-note {
-  padding: var(--sec-y) var(--pad-x);
-  background: var(--paper);
+[data-site-template="editorial"] .hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: clamp(28px, 4vh, 42px);
+  flex-wrap: wrap;
+}
+[data-site-template="editorial"] .hero-cta a {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 24px;
+  border-radius: 7px;
+  font-size: 0.72rem;
+  font-weight: 780;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+[data-site-template="editorial"] .hero-cta a:hover {
+  transform: translateY(-2px);
+}
+[data-site-template="editorial"] .hero-cta a:first-child {
+  background: var(--on-dark);
+  color: var(--primary);
+}
+[data-site-template="editorial"] .hero-cta a:last-child {
+  background: color-mix(in srgb, var(--on-dark) 8%, transparent);
+  color: var(--on-dark);
+}
+[data-site-template="editorial"] .hero-media {
+  min-height: 560px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+[data-site-template="editorial"] .hero-media::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: min(48vw, 700px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 22%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 8%, transparent) 43%,
+    transparent 72%
+  );
+}
+[data-site-template="editorial"] .hero-media > img.hero-crest {
+  width: min(100%, 700px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 34px 46px color-mix(in srgb, var(--primary-deep) 34%, transparent));
+}
+
+/* ============ NEXT MATCH ============
+   No circular background treatment or outer metadata rules; compact,
+   viewport-conscious layout with enlarged match metadata. Ported from the
+   approved concept mockup's `.match-feature`. */
+[data-site-template="editorial"] .match-feature {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(52px, 6vw, 84px) var(--pad-x) clamp(42px, 5vw, 60px);
+  background: var(--panel);
+  border-top: 1px solid var(--line-soft);
+}
+[data-site-template="editorial"] .match-feature-head,
+[data-site-template="editorial"] .match-stage,
+[data-site-template="editorial"] .match-meta,
+[data-site-template="editorial"] .match-feature-foot {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1180px);
+  margin-inline: auto;
+}
+[data-site-template="editorial"] .match-feature-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+[data-site-template="editorial"] .match-feature-head p {
+  margin: 0;
   color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .match-stage {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(28px, 5vw, 72px);
+  margin-top: clamp(34px, 4vw, 54px);
+}
+[data-site-template="editorial"] .match-side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  text-align: center;
+}
+[data-site-template="editorial"] .match-side img {
+  width: clamp(120px, 12vw, 170px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 24px 34px color-mix(in srgb, var(--primary) 20%, transparent));
+}
+[data-site-template="editorial"] .match-side > span {
+  width: clamp(120px, 12vw, 170px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-dark);
+  font-size: clamp(2.7rem, 5vw, 4.7rem);
+  font-weight: 830;
+  letter-spacing: -0.06em;
+  box-shadow: inset 0 0 0 10px color-mix(in srgb, var(--on-dark) 7%, transparent),
+    0 24px 34px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+[data-site-template="editorial"] .match-side strong {
+  max-width: 15ch;
+  min-height: 2.4em;
+  display: flex;
+  align-items: flex-start;
+  color: var(--ink);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+[data-site-template="editorial"] .match-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+[data-site-template="editorial"] .match-center::before,
+[data-site-template="editorial"] .match-center::after {
+  content: "";
+  width: 1px;
+  height: 42px;
+  background: var(--accent);
+}
+[data-site-template="editorial"] .match-center span {
+  color: var(--display);
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
+  font-weight: 830;
+  line-height: 0.8;
+  letter-spacing: -0.06em;
+}
+[data-site-template="editorial"] .match-center p {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .match-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: clamp(30px, 4vw, 46px);
+}
+[data-site-template="editorial"] .match-meta p {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 15px 24px;
+  text-align: center;
+}
+[data-site-template="editorial"] .match-meta p + p {
+  border-left: 1px solid var(--line);
+}
+[data-site-template="editorial"] .match-meta small,
+[data-site-template="editorial"] .match-feature-foot small {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 780;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+[data-site-template="editorial"] .match-meta strong {
+  color: var(--ink);
+  font-size: clamp(1.05rem, 1.45vw, 1.22rem);
+  font-weight: 760;
+  letter-spacing: -0.015em;
+}
+[data-site-template="editorial"] .match-feature-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding-top: 20px;
+}
+[data-site-template="editorial"] .match-feature-foot > p {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: baseline;
+  gap: 9px 14px;
+  margin: 0;
+}
+[data-site-template="editorial"] .match-feature-foot > p strong {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 820;
+  font-variant-numeric: tabular-nums;
+}
+[data-site-template="editorial"] .match-feature-foot > p span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+[data-site-template="editorial"] .match-feature-foot > a {
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* ============ MATCHDAY GALLERY ============
+   Full-bleed slideshow. Mobile uses a localized club-navy gradient behind
+   the copy instead of a heavy full-image overlay. Ported from the approved
+   concept mockup's `.matchday-*` rules. */
+[data-site-template="editorial"] .matchday-slideshow {
+  position: relative;
+  min-height: 640px;
+  height: min(82svh, 820px);
+  overflow: hidden;
+  background: var(--primary-deep);
+  color: var(--on-dark);
+  isolation: isolate;
+}
+[data-site-template="editorial"] .matchday-slides,
+[data-site-template="editorial"] .matchday-slide {
+  position: absolute;
+  inset: 0;
+}
+[data-site-template="editorial"] .matchday-slide {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+[data-site-template="editorial"] .matchday-slide[data-active="true"] {
+  opacity: 1;
+}
+[data-site-template="editorial"] .matchday-slide-backdrop {
+  object-fit: cover;
+  object-position: center;
+  filter: blur(30px) saturate(0.88);
+  opacity: 0.42;
+  transform: scale(1.09);
+}
+[data-site-template="editorial"] .matchday-slide-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+      90deg,
+      var(--primary-deep) 0%,
+      color-mix(in srgb, var(--primary-deep) 91%, transparent) 31%,
+      color-mix(in srgb, var(--primary-deep) 34%, transparent) 70%,
+      color-mix(in srgb, var(--primary-deep) 65%, transparent) 100%
+    ),
+    linear-gradient(0deg, color-mix(in srgb, var(--faded-black) 52%, transparent), transparent 48%);
+}
+[data-site-template="editorial"] .matchday-slide-image {
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 0 38%;
+}
+[data-site-template="editorial"] .matchday-slide-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 34px 0 54px -44px var(--primary-deep);
+  pointer-events: none;
+}
+[data-site-template="editorial"] .matchday-slide-image img {
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 30px 55px color-mix(in srgb, var(--faded-black) 38%, transparent));
+}
+[data-site-template="editorial"] .matchday-copy {
+  position: absolute;
+  z-index: 3;
+  left: var(--pad-x);
+  top: 50%;
+  width: min(38vw, 520px);
+  transform: translateY(-50%);
+}
+[data-site-template="editorial"] .matchday-copy h2 {
+  margin: 0;
+  color: var(--on-dark);
+  font-size: clamp(3rem, 6vw, 6.25rem);
+  font-weight: 830;
+  line-height: 0.88;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+}
+[data-site-template="editorial"] .matchday-copy h2 em {
+  color: var(--accent-bright);
+  font-style: normal;
+}
+[data-site-template="editorial"] .matchday-controls {
+  position: absolute;
+  z-index: 4;
+  left: var(--pad-x);
+  right: var(--pad-x);
+  bottom: 30px;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 22px;
+}
+[data-site-template="editorial"] .matchday-arrows {
+  display: flex;
+  gap: 7px;
+}
+[data-site-template="editorial"] .matchday-arrows button {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--on-dark-line);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary-deep) 70%, transparent);
+  color: var(--on-dark);
+  font-size: 1rem;
+  backdrop-filter: blur(10px);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+[data-site-template="editorial"] .matchday-arrows button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+[data-site-template="editorial"] .matchday-count {
+  color: var(--on-dark-muted);
+  font: 650 0.68rem var(--font-geist-mono);
+  letter-spacing: 0.12em;
+}
+[data-site-template="editorial"] .matchday-progress {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+[data-site-template="editorial"] .matchday-progress button {
+  width: 25px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  position: relative;
+}
+[data-site-template="editorial"] .matchday-progress button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 2px;
+  background: color-mix(in srgb, var(--on-dark) 34%, transparent);
+  transition: background-color 0.25s ease, transform 0.25s ease;
+  transform-origin: left;
+}
+[data-site-template="editorial"] .matchday-progress button[data-active="true"] {
+  width: 54px;
+}
+[data-site-template="editorial"] .matchday-progress button[data-active="true"]::after {
+  background: var(--accent-bright);
+}
+
+/* ============ OUR STORY TEASER ============
+   Minimal two-column heading/excerpt teaser linking to /club. Ported (in
+   reduced form) from the approved concept mockup's `.club-story`. */
+[data-site-template="editorial"] .club-story {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+  column-gap: clamp(48px, 8vw, 120px);
+  row-gap: clamp(56px, 7vw, 86px);
+  padding: var(--sec-y) var(--pad-x);
+  border-top: 1px solid var(--line-soft);
+  background: var(--paper);
+}
+[data-site-template="editorial"] .story-heading {
+  align-self: start;
+}
+[data-site-template="editorial"] .story-heading h2 {
+  margin-top: 24px;
+  font-size: clamp(3rem, 6vw, 6.25rem);
+  line-height: 0.9;
+  letter-spacing: -0.055em;
+}
+[data-site-template="editorial"] .story-heading h2 em {
+  color: var(--accent);
+  font-style: normal;
+}
+[data-site-template="editorial"] .story-copy {
+  align-self: end;
+  padding-bottom: 5px;
+}
+[data-site-template="editorial"] .story-copy > p {
+  max-width: 55ch;
+  margin: 0 0 30px;
+  color: var(--muted);
+  font-size: clamp(0.98rem, 1.35vw, 1.1rem);
+  line-height: 1.75;
+}
+[data-site-template="editorial"] .story-copy > a {
+  display: inline-block;
+  margin-top: 32px;
 }
 
 /* ============ FOOTER ============ */
@@ -465,6 +904,13 @@
     width: 70px;
     height: 69px;
   }
+  [data-site-template="editorial"] .hero-content {
+    grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+    gap: 30px;
+  }
+  [data-site-template="editorial"] .hero h1 {
+    font-size: clamp(3.05rem, 5.7vw, 4.8rem);
+  }
 }
 @media (max-width: 800px) {
   [data-site-template="editorial"] .site-header {
@@ -483,6 +929,118 @@
     top: 64px;
     height: calc(100dvh - 64px);
   }
+  [data-site-template="editorial"] .hero {
+    min-height: auto;
+    background: linear-gradient(
+      148deg,
+      var(--primary-deep) 0%,
+      var(--primary-deep) 48%,
+      var(--primary) 72%,
+      var(--accent) 148%
+    );
+  }
+  [data-site-template="editorial"] .hero-content {
+    min-height: auto;
+    padding: 114px 22px 34px;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  [data-site-template="editorial"] .hero-copy {
+    grid-row: 2;
+    padding: 0 0 28px;
+  }
+  [data-site-template="editorial"] .hero h1 {
+    font-size: clamp(2.9rem, 12.5vw, 4.7rem);
+  }
+  [data-site-template="editorial"] .hero-media {
+    grid-row: 1;
+    min-height: 43svh;
+    max-height: 470px;
+  }
+  [data-site-template="editorial"] .hero-media::before {
+    width: min(88vw, 500px);
+  }
+  [data-site-template="editorial"] .hero-media > img.hero-crest {
+    width: min(78vw, 430px);
+  }
+  [data-site-template="editorial"] .matchday-slideshow {
+    min-height: 620px;
+    height: 78svh;
+    max-height: 780px;
+  }
+  [data-site-template="editorial"] .matchday-slide-shade {
+    background: linear-gradient(
+        0deg,
+        var(--primary-deep) 0%,
+        color-mix(in srgb, var(--primary-deep) 66%, transparent) 42%,
+        color-mix(in srgb, var(--primary-deep) 12%, transparent) 76%
+      ),
+      linear-gradient(90deg, color-mix(in srgb, var(--primary-deep) 68%, transparent), transparent 72%);
+  }
+  [data-site-template="editorial"] .matchday-slide-image {
+    inset: 0 0 0 14%;
+  }
+  [data-site-template="editorial"] .matchday-copy {
+    left: 22px;
+    right: 22px;
+    top: auto;
+    bottom: 116px;
+    width: auto;
+    transform: none;
+  }
+  [data-site-template="editorial"] .matchday-copy h2 {
+    max-width: 620px;
+    font-size: clamp(2.8rem, 10vw, 5rem);
+  }
+  [data-site-template="editorial"] .matchday-controls {
+    left: 22px;
+    right: 22px;
+    bottom: 24px;
+  }
+  [data-site-template="editorial"] .match-feature {
+    padding-inline: 22px;
+  }
+  [data-site-template="editorial"] .match-stage {
+    gap: 18px;
+  }
+  [data-site-template="editorial"] .match-side img,
+  [data-site-template="editorial"] .match-side > span {
+    width: clamp(108px, 26vw, 148px);
+  }
+  [data-site-template="editorial"] .match-center::before,
+  [data-site-template="editorial"] .match-center::after {
+    height: 32px;
+  }
+  [data-site-template="editorial"] .match-meta {
+    grid-template-columns: 1fr;
+  }
+  [data-site-template="editorial"] .match-meta p {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 14px;
+    text-align: left;
+  }
+  [data-site-template="editorial"] .match-meta p + p {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  [data-site-template="editorial"] .match-feature-foot {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  [data-site-template="editorial"] .match-feature-foot > p {
+    grid-template-columns: auto auto;
+  }
+  [data-site-template="editorial"] .match-feature-foot > p span {
+    grid-column: 2;
+  }
+  [data-site-template="editorial"] .club-story {
+    grid-template-columns: 1fr;
+    row-gap: 46px;
+  }
+  [data-site-template="editorial"] .story-copy {
+    max-width: 640px;
+  }
   [data-site-template="editorial"] .footer-main {
     grid-template-columns: 1fr 1fr;
     grid-template-areas: "brand brand" "links social" "matchday matchday";
@@ -491,6 +1049,160 @@
   [data-site-template="editorial"] .footer-bottom {
     flex-direction: column;
     gap: 7px;
+  }
+}
+@media (max-width: 540px) {
+  [data-site-template="editorial"] .hero-content {
+    padding: 106px 16px 28px;
+    gap: 12px;
+  }
+  [data-site-template="editorial"] .hero-media {
+    min-height: 38svh;
+    max-height: 390px;
+  }
+  [data-site-template="editorial"] .hero-media > img.hero-crest {
+    width: min(82vw, 360px);
+  }
+  [data-site-template="editorial"] .hero h1 {
+    font-size: clamp(2.75rem, 12.8vw, 3.7rem);
+  }
+  [data-site-template="editorial"] .hero-intro {
+    font-size: 0.9rem;
+  }
+  [data-site-template="editorial"] .hero-cta {
+    margin-top: 28px;
+  }
+  [data-site-template="editorial"] .hero-cta a {
+    flex: 1;
+    min-width: 142px;
+    text-align: center;
+  }
+  [data-site-template="editorial"] .match-feature {
+    padding: 48px 18px 38px;
+  }
+  [data-site-template="editorial"] .match-feature-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  [data-site-template="editorial"] .match-stage {
+    gap: 10px;
+    margin-top: 30px;
+  }
+  [data-site-template="editorial"] .match-side {
+    gap: 14px;
+  }
+  [data-site-template="editorial"] .match-side img,
+  [data-site-template="editorial"] .match-side > span {
+    width: 92px;
+  }
+  [data-site-template="editorial"] .match-side > span {
+    font-size: 2.25rem;
+    box-shadow: inset 0 0 0 7px color-mix(in srgb, var(--on-dark) 7%, transparent),
+      0 16px 24px color-mix(in srgb, var(--primary) 16%, transparent);
+  }
+  [data-site-template="editorial"] .match-side strong {
+    min-height: 3.45em;
+    font-size: 0.82rem;
+  }
+  [data-site-template="editorial"] .match-center::before,
+  [data-site-template="editorial"] .match-center::after {
+    height: 24px;
+  }
+  [data-site-template="editorial"] .match-center span {
+    font-size: 2rem;
+  }
+  [data-site-template="editorial"] .match-meta {
+    margin-top: 26px;
+  }
+  [data-site-template="editorial"] .match-meta p {
+    padding: 13px 4px;
+  }
+  [data-site-template="editorial"] .match-feature-foot > p {
+    gap: 7px 10px;
+  }
+  [data-site-template="editorial"] .matchday-slideshow {
+    min-height: 640px;
+    height: 78svh;
+    max-height: 720px;
+  }
+  [data-site-template="editorial"] .matchday-slide-backdrop {
+    filter: blur(22px) saturate(0.9);
+    opacity: 0.32;
+  }
+  [data-site-template="editorial"] .matchday-slide-shade {
+    background: linear-gradient(
+      0deg,
+      var(--primary-deep) 0%,
+      color-mix(in srgb, var(--primary-deep) 76%, transparent) 28%,
+      color-mix(in srgb, var(--primary-deep) 24%, transparent) 58%,
+      color-mix(in srgb, var(--primary-deep) 8%, transparent) 82%
+    );
+  }
+  [data-site-template="editorial"] .matchday-slide-image {
+    inset: 0;
+  }
+  [data-site-template="editorial"] .matchday-slide-image img {
+    object-fit: cover;
+    object-position: center;
+    filter: none;
+  }
+  [data-site-template="editorial"] .matchday-copy {
+    left: 18px;
+    right: 18px;
+    bottom: 110px;
+    isolation: isolate;
+  }
+  [data-site-template="editorial"] .matchday-copy::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -42px -24px -30px -18px;
+    background: radial-gradient(
+      ellipse at 18% 58%,
+      color-mix(in srgb, var(--primary-deep) 96%, transparent) 0%,
+      color-mix(in srgb, var(--primary-deep) 78%, transparent) 44%,
+      transparent 76%
+    );
+    pointer-events: none;
+  }
+  [data-site-template="editorial"] .matchday-copy h2 {
+    font-size: clamp(2.55rem, 13vw, 4rem);
+    text-shadow: 0 4px 26px color-mix(in srgb, var(--primary-deep) 70%, transparent);
+  }
+  [data-site-template="editorial"] .matchday-controls {
+    left: 18px;
+    right: 18px;
+    grid-template-columns: auto auto 1fr;
+    gap: 13px;
+  }
+  [data-site-template="editorial"] .matchday-arrows button {
+    width: 38px;
+    height: 38px;
+  }
+  [data-site-template="editorial"] .matchday-progress {
+    gap: 5px;
+  }
+  [data-site-template="editorial"] .matchday-progress button {
+    width: 12px;
+  }
+  [data-site-template="editorial"] .matchday-progress button[data-active="true"] {
+    width: 28px;
+  }
+  [data-site-template="editorial"] .club-story {
+    padding: 72px 18px;
+    grid-template-columns: 1fr;
+    row-gap: 38px;
+  }
+  [data-site-template="editorial"] .story-heading h2 {
+    margin-top: 18px;
+    font-size: clamp(2.85rem, 13vw, 4.2rem);
+  }
+  [data-site-template="editorial"] .story-copy > p {
+    margin-bottom: 24px;
+  }
+  [data-site-template="editorial"] .story-copy > a {
+    margin-top: 28px;
   }
 }
 
