@@ -9,6 +9,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
 import type {
   DBAboutPageContent,
+  DBHomepageHeroContent,
   DBSiteSponsorLogo,
   ShopKitVariant,
 } from "@/lib/db-types";
@@ -327,10 +328,15 @@ function ClubhousePartners() {
   );
 }
 
-export default function ClubhouseHomePage() {
+export default function ClubhouseHomePage({
+  initialHeroContent,
+}: {
+  /** Server-resolved hero content forwarded from HomePageClient — see Hero. */
+  initialHeroContent: DBHomepageHeroContent | null;
+}) {
   return (
     <div className="clubhouse-prospect-home" data-presentation-template="clubhouse@1">
-      <Hero />
+      <Hero initialContent={initialHeroContent} />
       <ClubhouseNextMatch />
       <PhotoSlideshow />
       <ClubhouseKitHome />

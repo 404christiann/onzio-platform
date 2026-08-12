@@ -1,45 +1,13 @@
 "use client";
 
-import nextDynamic from "next/dynamic";
-import { useClubContext } from "@/components/ClubContextProvider";
+import HomePageClient from "@/components/HomePageClient";
 
 export const dynamic = "force-dynamic";
 
-const Hero           = nextDynamic(() => import("@/components/Hero"),           { ssr: false });
-const NextMatchCard   = nextDynamic(() => import("@/components/NextMatchCard"),  { ssr: false });
-const ChampionsBadge = nextDynamic(() => import("@/components/ChampionsBadge"), { ssr: false });
-const PhotoSlideshow = nextDynamic(() => import("@/components/PhotoSlideshow"), { ssr: false });
-const SponsorCarousel = nextDynamic(() => import("@/components/SponsorCarouselContainer"), { ssr: false });
-const LeagueStandings = nextDynamic(() => import("@/components/LeagueStandingsContainer"), { ssr: false });
-const ShopKitSection  = nextDynamic(() => import("@/components/ShopKitSectionContainer"), { ssr: false });
-const BehindTheRose   = nextDynamic(() => import("@/components/BehindTheRose"),   { ssr: false });
-const ClubhouseHomePage = nextDynamic(() => import("@/components/ClubhouseHomePage"), { ssr: false });
-const DevelopingNextGeneration = nextDynamic(() => import("@/components/DevelopingNextGeneration"), { ssr: false });
-const AcademyHomeShopFeature = nextDynamic(() => import("@/components/AcademyHomeShopFeature"), { ssr: false });
-const AcademyProgramsPathway = nextDynamic(() => import("@/components/AcademyProgramsPathway"), { ssr: false });
-const AcademyNextMatch = nextDynamic(() => import("@/components/AcademyNextMatch"), { ssr: false });
-
+// Legacy unscoped route. All public tenant traffic is rewritten by
+// middleware.ts to app/%5Fclubs/[slug]/page.tsx, which resolves the hero
+// content server-side; this path has no slug to resolve, so it passes null
+// and Hero client-fetches from a tenant-neutral initial state.
 export default function HomePage() {
-  const club = useClubContext();
-  if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseHomePage />;
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-
-  return (
-    <>
-      <Hero />
-      {isAcademy ? (
-        <AcademyHomeShopFeature />
-      ) : (
-        <ShopKitSection surface="home" fadeImageToWhite />
-      )}
-      {club.slug === "rose-city" && <ChampionsBadge />}
-      {isAcademy ? <AcademyNextMatch /> : <NextMatchCard />}
-      {isAcademy && <DevelopingNextGeneration />}
-      <PhotoSlideshow />
-      <SponsorCarousel />
-      <LeagueStandings />
-      {isAcademy && <AcademyProgramsPathway />}
-      <BehindTheRose />
-    </>
-  );
+  return <HomePageClient initialHeroContent={null} />;
 }

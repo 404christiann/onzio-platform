@@ -8,18 +8,35 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import ResilientBunnyVideo from "@/components/ResilientBunnyVideo";
 import { DIVERSE_CITY_HERO_VIDEO } from "@/lib/bunny-video";
-import { DEFAULT_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
+import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
+import type { DBHomepageHeroContent } from "@/lib/db-types";
 
-export default function Hero() {
+export default function Hero({
+  initialContent,
+}: {
+  /**
+   * The tenant's hero content, resolved server-side before any HTML is sent
+   * (see app/%5Fclubs/[slug]/page.tsx). Required so no consumer can silently
+   * fall back to first-painting another club's branding — the Diverse City
+   * "Rose City FC" flash. Pass null only when no server value exists (legacy
+   * unscoped route, or the server fetch failed); Hero then client-fetches,
+   * starting from the tenant-neutral empty state.
+   */
+  initialContent: DBHomepageHeroContent | null;
+}) {
   const club = useClubContext();
   const branding = useClubBranding();
   const usesLegacyRoseCityHero = club.slug === "rose-city";
   const ctaRef   = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
-  const [heroContent, setHeroContent] = useState(DEFAULT_HOMEPAGE_HERO_CONTENT);
+  const hasServerContent = initialContent !== null;
+  const [heroContent, setHeroContent] = useState<DBHomepageHeroContent>(
+    initialContent ?? EMPTY_HOMEPAGE_HERO_CONTENT,
+  );
 
   useEffect(() => {
+    if (hasServerContent) return;
     let cancelled = false;
     fetchHomepageContent(club.id)
       .then((content) => {
@@ -34,7 +51,7 @@ export default function Hero() {
     return () => {
       cancelled = true;
     };
-  }, [club.id]);
+  }, [club.id, hasServerContent]);
 
   useEffect(() => {
     if (hasAnimated.current) return;

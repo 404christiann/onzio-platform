@@ -53,6 +53,7 @@ import {
   DEFAULT_HOMEPAGE_HERO_CONTENT,
   DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS,
   DEFAULT_HOMEPAGE_SLIDESHOW_PHOTOS,
+  EMPTY_HOMEPAGE_HERO_CONTENT,
 } from "@/lib/homepage-content";
 import {
   normalizeKitBulletPoints,
@@ -64,6 +65,7 @@ import {
   DEFAULT_ABOUT_PAGE_CONTENT,
   EMPTY_ABOUT_PAGE_CONTENT,
   DEFAULT_CLUB_LOGO_PAGE_CONTENT,
+  EMPTY_CLUB_LOGO_PAGE_CONTENT,
   normalizeAboutValues,
   normalizeClubLogoColorCards,
   normalizeClubLogoFeatures,
@@ -813,16 +815,43 @@ export async function fetchShopCarouselPhotos(
   )) as unknown as DBShopCarouselPhoto[];
 }
 
+/**
+ * Fetches only the admin-editable homepage hero row for one club.
+ *
+ * Server components pass their request-scoped Supabase client (see
+ * app/%5Fclubs/[slug]/page.tsx) exactly like fetchAboutClubContent; client
+ * components fall back to the shared browser client. Kept as its own export
+ * so the tenant homepage can resolve the hero server-side and hand it to
+ * components/Hero.tsx as an initial prop — the fix for the Diverse City
+ * first-paint flash of Rose City branding.
+ */
+export async function fetchHomepageHeroContent(
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<DBHomepageHeroContent> {
+  const tenantId = requireClubId(clubId);
+  // DCFC-602: RLS silently returns zero rows (not an error) for a club whose
+  // public_access is below live/grace, so tenant-scoped calls must fall back
+  // to the neutral empty hero — never the Rose City branded default, which
+  // remains only for the legacy unscoped path.
+  const fallback = clubId
+    ? EMPTY_HOMEPAGE_HERO_CONTENT
+    : DEFAULT_HOMEPAGE_HERO_CONTENT;
+  const { data, error } = await client
+    .from("homepage_hero_content")
+    .select("*")
+    .eq("club_id", tenantId)
+    .limit(1);
+  if (error || !data) return fallback;
+  return ((data ?? []) as DBHomepageHeroContent[])[0] ?? fallback;
+}
+
 /** Fetches admin-managed homepage hero, slideshow, and Behind the Rose content. */
 export async function fetchHomepageContent(clubId?: string): Promise<HomepageContent> {
   const tenantId = requireClubId(clubId);
   const tenantScoped = Boolean(clubId);
-  const [heroResult, slideshowResult, settingsResult, behindTheRoseResult] = await Promise.all([
-    supabase
-      .from("homepage_hero_content")
-      .select("*")
-      .eq("club_id", tenantId)
-      .limit(1),
+  const [hero, slideshowResult, settingsResult, behindTheRoseResult] = await Promise.all([
+    fetchHomepageHeroContent(clubId),
     supabase
       .from("homepage_slideshow_photos")
       .select("*")
@@ -862,27 +891,9 @@ export async function fetchHomepageContent(clubId?: string): Promise<HomepageCon
         (tenantScoped
           ? { ...DEFAULT_BEHIND_THE_ROSE_SECTION, visible: false }
           : DEFAULT_BEHIND_THE_ROSE_SECTION);
-  // Unlike the sibling fallbacks above, this had no tenantScoped-safe variant,
-  // so a club with no public-readable hero row (e.g. public_access below
-  // live/grace) rendered this file's hardcoded Rose City default instead of
-  // falling through to the caller's own club.name/empty-state handling.
-  const tenantSafeHeroDefault: DBHomepageHeroContent = {
-    ...DEFAULT_HOMEPAGE_HERO_CONTENT,
-    headline_line_one: "",
-    primary_cta_label: "",
-    primary_cta_href: "",
-    secondary_cta_label: "",
-    secondary_cta_href: "",
-  };
 
   return {
-    hero:
-      heroResult.error || !heroResult.data
-        ? tenantScoped
-          ? tenantSafeHeroDefault
-          : DEFAULT_HOMEPAGE_HERO_CONTENT
-        : ((heroResult.data ?? []) as DBHomepageHeroContent[])[0] ??
-          (tenantScoped ? tenantSafeHeroDefault : DEFAULT_HOMEPAGE_HERO_CONTENT),
+    hero,
     slideshowPhotos,
     slideshowSettings,
     behindTheRose,
@@ -948,7 +959,9 @@ export async function fetchAboutClubContent(
           features: normalizeClubLogoFeatures(rawLogo.features),
           color_cards: normalizeClubLogoColorCards(rawLogo.color_cards),
         }
-      : DEFAULT_CLUB_LOGO_PAGE_CONTENT,
+      : clubId
+        ? EMPTY_CLUB_LOGO_PAGE_CONTENT
+        : DEFAULT_CLUB_LOGO_PAGE_CONTENT,
   };
 }
 

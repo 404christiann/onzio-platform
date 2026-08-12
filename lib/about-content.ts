@@ -167,6 +167,15 @@ export const DEFAULT_CLUB_LOGO_PAGE_CONTENT: DBClubLogoPageContent = {
   updated_at: "",
 };
 
+export const EMPTY_CLUB_LOGO_PAGE_CONTENT: DBClubLogoPageContent = {
+  id: 0,
+  annotated_image_url: "",
+  features: [],
+  map_image_url: "",
+  color_cards: [],
+  updated_at: "",
+};
+
 export function normalizeAboutValues(value: unknown): AboutValue[] {
   if (!Array.isArray(value)) return DEFAULT_ABOUT_PAGE_CONTENT.values;
   const values = value

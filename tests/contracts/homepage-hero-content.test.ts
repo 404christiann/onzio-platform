@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clubs } from "../fixtures/entities";
-import { fetchHomepageContent } from "@/lib/queries";
+import { fetchHomepageContent, fetchHomepageHeroContent } from "@/lib/queries";
+import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
 
 const CLUB_ID = clubs.alpha.id;
 
@@ -52,5 +53,22 @@ describe("fetchHomepageContent hero fallback", () => {
     const content = await fetchHomepageContent();
 
     expect(content.hero.headline_line_one).toBe("Rose City FC");
+  });
+});
+
+describe("fetchHomepageHeroContent (server-resolved hero for the tenant homepage)", () => {
+  // app/%5Fclubs/[slug]/page.tsx resolves the hero through this export before
+  // any HTML is sent, so its tenant fallback must be the neutral empty hero —
+  // the same guarantee fetchHomepageContent's hero field carries above.
+  it("falls back to the tenant-neutral empty hero for a scoped club with no readable row", async () => {
+    const hero = await fetchHomepageHeroContent(CLUB_ID);
+
+    expect(hero).toEqual(EMPTY_HOMEPAGE_HERO_CONTENT);
+  });
+
+  it("returns the branded legacy default only for an unscoped call", async () => {
+    const hero = await fetchHomepageHeroContent();
+
+    expect(hero.headline_line_one).toBe("Rose City FC");
   });
 });

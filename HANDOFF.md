@@ -2,6 +2,38 @@
 
 Last updated: 2026-08-11
 
+## Cross-tenant "Rose City FC" homepage hero flash fixed platform-wide
+
+Agent: Claude Fable 5 (Claude Code), 2026-08-11. Status: `complete` locally on
+`staging`, not committed, not deployed. Customer-reported defect (Diverse City
+FC saw "ROSE CITY FC" / "TEAM STORE" / "MEET THE SQUAD" flash on their own
+homepage before their content painted).
+
+Root cause: `components/Hero.tsx` initialized its state from
+`DEFAULT_HOMEPAGE_HERO_CONTENT` (Rose City's real copy) and only swapped in
+the tenant's hero after a client-side fetch. Fix is architectural, not
+cosmetic: `app/%5Fclubs/[slug]/page.tsx` is now a server component (about-page
+pattern) resolving the hero via new `fetchHomepageHeroContent(clubId, client)`
+before HTML is sent, handed down through new `components/HomePageClient.tsx`
+and `ClubhouseHomePage` into `Hero` as a **required** prop — TypeScript now
+prevents any consumer from silently falling back to another club's branding.
+A tenant-neutral `EMPTY_HOMEPAGE_HERO_CONTENT` (lib/homepage-content.ts)
+backs the null/legacy/error paths, replacing the DCFC-602 inline equivalent
+in `lib/queries.ts`. Final rendered content for clubs with saved heroes is
+byte-identical; only the transient wrong-tenant first paint is gone.
+
+Verification: tsc, lint, contracts 521/521 (+3 new), legacy 274/274,
+architecture 20/20, `next build` all clean; live-verified diverse-city
+(academy@1) and lions (clubhouse@1) against local Supabase staging — served
+documents carry each club's own hero and zero "Rose City" occurrences.
+
+Flagged, deliberately untouched (latent server-side fallbacks, no flash):
+`fetchAboutClubContent`'s `logo` leg still falls back to Rose City's
+`DEFAULT_CLUB_LOGO_PAGE_CONTENT` for tenant-scoped calls, and
+`diffHomepageSlideshowPhotos` writes "Rose City FC homepage slide N" alt text
+when an admin saves a photo with a blank alt. Details in
+`docs/phase-11/diverse-city/STATUS.md` (2026-08-11 entry).
+
 ## Stripe portal-config env gap hardened after the production "Manage billing" incident
 
 Agent: Claude Fable 5 (Claude Code), 2026-08-11. Status: `complete`, not

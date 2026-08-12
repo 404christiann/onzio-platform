@@ -26,6 +26,29 @@ export const DEFAULT_HOMEPAGE_HERO_CONTENT: DBHomepageHeroContent = {
   updated_at: "",
 };
 
+/**
+ * Tenant-neutral hero used wherever no club-specific hero row is available
+ * yet: the pre-hydration initial state in components/Hero.tsx and the
+ * tenant-scoped fallback in lib/queries.ts. Every field is blank so the hero
+ * templates fall through to club.name and their generic CTA labels instead of
+ * ever painting another club's branding (the Diverse City "Rose City FC"
+ * first-paint flash; same class as DCFC-602).
+ * DEFAULT_HOMEPAGE_HERO_CONTENT above stays reserved for the legacy unscoped
+ * Rose City path only.
+ */
+export const EMPTY_HOMEPAGE_HERO_CONTENT: DBHomepageHeroContent = {
+  id: 1,
+  eyebrow: "",
+  headline_line_one: "",
+  headline_line_two: "",
+  intro: "",
+  primary_cta_label: "",
+  primary_cta_href: "",
+  secondary_cta_label: "",
+  secondary_cta_href: "",
+  updated_at: "",
+};
+
 export const DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS: DBHomepageSlideshowSettings = {
   id: 1,
   season_label: "2025 – 2026 Season",
@@ -211,7 +234,7 @@ export function diffHomepageSlideshowPhotos(
   const toUpdate: HomepagePhotoDiff["toUpdate"] = [];
 
   draft.forEach((photo, index) => {
-    const alt = photo.alt.trim() || `Rose City FC homepage slide ${index + 1}`;
+    const alt = photo.alt.trim() || `Homepage slide ${index + 1}`;
 
     if (photo.id === null) {
       toInsert.push({ url: photo.url, alt, sort_order: index });
