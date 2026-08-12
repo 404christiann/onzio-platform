@@ -406,7 +406,177 @@ Shipped in total (prior session plus this one):
   mocked. `tests/contracts/editorial-template.test.ts` (24 tests) is green
   and its layout-source assertions match the corrected comment.
 
+### Lions L4 — real Starter editorial homepage (2026-08-12)
+
+Replaced `components/editorial/EditorialHomePlaceholder.tsx` with the real
+Starter-tier Lions homepage: Hero → Next Match → Matchday gallery → "Our
+story" teaser, exactly the required section order.
+
+- `components/editorial/EditorialIdentityContext.tsx`: shares the
+  `club_identity` content and full-color crest URL the tenant layout already
+  fetches server-side (once, for the header/footer) with the home page
+  sections via a new provider mounted in `EditorialShell`, so sections render
+  immediately instead of re-fetching client-side. Its default value is a safe
+  empty state rather than a thrown error, so a section renders correctly (and
+  is unit-testable) even outside `EditorialShell`.
+- `components/editorial/EditorialHero.tsx`: locked two-line headline
+  (`hero_headline_top` / `hero_headline_em`), `hero_intro` copy, direct
+  `/schedule` and `/roster` CTAs, and an oversized full-color crest on the
+  continuous `--club-primary` → `--club-secondary` gradient. Entirely
+  data-driven — verified the component source contains no Lions-specific
+  copy.
+- `components/editorial/EditorialNextMatch.tsx`: resolves the next upcoming
+  fixture and the most recently played result from the real seeded
+  `onzio.matches` data via the existing `fetchSchedule` plus two new small
+  pure helpers added to `lib/queries.ts` (`findNextFixture`,
+  `findLatestResult`, `fixtureKickoff`) rather than duplicating
+  `NextMatchCard`'s inline derivation a second time. Shows enlarged
+  date/kickoff/venue, club crest vs. opponent (falling back to a text
+  monogram — mirroring the mockup's own approach — for opponents without a
+  crest asset), a compact latest-result footer, and a link to `/schedule`.
+  Presentational: the fixture list arrives as a prop from `EditorialHome`'s
+  single fetch, so it stays independently testable.
+- `components/editorial/EditorialMatchdaySlideshow.tsx`: ported from the
+  mockup's `MatchdaySlideshow.tsx` — 4-second autoplay, pause on
+  pointer/keyboard interaction, arrow and direct slide controls, disabled
+  autoplay under `prefers-reduced-motion`, hides the whole section with no
+  photos, and a localized club-navy gradient behind the copy on mobile
+  instead of a full-image overlay. Presentational: the caller supplies the
+  already-fetched, sort-ordered `homepage_slideshow_photos` rows (the same 4
+  real gallery photos seeded in L2), so the empty-list and reduced-motion
+  contracts are independently unit-testable without mocking Supabase.
+- `components/editorial/EditorialStoryTeaser.tsx`: minimal section using
+  `identity_heading_top`/`identity_heading_em` and the first paragraph of
+  `about_page_content.story_paragraphs`, linking to `/club` (the L7 full
+  story page doesn't exist yet — that's expected for this phase).
+- `components/editorial/EditorialHome.tsx`: composes the four sections in
+  order, fetching fixtures (`fetchSchedule`), slideshow photos
+  (`fetchHomepageContent`), and the about excerpt (`fetchAboutClubContent`)
+  once and passing them down as props instead of each section re-fetching
+  independently. Replaces `EditorialHomePlaceholder` as
+  `app/(public)/page.tsx`'s editorial-template branch.
+- `styles/editorial.css`: added the hero/next-match/matchday-gallery/story
+  rules and their 1050px/800px/540px responsive variants, all scoped under
+  the existing `[data-site-template="editorial"]` wrapper and deriving every
+  color from the existing `--club-*` custom properties (no new hex values).
+  Removed the now-unused `.editorial-placeholder` rules.
+- `components/editorial/EditorialMotion.tsx` was **not modified** — its
+  existing `.hero`, `.hero-media > img`, `.hero h1`, `.hero-intro`,
+  `.hero-cta`, `section:not(.hero)`, and `.match-side`/`.fixture-row` card
+  selectors already matched the new markup exactly (the phase-3 agent had
+  deliberately pre-built these as safe no-ops), so scroll-reveal, hero
+  parallax, and card stagger now animate real content with zero motion-layer
+  changes.
+- No kit/store or sponsor content anywhere (Starter tier only has `about`,
+  `branding`, `homepage`, `roster`, `schedule` per `lib/club-features.ts`,
+  which was not touched); no season selector. `/shop` gating is untouched
+  and out of scope. No classic component was touched.
+- **Test-infrastructure fix required and made, documented here because it
+  affects how every future contract test that imports `lib/queries.ts` (or
+  anything else built on `lib/supabase.ts`) must behave**: plain `vitest`
+  never shared Next.js's own `.env.test` auto-loading, so importing
+  `lib/queries.ts` for the first time from a contract test threw
+  `supabaseUrl is required` at import time before any test ran (no prior
+  contract test had imported anything built on `lib/supabase.ts`, so this
+  gap was latent). `vitest.config.ts` now loads `.env.test` via Vite's
+  `loadEnv("test", ...)` and assigns only variables not already present in
+  `process.env`, so a real shell/CI-exported value always wins.
+  `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (the same local
+  loopback values already used by `SUPABASE_TEST_URL`/`SUPABASE_TEST_ANON_KEY`)
+  were added to `.env.test`/`.env.test.example`. `resolveMediaReferences`/
+  `resolveMediaStoragePath` already short-circuit under `NODE_ENV=test`, so
+  no test makes a real network call from this — it only stops
+  `createClient()` from throwing at module load. This same gap was silently
+  failing `npm run test:db` in this sandboxed session before the fix (61
+  failures with `Expected 3 parts in JWT; got 1`, because
+  `SUPABASE_TEST_ANON_KEY` was resolving to `createLocalClients()`'s
+  placeholder fallback string instead of the real local key); the fix
+  resolved that too. This was a pre-existing environment gap unrelated to
+  the Lions feature work, not a regression introduced by it.
+- Added `tests/contracts/editorial-home.test.ts` (17 tests): section order
+  and composition, the locked two-line hero headline, next-match resolution
+  against the real seeded 2026 fixture data (resolves to Capital City
+  Athletic on 2026-08-15, latest result LFC 2–1 SVF, exactly as the real
+  seed produces against today's real system clock), the opponent monogram
+  fallback, the slideshow rendering exactly the seeded photos in seeded
+  order, autoplay/reduced-motion/pause/control source assertions, the
+  slideshow hiding gracefully with an empty photo list, the story excerpt
+  and `/club` link, an explicit no-sponsor/store/kit assertion across every
+  new component, and a classic-tenant regression check. Updated
+  `tests/contracts/editorial-template.test.ts`'s "classic home renders /
+  editorial home renders" test to render the real `EditorialHome` instead of
+  the retired placeholder; no other existing test was deleted, skipped,
+  marked todo, loosened, or broadly mocked.
+
 ## Verification
+
+### Lions L4 gate — 2026-08-12
+
+```text
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run lint
+  passed with the pre-existing legacy warnings
+
+npm run test:db
+  61/61 passed across 7 files
+
+npm run test:contracts
+  231/231 passed across 19 files
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  553/553 passed across 48 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values;
+  25 routes generated
+```
+
+Manual proof against the local Supabase stack (`npm run dev`, real headless
+Chromium via `playwright-core`):
+
+- `http://lions.localhost:3000/` renders all four sections with real seeded
+  data: hero headline `"Capital City." / "Roar as One."` as two locked
+  `<span>`/`<em>` lines; Next Match resolves to Capital City Athletic,
+  "August 15, 2026", Scioto Field, "Away", competition "Midwest Premier
+  League", and latest-result footer "LFC 2–1 SVF"; the matchday gallery
+  renders exactly 4 slides; the story teaser shows heading "A club shaped by
+  / Columbus.", the seeded about-page excerpt, and links to `/club`. No
+  "sponsor", "partner", or "store" text appears anywhere on the page.
+- Slideshow interaction, desktop viewport: autoplay advances slide 0 → 1
+  after ~4.5s; hovering the section pauses it (stays on 1 through another
+  4.5s wait); moving the pointer away resumes autoplay (1 → 2); clicking the
+  "Next matchday photo" arrow advances directly (2 → 3).
+  `reducedMotion: "reduce"` in a fresh browser context: slide stays at 0
+  after a 5s wait — no autoplay.
+- Mobile viewport (390×844): hero renders full-width with no horizontal
+  overflow (`document.body.scrollWidth === window.innerWidth === 390`), the
+  148deg mobile hero gradient is active, and `.hero-content`/`.match-meta`
+  collapse to a single column.
+- `http://alpha.localhost:3000/` (classic) has zero
+  `[data-site-template="editorial"]`, `.site-header`, or `.hero` elements in
+  the live DOM — completely unaffected.
+- Two console-level warnings observed during manual verification are
+  pre-existing and unrelated to this phase, not introduced by it: a 404 for
+  `/_vercel/insights/script.js` (Vercel Analytics unavailable in this
+  sandbox) and a blocked `fonts.googleapis.com` request from
+  `styles/globals.css`'s unconditional Google Fonts `@import` (a
+  classic-template stylesheet loaded regardless of template, blocked only
+  because this sandbox has no outbound access to Google Fonts — the
+  editorial template deliberately vendors Geist locally for exactly this
+  reason, per L3).
+- Dev server process was stopped after verification; `ps aux` confirmed no
+  `next-server`/`next dev` process remained.
 
 ### Lions L3 gate — 2026-08-12
 
@@ -715,12 +885,12 @@ Known non-blocking warnings:
 
 Phase 8 full local import rehearsal and production-provisioning gate.
 
-On the parallel Lions track, L3 (the `components/editorial/*` presentation
-package and template dispatch) is complete; the Lions tenant now renders the
-editorial shell described above. The homepage body is still the temporary
-`EditorialHomePlaceholder` — the next Lions phase is the real editorial home
-sections (hero, next match, matchday gallery, identity, story), followed by
-roster and schedule pages once Starter scope for those is defined.
+On the parallel Lions track, L4 (the real Starter editorial homepage — hero,
+next match, matchday gallery, "Our story" teaser) is complete; the Lions
+tenant now renders real seeded content end to end on its homepage. The next
+Lions phase is roster and schedule pages once Starter scope for those is
+defined, followed later by the full `/club` story page (L7) that the story
+teaser's link already anticipates.
 
 First, create the immutable Rose City database/Auth/Storage export and complete
 the full local transformation/import/rollback rehearsal. Before any production
