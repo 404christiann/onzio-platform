@@ -8,6 +8,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { clubHasFeature } from "@/lib/club-features";
 
 const MIGRATED_LOGO_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/branding`;
@@ -51,7 +52,7 @@ type NavLink = {
   children?: { label: string; href: string }[];
 };
 
-const navLinks: NavLink[] = [
+const BASE_NAV_LINKS: NavLink[] = [
   { label: "Home", href: "/" },
   { label: "Roster", href: "/roster" },
   {
@@ -62,8 +63,9 @@ const navLinks: NavLink[] = [
     ],
   },
   { label: "Schedule", href: "/schedule" },
-  { label: "Shop", href: "/shop" },
 ];
+
+const SHOP_NAV_LINK: NavLink = { label: "Shop", href: "/shop" };
 
 function isLinkActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -78,6 +80,12 @@ export default function Nav() {
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const pathname = usePathname();
+  // Shop is a Pro-only feature platform-wide (lib/club-features.ts); Starter
+  // tenants (e.g. Bravo) never see the nav link, matching the direct-visit
+  // 404 app/(public)/shop/page.tsx now enforces.
+  const navLinks: NavLink[] = clubHasFeature(club.tier, "shop")
+    ? [...BASE_NAV_LINKS, SHOP_NAV_LINK]
+    : BASE_NAV_LINKS;
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);

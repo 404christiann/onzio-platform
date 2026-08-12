@@ -226,6 +226,7 @@ describe("tier and mutation boundary contract", () => {
   it.each([
     ["starter", "branding", true],
     ["starter", "standings", false],
+    ["starter", "shop", false],
     ["pro", "standings", true],
     ["pro", "shop", true],
   ] as const)(

@@ -792,7 +792,287 @@ Results status tabs, solid-color matchup cards) and the per-fixture
   pre-existing network/environment limitations, not regressions from this
   phase.
 
+### Lions L7+L8 — real Starter editorial club-story page and platform-wide shop tier gating (2026-08-12)
+
+This is the final phase of the Lions FC Starter-tier public site project.
+It completes the last editorial page (`/club`) L4's homepage story teaser
+already anticipated, and closes a real cross-template gap: `/shop` was
+previously gated by nothing at all for classic tenants, so a Starter tenant
+on the classic template (Bravo) could reach it unguarded.
+
+#### Part A — `/club` story page
+
+- `components/editorial/EditorialClubStoryView.tsx` (presentational) +
+  `components/editorial/EditorialClubStory.tsx` (fetch container): the same
+  container/view split L5/L6 established. The container fetches
+  `about_page_content.story_paragraphs` once via the existing tenant-scoped
+  `fetchAboutClubContent` (the same helper the classic `/club/about` page and
+  the homepage story teaser already call — no duplicate query added) and
+  passes it to the view. Every other field — `story_heading_top/em`,
+  `founded_year`, `mission`, `highlights`, `venue`, `contact_email`,
+  `contact_phone`, `contact_address` — comes from the `club_identity` row the
+  tenant layout already fetches once and shares through
+  `useEditorialIdentity()`, so no second identity fetch was added either.
+  Content, matching the mockup's `ClubScreen.tsx` structure exactly except
+  for the deliberate omission below: an interior hero (`story_heading_top`/
+  `_em`), a manifesto section (a founded-year "story mark" showing the
+  last-two-digit derivation the mockup itself uses, e.g. "14" for 2014, with
+  a `title` attribute carrying the full year for clarity; both real seeded
+  story paragraphs; the `mission` as a `<blockquote>`), a `club-highlights`
+  list rendering the `highlights` jsonb array (omitted entirely when empty),
+  and a "Find us" info block with venue/address/email/phone — no season
+  selector, no stats, no sponsor content anywhere.
+- **Per Christian's already-approved decision from the planning phase, the
+  mockup's decorative, non-functional contact form was deliberately NOT
+  ported** — this page is story + "Find us" info only. A real contact
+  page/form is explicitly deferred to a later session, not built here even
+  as a disabled placeholder. Verified via both a real render assertion (no
+  `<form>`/`<input>`/`<textarea>`/`<button>` in the rendered HTML) and a
+  component-source assertion (no `<form`/`<input`/`<textarea`/`useState` in
+  `EditorialClubStoryView.tsx`).
+- `app/(public)/club/page.tsx` (+ `app/%5Fclubs/[slug]/club/page.tsx`
+  mirror, the same `export { default } from ...` pattern the roster/
+  schedule/staff mirrors already use): the same `club.siteTemplate ===
+  "editorial"` client dispatch L3–L6 established. Classic tenants never had
+  a `/club` route at all (only `/club/about` and `/club/logo`, both nested
+  one level deeper under `app/(public)/club/`) — this dispatcher preserves
+  that exact prior 404 outcome instead of introducing new classic-facing
+  behavior, mirroring the `/staff` and `/schedule/[fixtureId]` precedent.
+  Confirmed no route collision: `/club` (`app/(public)/club/page.tsx`),
+  `/club/about`, and `/club/logo` are three distinct Next.js routes.
+- `middleware.ts`: added the exact-match `"/club"` entry to
+  `PUBLIC_TENANT_PATHS` (a strictly additive change — `/club/about` and
+  `/club/logo` were already present) so the new dynamic-imported route
+  resolves real club context through `ClubContextProvider` instead of
+  crashing on `useClubContext()`.
+- `styles/editorial.css`: added a new "CLUB STORY PAGE" section (`.interior`,
+  `.interior-hero`, `.manifesto`/`.story-mark`, `.club-highlights`,
+  `.find-us`/`.find-us-grid`/`.find-us-item`) ported from the mockup's
+  `.interior-hero`/`.manifesto` rules (the "Find us" card layout is this
+  phase's own addition, replacing the mockup's form+info grid with a
+  two-item info-card grid since there's no form), plus 800px/540px
+  responsive rules following the file's existing breakpoint structure. Every
+  rule is scoped under the existing `[data-site-template="editorial"]`
+  wrapper and derives every color from the existing `--club-*`/derived
+  tokens — no new hex values.
+- Confirmed (not changed) that the homepage's "Our story" teaser link built
+  in L4 — which pointed to `/club` before the page existed — now resolves to
+  the real page, both via direct navigation and via a real click-through from
+  the rendered homepage link.
+- Added `tests/contracts/editorial-club-story.test.ts` (16 tests): real
+  server renders of the interior hero/story paragraphs/story mark/mission
+  blockquote/highlights list (present and empty-list cases)/Find us block
+  against a real seeded-shaped `club_identity` fixture; the no-contact-form
+  assertion (render + source); a safe-empty-state render outside any
+  identity data; a data-driven-only source assertion (no hardcoded Lions
+  copy); the container's single-fetch source assertion; the dispatch/mirror/
+  no-collision/middleware wiring; and a classic-component regression check.
+  No existing test was deleted, skipped, marked todo, loosened, or broadly
+  mocked.
+
+#### Part B — platform-wide Starter shop gating
+
+Per Christian's already-approved decision, `/shop` and its nav link are now
+gated by tier **platform-wide** — not just for the editorial template. This
+is a real behavior change to the existing classic-template Bravo tenant
+(Starter), which previously showed Shop completely unguarded (no nav
+condition and no gate on direct URL visits).
+
+- `lib/club-features.ts`: no functional change was needed — `clubHasFeature`
+  already grants every feature unconditionally to `"pro"` and only checks
+  the `STARTER_FEATURES` allowlist for `"starter"`, and `"shop"` was never
+  in that allowlist (`about`, `branding`, `homepage`, `roster`, `schedule`
+  only). Added a code comment making this Pro-only-by-omission mechanism
+  explicit and pointing at the two call sites below, since nothing in the
+  file previously documented it. Extended the existing
+  `tests/contracts/authorization.test.ts` `clubHasFeature` table with
+  `["starter", "shop", false]` alongside the pre-existing `["pro", "shop",
+  true]` case (an addition, not a loosening).
+- `components/Nav.tsx` (classic nav): split the module-level `navLinks`
+  constant into `BASE_NAV_LINKS` (Home/Roster/Club/Schedule) and a separate
+  `SHOP_NAV_LINK`, appended only when `clubHasFeature(club.tier, "shop")` is
+  true, computed per-render from the real tenant `club.tier` — not a
+  hardcoded slug/tier check.
+- `app/(public)/shop/page.tsx` (its `app/%5Fclubs/[slug]/shop/page.tsx`
+  mirror already re-exports it, so it inherited the gate automatically):
+  added the same `clubHasFeature(club.tier, "shop")` check, calling
+  `notFound()` when false — so a direct URL visit from a Starter tenant also
+  404s, not just the nav link disappearing. This repository had no prior
+  precedent for a Pro-gated *public* route to copy exactly (the existing
+  `clubHasFeature` call sites are both server-side authorization checks —
+  `lib/authorization.ts` for admin mutations and `lib/media-processing.ts`
+  for upload surfaces — not public page rendering); the `notFound()` pattern
+  used here mirrors the established "route never existed for this tenant"
+  precedent the `/staff` and `/schedule/[fixtureId]` dispatchers already set
+  for template-based gating, applied here to tier-based gating instead.
+- The editorial template's `EditorialHeader`/`EditorialFooter` (built in L3)
+  already had no Store link at all — confirmed this is still correct and
+  requires no change: it was a deliberate hardcoded omission documented in
+  L3 (Starter-only scope for this entire project), not something the
+  platform-wide gating needed to take over, since no editorial Pro tenant
+  exists locally and a Pro editorial store is explicitly out of scope for
+  this whole project. Also confirmed the underlying gate is real and
+  tier-driven, not template-driven: `app/(public)/shop/page.tsx` has no
+  template branch at all, so before this phase an editorial+Starter tenant
+  that reached `/shop` by direct URL (it was already in `middleware.ts`'s
+  `PUBLIC_TENANT_PATHS`) would have rendered the unstyled classic shop
+  markup outside the editorial shell — this phase's tier gate closes that
+  latent gap too, as a side effect of being tier- rather than
+  template-based.
+- Added `tests/contracts/shop-tier-gating.test.ts` (9 tests): real Nav
+  renders proving the Shop link appears for an Alpha-shaped Pro club context
+  and is absent for a Bravo-shaped Starter club context; a direct
+  `clubHasFeature` truth-table check; source assertions that the gate goes
+  through `clubHasFeature` (not a hardcoded slug/tier literal) in both
+  `Nav.tsx` and `shop/page.tsx`; the shop mirror-export assertion; a
+  regression check that `EditorialHeader`/`EditorialFooter` still contain no
+  Store/Shop markup; a Lions-shaped (Starter, editorial) `clubHasFeature`
+  check confirming the same tier gate applies regardless of template; and a
+  Pro-behavior-preservation assertion that `shop/page.tsx` still renders the
+  full `ShopKitSectionContainer`/`ShopPhotoStripContainer`/
+  `ShopPurchaseDetailsContainer` composition. No existing test was deleted,
+  skipped, marked todo, loosened, or broadly mocked.
+
+#### Verification sweep
+
+Ran every gate (`tsc`, `lint`, `test:db`, `test:contracts`, `test:architecture`,
+`test`, `db:types:check`, `supabase db lint`, `build`) — see the L7+L8 gate
+below. Repo-wide static scan for `/storage/v1/render/image/`,
+`supabase-image-loader`, and `ydvggllbrswfchgjhjhr.supabase.co` found zero
+matches in any real application source (`app/`, `lib/`, `components/`,
+`scripts/`, `styles/`, `middleware.ts`); the only repo-wide matches are in
+tests that assert the patterns' *absence*, and in documentation describing
+the ban — exactly the same posture every prior phase's scan confirmed.
+
+Full manual regression pass (real headless Chromium via `playwright-core`,
+against `npm run dev` and the already-running local Supabase stack, desktop
+1440px and mobile 390px widths, plus a real `reducedMotion: "reduce"`
+browser context) covered all four editorial pages for Lions and the classic
+tenants:
+
+- `/club` (desktop and mobile): interior hero renders `story_heading_top`/
+  `_em`; both real seeded story paragraphs render; the story mark shows
+  "14" (derived from `founded_year: 2014`); the mission blockquote renders;
+  all 3 seeded highlights render as a plain list; the Find us block shows
+  the real seeded venue ("Scioto Field"), address, `mailto:` email, and
+  phone; zero `<form>` elements; no horizontal overflow at either width;
+  zero console/page errors.
+- Homepage → `/club`: the "Our story" teaser's `href="/club"` was confirmed,
+  then a real click-through navigation was exercised end to end, landing on
+  a fully rendered `/club` page.
+- `/` (home), `/roster` (23 real cards: 18 players + 5 staff), `/schedule`
+  (month rail + 5 months), a played fixture's `/schedule/[fixtureId]`
+  (correct "Match report" eyebrow, attendance, and scorers), an upcoming
+  fixture's `/schedule/[fixtureId]` (correct "Next match" eyebrow, no
+  attendance/scorers section), and an invalid fixture id (clean HTTP 200
+  not-found render, no crash) — all confirmed correct.
+- `/staff` still redirects to `/roster#staff`.
+- Header scroll transition: `data-scrolled="false"` at `scrollY === 0` on
+  home, `data-scrolled="true"` after scrolling — unchanged from L3.
+- Mobile menu: opens, locks `document.body.style.overflow`, panel visible —
+  unchanged from L3.
+- `prefers-reduced-motion`: the matchday slideshow does not autoplay (stays
+  on slide 0); the roster filter (a native `<select id="roster-filter">`,
+  confirmed via DOM inspection — not buttons, unlike the schedule page's
+  status tabs) still functions correctly, narrowing to exactly 6
+  midfielders.
+- Cross-tenant regression: Alpha (classic, Pro) — zero
+  `[data-site-template="editorial"]` markers on `/`; `/roster` and
+  `/schedule` unchanged; **`/shop` still returns HTTP 200 with the full real
+  shop composition and the Nav still shows the Shop link** — Pro behavior is
+  provably unchanged; `/club` correctly 404s (classic never had this
+  route). Bravo (classic, Starter, private preview) — `/` still 404s under
+  its pre-existing onboarding/preview lifecycle gating (unrelated to this
+  phase, unchanged); `/shop` also 404s, though for an anonymous visitor this
+  is indistinguishable from the pre-existing private-preview 404 since
+  tenant-lifecycle gating runs first in `middleware.ts` — Bravo's classic/
+  Starter tier-gating *logic itself* (not the live network response, which
+  private-preview gating already made unreachable for anon visitors before
+  this phase) is directly proven by `shop-tier-gating.test.ts`'s
+  Bravo-shaped `ClubContext` fixture, which exercises the exact same
+  `clubHasFeature`/`Nav.tsx`/`shop/page.tsx` code path Bravo's real requests
+  run through.
+- Three benign, pre-existing findings were investigated and confirmed
+  unrelated to this phase rather than assumed away: (1) a generic
+  `pageerror: Event` on any classic-template `notFound()` dispatch page,
+  confirmed via a side-by-side diagnostic to also fire identically on the
+  pre-existing L5 `/staff` classic-404 path (tied to this sandbox's blocked
+  font/analytics requests, not a real exception); (2) a Next.js Link
+  prefetch-then-navigate `ERR_ABORTED` network cancellation on the `/club`
+  soft-navigation request, standard Next.js router behavior, not a
+  functional failure (the same test's next assertion confirms the
+  destination page actually rendered real content); (3) a Framer-Motion
+  SSR/client style-attribute hydration console warning on the roster
+  filter's decorative flash span under `reducedMotion: "reduce"`
+  (`style={{opacity:0}}` vs. `style={{opacity:"0",transform:"none"}}`) —
+  confirmed pre-existing (this phase touched no roster/motion/framer-motion
+  files at all) and non-blocking (no thrown exception, the roster filter
+  itself still narrows correctly), so out of this phase's scope; not
+  filed as a new bug fix here since it predates L7+L8 entirely and fixing
+  it would mean touching L5's motion/roster code, outside this phase's
+  Part A/B scope.
+- Dev server was stopped after verification; `ps aux` confirmed no
+  `next-server`/`next dev` process remained, and no Chromium process
+  remained either.
+
+No existing test was deleted, skipped, marked todo, loosened, or broadly
+mocked. No ad hoc verification script was checked into the repository.
+
 ## Verification
+
+### Lions L7+L8 gate — 2026-08-12
+
+```text
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run lint
+  passed with the pre-existing legacy warnings (3 useMemo dependency
+  warnings in app/admin/(protected)/analytics/page.tsx, unrelated to this
+  phase)
+
+npm run test:db
+  65/65 passed across 8 files (unchanged from L6 — no schema change this
+  phase)
+
+npm run test:contracts
+  317/317 passed across 23 files (added tests/contracts/editorial-club-
+  story.test.ts and tests/contracts/shop-tier-gating.test.ts; extended
+  tests/contracts/authorization.test.ts)
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  643/643 passed across 53 files
+
+npm run db:types:check
+  generated definitions match the local schema (unchanged — no migration
+  this phase)
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values;
+  two new routes generated versus L6: /club and its
+  /_clubs/[slug]/club mirror
+```
+
+Static scan (repo-wide, excluding `node_modules`/`.git`):
+
+```text
+grep -r "/storage/v1/render/image/" .
+  zero matches in application source (app/, lib/, components/, scripts/,
+  styles/, middleware.ts); only in tests asserting its absence and docs
+  describing the ban
+
+grep -r "supabase-image-loader" .
+  zero matches in application source; only in tests/docs
+
+grep -r "ydvggllbrswfchgjhjhr.supabase.co" .
+  zero matches anywhere in the repository
+```
 
 ### Lions L6 gate — 2026-08-12
 
@@ -1286,13 +1566,30 @@ Known non-blocking warnings:
 
 Phase 8 full local import rehearsal and production-provisioning gate.
 
-On the parallel Lions track, L6 (the real Starter editorial `/schedule` page
-— month rail, status tabs, matchup cards — and the per-fixture
-`/schedule/[fixtureId]` match area) is complete; the Lions tenant now renders
-its full 11-fixture 2026 schedule and every fixture's match area end to end,
-with explicit cross-tenant fixture-isolation coverage. The next Lions phase
-is the full `/club` story page (L7) that L4's story teaser link already
-anticipates.
+**The parallel Lions FC Starter-tier public site project (L0 through L7+L8)
+is now complete.** The local-dev-only synthetic `lions` tenant renders a
+full Starter-tier `editorial` template public site — home, roster, schedule
++ per-fixture match area, and club story — provably isolated from every
+classic tenant, with `/shop` now correctly tier-gated platform-wide (closing
+a real gap where a classic Starter tenant, Bravo, previously showed Shop
+unguarded). What remains explicitly deferred and out of scope, per the
+originally approved plan:
+
+- admin portal work for the Lions tenant (content is currently seed-only)
+- a tryout/recruitment page
+- a real contact page/form (the `/club` page intentionally omits the
+  mockup's decorative form)
+- Pro-tier editorial features: sponsors, stats, a Pro store, season
+  switching, and player profile pages — none of these exist for the
+  editorial template at all yet, since no editorial Pro tenant exists
+- the real Phase 9 "new club rollout" Lions would need before ever going
+  publicly live: an actual domain, real Stripe billing (Lions currently
+  carries only a synthetic seeded Starter subscription), and an
+  operator-provisioned real owner account (the seeded `owner@lions.local`
+  is a local-dev-only fixture)
+
+No further Lions-track work is scheduled; the next platform milestone below
+is unrelated to it.
 
 First, create the immutable Rose City database/Auth/Storage export and complete
 the full local transformation/import/rollback rehearsal. Before any production
