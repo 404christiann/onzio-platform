@@ -57,6 +57,7 @@ export type Staff = {
 };
 
 export type Fixture = {
+  id?: string;             // Supabase UUID — present for DB-fetched fixtures, undefined for static data
   date: string;
   opponent: string;
   opponentShortName?: string | null;
@@ -73,6 +74,8 @@ export type Fixture = {
   state?: string | null;
   roseCityScore?: number | null;
   opponentScore?: number | null;
+  attendance?: number | null;
+  scorers?: string[];
 };
 
 export type ShopProduct = {

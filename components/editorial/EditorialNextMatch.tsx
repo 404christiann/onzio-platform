@@ -6,6 +6,7 @@ import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 import { findLatestResult, findNextFixture, fixtureKickoff } from "@/lib/queries";
+import { opponentMonogram as monogram } from "@/lib/opponent-monogram";
 import type { Fixture } from "@/lib/data";
 
 const matchDateFormat = new Intl.DateTimeFormat("en-US", {
@@ -18,17 +19,6 @@ const matchTimeFormat = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
   minute: "2-digit",
 });
-
-/** "Capital City Athletic" → "CCA", mirroring the mockup's opponent monogram. */
-function monogram(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((word) => word[0])
-    .join("")
-    .slice(0, 3)
-    .toUpperCase();
-}
 
 /**
  * Editorial "Next match" section, ported from the approved concept mockup's

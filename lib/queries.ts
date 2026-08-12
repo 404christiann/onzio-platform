@@ -95,8 +95,15 @@ function mapStaff(row: DBStaff): Staff {
   };
 }
 
+/** Filters a jsonb scorers column down to a string array, or undefined when absent/not an array. */
+function normalizeScorers(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === "string");
+}
+
 function mapFixture(row: DBMatch): Fixture {
   return {
+    id: row.id,
     date: row.date, time: row.time, opponent: row.opponent,
     opponentShortName: row.opponent_short_name,
     opponentLogoUrl: row.opponent_logo_url, competition: row.competition,
@@ -106,6 +113,8 @@ function mapFixture(row: DBMatch): Fixture {
     city: row.city, state: row.state,
     roseCityScore: row.rose_city_score,
     opponentScore: row.opponent_score,
+    attendance: row.attendance,
+    scorers: normalizeScorers(row.scorers),
   };
 }
 
@@ -738,11 +747,39 @@ export async function fetchSchedule(seasonId?: string, clubId?: string): Promise
   });
 }
 
-/** Parses a fixture's local stored date/time into a Date for comparison and display. */
-export function fixtureKickoff(fixture: Fixture): Date {
+/**
+ * Parses a fixture's local stored date/time into a Date for comparison and
+ * display.
+ *
+ * Without `timeZone` (the default, used by every caller before the schedule
+ * page existed), the stored numbers are read back as local Date components —
+ * this round-trips correctly for `now`-relative comparisons and
+ * default-locale formatting within a single JS runtime, which is all
+ * `findNextFixture`/`findLatestResult` and the homepage next-match section
+ * need.
+ *
+ * With an IANA `timeZone` (e.g. the club's `club_identity.time_zone`), the
+ * stored date/time is instead treated as club-local wall-clock time *in that
+ * zone* and converted into a genuinely correct UTC instant, so
+ * `Intl.DateTimeFormat` with an explicit `timeZone` renders correctly
+ * regardless of the visitor's own browser timezone. This mirrors the classic
+ * schedule page's own `fixtureDateTime` conversion technique
+ * (app/(public)/schedule/page.tsx), generalized to an arbitrary zone instead
+ * of a hardcoded one.
+ */
+export function fixtureKickoff(fixture: Fixture, timeZone?: string): Date {
   const [year, month, day] = fixture.date.split("-").map(Number);
   const [hours, minutes] = (fixture.time ?? "00:00").split(":").map(Number);
-  return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0);
+  if (!timeZone) {
+    return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0);
+  }
+  const approxUTC = new Date(
+    Date.UTC(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0),
+  );
+  const utcStr = approxUTC.toLocaleString("en-US", { timeZone: "UTC" });
+  const zonedStr = approxUTC.toLocaleString("en-US", { timeZone });
+  const offsetMs = new Date(utcStr).getTime() - new Date(zonedStr).getTime();
+  return new Date(approxUTC.getTime() + offsetMs);
 }
 
 /** Returns the earliest fixture with a kickoff strictly after `now`, or null. */

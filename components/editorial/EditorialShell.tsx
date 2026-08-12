@@ -57,7 +57,7 @@ export default function EditorialShell({
         crestUrl={crestUrl}
       />
       <EditorialMotion />
-      <EditorialIdentityProvider value={{ identity, crestUrl }}>
+      <EditorialIdentityProvider value={{ identity, crestUrl, crestOnDarkUrl }}>
         <main className="public-main">{children}</main>
       </EditorialIdentityProvider>
       <EditorialFooter

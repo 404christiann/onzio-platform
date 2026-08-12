@@ -125,6 +125,7 @@ async function renderWithProviders(
   element: ReturnType<typeof createElement>,
   identity: ClubIdentityContent | null = LIONS_IDENTITY,
   crestUrl = "",
+  crestOnDarkUrl = "",
 ) {
   const { ClubContextProvider } = await import(
     "@/components/ClubContextProvider"
@@ -136,7 +137,7 @@ async function renderWithProviders(
     createElement(ClubContextProvider, {
       club: LIONS_CLUB,
       children: createElement(EditorialIdentityProvider, {
-        value: { identity, crestUrl },
+        value: { identity, crestUrl, crestOnDarkUrl },
         children: element,
       }),
     }),

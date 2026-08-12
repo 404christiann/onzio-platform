@@ -54,6 +54,8 @@ export type DBMatch = {
   state: string | null;
   rose_city_score: number | null;
   opponent_score: number | null;
+  attendance: number | null;
+  scorers: unknown;
   season_id: string | null;
 };
 

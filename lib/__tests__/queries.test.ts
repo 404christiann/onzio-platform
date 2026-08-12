@@ -472,6 +472,7 @@ describe('fetchSchedule sponsor mapping', () => {
     }))
 
     await expect(fetchSchedule()).resolves.toEqual([{
+      id: 'match-sponsored',
       date: '2027-03-10',
       time: '19:00',
       opponent: 'Pasadena Athletic',
