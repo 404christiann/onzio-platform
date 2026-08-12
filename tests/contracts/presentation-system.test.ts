@@ -294,6 +294,98 @@ function validAcademyDocument() {
   };
 }
 
+function validEditorialDocument() {
+  return {
+    ...validCinematicDocument(),
+    template: { id: "editorial", version: 1 },
+    fontPack: "geist",
+    theme: {
+      surface: {
+        canvas: "#1B2958",
+        elevated: "#FFFFFF",
+        subtle: "#F7F5F1",
+        inverse: "#F0F0F0",
+      },
+      text: {
+        primary: "#F0F0F0",
+        secondary: "#C8CDD8",
+        muted: "#687083",
+        inverse: "#18213A",
+      },
+      action: {
+        primary: "#F0F0F0",
+        primaryHover: "#DADDE5",
+        primaryText: "#1B2958",
+        secondary: "#AD3234",
+      },
+      border: { subtle: "#35426B", strong: "#F0F0F0" },
+      status: {
+        success: "#12A140",
+        warning: "#D69E2E",
+        danger: "#AD3234",
+      },
+      accent: { one: "#AD3234", two: "#F0F0F0" },
+    },
+    modules: {
+      roster: true,
+      schedule: true,
+      store: true,
+      staff: true,
+      tryouts: true,
+      contact: true,
+    },
+    homepage: {
+      sections: [
+        {
+          id: "hero-main",
+          type: "editorial.hero",
+          enabled: true,
+          emptyBehavior: "error",
+          config: {},
+        },
+        {
+          id: "next-match",
+          type: "shared.next-match",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "matchday-slideshow",
+          type: "editorial.slideshow",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "club-story",
+          type: "shared.history",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+      ],
+    },
+    navigation: {
+      groups: [
+        {
+          id: "main",
+          label: null,
+          routes: [
+            "home",
+            "club",
+            "roster",
+            "schedule",
+            "tryouts",
+            "store",
+            "contact",
+          ],
+        },
+      ],
+    },
+  };
+}
+
 describe("Phase 9.1 presentation baselines", () => {
   it("records reviewable Rose City and Deportivo baseline inventories", async () => {
     const roseCity = await readFile(
@@ -375,6 +467,31 @@ describe("Phase 9.2 presentation schema and registries", () => {
       "schedule",
       "club",
       "programs",
+      "store",
+      "contact",
+    ]);
+  });
+
+  it("accepts a pinned editorial document for the Lions editorial template", async () => {
+    const { parsePresentationDocument } = await loadPresentation();
+    const parsed = parsePresentationDocument(validEditorialDocument(), {
+      surface: "production",
+    });
+
+    expect(parsed.template).toEqual({ id: "editorial", version: 1 });
+    expect(parsed.fontPack).toBe("geist");
+    expect(parsed.homepage.sections.map((section) => section.type)).toEqual([
+      "editorial.hero",
+      "shared.next-match",
+      "editorial.slideshow",
+      "shared.history",
+    ]);
+    expect(parsed.navigation.groups[0]?.routes).toEqual([
+      "home",
+      "club",
+      "roster",
+      "schedule",
+      "tryouts",
       "store",
       "contact",
     ]);

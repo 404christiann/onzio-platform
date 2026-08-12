@@ -5,8 +5,14 @@ export type TemplateKey =
   | "cinematic@1"
   | "heritage@1"
   | "clubhouse@1"
-  | "academy@1";
-export type TemplateId = "cinematic" | "heritage" | "clubhouse" | "academy";
+  | "academy@1"
+  | "editorial@1";
+export type TemplateId =
+  | "cinematic"
+  | "heritage"
+  | "clubhouse"
+  | "academy"
+  | "editorial";
 export type ProvenanceStatus =
   | "verified_public_source"
   | "club_supplied"
@@ -69,7 +75,7 @@ const sectionSchema = z.object({
 const documentSchema = z.object({
   schemaVersion: z.literal(1),
   template: z.object({
-    id: z.enum(["cinematic", "heritage", "clubhouse", "academy"]),
+    id: z.enum(["cinematic", "heritage", "clubhouse", "academy", "editorial"]),
     version: z.literal(1),
   }),
   fontPack: z.string(),
@@ -138,7 +144,13 @@ export type ProvenancedValue<T> = Omit<
 export type SectionRegistration = {
   type: string;
   version: 1;
-  scope: "shared" | "cinematic" | "heritage" | "clubhouse" | "academy";
+  scope:
+    | "shared"
+    | "cinematic"
+    | "heritage"
+    | "clubhouse"
+    | "academy"
+    | "editorial";
   contentDomain: string;
   compatibleTemplates: TemplateKey[];
   requiredModule: string | null;
@@ -228,6 +240,7 @@ export const fontPacks: Record<string, FontPackRegistration> = {
       "heritage@1",
       "clubhouse@1",
       "academy@1",
+      "editorial@1",
     ],
   },
   "archivo-sora": {
@@ -238,7 +251,7 @@ export const fontPacks: Record<string, FontPackRegistration> = {
   "geist": {
     key: "geist",
     displayName: "Geist",
-    compatibleTemplates: ["clubhouse@1"],
+    compatibleTemplates: ["clubhouse@1", "editorial@1"],
   },
   // DCFC-D104: no existing pack matched the approved academy@1 type stack --
   // Montserrat headings, Inter body/UI, DM Sans desktop navigation.
@@ -292,7 +305,13 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "shared",
     contentDomain: "matches",
-    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1"],
+    compatibleTemplates: [
+      "cinematic@1",
+      "heritage@1",
+      "clubhouse@1",
+      "academy@1",
+      "editorial@1",
+    ],
     requiredModule: "schedule",
     requiredEntitlement: "starter",
     cardinality: "single",
@@ -304,7 +323,13 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "shared",
     contentDomain: "about",
-    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1"],
+    compatibleTemplates: [
+      "cinematic@1",
+      "heritage@1",
+      "clubhouse@1",
+      "academy@1",
+      "editorial@1",
+    ],
     requiredModule: null,
     requiredEntitlement: null,
     cardinality: "single",
@@ -469,6 +494,30 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     compatibleTemplates: ["clubhouse@1"],
     requiredModule: "sponsors",
     requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "editorial.hero": {
+    type: "editorial.hero",
+    version: 1,
+    scope: "editorial",
+    contentDomain: "homepage",
+    compatibleTemplates: ["editorial@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "editorial.slideshow": {
+    type: "editorial.slideshow",
+    version: 1,
+    scope: "editorial",
+    contentDomain: "homepage_slideshow_photos",
+    compatibleTemplates: ["editorial@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
     cardinality: "single",
     emptyBehavior: "hide",
     productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
@@ -646,6 +695,23 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "contact",
       "affiliations",
     ],
+  },
+  // Lions editorial concept template (E2). Like clubhouse@1 and academy@1
+  // before it, this is a platform template, not Lions-exclusive -- any club
+  // may be assigned it, following the same extraction precedent.
+  "editorial@1": {
+    id: "editorial",
+    version: 1,
+    key: "editorial@1",
+    displayName: "Lions Editorial",
+    originNote: "Based on the approved Lions editorial concept mockup visual system.",
+    defaultFontPack: "geist",
+    compatibleFontPacks: ["geist", "bebas-inter"],
+    defaultSections: ["editorial.hero", "shared.next-match", "editorial.slideshow", "shared.history"],
+    supportedSections: ["editorial.hero", "shared.next-match", "editorial.slideshow", "shared.history"],
+    defaultRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
+    supportedRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
+    supportedModules: ["roster", "schedule", "store", "staff", "tryouts", "contact"],
   },
 };
 
