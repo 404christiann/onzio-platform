@@ -620,7 +620,216 @@ documented Starter-tier behavior exactly.
   the retired placeholder; no other existing test was deleted, skipped,
   marked todo, loosened, or broadly mocked.
 
+### Lions L6 — real Starter editorial schedule + match-area pages (2026-08-12)
+
+Added the editorial template's `/schedule` page (month rail, All/Upcoming/
+Results status tabs, solid-color matchup cards) and the per-fixture
+`/schedule/[fixtureId]` match area, matching the approved mockup's
+`ScheduleScreen`/`ScheduleMatchCard`/`MatchAreaScreen` design.
+
+- Extended `lib/data.ts`'s `Fixture` type and `lib/db-types.ts`'s `DBMatch`
+  type with `id`/`attendance`/`scorers` (all optional on `Fixture`, so no
+  other caller — including the legacy static `schedule` array and every
+  existing test's hand-built fixtures — needed a change) and taught
+  `lib/queries.ts`'s `mapFixture` to surface them: `id` passes through
+  directly, `attendance` passes through raw (`number | null`, matching the
+  nullable DB column), and a new `normalizeScorers` helper filters the
+  jsonb `scorers` column to a string array or `undefined` when absent, so
+  the one pre-existing exact-shape unit test in
+  `lib/__tests__/queries.test.ts` needed only a single, genuinely-justified
+  addition (`id`) to its expected object rather than any loosening.
+- Extended `lib/queries.ts`'s `fixtureKickoff` with an optional second
+  `timeZone` parameter (backward compatible — every existing 1-arg caller,
+  including `findNextFixture`/`findLatestResult`/`EditorialNextMatch`, is
+  unchanged). With a zone, it converts the club-local stored wall-clock
+  date/time into a genuinely correct UTC instant using the same
+  round-trip-offset technique the classic schedule page's own
+  `fixtureDateTime` already uses for its hardcoded `America/Los_Angeles`,
+  generalized to an arbitrary IANA zone (`club_identity.time_zone`,
+  `America/New_York` for Lions) instead of duplicating that math a second
+  time.
+- `lib/opponent-monogram.ts`: extracted the multi-letter opponent-monogram
+  derivation (`"Capital City Athletic"` → `"CCA"`) that `EditorialNextMatch`
+  already had inline in L4 into a shared function, now reused by both
+  `EditorialNextMatch` and the new `EditorialScheduleMatchCard` instead of
+  being duplicated a second time. This is unrelated to the classic
+  template's `components/OpponentCrest.tsx`, which derives a different
+  single-letter initial for its own visual treatment.
+- `components/editorial/EditorialIdentityContext.tsx` +
+  `EditorialShell.tsx`: added `crestOnDarkUrl` (already resolved with the
+  L3/L4 fallback-to-primary-crest behavior baked in by
+  `fetchEditorialCrests`) to the shared identity context alongside the
+  existing `identity`/`crestUrl`, so schedule surfaces can reuse the same
+  crest the footer already receives without a second fetch.
+- `components/editorial/EditorialScheduleMatchCard.tsx`: solid-color
+  matchup card — Lions' crest-on-dark (or an initials fallback) on
+  whichever side (`fixture.home`) Lions actually play, an opponent text
+  monogram (no opponent crest assets are seeded for Lions), the recorded
+  score in home-left/away-right order for played fixtures or the kickoff
+  time for upcoming ones, a `data-outcome="W"|"L"|"D"` chip derived from
+  `roseCityScore`/`opponentScore` directly (independent of home/away side —
+  verified this against the mockup's own `result.clubScore >
+  result.opponentScore` logic before assuming it), a `<dl>` of date/venue
+  formatted through `fixtureKickoff(fixture, timeZone)` plus an explicit
+  `timeZone` option on `Intl.DateTimeFormat`, and an action link (`"Go to
+  next match"` when `isNext`, else `"Match area →"`) omitted entirely via
+  `showAction={false}` for its reuse inside the match area.
+- `components/editorial/EditorialScheduleView.tsx` (presentational) +
+  `EditorialSchedule.tsx` (fetch container): titled "Team schedule". The
+  container fetches once via `fetchActiveSeason`/`fetchSchedule` — the same
+  tenant-scoped helpers the classic `/schedule` page already calls, no
+  duplicate query added — and passes the active season's fixtures down.
+  The view renders a month rail built from the fixtures' actual distinct
+  months (`distinctMonths`), defaulting to the month of the first upcoming
+  fixture (`initialMonthKey`, falling back to the last fixture's month when
+  every fixture has been played, then to the current month when the list is
+  empty — mirroring the mockup's own `initialMonth`), an unboxed
+  All/Upcoming/Results status-tab row using the `--club-secondary`-derived
+  `--accent` token for its active marker (never a hardcoded color), and a
+  Framer Motion `AnimatePresence` exit/reveal transition on month/filter
+  change with a `prefers-reduced-motion` fallback, following the exact
+  pattern L5's roster filter established. `isPlayedFixture`,
+  `visibleFixturesForFilter`, and `firstUpcomingFixtureId` are pure,
+  exported helpers, following the roster view's convention of keeping
+  filter logic independently unit-testable. No season selector renders
+  anywhere — Starter is locked to the single active season
+  (`lib/club-features.ts` was not touched and was re-confirmed to never
+  grant `seasons` to Starter) — not even a disabled placeholder.
+- `components/editorial/EditorialMatchArea.tsx` (+ exported
+  `MatchAreaContent` presentational piece, so the found/not-found states and
+  the played/upcoming eyebrow can be rendered and tested directly without
+  mocking the fetch effect, following the same testability motivation as
+  L5's container/view split): back link to `/schedule`, an eyebrow reading
+  "Next match" (upcoming) or "Match report" (played), the match card
+  without its action link (`showAction={false}`), and an aside with
+  kickoff/venue setting, `attendance` (played fixtures only, from the real
+  seeded column), and `scorers` (jsonb array, played fixtures only) or a
+  placeholder sentence when there's nothing to report yet. A clean
+  not-found state (never a crash) renders when the requested fixture id
+  isn't found in the tenant-scoped fixture list. **Reuses the same
+  `fetchActiveSeason`/`fetchSchedule` tenant-scoped query
+  `EditorialSchedule` uses — no duplicate query added — so a fixture id
+  belonging to a different club can never resolve here**: the query is
+  filtered to `club.id` from the verified tenant context (never a
+  client-supplied value), backed by `onzio.matches` RLS as a second layer,
+  so a foreign id simply never appears in the result set. Verified this
+  explicitly at the database level (see below) rather than assuming it.
+- `app/(public)/schedule/page.tsx`: added the same `club.siteTemplate ===
+  "editorial"` client dispatch L3-L5 established, renaming the existing
+  classic function to `ClassicSchedulePage` (its many extra
+  `useState`/`useEffect`/`useRef`/`useMemo` hooks would violate React's
+  rules of hooks behind an early-return dispatcher, per the exact
+  constraint L5 first hit with the roster page).
+- `app/(public)/schedule/[fixtureId]/page.tsx` (+
+  `app/%5Fclubs/[slug]/schedule/[fixtureId]/page.tsx` mirror, matching the
+  established `export { default } from ...` mirror pattern exactly):
+  dispatches to `EditorialMatchArea` for editorial tenants; classic tenants
+  get `notFound()`, since no classic per-fixture route existed before this
+  phase (the classic fixture rows have no detail link at all) — this
+  preserves the same "never existed" outcome instead of introducing new
+  classic-facing behavior, mirroring the `/staff` dispatcher's precedent
+  from L5.
+- `middleware.ts`: `PUBLIC_TENANT_PATHS` is an exact-match `Set`, which
+  cannot express the new dynamic `/schedule/[fixtureId]` segment (checked
+  this against how `/roster` and `/staff` were handled in L5 first, per the
+  phase brief). Added a small `isPublicTenantPath()` predicate that keeps
+  the existing exact-match check and additionally allows any `/schedule/*`
+  path — strictly additive, so no existing path's rewrite behavior changes.
+- `styles/editorial.css`: ported the mockup's `.schedule-*`/`.match-area-*`
+  rules (base + 1050px/800px/540px responsive, matching the file's existing
+  breakpoint structure) scoped under the existing
+  `[data-site-template="editorial"]` wrapper, deriving every color from the
+  existing `--club-*`/derived tokens (no new hex values).
+  `EditorialMotion.tsx` was **not modified** — its generic `section:not(.hero)`
+  scroll-reveal selector already matches `.schedule-month-section` as a safe
+  no-op, and `.schedule-match-card` was deliberately left out of its
+  `CARD_SELECTOR` card-stagger list since Framer Motion already owns
+  per-card entrance timing here, exactly mirroring how the mockup's own
+  `PublicMotion.tsx` + `ScheduleScreen.tsx` combination behaves (checked
+  this against the mockup before assuming it).
+- `EditorialHeader`'s nav and `EditorialFooter`'s Explore column already
+  linked to `/schedule` since L3/L4; confirmed (not changed) that this now
+  resolves to the real page instead of the classic-only list it pointed at
+  before this phase.
+- No `lib/club-features.ts`, classic component, or classic route was
+  touched. No stats, sponsors, or season selector anywhere.
+- Added `tests/contracts/editorial-schedule.test.ts` (44 tests): month-rail
+  derivation and initial-month selection against the real seeded May-Sept
+  2026 fixtures, All/Upcoming/Results filtering, W/L/D chip correctness
+  against real seeded Win (2026-05-09, 2-0)/Draw (2026-05-16, 1-1)/Loss
+  (2026-06-06, 0-1) fixtures, home/away score orientation, "Go to next
+  match" vs "Match area" labeling exercised against the real first-upcoming
+  fixture id, the opponent-monogram fallback, an explicit no-season-selector
+  assertion (render + source, across every new component), the schedule
+  empty state, match-area attendance/scorers presence for played fixtures
+  and their absence (with placeholder copy) for upcoming ones, a clean
+  not-found render for an unresolved fixture, the dispatch/mirror/
+  middleware wiring, and a classic-component regression check. Added
+  `tests/database/editorial-schedule-isolation.test.ts` (4 tests, real
+  local Supabase): proves a real Lions fixture id is not resolvable when
+  queried under Alpha's tenant scope and a synthetic Alpha fixture id is not
+  resolvable under Lions' tenant scope, both at the raw RLS-backed query
+  level and through the real `fetchSchedule()` helper the editorial pages
+  use — Alpha (not Bravo) was used because it's `active`/`live`/`pro` and
+  therefore anon-readable, letting the test prove real isolation rather than
+  an access-denied false negative. No existing test was deleted, skipped,
+  marked todo, loosened, or broadly mocked.
+- Manual browser verification (real headless Chromium, following L5's
+  precedent of not trusting the automated suite alone for hydration/render
+  issues): confirmed the month rail/status tabs/matchup cards render
+  correctly against real seed data at desktop and mobile widths, confirmed
+  a played fixture's match area shows the correct score/W-chip/attendance/
+  scorers, confirmed the first upcoming fixture's match area shows "Next
+  match"/"Match area" heading and no attendance/scorers section, confirmed
+  an invalid fixture id renders the clean not-found state (HTTP 200, no
+  crash), and confirmed Alpha's classic `/schedule` is completely
+  unaffected (no `[data-site-template="editorial"]` marker, no
+  `.schedule-calendar-page` markup). No hydration errors or React warnings
+  were found this time — every console/network artifact observed
+  (`/_vercel/insights/script.js` 404, Google Fonts `ERR_CONNECTION_RESET`,
+  local-storage-object `ERR_BLOCKED_BY_ORB`) was independently reproduced on
+  the untouched Alpha homepage too, confirming they are this sandbox's
+  pre-existing network/environment limitations, not regressions from this
+  phase.
+
 ## Verification
+
+### Lions L6 gate — 2026-08-12
+
+```text
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run lint
+  passed with the pre-existing legacy warnings (3 useMemo dependency
+  warnings in app/admin/(protected)/analytics/page.tsx, unrelated to this
+  phase)
+
+npm run test:db
+  65/65 passed across 8 files (added
+  tests/database/editorial-schedule-isolation.test.ts)
+
+npm run test:contracts
+  291/291 passed across 21 files (added
+  tests/contracts/editorial-schedule.test.ts)
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  617/617 passed across 51 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values;
+  28 routes generated (2 more than L5: /schedule/[fixtureId] and its
+  /_clubs/[slug]/schedule/[fixtureId] mirror)
+```
 
 ### Lions L5 gate — 2026-08-12
 
@@ -1077,12 +1286,13 @@ Known non-blocking warnings:
 
 Phase 8 full local import rehearsal and production-provisioning gate.
 
-On the parallel Lions track, L5 (the real Starter editorial roster page —
-filter control, non-interactive player/staff cards, `/staff` redirect) is
-complete; the Lions tenant now renders its full 18-player/5-staff roster end
-to end. The next Lions phase is the editorial `/schedule` page (Starter
-scope), followed later by the full `/club` story page (L7) that L4's story
-teaser link already anticipates.
+On the parallel Lions track, L6 (the real Starter editorial `/schedule` page
+— month rail, status tabs, matchup cards — and the per-fixture
+`/schedule/[fixtureId]` match area) is complete; the Lions tenant now renders
+its full 11-fixture 2026 schedule and every fixture's match area end to end,
+with explicit cross-tenant fixture-isolation coverage. The next Lions phase
+is the full `/club` story page (L7) that L4's story teaser link already
+anticipates.
 
 First, create the immutable Rose City database/Auth/Storage export and complete
 the full local transformation/import/rollback rehearsal. Before any production
