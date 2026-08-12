@@ -44,7 +44,7 @@ export default async function PaymentsPage() {
       }
     : null;
   const uiState = resolvePaymentsUiState(mirrorRow);
-  const priceLabel = await getConfiguredStripePriceLabel();
+  const priceLabel = await getConfiguredStripePriceLabel(club.stripePriceId);
 
   return (
     <div className="mx-auto max-w-4xl">
