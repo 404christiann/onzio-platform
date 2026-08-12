@@ -23,6 +23,10 @@ export type ClubContext = {
   // Derived from the presentation package rather than restated, so registering
   // a new template cannot leave this union silently stale.
   presentationTemplateKey: TemplateKey | null;
+  // Operator-only public-store toggle (onzio.clubs.store_enabled, added in
+  // Lions E1). Added here in E3 so editorial@1's nav can gate its "Store"
+  // item off real tenant data instead of guessing -- see EditorialHeader.
+  storeEnabled: boolean;
 };
 
 const TEST_CONTEXTS = {
@@ -38,6 +42,7 @@ const TEST_CONTEXTS = {
     tier: "pro",
     primaryColor: "#111111",
     secondaryColor: "#E7001B",
+    storeEnabled: true,
   },
   "bravo-onzio.vercel.app": {
     id: "22222222-2222-4222-8222-222222222222",
@@ -51,6 +56,7 @@ const TEST_CONTEXTS = {
     tier: "starter",
     primaryColor: "#222222",
     secondaryColor: "#666666",
+    storeEnabled: true,
   },
 } as const;
 
@@ -81,7 +87,7 @@ const resolveDatabaseContext = cache(
     const { data: domain, error } = await onzio
       .from("club_domains")
       .select(
-        "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color)",
+        "club_id, hostname, clubs!inner(id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color, store_enabled)",
       )
       .eq("hostname", hostname)
       .eq("active", true)
@@ -101,6 +107,7 @@ const resolveDatabaseContext = cache(
       tier: ClubContext["tier"];
       primary_color: string | null;
       secondary_color: string | null;
+      store_enabled: boolean;
     };
 
     // These three depend only on club.id/userId, not on each other, so they
@@ -149,6 +156,7 @@ const resolveDatabaseContext = cache(
       primaryColor: club.primary_color,
       secondaryColor: club.secondary_color,
       presentationTemplateKey,
+      storeEnabled: club.store_enabled,
     };
   },
 );
@@ -195,7 +203,7 @@ const resolveClubContextBySlug = cache(
     const onzio = supabase.schema("onzio");
     const { data: club, error } = await onzio
       .from("clubs")
-      .select("id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color")
+      .select("id, slug, name, lifecycle, public_access, kind, stripe_price_id, tier, primary_color, secondary_color, store_enabled")
       .eq("slug", slug)
       .maybeSingle();
     if (error || !club) failContract("UNKNOWN_TENANT");
@@ -247,6 +255,7 @@ const resolveClubContextBySlug = cache(
       primaryColor: club.primary_color,
       secondaryColor: club.secondary_color,
       presentationTemplateKey,
+      storeEnabled: club.store_enabled,
     };
   },
 );
