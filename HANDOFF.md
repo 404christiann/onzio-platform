@@ -471,6 +471,118 @@ story" teaser, exactly the required section order.
   `branding`, `homepage`, `roster`, `schedule` per `lib/club-features.ts`,
   which was not touched); no season selector. `/shop` gating is untouched
   and out of scope. No classic component was touched.
+
+### Lions L5 — real Starter editorial roster page and `/staff` redirect (2026-08-12)
+
+Added the editorial template's `/roster` page: a compact right-aligned
+filter control, non-interactive Starter player/staff cards, and the
+`/staff -> /roster#staff` redirect, matching the approved mockup's
+documented Starter-tier behavior exactly.
+
+- `components/editorial/EditorialPlayerCard.tsx`: non-interactive
+  (`data-interactive="false"`, `<article>` not `<button>`, no click handler,
+  no modal) Starter player card ported from the mockup's `PlayerCard.tsx`.
+  Big jersey number, position label, small-first/big-last name typography
+  via an exported `splitPlayerName` helper (splits on the last space — the
+  real seed stores one combined `name` string rather than the mockup's
+  separate `firstName`/`lastName` fields), and a full-color crest fallback
+  (arriving as a `crestUrl` prop, never a hardcoded club asset) when
+  `player.image` is empty, which is every seeded Lions player today (L2
+  seeded no player photos).
+- `components/editorial/EditorialStaffCard.tsx`: the same non-interactive
+  treatment for staff, ported from `StaffCard.tsx`. Initials are derived
+  from the name via an exported `staffInitials` helper rather than trusting
+  the stored `staff.initials` column, which defaults to `''` and is never
+  populated by the Lions seed — verified this against the actual seed
+  before assuming it, per the phase brief.
+- `components/editorial/EditorialRosterView.tsx` (presentational) +
+  `components/editorial/EditorialRoster.tsx` (fetch container): split
+  following the `EditorialHome`/`EditorialNextMatch` convention from L4 so
+  the view stays independently testable without mocking Supabase. The
+  container fetches once via the existing generic tenant-scoped
+  `fetchRoster`/`fetchStaff` (no duplicate query added — reused the same
+  functions the classic `/roster` page already calls) and passes the
+  result down. The view opens directly with the filter control — no roster
+  hero or introductory marketing copy — and renders Goalkeepers ->
+  Defenders -> Midfielders -> Forwards (each with a player count) followed
+  by a separate "Technical staff" section anchored `#staff`. Filter changes
+  use Framer Motion (`AnimatePresence`/`motion.*`) for the exit/reveal
+  transition with synchronized card rows, confirmed against the mockup's
+  actual `RosterScreen.tsx` (not assumed) before building it. Pure filter
+  logic (`visibleGroupsForFilter`, `showsStaffSection`,
+  `resultLabelForFilter`, `playersByPosition`) is extracted and exported
+  for direct unit testing, independent of animation timing.
+- `framer-motion` was not already a dependency (checked `package.json`
+  first, per the phase brief) — added `^13.1.0`, compatible with the
+  existing React 19 peer range.
+- `EditorialMotion.tsx` was **not modified** — its `.player-card`/
+  `.staff-card` GSAP ScrollTrigger stagger selectors were already pre-built
+  as a safe no-op since L3, so the roster page's scroll-into-view reveal
+  and the Framer Motion filter transition now run as two genuinely
+  different, coexisting animation systems, exactly matching what the
+  mockup's own `PublicMotion.tsx` + `RosterScreen.tsx` combination does.
+- `styles/editorial.css`: ported the mockup's `.roster-*`/`.player-card*`/
+  `.staff-card*` rules (base + 1050px/800px/540px responsive variants,
+  matching the file's existing breakpoints exactly), scoped under the
+  existing `[data-site-template="editorial"]` wrapper. Intentionally
+  omitted the mockup's `[data-interactive="true"]` hover-state rules and
+  all stats/hint markup — Starter never sets that attribute or renders
+  those elements, so porting inert CSS for a Pro-only future state was
+  judged not worth the dead weight.
+- `app/(public)/roster/page.tsx`: added the same `club.siteTemplate ===
+  "editorial"` client dispatch that `app/(public)/page.tsx` established in
+  L3, reusing `next/dynamic` for the editorial import. The existing classic
+  `RosterPage` function was renamed `ClassicRosterPage`, since leaving it
+  un-renamed and adding an early conditional return in front of it would
+  violate React's rules of hooks (the classic branch has extra
+  `useState`/`useEffect`/`useRef` calls the dispatcher itself does not) —
+  checked `app/(public)/page.tsx`'s equivalent dispatcher first and
+  confirmed it has no such extra hooks, so this repository had not
+  previously exercised that constraint.
+- `/staff`: added `app/(public)/staff/page.tsx` (client dispatcher:
+  `redirect("/roster#staff")` for editorial, `notFound()` for classic —
+  classic never had a `/staff` route, so this preserves the exact same 404
+  outcome instead of introducing new classic-facing behavior) and its
+  `app/%5Fclubs/[slug]/staff/page.tsx` mirror, matching the roster mirror's
+  `export { default } from ...` pattern exactly. Discovered and fixed a
+  necessary `middleware.ts` gap: `PUBLIC_TENANT_PATHS` is an explicit
+  allowlist gating which paths get rewritten to `/_clubs/{slug}/...` (where
+  `ClubContextProvider` actually exists); a path missing from it bypasses
+  tenant resolution entirely and would crash `useClubContext()`. Added
+  `/staff` to that Set — a strictly additive change that does not alter any
+  existing path's behavior.
+- No `/roster/[playerId]` route, no stats, no hover state, no profile
+  modal — explicitly Pro/future scope per the phase brief. No
+  `lib/club-features.ts`, classic component, or classic route was touched.
+- **Real bug found and fixed during manual browser verification, not by
+  the automated suite**: a genuine React hydration mismatch. The
+  `.roster-filter-flash` span was originally rendered conditionally
+  (`{!prefersReducedMotion && <motion.span .../>}`), copied from the
+  mockup's pattern. `useReducedMotion()` always returns `null` (falsy)
+  during SSR — confirmed by reading `motion-dom`'s source — so the server
+  always rendered the flash span, while a real reduced-motion *client*
+  renders `true` and omits it, producing a structural tree mismatch caught
+  only by loading the page in an actual `reducedMotion: "reduce"` browser
+  context (the automated contract suite, which renders via
+  `renderToStaticMarkup` and never executes effects, could not have caught
+  this). Fixed by always mounting the span and expressing reduced motion
+  only through prop *values* (permanently transparent, zero duration),
+  which does not change element presence/position and is therefore safe
+  for hydration. Reverified with a real reduced-motion browser context:
+  zero page errors.
+- Added `tests/contracts/editorial-roster.test.ts` (23 tests): card
+  non-interactivity (article not button, no `onClick`/`useState`/`Modal` in
+  source) for both player and staff cards, number/position/name-split
+  rendering, crest-fallback vs. real-photo image source selection,
+  single-word name splitting, staff-initials derivation from name, the
+  pure filter-logic helpers exercised directly (not just through
+  animation), real seeded 2/6/6/4 group order and counts plus 18/5 total
+  card counts rendered in a real `EditorialRosterView` render, no
+  stats/season-selector/sponsor content, the reduced-motion source
+  contract plus a real reduced-motion render assertion that doesn't throw,
+  the `/roster` and `/staff` dispatch wiring (including the middleware
+  allowlist entry), and a classic-component regression check. No existing
+  test was deleted, skipped, marked todo, loosened, or broadly mocked.
 - **Test-infrastructure fix required and made, documented here because it
   affects how every future contract test that imports `lib/queries.ts` (or
   anything else built on `lib/supabase.ts`) must behave**: plain `vitest`
@@ -509,6 +621,86 @@ story" teaser, exactly the required section order.
   marked todo, loosened, or broadly mocked.
 
 ## Verification
+
+### Lions L5 gate — 2026-08-12
+
+```text
+npx tsc --noEmit --pretty false --incremental false
+  passed
+
+npm run lint
+  passed with the pre-existing legacy warnings
+
+npm run test:db
+  61/61 passed across 7 files
+
+npm run test:contracts
+  254/254 passed across 20 files
+
+npm run test:architecture
+  18/18 passed
+
+npm test (with loopback-only local Supabase values)
+  576/576 passed across 49 files
+
+npm run db:types:check
+  generated definitions match the local schema
+
+supabase db lint --local --schema onzio,onzio_private
+  no schema errors
+
+npm run build
+  passed with loopback-only Supabase and inert test-shaped Stripe values;
+  27 routes generated (2 more than L4: /staff and its /_clubs/[slug]/staff
+  mirror)
+```
+
+Manual proof against the local Supabase stack (`npm run dev`, real headless
+Chromium via `playwright-core`; the dev server was restarted once, with
+`.next` cleared, after an unrelated stale-cache webpack error surfaced from
+running `npm run build` against the same `.next` directory a running `npm
+run dev` was using — not a defect in this phase's code, confirmed by a
+clean restart producing zero errors):
+
+- `http://lions.localhost:3000/roster` renders all 18 seeded players (2
+  goalkeepers, 6 defenders, 6 midfielders, 4 forwards — matching the real
+  seed exactly) and all 5 seeded staff, in Goalkeepers -> Defenders ->
+  Midfielders -> Forwards -> Technical staff order, with a compact
+  right-aligned filter control and no roster hero. Every one of the 23
+  cards carries `data-interactive="false"` (zero carry `"true"`); all 23
+  card images loaded successfully (`naturalWidth > 0`) and are the real
+  seeded Lions crest — expected, since L2 seeded no per-player photos.
+  Clicking a player card mounted no modal/dialog; hovering it produced no
+  class change. Selecting "Midfielders" in the filter correctly narrowed
+  the DOM to exactly the `midfielders` group with 6 cards; selecting
+  "Technical staff" correctly showed 0 position groups and 5 staff cards.
+  Zero console/page errors.
+- A real reduced-motion browser context (`reducedMotion: "reduce"`)
+  produced zero page errors and the filter still correctly narrowed the
+  DOM on selection — this is the run that caught and confirmed the fix for
+  the hydration mismatch described above.
+- `http://lions.localhost:3000/staff` navigated to
+  `http://lions.localhost:3000/roster#staff` (confirmed via both `curl`
+  303/307 inspection and a real browser's final resolved URL).
+  `http://alpha.localhost:3000/staff` returned HTTP 404, matching its
+  exact pre-existing behavior (Alpha never had a `/staff` route).
+- `http://alpha.localhost:3000/roster` (classic) has zero
+  `[data-site-template="editorial"]` elements and its existing `<nav>`
+  intact — completely unaffected. Its player/staff counts render as `0`
+  because Alpha's synthetic Phase 2 fixture seeds no `onzio.players` rows
+  at all (confirmed via `grep` on `supabase/seed.sql` — the only
+  `insert into onzio.players` statement in the file is the Lions block),
+  a pre-existing condition unrelated to this phase, not a regression.
+- Mobile viewport (390×844): `document.body.scrollWidth === window.innerWidth
+  === 390` on `/roster` — no horizontal overflow. A screenshot at both
+  desktop (1440px) and mobile (390px) widths was visually reviewed: crest
+  placeholder cards render as intentional match-poster tiles (large ghost
+  number, crest badge, number/position line, small-first/big-last name),
+  not as broken images.
+- Dev server process was stopped after verification; `ps aux` confirmed no
+  `next-server`/`next dev` process remained. All ad hoc verification
+  scripts used during this phase were deleted before the final commit —
+  none are checked in.
 
 ### Lions L4 gate — 2026-08-12
 
@@ -885,12 +1077,12 @@ Known non-blocking warnings:
 
 Phase 8 full local import rehearsal and production-provisioning gate.
 
-On the parallel Lions track, L4 (the real Starter editorial homepage — hero,
-next match, matchday gallery, "Our story" teaser) is complete; the Lions
-tenant now renders real seeded content end to end on its homepage. The next
-Lions phase is roster and schedule pages once Starter scope for those is
-defined, followed later by the full `/club` story page (L7) that the story
-teaser's link already anticipates.
+On the parallel Lions track, L5 (the real Starter editorial roster page —
+filter control, non-interactive player/staff cards, `/staff` redirect) is
+complete; the Lions tenant now renders its full 18-player/5-staff roster end
+to end. The next Lions phase is the editorial `/schedule` page (Starter
+scope), followed later by the full `/club` story page (L7) that L4's story
+teaser link already anticipates.
 
 First, create the immutable Rose City database/Auth/Storage export and complete
 the full local transformation/import/rollback rehearsal. Before any production
