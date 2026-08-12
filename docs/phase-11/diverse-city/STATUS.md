@@ -1,5 +1,48 @@
 # Diverse City FC Status
 
+## 2026-08-12 - Nationality flags now render for all 74 admin-supported nationalities, not just 6
+
+**Package:** none — ad hoc bug fix from a live report on diversecityfc.com:
+players with e.g. "Polish" nationality rendered no flag at all on the public
+roster.
+
+**Root cause:** two independently-maintained lists. The admin roster editor
+(`app/admin/(protected)/roster/page.tsx`) offered 74 nationalities, but
+`lib/flags.ts`'s hardcoded `FLAG_COUNTRY_CODES` only knew 6, so
+`getFlagCountryCode()` returned `null` for the other 68 and
+`components/NationalityFlag.tsx` rendered nothing. Shared code — affected
+every non-Rose-City club on the platform.
+
+**Fix:** single source of truth. New `lib/nationalities.ts` holds the
+74-entry `{ flag, label }` array (moved verbatim from the admin roster page,
+which now imports it). `lib/flags.ts` now derives `FLAG_COUNTRY_CODES`
+mechanically from the flag emoji via a new exported
+`flagEmojiToCountryCode()` helper (decodes the two regional-indicator code
+points to a lowercase ISO alpha-2 code, throws loudly on malformed input),
+registering both the label and the emoji for every entry. Rose City's
+separate `FLAG_FILES`/`getFlagUrl` path untouched. New regression tests in
+`lib/__tests__/flags.test.ts` include a completeness check asserting every
+`NATIONALITIES` entry resolves to a valid code, so a 75th nationality can
+never silently ship flagless again.
+
+**Files changed:** `lib/nationalities.ts` (new),
+`lib/flags.ts`, `app/admin/(protected)/roster/page.tsx`,
+`lib/__tests__/flags.test.ts`.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- `npm run lint` 0 errors (only the 5 known baseline warnings).
+- `npm run test:legacy` 279/279, `npm run test:contracts` 522/522
+  (including `tests/contracts/lions-roster-presentation.test.ts`,
+  unmodified), `npm run test:architecture` 20/20.
+- `npm run build` clean.
+- `npm run test:db` not runnable here — no local Supabase (all failures are
+  the standard `[RED CONTRACT] Local Supabase is unavailable` infra error,
+  unrelated to this change, which touches no database code).
+
+**Next step:** none — fix is complete pending review/deploy.
+
 ## 2026-08-09 - Template-default text fields now show real text, not a placeholder hint, in four places
 
 **Package:** none — ad hoc, from Christian's continued live review of the

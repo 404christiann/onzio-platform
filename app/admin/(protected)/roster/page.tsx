@@ -18,95 +18,12 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } from "@/lib/roster-images";
 import { cn } from "@/lib/utils";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { NATIONALITIES } from "@/lib/nationalities";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import {
   SlidingPanel,
   type SlidingPanelDirection,
 } from "@/components/ui/sliding-panel";
-// ── Nationalities ─────────────────────────────
-
-const NATIONALITIES = [
-  // Americas
-  { flag: "🇺🇸", label: "American" },
-  { flag: "🇦🇷", label: "Argentine" },
-  { flag: "🇧🇿", label: "Belizean" },
-  { flag: "🇧🇴", label: "Bolivian" },
-  { flag: "🇧🇷", label: "Brazilian" },
-  { flag: "🇨🇦", label: "Canadian" },
-  { flag: "🇨🇱", label: "Chilean" },
-  { flag: "🇨🇴", label: "Colombian" },
-  { flag: "🇨🇷", label: "Costa Rican" },
-  { flag: "🇨🇺", label: "Cuban" },
-  { flag: "🇩🇴", label: "Dominican" },
-  { flag: "🇪🇨", label: "Ecuadorian" },
-  { flag: "🇬🇹", label: "Guatemalan" },
-  { flag: "🇭🇹", label: "Haitian" },
-  { flag: "🇭🇳", label: "Honduran" },
-  { flag: "🇯🇲", label: "Jamaican" },
-  { flag: "🇲🇽", label: "Mexican" },
-  { flag: "🇳🇮", label: "Nicaraguan" },
-  { flag: "🇵🇦", label: "Panamanian" },
-  { flag: "🇵🇾", label: "Paraguayan" },
-  { flag: "🇵🇪", label: "Peruvian" },
-  { flag: "🇵🇷", label: "Puerto Rican" },
-  { flag: "🇸🇻", label: "Salvadoran" },
-  { flag: "🇹🇹", label: "Trinidadian" },
-  { flag: "🇺🇾", label: "Uruguayan" },
-  { flag: "🇻🇪", label: "Venezuelan" },
-  // Africa
-  { flag: "🇩🇿", label: "Algerian" },
-  { flag: "🇦🇴", label: "Angolan" },
-  { flag: "🇨🇲", label: "Cameroonian" },
-  { flag: "🇨🇩", label: "Congolese" },
-  { flag: "🇪🇬", label: "Egyptian" },
-  { flag: "🇪🇹", label: "Ethiopian" },
-  { flag: "🇬🇭", label: "Ghanaian" },
-  { flag: "🇬🇳", label: "Guinean" },
-  { flag: "🇨🇮", label: "Ivorian" },
-  { flag: "🇰🇪", label: "Kenyan" },
-  { flag: "🇱🇷", label: "Liberian" },
-  { flag: "🇲🇱", label: "Malian" },
-  { flag: "🇲🇦", label: "Moroccan" },
-  { flag: "🇳🇬", label: "Nigerian" },
-  { flag: "🇷🇼", label: "Rwandan" },
-  { flag: "🇸🇳", label: "Senegalese" },
-  { flag: "🇸🇱", label: "Sierra Leonean" },
-  { flag: "🇿🇦", label: "South African" },
-  { flag: "🇹🇿", label: "Tanzanian" },
-  { flag: "🇹🇬", label: "Togolese" },
-  { flag: "🇺🇬", label: "Ugandan" },
-  { flag: "🇿🇼", label: "Zimbabwean" },
-  // Europe
-  { flag: "🇦🇹", label: "Austrian" },
-  { flag: "🇧🇪", label: "Belgian" },
-  { flag: "🇬🇧", label: "British" },
-  { flag: "🇭🇷", label: "Croatian" },
-  { flag: "🇩🇰", label: "Danish" },
-  { flag: "🇳🇱", label: "Dutch" },
-  { flag: "🇫🇷", label: "French" },
-  { flag: "🇩🇪", label: "German" },
-  { flag: "🇬🇷", label: "Greek" },
-  { flag: "🇮🇪", label: "Irish" },
-  { flag: "🇮🇹", label: "Italian" },
-  { flag: "🇳🇴", label: "Norwegian" },
-  { flag: "🇵🇱", label: "Polish" },
-  { flag: "🇵🇹", label: "Portuguese" },
-  { flag: "🇷🇴", label: "Romanian" },
-  { flag: "🇷🇸", label: "Serbian" },
-  { flag: "🇪🇸", label: "Spanish" },
-  { flag: "🇸🇪", label: "Swedish" },
-  { flag: "🇨🇭", label: "Swiss" },
-  { flag: "🇹🇷", label: "Turkish" },
-  { flag: "🇺🇦", label: "Ukrainian" },
-  // Asia / Pacific
-  { flag: "🇦🇺", label: "Australian" },
-  { flag: "🇨🇳", label: "Chinese" },
-  { flag: "🇵🇭", label: "Filipino" },
-  { flag: "🇮🇳", label: "Indian" },
-  { flag: "🇮🇩", label: "Indonesian" },
-  { flag: "🇯🇵", label: "Japanese" },
-  { flag: "🇰🇷", label: "South Korean" },
-].sort((a, b) => a.label.localeCompare(b.label));
 
 // ── Types ─────────────────────────────────────
 

@@ -1,3 +1,5 @@
+import { NATIONALITIES } from "./nationalities";
+
 const ROSE_CITY_FLAG_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/flags`;
 
@@ -18,20 +20,38 @@ const FLAG_FILES: Record<string, string> = {
   "🇸🇻": "ElSalvador.png",
 };
 
-const FLAG_COUNTRY_CODES: Record<string, string> = {
-  American: "us",
-  Cameroonian: "cm",
-  Guatemalan: "gt",
-  Japanese: "jp",
-  Mexican: "mx",
-  Salvadoran: "sv",
-  "🇺🇸": "us",
-  "🇨🇲": "cm",
-  "🇬🇹": "gt",
-  "🇯🇵": "jp",
-  "🇲🇽": "mx",
-  "🇸🇻": "sv",
-};
+// Regional indicator symbols 🇦-🇿 occupy U+1F1E6 through U+1F1FF. A flag
+// emoji is two of them, so decoding each code point back to A-Z yields the
+// ISO 3166-1 alpha-2 country code the emoji encodes.
+const REGIONAL_INDICATOR_A = 0x1f1e6;
+
+export function flagEmojiToCountryCode(flag: string): string {
+  const letters = Array.from(flag).map((symbol) => {
+    const codePoint = symbol.codePointAt(0)!;
+    const offset = codePoint - REGIONAL_INDICATOR_A;
+    if (offset < 0 || offset > 25) return null;
+    return String.fromCharCode(offset + 65);
+  });
+
+  if (letters.length !== 2 || letters.some((letter) => letter === null)) {
+    throw new Error(
+      `flagEmojiToCountryCode: "${flag}" is not a two-letter regional-indicator flag emoji`,
+    );
+  }
+
+  return letters.join("").toLowerCase();
+}
+
+// Derived from the single source of truth in lib/nationalities.ts. Both the
+// label ("Polish") and the raw emoji ("🇵🇱", legacy data) resolve to a code.
+const FLAG_COUNTRY_CODES: Record<string, string> = NATIONALITIES.reduce<
+  Record<string, string>
+>((codes, { flag, label }) => {
+  const countryCode = flagEmojiToCountryCode(flag);
+  codes[label] = countryCode;
+  codes[flag] = countryCode;
+  return codes;
+}, {});
 
 const ROSE_CITY_MIGRATED_FLAG_FILES: Record<string, string> = {
   "USA.png": "def61117-0b21-5ffb-b25b-05158cf77a9a.webp",

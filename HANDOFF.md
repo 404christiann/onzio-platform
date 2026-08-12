@@ -1,6 +1,36 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-11
+Last updated: 2026-08-12
+
+## Roster nationality flags fixed platform-wide — 68 of 74 nationalities silently rendered no flag
+
+Agent: Claude Fable 5 (Claude Code), 2026-08-12. Status: implemented and
+verified on `staging` (worktree), pending review/deploy.
+
+**Root cause** (reported live on diversecityfc.com's roster, e.g. "Polish"
+showing no flag): `lib/flags.ts`'s hardcoded `FLAG_COUNTRY_CODES` covered
+only 6 nationalities while the admin roster editor's dropdown offered 74;
+for the other 68, `getFlagCountryCode()` returned `null` and
+`components/NationalityFlag.tsx` rendered nothing. Shared code — affected
+every club except Rose City (whose separate `getFlagUrl` media path is
+untouched).
+
+**Fix:** one source of truth. New `lib/nationalities.ts` exports the
+74-entry `NATIONALITIES` array (moved verbatim from
+`app/admin/(protected)/roster/page.tsx`, which now imports it), and
+`lib/flags.ts` derives `FLAG_COUNTRY_CODES` from it mechanically via a new
+`flagEmojiToCountryCode()` (regional-indicator emoji → lowercase ISO
+alpha-2; throws on malformed input), registering both label and emoji keys.
+A new completeness test in `lib/__tests__/flags.test.ts` asserts every
+`NATIONALITIES` entry resolves to a valid code, structurally preventing
+recurrence.
+
+**Verification:** `tsc --noEmit` clean; lint 0 errors (5 known baseline
+warnings); `test:legacy` 279/279; `test:contracts` 522/522 (incl.
+`lions-roster-presentation.test.ts`, unmodified); `test:architecture`
+20/20; `build` clean. `test:db` not runnable — no local Supabase in this
+environment (`[RED CONTRACT] Local Supabase is unavailable`), and this
+change touches no database code.
 
 ## Diverse City FC is publicly live — domain, real owner, real billing, all confirmed working
 
