@@ -146,18 +146,38 @@ export default function EditorialRosterView({
               ease: [0.22, 1, 0.36, 1],
             }}
           >
-            {!prefersReducedMotion && (
-              <motion.span
-                className="roster-filter-flash"
-                aria-hidden
-                initial={{ scaleX: 0, opacity: 1 }}
-                animate={{ scaleX: 1, opacity: 0 }}
-                transition={{
-                  scaleX: { duration: 0.42, ease: [0.22, 1, 0.36, 1] },
-                  opacity: { delay: 0.3, duration: 0.18 },
-                }}
-              />
-            )}
+            {/*
+              Always mounted (never conditionally included by
+              prefersReducedMotion) so the element tree shape is identical
+              between the server render (where useReducedMotion always
+              returns null) and a real reduced-motion client — omitting it
+              structurally on the client only produced a genuine hydration
+              mismatch, discovered during manual verification. Reduced
+              motion is instead expressed only through prop *values*: the
+              flash stays permanently transparent and never animates.
+            */}
+            <motion.span
+              className="roster-filter-flash"
+              aria-hidden
+              initial={
+                prefersReducedMotion
+                  ? { opacity: 0 }
+                  : { scaleX: 0, opacity: 1 }
+              }
+              animate={
+                prefersReducedMotion
+                  ? { opacity: 0 }
+                  : { scaleX: 1, opacity: 0 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : {
+                      scaleX: { duration: 0.42, ease: [0.22, 1, 0.36, 1] },
+                      opacity: { delay: 0.3, duration: 0.18 },
+                    }
+              }
+            />
 
             {visibleGroups.map(([position, label, anchor], groupIndex) => {
               const group = playersByPosition(roster, position);
