@@ -3,18 +3,7 @@
 import Link from "next/link";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 
-/**
- * Minimal "Our story" teaser section, driven by
- * club_identity.identity_heading_top/em and a short excerpt from
- * about_page_content. Links to /club/about, the full story page a later
- * phase builds. Deliberately omits the mockup's .story-meta founding facts
- * and .story-pillars highlights strip -- those belong to the full club page,
- * not this homepage teaser. Ported unchanged from the superseded reference
- * branch's EditorialStoryTeaser.tsx (identity_heading_top/em are unaffected
- * by the Lions E1 schema change), aside from the /club -> /club/about link
- * fix, since /club/about is this branch's real route registered in
- * packages/presentation/index.ts's routeRegistry, not /club.
- */
+/** Source-aligned editorial homepage story teaser, backed by club identity. */
 export default function EditorialStoryTeaser({
   excerpt,
 }: {
@@ -23,6 +12,11 @@ export default function EditorialStoryTeaser({
   const { identity } = useEditorialIdentity();
   const headingTop = identity?.identityHeadingTop ?? "";
   const headingEm = identity?.identityHeadingEm ?? "";
+  const highlights = Array.isArray(identity?.highlights)
+    ? identity.highlights
+        .filter((highlight): highlight is string => typeof highlight === "string")
+        .slice(0, 3)
+    : [];
 
   return (
     <section className="club-story">
@@ -42,8 +36,33 @@ export default function EditorialStoryTeaser({
       </header>
       <div className="story-copy">
         {excerpt && <p>{excerpt}</p>}
+        {(identity?.foundedYear || identity?.venue) && (
+          <div className="story-meta">
+            {identity?.foundedYear ? (
+              <span>
+                Founded <strong>{identity.foundedYear}</strong>
+              </span>
+            ) : null}
+            {identity?.venue ? (
+              <span>
+                Home <strong>{identity.venue}</strong>
+              </span>
+            ) : null}
+          </div>
+        )}
         <Link href="/club/about">Our story →</Link>
       </div>
+      {highlights.length > 0 ? (
+        <aside
+          className="story-pillars"
+          aria-label={`What defines ${identity?.shortName || "the club"}`}
+        >
+          <span className="story-pillars-label">What defines us</span>
+          {highlights.map((highlight) => (
+            <p key={highlight}>{highlight}</p>
+          ))}
+        </aside>
+      ) : null}
     </section>
   );
 }

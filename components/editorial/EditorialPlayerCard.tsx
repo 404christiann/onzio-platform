@@ -3,6 +3,13 @@ import { imageDeliveryProps } from "@/lib/image-delivery";
 import { splitPlayerName } from "@/lib/editorial-roster";
 import type { Player } from "@/lib/data";
 
+const POSITION_LABELS: Record<string, string> = {
+  GK: "Goalkeeper",
+  DF: "Defender",
+  MF: "Midfielder",
+  FW: "Forward",
+};
+
 /**
  * Editorial player card, ported (visual design) from the approved concept
  * mockup via the superseded claude/lions-fc-website-setup-ij0p7t reference
@@ -55,7 +62,7 @@ export default function EditorialPlayerCard({
       <span className="player-card-identity">
         <span className="player-card-topline">
           <strong>{String(player.number).padStart(2, "0")}</strong>
-          <small>{player.position}</small>
+          <small>{POSITION_LABELS[player.position] ?? player.position}</small>
         </span>
         <span className="player-card-name">
           {first && <small>{first}</small>}

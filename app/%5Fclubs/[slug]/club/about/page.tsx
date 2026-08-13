@@ -1,5 +1,6 @@
 import AboutClubPageClient from "@/components/AboutClubPageClient";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
+import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
 import { EMPTY_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchAboutClubContent, fetchSiteSponsorLogos } from "@/lib/queries";
@@ -16,6 +17,9 @@ export default async function TenantAboutPage({
     console.error("TenantAboutPage:", error);
     return { about: EMPTY_ABOUT_PAGE_CONTENT };
   });
+  if (club.presentationTemplateKey === "editorial@1") {
+    return <EditorialAboutPage content={content.about} />;
+  }
   if (club.presentationTemplateKey === "clubhouse@1") {
     const sponsors = await fetchSiteSponsorLogos("carousel", club.id);
     return <ClubhouseAboutPage content={content.about} sponsors={sponsors} />;

@@ -71,12 +71,14 @@ describe("shop page dispatch wiring", () => {
 });
 
 describe("editorial store page", () => {
-  it("self-fetches the home kit variant via fetchShopKitVariants(\"shop\", clubId)", () => {
+  it("self-fetches every configured kit variant via fetchShopKitVariants(\"shop\", clubId)", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
     expect(source).toContain('"use client"');
     expect(source).toContain("useClubId()");
     expect(source).toContain('fetchShopKitVariants("shop", clubId)');
-    expect(source).toContain("variants.home");
+    expect(source).toContain('VARIANT_ORDER: ShopKitVariant[] = ["home", "away", "third"]');
+    expect(source).toContain("setContent(variants)");
+    expect(source).toContain("content?.[variant]");
   });
 
   it("reuses lib/shop-kit.ts's normalizers instead of reimplementing them", () => {
@@ -88,21 +90,24 @@ describe("editorial store page", () => {
     expect(source).toContain("normalizeKitStoreNote(section.store_note)");
   });
 
-  it("shows a front/back toggle for two photos, a single photo for one, and an empty state for zero", () => {
+  it("renders the approved campaign, three-variant catalog, and photo fallback", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
-    expect(source).toContain('VIEW_LABELS = ["Front", "Back"]');
-    expect(source).toMatch(/photos\.length > 1/);
-    expect(source).toContain("shop-kit-photo-empty");
-    expect(source).toMatch(/data-empty=\{photos\.length === 0\}/);
+    expect(source).toContain('className="store-campaign"');
+    expect(source).toContain('className="store-featured-product"');
+    expect(source).toContain('className="store-product-grid"');
+    expect(source).toContain('className="store-product-card"');
+    expect(source).toContain("products.map(");
+    expect(source).toContain("store-product-image-empty");
   });
 
-  it("derives detail columns from bullet_points and an order CTA from store_note/cta_label/cta_link", () => {
-    const source = read("components/editorial/EditorialShopPage.tsx");
-    expect(source).toContain("function splitBullet(");
-    expect(source).toContain("bulletPoints.map(splitBullet)");
+  it("keeps product links and the service strip driven by admin-authored content", () => {
+    const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
     expect(source).toContain("section.cta_link");
     expect(source).toContain("section.cta_label");
-    expect(source).toContain("storeNote");
+    expect(source).toContain('className="store-service-strip"');
+    expect(source).toContain("featured.bulletPoints[0]");
+    expect(source).toContain("featured.storeNote");
+    expect(source).not.toMatch(/\$[0-9]|checkout|Select size/i);
   });
 
   it("has a loading state, following AcademyShopPage.tsx's pattern", () => {
@@ -120,8 +125,9 @@ describe("editorial store page", () => {
   it("appends its rules to styles/editorial.css, scoped under [data-site-template=\"editorial\"]", () => {
     const css = read("styles/editorial.css");
     expect(css).toContain("STORE (Lions E6)");
-    expect(css).toContain('[data-site-template="editorial"] .shop-kit {');
-    expect(css).toContain('[data-site-template="editorial"] .shop-kit-cta {');
+    expect(css).toContain('[data-site-template="editorial"] .store-campaign {');
+    expect(css).toContain('[data-site-template="editorial"] .store-product-card {');
+    expect(css).toContain('[data-site-template="editorial"] .store-service-strip {');
   });
 });
 

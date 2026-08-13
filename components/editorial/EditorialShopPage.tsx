@@ -2,60 +2,39 @@
 
 import { useEffect, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
+import { useClubId } from "@/components/ClubContextProvider";
+import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { fetchShopKitVariants, type ShopKitContent } from "@/lib/queries";
 import {
   normalizeKitBulletPoints,
   normalizeKitStoreNote,
 } from "@/lib/shop-kit";
-import { useClubId } from "@/components/ClubContextProvider";
+import type { ShopKitVariant } from "@/lib/db-types";
 
-const VIEW_LABELS = ["Front", "Back"] as const;
-
-// Splits an admin bullet like "Available item: Match Jersey" into a
-// label/value pair for the detail dl grid; bullets without a colon render
-// label-only. Mirrors AcademyShopPage.tsx's splitBullet -- duplicated here
-// rather than imported since AcademyShopPage.tsx is out of scope to touch
-// and this helper is presentational, not shared data logic.
-function splitBullet(bullet: string): { label: string; value: string } {
-  const index = bullet.indexOf(":");
-  if (index === -1) return { label: bullet, value: "" };
-  return {
-    label: bullet.slice(0, index).trim(),
-    value: bullet.slice(index + 1).trim(),
-  };
-}
+const VARIANT_ORDER: ShopKitVariant[] = ["home", "away", "third"];
+const KIT_LABELS: Record<ShopKitVariant, string> = {
+  home: "Home kit",
+  away: "Away kit",
+  third: "Third kit",
+};
 
 /**
- * Editorial store page (editorial@1's /shop), rendered only when the
- * operator has switched onzio.clubs.store_enabled on for this club --
- * app/(public)/shop/page.tsx gates the route itself with notFound() before
- * this ever mounts, and EditorialHeader already hides the "Store" nav item
- * when the flag is off.
- *
- * Structurally follows components/AcademyShopPage.tsx: a self-fetching
- * client component that reads fetchShopKitVariants("shop", clubId) for the
- * "home" kit variant, offers a Front/Back photo toggle when two photos
- * exist (a single photo when there's one, a quiet empty state when there
- * are none), and derives detail columns from bullet_points plus an order
- * CTA from store_note/cta_label/cta_link via lib/shop-kit.ts's existing
- * normalizers. Styled from editorial's own CSS custom properties
- * (styles/editorial.css, scoped under [data-site-template="editorial"])
- * with plain semantic classes -- no Tailwind utility classes and no
- * hardcoded navy/red hex values, unlike AcademyShopPage.tsx -- matching
- * every other component under components/editorial/.
+ * Real-data editorial Store, using the approved mockup's campaign, catalog,
+ * and service-strip structure. Product links remain the admin-authored CTAs;
+ * no price, cart, size, or checkout behavior is invented.
  */
 export default function EditorialShopPage() {
   const clubId = useClubId();
-  const [content, setContent] = useState<ShopKitContent | null>(null);
+  const { identity } = useEditorialIdentity();
+  const [content, setContent] = useState<Record<ShopKitVariant, ShopKitContent> | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     fetchShopKitVariants("shop", clubId)
       .then((variants) => {
-        if (!cancelled) setContent(variants.home);
+        if (!cancelled) setContent(variants);
       })
       .catch((error: unknown) => {
         console.error("EditorialShopPage:", error);
@@ -77,12 +56,26 @@ export default function EditorialShopPage() {
     );
   }
 
-  const section = content?.section ?? null;
-  const photos = (content?.photos ?? [])
-    .filter((photo) => photo.url.trim().length > 0)
-    .slice(0, VIEW_LABELS.length);
+  const products = VARIANT_ORDER.flatMap((variant) => {
+    const variantContent = content?.[variant];
+    const section = variantContent?.section;
+    if (!section) return [];
 
-  if (!section) {
+    const photos = (variantContent.photos ?? []).filter(
+      (photo) => photo.url.trim().length > 0,
+    );
+    return [
+      {
+        variant,
+        section,
+        photo: photos[0] ?? null,
+        bulletPoints: normalizeKitBulletPoints(section.bullet_points),
+        storeNote: normalizeKitStoreNote(section.store_note).trim(),
+      },
+    ];
+  });
+
+  if (products.length === 0) {
     return (
       <section className="shop-state">
         <p className="eyebrow">Store</p>
@@ -92,84 +85,114 @@ export default function EditorialShopPage() {
     );
   }
 
-  const bulletPoints = normalizeKitBulletPoints(section.bullet_points);
-  const storeNote = normalizeKitStoreNote(section.store_note).trim();
-  const detailPairs = bulletPoints.map(splitBullet);
-  const hasCta =
-    section.cta_link.trim().length > 0 && section.cta_label.trim().length > 0;
+  const featured = products[0];
+  const city = identity?.city?.trim() || "the city";
+  const clubLabel = identity?.shortName?.trim() || "the club";
+  const productHref = (value: string) => value.trim() || "#store-collection-title";
 
   return (
-    <section className="shop-kit">
-      <div className="shop-kit-visual" data-empty={photos.length === 0}>
-        {photos.length > 0 ? (
-          <>
-            {photos.map((photo, index) => (
+    <div className="store-page">
+      <section className="store-campaign">
+        <div className="store-campaign-copy">
+          <span className="eyebrow">Official collection</span>
+          <h1>
+            Made for the match.
+            <br />
+            <em>Worn for {city}.</em>
+          </h1>
+          <p>
+            {products.length} first-team colors. One {clubLabel} badge. Built
+            for every side of matchday.
+          </p>
+        </div>
+
+        <a
+          className="store-featured-product"
+          href={productHref(featured.section.cta_link)}
+          aria-label={featured.section.cta_label || `View ${featured.section.title}`}
+        >
+          <span className="store-featured-label">
+            Featured · {KIT_LABELS[featured.variant]}
+          </span>
+          <span className="store-featured-image">
+            {featured.photo ? (
               <ResilientImage
-                key={photo.id}
-                src={photo.url}
-                alt={
-                  activeView === index
-                    ? `${VIEW_LABELS[index]} of the ${section.title}`
-                    : ""
-                }
+                src={featured.photo.url}
+                alt={featured.section.title}
                 fill
-                priority={index === 0}
-                sizes="(max-width: 1023px) 100vw, 54vw"
-                className={`shop-kit-photo${activeView === index ? " is-active" : ""}`}
+                priority
+                sizes="(max-width: 800px) 94vw, 48vw"
                 {...imageDeliveryProps("shop-photo")}
               />
-            ))}
-            {photos.length > 1 && (
-              <div
-                className="shop-kit-toggle"
-                role="group"
-                aria-label="Choose jersey view"
-              >
-                {photos.map((photo, index) => (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    aria-pressed={activeView === index}
-                    data-active={activeView === index}
-                    onClick={() => setActiveView(index)}
-                  >
-                    {VIEW_LABELS[index]}
-                  </button>
-                ))}
-              </div>
+            ) : (
+              <span className="store-product-image-empty" aria-hidden="true" />
             )}
-          </>
-        ) : (
-          <span className="shop-kit-photo-empty" aria-hidden="true" />
-        )}
-      </div>
+          </span>
+          <span className="store-featured-footer">
+            <strong>{featured.section.title}</strong>
+            <b>{featured.section.cta_label || "View kit"}</b>
+          </span>
+        </a>
+      </section>
 
-      <div className="shop-kit-details">
-        {section.eyebrow && <p className="eyebrow">{section.eyebrow}</p>}
-        <h1>{section.title}</h1>
-        {section.description && (
-          <p className="shop-kit-description">{section.description}</p>
-        )}
+      <section className="store-catalog" aria-labelledby="store-collection-title">
+        <header className="store-catalog-head">
+          <div>
+            <span className="eyebrow">First-team kits</span>
+            <h2 id="store-collection-title">Choose your colors.</h2>
+          </div>
+          <p>{products.length} official jerseys · current collection</p>
+        </header>
 
-        {detailPairs.length > 0 && (
-          <dl className="shop-kit-bullets">
-            {detailPairs.map((pair) => (
-              <div key={pair.label}>
-                <dt>{pair.label}</dt>
-                <dd>{pair.value || "—"}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
+        <div className="store-product-grid">
+          {products.map((product, index) => (
+            <a
+              key={product.variant}
+              className="store-product-card"
+              data-kit={index + 1}
+              href={productHref(product.section.cta_link)}
+              aria-label={product.section.cta_label || `View ${product.section.title}`}
+            >
+              <span className="store-product-type">{KIT_LABELS[product.variant]}</span>
+              <span className="store-product-image">
+                {product.photo ? (
+                  <ResilientImage
+                    src={product.photo.url}
+                    alt={product.section.title}
+                    fill
+                    sizes="(max-width: 700px) 88vw, 32vw"
+                    {...imageDeliveryProps("shop-photo")}
+                  />
+                ) : (
+                  <span className="store-product-image-empty" aria-hidden="true" />
+                )}
+              </span>
+              <span className="store-product-info">
+                <span>
+                  <small>Official first-team jersey</small>
+                  <strong>{product.section.title}</strong>
+                </span>
+                <b>{product.section.cta_label || "View kit"}</b>
+              </span>
+            </a>
+          ))}
+        </div>
 
-        {storeNote && <p className="shop-kit-note">{storeNote}</p>}
-
-        {hasCta && (
-          <a className="shop-kit-cta" href={section.cta_link}>
-            {section.cta_label}
-          </a>
-        )}
-      </div>
-    </section>
+        <div className="store-service-strip" aria-label="Store information">
+          <p>
+            <small>Details</small>
+            <strong>{featured.bulletPoints[0] || "Official first-team collection"}</strong>
+          </p>
+          <p>
+            <small>Collection</small>
+            <strong>{clubLabel}</strong>
+          </p>
+          <p>
+            <small>Ordering</small>
+            <strong>{featured.storeNote || featured.section.cta_label}</strong>
+          </p>
+        </div>
+      </section>
+    </div>
   );
 }

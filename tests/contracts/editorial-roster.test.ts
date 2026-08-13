@@ -159,7 +159,11 @@ describe("editorial player card", () => {
   it("renders the big number, position label, and small-first/big-last name split", () => {
     const source = read("components/editorial/EditorialPlayerCard.tsx");
     expect(source).toContain("player-card-number");
-    expect(source).toContain("{player.position}");
+    expect(source).toContain("POSITION_LABELS[player.position] ?? player.position");
+    expect(source).toContain('GK: "Goalkeeper"');
+    expect(source).toContain('DF: "Defender"');
+    expect(source).toContain('MF: "Midfielder"');
+    expect(source).toContain('FW: "Forward"');
     expect(source).toContain("{first && <small>{first}</small>}");
     expect(source).toContain("<strong>{last}</strong>");
   });

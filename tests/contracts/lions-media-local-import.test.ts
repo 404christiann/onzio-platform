@@ -22,6 +22,9 @@ describe("local LionsFC media import rows", () => {
       lifecycle: "active",
       public_access: "live",
       tier: "pro",
+      primary_color: "#1B2958",
+      secondary_color: "#AD3234",
+      accent_color: "#F0F0F0",
     });
     expect(first.domain).toMatchObject({
       club_id: LIONS_LOCAL_TENANT_ID,

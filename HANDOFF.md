@@ -2,6 +2,80 @@
 
 Last updated: 2026-08-12
 
+## Lions editorial@1 local visual-parity cleanup complete; staging remains approval-gated
+
+Agent: Codex, 2026-08-12. Status: **local implementation and verification
+complete** on `codex/lions-ui-parity`; no hosted Supabase, Vercel, Stripe, or
+staging command was run. This entry supersedes the prior entry's "not yet
+fixed" local parity status, but not its hosted staging facts.
+
+**Exact comparison process:** the approved mockup ran read-only at
+`localhost:3014`; the platform ran at `lions.localhost:3005` against the local
+Supabase stack only. A throwaway Playwright harness under
+`/tmp/lions-parity/` captured 1440x900 and 390x844 full-page screenshots for
+Home, Roster, Fixtures, Match area, Store (`?tier=pro` on the mockup), About,
+Tryouts, and Contact, plus the mobile menu and desktop Schedule dropdown. It
+waited for network idle and `document.fonts.ready`, cleared the approved GSAP
+inline properties, dumped computed styles, and recorded a written before-fix
+discrepancy list. The final matrix is in `/tmp/lions-parity/*-after.png` and
+`report-after.json`: all 28 captures returned HTTP 200, no platform page had a
+console or page error, and no route overflowed at either viewport.
+
+**Completed work:**
+
+- Added Lions `accent_color: "#F0F0F0"` to the shared import-row builder and
+  pinned it in the importer contract. The same builder feeds future staging
+  SQL generation, so there is no second staging definition to edit. A local
+  reset/re-import reconciled 10 media assets, 32 players, all presentation
+  rows, zero forbidden URL references, and `hostedMutations: 0`; computed
+  `--club-accent`, `--surface`, and `--on-dark` now all resolve to `#F0F0F0`.
+- Confirmed the reported crest and font issues were not reproducible: the
+  full-color crest loaded with real natural dimensions, was topmost at its
+  center point, and rendered at both viewports; both apps computed Geist at
+  weight 840 and passed `document.fonts.check()`. No speculative hero CSS was
+  added.
+- Restored the complete homepage identity teaser (Founded/Home facts and the
+  three source-driven pillars) in `EditorialStoryTeaser.tsx` and
+  `styles/editorial.css`.
+- Fixed editorial roster poster cards by explicitly inheriting the editorial
+  token set on `.roster-page`; an unscoped legacy rule in `globals.css` had
+  shadowed those tokens with undefined `--clubhouse-*` values. Also maps
+  compact position codes to full display labels without changing roster data.
+- Added `EditorialAboutPage.tsx` and the `editorial@1` route branch before the
+  existing Clubhouse/classic paths. It renders the real About and identity
+  content using the approved interior/manifesto/find-us system; it adds no
+  form or mutation.
+- Rebuilt `EditorialShopPage.tsx` around the approved Pro campaign, featured
+  product, three-card catalog, and service-strip structure. It still uses the
+  existing `fetchShopKitVariants("shop", clubId)` result, real imported media,
+  normalizers, and admin-authored CTAs; it invents no price, size, checkout, or
+  cart behavior.
+- Replaced Contact's broken optional icon-image requests with inline platform
+  marks. The prior four 404s per viewport are gone and the social links remain
+  content-driven.
+- Added/updated contracts for About, home story metadata, roster labels,
+  Store structure, Contact icon delivery, and the Lions accent row. Classic,
+  Clubhouse, Academy, shared Nav/Footer/Hero, auth, billing, Stripe, and
+  operator paths were not changed.
+
+**Verification:** `npx tsc --noEmit` exit 0; `npm run lint` exit 0 with the
+same five existing admin Hook warnings; focused editorial/import contracts
+80/80; `npm run test:contracts` 652/652; `npm run test:legacy` 279/279;
+`npm run test:architecture` 20/20; full `npm test` 1132/1132; local-env
+`npm run build` completed successfully (only the existing Supabase Edge
+Runtime and admin Hook warnings). `git diff --check` is clean.
+
+**Still open / exact next step:** expanded editorial roster player profiles
+and the mockup's profile modal remain explicitly outside this sweep. The
+existing Lions staging database still has its old/null accent value; the code
+change does not mutate already-imported hosted data. After reviewing this
+branch and screenshots, Christian must separately approve the code push/
+preview deployment and run the prepared one-line Lions staging
+`accent_color = '#F0F0F0'` SQL backfill, then the hosted site needs the same
+desktop/mobile verification. No production promotion is implied. The shared
+checkout intentionally still contains the pre-existing untracked `.claude/`
+directory; do not stage it.
+
 ## Lions editorial@1 merged to staging, deployed to a real hosted preview, visual-parity gap found and handed to Codex
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-12, direct edit + browser

@@ -1,9 +1,8 @@
 "use client";
 
-import ResilientImage from "@/components/ResilientImage";
-import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
 import type { ContactContent } from "@/lib/queries";
+import type { DBSiteSocialLink } from "@/lib/db-types";
 
 /**
  * Presentational editorial contact page (`/contact`).
@@ -22,6 +21,46 @@ import type { ContactContent } from "@/lib/queries";
 function telephoneHref(phone: string): string {
   const normalized = phone.replace(/[^0-9+]/g, "");
   return /^\+?[0-9]{7,15}$/.test(normalized) ? `tel:${normalized}` : "";
+}
+
+function SocialIcon({ platform }: { platform: DBSiteSocialLink["id"] }) {
+  if (platform === "instagram") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4.25" />
+        <circle className="social-icon-fill" cx="17.4" cy="6.7" r="1.15" />
+      </svg>
+    );
+  }
+  if (platform === "youtube") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <rect x="2.5" y="5.25" width="19" height="13.5" rx="4" />
+        <path className="social-icon-fill" d="m10 9 5 3-5 3Z" />
+      </svg>
+    );
+  }
+  if (platform === "facebook") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path className="social-icon-fill" d="M14 8h3V4.3A15 15 0 0 0 14.4 4C11.8 4 10 5.6 10 8.6V11H7v4h3v7h4v-7h3.2l.8-4H14V8.8c0-.6.4-.8 1-.8Z" />
+      </svg>
+    );
+  }
+  if (platform === "x") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M5 4l14 16M19 4 5 20" />
+      </svg>
+    );
+  }
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M14 4v10.2a4.2 4.2 0 1 1-3.4-4.1" />
+      <path d="M14 4c.7 2.2 2.1 3.7 4.5 4.2" />
+    </svg>
+  );
 }
 
 export default function EditorialContactPage({
@@ -92,15 +131,10 @@ export default function EditorialContactPage({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={link.label}
+                title={link.label}
                 className="contact-social-icon"
               >
-                <ResilientImage
-                  src={link.icon}
-                  alt=""
-                  fill
-                  sizes="32px"
-                  {...imageDeliveryProps("small-graphic")}
-                />
+                <SocialIcon platform={link.id} />
               </a>
             ))}
           </div>

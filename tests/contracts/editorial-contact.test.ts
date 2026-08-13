@@ -53,6 +53,14 @@ describe("editorial contact: read-only render", () => {
     const source = read("components/editorial/EditorialContactPage.tsx");
     expect(source).not.toMatch(/#1E3653|#FF1616|#14283F|#D70000|#B9E3F6|#F9FAFD/i);
   });
+
+  it("renders local inline social marks instead of requesting optional icon URLs", () => {
+    const source = read("components/editorial/EditorialContactPage.tsx");
+    expect(source).toContain("function SocialIcon(");
+    expect(source).toContain("<SocialIcon platform={link.id} />");
+    expect(source).not.toContain("link.icon");
+    expect(source).not.toContain("ResilientImage");
+  });
 });
 
 describe("editorial contact: dispatch wiring", () => {

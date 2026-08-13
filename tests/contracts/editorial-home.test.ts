@@ -232,6 +232,11 @@ describe("editorial our story teaser", () => {
     expect(source).toContain("identity?.identityHeadingTop");
     expect(source).toContain("identity?.identityHeadingEm");
     expect(source).toContain("{excerpt && <p>{excerpt}</p>}");
+    expect(source).toContain("identity?.foundedYear");
+    expect(source).toContain("identity?.venue");
+    expect(source).toContain('className="story-meta"');
+    expect(source).toContain('className="story-pillars"');
+    expect(source).toContain("identity?.highlights");
     expect(source).toContain('<Link href="/club/about">Our story');
     expect(source).not.toMatch(/Columbus|A club shaped by/);
   });

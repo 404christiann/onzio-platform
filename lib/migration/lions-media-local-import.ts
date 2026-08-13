@@ -649,6 +649,7 @@ export function buildLionsLocalImportRows(
     tier: "pro",
     primary_color: "#1B2958",
     secondary_color: "#AD3234",
+    accent_color: "#F0F0F0",
     // Lions E7: Christian wants a Store on the real site; store_enabled is
     // operator-only (Lions E1) and defaults false for new clubs, so it is
     // set explicitly here rather than relying on any backfill.
