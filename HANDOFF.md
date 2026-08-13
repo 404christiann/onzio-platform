@@ -7256,6 +7256,18 @@ Known non-blocking warnings:
 
 ## Known Constraints and Blockers
 
+- **Business status (recorded 2026-08-12, Christian):** Diverse City FC is
+  currently the platform's only paying customer — treat any change that
+  could reach `diversecityfc.com` with paying-customer-grade caution
+  (staging/preview verification before production, never a direct-to-prod
+  change). Rose City is **not currently a paying customer**, but Christian
+  is deliberately keeping it live and production-quality specifically as a
+  sales showcase for prospective clients — do not treat it as lower-risk or
+  disposable because it's non-paying; its `kind = 'demo'` database flag
+  reflects billing status only, not engineering risk tolerance. Both
+  tenants' live rendering paths (`academy@1` and `clubhouse@1` respectively)
+  should be protected with the same care regardless of which one is
+  currently generating revenue.
 - `Onzio Platform Production` is healthy and serves the reconciled Rose City
   import, billing projection, and verified production domains.
 - The exposed legacy production service-role key must never be reused. Its API
