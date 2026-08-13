@@ -2,6 +2,158 @@
 
 Last updated: 2026-08-12
 
+## Lions editorial@1 merged to staging, deployed to a real hosted preview, visual-parity gap found and handed to Codex
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-12, direct edit + browser
+verification, working directory `~/Downloads/onzio-platform`. Continuation of
+the "Lions editorial@1 rebuild — E1 through E7 complete" entry below — read
+that first for the template build itself; this entry covers everything after
+E7: the merge, the real hosted staging deployment, and a discovered
+styling regression against the approved mockup that is **not yet fixed**.
+
+**Merge to `origin/staging` (Christian approved):** `claude/lions-editorial-rebuild`
+was a clean fast-forward onto `origin/staging` (8 commits, zero divergence —
+nothing else had landed on staging since the branch was cut). Pushed directly,
+no PR. Confirmed via the Vercel API that this only triggers a **preview**
+deployment (`target: null`), never production — matches this project's
+established pattern (`vercel --prod` is always a separate, explicit,
+Christian-approved step; see the roster-flags entry above for the most recent
+precedent). **Diverse City FC's real staging site
+(`https://diverse-city-onzio-staging.vercel.app`, a separate Vercel project
+tracking the same `staging` branch) was walked page-by-page after the merge —
+home, roster, tryouts, store, contact, schedule — and confirmed byte-for-byte
+unaffected.**
+
+**Lions now has its own real hosted staging presence** — this did not exist
+before today; Lions had been local-dev-only for its entire build:
+
+- New Vercel domain `lions-onzio-staging.vercel.app`, added to the
+  `onzio-platform` project's **Preview** environment scoped to the `staging`
+  git branch (never Production — verified in the dashboard before saving).
+- New `scripts/import-lions-media-staging.ts` (+ `lib/migration/
+  lions-media-local-import.ts` reuse, no new lib code needed), modeled
+  directly on the existing `scripts/import-diverse-city-staging.ts` safety
+  pattern: database mutations are **only ever written to a reviewable SQL
+  file** (`--prepare-sql`, never auto-executed — Christian pasted the
+  generated file into the Supabase SQL Editor for the "Onzio Platform
+  Staging" project himself), and only object-storage sync (`--sync-storage`,
+  idempotent, checksum-verified) writes live. Pre-flight `assertHostedTarget`
+  refuses to run unless the target tenant id/slug/hostname are exactly the
+  expected from-scratch state.
+- **A real bug was found and fixed during the live run, not in testing:**
+  `assertHostedTarget` originally only checked for tenant *absence*, correct
+  for `--prepare-sql` (creating the club) but wrong for `--sync-storage`
+  (which necessarily runs *after* the club exists) — it refused to sync media
+  the first time it was run for real. Fixed by splitting the check into
+  `"create"` (refuse if the tenant already exists) and `"sync"` (refuse
+  unless the exact expected tenant/domain already exists) modes. Committed as
+  `5e3bca8`.
+- **A second real gotcha, found live, not a bug:** after both the migration
+  SQL and the import SQL applied cleanly (127 rows across 29 tables, 10 media
+  assets uploaded and checksum-verified — exact counts match the local
+  import), the site still 404'd for anonymous visitors. Root cause: new
+  tenants are created `lifecycle = 'onboarding'`, and
+  `onzio_private.subscription_public_access()` **hard-overrides** any
+  `onboarding`-lifecycle club to `'preview'` regardless of its
+  `public_access` column value, and `is_publicly_accessible()` only allows
+  `'live'`/`'grace'` — so an onboarding club is never anonymously visible by
+  design (sensible default: nobody should see a tenant before its owner has).
+  Diverse City FC's staging tenant is invisible to this same check on paper
+  but renders fine because it was later promoted (`lifecycle: 'active'`,
+  `public_access: 'live'`) as part of its own real provisioning arc. Fixed by
+  running the same one-line promotion for Lions staging directly (Christian
+  ran it via the SQL Editor): `update onzio.clubs set lifecycle = 'active',
+  public_access = 'live' where id = '8d82bb47-c10b-4823-8ec7-c4de87d34b0a';`
+  — staging-only, purely a preview-visibility change, not a real launch.
+  **Anyone hosting a new tenant on staging in the future should expect this
+  same step.**
+- Staging credentials are **not** in this repo's tracked `.env.local`
+  (confirmed — that file's `NEXT_PUBLIC_SUPABASE_URL` points at
+  `127.0.0.1:54321`, local only, despite an unrelated `ONZIO_ENVIRONMENT=staging`
+  flag living in the same file). They were supplied via a new, gitignored
+  `.env.staging.local` (`.env.*.local` is already ignored) containing
+  `SUPABASE_SECRET_KEY` (a real `sb_secret_...` key for the "Onzio Platform
+  Staging" project, `fxefqnoqxbezeccjvrsw`) and `LIONS_STAGING_OWNER_USER_ID`
+  (a real Supabase Auth user id on that project, found via its dashboard's
+  Authentication → Users, that owns the new Lions staging club row). Neither
+  value was ever pasted into a chat/session transcript — the file was created
+  directly by Christian and read only via shell redirection.
+- **One near-miss worth recording:** `supabase migration list --linked`
+  was run once, believing the CLI was linked to staging — it was actually
+  linked to **`ioalthwsdrlzrubomrow` ("Onzio Platform Production")**. The
+  command used was read-only (lists applied migration timestamps, mutates
+  nothing) so no harm occurred, but the CLI link was abandoned immediately in
+  favor of generating migration SQL by hand (same file-review pattern as the
+  import) rather than risk it again. **Whoever next touches this repo's
+  Supabase CLI link should explicitly re-link or verify the target before
+  running anything beyond a read.**
+
+**Lions is now live and fully functional at `https://lions-onzio-staging.vercel.app`**
+(behind Vercel Authentication — needs a team member's Vercel login to view).
+Nav, home, roster, schedule, all three tryout states, store (real "Blue
+Jersey" photo, `store_enabled: true`), and contact all confirmed rendering
+real seeded data with no console errors.
+
+**Styling regression found, NOT yet fixed — this is the open item.** Christian
+looked at the deployed site and confirmed it functions correctly but no
+longer visually matches the approved Lions sales mockup
+(`~/Downloads/onzioMockups`, the actual source of truth — a different, more
+authoritative reference than the deleted intermediate branch E1-E7 was
+visually ported from). Direct side-by-side comparison (same 1280px viewport,
+GSAP animation inline styles cleared for a fair "settled" screenshot — both
+apps use GSAP entrance animations that make mid-animation screenshots
+misleading) confirmed three concrete homepage bugs:
+
+1. Hero crest image loads successfully (verified via network/DOM: `complete:
+   true`, real pixel dimensions, `opacity:1`/`visibility:visible`/real
+   non-zero bounding rect) but does not visually render — layout/stacking/
+   paint issue, not a missing-asset or display:none issue. Root cause not
+   yet found.
+2. Hero headline: mockup renders line one ("Capital City.") white/off-white
+   and line two ("Roar as One.") in the red/salmon accent — a clear two-tone
+   contrast. The live site renders both lines in the same red. **Root cause
+   found via code reading, not yet fixed:** `--on-dark` derives from
+   `--club-accent`; the mockup's Lions config sets `accentColor: "#F0F0F0"`
+   but the platform's Lions import (`lib/migration/lions-media-local-import.ts`)
+   never sets `clubs.accent_color`, so `fetchClubThemeColors` falls back to
+   the secondary (red) — cascading into every accent-derived token
+   (surfaces, tiles, footer text, CTA colors) platform-wide, not just the
+   headline. One-line fix identified, not yet applied: add `accent_color:
+   "#F0F0F0"` to the Lions club row in both the local and staging import
+   definitions, then re-seed/re-import to see it.
+3. Headline font weight looks visibly lighter than the mockup's near-black
+   840 weight at the same viewport — both stylesheets specify the same
+   `font-weight: 840` rule, so this is suspected to be a font-loading/
+   fallback issue (the Geist variable font not actually reaching the
+   editorial subtree, silently falling back to a lighter system weight), not
+   yet confirmed via computed-style diff.
+
+Given this session was approaching its usage limit, a full page-by-page
+visual-parity cleanup plan was drafted (a Claude Fable 5 planning pass, using
+the three bugs above as a confirmed starting punch list) for a **different**
+coding agent ("Codex") to execute — this repo has no direct Codex
+integration, so the plan was delivered to Christian as a standalone file
+rather than run by this session. The plan: sets up both the mockup and the
+local platform side by side; specifies the exact GSAP-clearing screenshot
+comparison method at two viewports (1440×900 desktop, 390×844 mobile,
+matching this repo's existing Playwright convention); maps every editorial
+nav page to its mockup counterpart (flagging `/tryouts` and `/contact` as
+having **no** mockup counterpart — built new, judged against the mockup's
+internal design-system consistency instead); flags a real structural finding
+that `/club/about` has **no editorial dispatch branch at all** and currently
+falls through to the classic template's About page for editorial tenants;
+orders the fix priority (the accent-color bug first, since fixing it likely
+resolves cascading discrepancies across every page before a full sweep);
+and hard-guardrails Codex away from `Clubhouse*`/`Academy*`/`Nav.tsx`/
+`Footer.tsx` (Rose City's and Diverse City FC's live code) and away from any
+hosted/remote database. **Not yet executed as of this entry.**
+
+**Exact next step:** hand the plan file to Codex, let it run the full
+comparison + fix + re-verify cycle locally, review its output (screenshots +
+fix list + not-fixed list), re-deploy to staging, re-verify the three bugs
+above are actually closed, then decide separately whether/when to promote to
+production — no promotion has happened or been requested yet.
+
 ## Roster nationality flags fixed platform-wide — 68 of 74 nationalities silently rendered no flag
 
 Agent: Claude Fable 5 (Claude Code), implemented in a separate `staging`
