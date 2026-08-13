@@ -2,17 +2,19 @@
 
 Last updated: 2026-08-12
 
-## Lions editorial Diverse City parity + Tailwind migration ready for Git publish
+## Lions editorial Diverse City parity + Tailwind migration shipped to staging preview
 
-Agent: Codex, 2026-08-12. Status: **implementation, local verification, and
-feature-branch commit complete; Git push/staging fast-forward still pending in
-this turn**. Feature commit message: `Migrate Lions editorial UI to Tailwind`.
-Feature branch: `codex/lions-editorial-diversecity`, cut from
-`origin/staging` at `8100788`. No hosted Supabase, Stripe, production, or
-Vercel mutation has been run. Local Supabase only was used, and Diverse City
-was imported locally via `npm run migration:import:diverse-city:local`
-(`hostedMutations: 0`). The pre-existing untracked `.claude/` directory remains
-unstaged.
+Agent: Codex, 2026-08-12. Status: **implementation, local verification, Git
+publish, staging fast-forward, and Vercel staging preview verification
+complete**. Feature branch: `codex/lions-editorial-diversecity`, cut from
+`origin/staging` at `8100788`; implementation commit message: `Migrate Lions
+editorial UI to Tailwind`. The branch was pushed to origin and `origin/staging`
+was fast-forwarded. The new Vercel preview for the staging branch reached
+`READY` and the custom staging alias resolved to it. No production deployment,
+hosted Supabase mutation, Stripe mutation, or hosted database write was run.
+Local Supabase only was used, and Diverse City was imported locally via
+`npm run migration:import:diverse-city:local` (`hostedMutations: 0`). The
+pre-existing untracked `.claude/` directory remains unstaged.
 
 **Completed work:** replaced the monolithic `styles/editorial.css` with
 `styles/editorial-tokens.css`, additive `ed-*` Tailwind tokens, and public-only
@@ -40,9 +42,10 @@ overflow. Spot check also verified Lions accent/CTA contrast after using the
 club secondary as the editorial visual accent while retaining raw
 `--ed-theme-accent`.
 
-**Still open / exact next step:** push `codex/lions-editorial-diversecity`,
-fast-forward `origin/staging` if it has not moved, then verify the resulting
-Vercel preview reaches `READY`. No production promotion is implied.
+**Still open / exact next step:** hard-refresh
+`https://lions-onzio-staging.vercel.app` and visually review desktop/mobile
+screens. No production promotion is implied and remains separately
+approval-gated.
 
 ## Lions Powered by Onzio footer ready locally; staging accent backfill completed
 
