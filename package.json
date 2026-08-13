@@ -26,6 +26,7 @@
     "media:smoke": "tsx scripts/smoke-media-pipeline.ts",
     "migration:export:rose-city": "node scripts/export-rose-city-rehearsal.mjs",
     "migration:import:lions-media:local": "eval \"$(supabase status -o env 2>/dev/null)\"; NEXT_PUBLIC_SUPABASE_URL=\"$API_URL\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$ANON_KEY\" SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_ROLE_KEY\" SUPABASE_DB_URL=\"$DB_URL\" tsx scripts/import-lions-media-local.ts --execute-local --confirm-local",
+    "migration:import:lions-media:staging": "tsx scripts/import-lions-media-staging.ts",
     "migration:import:diverse-city:local": "eval \"$(supabase status -o env 2>/dev/null)\"; NEXT_PUBLIC_SUPABASE_URL=\"$API_URL\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$ANON_KEY\" SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_ROLE_KEY\" SUPABASE_DB_URL=\"$DB_URL\" tsx scripts/import-diverse-city-local.ts --execute-local --confirm-local",
     "migration:rehearse:diverse-city:local": "eval \"$(supabase status -o env 2>/dev/null)\"; NEXT_PUBLIC_SUPABASE_URL=\"$API_URL\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$ANON_KEY\" SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_ROLE_KEY\" SUPABASE_DB_URL=\"$DB_URL\" tsx scripts/import-diverse-city-local.ts --execute-local --confirm-local --rehearse",
     "migration:reset:diverse-city:local": "eval \"$(supabase status -o env 2>/dev/null)\"; NEXT_PUBLIC_SUPABASE_URL=\"$API_URL\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$ANON_KEY\" SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_ROLE_KEY\" SUPABASE_DB_URL=\"$DB_URL\" tsx scripts/import-diverse-city-local.ts --execute-local --confirm-local --reset-only",
