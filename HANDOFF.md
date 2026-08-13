@@ -2,6 +2,45 @@
 
 Last updated: 2026-08-12
 
+## Lions Powered by Onzio footer ready locally; staging accent backfill completed
+
+Agent: Codex, 2026-08-12. Status: **implementation and local verification
+complete; Git publication and Vercel deployment not yet run**. Christian
+provided the staging SQL result confirming the Lions row
+`8d82bb47-c10b-4823-8ec7-c4de87d34b0a` changed from `accent_color = null` to
+`accent_color = '#F0F0F0'` at `2026-08-13 04:53:17.769707+00`. That closes the
+data-only follow-up from the prior entry; no additional database write or
+Vercel redeploy is required for the accent value.
+
+**Completed work:** extracted the existing shared `PoweredByOnzio` badge from
+`components/Footer.tsx` into `components/PoweredByOnzio.tsx`, preserving the
+exact Diverse City FC treatment: visible `Powered by` copy, the white Onzio
+wordmark, same-tab navigation, and a host-relative `/admin/login` destination
+that remains tenant-scoped. The shared classic, Clubhouse, and Academy footer
+branches still consume the same component with their existing styles.
+`EditorialFooter.tsx` now renders that shared badge centered beneath the Lions
+copyright line with editorial-scoped muted text tokens. No tenant data, admin
+behavior, public content, or non-footer navigation changed. Added a focused
+contract that pins shared reuse, copy, image, destination, and same-tab
+behavior.
+
+**Verification:** focused footer/editorial contracts 69/69; all contracts
+653/653; full suite 1133/1133 when run outside the filesystem sandbox against
+the already-running local Supabase stack; `npx tsc --noEmit` exit 0; `npm run
+lint` exit 0 with the same five existing admin Hook warnings; production build
+exit 0 with those same warnings; `git diff --check` clean. Browser verification
+at 1440x900 and 390x844 confirmed exactly one visible Powered by Onzio link,
+the wordmark loaded, the resolved destination was
+`http://lions.localhost:3005/admin/login`, no horizontal overflow, no framework
+error overlay, and no console errors. The prescribed `agent-browser` binary was
+not installed, so the supported in-app browser fallback performed this check.
+
+**Still open / exact next step:** obtain explicit approval before pushing the
+focused footer commit on `codex/lions-ui-parity` or updating `staging`. The
+currently deployed Lions staging preview does not include this footer follow-up
+yet. Preserve the pre-existing untracked `.claude/` directory and do not stage
+it.
+
 ## Lions editorial@1 visual-parity cleanup committed and deployed to staging preview
 
 Agent: Codex, 2026-08-12. Status: **implementation, verification, Git publish,

@@ -262,6 +262,27 @@ describe("editorial header nav", () => {
   });
 });
 
+describe("editorial footer attribution", () => {
+  it("reuses the same tenant-scoped Powered by Onzio badge as the shared Diverse City footer", () => {
+    const editorialFooter = read("components/editorial/EditorialFooter.tsx");
+    const sharedFooter = read("components/Footer.tsx");
+    const attribution = read("components/PoweredByOnzio.tsx");
+
+    expect(editorialFooter).toContain(
+      'import PoweredByOnzio from "@/components/PoweredByOnzio"',
+    );
+    expect(editorialFooter).toContain("<PoweredByOnzio");
+    expect(sharedFooter).toContain(
+      'import PoweredByOnzio from "@/components/PoweredByOnzio"',
+    );
+    expect(attribution).toContain("Powered by");
+    expect(attribution).toContain('href="/admin/login"');
+    expect(attribution).toContain('alt="Onzio"');
+    expect(attribution).toContain("onzio-wordmark-white.png");
+    expect(attribution).not.toMatch(/target=|rel=/);
+  });
+});
+
 describe("editorial home: classic regression", () => {
   it("classic/clubhouse/academy chrome and shared homepage sections never mount any editorial content", () => {
     for (const file of [

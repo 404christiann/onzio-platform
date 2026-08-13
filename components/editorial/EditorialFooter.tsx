@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "@/components/ResilientImage";
+import PoweredByOnzio from "@/components/PoweredByOnzio";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import type { ClubIdentityContent } from "@/lib/editorial-identity";
 import type { ContactProfileContent } from "@/lib/queries";
@@ -117,6 +118,10 @@ export default function EditorialFooter({
           © {new Date().getFullYear()} {clubName}. All rights reserved.
         </span>
       </div>
+      <PoweredByOnzio
+        className="footer-powered-by"
+        textClassName="footer-powered-by-text"
+      />
     </footer>
   );
 }

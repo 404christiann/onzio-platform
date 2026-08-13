@@ -2189,6 +2189,13 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+[data-site-template="editorial"] .footer-powered-by {
+  margin-top: 10px;
+}
+[data-site-template="editorial"] .footer-powered-by-text {
+  color: color-mix(in srgb, var(--on-dark) 45%, transparent);
+  font-size: 0.72rem;
+}
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 1050px) {
