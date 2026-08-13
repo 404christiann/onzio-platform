@@ -71,9 +71,9 @@ export default function EditorialScheduleMatchCard({
   const awayScore = fixture.home ? fixture.opponentScore : fixture.roseCityScore;
 
   const clubSide = (
-    <div className="schedule-match-team grid justify-items-center gap-3 text-center">
+    <div className="schedule-match-team">
       {crestOnDarkUrl ? (
-        <span className="schedule-match-crest relative inline-flex size-20 rounded-full bg-white">
+        <span className="schedule-match-crest">
           <Image
             src={crestOnDarkUrl}
             alt=""
@@ -83,18 +83,18 @@ export default function EditorialScheduleMatchCard({
           />
         </span>
       ) : (
-        <span className="schedule-opponent-mark inline-flex size-20 items-center justify-center rounded-full bg-white font-display text-xl font-black text-ed-primary" aria-hidden>
+        <span className="schedule-opponent-mark" aria-hidden>
           {clubInitials}
         </span>
       )}
-      <strong className="font-display text-2xl font-black uppercase leading-none">{clubShortName}</strong>
+      <strong>{clubShortName}</strong>
     </div>
   );
 
   const opponentSide = (
-    <div className="schedule-match-team grid justify-items-center gap-3 text-center">
+    <div className="schedule-match-team">
       {fixture.opponentLogoUrl ? (
-        <span className="schedule-match-crest relative inline-flex size-20 rounded-full bg-white">
+        <span className="schedule-match-crest">
           <Image
             src={fixture.opponentLogoUrl}
             alt=""
@@ -104,61 +104,61 @@ export default function EditorialScheduleMatchCard({
           />
         </span>
       ) : (
-        <span className="schedule-opponent-mark inline-flex size-20 items-center justify-center rounded-full bg-white font-display text-xl font-black text-ed-primary" aria-hidden>
+        <span className="schedule-opponent-mark" aria-hidden>
           {monogram(fixture.opponent)}
         </span>
       )}
-      <strong className="font-display text-2xl font-black uppercase leading-none">{fixture.opponent}</strong>
+      <strong>{fixture.opponent}</strong>
     </div>
   );
 
   return (
-    <article className="schedule-match-card overflow-hidden bg-ed-primary text-ed-on-dark">
-      <div className="schedule-match-stage grid items-center gap-6 p-8 md:grid-cols-[1fr_auto_1fr]">
+    <article className="schedule-match-card">
+      <div className="schedule-match-stage">
         {fixture.home ? clubSide : opponentSide}
-        <div className="schedule-match-center grid justify-items-center gap-2 text-center text-ed-accent">
+        <div className="schedule-match-center">
           {outcome ? (
-            <strong className="font-display text-5xl font-black">
+            <strong>
               {homeScore}
-              <span>-</span>
+              <span>–</span>
               {awayScore}
             </strong>
           ) : (
             <>
-              <strong className="font-display text-4xl font-black">{cardTimeFormat.format(kickoff)}</strong>
-              <span className="font-display text-xs font-black uppercase tracking-[0.16em] text-ed-on-dark-nav">Kickoff</span>
+              <strong>{cardTimeFormat.format(kickoff)}</strong>
+              <span>Kickoff</span>
             </>
           )}
         </div>
         {fixture.home ? opponentSide : clubSide}
       </div>
-      <div className="schedule-match-details grid gap-5 bg-ed-panel p-6 text-ed-ink">
-        <div className="schedule-match-kicker flex flex-wrap items-center justify-between gap-3">
-          <span className="font-display text-xs font-black uppercase tracking-[0.16em] text-ed-accent">{fixture.competition || "League"}</span>
+      <div className="schedule-match-details">
+        <div className="schedule-match-kicker">
+          <span>{fixture.competition || "League"}</span>
           {outcome ? (
-            <b className="font-display text-xs font-black uppercase tracking-[0.14em]" data-outcome={outcome}>{OUTCOME_LABEL[outcome]}</b>
+            <b data-outcome={outcome}>{OUTCOME_LABEL[outcome]}</b>
           ) : (
-            <b className="font-display text-xs font-black uppercase tracking-[0.14em]">{fixture.home ? "Home" : "Away"}</b>
+            <b>{fixture.home ? "Home" : "Away"}</b>
           )}
         </div>
-        <h3 className="font-display text-4xl font-black uppercase leading-none">{fixture.home ? "Home match" : "Away match"}</h3>
-        <dl className="grid gap-3">
+        <h3>{fixture.home ? "Home match" : "Away match"}</h3>
+        <dl>
           <div>
-            <dt className="font-display text-xs font-black uppercase tracking-[0.14em] text-ed-muted">Date</dt>
-            <dd className="font-semibold">
+            <dt>Date</dt>
+            <dd>
               {cardDateFormat.format(kickoff)} · {cardTimeFormat.format(kickoff)}
             </dd>
           </div>
           <div>
-            <dt className="font-display text-xs font-black uppercase tracking-[0.14em] text-ed-muted">Venue</dt>
-            <dd className="font-semibold">{fixture.venue}</dd>
+            <dt>Venue</dt>
+            <dd>{fixture.venue}</dd>
           </div>
         </dl>
         {showAction && fixture.id && (
-          <Link className="schedule-match-action inline-flex items-center justify-between gap-3 border-t border-[color:var(--ed-line)] pt-5 font-display text-xs font-black uppercase tracking-[0.16em] text-ed-accent" href={`/schedule/${fixture.id}`}>
-            <span aria-hidden>...</span>
+          <Link className="schedule-match-action" href={`/schedule/${fixture.id}`}>
+            <span aria-hidden>⋮</span>
             {isNext ? "Go to next match" : "Match area"}
-            <b aria-hidden>-&gt;</b>
+            <b aria-hidden>→</b>
           </Link>
         )}
       </div>

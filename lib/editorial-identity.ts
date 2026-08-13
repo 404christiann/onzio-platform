@@ -89,7 +89,7 @@ export type ClubThemeColors = {
  * onzio.clubs.accent_color (Lions E1). primary/secondary are passed in by
  * the caller (already resolved on ClubContext) rather than re-queried here.
  * A club with no accent_color set yet falls back to its secondary color, so
- * the gradient tokens editorial-tokens.css derives from --club-accent stay
+ * the gradient tokens editorial.css derives from --club-accent stay
  * well-formed instead of resolving to an empty custom property.
  */
 export async function fetchClubThemeColors(

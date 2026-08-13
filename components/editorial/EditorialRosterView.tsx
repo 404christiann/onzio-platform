@@ -77,11 +77,10 @@ export default function EditorialRosterView({
   const resultLabel = resultLabelForFilter(filter);
 
   return (
-    <div className="roster-page bg-ed-paper px-5 pb-28 pt-32 text-ed-ink md:px-8">
-      <div className="roster-filter-bar mx-auto mb-10 flex max-w-[1180px] flex-wrap items-center justify-between gap-4 border-b border-[color:var(--ed-line)] pb-6">
+    <div className="roster-page">
+      <div className="roster-filter-bar">
         <label htmlFor="roster-filter">Filter roster</label>
         <select
-          className="min-h-12 border border-[color:var(--ed-line-strong)] bg-transparent px-4 font-display text-xs font-black uppercase tracking-[0.14em] text-ed-ink"
           id="roster-filter"
           value={filter}
           onChange={(event) => setFilter(event.target.value as RosterFilter)}
@@ -96,10 +95,10 @@ export default function EditorialRosterView({
         </select>
       </div>
 
-      <div className="roster-content mx-auto max-w-[1180px]">
+      <div className="roster-content">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            className="roster-filter-results relative grid gap-14"
+            className="roster-filter-results"
             key={filter}
             aria-label={`Showing ${resultLabel}`}
             initial={
@@ -130,7 +129,7 @@ export default function EditorialRosterView({
               permanently transparent and never animates.
             */}
             <motion.span
-              className="roster-filter-flash pointer-events-none absolute inset-x-0 top-0 h-1 origin-left bg-ed-accent"
+              className="roster-filter-flash"
               aria-hidden
               initial={
                 prefersReducedMotion
@@ -156,7 +155,7 @@ export default function EditorialRosterView({
               const group = playersByPosition(roster, position);
               return (
                 <motion.section
-                  className="roster-group grid gap-8"
+                  className="roster-group"
                   id={anchor}
                   key={position}
                   initial={
@@ -169,13 +168,13 @@ export default function EditorialRosterView({
                     ease: [0.22, 1, 0.36, 1],
                   }}
                 >
-                  <div className="roster-group-heading flex flex-wrap items-end justify-between gap-4">
-                    <h2 className="font-display text-[clamp(3rem,9vw,7rem)] font-black uppercase leading-[0.82]">{label}</h2>
-                    <small className="font-display text-xs font-black uppercase tracking-[0.16em] text-ed-muted">
+                  <div className="roster-group-heading">
+                    <h2>{label}</h2>
+                    <small>
                       {group.length} {group.length === 1 ? "player" : "players"}
                     </small>
                   </div>
-                  <div className="roster-grid grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="roster-grid">
                     {group.map((player) => (
                       <motion.div
                         className="roster-filter-card"
@@ -202,7 +201,7 @@ export default function EditorialRosterView({
 
             {showsStaffSection(filter) && (
               <motion.section
-                className="staff-section grid gap-8"
+                className="staff-section"
                 id="staff"
                 initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -213,13 +212,13 @@ export default function EditorialRosterView({
                 }}
               >
                 <div className="staff-section-intro">
-                  <h2 className="font-display text-[clamp(3rem,9vw,7rem)] font-black uppercase leading-[0.82]">
+                  <h2>
                     Technical
                     <br />
-                    <em className="not-italic text-ed-accent">staff.</em>
+                    <em>staff.</em>
                   </h2>
                 </div>
-                <div className="staff-grid grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="staff-grid">
                   {staffList.map((member) => (
                     <motion.div
                       className="roster-filter-card"

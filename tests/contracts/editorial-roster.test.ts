@@ -152,9 +152,7 @@ describe("editorial roster: pure filter/group logic (lib/editorial-roster.ts)", 
 describe("editorial player card", () => {
   it("is non-interactive: article markup, data-interactive=false, no click handler or client state", () => {
     const source = stripComments(read("components/editorial/EditorialPlayerCard.tsx"));
-    expect(source).toContain("<article");
-    expect(source).toContain("player-card");
-    expect(source).toContain('data-interactive="false"');
+    expect(source).toContain('<article className="player-card" data-interactive="false">');
     expect(source).not.toMatch(/onClick|useState|Modal|"use client"/);
   });
 
@@ -166,9 +164,8 @@ describe("editorial player card", () => {
     expect(source).toContain('DF: "Defender"');
     expect(source).toContain('MF: "Midfielder"');
     expect(source).toContain('FW: "Forward"');
-    expect(source).toContain("{first && <small");
-    expect(source).toContain("{first}</small>}");
-    expect(source).toContain("{last}</strong>");
+    expect(source).toContain("{first && <small>{first}</small>}");
+    expect(source).toContain("<strong>{last}</strong>");
   });
 
   it("falls back to the club crest (never a hardcoded club asset) when the player has no photo", () => {
@@ -190,9 +187,7 @@ describe("editorial player card", () => {
 describe("editorial staff card", () => {
   it("is non-interactive: article markup, data-interactive=false, no click handler or client state", () => {
     const source = stripComments(read("components/editorial/EditorialStaffCard.tsx"));
-    expect(source).toContain("<article");
-    expect(source).toContain("staff-card");
-    expect(source).toContain('data-interactive="false"');
+    expect(source).toContain('<article className="staff-card" data-interactive="false">');
     expect(source).not.toMatch(/onClick|useState|Modal|"use client"/);
   });
 
@@ -223,7 +218,7 @@ describe("editorial roster view: composition", () => {
     const source = read("components/editorial/EditorialRosterView.tsx");
     expect(source).toContain("visibleGroups.map(([position, label, anchor");
     expect(source).toContain('id={anchor}');
-    const staffSectionIndex = source.indexOf("staff-section");
+    const staffSectionIndex = source.indexOf('className="staff-section"');
     const groupsMapIndex = source.indexOf("visibleGroups.map(([position");
     expect(staffSectionIndex).toBeGreaterThan(groupsMapIndex);
     // GROUPS itself (imported from lib/editorial-roster.ts) is asserted
@@ -259,7 +254,7 @@ describe("editorial roster view: reduced motion", () => {
 
   it("mounts the filter-flash element unconditionally (never gated by prefersReducedMotion), avoiding the reduced-motion hydration mismatch fixed on the reference branch", () => {
     const source = read("components/editorial/EditorialRosterView.tsx");
-    const flashIndex = source.indexOf("roster-filter-flash");
+    const flashIndex = source.indexOf('className="roster-filter-flash"');
     expect(flashIndex).toBeGreaterThan(-1);
     // Reduced motion must be expressed only through prop *values* on this
     // element (initial/animate/transition), never by conditionally omitting

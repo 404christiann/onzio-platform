@@ -28,7 +28,9 @@ import type { Fixture } from "@/lib/data";
  *   component throws a vite import-analysis error on the JSX syntax. This
  *   file follows the established house convention instead: source-scan
  *   assertions for markup/behavior, plus real functional assertions against
- *   the pure fixture-resolution helpers in lib/editorial-fixtures.ts.
+ *   EditorialNextMatch's now-exported pure date-resolution helpers
+ *   (findNextFixture/findLatestResult/monogram/fixtureKickoff), which need
+ *   no JSX rendering at all.
  */
 
 const read = (path: string) =>
@@ -97,8 +99,7 @@ describe("editorial hero", () => {
   it("locks the headline to two lines via data-driven span/em, sourced from homepage_hero_content -- never hardcoded club copy or club_identity", () => {
     const source = read("components/editorial/EditorialHero.tsx");
     expect(source).toContain("<span>{headlineTop}</span>");
-    expect(source).toContain("{headlineEm && <em");
-    expect(source).toContain("{headlineEm}</em>}");
+    expect(source).toContain("{headlineEm && <em>{headlineEm}</em>}");
     expect(source).toContain(
       "heroContent.headline_line_one.trim() || club.name",
     );
@@ -122,14 +123,12 @@ describe("editorial hero", () => {
     expect(source).toContain("EMPTY_HOMEPAGE_HERO_CONTENT");
   });
 
-  it("uses the editorial token layer and Tailwind classes for the hero treatment", () => {
-    const source = read("components/editorial/EditorialHero.tsx");
-    const tokens = read("styles/editorial-tokens.css");
-    expect(source).toContain("bg-ed-primary");
-    expect(source).toContain("text-ed-on-dark");
-    expect(source).toContain('className="hero ');
-    expect(tokens).toContain("--ed-primary: var(--club-primary");
-    expect(tokens).toContain('[data-site-template="editorial"] .public-main');
+  it("uses the editorial CSS hero gradient locked to two lines at every breakpoint", () => {
+    const css = read("styles/editorial.css");
+    expect(css).toMatch(
+      /\.hero h1 span,\s*\n\[data-site-template="editorial"\] \.hero h1 em \{\s*\n\s*display: block;\s*\n\s*white-space: nowrap;/,
+    );
+    expect(css).toContain("var(--club-primary)");
   });
 });
 
@@ -143,19 +142,26 @@ describe("editorial next match", () => {
     expect(next?.competition).toBe("Midwest Premier League");
   });
 
-  it("does not render a latest-result panel in the redesigned next-match feature", () => {
-    const source = stripComments(read("components/editorial/EditorialNextMatch.tsx"));
-    expect(source).not.toContain("findLatestResult");
-    expect(source).not.toMatch(/Latest result/i);
+  it("resolves the real latest played result", async () => {
+    const { findLatestResult } = await import("@/lib/editorial-fixtures");
+    const latest = findLatestResult(LIONS_FIXTURES);
+    // 2026-07-11 Lions 2-1 Scioto Valley FC (home win) is the most recent
+    // fixture with both scores recorded and a kickoff in the past.
+    expect(latest?.opponent).toBe("Scioto Valley FC");
+    expect(latest?.roseCityScore).toBe(2);
+    expect(latest?.opponentScore).toBe(1);
   });
 
-  it("returns null when there are no fixtures or none upcoming", async () => {
-    const { findNextFixture } = await import("@/lib/editorial-fixtures");
+  it("returns null for both when there are no fixtures, or none upcoming/played", async () => {
+    const { findNextFixture, findLatestResult } = await import(
+      "@/lib/editorial-fixtures"
+    );
     expect(findNextFixture([])).toBeNull();
-    const onlyPast: Fixture[] = [
-      { date: "2020-01-01", time: "12:00", opponent: "Past FC", home: true, venue: "TBD" },
+    expect(findLatestResult([])).toBeNull();
+    const onlyFuture: Fixture[] = [
+      { date: "2099-01-01", time: "12:00", opponent: "Future FC", home: true, venue: "TBD" },
     ];
-    expect(findNextFixture(onlyPast)).toBeNull();
+    expect(findLatestResult(onlyFuture)).toBeNull();
   });
 
   it("falls back to a text monogram for opponents without a crest asset", async () => {
@@ -225,13 +231,13 @@ describe("editorial our story teaser", () => {
     const source = read("components/editorial/EditorialStoryTeaser.tsx");
     expect(source).toContain("identity?.identityHeadingTop");
     expect(source).toContain("identity?.identityHeadingEm");
-    expect(source).toContain("{excerpt && <p");
+    expect(source).toContain("{excerpt && <p>{excerpt}</p>}");
     expect(source).toContain("identity?.foundedYear");
     expect(source).toContain("identity?.venue");
-    expect(source).toContain("story-meta");
-    expect(source).toContain("story-pillars");
+    expect(source).toContain('className="story-meta"');
+    expect(source).toContain('className="story-pillars"');
     expect(source).toContain("identity?.highlights");
-    expect(source).toContain('href="/club/about"');
+    expect(source).toContain('<Link href="/club/about">Our story');
     expect(source).not.toMatch(/Columbus|A club shaped by/);
   });
 });

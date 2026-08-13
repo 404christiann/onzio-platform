@@ -1,40 +1,75 @@
 "use client";
 
-import Link from "next/link";
-import { useReducedMotion, motion } from "motion/react";
-import { CrestCircle } from "@/components/ui/editorial/crest-circle";
+import { useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import EditorialScheduleMatchCard from "@/components/editorial/EditorialScheduleMatchCard";
 import {
+  distinctMonths,
   firstUpcomingFixtureId,
+  initialMonthKey,
   isPlayedFixture,
-  sortFixturesChronologically,
+  monthKey,
+  visibleFixturesForFilter,
+  type ScheduleStatusFilter,
 } from "@/lib/editorial-fixtures";
 import type { Fixture } from "@/lib/data";
 
 export {
+  distinctMonths,
   firstUpcomingFixtureId,
+  initialMonthKey,
   isPlayedFixture,
-  sortFixturesChronologically,
+  monthKey,
+  visibleFixturesForFilter,
+};
+export type { ScheduleStatusFilter };
+
+/**
+ * Presentational editorial schedule view, ported (visual design) from the
+ * approved concept mockup via the superseded claude/lions-fc-website-setup-
+ * ij0p7t reference branch's EditorialScheduleView.tsx.
+ *
+ * The caller (EditorialSchedule) supplies the already-fetched active-season
+ * fixture list as a prop, so this component stays independently testable
+ * without mocking Supabase -- the same EditorialHome/EditorialRoster
+ * fetch-once-and-pass-down convention established in E3/E4.
+ *
+ * Titled "Team schedule": a functional month rail built from the distinct
+ * months actually present in the fixture list, an unboxed status-tab row
+ * (All / Upcoming / Results), and a solid-color matchup card grid. No season
+ * selector -- Starter is locked to the single active season, so this view
+ * never renders one, not even a disabled placeholder. Filter/month changes
+ * use the same Motion AnimatePresence exit/reveal approach the roster filter
+ * established (EditorialRosterView), with a prefers-reduced-motion
+ * fallback. Imports from "motion/react" (this repo's real installed
+ * package), not "framer-motion" -- see EditorialRosterView.tsx's doc
+ * comment for why.
+ *
+ * The month/status-filter pure logic (monthKey/distinctMonths/
+ * initialMonthKey/firstUpcomingFixtureId/isPlayedFixture/
+ * visibleFixturesForFilter) lives in lib/editorial-fixtures.ts (a plain,
+ * non-JSX module), not here, so contract tests can exercise it directly --
+ * see EditorialRosterView.tsx's doc comment for why. Re-exported above for
+ * callers that only need to import this one module.
+ */
+
+const STATUS_FILTERS: ScheduleStatusFilter[] = ["all", "upcoming", "played"];
+
+const STATUS_LABEL: Record<ScheduleStatusFilter, string> = {
+  all: "All matches",
+  upcoming: "Upcoming",
+  played: "Results",
 };
 
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "2-digit",
+const monthLabelFormat = new Intl.DateTimeFormat("en-US", { month: "short" });
+const monthHeadingFormat = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  year: "numeric",
 });
 
-const timeFormat = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-});
-
-function kickoffDate(fixture: Fixture) {
-  const [year, month, day] = fixture.date.split("-").map(Number);
-  const [hours, minutes] = (fixture.time || "00:00").split(":").map(Number);
-  return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0);
-}
-
-function scoreLabel(fixture: Fixture) {
-  if (!isPlayedFixture(fixture)) return fixture.home ? "Home" : "Away";
-  return `${fixture.roseCityScore}-${fixture.opponentScore}`;
+/** A safe mid-month noon Date for a "YYYY-MM" key, immune to timezone day-boundary drift. */
+function monthKeyToDate(month: string): Date {
+  return new Date(`${month}-02T12:00:00`);
 }
 
 export default function EditorialScheduleView({
@@ -43,117 +78,107 @@ export default function EditorialScheduleView({
   clubInitials,
   crestOnDarkUrl,
   league,
-  seasonLabel = "Current season",
 }: {
   fixtures: Fixture[];
   clubShortName: string;
   clubInitials: string;
   crestOnDarkUrl: string;
   league?: string;
-  seasonLabel?: string;
 }) {
   const prefersReducedMotion = useReducedMotion();
-  const orderedFixtures = sortFixturesChronologically(fixtures);
-  const nextFixtureId = firstUpcomingFixtureId(orderedFixtures);
+  const months = useMemo(() => distinctMonths(fixtures), [fixtures]);
+  const [selectedMonth, setSelectedMonth] = useState(() => initialMonthKey(fixtures));
+  const [statusFilter, setStatusFilter] = useState<ScheduleStatusFilter>("all");
+  const nextFixtureId = useMemo(() => firstUpcomingFixtureId(fixtures), [fixtures]);
+  const visibleFixtures = visibleFixturesForFilter(fixtures, selectedMonth, statusFilter);
 
   return (
-    <div className="schedule-calendar-page bg-ed-paper pt-32 text-ed-ink">
-      <main className="schedule-calendar-shell mx-auto max-w-[1180px] px-5 pb-28 md:px-8">
-        <header className="schedule-calendar-head mb-14 grid gap-6 border-b border-[color:var(--ed-line)] pb-10 md:grid-cols-[1fr_auto] md:items-end">
-          <div className="grid gap-5">
-            <span className="eyebrow">Team schedule</span>
-            <h1 className="text-[clamp(4rem,16vw,13rem)] font-black uppercase leading-[0.78]">
-              Fixtures
-            </h1>
+    <div className="schedule-calendar-page">
+      <main className="schedule-calendar-shell">
+        <header className="schedule-calendar-head">
+          <div>
+            <h1>Team schedule</h1>
           </div>
-          <p className="max-w-xs text-sm font-semibold uppercase tracking-[0.14em] text-ed-muted md:text-right">
-            {seasonLabel}
-            {league ? <span className="block text-ed-accent">{league}</span> : null}
-          </p>
         </header>
 
-        <section className="schedule-month-section" aria-label="Fixtures">
-          <div className="schedule-card-grid grid">
-            {orderedFixtures.map((fixture, index) => {
-              const kickoff = kickoffDate(fixture);
-              const played = isPlayedFixture(fixture);
-              const isNext = Boolean(fixture.id) && fixture.id === nextFixtureId;
-              const content = (
-                <>
-                  <span className="font-display text-sm font-black text-ed-accent">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span className="grid gap-1">
-                    <strong className="font-display text-3xl font-black uppercase leading-none md:text-5xl">
-                      {clubShortName}
-                    </strong>
-                    <small className="font-semibold uppercase tracking-[0.14em] text-ed-muted">
-                      {dateFormat.format(kickoff)} · {timeFormat.format(kickoff)}
-                    </small>
-                  </span>
-                  <span className="hidden justify-self-center md:block">
-                    <CrestCircle
-                      src={crestOnDarkUrl}
-                      alt={`${clubShortName} crest`}
-                      fallback={clubInitials}
-                      variant="row"
-                    />
-                  </span>
-                  <span className="font-display text-xl font-black uppercase text-ed-muted md:text-3xl">
-                    {scoreLabel(fixture)}
-                  </span>
-                  <span className="grid gap-1 md:text-right">
-                    <strong className="font-display text-3xl font-black uppercase leading-none md:text-5xl">
-                      {fixture.opponent}
-                    </strong>
-                    <small className="font-semibold uppercase tracking-[0.14em] text-ed-muted">
-                      {fixture.venue}
-                    </small>
-                  </span>
-                </>
-              );
+        <div className="schedule-filter-panel">
+          <fieldset>
+            <legend>Match status</legend>
+            {STATUS_FILTERS.map((status) => (
+              <button
+                type="button"
+                key={status}
+                aria-pressed={statusFilter === status}
+                data-active={statusFilter === status}
+                onClick={() => setStatusFilter(status)}
+              >
+                {STATUS_LABEL[status]}
+              </button>
+            ))}
+          </fieldset>
+        </div>
 
-              const rowClassName =
-                "fixture-row grid gap-5 border-t border-[color:var(--ed-line)] py-7 transition md:grid-cols-[3rem_minmax(0,1fr)_5rem_6rem_minmax(0,1fr)] md:items-center";
+        <nav className="schedule-month-rail" aria-label="Schedule months">
+          {months.map((month) => (
+            <button
+              type="button"
+              key={month}
+              aria-pressed={selectedMonth === month}
+              data-active={selectedMonth === month}
+              onClick={() => setSelectedMonth(month)}
+            >
+              {monthLabelFormat.format(monthKeyToDate(month))}
+            </button>
+          ))}
+        </nav>
 
-              return fixture.id ? (
-                <motion.div
-                  key={fixture.id}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-                  animate={{ opacity: played ? 0.55 : 1, y: 0 }}
-                  transition={{ duration: 0.42, delay: index * 0.035, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <Link
-                    href={`/schedule/${fixture.id}`}
-                    className={`${rowClassName} hover:bg-ed-ink-ghost`}
-                    data-next={isNext}
-                    data-played={played}
-                  >
-                    {content}
-                  </Link>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={`${fixture.date}-${fixture.opponent}-${index}`}
-                  className={rowClassName}
-                  initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
-                  animate={{ opacity: played ? 0.55 : 1, y: 0 }}
-                  transition={{ duration: 0.42, delay: index * 0.035, ease: [0.22, 1, 0.36, 1] }}
-                  data-next={isNext}
-                  data-played={played}
-                >
-                  {content}
-                </motion.div>
-              );
-            })}
+        <section className="schedule-month-section">
+          <div className="schedule-month-heading">
+            <div>
+              <span>
+                {visibleFixtures.length} {visibleFixtures.length === 1 ? "match" : "matches"}
+              </span>
+              <h2>{monthHeadingFormat.format(monthKeyToDate(selectedMonth))}</h2>
+            </div>
+            {league && <small>{league}</small>}
           </div>
 
-          {orderedFixtures.length === 0 && (
-            <div className="schedule-empty border border-[color:var(--ed-line)] bg-ed-panel-glass p-8">
-              <strong className="font-display text-3xl uppercase">No fixtures published yet.</strong>
-              <p className="mt-3 text-ed-muted">Check back once the active season schedule is announced.</p>
-            </div>
-          )}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              className="schedule-card-grid"
+              key={`${selectedMonth}-${statusFilter}`}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+              transition={{
+                duration: prefersReducedMotion ? 0.12 : 0.4,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+            >
+              {visibleFixtures.map((fixture, index) => (
+                <motion.div
+                  key={fixture.id ?? `${fixture.date}-${fixture.opponent}`}
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 24, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.48, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <EditorialScheduleMatchCard
+                    fixture={fixture}
+                    clubShortName={clubShortName}
+                    clubInitials={clubInitials}
+                    crestOnDarkUrl={crestOnDarkUrl}
+                    isNext={Boolean(fixture.id) && fixture.id === nextFixtureId}
+                  />
+                </motion.div>
+              ))}
+              {visibleFixtures.length === 0 && (
+                <div className="schedule-empty">
+                  <strong>No matches in this view.</strong>
+                  <p>Choose another month or update the match-status filter.</p>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </section>
       </main>
     </div>

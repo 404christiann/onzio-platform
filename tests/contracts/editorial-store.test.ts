@@ -92,10 +92,10 @@ describe("editorial store page", () => {
 
   it("renders the approved campaign, three-variant catalog, and photo fallback", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
-    expect(source).toContain("store-campaign");
-    expect(source).toContain("store-featured-product");
-    expect(source).toContain("store-product-grid");
-    expect(source).toContain("store-product-card");
+    expect(source).toContain('className="store-campaign"');
+    expect(source).toContain('className="store-featured-product"');
+    expect(source).toContain('className="store-product-grid"');
+    expect(source).toContain('className="store-product-card"');
     expect(source).toContain("products.map(");
     expect(source).toContain("store-product-image-empty");
   });
@@ -104,7 +104,7 @@ describe("editorial store page", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
     expect(source).toContain("section.cta_link");
     expect(source).toContain("section.cta_label");
-    expect(source).toContain("store-service-strip");
+    expect(source).toContain('className="store-service-strip"');
     expect(source).toContain("featured.bulletPoints[0]");
     expect(source).toContain("featured.storeNote");
     expect(source).not.toMatch(/\$[0-9]|checkout|Select size/i);
@@ -116,19 +116,18 @@ describe("editorial store page", () => {
     expect(source).toMatch(/if \(loading\) \{/);
   });
 
-  it("styles from editorial's own token utilities, never AcademyShopPage.tsx's hardcoded navy/red hex values or admin token utilities", () => {
+  it("styles from editorial's own CSS custom properties, never AcademyShopPage.tsx's hardcoded navy/red hex values", () => {
     const source = read("components/editorial/EditorialShopPage.tsx");
     expect(source).not.toMatch(/#1E3653|#FF1616|#F9FAFD|#B9E3F6/);
-    expect(source).toMatch(/\bed-/);
-    expect(source).not.toMatch(/\b(bg|text)-(primary|accent|brand|foreground|muted|card|popover)\b/);
+    expect(source).not.toMatch(/className="[^"]*\b(bg-|text-|font-display|font-nav)/);
   });
 
-  it("uses the shared editorial token stylesheet instead of appending component CSS", () => {
-    const shell = read("components/editorial/EditorialShell.tsx");
-    const tokens = read("styles/editorial-tokens.css");
-    expect(shell).toContain('import "@/styles/editorial-tokens.css";');
-    expect(tokens).toContain("--ed-accent");
-    expect(tokens).toContain('[data-site-template="editorial"]');
+  it("appends its rules to styles/editorial.css, scoped under [data-site-template=\"editorial\"]", () => {
+    const css = read("styles/editorial.css");
+    expect(css).toContain("STORE (Lions E6)");
+    expect(css).toContain('[data-site-template="editorial"] .store-campaign {');
+    expect(css).toContain('[data-site-template="editorial"] .store-product-card {');
+    expect(css).toContain('[data-site-template="editorial"] .store-service-strip {');
   });
 });
 

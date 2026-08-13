@@ -29,10 +29,8 @@ describe("editorial About page", () => {
     expect(source).toContain("content.story_paragraphs.map");
     expect(source).toContain("identity?.mission");
     expect(source).toContain("identity?.highlights");
-    expect(source).toContain("manifesto");
-    expect(source).toContain("EditorialValueCard");
-    expect(source).not.toContain("find-us");
-    expect(source).not.toContain("hasLocation");
+    expect(source).toContain('className="manifesto"');
+    expect(source).toContain('className="find-us"');
     expect(source).not.toMatch(/Lions|Columbus|<form/i);
   });
 });

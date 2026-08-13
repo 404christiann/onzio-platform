@@ -1,51 +1,32 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-12
+Last updated: 2026-08-13
 
-## Lions editorial Diverse City parity + Tailwind migration shipped to staging preview
+## Lions editorial Tailwind/Diverse City migration reverted on staging
 
-Agent: Codex, 2026-08-12. Status: **implementation, local verification, Git
-publish, staging fast-forward, and Vercel staging preview verification
-complete**. Feature branch: `codex/lions-editorial-diversecity`, cut from
-`origin/staging` at `8100788`; implementation commit message: `Migrate Lions
-editorial UI to Tailwind`. The branch was pushed to origin and `origin/staging`
-was fast-forwarded. The new Vercel preview for the staging branch reached
-`READY` and the custom staging alias resolved to it. No production deployment,
-hosted Supabase mutation, Stripe mutation, or hosted database write was run.
-Local Supabase only was used, and Diverse City was imported locally via
-`npm run migration:import:diverse-city:local` (`hostedMutations: 0`). The
-pre-existing untracked `.claude/` directory remains unstaged.
+Agent: Codex, 2026-08-13. Status: **revert prepared and ready to publish in
+this turn**. Christian rejected the Lions editorial Tailwind/Diverse City
+parity result and requested it be reverted, then asked for a fresh branch from
+the reverted commit because `codex/lions-editorial-diversecity` is no longer a
+useful base.
 
-**Completed work:** replaced the monolithic `styles/editorial.css` with
-`styles/editorial-tokens.css`, additive `ed-*` Tailwind tokens, and public-only
-editorial primitives in `components/ui/editorial/*`. Redesigned the five
-requested surfaces toward the live Diverse City visual language: fixed/header
-nav with Base UI mobile dialog, chronological oversized Fixtures list, About
-numbered values with no Find Us block, Next Match with no latest-result panel,
-and homepage identity/story value cards. Mechanically ported the remaining
-editorial pages/components to Tailwind utilities while preserving data flow,
-GSAP hook class names, tenant isolation, and Starter behavior. `EditorialSchedule`
-now preserves the active-season label and `lib/editorial-fixtures.ts` exposes
-`sortFixturesChronologically()`.
+**Completed work:** reverted the two staging commits from that attempt:
+`f8164b6` (`Update Lions editorial staging handoff`) and `b7e3853` (`Migrate
+Lions editorial UI to Tailwind`). This restores the prior staged Lions
+editorial implementation from before the Tailwind migration, including
+`styles/editorial.css`, the previous editorial component markup, and the
+pre-migration contract expectations. A new branch,
+`codex/lions-editorial-v2-plan`, is the reset point for a better follow-up
+plan.
 
-**Verification:** `npx tsc --noEmit` exit 0; `npm run lint` exit 0 with the
-same five existing admin Hook warnings; `npm run test:contracts` 655/655;
-`npm run test:architecture` 20/20; local-only `npm run test:db` 181/181; full
-local-env `npm test` 1135/1135; `npm run db:types:check` confirmed generated
-types match local schema; `supabase db lint --local` found no schema errors;
-`npm run build` exit 0 with the same five admin Hook warnings. Final Playwright
-visual sweep `/tmp/lions-dcfc-restyle/report-after.json`: 32 local captures and
-10 live-reference captures across desktop 1440x900 and mobile 390x844,
-failures `[]`; all local Lions and local Diverse City routes returned 200 with
-zero console errors, zero page errors, no framework overlay, and no horizontal
-overflow. Spot check also verified Lions accent/CTA contrast after using the
-club secondary as the editorial visual accent while retaining raw
-`--ed-theme-accent`.
+**Verification:** revert applied cleanly with no conflicts. Publish and final
+Vercel staging verification are still pending below in this same turn. No
+production deployment, hosted Supabase write, Stripe mutation, or hosted
+database change is authorized or implied.
 
-**Still open / exact next step:** hard-refresh
-`https://lions-onzio-staging.vercel.app` and visually review desktop/mobile
-screens. No production promotion is implied and remains separately
-approval-gated.
+**Still open / exact next step:** push the revert commit to
+`codex/lions-editorial-v2-plan`, fast-forward `origin/staging` to the revert
+commit, then verify the Lions staging preview reaches `READY`.
 
 ## Lions Powered by Onzio footer ready locally; staging accent backfill completed
 

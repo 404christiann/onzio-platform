@@ -15,7 +15,7 @@ import {
 } from "@/lib/editorial-identity";
 import { fetchContactProfile, fetchSiteSocialLinks, type ContactProfileContent } from "@/lib/queries";
 import type { DBSiteSocialLink } from "@/lib/db-types";
-import "@/styles/editorial-tokens.css";
+import "@/styles/editorial.css";
 
 // Matches Hero.tsx's own default navy/red fallback (components/Hero.tsx) so
 // an editorial tenant with no colors configured yet still renders a sane
@@ -27,8 +27,8 @@ const DEFAULT_SECONDARY = "#AD3234";
  * Root wrapper for the editorial@1 site template, mounted by
  * app/%5Fclubs/[slug]/layout.tsx instead of Nav/Footer/TemplateFontScope.
  *
- * Sets data-site-template="editorial" (which scopes the editorial token
- * stylesheet) and injects the club's colors as the
+ * Sets data-site-template="editorial" (which scopes every rule in
+ * styles/editorial.css) and injects the club's colors as the
  * --club-primary / --club-secondary / --club-accent custom properties the
  * editorial token system derives from. primary/secondary come straight off
  * ClubContext (already resolved by the tenant layout); accent is fetched

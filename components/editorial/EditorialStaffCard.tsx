@@ -32,25 +32,23 @@ export default function EditorialStaffCard({
   const imageSrc = hasPhoto ? member.image : crestUrl;
 
   return (
-    <article className="staff-card grid overflow-hidden border border-[color:var(--ed-line)] bg-ed-panel-glass" data-interactive="false">
-      <span className="staff-card-media relative min-h-[300px] overflow-hidden bg-ed-ink-ghost">
+    <article className="staff-card" data-interactive="false">
+      <span className="staff-card-media">
         {imageSrc && (
           <Image
             src={imageSrc}
             alt=""
             fill
-            className={hasPhoto ? "is-photo object-cover object-top" : "is-crest object-contain p-16"}
+            className={hasPhoto ? "is-photo" : "is-crest"}
             sizes="(max-width: 640px) 50vw, (max-width: 1050px) 33vw, 25vw"
             {...imageDeliveryProps(hasPhoto ? "roster-photo" : "club-logo")}
           />
         )}
       </span>
-      <span className="staff-card-copy grid gap-4 p-5">
-        <span className="staff-card-name font-display text-3xl font-black uppercase leading-none">{member.name}</span>
-        <span className="staff-card-role flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.12em] text-ed-muted">
-          <b className="inline-flex size-10 items-center justify-center rounded-full bg-ed-accent font-display text-xs font-black text-ed-on-accent">
-            {staffInitials(member.name)}
-          </b>
+      <span className="staff-card-copy">
+        <span className="staff-card-name">{member.name}</span>
+        <span className="staff-card-role">
+          <b>{staffInitials(member.name)}</b>
           {member.role}
         </span>
       </span>

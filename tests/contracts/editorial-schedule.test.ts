@@ -9,7 +9,6 @@ import {
   isPlayedFixture,
   monthKey,
   outcomeForFixture,
-  sortFixturesChronologically,
   visibleFixturesForFilter,
 } from "@/lib/editorial-fixtures";
 
@@ -123,17 +122,6 @@ describe("editorial schedule: first-upcoming-fixture labeling (lib/editorial-fix
   });
 });
 
-describe("editorial schedule: chronological fixture ordering (lib/editorial-fixtures.ts)", () => {
-  it("sorts every fixture chronologically for the redesigned all-fixtures list", () => {
-    const shuffled = [LIONS_FIXTURES[7], LIONS_FIXTURES[0], LIONS_FIXTURES[10]];
-    expect(sortFixturesChronologically(shuffled).map((fixture) => fixture.id)).toEqual([
-      "f1",
-      "f8",
-      "f11",
-    ]);
-  });
-});
-
 describe("editorial schedule: W/L/D outcome resolution (lib/editorial-fixtures.ts)", () => {
   it("resolves a real seeded win regardless of home/away side (2026-05-09 Lions 2-0 Dayton, home)", () => {
     expect(outcomeForFixture(LIONS_FIXTURES[0])).toBe("W");
@@ -156,7 +144,7 @@ describe("editorial schedule match card", () => {
   it("shows the kickoff time (not a score) for an upcoming fixture, and a W/L/D chip otherwise", () => {
     const source = read("components/editorial/EditorialScheduleMatchCard.tsx");
     expect(source).toContain("outcome ? (");
-    expect(source).toContain("Kickoff");
+    expect(source).toContain(">Kickoff</span>");
     expect(source).toContain('data-outcome={outcome}');
   });
 
@@ -185,12 +173,13 @@ describe("editorial schedule match card", () => {
   });
 });
 
-describe("editorial schedule view: redesigned chronological fixtures list", () => {
-  it("titles the page with a Team schedule eyebrow and oversized Fixtures heading", () => {
+describe("editorial schedule view: composition and no season selector", () => {
+  it("titles the page 'Team schedule' and renders All/Upcoming/Results status tabs", () => {
     const source = read("components/editorial/EditorialScheduleView.tsx");
-    expect(source).toContain("Team schedule");
-    expect(source).toContain("Fixtures");
-    expect(source).toContain("seasonLabel");
+    expect(source).toContain("<h1>Team schedule</h1>");
+    expect(source).toContain('all: "All matches"');
+    expect(source).toContain('upcoming: "Upcoming"');
+    expect(source).toContain('played: "Results"');
   });
 
   it("never renders a season selector -- not even a disabled one", () => {
@@ -204,35 +193,25 @@ describe("editorial schedule view: redesigned chronological fixtures list", () =
     }
   });
 
-  it("uses the pure chronological sort helper from lib/editorial-fixtures.ts rather than redefining it", () => {
+  it("re-exports the pure month/status-filter helpers from lib/editorial-fixtures.ts rather than redefining them", () => {
     const source = read("components/editorial/EditorialScheduleView.tsx");
     expect(source).toContain('from "@/lib/editorial-fixtures"');
-    expect(source).toContain("sortFixturesChronologically(fixtures)");
     expect(source).not.toMatch(/export function distinctMonths/);
     expect(source).not.toMatch(/export function visibleFixturesForFilter/);
   });
 
-  it("does not render the old month rail, status filters, or card-grid filtering controls", () => {
+  it("uses Motion (motion/react) for the month/filter transition with a prefers-reduced-motion fallback", () => {
     const source = read("components/editorial/EditorialScheduleView.tsx");
-    expect(source).not.toContain("schedule-filter-panel");
-    expect(source).not.toContain("schedule-month-rail");
-    expect(source).not.toContain("ScheduleStatusFilter");
-    expect(source).not.toContain("visibleFixturesForFilter");
-    expect(source).not.toContain("AnimatePresence");
+    expect(source).toContain('from "motion/react"');
+    expect(source).not.toContain('from "framer-motion"');
+    expect(source).toContain("useReducedMotion");
+    expect(source).toContain("AnimatePresence");
   });
 
-  it("renders numbered .fixture-row entries linked to match area, with played rows dimmed", () => {
+  it("renders the empty state markup for a month/filter combination with no fixtures", () => {
     const source = read("components/editorial/EditorialScheduleView.tsx");
-    expect(source).toContain("fixture-row");
-    expect(source).toContain("String(index + 1).padStart(2");
-    expect(source).toContain('href={`/schedule/${fixture.id}`}');
-    expect(source).toContain("data-played={played}");
-  });
-
-  it("renders a truthful empty state when no active-season fixtures are published", () => {
-    const source = read("components/editorial/EditorialScheduleView.tsx");
-    expect(source).toContain("schedule-empty");
-    expect(source).toContain("No fixtures published yet.");
+    expect(source).toContain('className="schedule-empty"');
+    expect(source).toContain("No matches in this view.");
   });
 });
 
@@ -242,14 +221,14 @@ describe("editorial match area: attendance/scorers and not-found state", () => {
     expect(source).toContain("played && fixture.attendance != null");
     expect(source).toContain("fixture.attendance.toLocaleString()");
     expect(source).toContain("played && scorers.length > 0");
-    expect(source).toMatch(/scorers\.join\(/);
+    expect(source).toContain('scorers.join(" · ")');
   });
 
   it("renders a clean not-found state for a null fixture, linking back to /schedule", () => {
     const source = read("components/editorial/EditorialMatchArea.tsx");
     expect(source).toContain("if (!fixture) {");
     expect(source).toContain("Match not found.");
-    expect(source).toContain("Return to the schedule");
+    expect(source).toContain('<Link href="/schedule">Return to the schedule</Link>');
   });
 
   it("embeds the schedule match card with showAction={false} and no season/kit/sponsor content", () => {

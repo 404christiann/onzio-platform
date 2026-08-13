@@ -65,23 +65,23 @@ export default function EditorialHero({
   const secondaryLabel = heroContent.secondary_cta_label.trim() || "Meet the squad";
 
   return (
-    <section className="hero min-h-[min(900px,100svh)] bg-ed-primary px-5 pb-20 pt-28 text-ed-on-dark md:px-8">
-      <div className="hero-content mx-auto grid max-w-[1180px] gap-10 md:grid-cols-[minmax(0,1fr)_minmax(320px,0.68fr)] md:items-center">
-        <div className="hero-copy relative z-10 grid gap-7">
-          <h1 className="grid max-w-[11ch] font-display text-[clamp(4.25rem,13vw,11rem)] font-black uppercase leading-[0.78]">
+    <section className="hero">
+      <div className="hero-content">
+        <div className="hero-copy">
+          <h1>
             <span>{headlineTop}</span>
-            {headlineEm && <em className="not-italic text-ed-accent">{headlineEm}</em>}
+            {headlineEm && <em>{headlineEm}</em>}
           </h1>
-          {intro && <p className="hero-intro max-w-xl text-xl leading-8 text-ed-on-dark-nav">{intro}</p>}
-          <div className="hero-cta flex flex-wrap gap-3">
-            <Link className="border border-ed-accent bg-ed-accent px-5 py-3 font-display text-xs font-black uppercase tracking-[0.14em] text-ed-on-accent transition hover:border-ed-on-dark hover:bg-ed-on-dark hover:text-ed-ink" href={primaryHref}>{primaryLabel}</Link>
-            <Link className="border border-white/25 px-5 py-3 font-display text-xs font-black uppercase tracking-[0.14em] text-ed-on-dark transition hover:border-ed-accent hover:text-ed-accent" href={secondaryHref}>{secondaryLabel}</Link>
+          {intro && <p className="hero-intro">{intro}</p>}
+          <div className="hero-cta">
+            <Link href={primaryHref}>{primaryLabel}</Link>
+            <Link href={secondaryHref}>{secondaryLabel}</Link>
           </div>
         </div>
-        <div className="hero-media relative mx-auto aspect-square w-full max-w-[620px]" aria-label={`${club.name} crest`}>
+        <div className="hero-media" aria-label={`${club.name} crest`}>
           {crestUrl && (
             <Image
-              className="hero-crest object-contain drop-shadow-[0_30px_80px_rgba(0,0,0,0.28)]"
+              className="hero-crest"
               src={crestUrl}
               alt={`${club.name} crest`}
               width={720}
