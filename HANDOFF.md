@@ -2,12 +2,18 @@
 
 Last updated: 2026-08-12
 
-## Lions editorial@1 local visual-parity cleanup complete; staging remains approval-gated
+## Lions editorial@1 visual-parity cleanup committed and deployed to staging preview
 
-Agent: Codex, 2026-08-12. Status: **local implementation and verification
-complete** on `codex/lions-ui-parity`; no hosted Supabase, Vercel, Stripe, or
-staging command was run. This entry supersedes the prior entry's "not yet
-fixed" local parity status, but not its hosted staging facts.
+Agent: Codex, 2026-08-12. Status: **implementation, verification, Git publish,
+and staging preview deployment complete**. The reviewed parity change was
+committed as `e1c2db5` (`Restore Lions editorial visual parity`), pushed to
+`origin/codex/lions-ui-parity`, then cleanly fast-forwarded from `00afaea` to
+`e1c2db5` on `origin/staging`. Vercel built staging preview deployment
+`dpl_BZLKyGo68bRajSpXzSxWsWFTgDzw` and attached
+`https://lions-onzio-staging.vercel.app`; target `preview`, status `READY`.
+No production deployment and no hosted Supabase, Stripe, or other database
+mutation was run. This entry supersedes the prior entry's "not yet fixed"
+local parity status, but not its earlier hosted staging history.
 
 **Exact comparison process:** the approved mockup ran read-only at
 `localhost:3014`; the platform ran at `lions.localhost:3005` against the local
@@ -68,13 +74,12 @@ Runtime and admin Hook warnings). `git diff --check` is clean.
 **Still open / exact next step:** expanded editorial roster player profiles
 and the mockup's profile modal remain explicitly outside this sweep. The
 existing Lions staging database still has its old/null accent value; the code
-change does not mutate already-imported hosted data. After reviewing this
-branch and screenshots, Christian must separately approve the code push/
-preview deployment and run the prepared one-line Lions staging
-`accent_color = '#F0F0F0'` SQL backfill, then the hosted site needs the same
-desktop/mobile verification. No production promotion is implied. The shared
-checkout intentionally still contains the pre-existing untracked `.claude/`
-directory; do not stage it.
+deployment cannot mutate already-imported hosted data. Christian must run the
+prepared one-line Lions staging `accent_color = '#F0F0F0'` SQL backfill, then
+hard-refresh and verify the hosted site at desktop/mobile sizes. No Vercel
+redeploy should be required for that database value. No production promotion
+is implied. The shared checkout intentionally still contains the pre-existing
+untracked `.claude/` directory; do not stage it.
 
 ## Lions editorial@1 merged to staging, deployed to a real hosted preview, visual-parity gap found and handed to Codex
 
