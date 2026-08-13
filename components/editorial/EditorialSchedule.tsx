@@ -23,11 +23,15 @@ export default function EditorialSchedule() {
   const club = useClubContext();
   const { identity, crestOnDarkUrl } = useEditorialIdentity();
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
+  const [seasonLabel, setSeasonLabel] = useState("Current season");
 
   useEffect(() => {
     let cancelled = false;
     fetchActiveSeason(club.id)
-      .then((season) => (season ? fetchSchedule(season.id, club.id) : Promise.resolve([])))
+      .then((season) => {
+        if (!cancelled) setSeasonLabel(season?.label ?? "Current season");
+        return season ? fetchSchedule(season.id, club.id) : Promise.resolve([]);
+      })
       .then((rows) => {
         if (!cancelled) setFixtures(rows);
       })
@@ -50,6 +54,7 @@ export default function EditorialSchedule() {
       clubInitials={clubInitials}
       crestOnDarkUrl={crestOnDarkUrl}
       league={identity?.league}
+      seasonLabel={seasonLabel}
     />
   );
 }

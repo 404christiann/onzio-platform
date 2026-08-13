@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { EditorialSectionHeading } from "@/components/ui/editorial/section-heading";
+import { EditorialValueCard } from "@/components/ui/editorial/value-card";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 import type { DBAboutPageContent } from "@/lib/db-types";
 
@@ -10,7 +11,6 @@ function stringHighlights(value: unknown): string[] {
     : [];
 }
 
-/** Editorial club-story page, using the approved mockup's interior structure. */
 export default function EditorialAboutPage({
   content,
 }: {
@@ -20,63 +20,60 @@ export default function EditorialAboutPage({
   const headingTop = identity?.storyHeadingTop?.trim() ?? "";
   const headingEm = identity?.storyHeadingEm?.trim() ?? "";
   const highlights = stringHighlights(identity?.highlights);
-  const hasLocation = Boolean(identity?.venue || identity?.contactAddress);
+  const foundedLabel = identity?.foundedYear ? String(identity.foundedYear) : "Club";
 
   return (
-    <div className="interior club-page">
-      <header className="interior-hero">
-        <span className="eyebrow">Our club</span>
-        <h1>
-          {headingTop || content.hero_title}
-          {headingEm ? (
-            <>
-              <br />
-              <em>{headingEm}</em>
-            </>
-          ) : null}
-        </h1>
-      </header>
+    <div className="interior club-page bg-ed-paper px-5 pb-28 pt-32 text-ed-ink md:px-8">
+      <div className="mx-auto grid max-w-[1180px] gap-16">
+        <header className="interior-hero grid gap-8 border-b border-[color:var(--ed-line)] pb-12">
+          <span className="eyebrow">Our club</span>
+          <h1 className="max-w-[11ch] text-[clamp(4rem,13vw,11rem)] uppercase leading-[0.78]">
+            {headingTop || content.hero_title}
+            {headingEm ? (
+              <>
+                <br />
+                <em className="not-italic text-ed-accent">{headingEm}</em>
+              </>
+            ) : null}
+          </h1>
+        </header>
 
-      <section className="manifesto">
-        <span className="story-mark" aria-label={`Founded ${identity?.foundedYear || ""}`}>
-          {String(identity?.foundedYear ?? "").slice(-2)}
-        </span>
-        <div>
-          {content.story_paragraphs.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </div>
-        {identity?.mission ? <blockquote>“{identity.mission}”</blockquote> : null}
-      </section>
-
-      {highlights.length > 0 ? (
-        <section className="club-highlights">
-          <span className="eyebrow">{content.values_heading || "What defines us"}</span>
-          <ul>
-            {highlights.map((highlight) => (
-              <li key={highlight}>{highlight}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {hasLocation ? (
-        <section className="find-us">
-          <span className="eyebrow">Find us</span>
-          <h2>Club contact</h2>
-          <div className="find-us-grid">
-            <div className="find-us-item">
-              <span>Matchday</span>
-              {identity?.venue ? <p>{identity.venue}</p> : null}
-              {identity?.contactAddress ? <p>{identity.contactAddress}</p> : null}
+        <section className="manifesto grid gap-8 md:grid-cols-[10rem_1fr]">
+          <span
+            className="story-mark font-display text-[clamp(5rem,13vw,10rem)] font-black leading-none text-ed-accent"
+            aria-label={`Founded ${identity?.foundedYear || ""}`}
+          >
+            {foundedLabel.slice(-2)}
+          </span>
+          <div className="grid gap-8">
+            <div className="grid gap-6 text-xl leading-9 text-ed-muted">
+              {content.story_paragraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
             </div>
-            <div className="find-us-item">
-              <span>Get in touch</span>
-              <Link href="/contact">Contact the club →</Link>
-            </div>
+            {identity?.mission ? (
+              <blockquote className="border-l-4 border-ed-accent pl-6 font-display text-3xl font-black uppercase leading-tight">
+                &quot;{identity.mission}&quot;
+              </blockquote>
+            ) : null}
           </div>
         </section>
-      ) : null}
+
+        {highlights.length > 0 ? (
+          <section className="club-highlights grid gap-8">
+            <EditorialSectionHeading
+              eyebrow={content.values_heading || "What defines us"}
+              title="Values"
+              titleClassName="text-[clamp(3.5rem,10vw,8rem)]"
+            />
+            <div className="grid gap-4 md:grid-cols-3">
+              {highlights.map((highlight, index) => (
+                <EditorialValueCard key={highlight} index={index + 1} title={highlight} />
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

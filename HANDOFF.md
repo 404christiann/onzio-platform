@@ -2,6 +2,48 @@
 
 Last updated: 2026-08-12
 
+## Lions editorial Diverse City parity + Tailwind migration ready for Git publish
+
+Agent: Codex, 2026-08-12. Status: **implementation, local verification, and
+feature-branch commit complete; Git push/staging fast-forward still pending in
+this turn**. Feature commit message: `Migrate Lions editorial UI to Tailwind`.
+Feature branch: `codex/lions-editorial-diversecity`, cut from
+`origin/staging` at `8100788`. No hosted Supabase, Stripe, production, or
+Vercel mutation has been run. Local Supabase only was used, and Diverse City
+was imported locally via `npm run migration:import:diverse-city:local`
+(`hostedMutations: 0`). The pre-existing untracked `.claude/` directory remains
+unstaged.
+
+**Completed work:** replaced the monolithic `styles/editorial.css` with
+`styles/editorial-tokens.css`, additive `ed-*` Tailwind tokens, and public-only
+editorial primitives in `components/ui/editorial/*`. Redesigned the five
+requested surfaces toward the live Diverse City visual language: fixed/header
+nav with Base UI mobile dialog, chronological oversized Fixtures list, About
+numbered values with no Find Us block, Next Match with no latest-result panel,
+and homepage identity/story value cards. Mechanically ported the remaining
+editorial pages/components to Tailwind utilities while preserving data flow,
+GSAP hook class names, tenant isolation, and Starter behavior. `EditorialSchedule`
+now preserves the active-season label and `lib/editorial-fixtures.ts` exposes
+`sortFixturesChronologically()`.
+
+**Verification:** `npx tsc --noEmit` exit 0; `npm run lint` exit 0 with the
+same five existing admin Hook warnings; `npm run test:contracts` 655/655;
+`npm run test:architecture` 20/20; local-only `npm run test:db` 181/181; full
+local-env `npm test` 1135/1135; `npm run db:types:check` confirmed generated
+types match local schema; `supabase db lint --local` found no schema errors;
+`npm run build` exit 0 with the same five admin Hook warnings. Final Playwright
+visual sweep `/tmp/lions-dcfc-restyle/report-after.json`: 32 local captures and
+10 live-reference captures across desktop 1440x900 and mobile 390x844,
+failures `[]`; all local Lions and local Diverse City routes returned 200 with
+zero console errors, zero page errors, no framework overlay, and no horizontal
+overflow. Spot check also verified Lions accent/CTA contrast after using the
+club secondary as the editorial visual accent while retaining raw
+`--ed-theme-accent`.
+
+**Still open / exact next step:** push `codex/lions-editorial-diversecity`,
+fast-forward `origin/staging` if it has not moved, then verify the resulting
+Vercel preview reaches `READY`. No production promotion is implied.
+
 ## Lions Powered by Onzio footer ready locally; staging accent backfill completed
 
 Agent: Codex, 2026-08-12. Status: **implementation, local verification, Git

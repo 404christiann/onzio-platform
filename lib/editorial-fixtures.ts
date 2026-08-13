@@ -60,7 +60,19 @@ export function monogram(name: string): string {
 
 // ── Schedule/match-area helpers (E4) ─────────────────────────────────
 
-const byDate = (a: Fixture, b: Fixture) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+const byDate = (a: Fixture, b: Fixture) => {
+  const aTime = fixtureKickoff(a).getTime();
+  const bTime = fixtureKickoff(b).getTime();
+  if (Number.isNaN(aTime) && Number.isNaN(bTime)) return a.date.localeCompare(b.date);
+  if (Number.isNaN(aTime)) return 1;
+  if (Number.isNaN(bTime)) return -1;
+  return aTime - bTime;
+};
+
+/** All fixtures in chronological order, preserving invalid-date rows at the end. */
+export function sortFixturesChronologically(fixtures: Fixture[]): Fixture[] {
+  return [...fixtures].sort(byDate);
+}
 
 /** A fixture with a recorded result on both sides -- mirrors findLatestResult's own criterion. */
 export function isPlayedFixture(fixture: Fixture): boolean {

@@ -69,32 +69,33 @@ export default function EditorialMatchdaySlideshow({
 
   return (
     <section
-      className="matchday-slideshow"
+      className="matchday-slideshow relative min-h-[720px] overflow-hidden bg-ed-ink text-ed-on-dark"
       aria-labelledby="matchday-slideshow-title"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      <div className="matchday-slides" aria-live="polite">
+      <div className="matchday-slides absolute inset-0" aria-live="polite">
         {photos.map((photo, index) => (
           <div
-            className="matchday-slide"
+            className="matchday-slide absolute inset-0 opacity-0 transition-opacity duration-700 data-[active=true]:opacity-100"
             data-active={index === safeCurrent}
             key={photo.id}
             aria-hidden={index !== safeCurrent}
           >
             <Image
-              className="matchday-slide-backdrop"
+              className="matchday-slide-backdrop object-cover opacity-25 blur-md scale-105"
               src={photo.url}
               alt=""
               fill
               sizes="100vw"
               {...imageDeliveryProps("photograph")}
             />
-            <div className="matchday-slide-shade" />
-            <div className="matchday-slide-image">
+            <div className="matchday-slide-shade absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-black/70" />
+            <div className="matchday-slide-image absolute bottom-0 right-0 top-0 w-full md:w-[62%]">
               <Image
+                className="object-cover"
                 src={photo.url}
                 alt={photo.alt || `${club.name} matchday photo ${index + 1}`}
                 fill
@@ -107,37 +108,38 @@ export default function EditorialMatchdaySlideshow({
       </div>
 
       {(headingTop || headingEm) && (
-        <div className="matchday-copy">
-          <h2 id="matchday-slideshow-title">
+        <div className="matchday-copy relative z-10 flex min-h-[720px] max-w-[1180px] items-center px-5 md:mx-auto md:px-8">
+          <h2 id="matchday-slideshow-title" className="max-w-[8ch] font-display text-[clamp(3.75rem,11vw,9rem)] font-black uppercase leading-[0.82]">
             {headingTop}
             {headingEm && (
               <>
                 <br />
-                <em>{headingEm}</em>
+                <em className="not-italic text-ed-accent">{headingEm}</em>
               </>
             )}
           </h2>
         </div>
       )}
 
-      <div className="matchday-controls">
-        <div className="matchday-arrows">
-          <button type="button" onClick={previousSlide} aria-label="Previous matchday photo">
-            ←
+      <div className="matchday-controls absolute inset-x-5 bottom-6 z-20 mx-auto flex max-w-[1180px] flex-wrap items-center gap-4 md:inset-x-8">
+        <div className="matchday-arrows flex gap-2">
+          <button className="grid size-11 place-items-center border border-white/25 font-display text-lg font-black transition hover:border-ed-accent hover:text-ed-accent" type="button" onClick={previousSlide} aria-label="Previous matchday photo">
+            &lt;
           </button>
-          <button type="button" onClick={nextSlide} aria-label="Next matchday photo">
-            →
+          <button className="grid size-11 place-items-center border border-white/25 font-display text-lg font-black transition hover:border-ed-accent hover:text-ed-accent" type="button" onClick={nextSlide} aria-label="Next matchday photo">
+            &gt;
           </button>
         </div>
-        <span className="matchday-count">
+        <span className="matchday-count font-display text-xs font-black uppercase tracking-[0.16em] text-ed-on-dark-nav">
           {String(safeCurrent + 1).padStart(2, "0")} /{" "}
           {String(photos.length).padStart(2, "0")}
         </span>
-        <div className="matchday-progress" aria-label="Choose a matchday photo">
+        <div className="matchday-progress flex flex-1 gap-2" aria-label="Choose a matchday photo">
           {photos.map((photo, index) => (
             <button
               type="button"
               key={photo.id}
+              className="h-1 min-w-8 flex-1 bg-white/25 transition data-[active=true]:bg-ed-accent"
               data-active={index === safeCurrent}
               aria-label={`Show matchday photo ${index + 1}`}
               aria-current={index === safeCurrent ? "true" : undefined}

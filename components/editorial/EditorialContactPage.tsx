@@ -90,29 +90,30 @@ export default function EditorialContactPage({
   ];
 
   return (
-    <div className="interior contact-page">
-      <header className="interior-hero">
+    <div className="interior contact-page bg-ed-paper px-5 pb-28 pt-32 text-ed-ink md:px-8">
+      <div className="mx-auto grid max-w-[1180px] gap-14">
+      <header className="interior-hero grid gap-6 border-b border-[color:var(--ed-line)] pb-10">
         <span className="eyebrow">{page?.eyebrow || "Contact"}</span>
-        <h1>{page?.headline || `Talk to ${club.name}`}</h1>
-        {page?.intro ? <p className="contact-intro">{page.intro}</p> : null}
+        <h1 className="max-w-[12ch] text-[clamp(3.75rem,11vw,9rem)] font-black uppercase leading-[0.82]">{page?.headline || `Talk to ${club.name}`}</h1>
+        {page?.intro ? <p className="contact-intro max-w-2xl text-xl leading-9 text-ed-muted">{page.intro}</p> : null}
         {emailHref ? (
-          <a className="contact-hero-cta" href={emailHref}>
+          <a className="contact-hero-cta justify-self-start border border-ed-accent bg-ed-accent px-5 py-3 font-display text-xs font-black uppercase tracking-[0.14em] text-ed-on-accent" href={emailHref}>
             Email {club.name}
           </a>
         ) : null}
       </header>
 
       {details.length > 0 ? (
-        <section className="contact-details">
+        <section className="contact-details grid gap-8">
           <span className="eyebrow">Get in touch</span>
-          <div className="contact-details-grid">
+          <div className="contact-details-grid grid gap-4 md:grid-cols-2">
             {details.map((detail) => (
-              <div className="contact-detail-item" key={detail.label}>
-                <span>{detail.label}</span>
+              <div className="contact-detail-item grid gap-3 border border-[color:var(--ed-line)] bg-ed-panel-glass p-6" key={detail.label}>
+                <span className="font-display text-xs font-black uppercase tracking-[0.16em] text-ed-accent">{detail.label}</span>
                 {detail.href ? (
-                  <a href={detail.href}>{detail.value}</a>
+                  <a className="font-display text-3xl font-black uppercase leading-none" href={detail.href}>{detail.value}</a>
                 ) : (
-                  <p>{detail.value}</p>
+                  <p className="font-display text-3xl font-black uppercase leading-none">{detail.value}</p>
                 )}
               </div>
             ))}
@@ -121,9 +122,9 @@ export default function EditorialContactPage({
       ) : null}
 
       {content.socialLinks.length > 0 ? (
-        <section className="contact-social">
+        <section className="contact-social grid gap-8">
           <span className="eyebrow">Follow along</span>
-          <div className="contact-social-links">
+          <div className="contact-social-links flex flex-wrap gap-3">
             {content.socialLinks.map((link) => (
               <a
                 key={link.id}
@@ -132,7 +133,7 @@ export default function EditorialContactPage({
                 rel="noopener noreferrer"
                 aria-label={link.label}
                 title={link.label}
-                className="contact-social-icon"
+                className="contact-social-icon grid size-14 place-items-center border border-[color:var(--ed-line)] text-ed-ink transition hover:border-ed-accent hover:text-ed-accent [&_svg]:size-6 [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-2 [&_.social-icon-fill]:fill-current [&_.social-icon-fill]:stroke-0"
               >
                 <SocialIcon platform={link.id} />
               </a>
@@ -142,11 +143,12 @@ export default function EditorialContactPage({
       ) : null}
 
       {!hasContent ? (
-        <section className="contact-empty">
-          <h2>Contact details coming soon</h2>
-          <p>The club has not published contact information yet.</p>
+        <section className="contact-empty grid gap-3 border border-[color:var(--ed-line)] bg-ed-panel-glass p-6">
+          <h2 className="font-display text-4xl font-black uppercase leading-none">Contact details coming soon</h2>
+          <p className="text-ed-muted">The club has not published contact information yet.</p>
         </section>
       ) : null}
+      </div>
     </div>
   );
 }
