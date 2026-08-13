@@ -4,8 +4,14 @@ Last updated: 2026-08-12
 
 ## Lions Powered by Onzio footer ready locally; staging accent backfill completed
 
-Agent: Codex, 2026-08-12. Status: **implementation and local verification
-complete; Git publication and Vercel deployment not yet run**. Christian
+Agent: Codex, 2026-08-12. Status: **implementation, local verification, Git
+publication, and Vercel staging deployment complete**. The focused footer
+change was committed as `3b5dfbf` (`Add Onzio attribution to Lions footer`),
+pushed to `origin/codex/lions-ui-parity`, and cleanly fast-forwarded from
+`9b45a53` to `3b5dfbf` on `origin/staging`. Vercel staging preview deployment
+`dpl_CqQiausXASZWn94m6nrmjdLYVYXv` reached `READY` and owns
+`https://lions-onzio-staging.vercel.app`; target `preview`. No production
+deployment was run. Christian
 provided the staging SQL result confirming the Lions row
 `8d82bb47-c10b-4823-8ec7-c4de87d34b0a` changed from `accent_color = null` to
 `accent_color = '#F0F0F0'` at `2026-08-13 04:53:17.769707+00`. That closes the
@@ -35,11 +41,10 @@ the wordmark loaded, the resolved destination was
 error overlay, and no console errors. The prescribed `agent-browser` binary was
 not installed, so the supported in-app browser fallback performed this check.
 
-**Still open / exact next step:** obtain explicit approval before pushing the
-focused footer commit on `codex/lions-ui-parity` or updating `staging`. The
-currently deployed Lions staging preview does not include this footer follow-up
-yet. Preserve the pre-existing untracked `.claude/` directory and do not stage
-it.
+**Still open / exact next step:** hard-refresh the Lions staging preview and
+confirm the Powered by Onzio badge visually at desktop/mobile sizes. Any
+production promotion remains separately approval-gated. Preserve the
+pre-existing untracked `.claude/` directory and do not stage it.
 
 ## Lions editorial@1 visual-parity cleanup committed and deployed to staging preview
 
