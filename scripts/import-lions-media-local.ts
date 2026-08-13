@@ -80,6 +80,11 @@ const CONFLICT_COLUMNS: Record<string, readonly string[]> = {
   about_page_content: ["club_id"],
   site_sponsor_logos: ["id"],
   site_social_links: ["club_id", "id"],
+  club_identity: ["club_id"],
+  contact_profile: ["club_id"],
+  contact_page_content: ["club_id"],
+  tryouts: ["id"],
+  tryouts_page_content: ["club_id"],
 };
 
 const JSON_COLUMNS = new Set([
@@ -89,6 +94,7 @@ const JSON_COLUMNS = new Set([
   "presentation_publications.validation_result",
   "shop_kit_section.bullet_points",
   "shop_purchase_details.cards",
+  "club_identity.highlights",
 ]);
 
 const INSERT_ONLY_TABLES = new Set([
@@ -322,6 +328,13 @@ async function applyRows(
     for (const row of rows.siteSocialLinks) {
       await upsertRow(client, "site_social_links", row);
     }
+    await upsertRow(client, "club_identity", rows.clubIdentity);
+    await upsertRow(client, "contact_profile", rows.contactProfile);
+    await upsertRow(client, "contact_page_content", rows.contactPageContent);
+    for (const row of rows.tryouts) {
+      await upsertRow(client, "tryouts", row);
+    }
+    await upsertRow(client, "tryouts_page_content", rows.tryoutsPageContent);
 
     const auditExists = await client.query(
       `select 1 from onzio.audit_events
@@ -365,6 +378,11 @@ async function reconcileDatabase(
     ["presentationState", "presentation_state"],
     ["presentationPublications", "presentation_publications"],
     ["siteSponsorLogos", "site_sponsor_logos"],
+    ["clubIdentity", "club_identity"],
+    ["contactProfile", "contact_profile"],
+    ["contactPageContent", "contact_page_content"],
+    ["tryouts", "tryouts"],
+    ["tryoutsPageContent", "tryouts_page_content"],
   ] as const) {
     const result = await client.query(
       `select count(*)::integer as count
@@ -410,6 +428,11 @@ async function reconcileDatabase(
     checks.presentationState !== 1 ||
     checks.presentationPublications !== 1 ||
     checks.siteSponsorLogos !== 6 ||
+    checks.clubIdentity !== 1 ||
+    checks.contactProfile !== 1 ||
+    checks.contactPageContent !== 1 ||
+    checks.tryouts !== 3 ||
+    checks.tryoutsPageContent !== 1 ||
     checks.forbiddenUrlReferences !== 0
   ) {
     throw new Error(`Lions database reconciliation failed: ${JSON.stringify(checks)}`);

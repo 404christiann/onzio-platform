@@ -17,10 +17,27 @@ export const LIONS_LOCAL_PRESENTATION_DOCUMENT_ID = deterministicUuid(
 export const LIONS_LOCAL_PRESENTATION_PUBLICATION_ID = deterministicUuid(
   "onzio:lions:presentation-publication:clubhouse@1:published",
 );
+// Lions E7: the clubhouse@1 document/publication IDs above stay defined and
+// exported -- presentation_documents rows are immutable/insert-only by
+// design, so the original clubhouse@1 document this project verified against
+// through E1-E6 remains a valid, permanently orphaned historical row rather
+// than something deleted or repurposed. Only presentation_state now points
+// at the editorial@1 document below.
+export const LIONS_LOCAL_EDITORIAL_DOCUMENT_ID = deterministicUuid(
+  "onzio:lions:presentation:editorial@1:published",
+);
+export const LIONS_LOCAL_EDITORIAL_PUBLICATION_ID = deterministicUuid(
+  "onzio:lions:presentation-publication:editorial@1:published",
+);
 export const LIONS_LOCAL_PRESENTATION_ACTOR_ID =
   "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 
-const LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION = {
+// Superseded as of Lions E7 (Lions now publishes on editorial@1, see
+// LIONS_EDITORIAL_PRESENTATION_CONFIGURATION below) but kept -- unused,
+// still exported -- as the historical record of the clubhouse@1
+// configuration every prior phase (E1-E6) verified against via the
+// temporary local database switch this phase makes permanent.
+export const LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION = {
   schemaVersion: 1,
   template: { id: "clubhouse", version: 1 },
   fontPack: "geist",
@@ -132,6 +149,117 @@ const LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION = {
   },
 } as const;
 
+// Lions E7: the real, permanent presentation configuration Lions publishes
+// on going forward. theme is carried over unchanged from the clubhouse@1
+// configuration above -- it already encodes Lions' navy/red palette and
+// passes the presentation system's contrast validation inside
+// parsePresentationDocument below, so editorial@1 does not need a new
+// palette. modules/homepage.sections/navigation are edited down to exactly
+// what editorial@1 registers in packages/presentation/index.ts (Lions E2):
+// no sponsors/stats/expandedProfiles/seasons/analytics/affiliations, no
+// clubhouse.kits/clubhouse.partners sections, and the 7-route editorial nav.
+const LIONS_EDITORIAL_PRESENTATION_CONFIGURATION = {
+  schemaVersion: 1,
+  template: { id: "editorial", version: 1 },
+  fontPack: "geist",
+  theme: {
+    surface: {
+      canvas: "#1B2958",
+      elevated: "#FFFFFF",
+      subtle: "#F7F5F1",
+      inverse: "#F0F0F0",
+    },
+    text: {
+      primary: "#F0F0F0",
+      secondary: "#C8CDD8",
+      muted: "#687083",
+      inverse: "#18213A",
+    },
+    action: {
+      primary: "#F0F0F0",
+      primaryHover: "#DADDE5",
+      primaryText: "#1B2958",
+      secondary: "#AD3234",
+    },
+    border: {
+      subtle: "#35426B",
+      strong: "#F0F0F0",
+    },
+    status: {
+      success: "#12A140",
+      warning: "#D69E2E",
+      danger: "#AD3234",
+    },
+    accent: {
+      one: "#AD3234",
+      two: "#F0F0F0",
+    },
+  },
+  modules: {
+    roster: true,
+    schedule: true,
+    store: true,
+    staff: true,
+    tryouts: true,
+    contact: true,
+  },
+  homepage: {
+    sections: [
+      {
+        id: "hero-main",
+        type: "editorial.hero",
+        enabled: true,
+        emptyBehavior: "error",
+        config: {},
+      },
+      {
+        id: "next-match",
+        type: "shared.next-match",
+        enabled: true,
+        emptyBehavior: "hide",
+        config: {},
+      },
+      {
+        id: "matchday-slideshow",
+        type: "editorial.slideshow",
+        enabled: true,
+        emptyBehavior: "hide",
+        config: {},
+      },
+      {
+        id: "club-story",
+        type: "shared.history",
+        enabled: true,
+        emptyBehavior: "hide",
+        config: {},
+      },
+    ],
+  },
+  navigation: {
+    groups: [
+      {
+        id: "main",
+        label: null,
+        routes: [
+          "home",
+          "club",
+          "roster",
+          "schedule",
+          "tryouts",
+          "store",
+          "contact",
+        ],
+      },
+    ],
+  },
+  metadata: {
+    recommendationId: null,
+    createdBy: LIONS_LOCAL_PRESENTATION_ACTOR_ID,
+    createdAt: "2026-08-12T00:00:00.000Z",
+    sourceArtifact: "soccerPlatformMockups:lions-editorial",
+  },
+} as const;
+
 type SourceRow = Record<string, unknown>;
 
 export type LionsLocalImportRows = {
@@ -159,6 +287,11 @@ export type LionsLocalImportRows = {
   aboutPageContent: SourceRow;
   siteSponsorLogos: SourceRow[];
   siteSocialLinks: SourceRow[];
+  clubIdentity: SourceRow;
+  contactProfile: SourceRow;
+  contactPageContent: SourceRow;
+  tryouts: SourceRow[];
+  tryoutsPageContent: SourceRow;
   auditEvent: SourceRow;
 };
 
@@ -179,6 +312,11 @@ export type LionsLocalImportReconciliation = {
   presentationStateCount: number;
   presentationPublicationCount: number;
   sponsorLogoCount: number;
+  clubIdentityCount: number;
+  contactProfileCount: number;
+  contactPageContentCount: number;
+  tryoutCount: number;
+  tryoutsPageContentCount: number;
   readyContentLinkCount: number;
   blockedContentLinkCount: number;
   sourceChecksumCount: number;
@@ -511,6 +649,10 @@ export function buildLionsLocalImportRows(
     tier: "pro",
     primary_color: "#1B2958",
     secondary_color: "#AD3234",
+    // Lions E7: Christian wants a Store on the real site; store_enabled is
+    // operator-only (Lions E1) and defaults false for new clubs, so it is
+    // set explicitly here rather than relying on any backfill.
+    store_enabled: true,
     created_at: now,
     updated_at: now,
     archived_at: null,
@@ -594,10 +736,19 @@ export function buildLionsLocalImportRows(
     updated_at: now,
   }));
   const presentationConfiguration = parsePresentationDocument(
-    LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION,
+    LIONS_EDITORIAL_PRESENTATION_CONFIGURATION,
     { surface: "operator_preview" },
   );
   const presentationDigest = digestJson(presentationConfiguration);
+  const tryoutOpenId = deterministicUuid(
+    "onzio:lions:tryout:2026-academy-fall-id-days",
+  );
+  const tryoutUpcomingId = deterministicUuid(
+    "onzio:lions:tryout:2026-fall-open-trial",
+  );
+  const tryoutClosedId = deterministicUuid(
+    "onzio:lions:tryout:2026-u23-summer-id-camp",
+  );
 
   return {
     club,
@@ -756,11 +907,11 @@ export function buildLionsLocalImportRows(
     goalkeeperSeasonStats,
     staff,
     presentationDocument: {
-      id: LIONS_LOCAL_PRESENTATION_DOCUMENT_ID,
+      id: LIONS_LOCAL_EDITORIAL_DOCUMENT_ID,
       club_id: clubId,
       version: 1,
       schema_version: 1,
-      template_id: "clubhouse",
+      template_id: "editorial",
       template_version: 1,
       configuration: presentationConfiguration,
       configuration_digest: presentationDigest,
@@ -770,16 +921,16 @@ export function buildLionsLocalImportRows(
     presentationState: {
       club_id: clubId,
       draft_document_id: null,
-      published_document_id: LIONS_LOCAL_PRESENTATION_DOCUMENT_ID,
+      published_document_id: LIONS_LOCAL_EDITORIAL_DOCUMENT_ID,
       updated_by: LIONS_LOCAL_PRESENTATION_ACTOR_ID,
       updated_at: now,
     },
     presentationPublication: {
-      id: LIONS_LOCAL_PRESENTATION_PUBLICATION_ID,
+      id: LIONS_LOCAL_EDITORIAL_PUBLICATION_ID,
       club_id: clubId,
       action: "publish",
       previous_document_id: null,
-      next_document_id: LIONS_LOCAL_PRESENTATION_DOCUMENT_ID,
+      next_document_id: LIONS_LOCAL_EDITORIAL_DOCUMENT_ID,
       next_configuration_digest: presentationDigest,
       validation_result: { valid: true, errors: [], warnings: [] },
       override_reason: null,
@@ -957,6 +1108,149 @@ export function buildLionsLocalImportRows(
         updated_at: now,
       },
     ],
+    // Lions E7: club_identity (Lions E1) content for the editorial@1 pages
+    // built in E3-E6. founded_year/league/division/venue/city/state are kept
+    // consistent with the fixtures already elsewhere in this file: the
+    // "2025 Ohio Valley Division Champions" highlight on aboutPageContent,
+    // the "Midwest Premier League" competition and "Scioto Field" venue on
+    // the seeded matches, and the "1814 W Broad St" match address.
+    clubIdentity: {
+      club_id: clubId,
+      short_name: "Lions FC",
+      initials: "LFC",
+      founded_year: 2015,
+      league: "Midwest Premier League",
+      division: "Ohio Valley Division",
+      city: "Columbus",
+      state: "OH",
+      venue: "Scioto Field",
+      time_zone: "America/New_York",
+      contact_address: "1814 W Broad St, Columbus, OH 43222",
+      slideshow_heading_top: "This is how",
+      slideshow_heading_em: "Columbus roars.",
+      identity_heading_top: "One badge,",
+      identity_heading_em: "every neighborhood.",
+      story_heading_top: "Built by Columbus,",
+      story_heading_em: "for Columbus.",
+      mission:
+        "To give Columbus a club that competes with ambition, develops local talent through one connected pathway, and belongs to the community it represents.",
+      highlights: [
+        "2025 Ohio Valley Division Champions",
+        "Three connected player pathways: first team, U23s, academy",
+        "Columbus-owned and community-backed since 2015",
+      ],
+      updated_at: now,
+    },
+    contactProfile: {
+      club_id: clubId,
+      public_email: "columbuslionsfc@gmail.com",
+      public_phone: "(614) 555-0142",
+      service_area: "Columbus, Ohio",
+      hours: "Mon-Fri, 9am-5pm ET",
+      updated_at: now,
+    },
+    contactPageContent: {
+      club_id: clubId,
+      eyebrow: "Contact Us",
+      headline: "Reach out. We're here for Columbus.",
+      intro:
+        "Questions about tryouts, tickets, partnerships, or Lions FC in general? Reach us directly by email, phone, or social media below.",
+      hero_media_asset_id: null,
+      updated_at: now,
+    },
+    // Lions E7: three tryouts rows exercising all three onzio.tryouts
+    // statuses that mapTryout (lib/queries.ts, built against for E5)
+    // resolves into distinct public states -- upcoming (falls back to the
+    // mailto contact action above since no registration link is set yet),
+    // open with a real registration link, and closed with a closed_message.
+    // None reference a program (Lions has no onzio.programs rows) or a hero
+    // media asset.
+    tryouts: [
+      {
+        id: tryoutUpcomingId,
+        club_id: clubId,
+        program_id: null,
+        status: "upcoming",
+        eyebrow: "First Team",
+        headline: "Fall Open Trial",
+        intro:
+          "An open evaluation session for the Lions FC first team ahead of the fall slate.",
+        hero_media_asset_id: null,
+        eligibility_copy:
+          "Open to players 18 and older with prior competitive or collegiate experience.",
+        what_to_expect_copy:
+          "Small-sided games, technical drills, and a scrimmage in front of First Team and U23 staff.",
+        preparation_copy:
+          "Bring boots, shin guards, and both a light and dark training top.",
+        event_date: "2026-09-19",
+        location: "Scioto Field, Columbus, OH",
+        cost_text: "$25 registration fee, due at check-in",
+        cta_label: "",
+        registration_href: "",
+        closed_message: "",
+        sort_order: 0,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: tryoutOpenId,
+        club_id: clubId,
+        program_id: null,
+        status: "open",
+        eyebrow: "Academy",
+        headline: "Academy Fall Identification Days",
+        intro:
+          "Two identification sessions for players ages 12-17 interested in the Lions FC academy pathway.",
+        hero_media_asset_id: null,
+        eligibility_copy: "Open to players ages 12-17 living in or near Columbus.",
+        what_to_expect_copy:
+          "Positional drills and small-sided play evaluated by academy coaching staff.",
+        preparation_copy:
+          "Arrive 30 minutes early to check in and complete a waiver.",
+        event_date: "2026-08-30",
+        location: "Scioto Field, Columbus, OH",
+        cost_text: "$15 registration fee",
+        cta_label: "Register Now",
+        registration_href: "https://forms.gle/lionsfc-academy-tryouts",
+        closed_message: "",
+        sort_order: 1,
+        created_at: now,
+        updated_at: now,
+      },
+      {
+        id: tryoutClosedId,
+        club_id: clubId,
+        program_id: null,
+        status: "closed",
+        eyebrow: "U23",
+        headline: "U23 Summer Identification Camp",
+        intro:
+          "Summer identification camp for the Lions FC U23 developmental roster.",
+        hero_media_asset_id: null,
+        eligibility_copy: "Open to players ages 18-23 with prior competitive experience.",
+        what_to_expect_copy:
+          "Full-field scrimmages evaluated by U23 coaching staff.",
+        preparation_copy: "Boots, shin guards, and both training kits required.",
+        event_date: "2026-07-12",
+        location: "Scioto Field, Columbus, OH",
+        cost_text: "$20 registration fee",
+        cta_label: "",
+        registration_href: "",
+        closed_message:
+          "Registration for this session has closed. Check back for the next U23 identification camp.",
+        sort_order: 2,
+        created_at: now,
+        updated_at: now,
+      },
+    ],
+    tryoutsPageContent: {
+      club_id: clubId,
+      intro_with_tryouts:
+        "Review upcoming Lions FC tryout dates below. Registration, waivers, and participant information stay with the club's external provider.",
+      intro_no_tryouts:
+        "Lions FC tryout dates are still being finalized for this season. Check back soon or contact the club to stay informed.",
+      updated_at: now,
+    },
     auditEvent: {
       club_id: clubId,
       actor_user_id: null,
@@ -1024,6 +1318,11 @@ export function reconcileLionsLocalImportPlan(
     presentationStateCount: rows.presentationState ? 1 : 0,
     presentationPublicationCount: rows.presentationPublication ? 1 : 0,
     sponsorLogoCount: rows.siteSponsorLogos.length,
+    clubIdentityCount: rows.clubIdentity ? 1 : 0,
+    contactProfileCount: rows.contactProfile ? 1 : 0,
+    contactPageContentCount: rows.contactPageContent ? 1 : 0,
+    tryoutCount: rows.tryouts.length,
+    tryoutsPageContentCount: rows.tryoutsPageContent ? 1 : 0,
     readyContentLinkCount: plan.summary.readyContentLinkCount,
     blockedContentLinkCount: plan.summary.blockedContentLinkCount,
     sourceChecksumCount: new Set(

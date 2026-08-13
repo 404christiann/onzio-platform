@@ -9342,3 +9342,240 @@ it for now" on all three — noted here so they aren't lost, not scheduled:
   explicitly revoked session immediately, while local verification would
   keep honoring that token until it naturally expires. Faster, but trades
   away instant revocation — a security decision, not a free win.
+
+## Lions editorial@1 rebuild — E1 through E7 complete
+
+- **Status:** complete, 2026-08-12, Claude Code (Sonnet 5), direct edit,
+  branch `claude/lions-editorial-rebuild`.
+- **Objective:** register and ship a second real presentation template,
+  `editorial@1` ("Lions Editorial"), for Lions FC — schema, template
+  registry, shell/homepage, roster/schedule/match-area, tryouts/contact,
+  store, and finally (this phase, E7) converting Lions' actual local
+  presentation document from clubhouse@1 to editorial@1 for real, with real
+  seed content in every table the new pages read from. This branch was built
+  fresh against current `staging`; it is **not** the same branch as the
+  superseded `claude/lions-fc-website-setup-ij0p7t` line, and it has **not**
+  been merged into `staging` — that merge is a separate future step
+  requiring its own review/approval, not implied by E7's completion.
+- **E1 — schema foundation (`ba369f0`):** registers `editorial` as a valid
+  `presentation_documents.template_id`; adds `onzio.club_identity`
+  (deliberately excludes hero copy and contact email/phone, which already
+  live in `homepage_hero_content`/`contact_profile`), `clubs.accent_color`,
+  `matches.attendance`/`matches.scorers`, and an operator-only
+  `clubs.store_enabled` toggle backfilled `true` for every existing club (so
+  Rose City/Diverse City stores are unaffected by its existence).
+- **E2 — template registry (`20d95c2`):** registers `editorial@1` in
+  `packages/presentation/index.ts` — displayName "Lions Editorial", default
+  font pack `geist`, sections `["editorial.hero", "shared.next-match",
+  "editorial.slideshow", "shared.history"]`, routes `["home", "club",
+  "roster", "schedule", "tryouts", "store", "contact"]`, modules `["roster",
+  "schedule", "store", "staff", "tryouts", "contact"]`. Every other
+  template's registration verified byte-identical before/after.
+- **E3 — shell, homepage, nav (`9b60105`):** a fully custom
+  `EditorialShell` (own header/motion/footer, no `Nav.tsx`/`Footer.tsx`
+  reuse) dispatched for `editorial@1`; homepage hero reads the same
+  admin-editable `homepage_hero_content` academy@1 uses, footer contact
+  comes from `contact_profile`/`site_social_links`, `club_identity` backs
+  founding/story/mission copy. Header's Schedule nav item is a hover/tap
+  dropdown (Fixtures, Tryouts); Store item gated on `clubs.store_enabled`.
+- **E4 — roster, fixtures, match-area (`93af4f0`):** Roster and Schedule
+  dispatch from their existing clubhouse@1 ternaries; match-area gets a real
+  per-template dispatch for the first time (previously rendered
+  `ClubhouseMatchAreaPage` unconditionally for every template).
+  `matches.attendance`/`scorers` (added in E1) surfaced additively through
+  `Fixture`/`fetchSchedule`.
+- **E5 — tryouts, contact (`f2afab0`):** reuses Diverse City's real tryouts
+  (`onzio.tryouts`, per-event status/registration-or-mailto action) and
+  contact (`contact_profile`/`contact_page_content`) data model unchanged —
+  no new schema, no new admin surface — with editorial-styled presentational
+  views only.
+- **E6 — store page, `store_enabled` (`89be28e`):** `EditorialShopPage`
+  reuses the pre-fork `shop_kit_section`/`shop_kit_photos` schema unchanged,
+  styled with editorial's own theme tokens. Route gated on
+  `clubs.store_enabled` via the same `notFound()` convention every other
+  template-unsupported route already uses.
+- **E7 — this phase: converting the local database switch into the real,
+  permanent thing (`lib/migration/lions-media-local-import.ts`,
+  `scripts/import-lions-media-local.ts`).** Every prior phase (E1-E6)
+  verified its work through a temporary, always-reverted local database
+  switch of Lions' published presentation document. E7 makes that
+  conversion real: a normal `npm run db:reset` followed by `npm run
+  migration:import:lions-media:local` now produces a Lions club genuinely,
+  permanently published on `editorial@1`, with real seed content in every
+  table the E3-E6 pages read from.
+
+### E7 — presentation document conversion
+
+- Added a new sibling `LIONS_EDITORIAL_PRESENTATION_CONFIGURATION` next to
+  the existing (now-exported, kept-as-historical-record, otherwise
+  unmodified) `LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION`: `template: {id:
+  "editorial", version: 1}`, the **same** theme block as clubhouse (Lions'
+  navy/red palette; already passes `parsePresentationDocument`'s contrast
+  validation — confirmed by running the existing pinned-document contract
+  test plus a new one, not just assumed), `fontPack: "geist"`, `modules:
+  {roster, schedule, store, staff, tryouts, contact: true}` (drops
+  sponsors/stats/expandedProfiles/seasons/analytics/affiliations per E2's
+  registry entry), four `homepage.sections`
+  (`editorial.hero`/`shared.next-match`/`editorial.slideshow`/`shared.history`,
+  dropping `clubhouse.kits`/`clubhouse.partners`), `navigation.groups[0].routes:
+  ["home", "club", "roster", "schedule", "tryouts", "store", "contact"]`,
+  and `metadata.sourceArtifact: "soccerPlatformMockups:lions-editorial"`.
+- Added `LIONS_LOCAL_EDITORIAL_DOCUMENT_ID`/`LIONS_LOCAL_EDITORIAL_PUBLICATION_ID`
+  (`deterministicUuid` over new `onzio:lions:presentation(-publication):editorial@1:published`
+  seeds), mirroring the existing clubhouse ID pattern. The old clubhouse@1
+  IDs/config are **not** deleted or repurposed — `presentation_documents`
+  rows are immutable/insert-only by design, so the original document every
+  prior phase verified against stays a valid, permanently orphaned
+  historical row. Only `LionsLocalImportRows.presentationDocument` (now
+  `template_id: "editorial"`), `.presentationState.published_document_id`,
+  and `.presentationPublication` were repointed at the new IDs/config.
+- Updated `tests/contracts/lions-media-local-import.test.ts` (the one file
+  outside the phase's stated scope that was touched, and only because its
+  assertions directly pin the old clubhouse@1 values this phase
+  intentionally changes): `presentationDocument.template_id` expectation
+  flipped from `"clubhouse"` to `"editorial"`, and new assertions/reconcile
+  fields added for the five new content tables below.
+
+### E7 — new seed content (tables the E5/E6 pages actually read from)
+
+For `LIONS_LOCAL_TENANT_ID`, both `lib/migration/lions-media-local-import.ts`
+(row-building/reconciliation) and `scripts/import-lions-media-local.ts`
+(`CONFLICT_COLUMNS`/`JSON_COLUMNS`/`applyRows`/`reconcileDatabase`) now also
+create:
+
+- **`onzio.club_identity`** (one row) — `short_name` "Lions FC", `initials`
+  "LFC", `founded_year` 2015, `league` "Midwest Premier League", `division`
+  "Ohio Valley Division", `city`/`state` "Columbus"/"OH", `venue` "Scioto
+  Field", `time_zone` "America/New_York", `contact_address` "1814 W Broad
+  St, Columbus, OH 43222" — all kept consistent with fixtures already
+  elsewhere in the file (the seeded matches' venue/address/competition, and
+  `aboutPageContent`'s "2025 Ohio Valley Division Champions" highlight,
+  reused verbatim in `club_identity.highlights`). Slideshow/identity/story
+  heading pairs and a mission statement are new placeholder copy.
+- **`onzio.contact_profile`** — public email `columbuslionsfc@gmail.com`
+  (matching the club's existing seeded Instagram handle), phone `(614)
+  555-0142` (Columbus area code), service area "Columbus, Ohio", hours.
+  Shape mirrors Diverse City's local seed row.
+- **`onzio.contact_page_content`** — eyebrow/headline/intro for the Contact
+  page hero, `hero_media_asset_id: null`. Shape mirrors Diverse City's local
+  seed row.
+- **`onzio.tryouts`** — three rows exercising all three states `mapTryout`
+  (`lib/queries.ts`) resolves: "Fall Open Trial" (`status: "upcoming"`, no
+  registration link, falls back to the mailto contact action), "Academy Fall
+  Identification Days" (`status: "open"`, real `registration_href` +
+  `cta_label: "Register Now"`), "U23 Summer Identification Camp" (`status:
+  "closed"`, populated `closed_message`). None reference a program (Lions
+  has no `onzio.programs` rows) or a hero media asset.
+- **`onzio.tryouts_page_content`** — one row with `intro_with_tryouts`/
+  `intro_no_tryouts` copy per `lib/tryouts-page-content.ts`'s shape.
+- **`onzio.clubs.store_enabled`** — set `true` for Lions as part of the
+  existing club-row upsert (Christian wants a real Store on the live site).
+- Confirmed Lions already had one real "Blue Jersey" home-kit
+  `shop_kit_section`/`shop_kit_photos` row from a prior import pass (E6);
+  left it untouched — not duplicated, not overwritten.
+
+### E7 — sponsors/stats routes evaluated, no change needed
+
+Read `app/(public)/sponsors/page.tsx` and `app/(public)/stats/page.tsx`:
+both already gate on `club.presentationTemplateKey === "clubhouse@1"` and
+otherwise render the same generic "not published for this site yet."
+fallback — the identical fallback academy@1 already gets today. editorial@1
+falls into that same existing branch with no special-casing required; this
+was evaluated deliberately, not skipped, and verified live (see below).
+
+### Verification
+
+```text
+npx tsc --noEmit                    clean
+npm run lint                        0 errors (3 pre-existing react-hooks/exhaustive-deps warnings,
+                                     unrelated files: admin analytics/homepage/schedule pages)
+npm run test:architecture           20/20 passed
+npm run test:contracts              649/649 passed (53 files)
+npm run test:legacy                 279/279 passed (25 files)
+
+npm run db:reset                    clean, all migrations applied
+
+# with `eval "$(supabase status -o env)"` mapped into SUPABASE_TEST_*, per tests/README.md:
+npm run test:db                     181/181 passed (18 files)
+npm test (full suite)               1129/1129 passed (99 files)
+
+npm run db:types:check              generated definitions match the local schema
+supabase db lint --local
+  --schema onzio,onzio_private      no schema errors found
+
+npm run build                       succeeded (29/29 static pages, standard pre-existing
+                                     Edge Runtime warning from @supabase/supabase-js only)
+```
+
+### Real clean-room browser walk (fresh `db:reset`, then the real import commands)
+
+```text
+npm run db:reset
+npm run migration:import:lions-media:local
+  → database counts: mediaAssets 10, homepageHeroContent 1, homepageSlideshowPhotos 5,
+    shopKitPhotos 3, shopCarouselPhotos 3, matches 4, players 32, playerSeasonStats 28,
+    goalkeeperSeasonStats 4, staff 6, presentationDocuments 1, presentationState 1,
+    presentationPublications 1, siteSponsorLogos 6, clubIdentity 1, contactProfile 1,
+    contactPageContent 1, tryouts 3, tryoutsPageContent 1, forbiddenUrlReferences 0
+  → direct DB spot-check: presentation_documents.template_id = "editorial",
+    presentation_state.published_document_id points at it, clubs.store_enabled = true,
+    club_identity populated, all three tryouts states present with the expected
+    registration_href/closed_message values
+npm run migration:import:rose-city -- <private-cutover-plan> --mode=apply
+  → 209 source rows, 515 media assets, all 24 destination table counts reconciled
+npm run migration:import:diverse-city:local
+  → idempotent replay confirmed, all counts reconciled, hostedMutations: 0
+```
+
+Visited `lions.localhost:3005` (real, permanently converted — not a temporary
+switch) and walked every nav destination:
+
+- **Home** — hero ("Capital City. / Roar as One."), Next Match card (real
+  Aug 15 fixture vs. Capital City Athletic, Scioto Field), matchday
+  slideshow (heading "This is how / Columbus roars." from
+  `club_identity.slideshow_heading_top/em`, 01/05 photos), and the story
+  teaser ("One badge, / every neighborhood.") all rendered with real seeded
+  data — all four `editorial@1` homepage sections confirmed live.
+- **About** (`/club/about`) — renders `aboutPageContent` unchanged.
+- **Roster** — position-grouped player cards render (Goalkeepers first,
+  Jonah Reed #1).
+- **Schedule** — Fixtures list renders (August 2026, two matches); a
+  fixture's match-area page (`/schedule/<id>`) renders venue/competition/
+  kickoff detail with no errors.
+- **Schedule → Tryouts** (header dropdown) — all three seeded states
+  reachable on the real site: "Fall Open Trial" shows UPCOMING +
+  "Contact the club" (mailto fallback), "Academy Fall Identification Days"
+  shows OPEN + "Register Now" linking to the real `registration_href`,
+  "U23 Summer Identification Camp" shows CLOSED + the seeded
+  `closed_message` text.
+- **Store** — confirmed visible in nav and renders (`store_enabled` now
+  `true`); shows the pre-existing "Blue Jersey" home-kit section untouched.
+- **Contact** — renders `contact_page_content`'s intro plus
+  `contact_profile`'s email/phone/service-area/hours.
+- **Sponsors/Stats** — both show the generic "not published for this site
+  yet." fallback, confirming Part 3's evaluation live.
+- Header nav dropdown (Schedule → Fixtures/Tryouts) opens/closes correctly
+  on click.
+- No console errors or hydration warnings on any of the above **except** two
+  pre-existing, out-of-scope 404s for `/icons/instagram.svg` and
+  `/icons/youtube.svg` — seed data present in this file before E7 (untouched
+  by this phase), referencing a `public/icons/` directory that was never
+  checked into the repo; `EditorialFooter.tsx` doesn't even read the `icon`
+  field (it renders its own inline SVGs), so this is cosmetically and
+  functionally inert. Not a regression from this phase.
+
+**Rose City and Diverse City non-regression check:** both re-imported
+locally (commands above) and visited at `rose-city.localhost:3005` and
+`diverse-city.localhost:3005` — both render pixel/behavior-unchanged from
+before this project (clubhouse@1 and academy@1 respectively), zero console
+errors on either.
+
+- **Blockers:** none.
+- **Exact next step:** merge `claude/lions-editorial-rebuild` into `staging`
+  — a separate future step requiring its own review/approval, not implied
+  by this phase's completion. No further Lions editorial@1 work is
+  outstanding.
+- **Hosted mutations, commits, pushes, deployments:** zero hosted mutations
+  (all database work against local Supabase only). This phase's changes
+  were committed locally to `claude/lions-editorial-rebuild`; not pushed to
+  any remote.

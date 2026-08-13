@@ -64,7 +64,7 @@ describe("local LionsFC media import rows", () => {
       club_id: LIONS_LOCAL_TENANT_ID,
       version: 1,
       schema_version: 1,
-      template_id: "clubhouse",
+      template_id: "editorial",
       template_version: 1,
     });
     expect(first.presentationState).toMatchObject({
@@ -94,6 +94,43 @@ describe("local LionsFC media import rows", () => {
       values_heading: "What defines us",
     });
     expect(first.siteSponsorLogos).toHaveLength(6);
+
+    // Lions E7: editorial@1 content tables the E5/E6 pages actually read
+    // from (club_identity, contact_profile, contact_page_content, tryouts,
+    // tryouts_page_content).
+    expect(first.clubIdentity).toMatchObject({
+      club_id: LIONS_LOCAL_TENANT_ID,
+      short_name: "Lions FC",
+      initials: "LFC",
+    });
+    expect(first.contactProfile).toMatchObject({
+      club_id: LIONS_LOCAL_TENANT_ID,
+      public_email: "columbuslionsfc@gmail.com",
+    });
+    expect(first.contactPageContent).toMatchObject({
+      club_id: LIONS_LOCAL_TENANT_ID,
+    });
+    expect(first.tryouts).toHaveLength(3);
+    expect(first.tryouts.map((tryout) => tryout.status).sort()).toEqual([
+      "closed",
+      "open",
+      "upcoming",
+    ]);
+    expect(
+      first.tryouts.find((tryout) => tryout.status === "open"),
+    ).toMatchObject({
+      registration_href: "https://forms.gle/lionsfc-academy-tryouts",
+      cta_label: "Register Now",
+    });
+    expect(
+      first.tryouts.find((tryout) => tryout.status === "closed"),
+    ).toMatchObject({
+      closed_message:
+        "Registration for this session has closed. Check back for the next U23 identification camp.",
+    });
+    expect(first.tryoutsPageContent).toMatchObject({
+      club_id: LIONS_LOCAL_TENANT_ID,
+    });
   });
 
   it("links content only through local Onzio media paths and media asset IDs", () => {
@@ -148,6 +185,11 @@ describe("local LionsFC media import rows", () => {
       presentationStateCount: 1,
       presentationPublicationCount: 1,
       sponsorLogoCount: 6,
+      clubIdentityCount: 1,
+      contactProfileCount: 1,
+      contactPageContentCount: 1,
+      tryoutCount: 3,
+      tryoutsPageContentCount: 1,
       readyContentLinkCount: 13,
       blockedContentLinkCount: 0,
       sourceChecksumCount: 10,
