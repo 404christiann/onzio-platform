@@ -4,29 +4,38 @@ Last updated: 2026-08-13
 
 ## Lions editorial Tailwind/Diverse City migration reverted on staging
 
-Agent: Codex, 2026-08-13. Status: **revert prepared and ready to publish in
-this turn**. Christian rejected the Lions editorial Tailwind/Diverse City
-parity result and requested it be reverted, then asked for a fresh branch from
-the reverted commit because `codex/lions-editorial-diversecity` is no longer a
-useful base.
+Agent: Codex, 2026-08-13. Status: **rollback, Git publication, and Vercel
+staging deployment complete**. Christian rejected the Lions editorial
+Tailwind/Diverse City parity result and requested it be reverted, then asked
+for a fresh branch from the reverted state because
+`codex/lions-editorial-diversecity` is no longer a useful base.
 
-**Completed work:** reverted the two staging commits from that attempt:
+**Completed work:** reverted the two staging commits from that attempt in
+`def49c7` (`Revert Lions editorial Tailwind migration`):
 `f8164b6` (`Update Lions editorial staging handoff`) and `b7e3853` (`Migrate
 Lions editorial UI to Tailwind`). This restores the prior staged Lions
 editorial implementation from before the Tailwind migration, including
 `styles/editorial.css`, the previous editorial component markup, and the
 pre-migration contract expectations. A new branch,
 `codex/lions-editorial-v2-plan`, is the reset point for a better follow-up
-plan.
+plan. That branch was pushed to origin, then `origin/staging` was
+fast-forwarded from `f8164b6` to the rollback state.
 
-**Verification:** revert applied cleanly with no conflicts. Publish and final
-Vercel staging verification are still pending below in this same turn. No
+**Verification:** revert applied cleanly with no conflicts. `git diff --cached
+--check` passed before commit. `npx tsc --noEmit` passed. `npm run
+test:contracts` passed with 54 files and 653 tests. `npm run build` passed
+locally with the same existing admin Hook warnings. Vercel preview deployment
+`dpl_AZqbJ6YArKLKdD9dvrBtdGAyVSZ6` built commit `def49c7` from branch
+`staging`, reached `READY`, and owns
+`https://lions-onzio-staging.vercel.app` plus the git staging alias. No
 production deployment, hosted Supabase write, Stripe mutation, or hosted
-database change is authorized or implied.
+database change was performed or authorized.
 
-**Still open / exact next step:** push the revert commit to
-`codex/lions-editorial-v2-plan`, fast-forward `origin/staging` to the revert
-commit, then verify the Lions staging preview reaches `READY`.
+**Still open / exact next step:** use `codex/lions-editorial-v2-plan` as the
+clean reset branch for a better plan. Do not continue from
+`codex/lions-editorial-diversecity`; preserve it only if Christian wants a
+record of the rejected attempt. Any production promotion remains separately
+approval-gated.
 
 ## Lions Powered by Onzio footer ready locally; staging accent backfill completed
 
