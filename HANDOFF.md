@@ -2,17 +2,20 @@
 
 Last updated: 2026-08-12
 
-## Lions Powered by Onzio footer ready locally; staging accent backfill completed
+## Lions Powered by Onzio footer complete and visually accepted on staging
 
 Agent: Codex, 2026-08-12. Status: **implementation, local verification, Git
-publication, and Vercel staging deployment complete**. The focused footer
-change was committed as `3b5dfbf` (`Add Onzio attribution to Lions footer`),
-pushed to `origin/codex/lions-ui-parity`, and cleanly fast-forwarded from
-`9b45a53` to `3b5dfbf` on `origin/staging`. Vercel staging preview deployment
-`dpl_CqQiausXASZWn94m6nrmjdLYVYXv` reached `READY` and owns
-`https://lions-onzio-staging.vercel.app`; target `preview`. No production
-deployment was run. Christian
-provided the staging SQL result confirming the Lions row
+publication, Vercel staging deployment, and hosted visual acceptance
+complete**. The focused footer change was committed as `3b5dfbf` (`Add Onzio
+attribution to Lions footer`), pushed to `origin/codex/lions-ui-parity`, and
+cleanly fast-forwarded from `9b45a53` to `3b5dfbf` on `origin/staging`. Vercel
+application preview deployment `dpl_CqQiausXASZWn94m6nrmjdLYVYXv` reached
+`READY`. The deployment-record follow-up was committed as `8100788` (`Record
+Lions footer staging deploy`), pushed to both branches, and the resulting
+documentation-only preview `dpl_34o5MycCcTrZvCDrsFR14jbqW8Df` reached `READY`
+and currently owns `https://lions-onzio-staging.vercel.app`; target `preview`.
+No production deployment was run. Christian provided the staging SQL result
+confirming the Lions row
 `8d82bb47-c10b-4823-8ec7-c4de87d34b0a` changed from `accent_color = null` to
 `accent_color = '#F0F0F0'` at `2026-08-13 04:53:17.769707+00`. That closes the
 data-only follow-up from the prior entry; no additional database write or
@@ -40,11 +43,15 @@ the wordmark loaded, the resolved destination was
 `http://lions.localhost:3005/admin/login`, no horizontal overflow, no framework
 error overlay, and no console errors. The prescribed `agent-browser` binary was
 not installed, so the supported in-app browser fallback performed this check.
+The final protected staging HTML was also read through the authenticated Vercel
+CLI and contained the expected `/admin/login` attribution link, `Powered by`
+copy, and Onzio wordmark. Christian then reviewed the hosted result and
+confirmed it "looks great," completing visual acceptance.
 
-**Still open / exact next step:** hard-refresh the Lions staging preview and
-confirm the Powered by Onzio badge visually at desktop/mobile sizes. Any
-production promotion remains separately approval-gated. Preserve the
-pre-existing untracked `.claude/` directory and do not stage it.
+**Acceptance / remaining boundary:** no Lions staging work remains in this
+footer follow-up. Any production promotion remains separately approval-gated
+and was neither requested nor performed. Preserve the pre-existing untracked
+`.claude/` directory and do not stage it.
 
 ## Lions editorial@1 visual-parity cleanup committed and deployed to staging preview
 
