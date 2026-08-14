@@ -162,20 +162,32 @@ export default function AdminShopPage() {
   // (home/away/third) and that machinery must keep working as-is.
   const isEditorial = club.presentationTemplateKey === "editorial@1";
   // The "home" surface is a separate shop_kit_* dataset that only renders when
-  // a template reads fetchShopKitVariants("home", ...) — AcademyHomeShopFeature
-  // does exactly that for academy@1, so its Home Page tab stays live. Lions'
-  // homepage teaser (components/editorial/EditorialHomeStore.tsx) instead reads
-  // fetchShopKitVariants("shop", ...), the same rows as the /shop page, so the
+  // a template asks for it. Two templates give their homepage a bespoke store
+  // teaser that reads fetchShopKitVariants("shop", ...) — the same rows as the
+  // /shop page — instead: clubhouse@1 (components/ClubhouseHomePage.tsx) and
+  // editorial@1 (components/editorial/EditorialHomeStore.tsx). For those two the
   // whole "home" surface — title, description, CTA and kit photos alike — is
-  // unreachable content for editorial@1 and the surface is hidden for it.
-  const surfaceOptions = isEditorial
+  // unreachable content, so the Home Page tab is hidden for both.
+  //
+  // Every other template still renders the "home" surface and keeps the tab:
+  // academy@1 via AcademyHomeShopFeature (fetchShopKitVariants("home", ...)),
+  // and cinematic@1 / heritage@1 / not-yet-published clubs (null key) via
+  // HomePageClient's default branch, which renders
+  // <ShopKitSection surface="home" />. So this is an explicit two-template
+  // denylist rather than an academy@1-only allowlist — gating it on academy@1
+  // would strip the tab from templates whose homepages do read these rows.
+  const hidesHomeShopSurface =
+    club.presentationTemplateKey === "clubhouse@1" || isEditorial;
+  const surfaceOptions = hidesHomeShopSurface
     ? SURFACE_OPTIONS.filter((surface) => surface.id !== "home")
     : SURFACE_OPTIONS;
   const [surfaceChoice, setSelectedSurface] = useState<ShopKitSurface>("home");
   // Derived rather than initial-state-only so no lingering state — the default
   // "home", or a stale value left by a template change — can ever point the
   // editor at a surface its own selector no longer offers. Every downstream
-  // `selectedSurface === "home"` branch is therefore dead for editorial@1.
+  // `selectedSurface === "home"` branch is therefore dead for any template in
+  // hidesHomeShopSurface (clubhouse@1 and editorial@1), which fall through to
+  // surfaceOptions[0] === "shop".
   const selectedSurface: ShopKitSurface = surfaceOptions.some(
     (surface) => surface.id === surfaceChoice,
   )
@@ -687,9 +699,10 @@ export default function AdminShopPage() {
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
           <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            {/* With only "shop" left in surfaceOptions for editorial@1, a
-                single-tab switcher would be dead UI, so it's hidden entirely —
-                same pattern as the kit-variant switcher just below. */}
+            {/* With only "shop" left in surfaceOptions for the templates in
+                hidesHomeShopSurface (clubhouse@1, editorial@1), a single-tab
+                switcher would be dead UI, so it's hidden entirely — same
+                pattern as the kit-variant switcher just below. */}
             {surfaceOptions.length > 1 && (
             <div
               className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1"

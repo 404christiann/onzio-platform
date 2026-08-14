@@ -2,6 +2,50 @@
 
 Last updated: 2026-08-13
 
+## Shop's dead "Home Page" tab hide generalized to Rose City (clubhouse@1) too
+
+Agent: Claude (1 Opus subagent for the fix, 1 Fable subagent for
+verification), 2026-08-13. Status: **complete, verified, ready to commit on
+`codex/lions-editorial-diversecity-v2`**.
+
+**Trigger:** Christian spotted the same dead "Home Page" tab problem on what
+was very likely Rose City's (`clubhouse@1`) admin, after the prior HANDOFF
+entry only fixed it for Lions (`editorial@1`).
+
+**What the investigation found:** the earlier fix's premise — "only
+`academy@1` reads the `home` shop-kit surface" — was checked with a literal
+grep that missed an indirect consumer. This platform actually has 5
+presentation templates, not 3: `academy@1`, `clubhouse@1`, `editorial@1`,
+plus `cinematic@1` and `heritage@1`, and clubs can also have no published
+template at all (`presentationTemplateKey: null`). A fallback component
+(`HomePageClient.tsx` → `ShopKitSection surface="home"` →
+`ShopKitSectionContainer.tsx`) genuinely reads the "home" surface for
+`cinematic@1`, `heritage@1`, and null-template clubs — so a naive "only show
+for academy@1" allowlist would have broken the Home Page tab for those. The
+actual dead set is exactly `clubhouse@1` and `editorial@1` (both read the
+`"shop"` surface for their homepage teaser instead of `"home"`), confirmed
+by reading `ClubhouseHomePage.tsx`/`ClubhouseShopPage.tsx` directly. Fixed
+as a precise two-template denylist rather than an allowlist, reusing the
+already-in-scope `isEditorial` variable and the existing academy@1 check
+(`hidesClubhouseShopSections`) rather than introducing new booleans. The
+already-hidden Photo Row/Purchase tabs (editorial@1-only — Rose City's real
+shop page does render that content) were confirmed untouched.
+
+**Verification:** full contract suite passed with 55 files and 693 tests
+(+2 over the prior baseline), `npm run lint` passed with the same 5 baseline
+warnings, full local-Supabase `npm test` gate passed with 101 files and 1174
+tests (+2). `npx tsc --noEmit` and `git diff --check` both passed. Live-checked
+against Rose City's local admin: no Home Page tab, all 3 kit variants intact,
+Photo Row and Purchase tabs both fully functional. DCFC (`academy@1`)
+confirmed unaffected — still has both surface options, defaults to Home Page.
+
+**Known pre-existing issue, noticed but not fixed (out of scope for this
+change):** Rose City's Shop admin mislabels its "Third" kit editor as "Away
+Shop Kit" (`activeEditorLabel` only distinguishes Home vs. everything-else).
+Worth a follow-up.
+
+**Exact next step:** commit and sync to staging.
+
 ## Standings "Remove Logo" added; Shop's dead "Home Page" tab hidden for Lions
 
 Agent: Claude (1 Sonnet subagent, 1 Opus subagent for the surface-hide, 1

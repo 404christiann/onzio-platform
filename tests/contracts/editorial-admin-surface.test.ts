@@ -22,6 +22,7 @@ const STANDINGS_ADMIN = "app/admin/(protected)/standings/page.tsx";
 
 const EDITORIAL_GATE = 'presentationTemplateKey === "editorial@1"';
 const ACADEMY_GATE = 'presentationTemplateKey === "academy@1"';
+const CLUBHOUSE_GATE = 'presentationTemplateKey === "clubhouse@1"';
 
 /**
  * Lions FC (editorial@1) hides admin surfaces its public template never
@@ -156,11 +157,17 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
-  describe("shop admin: Home Page surface hidden for editorial@1", () => {
+  describe("shop admin: Home Page surface hidden for clubhouse@1 and editorial@1", () => {
     it("filters the home surface out of the option list itself, not just the rendered tabs", () => {
       const page = source(SHOP_ADMIN);
+      // The gate is an explicit two-template denylist. Both templates give
+      // their homepage a bespoke teaser that reads the "shop" surface, so the
+      // "home" rows are unreachable content for each of them.
       expect(page).toContain(
-        'const surfaceOptions = isEditorial\n    ? SURFACE_OPTIONS.filter((surface) => surface.id !== "home")\n    : SURFACE_OPTIONS;',
+        `const hidesHomeShopSurface =\n    club.${CLUBHOUSE_GATE} || isEditorial;`,
+      );
+      expect(page).toContain(
+        'const surfaceOptions = hidesHomeShopSurface\n    ? SURFACE_OPTIONS.filter((surface) => surface.id !== "home")\n    : SURFACE_OPTIONS;',
       );
       // The selector renders from the filtered list, so no literal "Home Page"
       // button can survive the filter.
@@ -171,11 +178,13 @@ describe("editorial@1 admin surface hides", () => {
       expect(page).toContain("{surfaceOptions.length > 1 && (");
     });
 
-    it("derives selectedSurface so no state can point editorial@1 at the hidden surface", () => {
+    it("derives selectedSurface so no state can point either template at the hidden surface", () => {
       const page = source(SHOP_ADMIN);
       // The raw state still defaults to "home" (academy@1 depends on that), but
       // the value every downstream branch reads is derived from the filtered
-      // option list, so editorial@1 resolves to "shop" on mount and forever.
+      // option list, so both hidden templates resolve to "shop" on mount and
+      // forever — the derivation is gate-agnostic, so widening the gate to
+      // clubhouse@1 needed no change here.
       expect(page).toContain(
         'const [surfaceChoice, setSelectedSurface] = useState<ShopKitSurface>("home");',
       );
@@ -188,13 +197,15 @@ describe("editorial@1 admin surface hides", () => {
 
     it("leaves academy@1's Home Page surface completely intact", () => {
       const page = source(SHOP_ADMIN);
-      // Both options remain in the module-level list, and the filter is gated
-      // solely on isEditorial — academy@1 keeps the tab and its "home" default.
+      // Both options remain in the module-level list, and academy@1 appears
+      // nowhere in the surface gate — it keeps the tab and its "home" default.
       expect(page).toContain(
         'const SURFACE_OPTIONS: Array<{ id: ShopKitSurface; label: string }> = [\n  { id: "home", label: "Home Page" },\n  { id: "shop", label: "Shop Page" },\n];',
       );
-      // The academy-only surface hide must not borrow the clubhouse-sections
-      // flag, which would change Rose City too.
+      // The surface hide must not borrow the clubhouse-sections flag: that is
+      // an academy@1 check, so reusing it would inadvertently strip the tab
+      // from every non-academy template — including cinematic@1, heritage@1
+      // and unpublished clubs, whose homepages do render the "home" surface.
       expect(page).not.toContain(
         "const surfaceOptions = hidesClubhouseShopSections",
       );
@@ -204,12 +215,46 @@ describe("editorial@1 admin surface hides", () => {
       );
     });
 
-    it("keeps AcademyHomeShopFeature reading the home surface it edits", () => {
-      // The hide is only correct because academy@1 actually renders the "home"
-      // surface on its homepage while editorial@1 does not.
+    it("hides the surface for exactly the two templates whose homepage reads 'shop'", () => {
+      // The hide is only correct because these two templates render their own
+      // store teaser off the same rows as the /shop page.
+      expect(source("components/ClubhouseHomePage.tsx")).toContain(
+        'fetchShopKitVariants("shop", club.id)',
+      );
+      expect(source("components/editorial/EditorialHomeStore.tsx")).toContain(
+        'fetchShopKitVariants("shop", club.id)',
+      );
+      // ...while academy@1 genuinely reads the "home" surface it edits.
       expect(source("components/AcademyHomeShopFeature.tsx")).toContain(
         'fetchShopKitVariants("home", clubId)',
       );
+    });
+
+    it("keeps the tab for the templates that fall through to the shared home-surface section", () => {
+      // HomePageClient special-cases editorial@1 and clubhouse@1 and returns
+      // early; every other template (academy@1 aside) falls through to the
+      // shared <ShopKitSection surface="home" /> branch. cinematic@1,
+      // heritage@1 and clubs with no published presentation (null key) all land
+      // there, so their Home Page tab must stay editable — which is why the
+      // gate names two templates instead of excluding all non-academy ones.
+      const home = source("components/HomePageClient.tsx");
+      expect(home).toContain('<ShopKitSection surface="home" fadeImageToWhite />');
+      expect(home).toContain(
+        'if (club.presentationTemplateKey === "clubhouse@1") {',
+      );
+      expect(home).toContain(
+        'if (club.presentationTemplateKey === "editorial@1") {',
+      );
+    });
+
+    it("leaves the editorial@1-only Photo Row and Purchase hides untouched", () => {
+      const page = source(SHOP_ADMIN);
+      // Rose City's ClubhouseShopPage does render both, so those tabs must stay
+      // gated on isEditorial alone and must not pick up the new surface flag.
+      expect(page).toContain(
+        "const tabOrder = isEditorial\n    ? ADMIN_TAB_ORDER.filter(\n        (tab) => tab !== \"photoStrip\" && tab !== \"purchase\",",
+      );
+      expect(page).not.toContain("tabOrder = hidesHomeShopSurface");
     });
   });
 
