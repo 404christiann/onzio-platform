@@ -425,7 +425,12 @@ export default function AdminShopPage() {
     const cleanedBulletPoints = cleanKitBulletPoints(
       fields.bullet_points.map((point) => point.text),
     );
-    if (cleanedBulletPoints.length === 0) {
+    // editorial@1 (Lions) never renders bullet points on its public shop
+    // page (see EditorialShopPage.tsx) and the input UI for them is hidden
+    // below, so this club must never be blocked from saving over a missing
+    // bullet point. academy@1 and every other template still requires at
+    // least one.
+    if (cleanedBulletPoints.length === 0 && !isEditorial) {
       setError("Add at least one product bullet point before saving.");
       return;
     }
@@ -602,9 +607,14 @@ export default function AdminShopPage() {
     cards: normalizePurchaseDetailCards(purchaseDetails.cards),
     updated_at: "",
   });
+  // editorial@1 never shows the bullet-point editor (see below) and its
+  // public shop page never renders bullet points, so it's exempt from the
+  // "at least one bullet point" requirement that still gates academy@1 and
+  // every other template.
   const hasBulletPoint =
+    isEditorial ||
     cleanKitBulletPoints(fields.bullet_points.map((point) => point.text)).length >
-    0;
+      0;
   const saveDisabled =
     saving || uploading || draftPhotos.length === 0 || !hasBulletPoint;
   const activeEditorLabel =
@@ -843,6 +853,12 @@ export default function AdminShopPage() {
                 />
               </Field>
 
+              {/* editorial@1 (Lions) never renders bullet points on its public
+                  shop page (EditorialShopPage.tsx reads a fixed layout, not
+                  fields.bullet_points), so this input is pointless there.
+                  hasBulletPoint is forced true for isEditorial above, so
+                  hiding this never blocks Save. */}
+              {!isEditorial && (
               <Field
                 label="Product Bullet Points"
                 help={`Short lines shown next to the red dots. Add up to ${MAX_KIT_BULLET_POINTS}.`}
@@ -909,6 +925,7 @@ export default function AdminShopPage() {
                   </p>
                 )}
               </Field>
+              )}
 
               <Field
                 label="Store Information"
@@ -926,6 +943,11 @@ export default function AdminShopPage() {
               </Field>
 
               <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                {/* editorial@1 (Lions) always shows a hardcoded CTA label
+                    ("Shop with our vendor") on its public shop page — see
+                    EditorialShopPage.tsx — and ignores fields.cta_label, so
+                    this input is pointless there. */}
+                {!isEditorial && (
                 <Field
                   label="Purchase Button Text"
                   help='Example: "Buy Now →"'
@@ -938,6 +960,7 @@ export default function AdminShopPage() {
                     className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
+                )}
                 <Field
                   label="Purchase Page Link"
                   help={

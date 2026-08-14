@@ -294,10 +294,10 @@ export default function AdminStandingsPage() {
   //
   // academy@1's real public standings table renders nothing when there is no
   // real data, so its preview matches by showing the empty state instead.
-  // editorial@1 never renders this data at all — Lions' public standings
-  // (components/editorial/EditorialStandingsTable.tsx) is a static
-  // Lions-specific table — so the Rose City sample is doubly wrong there;
-  // the empty state is the honest preview until rows are actually entered.
+  // editorial@1's public standings table
+  // (components/editorial/EditorialStandingsTable.tsx) reads these same rows
+  // and renders nothing when there are none, so it behaves like academy@1
+  // here: the empty state is the honest preview until rows are entered.
   const previewRows = normalizeStandingsRows(rows, {
     fallbackToSample: !isAcademy && !isEditorial,
   });

@@ -2,6 +2,67 @@
 
 Last updated: 2026-08-13
 
+## Lions standings made database-driven; Shop's dead bullet-point/CTA fields hidden
+
+Agent: Claude (1 Opus subagent for the standings rewrite, 1 Sonnet subagent
+for the Shop field hides, 1 Fable subagent for final verification),
+2026-08-13. Status: **both changes complete, verified locally, committed on
+`codex/lions-editorial-diversecity-v2`, and synced to staging** — including a
+direct data seed to staging's Supabase project (see below).
+
+**Standings made real:** the prior HANDOFF entry found Lions' public
+standings table (`components/editorial/EditorialStandingsTable.tsx`) was a
+fully hardcoded static component with real Spring 2026 season data, but zero
+database connection — the Standings admin page was a no-op regardless of the
+sample-data fix already made. Christian confirmed the hardcoded numbers were
+real and asked for the table to become database-driven, seeded with that
+same data so nothing was lost. The component now fetches
+`fetchLeagueStandings(club.id)` the same way the recently-extracted sibling
+`EditorialSponsorCarousel.tsx` fetches its own data — visual output
+(headings, styling, CSS classes, crest treatment) is unchanged, only the
+data source moved. A new local-only seed script,
+`scripts/seed-lions-standings-local.ts` (`npm run seed:lions-standings:local`),
+seeds the 9 real teams plus the section settings; it has a hard loopback-only
+guard with no hosted-project escape hatch, so it was run against local
+Supabase only. **Staging's database had no `league_standings` rows at all**,
+which would have meant an empty standings section on staging the moment this
+deployed — Christian explicitly authorized seeding staging directly this
+session, so the same 9 rows and settings were written to Lions' staging
+Supabase project via direct SQL after this commit synced. Production is not
+seeded and needs the same step whenever Lions goes live there.
+
+One known behavior change worth noting: the component now sorts by
+`sort_order` (what the admin controls), not by a points/GD tie-break — the
+three 5-point teams' order (Ohio International, Lightning, Mahoning) matches
+the originally published table, which a strict GD tie-break would have
+reordered. This makes admin-controlled ordering authoritative going forward.
+Also unchanged/still a gap: per-team logos uploaded in the admin still don't
+render on the public table (abbreviation badges only) — flagged as a
+possible follow-up, not fixed here.
+
+**Shop's now-dead fields hidden:** following the pattern from the prior
+preview-fix entry (Shop Kit preview no longer shows bullet points or a
+custom CTA label, since Lions' real public page renders neither), the
+underlying admin input fields for both are now hidden for `editorial@1` too.
+This required also relaxing a save-blocking validation
+("Add at least one product bullet point before saving") that would otherwise
+have permanently blocked Lions admins from saving any Shop kit change once
+the field was hidden — confirmed scoped precisely to `editorial@1`, with
+DCFC's own bullet-point requirement completely unchanged.
+
+**Verification:** full contract suite passed with 55 files and 677 tests,
+`npm run lint` passed with the same 5 baseline warnings, full local-Supabase
+`npm test` gate passed with 101 files and 1158 tests, `npx tsc --noEmit` and
+`git diff --check` both passed. The live standings page was confirmed via
+real browser screenshot (not just DOM inspection) to render identically to
+the previous hardcoded version — same 9 teams, same numbers, same order,
+same styling.
+
+**Exact next step:** Christian's visual review on staging, including the
+Standings admin page (now that it actually controls the live table) and the
+Shop admin's Home/Away/Third kit tabs (bullet points and CTA label fields
+should be gone, kit photos/variants unaffected).
+
 ## Lions admin previews fixed: two were rendering the wrong thing entirely, one was showing another club's data
 
 Agent: Claude (5 subagents this round — 2 Opus for the investigative fixes, 3

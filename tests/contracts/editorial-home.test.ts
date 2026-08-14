@@ -172,11 +172,32 @@ describe("editorial home: section composition", () => {
     );
   });
 
-  it("renders Christian's supplied Lions standings table in the Diverse City table structure with the Lions crest row", () => {
-    const source = read("components/editorial/EditorialStandingsTable.tsx");
+  it("renders the Lions standings table from league_standings, keeping the Diverse City table structure and the Lions crest row", () => {
+    const source = stripComments(
+      read("components/editorial/EditorialStandingsTable.tsx"),
+    );
     const css = read("styles/editorial.css");
+
+    // Data source: the tenant's own rows, same self-fetching shape as the
+    // sibling EditorialSponsorCarousel. The Standings admin page writes these
+    // tables, so the public table has to read them.
+    expect(source).toContain("fetchLeagueStandings(club.id)");
+    expect(source).toContain("useClubContext");
+    expect(source).toContain("content.rows");
+    expect(source).toContain("{settings.eyebrow}");
+    expect(source).toContain("{settings.title}");
+    expect(source).toContain("{settings.intro}");
+    expect(source).toContain("{row.team_name}");
+    expect(source).toContain("row.team_abbreviation || teamAbbreviation(row.team_name)");
+    expect(source).toContain("if (rows.length === 0) return null;");
+
+    // The league's published order is the admin's saved row order.
+    // fetchLeagueStandings re-sorts by points/goal difference, which splits
+    // the three 5-point sides differently from the real table.
+    expect(source).toContain("a.sort_order - b.sort_order");
+
+    // No club data may be hardcoded here any more -- that was the whole bug.
     for (const literal of [
-      "Lions Football Club",
       "Leal United FC",
       "Columbus Astray",
       "Fut Ohio SC",
@@ -185,18 +206,65 @@ describe("editorial home: section composition", () => {
       "Ohio International FC",
       "Lightning SC",
       "Mahoning Trumbull United SC",
+      "Ohio Valley Division",
     ]) {
-      expect(source).toContain(literal);
+      expect(source).not.toContain(literal);
     }
-    expect(source).toContain("goalDifference: 21");
-    expect(source).toContain("goalDifference: -30");
-    expect(source).toContain("points: 24");
+    expect(source).not.toMatch(/const STANDINGS(_ROWS)?\s*[:=]/);
+
+    // Presentation is unchanged: same crest treatment, same CSS contract.
     expect(source).toContain("useEditorialIdentity");
-    expect(source).toContain("row.isClub && crestUrl");
+    expect(source).toContain("row.is_club && crestUrl");
     expect(source).toContain('className="editorial-standings-row editorial-standings-row-head"');
+    expect(source).toContain('className="editorial-standings-crest"');
+    expect(source).toContain('className="editorial-standings-abbr"');
+    expect(source).toContain('className="editorial-standings-stat"');
     expect(css).toContain('[data-site-template="editorial"] .editorial-standings-row');
     expect(css).toContain("grid-template-columns: minmax(360px, 1fr) repeat(6, 78px);");
     expect(css).toContain("background: #f9fafd;");
+  });
+
+  it("keeps Christian's real Spring 2026 Ohio Valley Division numbers in the Lions standings seed", () => {
+    const seed = read("scripts/seed-lions-standings-local.ts");
+
+    // The nine rows that used to live in EditorialStandingsTable.tsx. They are
+    // real season data, so the move to the database must not lose or reorder
+    // them -- the array order below is the published table order and becomes
+    // each row's sort_order.
+    const expected: Array<[string, string]> = [
+      ["Lions Football Club", "played: 10, wins: 7, draws: 3, losses: 0, goal_difference: 21, points: 24, is_club: true"],
+      ["Leal United FC", "played: 10, wins: 5, draws: 4, losses: 1, goal_difference: 11, points: 19, is_club: false"],
+      ["Columbus Astray", "played: 10, wins: 6, draws: 1, losses: 3, goal_difference: 7, points: 19, is_club: false"],
+      ["Fut Ohio SC", "played: 10, wins: 4, draws: 5, losses: 1, goal_difference: 27, points: 17, is_club: false"],
+      ["Indy Gladiators SC", "played: 10, wins: 3, draws: 5, losses: 2, goal_difference: 10, points: 14, is_club: false"],
+      ["Manu Ledesma Academy", "played: 10, wins: 4, draws: 2, losses: 4, goal_difference: 9, points: 8, is_club: false"],
+      ["Ohio International FC", "played: 10, wins: 1, draws: 2, losses: 7, goal_difference: -30, points: 5, is_club: false"],
+      ["Lightning SC", "played: 10, wins: 1, draws: 2, losses: 7, goal_difference: -27, points: 5, is_club: false"],
+      ["Mahoning Trumbull United SC", "played: 10, wins: 1, draws: 2, losses: 7, goal_difference: -28, points: 5, is_club: false"],
+    ];
+    let cursor = -1;
+    for (const [teamName, stats] of expected) {
+      expect(seed).toContain(`team_name: "${teamName}", ${stats}`);
+      const index = seed.indexOf(`team_name: "${teamName}"`);
+      expect(index, `${teamName} is out of published order`).toBeGreaterThan(cursor);
+      cursor = index;
+    }
+
+    // Heading copy moves to league_standings_settings unchanged.
+    expect(seed).toContain('eyebrow: "League standings"');
+    expect(seed).toContain('title: "Ohio Valley Division"');
+    expect(seed).toContain(
+      'intro: "Current table for Lions Football Club\'s 2026 campaign."',
+    );
+
+    // Local-only: no hosted seed may be reachable from this script. Checked
+    // against the code, not the prose, which discusses the hosted case.
+    const seedCode = stripComments(seed);
+    expect(seedCode).toContain("LOOPBACK_HOSTS.has(hostname)");
+    expect(seedCode).toContain("--execute-local");
+    expect(seedCode).toContain("--confirm-local");
+    expect(seedCode).not.toContain("--confirm-project");
+    expect(seedCode).not.toMatch(/supabase\.co/);
   });
 });
 

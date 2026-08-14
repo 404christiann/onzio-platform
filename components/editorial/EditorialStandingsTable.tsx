@@ -1,43 +1,41 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Image from "@/components/ResilientImage";
+import { useClubContext } from "@/components/ClubContextProvider";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 import { imageDeliveryProps } from "@/lib/image-delivery";
-import { teamAbbreviation } from "@/lib/standings-content";
+import { fetchLeagueStandings } from "@/lib/queries";
+import { teamAbbreviation, type StandingsTableContent } from "@/lib/standings-content";
 
-type StandingRow = {
-  team: string;
-  played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goalDifference: number;
-  points: number;
-  isClub?: boolean;
+/**
+ * Lions' public league table. The rows and the heading copy come from the
+ * tenant's own `league_standings` / `league_standings_settings` records, so
+ * the Standings admin page actually drives what visitors see. It used to be a
+ * hardcoded module-level array, which meant the admin page wrote to tables
+ * nothing on the public site ever read.
+ *
+ * Data flow follows the sibling EditorialSponsorCarousel: this stays a
+ * self-fetching "use client" component that reads its tenant id from
+ * useClubContext, rather than adding another prop to EditorialHome. Only the
+ * hero is server-resolved and threaded through as a prop.
+ */
+
+const EMPTY_CONTENT: StandingsTableContent = {
+  settings: { id: 1, eyebrow: "", title: "", intro: "", updated_at: "" },
+  rows: [],
 };
 
 const COLUMNS: Array<{
-  key: "played" | "wins" | "draws" | "losses" | "goalDifference" | "points";
+  key: "played" | "wins" | "draws" | "losses" | "goal_difference" | "points";
   label: string;
 }> = [
   { key: "played", label: "GP" },
   { key: "wins", label: "W" },
   { key: "draws", label: "D" },
   { key: "losses", label: "L" },
-  { key: "goalDifference", label: "GD" },
+  { key: "goal_difference", label: "GD" },
   { key: "points", label: "PTS" },
-];
-
-const STANDINGS: StandingRow[] = [
-  { team: "Lions Football Club", played: 10, wins: 7, draws: 3, losses: 0, goalDifference: 21, points: 24, isClub: true },
-  { team: "Leal United FC", played: 10, wins: 5, draws: 4, losses: 1, goalDifference: 11, points: 19 },
-  { team: "Columbus Astray", played: 10, wins: 6, draws: 1, losses: 3, goalDifference: 7, points: 19 },
-  { team: "Fut Ohio SC", played: 10, wins: 4, draws: 5, losses: 1, goalDifference: 27, points: 17 },
-  { team: "Indy Gladiators SC", played: 10, wins: 3, draws: 5, losses: 2, goalDifference: 10, points: 14 },
-  { team: "Manu Ledesma Academy", played: 10, wins: 4, draws: 2, losses: 4, goalDifference: 9, points: 8 },
-  { team: "Ohio International FC", played: 10, wins: 1, draws: 2, losses: 7, goalDifference: -30, points: 5 },
-  { team: "Lightning SC", played: 10, wins: 1, draws: 2, losses: 7, goalDifference: -27, points: 5 },
-  { team: "Mahoning Trumbull United SC", played: 10, wins: 1, draws: 2, losses: 7, goalDifference: -28, points: 5 },
 ];
 
 function formatDifference(value: number) {
@@ -45,16 +43,47 @@ function formatDifference(value: number) {
 }
 
 export default function EditorialStandingsTable() {
+  const club = useClubContext();
   const { crestUrl } = useEditorialIdentity();
+  const [content, setContent] = useState<StandingsTableContent>(EMPTY_CONTENT);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLeagueStandings(club.id)
+      .then((next) => {
+        if (!cancelled) setContent(next);
+      })
+      .catch((error: unknown) => {
+        console.error("EditorialStandingsTable:", error);
+        if (!cancelled) setContent(EMPTY_CONTENT);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [club.id]);
+
+  // Render in the admin's saved row order (`sort_order`), which is the order
+  // the club publishes its table in. fetchLeagueStandings hands rows back
+  // re-sorted by points/goal difference, and that tie-break does not match
+  // the real Ohio Valley Division table -- the three 5-point sides are
+  // ordered by the league's own criteria, not by goal difference.
+  const rows = useMemo(
+    () => [...content.rows].sort((a, b) => a.sort_order - b.sort_order),
+    [content.rows],
+  );
+
+  if (rows.length === 0) return null;
+
+  const { settings } = content;
 
   return (
     <section className="editorial-standings" aria-label="League standings">
       <div className="editorial-standings-inner">
-        <p className="editorial-standings-eyebrow">League standings</p>
-        <h2>Ohio Valley Division</h2>
-        <p className="editorial-standings-intro">
-          Current table for Lions Football Club&apos;s 2026 campaign.
-        </p>
+        <p className="editorial-standings-eyebrow">{settings.eyebrow}</p>
+        <h2>{settings.title}</h2>
+        {settings.intro ? (
+          <p className="editorial-standings-intro">{settings.intro}</p>
+        ) : null}
 
         <div className="editorial-standings-card">
           <div className="editorial-standings-row editorial-standings-row-head">
@@ -67,15 +96,15 @@ export default function EditorialStandingsTable() {
             ))}
           </div>
 
-          {STANDINGS.map((row, index) => (
+          {rows.map((row, index) => (
             <div
               className="editorial-standings-row"
-              data-club={row.isClub ? "true" : "false"}
-              key={row.team}
+              data-club={row.is_club ? "true" : "false"}
+              key={row.id}
             >
               <div className="editorial-standings-team">
                 <span className="editorial-standings-rank">{index + 1}</span>
-                {row.isClub && crestUrl ? (
+                {row.is_club && crestUrl ? (
                   <span className="editorial-standings-crest">
                     <Image
                       src={crestUrl}
@@ -89,16 +118,16 @@ export default function EditorialStandingsTable() {
                 ) : (
                   <span
                     className="editorial-standings-abbr"
-                    aria-label={`${row.team} logo placeholder`}
+                    aria-label={`${row.team_name} logo placeholder`}
                   >
-                    {teamAbbreviation(row.team)}
+                    {row.team_abbreviation || teamAbbreviation(row.team_name)}
                   </span>
                 )}
-                <strong>{row.team}</strong>
+                <strong>{row.team_name}</strong>
               </div>
               {COLUMNS.map((column) => (
                 <span className="editorial-standings-stat" key={column.key}>
-                  {column.key === "goalDifference"
+                  {column.key === "goal_difference"
                     ? formatDifference(row[column.key])
                     : row[column.key]}
                 </span>
