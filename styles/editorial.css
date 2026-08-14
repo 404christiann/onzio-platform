@@ -3960,6 +3960,101 @@
     0 34px 34px color-mix(in srgb, var(--primary-deep) 18%, transparent)
   );
 }
+/* ---- Multi-photo kit slideshow ----
+   Same interaction pattern as the homepage .matchday-* gallery (cross-fade,
+   counter, arrows, progress dashes) but its own scoped class names: this one
+   lives inside the fixed .store-product-image stage above and sits on the
+   light store background, so it must not inherit the matchday rules' full-
+   bleed sizing or on-dark palette (and must not leak into them either).
+   Slides are absolutely positioned inside the existing stage, so adding
+   photos never changes the page's layout or the product box's footprint. */
+[data-site-template="editorial"] .store-product-slideshow,
+[data-site-template="editorial"] .store-product-slides,
+[data-site-template="editorial"] .store-product-slide {
+  position: absolute;
+  inset: 0;
+}
+[data-site-template="editorial"] .store-product-slide {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+[data-site-template="editorial"] .store-product-slide[data-active="true"] {
+  opacity: 1;
+}
+[data-site-template="editorial"] .store-product-slideshow-controls {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: auto auto minmax(64px, 1fr);
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 16px 7px 7px;
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  backdrop-filter: blur(10px);
+}
+[data-site-template="editorial"] .store-product-slideshow-arrows {
+  display: flex;
+  gap: 6px;
+}
+[data-site-template="editorial"] .store-product-slideshow-arrows button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.9rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease;
+}
+[data-site-template="editorial"] .store-product-slideshow-arrows button:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+}
+[data-site-template="editorial"] .store-product-slideshow-count {
+  color: var(--muted);
+  font: 650 0.68rem var(--font-geist-mono);
+  letter-spacing: 0.12em;
+}
+[data-site-template="editorial"] .store-product-slideshow-progress {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+[data-site-template="editorial"] .store-product-slideshow-progress button {
+  width: 20px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  position: relative;
+}
+[data-site-template="editorial"] .store-product-slideshow-progress button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 2px;
+  background: color-mix(in srgb, var(--ink) 26%, transparent);
+  transition: background-color 0.25s ease, transform 0.25s ease;
+  transform-origin: left;
+}
+[data-site-template="editorial"] .store-product-slideshow-progress button[data-active="true"] {
+  width: 40px;
+}
+[data-site-template="editorial"] .store-product-slideshow-progress button[data-active="true"]::after {
+  background: var(--accent);
+}
 [data-site-template="editorial"] .store-product-image-empty {
   position: absolute;
   inset: 12%;
@@ -4104,6 +4199,24 @@
   [data-site-template="editorial"] .store-product-image {
     width: 140%;
     height: 580px;
+  }
+  [data-site-template="editorial"] .store-product-slideshow-controls {
+    gap: 10px;
+    padding: 5px 12px 5px 5px;
+  }
+  [data-site-template="editorial"] .store-product-slideshow-arrows button {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  [data-site-template="editorial"] .store-product-slideshow-count {
+    font-size: 0.6rem;
+  }
+  [data-site-template="editorial"] .store-product-slideshow-progress button {
+    width: 14px;
+  }
+  [data-site-template="editorial"] .store-product-slideshow-progress button[data-active="true"] {
+    width: 28px;
   }
   [data-site-template="editorial"] .store-product-details {
     padding-top: 2px;

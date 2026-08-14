@@ -96,44 +96,47 @@ export default function EditorialStandingsTable() {
             ))}
           </div>
 
-          {rows.map((row, index) => (
-            <div
-              className="editorial-standings-row"
-              data-club={row.is_club ? "true" : "false"}
-              key={row.id}
-            >
-              <div className="editorial-standings-team">
-                <span className="editorial-standings-rank">{index + 1}</span>
-                {row.is_club && crestUrl ? (
-                  <span className="editorial-standings-crest">
-                    <Image
-                      src={crestUrl}
-                      alt=""
-                      fill
-                      sizes="40px"
-                      className="editorial-standings-crest-img"
-                      {...imageDeliveryProps("club-logo")}
-                    />
+          {rows.map((row, index) => {
+            const logoSrc = row.is_club ? crestUrl : row.logo_url;
+            return (
+              <div
+                className="editorial-standings-row"
+                data-club={row.is_club ? "true" : "false"}
+                key={row.id}
+              >
+                <div className="editorial-standings-team">
+                  <span className="editorial-standings-rank">{index + 1}</span>
+                  {logoSrc ? (
+                    <span className="editorial-standings-crest">
+                      <Image
+                        src={logoSrc}
+                        alt=""
+                        fill
+                        sizes="40px"
+                        className="editorial-standings-crest-img"
+                        {...imageDeliveryProps(row.is_club ? "club-logo" : "opponent-crest")}
+                      />
+                    </span>
+                  ) : (
+                    <span
+                      className="editorial-standings-abbr"
+                      aria-label={`${row.team_name} logo placeholder`}
+                    >
+                      {row.team_abbreviation || teamAbbreviation(row.team_name)}
+                    </span>
+                  )}
+                  <strong>{row.team_name}</strong>
+                </div>
+                {COLUMNS.map((column) => (
+                  <span className="editorial-standings-stat" key={column.key}>
+                    {column.key === "goal_difference"
+                      ? formatDifference(row[column.key])
+                      : row[column.key]}
                   </span>
-                ) : (
-                  <span
-                    className="editorial-standings-abbr"
-                    aria-label={`${row.team_name} logo placeholder`}
-                  >
-                    {row.team_abbreviation || teamAbbreviation(row.team_name)}
-                  </span>
-                )}
-                <strong>{row.team_name}</strong>
+                ))}
               </div>
-              {COLUMNS.map((column) => (
-                <span className="editorial-standings-stat" key={column.key}>
-                  {column.key === "goal_difference"
-                    ? formatDifference(row[column.key])
-                    : row[column.key]}
-                </span>
-              ))}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import ShopKitSection from "@/components/ShopKitSection";
 import ResilientImage from "@/components/ResilientImage";
+import EditorialShopKitSlideshow from "@/components/editorial/EditorialShopKitSlideshow";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import type {
@@ -42,6 +43,10 @@ interface ScaledShopKitPreviewProps {
  * Notably different from the generic ShopKitSection this replaces: no
  * bullet points, no store note, and the CTA button's label is always "Shop
  * with our vendor" -- cta_label is never read on the real page.
+ *
+ * Multi-photo drafts render the real EditorialShopKitSlideshow component
+ * (not a copy of it), so a second uploaded photo shows up here as the same
+ * auto-advancing slideshow visitors get; one photo stays a static image.
  */
 function EditorialShopKitProductPreview({
   section,
@@ -54,7 +59,10 @@ function EditorialShopKitProductPreview({
   primaryColor: string;
   secondaryColor: string;
 }) {
-  const photo = photos.find((item) => item.url.trim().length > 0) ?? null;
+  // Same filter EditorialShopPage.tsx applies before deciding between a
+  // static photo and the multi-photo slideshow, so the preview stays honest
+  // about which of the two a visitor actually gets.
+  const visiblePhotos = photos.filter((item) => item.url.trim().length > 0);
   const productHref = section.cta_link.trim() || "#store-product";
 
   return (
@@ -73,9 +81,14 @@ function EditorialShopKitProductPreview({
       <div className="store-product">
         <div className="store-product-visual">
           <div className="store-product-image">
-            {photo ? (
+            {visiblePhotos.length > 1 ? (
+              <EditorialShopKitSlideshow
+                photos={visiblePhotos}
+                alt={section.title}
+              />
+            ) : visiblePhotos[0] ? (
               <ResilientImage
-                src={photo.url}
+                src={visiblePhotos[0].url}
                 alt={section.title}
                 fill
                 sizes="(max-width: 1120px) 100vw, 62vw"

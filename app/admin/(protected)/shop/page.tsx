@@ -927,6 +927,12 @@ export default function AdminShopPage() {
               </Field>
               )}
 
+              {/* editorial@1 (Lions) never renders store_note on its public
+                  shop page (EditorialShopPage.tsx does not reference this
+                  field at all), so this input is pointless there. There is
+                  no save-blocking validation on store_note, so hiding this
+                  never blocks Save. */}
+              {!isEditorial && (
               <Field
                 label="Store Information"
                 help="Use Enter to place the store name and address on separate lines."
@@ -941,6 +947,7 @@ export default function AdminShopPage() {
                   rows={2}
                 />
               </Field>
+              )}
 
               <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 {/* editorial@1 (Lions) always shows a hardcoded CTA label

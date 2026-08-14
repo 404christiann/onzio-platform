@@ -2,6 +2,63 @@
 
 Last updated: 2026-08-13
 
+## Lions Shop kit photos now slideshow; standings team logos and one more dead field fixed
+
+Agent: Claude (2 Sonnet subagents, 1 Opus subagent for the slideshow build,
+1 Fable subagent for final verification), 2026-08-13. Status: **all three
+fixes complete, verified locally, ready to commit on
+`codex/lions-editorial-diversecity-v2`**.
+
+**Trigger:** Christian's review of the previous round's staging deploy
+surfaced three more items: the Shop admin's "Store Information" field is
+another dead field (same class as the already-hidden bullet points/CTA
+label), uploading a second kit photo had no visible effect on the live site,
+and uploading a team logo on the Standings admin showed correctly in the
+preview but not on the real public table.
+
+**Completed work:**
+- **Shop "Store Information" field hidden for `editorial@1`** — `store_note`
+  is never rendered on Lions' real public shop page; hidden the same way as
+  the other confirmed-dead Shop fields. No validation was attached, so
+  nothing else needed to change.
+- **Standings team logos now render** — `EditorialStandingsTable.tsx`
+  previously only ever showed an image for the club's own row; every other
+  team's uploaded `logo_url` was silently ignored in favor of an
+  abbreviation badge. Fixed to mirror the exact pattern the generic
+  `components/LeagueStandingsTable.tsx` already uses elsewhere in the
+  platform (`logoSrc = row.is_club ? crestUrl : row.logo_url`). Verified live
+  with a real temporarily-seeded local logo, then reverted.
+- **Kit photos now slideshow when there's more than one** — Lions' Shop page
+  previously discarded every photo past the first. New
+  `components/editorial/EditorialShopKitSlideshow.tsx` reuses the same
+  auto-advance/cross-fade/arrows/progress-dash interaction pattern already
+  established by the homepage's `EditorialMatchdaySlideshow.tsx`, scaled to
+  the smaller product-photo container. Kits with exactly one photo render
+  exactly as before — confirmed byte-identical, no behavior change for the
+  common case. The admin's Shop Kit preview now mounts the same real
+  slideshow component so it stays honest about what visitors will see.
+  Verified live with a real temporarily-seeded second photo, then reverted.
+
+Every change this round is Lions/`editorial@1`-only; DCFC's `academy@1`
+admin and public pages were confirmed unaffected in every touched file,
+including the preview component's existing template gate.
+
+**Verification:** full contract suite passed with 55 files and 686 tests
+(+9 over the prior round's baseline), `npm run lint` passed with the same 5
+baseline warnings, full local-Supabase `npm test` gate passed with 101 files
+and 1167 tests (+9). `npx tsc --noEmit` and `git diff --check` both passed.
+
+**Known non-blocking data note:** Manu Ledesma Academy's standings row shows
+8 points on a 4-2-4 record (a standard 3/1/0 scoring table would total 14) —
+this comes from the real Spring 2026 data Christian provided, unchanged by
+any fix this round. Worth a glance against the actual league table if it
+looks off, but not something to alter unilaterally.
+
+**Exact next step:** commit and sync to staging, then Christian's review —
+specifically the Shop admin's Content tab (Store Information gone), a kit
+with 2+ photos on `/shop` (should show working slideshow controls), and the
+Standings admin (uploaded team logos should now appear on the live table).
+
 ## Lions standings made database-driven; Shop's dead bullet-point/CTA fields hidden
 
 Agent: Claude (1 Opus subagent for the standings rewrite, 1 Sonnet subagent

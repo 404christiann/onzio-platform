@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import { useClubId } from "@/components/ClubContextProvider";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
+import EditorialShopKitSlideshow from "@/components/editorial/EditorialShopKitSlideshow";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { fetchShopKitVariants, type ShopKitContent } from "@/lib/queries";
 import type { ShopKitVariant } from "@/lib/db-types";
@@ -61,7 +62,9 @@ export default function EditorialShopPage() {
       (photo) => photo.url.trim().length > 0,
     );
 
-    return [{ variant, section, photo: photos[0] ?? null }];
+    // Carry the whole ordered list: a variant with more than one photo is
+    // rendered as a slideshow rather than silently showing only photos[0].
+    return [{ variant, section, photos }];
   });
 
   if (products.length === 0) {
@@ -117,9 +120,18 @@ export default function EditorialShopPage() {
       >
         <div className="store-product-visual">
           <div className="store-product-image">
-            {selectedProduct.photo ? (
+            {selectedProduct.photos.length > 1 ? (
+              // key={variant} remounts on a kit-tab switch, so the slideshow
+              // resets to the first photo and restarts its auto-advance cycle.
+              <EditorialShopKitSlideshow
+                key={selectedProduct.variant}
+                photos={selectedProduct.photos}
+                alt={selectedProduct.section.title}
+                priority
+              />
+            ) : selectedProduct.photos[0] ? (
               <ResilientImage
-                src={selectedProduct.photo.url}
+                src={selectedProduct.photos[0].url}
                 alt={selectedProduct.section.title}
                 fill
                 priority

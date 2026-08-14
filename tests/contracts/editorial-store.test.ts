@@ -81,6 +81,17 @@ describe("editorial store page", () => {
     expect(source).toContain("content?.[variant]");
   });
 
+  it("carries every non-blank photo for a variant, not just the first one", () => {
+    const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
+    expect(source).toContain(
+      "const photos = (variantContent.photos ?? []).filter(",
+    );
+    expect(source).toContain("return [{ variant, section, photos }];");
+    // The old single-photo contract silently discarded photos[1..n].
+    expect(source).not.toContain("photo: photos[0] ?? null");
+    expect(source).not.toContain("selectedProduct.photo.url");
+  });
+
   it("renders the approved heading, jersey tabs, single product, and photo fallback", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
     expect(source).toContain('className="store-collection-label"');
@@ -148,6 +159,136 @@ describe("editorial store page", () => {
     expect(css).toMatch(
       /\.store-product-image \{[^}]*height: var\(--store-product-stage\);/,
     );
+  });
+});
+
+describe("editorial store kit photo slideshow", () => {
+  const componentPath = "components/editorial/EditorialShopKitSlideshow.tsx";
+
+  it("keeps the single-photo case a plain static image with no slideshow markup", () => {
+    const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
+    // Exactly one photo -> the same <ResilientImage fill priority> as before.
+    expect(source).toMatch(
+      /\) : selectedProduct\.photos\[0\] \? \(\s*\n\s*<ResilientImage\s*\n\s*src=\{selectedProduct\.photos\[0\]\.url\}/,
+    );
+    expect(source).toContain("alt={selectedProduct.section.title}");
+    expect(source).toContain('sizes="(max-width: 1120px) 100vw, 62vw"');
+    expect(source).toContain('imageDeliveryProps("shop-photo")');
+    // Zero photos still falls back to the dashed placeholder.
+    expect(source).toContain(
+      '<span className="store-product-image-empty" aria-hidden="true" />',
+    );
+  });
+
+  it("renders the slideshow only when a variant has more than one photo", () => {
+    const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
+    expect(source).toContain(
+      'import EditorialShopKitSlideshow from "@/components/editorial/EditorialShopKitSlideshow";',
+    );
+    expect(source).toMatch(/\{selectedProduct\.photos\.length > 1 \? \(/);
+    expect(source).toContain("<EditorialShopKitSlideshow");
+    expect(source).toContain("photos={selectedProduct.photos}");
+  });
+
+  it("resets to the first photo and restarts autoplay when the kit tab changes", () => {
+    const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
+    // Remounting on the variant key is what drops the previous variant's
+    // slide index and starts a fresh interval.
+    expect(source).toMatch(
+      /<EditorialShopKitSlideshow\s*\n\s*key=\{selectedProduct\.variant\}/,
+    );
+  });
+
+  it("mirrors the matchday gallery's timing, cross-fade, counter, arrows, and dashes", () => {
+    const source = read(componentPath);
+    expect(source).toContain('"use client"');
+    expect(source).toContain("SHOP_SLIDE_DURATION = 4000");
+    expect(source).toContain("window.setInterval");
+    expect(source).toMatch(
+      /if \(\s*photos\.length < 2 \|\|\s*paused \|\|\s*window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches\s*\)\s*\{\s*\n\s*return;/,
+    );
+    expect(source).toContain("onMouseEnter={() => setPaused(true)}");
+    expect(source).toContain("onMouseLeave={() => setPaused(false)}");
+    expect(source).toContain("onFocusCapture={() => setPaused(true)}");
+    expect(source).toContain("onBlurCapture={() => setPaused(false)}");
+    expect(source).toContain('aria-label="Previous kit photo"');
+    expect(source).toContain('aria-label="Next kit photo"');
+    expect(source).toContain("selectSlide(index)");
+    expect(source).toContain('String(safeCurrent + 1).padStart(2, "0")');
+    expect(source).toContain('String(photos.length).padStart(2, "0")');
+    expect(source).toContain("{photos.map((photo, index) => (");
+    expect(source).not.toMatch(/photos\s*\.(sort|reverse)\(/);
+    expect(source).toContain("if (photos.length === 0) return null;");
+  });
+
+  it("uses its own store-scoped class names, never the homepage matchday ones", () => {
+    const source = read(componentPath);
+    expect(source).toContain('className="store-product-slideshow"');
+    expect(source).toContain('className="store-product-slides"');
+    expect(source).toContain('className="store-product-slide"');
+    expect(source).toContain('className="store-product-slideshow-controls"');
+    expect(source).toContain('className="store-product-slideshow-arrows"');
+    expect(source).toContain('className="store-product-slideshow-count"');
+    expect(source).toContain('className="store-product-slideshow-progress"');
+    expect(source).not.toMatch(/className="matchday-/);
+  });
+
+  it("adds scoped slideshow CSS that stays inside the existing product stage", () => {
+    const css = read("styles/editorial.css");
+    expect(css).toMatch(
+      /\[data-site-template="editorial"\] \.store-product-slideshow,\s*\n\[data-site-template="editorial"\] \.store-product-slides,\s*\n\[data-site-template="editorial"\] \.store-product-slide \{\s*\n\s*position: absolute;\s*\n\s*inset: 0;/,
+    );
+    expect(css).toMatch(
+      /\.store-product-slide \{\s*\n\s*opacity: 0;\s*\n\s*transition: opacity 0\.9s ease;/,
+    );
+    expect(css).toContain(
+      '[data-site-template="editorial"] .store-product-slide[data-active="true"] {',
+    );
+    expect(css).toContain(
+      '[data-site-template="editorial"] .store-product-slideshow-controls {',
+    );
+    expect(css).toContain(
+      '[data-site-template="editorial"] .store-product-slideshow-progress button[data-active="true"] {',
+    );
+    // The store slideshow must not borrow the full-bleed matchday sizing, and
+    // the matchday rules must not gain a store selector.
+    expect(css).not.toMatch(/\.store-product-slide[a-z-]*[^{}]*\{[^}]*82svh/);
+    // No selector anywhere pairs a matchday class with a store class, in
+    // either direction, so neither slideshow can restyle the other.
+    for (const [, selector] of stripComments(css).matchAll(/([^{}]+)\{/g)) {
+      expect(
+        selector.includes(".matchday-") &&
+          selector.includes(".store-product-slide"),
+      ).toBe(false);
+    }
+  });
+
+  it("keeps the admin preview honest by rendering the same slideshow component", () => {
+    const source = stripComments(read("components/admin/ScaledShopKitPreview.tsx"));
+    expect(source).toContain(
+      'import EditorialShopKitSlideshow from "@/components/editorial/EditorialShopKitSlideshow";',
+    );
+    expect(source).toContain(
+      "const visiblePhotos = photos.filter((item) => item.url.trim().length > 0);",
+    );
+    expect(source).toMatch(/\{visiblePhotos\.length > 1 \? \(/);
+    expect(source).toContain("<EditorialShopKitSlideshow");
+    expect(source).toContain("photos={visiblePhotos}");
+    expect(source).toMatch(
+      /\) : visiblePhotos\[0\] \? \(\s*\n\s*<ResilientImage\s*\n\s*src=\{visiblePhotos\[0\]\.url\}/,
+    );
+    expect(source).toContain(
+      '<span className="store-product-image-empty" aria-hidden="true" />',
+    );
+    // Still gated on editorial@1's shop surface only.
+    expect(source).toContain(
+      'club.presentationTemplateKey === "editorial@1" && section.surface === "shop"',
+    );
+  });
+
+  it("never touches academy@1's shop rendering", () => {
+    const academy = read("components/AcademyShopPage.tsx");
+    expect(academy).not.toMatch(/EditorialShopKitSlideshow|store-product-slide/);
   });
 });
 

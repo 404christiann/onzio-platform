@@ -213,8 +213,13 @@ describe("editorial home: section composition", () => {
     expect(source).not.toMatch(/const STANDINGS(_ROWS)?\s*[:=]/);
 
     // Presentation is unchanged: same crest treatment, same CSS contract.
+    // Non-club rows now also render their own uploaded row.logo_url instead
+    // of always falling back to the abbreviation badge -- see
+    // components/LeagueStandingsTable.tsx for the equivalent, pre-existing
+    // logic on the generic public standings table.
     expect(source).toContain("useEditorialIdentity");
-    expect(source).toContain("row.is_club && crestUrl");
+    expect(source).toContain("row.is_club ? crestUrl : row.logo_url");
+    expect(source).toContain('imageDeliveryProps(row.is_club ? "club-logo" : "opponent-crest")');
     expect(source).toContain('className="editorial-standings-row editorial-standings-row-head"');
     expect(source).toContain('className="editorial-standings-crest"');
     expect(source).toContain('className="editorial-standings-abbr"');
