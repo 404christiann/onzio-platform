@@ -72,7 +72,7 @@ export default function EditorialFooter({
             </div>
             <div>
               <Link href="/schedule">Schedule</Link>
-              {storeEnabled ? <Link href="/store">Store</Link> : null}
+              {storeEnabled ? <Link href="/shop">Store</Link> : null}
               <Link href="/contact">Contact</Link>
             </div>
           </div>
