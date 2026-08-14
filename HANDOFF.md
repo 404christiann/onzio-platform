@@ -1,6 +1,63 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
+
+## Incident: production briefly down after a deploy shipped code ahead of its database migrations — rolled back, root-caused, guardrail added
+
+Agent: Claude, 2026-08-14. Status: **resolved — production restored via
+rollback; root cause found; a mandatory pre-deploy gate added to
+`CLAUDE.md` to prevent recurrence.**
+
+**What happened:** Christian ran `vercel --prod` from
+`codex/lions-editorial-diversecity-v2` (commit `6d6810e`) after this branch
+had been thoroughly verified on staging across many rounds this session.
+The deploy succeeded and built cleanly, but production's live site
+(`diversecityfc.com`) immediately started returning 404 for every request.
+
+**Root cause:** the branch carried 3 Supabase migrations
+(`20260812120000_editorial_presentation_template.sql`,
+`20260812120100_editorial_club_identity.sql`,
+`20260812120200_club_store_enabled.sql`) that were applied to local and
+staging Supabase during this session, but never to **production**
+Supabase. `lib/club-context.ts`'s `resolveDatabaseContext` — the
+tenant-resolution query that runs on every request, for every club —
+unconditionally selects `clubs.store_enabled`, a column from the third
+migration. Production's `clubs` table didn't have that column, so the
+query errored for every domain, and the error path collapsed that into
+`UNKNOWN_TENANT` → 404. This broke Diverse City FC's live site even though
+nothing about DCFC's own code or template changed — pure schema/code
+mismatch, confirmed via Vercel's runtime error logs (`ContractError:
+UNKNOWN_TENANT`, `lastDeployment=dpl_C6mDKkfy3AQsvoeCVggFUnhaczNV`) and by
+reading the failing query directly.
+
+**Why local/staging verification didn't catch it:** every verification
+pass this session (contract tests, the full local-Supabase suite, `npm run
+build`, live staging checks) ran against databases that already had these
+3 migrations applied. `npm run build` type-checks against
+`lib/db-types.ts`, not the live database schema, so it has no way to detect
+a migration gap. Nothing in this session's process checked migration parity
+against the specific target (production) before deploying to it.
+
+**Resolution:** Christian ran `vercel rollback
+onzio-platform-kg8no3pgt-404christianns-projects.vercel.app --yes`,
+restoring production to the last known-good deployment (`dpl_2Mi33ahNh6RCWqoHqnK2Fs663E3g`,
+commit `26da2a6`). Confirmed restored via a live check immediately after.
+
+**Guardrail added:** `CLAUDE.md` now has a mandatory, explicit gate
+requiring `supabase link --project-ref ioalthwsdrlzrubomrow` +
+`supabase migration list --linked` to show zero pending (Local-only)
+migrations before any `vercel --prod`, with the exact dry-run-then-push
+sequence to close any gap found. This is the same pattern already
+established and repeatedly used for every prior Diverse City FC production
+migration (see `docs/phase-11/diverse-city/PRODUCTION-CUTOVER-ROLLBACK.md`)
+— the gap here was that the step was skipped, not that the pattern was
+unknown, since this deploy bundled schema changes in with unrelated feature
+work and nothing forced the check.
+
+**Exact next step:** apply the 3 pending migrations to production Supabase
+(commands prepared, not yet run — requires Christian's production database
+access), then production can be redeployed with schema and code back in
+sync.
 
 ## Shop's dead "Home Page" tab hide generalized to Rose City (clubhouse@1) too
 
