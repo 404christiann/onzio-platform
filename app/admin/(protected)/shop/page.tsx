@@ -132,6 +132,11 @@ const KIT_VARIANTS: Array<{ id: ShopKitVariant; label: string }> = [
   { id: "away", label: "Away Kit" },
 ];
 
+const SURFACE_OPTIONS: Array<{ id: ShopKitSurface; label: string }> = [
+  { id: "home", label: "Home Page" },
+  { id: "shop", label: "Shop Page" },
+];
+
 export default function AdminShopPage() {
   const clubId = useClubId();
   const club = useClubContext();
@@ -156,7 +161,26 @@ export default function AdminShopPage() {
   // for it. Content and Kit Photos stay untouched — Lions has 3 kit variants
   // (home/away/third) and that machinery must keep working as-is.
   const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const [selectedSurface, setSelectedSurface] = useState<ShopKitSurface>("home");
+  // The "home" surface is a separate shop_kit_* dataset that only renders when
+  // a template reads fetchShopKitVariants("home", ...) — AcademyHomeShopFeature
+  // does exactly that for academy@1, so its Home Page tab stays live. Lions'
+  // homepage teaser (components/editorial/EditorialHomeStore.tsx) instead reads
+  // fetchShopKitVariants("shop", ...), the same rows as the /shop page, so the
+  // whole "home" surface — title, description, CTA and kit photos alike — is
+  // unreachable content for editorial@1 and the surface is hidden for it.
+  const surfaceOptions = isEditorial
+    ? SURFACE_OPTIONS.filter((surface) => surface.id !== "home")
+    : SURFACE_OPTIONS;
+  const [surfaceChoice, setSelectedSurface] = useState<ShopKitSurface>("home");
+  // Derived rather than initial-state-only so no lingering state — the default
+  // "home", or a stale value left by a template change — can ever point the
+  // editor at a surface its own selector no longer offers. Every downstream
+  // `selectedSurface === "home"` branch is therefore dead for editorial@1.
+  const selectedSurface: ShopKitSurface = surfaceOptions.some(
+    (surface) => surface.id === surfaceChoice,
+  )
+    ? surfaceChoice
+    : (surfaceOptions[0]?.id ?? "shop");
   const [selectedKitVariant, setSelectedKitVariant] =
     useState<ShopKitVariant>("home");
   // Never leave the editor pointed at a variant its own selector no longer
@@ -663,16 +687,15 @@ export default function AdminShopPage() {
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
           <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
+            {/* With only "shop" left in surfaceOptions for editorial@1, a
+                single-tab switcher would be dead UI, so it's hidden entirely —
+                same pattern as the kit-variant switcher just below. */}
+            {surfaceOptions.length > 1 && (
             <div
               className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1"
               aria-label="Kit placement"
             >
-              {(
-                [
-                  { id: "home" as const, label: "Home Page" },
-                  { id: "shop" as const, label: "Shop Page" },
-                ]
-              ).map((surface) => {
+              {surfaceOptions.map((surface) => {
                 const isSelected = selectedSurface === surface.id;
                 return (
                   <button
@@ -709,6 +732,7 @@ export default function AdminShopPage() {
                 );
               })}
             </div>
+            )}
 
             {/* With only "home" left in kitVariants for academy@1, a
                 single-tab switcher would be dead UI, so it's hidden entirely —

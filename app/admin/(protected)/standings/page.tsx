@@ -190,6 +190,19 @@ export default function AdminStandingsPage() {
     }
   }
 
+  function removeLogo(index: number) {
+    const row = rows[index];
+    if (!row?.logo_url) return;
+    const logoUrl = row.logo_url;
+    setPendingDeleteUrls((current) => [...current, logoUrl]);
+    setRows((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, logo_url: null } : item,
+      ),
+    );
+    markDirty();
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -476,6 +489,16 @@ export default function AdminStandingsPage() {
                     >
                       {row.logo_url ? "Replace Logo" : "Upload Logo"}
                     </button>
+                    {row.logo_url && (
+                      <button
+                        type="button"
+                        onClick={() => removeLogo(index)}
+                        disabled={uploading || row.is_club}
+                        className="font-display rounded-md border border-destructive/45 px-3 py-2 text-xs uppercase tracking-widest text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/40 disabled:hover:bg-transparent"
+                      >
+                        Remove Logo
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

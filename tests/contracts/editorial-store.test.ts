@@ -81,6 +81,20 @@ describe("editorial store page", () => {
     expect(source).toContain("content?.[variant]");
   });
 
+  it("reads the shop surface on the homepage too, which is why the admin hides the home surface", () => {
+    // Lions' homepage teaser reads the SAME rows as /shop. The separate "home"
+    // surface dataset is therefore unreachable for editorial@1, so the Shop
+    // admin hides that surface tab entirely. If this ever starts fetching
+    // "home", the admin hide must be reverted alongside it.
+    const source = stripComments(read("components/editorial/EditorialHomeStore.tsx"));
+    expect(source).toContain('fetchShopKitVariants("shop", club.id)');
+    expect(source).not.toContain('fetchShopKitVariants("home"');
+    // academy@1's equivalent teaser does read the home surface, so DCFC's
+    // Home Page tab stays live.
+    const academy = stripComments(read("components/AcademyHomeShopFeature.tsx"));
+    expect(academy).toContain('fetchShopKitVariants("home", clubId)');
+  });
+
   it("carries every non-blank photo for a variant, not just the first one", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
     expect(source).toContain(

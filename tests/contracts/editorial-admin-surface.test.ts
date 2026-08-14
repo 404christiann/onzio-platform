@@ -156,6 +156,63 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
+  describe("shop admin: Home Page surface hidden for editorial@1", () => {
+    it("filters the home surface out of the option list itself, not just the rendered tabs", () => {
+      const page = source(SHOP_ADMIN);
+      expect(page).toContain(
+        'const surfaceOptions = isEditorial\n    ? SURFACE_OPTIONS.filter((surface) => surface.id !== "home")\n    : SURFACE_OPTIONS;',
+      );
+      // The selector renders from the filtered list, so no literal "Home Page"
+      // button can survive the filter.
+      expect(page).toContain("{surfaceOptions.map((surface) => {");
+      expect(page).not.toContain('{ id: "home" as const, label: "Home Page" }');
+      // A one-option switcher is dead UI and is hidden entirely, matching the
+      // kit-variant switcher's `kitVariants.length > 1` pattern.
+      expect(page).toContain("{surfaceOptions.length > 1 && (");
+    });
+
+    it("derives selectedSurface so no state can point editorial@1 at the hidden surface", () => {
+      const page = source(SHOP_ADMIN);
+      // The raw state still defaults to "home" (academy@1 depends on that), but
+      // the value every downstream branch reads is derived from the filtered
+      // option list, so editorial@1 resolves to "shop" on mount and forever.
+      expect(page).toContain(
+        'const [surfaceChoice, setSelectedSurface] = useState<ShopKitSurface>("home");',
+      );
+      expect(page).toContain(
+        "const selectedSurface: ShopKitSurface = surfaceOptions.some(\n    (surface) => surface.id === surfaceChoice,\n  )\n    ? surfaceChoice\n    : (surfaceOptions[0]?.id ?? \"shop\");",
+      );
+      // No raw state escapes into the surface-dependent logic.
+      expect(count(page, "surfaceChoice")).toBe(3);
+    });
+
+    it("leaves academy@1's Home Page surface completely intact", () => {
+      const page = source(SHOP_ADMIN);
+      // Both options remain in the module-level list, and the filter is gated
+      // solely on isEditorial — academy@1 keeps the tab and its "home" default.
+      expect(page).toContain(
+        'const SURFACE_OPTIONS: Array<{ id: ShopKitSurface; label: string }> = [\n  { id: "home", label: "Home Page" },\n  { id: "shop", label: "Shop Page" },\n];',
+      );
+      // The academy-only surface hide must not borrow the clubhouse-sections
+      // flag, which would change Rose City too.
+      expect(page).not.toContain(
+        "const surfaceOptions = hidesClubhouseShopSections",
+      );
+      // The home-surface write path is still reachable for academy@1.
+      expect(page).toContain(
+        "shopKitSectionId(selectedSurface, activeKitVariant)",
+      );
+    });
+
+    it("keeps AcademyHomeShopFeature reading the home surface it edits", () => {
+      // The hide is only correct because academy@1 actually renders the "home"
+      // surface on its homepage while editorial@1 does not.
+      expect(source("components/AcademyHomeShopFeature.tsx")).toContain(
+        'fetchShopKitVariants("home", clubId)',
+      );
+    });
+  });
+
   describe("sponsors admin: footer placement hidden for editorial@1", () => {
     it("extends the academy gate with OR — academy@1 branch unchanged", () => {
       const page = source(SPONSORS_ADMIN);

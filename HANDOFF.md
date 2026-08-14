@@ -2,6 +2,51 @@
 
 Last updated: 2026-08-13
 
+## Standings "Remove Logo" added; Shop's dead "Home Page" tab hidden for Lions
+
+Agent: Claude (1 Sonnet subagent, 1 Opus subagent for the surface-hide, 1
+Fable subagent for final verification), 2026-08-13. Status: **both fixes
+complete, verified locally, ready to commit on
+`codex/lions-editorial-diversecity-v2`**.
+
+**Trigger:** Christian's continued staging review found two more items:
+uploading a team logo on the Standings admin only offered "Replace," never
+"Remove," and uploading additional Shop kit photos under the admin's "Home
+Page" tab had no visible effect on the site.
+
+**Completed work:**
+- **Standings admin: "Remove Logo" button added** — plain usability fix, not
+  template-gated, applies identically to every club/template on the
+  platform. Clears the row's `logo_url` and queues the storage object for
+  cleanup on save, mirroring the existing remove-row/replace-logo patterns.
+- **Shop admin's "Home Page" surface tab hidden for `editorial@1`** —
+  investigation found this was bigger than just photos: DCFC's homepage
+  genuinely reads a separate `"home"`-surface dataset via
+  `AcademyHomeShopFeature.tsx`, but Lions' homepage teaser
+  (`EditorialHomeStore.tsx`) reads the same `"shop"`-surface data as the main
+  `/shop` page instead — so the entire "Home Page" tab (title, description,
+  CTA, and photos alike) was orphaned for Lions, not just the photo section.
+  Hid the whole tab rather than a partial fix. Implementation derives
+  `selectedSurface` from a filtered option list rather than editing the ~20
+  existing call sites individually; verified line-by-line that this can
+  never leak "home" state to `editorial@1` on any render (including first
+  paint) while remaining byte-for-byte unchanged for `academy@1`.
+  **Known consequence:** if Christian had already entered content under that
+  tab, it's still stored but now unreachable from the admin UI — it would
+  need to be re-entered under the Shop Page tab to actually appear on the
+  live site.
+
+**Verification:** full contract suite passed with 55 files and 691 tests
+(+5 over the prior round's baseline), `npm run lint` passed with the same 5
+baseline warnings, full local-Supabase `npm test` gate passed with 101 files
+and 1172 tests (+5). `npx tsc --noEmit` and `git diff --check` both passed.
+DCFC's `academy@1` Home Page tab and Standings admin confirmed fully
+unaffected.
+
+**Exact next step:** commit and sync to staging, then Christian's review —
+Standings admin (logo remove should work), Shop admin (Home Page tab should
+be gone entirely for Lions, only the Shop Page kit tabs remain).
+
 ## Lions Shop kit photos now slideshow; standings team logos and one more dead field fixed
 
 Agent: Claude (2 Sonnet subagents, 1 Opus subagent for the slideshow build,
