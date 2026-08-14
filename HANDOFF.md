@@ -2,6 +2,31 @@
 
 Last updated: 2026-08-14
 
+## Dashboard's dead "Enter Match Stats" quick-action replaced for Lions
+
+Agent: Claude (1 Sonnet subagent), 2026-08-14. Status: **complete, verified,
+ready to commit on `codex/lions-editorial-diversecity-v2`.**
+
+**Trigger:** Christian noticed the admin Dashboard's "Enter Match Stats"
+quick-action card links to `/admin/stats`, which is already route-guarded
+away for `editorial@1` (hidden earlier this session) — clicking it just
+bounces a Lions admin back to the dashboard. Same dead-UI-pointing-at-a-hidden-feature
+class of bug as everything else fixed this session, just in a spot
+(`app/admin/(protected)/page.tsx`, a hardcoded 4-card grid) that hadn't been
+checked yet.
+
+**Fix:** for `editorial@1` only, the card is replaced with "Manage Tryouts"
+(→ `/admin/tryouts`, a genuinely live Lions feature), reusing the existing
+Tryouts icon from `AdminShell.tsx`'s sidebar for visual consistency. The
+other 3 cards (Manage Seasons, Manage Roster, Manage Schedule) are
+untouched. For `academy@1` and every other template, "Enter Match Stats" is
+byte-identical to before.
+
+**Verification:** full contract suite passed with 55 files and 702 tests
+(+3), `npm run lint` passed with the same 5 baseline warnings, full
+local-Supabase `npm test` gate passed with 101 files and 1183 tests (+3).
+`npx tsc --noEmit` passed.
+
 ## Lions About admin editor restored — earlier hide was checked against the wrong (dead-code) nav component
 
 Agent: Claude (1 Opus subagent for the fix, 1 Fable subagent for

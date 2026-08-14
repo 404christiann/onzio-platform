@@ -1,6 +1,6 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -24,6 +24,8 @@ type Stats = {
 };
 
 export default function AdminDashboard() {
+  const club = useClubContext();
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
   const clubId = useClubId();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,16 +107,30 @@ export default function AdminDashboard() {
           Quick Actions
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          <ActionCard
-            href="/admin/stats"
-            title="Enter Match Stats"
-            description="Log goals, assists, saves and minutes for a completed match."
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            }
-          />
+          {isEditorial ? (
+            <ActionCard
+              href="/admin/tryouts"
+              title="Manage Tryouts"
+              description="Add tryout sessions, manage registration links, and update status."
+              icon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 3v3M17 3v3M4 8h16v12H4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 12h3M13 12h3M8 16h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              }
+            />
+          ) : (
+            <ActionCard
+              href="/admin/stats"
+              title="Enter Match Stats"
+              description="Log goals, assists, saves and minutes for a completed match."
+              icon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              }
+            />
+          )}
           <ActionCard
             href="/admin/seasons"
             title="Manage Seasons"

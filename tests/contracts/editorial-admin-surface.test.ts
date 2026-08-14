@@ -19,6 +19,7 @@ const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
 const STANDINGS_ADMIN = "app/admin/(protected)/standings/page.tsx";
+const DASHBOARD_ADMIN = "app/admin/(protected)/page.tsx";
 
 const EDITORIAL_GATE = 'presentationTemplateKey === "editorial@1"';
 const ACADEMY_GATE = 'presentationTemplateKey === "academy@1"';
@@ -513,6 +514,40 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
+  describe("dashboard quick actions: Enter Match Stats swapped for Manage Tryouts for editorial@1", () => {
+    it("swaps the dead /admin/stats card for a working /admin/tryouts card", () => {
+      // /admin/stats route-guards editorial@1 back to /admin, so its Quick
+      // Actions card would be dead UI for Lions. Swap it for the Tryouts
+      // card, reusing AdminShell's Tryouts nav icon for visual consistency.
+      const page = source(DASHBOARD_ADMIN);
+      expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
+      expect(page).toContain("{isEditorial ? (");
+      expect(page).toContain(
+        '<ActionCard\n              href="/admin/tryouts"\n              title="Manage Tryouts"',
+      );
+      expect(source(ADMIN_SHELL)).toContain(
+        '<path d="M7 3v3M17 3v3M4 8h16v12H4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>',
+      );
+      expect(count(page, '<path d="M7 3v3M17 3v3M4 8h16v12H4z"')).toBe(1);
+    });
+
+    it("keeps Enter Match Stats intact behind the else branch for academy@1 and every other template", () => {
+      const page = source(DASHBOARD_ADMIN);
+      expect(page).toContain(
+        '<ActionCard\n              href="/admin/stats"\n              title="Enter Match Stats"\n              description="Log goals, assists, saves and minutes for a completed match."',
+      );
+      expect(page).not.toContain(`club.${ACADEMY_GATE}`);
+    });
+
+    it("leaves Manage Seasons, Manage Roster, and Manage Schedule untouched for every template", () => {
+      const page = source(DASHBOARD_ADMIN);
+      expect(page).toContain('href="/admin/seasons"');
+      expect(page).toContain('href="/admin/roster"');
+      expect(page).toContain('href="/admin/schedule"');
+      expect(count(page, "isEditorial ?")).toBe(1);
+    });
+  });
+
   describe("no gate is tenant-scoped", () => {
     it("hides key off presentationTemplateKey, never a club id or slug", () => {
       for (const path of [
@@ -528,6 +563,7 @@ describe("editorial@1 admin surface hides", () => {
         SCHEDULE_ADMIN,
         TRYOUTS_ADMIN,
         STANDINGS_ADMIN,
+        DASHBOARD_ADMIN,
       ]) {
         const page = source(path);
         expect(page, path).toContain(EDITORIAL_GATE);
