@@ -2,6 +2,59 @@
 
 Last updated: 2026-08-14
 
+## Lions About admin editor restored — earlier hide was checked against the wrong (dead-code) nav component
+
+Agent: Claude (1 Opus subagent for the fix, 1 Fable subagent for
+verification), 2026-08-14. Status: **complete, verified, ready to commit on
+`codex/lions-editorial-diversecity-v2`.**
+
+**Trigger:** Christian noticed there was nowhere to edit the About page in
+Lions' admin, ahead of a production deploy attempt.
+
+**Root cause:** an earlier round this session hid the About admin page for
+`editorial@1` on the premise that Lions' public nav doesn't link to
+`/club/about`. That premise was checked against `components/Nav.tsx`'s
+`lionsNavLinks` array — which is dead code for `editorial@1`. Lions actually
+mounts its own fully custom header, `components/editorial/EditorialHeader.tsx`,
+which genuinely does link "About" → `/club/about`, and
+`components/editorial/EditorialAboutPage.tsx` genuinely renders it. The
+hide was a real mistake, not a judgment call.
+
+**Fixed:**
+- `/admin/about` removed from `EDITORIAL_HIDDEN_HREFS`; the route-guard
+  redirect removed entirely for `editorial@1`.
+- **Confirmed the admin form and Lions' public About page share the exact
+  same data** — both resolve through `fetchAboutClubContent` to the same
+  `onzio.about_page_content` row keyed by `club_id` — so this is a real,
+  working fix, not a UI-only unhide with no effect.
+- **Club Logo verified to genuinely not apply to Lions** (no link anywhere
+  in `EditorialHeader.tsx`/`EditorialFooter.tsx`, absent from `editorial@1`'s
+  `supportedRoutes` in the template registry) — that part of the original
+  hide was correct and stays.
+- A related preview bug fixed in the same pass: `ScaledAboutPreview.tsx`
+  had zero template-awareness and always rendered the generic
+  `AboutClubPageClient`, same bug class as Tryouts/Shop Kit earlier this
+  session. Now branches to the real `EditorialAboutPage` for `editorial@1`'s
+  "about" variant, following the established CSS-wiring pattern.
+- One trap avoided: a shared `isAcademy` flag also pinned DCFC's About
+  closing-CTA link to `/schedule` (DCFC-D007). Lions' real closing CTA is
+  `/club/about` — widening that specific pin to cover Club Logo's gate too
+  would have silently broken Lions' button. Kept it academy-only, added a
+  separate `hasClubLogoPage` flag for the Club Logo tab specifically.
+
+**Verification:** full contract suite passed with 55 files and 699 tests
+(+6), `npm run lint` passed with the same 5 baseline warnings, full
+local-Supabase `npm test` gate passed with 101 files and 1180 tests (+6),
+plus a production build (`npm run build`) confirmed clean — checked
+specifically because of the new global CSS import in a client component.
+`npx tsc --noEmit` and `git diff --check` both passed. DCFC confirmed
+unaffected at every gate site, traced explicitly rather than assumed.
+
+**Known gap:** the admin preview itself was verified at the code level only
+— `/admin/about` sits behind the same OTP login wall that's blocked live
+admin verification all session. The public-facing side (Lions' `/club/about`
+rendering real content, DCFC's `/club/about` unaffected) was confirmed live.
+
 ## Incident: production briefly down after a deploy shipped code ahead of its database migrations — rolled back, root-caused, guardrail added
 
 Agent: Claude, 2026-08-14. Status: **resolved — production restored via

@@ -1,7 +1,6 @@
 "use client";
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
-import { useRouter } from "next/navigation";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
@@ -94,13 +93,6 @@ async function uploadAboutImage(
 export default function AdminAboutPage() {
   const clubId = useClubId();
   const club = useClubContext();
-  const router = useRouter();
-  // editorial@1 (Lions) doesn't support an About page -- the nav item is
-  // already hidden in AdminShell.tsx, this blocks direct URL access too.
-  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
-  useEffect(() => {
-    if (isEditorialTemplate) router.replace("/admin");
-  }, [isEditorialTemplate, router]);
   // DCFC-D007: club owners edit copy, Onzio operators own navigation
   // destinations. The About closing button follows the precedent already set by
   // DevelopingNextGeneration's "Our Story" button — the label stays editable,
@@ -109,6 +101,19 @@ export default function AdminAboutPage() {
   // changes nothing about where the button goes; it only removes a free-text
   // href field that could save a broken path.
   const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  // editorial@1 genuinely has an About page -- components/editorial/
+  // EditorialHeader.tsx's nav and EditorialFooter.tsx both link /club/about,
+  // and app/%5Fclubs/[slug]/club/about/page.tsx renders EditorialAboutPage
+  // from this very editor's about_page_content row. (An earlier revision hid
+  // this whole page for editorial@1 after checking Nav.tsx's lionsNavLinks,
+  // which is dead code for this template -- Lions never mounts Nav.tsx.)
+  //
+  // The Club Logo tab is the part that stays hidden: templateRegistry's
+  // editorial@1 entry lists no "club-logo" in defaultRoutes/supportedRoutes,
+  // and nothing on the editorial site links /club/logo, so its content row is
+  // never read -- exactly the academy@1 situation this gate already covered.
+  const hasClubLogoPage = !isAcademy && !isEditorial;
   const [activeTab, setActiveTab] = useState<AdminTab>("about");
   const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
   const [aboutPanel, setAboutPanel] = useState<AboutPanel>("story");
@@ -327,13 +332,14 @@ export default function AdminAboutPage() {
         updated_at: new Date().toISOString(),
       };
 
-      // academy@1 sites have no /club-logo page, so its content row is never
-      // read; skipping the upsert keeps the unreachable editor from writing.
+      // academy@1 and editorial@1 sites have no /club/logo page, so their
+      // content row is never read; skipping the upsert keeps the unreachable
+      // editor from writing.
       const [aboutResult, logoResult] = await Promise.all([
         supabase.from("about_page_content").upsert([aboutPayload]),
-        isAcademy
-          ? Promise.resolve({ error: null })
-          : supabase.from("club_logo_page_content").upsert([logoPayload]),
+        hasClubLogoPage
+          ? supabase.from("club_logo_page_content").upsert([logoPayload])
+          : Promise.resolve({ error: null }),
       ]);
       const saveError = aboutResult.error ?? logoResult.error;
       if (saveError) throw new Error(saveError.message);
@@ -354,8 +360,6 @@ export default function AdminAboutPage() {
 
   const saveDisabled = saving || uploading || !dirty;
 
-  if (isEditorialTemplate) return null;
-
   return (
     <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
       <AdminSaveFeedback saving={saving} saved={saved} />
@@ -367,9 +371,9 @@ export default function AdminAboutPage() {
           About
         </h1>
         <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          {isAcademy
-            ? "Edit the public About page."
-            : "Edit the About Club and Club Logo public pages."}
+          {hasClubLogoPage
+            ? "Edit the About Club and Club Logo public pages."
+            : "Edit the public About page."}
         </p>
       </div>
 
@@ -380,13 +384,14 @@ export default function AdminAboutPage() {
           <section
             className="flex min-w-0 max-h-[calc(100vh-9rem)] flex-col self-start overflow-hidden rounded-xl border border-border bg-background p-4 sm:p-5"
           >
-            {/* academy@1 has no reachable /club-logo route (templateRegistry
-                lists no club-logo in defaultRoutes/supportedRoutes), so the
-                Club Logo editor is unreachable content for that template —
-                same shape as DCFC-D130's sponsors decision. With one tab left
-                the switcher itself is hidden; every other template keeps both
-                tabs untouched. */}
-            {!isAcademy && (
+            {/* academy@1 and editorial@1 have no reachable /club/logo route
+                (templateRegistry lists no club-logo in defaultRoutes/
+                supportedRoutes for either), so the Club Logo editor is
+                unreachable content for both templates — same shape as
+                DCFC-D130's sponsors decision. With one tab left the switcher
+                itself is hidden; every other template keeps both tabs
+                untouched. */}
+            {hasClubLogoPage && (
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-card p-1">
               {[
                 { id: "about" as const, label: "About" },

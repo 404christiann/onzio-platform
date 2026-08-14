@@ -327,7 +327,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }, [sidebarOpen]);
 
   const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
-  const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/about", "/admin/analytics", "/admin/stats", "/admin/season-stats"];
+  const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/analytics", "/admin/stats", "/admin/season-stats"];
 
   const navItems = NAV_ITEMS.filter(
     (item) =>

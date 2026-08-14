@@ -33,17 +33,45 @@ const CLUBHOUSE_GATE = 'presentationTemplateKey === "clubhouse@1"';
  * academy@1 and the default templates.
  */
 describe("editorial@1 admin surface hides", () => {
-  describe("nav: Programs, About, Analytics, Match Stats, Season Stats dropped for editorial@1 only", () => {
-    it("filters exactly the five dead hrefs behind the editorial template check", () => {
+  describe("nav: Programs, Analytics, Match Stats, Season Stats dropped for editorial@1 only", () => {
+    it("filters exactly the four dead hrefs behind the editorial template check", () => {
       const shell = source(ADMIN_SHELL);
       expect(shell).toContain(
         `const isEditorialTemplate = club.${EDITORIAL_GATE};`,
       );
       expect(shell).toContain(
-        'const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/about", "/admin/analytics", "/admin/stats", "/admin/season-stats"];',
+        'const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/analytics", "/admin/stats", "/admin/season-stats"];',
       );
       expect(shell).toContain(
         "(!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href))",
+      );
+    });
+
+    it("keeps /admin/about in the nav — editorial@1 really does have an About page", () => {
+      // components/editorial/EditorialHeader.tsx (the header Lions actually
+      // mounts) and EditorialFooter.tsx both link /club/about, and
+      // app/%5Fclubs/[slug]/club/about/page.tsx renders EditorialAboutPage for
+      // the template. Nav.tsx's lionsNavLinks omits About but is dead code for
+      // editorial@1 — Lions never mounts Nav.tsx — and an earlier revision
+      // hid this nav item after checking that wrong component.
+      const shell = source(ADMIN_SHELL);
+      // The nav item itself is untouched; it is simply no longer in the
+      // editorial denylist, so the filter above leaves it in place.
+      expect(shell).toContain('href: "/admin/about",');
+      expect(
+        shell.slice(
+          shell.indexOf("const EDITORIAL_HIDDEN_HREFS"),
+          shell.indexOf("const navItems"),
+        ),
+      ).not.toContain("/admin/about");
+      expect(source("components/editorial/EditorialHeader.tsx")).toContain(
+        '{ label: "About", href: "/club/about" }',
+      );
+      expect(source("components/editorial/EditorialFooter.tsx")).toContain(
+        '<Link href="/club/about">',
+      );
+      expect(source("app/%5Fclubs/[slug]/club/about/page.tsx")).toContain(
+        "return <EditorialAboutPage content={content.about} />;",
       );
     });
 
@@ -59,7 +87,6 @@ describe("editorial@1 admin surface hides", () => {
   describe("route guards: direct URL access redirects editorial@1 to /admin", () => {
     for (const [name, path] of [
       ["programs", PROGRAMS_ADMIN],
-      ["about", ABOUT_ADMIN],
       ["analytics", ANALYTICS_ADMIN],
     ] as const) {
       it(`${name} page redirects editorial@1 and renders null while doing so`, () => {
@@ -81,6 +108,113 @@ describe("editorial@1 admin surface hides", () => {
         expect(page).not.toContain('=== "academy@1") router.replace');
       });
     }
+  });
+
+  describe("about admin: page reachable for editorial@1, Club Logo tab hidden", () => {
+    it("has no route guard — editorial@1 reaches /admin/about like every template", () => {
+      const page = source(ABOUT_ADMIN);
+      expect(page).not.toContain('router.replace("/admin")');
+      expect(page).not.toContain("if (isEditorialTemplate) return null;");
+      expect(page).not.toContain("useRouter");
+    });
+
+    it("extends the academy club-logo gate with the tryouts !isAcademy && !isEditorial shape", () => {
+      const page = source(ABOUT_ADMIN);
+      expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
+      expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
+      expect(page).toContain(
+        "const hasClubLogoPage = !isAcademy && !isEditorial;",
+      );
+      // The tab switcher, the blurb, and the write path all read the combined
+      // gate; no stray !isAcademy-only club-logo gate survives.
+      expect(page).toContain("{hasClubLogoPage && (");
+      expect(page).toContain("{hasClubLogoPage\n            ?");
+      expect(page).toContain(
+        'hasClubLogoPage\n          ? supabase.from("club_logo_page_content").upsert([logoPayload])\n          : Promise.resolve({ error: null }),',
+      );
+      expect(page).not.toContain("{!isAcademy && (");
+      expect(page).not.toContain("isAcademy\n          ? Promise.resolve");
+    });
+
+    it("keeps the closing-CTA pin academy-only — Lions keeps its editable Button Link", () => {
+      const page = source(ABOUT_ADMIN);
+      // DCFC-D007 pins academy@1's href in code. editorial@1's seeded
+      // closing_cta_href is /club/about, not /schedule, so it must NOT inherit
+      // the pin when the club-logo gate widened.
+      expect(page).toContain(
+        "closing_cta_href: isAcademy\n          ? ACADEMY_ABOUT_CLOSING_CTA_HREF\n          : aboutDraft.closing_cta_href.trim() || \"/schedule\",",
+      );
+      expect(page).not.toContain("closing_cta_href: hasClubLogoPage");
+      expect(page).toContain("{isAcademy ? (");
+    });
+
+    it("hides Club Logo for exactly the templates whose registry lists no club-logo route", () => {
+      const registry = source("packages/presentation/index.ts");
+      // academy@1 and editorial@1 both omit "club-logo"; cinematic@1 keeps it,
+      // which is why the gate names templates instead of excluding all
+      // non-academy ones.
+      expect(registry).toContain(
+        'defaultRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],\n    supportedRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],',
+      );
+      expect(registry).toContain(
+        'defaultRoutes: ["home", "roster", "schedule", "club", "club-logo", "store"],',
+      );
+      // And nothing on the editorial site links /club/logo.
+      expect(source("components/editorial/EditorialHeader.tsx")).not.toContain(
+        "/club/logo",
+      );
+      expect(source("components/editorial/EditorialFooter.tsx")).not.toContain(
+        "/club/logo",
+      );
+    });
+
+    it("previews the editorial About page for editorial@1 instead of the default one", () => {
+      const preview = source("components/admin/ScaledAboutPreview.tsx");
+      expect(preview).toContain(
+        'const isEditorialAbout =\n    club.presentationTemplateKey === "editorial@1" && props.variant === "about";',
+      );
+      expect(preview).toContain("<EditorialAboutPage content={props.content} />");
+      // editorial.css is scoped under the template wrapper and is otherwise
+      // only imported by EditorialShell, which the admin never mounts — same
+      // wiring ScaledTryoutsPreview/ScaledShopKitPreview needed.
+      expect(preview).toContain('import "@/styles/editorial.css";');
+      expect(preview).toContain('data-site-template="editorial"');
+      expect(preview).toContain('"--club-primary": theme.primary');
+      expect(preview).toContain('"--club-secondary": theme.secondary');
+      expect(preview).toContain('"--club-accent": theme.accent');
+    });
+
+    it("leaves every other template's About and Club Logo preview untouched", () => {
+      const preview = source("components/admin/ScaledAboutPreview.tsx");
+      // academy@1/DCFC and the rest still fall through to the same two
+      // components as before; the logo variant gained no editorial branch.
+      expect(preview).toContain(
+        "<AboutClubPageClient content={props.content} animate={false} />",
+      );
+      expect(preview).toContain(
+        "<ClubLogoPageClient content={props.content} animate={false} />",
+      );
+      // Import line (twice: binding + module path) plus the single JSX use.
+      expect(count(preview, "ClubLogoPageClient")).toBe(3);
+      expect(preview).not.toMatch(/isEditorial\w*\s*&&[\s\S]{0,80}ClubLogoPageClient/);
+    });
+
+    it("edits the same row the public editorial page renders", () => {
+      // The un-hide is only meaningful because both sides read
+      // about_page_content for the tenant: the admin loads and upserts it,
+      // and the public editorial route feeds the very same fetch into
+      // EditorialAboutPage. A UI-only un-hide would not give the club control.
+      const page = source(ABOUT_ADMIN);
+      expect(page).toContain("fetchAboutClubContent(clubId)");
+      expect(page).toContain('supabase.from("about_page_content").upsert([aboutPayload])');
+      const publicRoute = source("app/%5Fclubs/[slug]/club/about/page.tsx");
+      expect(publicRoute).toContain("fetchAboutClubContent(club.id, onzio)");
+      expect(publicRoute).toContain("<EditorialAboutPage content={content.about} />");
+      expect(source("lib/queries.ts")).toContain('.from("about_page_content")');
+      expect(source("components/editorial/EditorialAboutPage.tsx")).toContain(
+        "content: DBAboutPageContent;",
+      );
+    });
   });
 
   describe("homepage admin: Behind the Rose hidden for editorial@1", () => {
