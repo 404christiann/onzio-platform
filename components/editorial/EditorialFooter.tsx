@@ -22,42 +22,64 @@ export default function EditorialFooter({
   identity,
   contactProfile,
   socialLinks,
+  storeEnabled,
 }: {
   clubName: string;
   crestOnDarkUrl: string;
   identity: ClubIdentityContent | null;
   contactProfile: ContactProfileContent | null;
   socialLinks: DBSiteSocialLink[];
+  storeEnabled: boolean;
 }) {
   const instagram = socialLinks.find((link) => link.id === "instagram");
   const youtube = socialLinks.find((link) => link.id === "youtube");
+  const footerTagline =
+    [identity?.identityHeadingTop, identity?.identityHeadingEm]
+      .filter((part): part is string => Boolean(part?.trim()))
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim() || identity?.mission;
+  const footerClubName = identity?.shortName?.trim() || clubName;
 
   return (
     <footer className="site-footer">
       <div className="footer-main">
         <div className="footer-brand">
-          {crestOnDarkUrl ? (
-            <Image
-              src={crestOnDarkUrl}
-              alt={`${clubName} crest`}
-              width={80}
-              height={79}
-              {...imageDeliveryProps("club-logo")}
-            />
-          ) : null}
+          <div className="footer-brand-lockup">
+            {crestOnDarkUrl ? (
+              <Image
+                src={crestOnDarkUrl}
+                alt={`${clubName} crest`}
+                width={112}
+                height={111}
+                {...imageDeliveryProps("club-logo")}
+              />
+            ) : null}
+            <div>
+              <strong>{footerClubName}</strong>
+              {footerTagline ? <p>{footerTagline}</p> : null}
+            </div>
+          </div>
         </div>
 
-        <div className="footer-links">
+        <nav className="footer-links" aria-label="Footer navigation">
           <span className="footer-label">Explore</span>
-          <Link href="/roster">Roster</Link>
-          <Link href="/schedule">Schedule</Link>
-          <Link href="/tryouts">Tryouts</Link>
-        </div>
+          <div className="footer-link-grid">
+            <div>
+              <Link href="/club/about">Club</Link>
+              <Link href="/roster">Roster</Link>
+              <Link href="/tryouts">Tryouts</Link>
+            </div>
+            <div>
+              <Link href="/schedule">Schedule</Link>
+              {storeEnabled ? <Link href="/store">Store</Link> : null}
+              <Link href="/contact">Contact</Link>
+            </div>
+          </div>
+        </nav>
 
-        <div className="footer-matchday">
-          <span className="footer-label">Matchday</span>
-          {identity?.venue && <p>{identity.venue}</p>}
-          {identity?.contactAddress && <p>{identity.contactAddress}</p>}
+        <div className="footer-connect">
+          <span className="footer-label">Connect</span>
           {contactProfile?.publicEmail && (
             <a href={`mailto:${contactProfile.publicEmail}`}>
               {contactProfile.publicEmail}
@@ -68,11 +90,8 @@ export default function EditorialFooter({
               {contactProfile.publicPhone}
             </a>
           )}
-        </div>
-
-        {(instagram || youtube) && (
-          <div className="footer-social">
-            <span className="footer-label">Follow</span>
+          {identity?.venue && <p>{identity.venue}</p>}
+          {(instagram || youtube) && (
             <div className="footer-social-links">
               {instagram && (
                 <a
@@ -109,19 +128,20 @@ export default function EditorialFooter({
                 </a>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="footer-bottom">
         <span>
-          © {new Date().getFullYear()} {clubName}. All rights reserved.
+          © {new Date().getFullYear()} {footerClubName}
         </span>
+        <PoweredByOnzio
+          className="footer-powered-by"
+          textClassName="footer-powered-by-text"
+        />
+        <span className="footer-bottom-right">All rights reserved.</span>
       </div>
-      <PoweredByOnzio
-        className="footer-powered-by"
-        textClassName="footer-powered-by-text"
-      />
     </footer>
   );
 }

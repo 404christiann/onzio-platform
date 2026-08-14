@@ -52,14 +52,63 @@ describe("editorial contact: read-only render", () => {
   it("uses editorial's own CSS custom properties, never Diverse City's hardcoded navy/red hex colors", () => {
     const source = read("components/editorial/EditorialContactPage.tsx");
     expect(source).not.toMatch(/#1E3653|#FF1616|#14283F|#D70000|#B9E3F6|#F9FAFD/i);
+
+    const css = read("styles/editorial.css");
+    expect(css).toContain('[data-site-template="editorial"] .contact-hero-cta {');
+    expect(css).toContain("align-self: flex-start;");
+    expect(css).toContain("width: fit-content;");
+    expect(css).toContain('[data-site-template="editorial"] .contact-details > .eyebrow');
+    expect(css).toContain("border-left: 1px solid var(--line);");
   });
 
   it("renders local inline social marks instead of requesting optional icon URLs", () => {
     const source = read("components/editorial/EditorialContactPage.tsx");
     expect(source).toContain("function SocialIcon(");
     expect(source).toContain("<SocialIcon platform={link.id} />");
+    expect(source).toContain("href={link.href}");
+    expect(source).toContain('target="_blank"');
+    expect(source).toContain('rel="noopener noreferrer"');
     expect(source).not.toContain("link.icon");
     expect(source).not.toContain("ResilientImage");
+  });
+
+  it("centers and enlarges the social follow section without compromising mobile or keyboard access", () => {
+    const source = read("components/editorial/EditorialContactPage.tsx");
+    const css = read("styles/editorial.css");
+
+    expect(source).toContain('<h2 className="eyebrow">Follow along</h2>');
+    expect(css).toMatch(
+      /\[data-site-template="editorial"\] \.contact-social \{[^}]*align-items: center;[^}]*text-align: center;/,
+    );
+    expect(css).toMatch(
+      /\[data-site-template="editorial"\] \.contact-social-links \{[^}]*flex-wrap: wrap;[^}]*justify-content: center;[^}]*width: min\(100%, 520px\);/,
+    );
+    expect(css).toMatch(
+      /\[data-site-template="editorial"\] \.contact-social-icon \{[^}]*width: clamp\(62px, 6vw, 72px\);[^}]*height: clamp\(62px, 6vw, 72px\);/,
+    );
+    expect(css).toMatch(
+      /\[data-site-template="editorial"\] \.contact-social-icon:focus-visible \{[^}]*outline: 3px solid var\(--accent\);[^}]*outline-offset: 4px;/,
+    );
+    expect(css).toMatch(
+      /\[data-site-template="editorial"\] \.contact-page \{[^}]*padding-bottom: 0;/,
+    );
+    expect(css).toMatch(
+      /\[data-site-template="editorial"\] \.contact-social \{[^}]*padding-bottom: clamp\(28px, 4vw, 48px\);/,
+    );
+  });
+
+  it("keeps the published email on one line without overflowing responsive contact grids", () => {
+    const css = read("styles/editorial.css");
+
+    expect(css).toMatch(
+      /\.contact-detail-item a\[href\^="mailto:"\] \{[^}]*white-space: nowrap;[^}]*word-break: normal;/,
+    );
+    expect(css).toContain("@media (min-width: 1351px)");
+    expect(css).toContain(
+      "grid-template-columns: minmax(420px, 1.5fr) repeat(3, minmax(0, 1fr));",
+    );
+    expect(css).toContain("@media (max-width: 1350px)");
+    expect(css).toContain("@media (max-width: 700px)");
   });
 });
 

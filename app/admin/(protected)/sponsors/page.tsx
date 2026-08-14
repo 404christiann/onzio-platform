@@ -83,7 +83,11 @@ export default function AdminSponsorsPage() {
   // would duplicate the homepage SponsorCarousel), so footer-placement logos
   // are never displayed on an academy@1 site. Hide that placement tab and pin
   // the editor to the carousel; every other template keeps both placements.
+  // editorial@1's EditorialFooter also renders no sponsor strip, so the same
+  // applies there.
   const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const hidesSponsorFooterTab = isAcademy || isEditorial;
   const [placement, setPlacement] = useState<SponsorLogoPlacement>("carousel");
   const [placementDirection, setPlacementDirection] =
     useState<SlidingPanelDirection>(1);
@@ -311,7 +315,7 @@ export default function AdminSponsorsPage() {
           Sponsors
         </h1>
         <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          {isAcademy
+          {hidesSponsorFooterTab
             ? "Manage sponsor logos for the homepage carousel."
             : "Manage sponsor logos for the homepage carousel and footer."}
         </p>
@@ -343,10 +347,11 @@ export default function AdminSponsorsPage() {
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
           <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            {/* With the footer placement hidden for academy@1, a single-tab
-                switcher would be dead UI, so the whole switcher is hidden and
-                `placement` stays at its initial "carousel" value. */}
-            {!isAcademy && (
+            {/* With the footer placement hidden for academy@1 and editorial@1,
+                a single-tab switcher would be dead UI, so the whole switcher
+                is hidden and `placement` stays at its initial "carousel"
+                value. */}
+            {!hidesSponsorFooterTab && (
             <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1">
               {[
                 { id: "carousel" as const, label: "Carousel" },

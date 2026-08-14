@@ -151,6 +151,11 @@ export default function AdminShopPage() {
   const kitVariants = hidesClubhouseShopSections
     ? KIT_VARIANTS.filter((variant) => variant.id === "home")
     : KIT_VARIANTS;
+  // editorial@1 (Lions) never renders the static shop photo row or the
+  // purchase-detail fields on its public shop page, so both tabs are hidden
+  // for it. Content and Kit Photos stay untouched — Lions has 3 kit variants
+  // (home/away/third) and that machinery must keep working as-is.
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
   const [selectedSurface, setSelectedSurface] = useState<ShopKitSurface>("home");
   const [selectedKitVariant, setSelectedKitVariant] =
     useState<ShopKitVariant>("home");
@@ -162,13 +167,21 @@ export default function AdminShopPage() {
       : kitVariants.some((variant) => variant.id === selectedKitVariant)
         ? selectedKitVariant
         : "home";
+  // Filtering "photoStrip" and "purchase" out of the tab order itself (not
+  // just the rendered tab list) keeps slide-direction/active-tab indexing
+  // correct for editorial@1 even if either tab was ever the active one.
+  const tabOrder = isEditorial
+    ? ADMIN_TAB_ORDER.filter(
+        (tab) => tab !== "photoStrip" && tab !== "purchase",
+      )
+    : ADMIN_TAB_ORDER;
   const [activeTab, setActiveTab] = useState<AdminTab>("content");
   const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
   const selectTab = (next: AdminTab) => {
     setActiveTab((current) => {
       if (next === current) return current;
       setTabDirection(
-        ADMIN_TAB_ORDER.indexOf(next) > ADMIN_TAB_ORDER.indexOf(current) ? 1 : -1,
+        tabOrder.indexOf(next) > tabOrder.indexOf(current) ? 1 : -1,
       );
       return next;
     });
@@ -727,7 +740,7 @@ export default function AdminShopPage() {
 
             <p className="font-body mb-4 text-xs leading-relaxed text-muted-foreground">
               Editing the {selectedSurface === "home" ? "home page kit" : `${activeKitVariant} shop kit`}.
-              {hidesClubhouseShopSections
+              {hidesClubhouseShopSections || isEditorial
                 ? " Content and Kit Photos are saved independently."
                 : " Content, Kit Photos, and Shop Page Photo Row are saved independently."}
             </p>
@@ -754,7 +767,9 @@ export default function AdminShopPage() {
                 ].filter(
                   (tab) =>
                     (tab.id !== "photoStrip" && tab.id !== "purchase") ||
-                    (selectedSurface === "shop" && !hidesClubhouseShopSections),
+                    (selectedSurface === "shop" &&
+                      !hidesClubhouseShopSections &&
+                      !isEditorial),
                 )
               ).map((tab) => {
                 const hasIssue =
@@ -1272,7 +1287,8 @@ export default function AdminShopPage() {
 
             {selectedSurface === "shop" &&
               activeTab !== "purchase" &&
-              !hidesClubhouseShopSections && (
+              !hidesClubhouseShopSections &&
+              !isEditorial && (
             <>
             <div className="mb-3 mt-6 flex flex-wrap items-end justify-between gap-3">
               <div>

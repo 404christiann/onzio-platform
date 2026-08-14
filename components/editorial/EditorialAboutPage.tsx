@@ -1,80 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
+import { useClubContext } from "@/components/ClubContextProvider";
+import ResilientImage from "@/components/ResilientImage";
 import type { DBAboutPageContent } from "@/lib/db-types";
 
-function stringHighlights(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
-}
-
-/** Editorial club-story page, using the approved mockup's interior structure. */
+/** Editorial club-story page, using the shared About-page content contract. */
 export default function EditorialAboutPage({
   content,
 }: {
   content: DBAboutPageContent;
 }) {
-  const { identity } = useEditorialIdentity();
-  const headingTop = identity?.storyHeadingTop?.trim() ?? "";
-  const headingEm = identity?.storyHeadingEm?.trim() ?? "";
-  const highlights = stringHighlights(identity?.highlights);
-  const hasLocation = Boolean(identity?.venue || identity?.contactAddress);
+  const club = useClubContext();
 
   return (
     <div className="interior club-page">
       <header className="interior-hero">
-        <span className="eyebrow">Our club</span>
-        <h1>
-          {headingTop || content.hero_title}
-          {headingEm ? (
-            <>
-              <br />
-              <em>{headingEm}</em>
-            </>
-          ) : null}
-        </h1>
+        <h1>{content.hero_title}</h1>
+        <span className="head-rule" aria-hidden="true" />
       </header>
 
-      <section className="manifesto">
-        <span className="story-mark" aria-label={`Founded ${identity?.foundedYear || ""}`}>
-          {String(identity?.foundedYear ?? "").slice(-2)}
-        </span>
-        <div>
-          {content.story_paragraphs.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
+      <section
+        className={`manifesto${content.feature_image_url ? "" : " manifesto-single"}`}
+      >
+        <div className="manifesto-copy">
+          {content.story_paragraphs.map((paragraph, index) => (
+            <p key={`${paragraph}-${index}`}>{paragraph}</p>
           ))}
         </div>
-        {identity?.mission ? <blockquote>“{identity.mission}”</blockquote> : null}
+        {content.feature_image_url ? (
+          <div className="manifesto-media">
+            <ResilientImage
+              src={content.feature_image_url}
+              alt={`${club.name} about page feature`}
+              fallbackVariant="photo"
+              fill
+              sizes="(max-width: 768px) 100vw, 420px"
+              className="manifesto-image"
+            />
+          </div>
+        ) : null}
       </section>
 
-      {highlights.length > 0 ? (
-        <section className="club-highlights">
-          <span className="eyebrow">{content.values_heading || "What defines us"}</span>
-          <ul>
-            {highlights.map((highlight) => (
-              <li key={highlight}>{highlight}</li>
+      {content.values.length > 0 ? (
+        <section className="value-section">
+          <p className="eyebrow">{content.values_heading}</p>
+          <div className="value-grid">
+            {content.values.map((value, index) => (
+              <article className="value-card" key={`${value.title}-${index}`}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <h3>{value.title}</h3>
+                <p>{value.description}</p>
+              </article>
             ))}
-          </ul>
+          </div>
         </section>
       ) : null}
 
-      {hasLocation ? (
-        <section className="find-us">
-          <span className="eyebrow">Find us</span>
-          <h2>Club contact</h2>
-          <div className="find-us-grid">
-            <div className="find-us-item">
-              <span>Matchday</span>
-              {identity?.venue ? <p>{identity.venue}</p> : null}
-              {identity?.contactAddress ? <p>{identity.contactAddress}</p> : null}
-            </div>
-            <div className="find-us-item">
-              <span>Get in touch</span>
-              <Link href="/contact">Contact the club →</Link>
-            </div>
-          </div>
+      {content.closing_text ||
+      (content.closing_cta_label && content.closing_cta_href) ? (
+        <section className="about-closing">
+          {content.closing_text ? <p>{content.closing_text}</p> : null}
+          {content.closing_cta_label && content.closing_cta_href ? (
+            <Link href={content.closing_cta_href}>
+              {content.closing_cta_label}
+            </Link>
+          ) : null}
         </section>
       ) : null}
     </div>

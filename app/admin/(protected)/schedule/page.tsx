@@ -123,9 +123,13 @@ export default function SchedulePage() {
   const club = useClubContext();
   // See MatchForm: academy@1 never renders match sponsors, so the fields are
   // hidden and nothing is copied forward into a new match for that template.
+  // editorial@1's EditorialScheduleMatchCard/EditorialNextMatch also render no
+  // sponsor data, so the same applies there.
   const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const hidesMatchSponsorFields = isAcademy || isEditorial;
   const carrySponsor = (list: Match[], seasonId: string) =>
-    isAcademy ? {} : carrySponsorFromLatestMatch(list, seasonId);
+    hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId);
   const {
     seasons,
     selectedSeasonId,
@@ -502,7 +506,7 @@ export default function SchedulePage() {
                         </p>
                       )}
 
-                      {!isAcademy && m.sponsor_logo_url && (
+                      {!hidesMatchSponsorFields && m.sponsor_logo_url && (
                         <p className="font-body truncate text-muted-foreground/80" style={{ fontSize: "0.8rem" }}>
                           Presented by {m.sponsor_name || "match sponsor"}
                         </p>
@@ -567,7 +571,12 @@ function MatchForm({
   // dead-admin-surface removal as DCFC-D130. The columns, the upload/cleanup
   // logic, and every other template's editor are untouched — clubhouse@1 still
   // renders these through NextMatchCard.
+  // editorial@1's EditorialScheduleMatchCard and EditorialNextMatch also never
+  // read sponsor_name, sponsor_logo_url, or sponsor_link, so the same applies
+  // there.
   const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const hidesMatchSponsorFields = isAcademy || isEditorial;
 
   function set(field: string, value: string | boolean | number | null) {
     onChange({ ...form, [field]: value });
@@ -694,7 +703,7 @@ function MatchForm({
         />
       </Field>
 
-      {!isAcademy && (
+      {!hidesMatchSponsorFields && (
         <>
           <div className="mt-2 border-t border-border pt-4 sm:col-span-2">
             <p className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">

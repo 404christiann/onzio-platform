@@ -326,10 +326,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     };
   }, [sidebarOpen]);
 
+  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/about", "/admin/analytics"];
+
   const navItems = NAV_ITEMS.filter(
     (item) =>
       (!item.ownerOnly || club.role === "owner") &&
-      (item.href !== "/admin/payments" || isBillingAdmin),
+      (item.href !== "/admin/payments" || isBillingAdmin) &&
+      (!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href)),
   );
 
   async function handleSignOut() {

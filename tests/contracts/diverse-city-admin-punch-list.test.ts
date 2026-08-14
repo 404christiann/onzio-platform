@@ -102,10 +102,17 @@ describe("Diverse City admin punch list", () => {
       expect(schedule).toContain(
         'club.presentationTemplateKey === "academy@1"',
       );
-      expect(schedule).toContain("{!isAcademy && (");
+      // The gate later widened to also cover editorial@1 (Lions) via
+      // hidesMatchSponsorFields = isAcademy || isEditorial — an OR extension,
+      // so academy@1 still hides exactly what it hid before. See
+      // editorial-admin-surface.test.ts for the editorial half.
+      expect(schedule).toContain(
+        "const hidesMatchSponsorFields = isAcademy || isEditorial;",
+      );
+      expect(schedule).toContain("{!hidesMatchSponsorFields && (");
       // The copy-forward must not seed a hidden field either.
       expect(schedule).toContain(
-        "isAcademy ? {} : carrySponsorFromLatestMatch(list, seasonId)",
+        "hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId)",
       );
       expect(schedule).not.toContain(
         "...carrySponsorFromLatestMatch(matches, selectedSeasonId)",

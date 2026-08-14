@@ -6,10 +6,6 @@ import { useClubId } from "@/components/ClubContextProvider";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { fetchShopKitVariants, type ShopKitContent } from "@/lib/queries";
-import {
-  normalizeKitBulletPoints,
-  normalizeKitStoreNote,
-} from "@/lib/shop-kit";
 import type { ShopKitVariant } from "@/lib/db-types";
 
 const VARIANT_ORDER: ShopKitVariant[] = ["home", "away", "third"];
@@ -20,14 +16,14 @@ const KIT_LABELS: Record<ShopKitVariant, string> = {
 };
 
 /**
- * Real-data editorial Store, using the approved mockup's campaign, catalog,
- * and service-strip structure. Product links remain the admin-authored CTAs;
- * no price, cart, size, or checkout behavior is invented.
+ * Real-data editorial Store using a simple official-vendor handoff. The club
+ * controls each product's title, description, image, and destination link.
  */
 export default function EditorialShopPage() {
   const clubId = useClubId();
   const { identity } = useEditorialIdentity();
   const [content, setContent] = useState<Record<ShopKitVariant, ShopKitContent> | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ShopKitVariant>("home");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,15 +60,8 @@ export default function EditorialShopPage() {
     const photos = (variantContent.photos ?? []).filter(
       (photo) => photo.url.trim().length > 0,
     );
-    return [
-      {
-        variant,
-        section,
-        photo: photos[0] ?? null,
-        bulletPoints: normalizeKitBulletPoints(section.bullet_points),
-        storeNote: normalizeKitStoreNote(section.store_note).trim(),
-      },
-    ];
+
+    return [{ variant, section, photo: photos[0] ?? null }];
   });
 
   if (products.length === 0) {
@@ -85,114 +74,82 @@ export default function EditorialShopPage() {
     );
   }
 
-  const featured = products[0];
-  const city = identity?.city?.trim() || "the city";
-  const clubLabel = identity?.shortName?.trim() || "the club";
-  const productHref = (value: string) => value.trim() || "#store-collection-title";
+  const selectedProduct =
+    products.find((product) => product.variant === selectedVariant) ?? products[0];
+  const productHref = selectedProduct.section.cta_link.trim() || "#store-product";
+  const collectionName =
+    identity?.shortName?.replace(/\s+FC$/i, "").trim() || "Club";
 
   return (
-    <div className="store-page">
-      <section className="store-campaign">
-        <div className="store-campaign-copy">
-          <span className="eyebrow">Official collection</span>
-          <h1>
-            Made for the match.
-            <br />
-            <em>Worn for {city}.</em>
-          </h1>
-          <p>
-            {products.length} first-team colors. One {clubLabel} badge. Built
-            for every side of matchday.
-          </p>
-        </div>
+    <main className="store-page">
+      <header className="store-heading">
+        <span className="store-collection-label">
+          Official {collectionName} collection
+        </span>
+        <h1>Make it yours!</h1>
+        <p className="store-intro">
+          Pick your colors, then finish sizing and checkout with our official
+          merchandise partner.
+        </p>
 
-        <a
-          className="store-featured-product"
-          href={productHref(featured.section.cta_link)}
-          aria-label={featured.section.cta_label || `View ${featured.section.title}`}
-        >
-          <span className="store-featured-label">
-            Featured · {KIT_LABELS[featured.variant]}
-          </span>
-          <span className="store-featured-image">
-            {featured.photo ? (
+        <div className="store-kit-tabs" role="tablist" aria-label="Choose a jersey">
+          {products.map((product) => (
+            <button
+              key={product.variant}
+              className="store-kit-tab"
+              type="button"
+              role="tab"
+              aria-selected={selectedProduct.variant === product.variant}
+              aria-controls="store-product"
+              onClick={() => setSelectedVariant(product.variant)}
+            >
+              {KIT_LABELS[product.variant]}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <section
+        id="store-product"
+        className="store-product"
+        role="tabpanel"
+        aria-live="polite"
+      >
+        <div className="store-product-visual">
+          <div className="store-product-image">
+            {selectedProduct.photo ? (
               <ResilientImage
-                src={featured.photo.url}
-                alt={featured.section.title}
+                src={selectedProduct.photo.url}
+                alt={selectedProduct.section.title}
                 fill
                 priority
-                sizes="(max-width: 800px) 94vw, 48vw"
+                sizes="(max-width: 1120px) 100vw, 62vw"
                 {...imageDeliveryProps("shop-photo")}
               />
             ) : (
               <span className="store-product-image-empty" aria-hidden="true" />
             )}
-          </span>
-          <span className="store-featured-footer">
-            <strong>{featured.section.title}</strong>
-            <b>{featured.section.cta_label || "View kit"}</b>
-          </span>
-        </a>
-      </section>
-
-      <section className="store-catalog" aria-labelledby="store-collection-title">
-        <header className="store-catalog-head">
-          <div>
-            <span className="eyebrow">First-team kits</span>
-            <h2 id="store-collection-title">Choose your colors.</h2>
           </div>
-          <p>{products.length} official jerseys · current collection</p>
-        </header>
-
-        <div className="store-product-grid">
-          {products.map((product, index) => (
-            <a
-              key={product.variant}
-              className="store-product-card"
-              data-kit={index + 1}
-              href={productHref(product.section.cta_link)}
-              aria-label={product.section.cta_label || `View ${product.section.title}`}
-            >
-              <span className="store-product-type">{KIT_LABELS[product.variant]}</span>
-              <span className="store-product-image">
-                {product.photo ? (
-                  <ResilientImage
-                    src={product.photo.url}
-                    alt={product.section.title}
-                    fill
-                    sizes="(max-width: 700px) 88vw, 32vw"
-                    {...imageDeliveryProps("shop-photo")}
-                  />
-                ) : (
-                  <span className="store-product-image-empty" aria-hidden="true" />
-                )}
-              </span>
-              <span className="store-product-info">
-                <span>
-                  <small>Official first-team jersey</small>
-                  <strong>{product.section.title}</strong>
-                </span>
-                <b>{product.section.cta_label || "View kit"}</b>
-              </span>
-            </a>
-          ))}
         </div>
 
-        <div className="store-service-strip" aria-label="Store information">
-          <p>
-            <small>Details</small>
-            <strong>{featured.bulletPoints[0] || "Official first-team collection"}</strong>
+        <div className="store-product-details">
+          <h2>{selectedProduct.section.title}</h2>
+          <p className="store-product-description">
+            {selectedProduct.section.description}
           </p>
-          <p>
-            <small>Collection</small>
-            <strong>{clubLabel}</strong>
-          </p>
-          <p>
-            <small>Ordering</small>
-            <strong>{featured.storeNote || featured.section.cta_label}</strong>
-          </p>
+          <div className="store-product-action">
+            <a
+              className="store-vendor-button"
+              href={productHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Shop ${selectedProduct.section.title} with our vendor`}
+            >
+              Shop with our vendor
+            </a>
+          </div>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import EditorialHero from "@/components/editorial/EditorialHero";
 import EditorialNextMatch from "@/components/editorial/EditorialNextMatch";
+import EditorialSponsorCarousel from "@/components/editorial/EditorialSponsorCarousel";
+import EditorialStandingsTable from "@/components/editorial/EditorialStandingsTable";
+import EditorialHomeStore from "@/components/editorial/EditorialHomeStore";
 import EditorialMatchdaySlideshow from "@/components/editorial/EditorialMatchdaySlideshow";
 import EditorialStoryTeaser from "@/components/editorial/EditorialStoryTeaser";
 import { fetchAboutClubContent, fetchHomepageContent, fetchSchedule } from "@/lib/queries";
@@ -11,12 +14,12 @@ import type { Fixture } from "@/lib/data";
 import type { DBHomepageHeroContent, DBHomepageSlideshowPhoto } from "@/lib/db-types";
 
 /**
- * Real editorial@1 Lions homepage. Section order: Hero -> Next Match ->
- * Matchday gallery -> "Our story" teaser -- same composition the superseded
- * reference branch's EditorialHome.tsx used, rewired to this branch's real
- * data sources (see components/editorial/EditorialHero.tsx and
- * components/editorial/EditorialShell.tsx for the schema-level rewiring
- * notes).
+ * Real editorial@1 Lions homepage. Section order: Hero -> Store -> sponsor
+ * carousel -> Next Match -> Matchday gallery -> standings -> "Our story"
+ * teaser.
+ * The original composition came from the superseded reference branch's
+ * EditorialHome.tsx and has been extended with Christian's requested
+ * sponsor/standings surfaces.
  *
  * Fetches fixtures, slideshow photos, and the about-page excerpt once here
  * and passes them down as props, so each section stays a small,
@@ -75,8 +78,11 @@ export default function EditorialHome({
   return (
     <>
       <EditorialHero initialHeroContent={initialHeroContent} />
+      <EditorialHomeStore />
+      <EditorialSponsorCarousel />
       <EditorialNextMatch fixtures={fixtures} />
       <EditorialMatchdaySlideshow photos={slideshowPhotos} />
+      <EditorialStandingsTable />
       <EditorialStoryTeaser excerpt={storyExcerpt} />
     </>
   );

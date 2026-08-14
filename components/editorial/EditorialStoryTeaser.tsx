@@ -20,47 +20,54 @@ export default function EditorialStoryTeaser({
 
   return (
     <section className="club-story">
-      <header className="story-heading">
-        <span className="eyebrow">Our identity</span>
-        {(headingTop || headingEm) && (
-          <h2>
-            {headingTop}
-            {headingEm && (
-              <>
-                <br />
-                <em>{headingEm}</em>
-              </>
-            )}
-          </h2>
-        )}
-      </header>
-      <div className="story-copy">
-        {excerpt && <p>{excerpt}</p>}
-        {(identity?.foundedYear || identity?.venue) && (
-          <div className="story-meta">
-            {identity?.foundedYear ? (
-              <span>
-                Founded <strong>{identity.foundedYear}</strong>
-              </span>
-            ) : null}
-            {identity?.venue ? (
-              <span>
-                Home <strong>{identity.venue}</strong>
-              </span>
-            ) : null}
-          </div>
-        )}
-        <Link href="/club/about">Our story →</Link>
+      <div className="story-main">
+        <header className="story-heading">
+          <span className="eyebrow">Our identity</span>
+          {(headingTop || headingEm) && (
+            <h2>
+              {headingTop}
+              {headingEm && (
+                <>
+                  <br />
+                  <em>{headingEm}</em>
+                </>
+              )}
+            </h2>
+          )}
+        </header>
+        <div className="story-copy">
+          {excerpt && <p>{excerpt}</p>}
+          {(identity?.foundedYear || identity?.venue) && (
+            <div className="story-meta">
+              {identity?.foundedYear ? (
+                <span>
+                  Founded <strong>{identity.foundedYear}</strong>
+                </span>
+              ) : null}
+              {identity?.venue ? (
+                <span>
+                  Home <strong>{identity.venue}</strong>
+                </span>
+              ) : null}
+            </div>
+          )}
+          <Link href="/club/about">Our story</Link>
+        </div>
       </div>
+
       {highlights.length > 0 ? (
         <aside
           className="story-pillars"
           aria-label={`What defines ${identity?.shortName || "the club"}`}
         >
           <span className="story-pillars-label">What defines us</span>
-          {highlights.map((highlight) => (
-            <p key={highlight}>{highlight}</p>
-          ))}
+          <div className="story-pillar-list">
+            {highlights.map((highlight) => (
+              <article className="story-pillar-item" key={highlight}>
+                <h3>{highlight}</h3>
+              </article>
+            ))}
+          </div>
         </aside>
       ) : null}
     </section>

@@ -3,18 +3,14 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Fixture } from "@/lib/data";
 import {
-  distinctMonths,
   firstUpcomingFixtureId,
-  initialMonthKey,
   isPlayedFixture,
-  monthKey,
   outcomeForFixture,
-  visibleFixturesForFilter,
 } from "@/lib/editorial-fixtures";
 
 /**
- * Real Starter-tier editorial@1 schedule + match-area contracts (month
- * rail/status filter derivation, W/L/D outcome resolution, match-area
+ * Real Starter-tier editorial@1 schedule + match-area contracts (fixtures
+ * row-list composition, W/L/D outcome resolution, match-area
  * attendance/scorers surfacing, dispatch wiring, and a classic/clubhouse/
  * academy regression check).
  *
@@ -25,7 +21,7 @@ import {
  * tests/contracts/editorial-roster.test.ts (E4) established: no
  * react-dom/server rendering (this repo's vitest.config.ts has no
  * JSX-transform plugin), just source-scan assertions plus real functional
- * assertions against the pure month/status-filter/outcome helpers E4 added
+ * assertions against the pure outcome helpers E4 added
  * to lib/editorial-fixtures.ts (a plain, non-JSX module already used for
  * this purpose since E3).
  */
@@ -52,63 +48,10 @@ const LIONS_FIXTURES: Fixture[] = [
   { id: "f11", date: "2026-09-12", time: "18:30", opponent: "Toledo Harbor FC", competition: "Midwest Premier League", home: true, venue: "Scioto Field", roseCityScore: null, opponentScore: null, attendance: null, scorers: [] },
 ];
 
-describe("editorial schedule: month rail derivation (lib/editorial-fixtures.ts)", () => {
-  it("monthKey truncates an ISO date to its year-month", () => {
-    expect(monthKey("2026-08-15")).toBe("2026-08");
-  });
-
-  it("derives exactly the real seeded May-September 2026 distinct months, in order", () => {
-    expect(distinctMonths(LIONS_FIXTURES)).toEqual([
-      "2026-05",
-      "2026-06",
-      "2026-07",
-      "2026-08",
-      "2026-09",
-    ]);
-  });
-
-  it("initial month is August 2026 -- the month of the first upcoming fixture", () => {
-    expect(initialMonthKey(LIONS_FIXTURES)).toBe("2026-08");
-  });
-
-  it("falls back to the last fixture's month when every fixture has been played", () => {
-    const allPlayed = LIONS_FIXTURES.slice(0, 7);
-    expect(initialMonthKey(allPlayed)).toBe("2026-07");
-  });
-
-  it("falls back to the current month when there are no fixtures", () => {
-    const now = new Date(2026, 7, 12);
-    expect(initialMonthKey([], now)).toBe("2026-08");
-  });
-});
-
-describe("editorial schedule: status-tab filtering (lib/editorial-fixtures.ts)", () => {
+describe("editorial schedule: played-state helper (lib/editorial-fixtures.ts)", () => {
   it("isPlayedFixture is true only for fixtures with both scores recorded", () => {
     expect(isPlayedFixture(LIONS_FIXTURES[0])).toBe(true);
     expect(isPlayedFixture(LIONS_FIXTURES[7])).toBe(false);
-  });
-
-  it("'all' returns every fixture in the selected month", () => {
-    expect(visibleFixturesForFilter(LIONS_FIXTURES, "2026-08", "all")).toHaveLength(2);
-    expect(visibleFixturesForFilter(LIONS_FIXTURES, "2026-05", "all")).toHaveLength(3);
-  });
-
-  it("'upcoming' returns only unplayed fixtures in the selected month", () => {
-    const upcoming = visibleFixturesForFilter(LIONS_FIXTURES, "2026-08", "upcoming");
-    expect(upcoming).toHaveLength(2);
-    expect(upcoming.every((f) => f.roseCityScore == null)).toBe(true);
-    expect(visibleFixturesForFilter(LIONS_FIXTURES, "2026-05", "upcoming")).toEqual([]);
-  });
-
-  it("'played' returns only fixtures with a recorded result in the selected month", () => {
-    const played = visibleFixturesForFilter(LIONS_FIXTURES, "2026-05", "played");
-    expect(played).toHaveLength(3);
-    expect(played.every((f) => f.roseCityScore != null)).toBe(true);
-    expect(visibleFixturesForFilter(LIONS_FIXTURES, "2026-08", "played")).toEqual([]);
-  });
-
-  it("an empty month/filter combination produces zero fixtures (empty-state trigger)", () => {
-    expect(visibleFixturesForFilter(LIONS_FIXTURES, "2026-09", "played")).toEqual([]);
   });
 });
 
@@ -174,12 +117,19 @@ describe("editorial schedule match card", () => {
 });
 
 describe("editorial schedule view: composition and no season selector", () => {
-  it("titles the page 'Team schedule' and renders All/Upcoming/Results status tabs", () => {
+  it("renders the approved fixtures hero and a single unfiltered row list", () => {
     const source = read("components/editorial/EditorialScheduleView.tsx");
-    expect(source).toContain("<h1>Team schedule</h1>");
-    expect(source).toContain('all: "All matches"');
-    expect(source).toContain('upcoming: "Upcoming"');
-    expect(source).toContain('played: "Results"');
+    expect(source).toContain('className="interior-hero fixtures-hero"');
+    expect(source).toContain("const seasonEyebrow = /\\bseason$/i.test(seasonLabel.trim())");
+    expect(source).toContain("{seasonEyebrow}");
+    expect(source).toContain("<h1>Fixtures</h1>");
+    expect(source).toContain('className="fixtures-colhead"');
+    expect(source).toContain('className="fixtures-list"');
+    expect(source).toContain('className="fixture-row"');
+    expect(source).toContain('String(index + 1).padStart(2, "0")');
+    expect(source).toContain('href={`/schedule/${fixture.id}`}');
+    expect(source).toContain('data-past={isPast || undefined}');
+    expect(source).toContain('data-has-result={isPlayed || undefined}');
   });
 
   it("never renders a season selector -- not even a disabled one", () => {
@@ -193,25 +143,35 @@ describe("editorial schedule view: composition and no season selector", () => {
     }
   });
 
-  it("re-exports the pure month/status-filter helpers from lib/editorial-fixtures.ts rather than redefining them", () => {
+  it("removes the prior month/status filter UI and component-level Motion transition", () => {
     const source = read("components/editorial/EditorialScheduleView.tsx");
     expect(source).toContain('from "@/lib/editorial-fixtures"');
-    expect(source).not.toMatch(/export function distinctMonths/);
-    expect(source).not.toMatch(/export function visibleFixturesForFilter/);
-  });
-
-  it("uses Motion (motion/react) for the month/filter transition with a prefers-reduced-motion fallback", () => {
-    const source = read("components/editorial/EditorialScheduleView.tsx");
-    expect(source).toContain('from "motion/react"');
+    expect(source).not.toContain("schedule-month-rail");
+    expect(source).not.toContain("schedule-filter-panel");
+    expect(source).not.toContain("visibleFixturesForFilter");
+    expect(source).not.toContain("distinctMonths");
+    expect(source).not.toContain("initialMonthKey");
+    expect(source).not.toContain('from "motion/react"');
     expect(source).not.toContain('from "framer-motion"');
-    expect(source).toContain("useReducedMotion");
-    expect(source).toContain("AnimatePresence");
+    expect(source).not.toContain("useReducedMotion");
+    expect(source).not.toContain("AnimatePresence");
   });
 
-  it("renders the empty state markup for a month/filter combination with no fixtures", () => {
+  it("renders the reference empty state and fixtures footnote", () => {
     const source = read("components/editorial/EditorialScheduleView.tsx");
     expect(source).toContain('className="schedule-empty"');
-    expect(source).toContain("No matches in this view.");
+    expect(source).toContain("Schedule coming soon");
+    expect(source).toContain("No official fixtures have been published yet.");
+    expect(source).toContain("Match details and venues are subject to change.");
+  });
+
+  it("passes the active season label from EditorialSchedule and stops passing league chrome", () => {
+    const source = read("components/editorial/EditorialSchedule.tsx");
+    expect(source).toContain('const [seasonLabel, setSeasonLabel] = useState("Current");');
+    expect(source).toContain('setSeasonLabel(season?.label ?? "Current")');
+    expect(source).toContain("<EditorialScheduleView fixtures={fixtures} seasonLabel={seasonLabel} />");
+    expect(source).not.toContain("identity?.league");
+    expect(source).not.toContain("crestOnDarkUrl");
   });
 });
 

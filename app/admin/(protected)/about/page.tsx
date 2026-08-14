@@ -1,6 +1,7 @@
 "use client";
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { useRouter } from "next/navigation";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
@@ -93,6 +94,13 @@ async function uploadAboutImage(
 export default function AdminAboutPage() {
   const clubId = useClubId();
   const club = useClubContext();
+  const router = useRouter();
+  // editorial@1 (Lions) doesn't support an About page -- the nav item is
+  // already hidden in AdminShell.tsx, this blocks direct URL access too.
+  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  useEffect(() => {
+    if (isEditorialTemplate) router.replace("/admin");
+  }, [isEditorialTemplate, router]);
   // DCFC-D007: club owners edit copy, Onzio operators own navigation
   // destinations. The About closing button follows the precedent already set by
   // DevelopingNextGeneration's "Our Story" button — the label stays editable,
@@ -345,6 +353,8 @@ export default function AdminAboutPage() {
   }
 
   const saveDisabled = saving || uploading || !dirty;
+
+  if (isEditorialTemplate) return null;
 
   return (
     <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">

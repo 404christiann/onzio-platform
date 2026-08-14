@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
@@ -116,6 +117,13 @@ function errorMessage(error: unknown, fallback: string): string {
 
 export default function AdminProgramsPage() {
   const club = useClubContext();
+  const router = useRouter();
+  // editorial@1 (Lions) doesn't support the Programs module -- the nav item
+  // is already hidden in AdminShell.tsx, this blocks direct URL access too.
+  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  useEffect(() => {
+    if (isEditorialTemplate) router.replace("/admin");
+  }, [isEditorialTemplate, router]);
   // Diverse City's admins do not hand-write URL slugs; the slug is derived from
   // the navigation label the first time a program is saved and then fixed for
   // the program's lifetime. Every other template keeps the manual field.
@@ -623,6 +631,8 @@ export default function AdminProgramsPage() {
       await loadPrograms(draft?.id);
     }
   }
+
+  if (isEditorialTemplate) return null;
 
   return (
     <div className="mx-auto max-w-7xl">

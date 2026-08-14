@@ -2,6 +2,696 @@
 
 Last updated: 2026-08-13
 
+## Lions admin portal: DCFC-only surfaces hidden for editorial@1, verified and committed
+
+Agent: Claude (5 subagents for edits — 4 Sonnet, 1 Fable for the highest-risk
+file — plus 1 Fable subagent for final verification), 2026-08-13. Status:
+**admin-portal template-gating complete, verified locally, and committed on
+`codex/lions-editorial-diversecity-v2`**. Not yet pushed or synced to staging
+at the time of this entry; no hosted Supabase write, Stripe mutation, or
+production change was performed.
+
+**Completed work:** copied Diverse City FC's (`academy@1`) admin portal
+pattern for Lions (`editorial@1`), hiding DCFC-specific or confirmed-dead-data
+admin surfaces behind template-scoped gates
+(`presentationTemplateKey === "editorial@1"`), mirroring the existing
+`isAcademy` convention already used throughout the admin pages. Hidden for
+Lions: the Programs page and nav item; the About page and nav item; the
+Analytics page and nav item (all three both nav-filtered in `AdminShell.tsx`
+and route-guarded at the page level); the Homepage "Behind the Rose" tab; the
+Shop "Photo Row" and "Purchase" tabs; the Sponsors "Footer placement" tab; the
+Contact hero-image field; four sponsor-related fields/call sites on the
+Schedule page; and the Tryouts page's program-association and hero-image
+fields. Left unchanged for Lions: the Sponsors Carousel tab, Standings,
+Homepage Slideshow, Shop's three kit variants (home/away/third), and the
+Roster/Staff tabs. Every gate is additive — DCFC's `academy@1` admin behavior
+is unchanged everywhere.
+
+**Verification:** a new regression contract test,
+`tests/contracts/editorial-admin-surface.test.ts` (23 tests), asserts both
+halves of every hide — gone for `editorial@1`, fully intact for `academy@1`.
+The full contract suite passed with 55 files and 673 tests (one pre-existing
+test in `diverse-city-admin-punch-list.test.ts` had assertions pinned to a
+Schedule gate variable name that this work renamed; fixed as part of this
+pass, production code untouched by that fix). `npx tsc --noEmit` passed,
+`git diff --check` passed, and `npm run lint` passed with the same 5 known
+baseline Hook warnings as before. The full local-Supabase `npm test` gate
+passed with 101 files and 1153 tests.
+
+**Open item, deliberately not touched here:** `clubs.store_enabled` (an
+existing, already-working Shop-visibility toggle, migration
+`20260812120200_club_store_enabled.sql`) is operator-only today. Whether Lions
+gets a club-facing admin control for it, or launches with it set once via
+script, is still Christian's call and is out of scope for this commit.
+
+**Exact next step:** sync this branch to the Lions staging tenant
+(`lions-onzio-staging.vercel.app`) for Christian's visual review — admin nav,
+every hidden tab/field, and a DCFC staging admin spot-check for
+regressions — before any production step.
+
+## Lions Team Shop copy and contact email fit updated locally
+
+Agent: Codex, 2026-08-13. Status: **requested homepage shop-label and Contact
+email refinements complete and verified locally on
+`codex/lions-editorial-diversecity-v2`**. No commit, push, deployment, hosted
+Supabase write, Stripe mutation, or other hosted change was performed.
+
+**Completed work:** changed the editorial homepage Shop eyebrow from `Badge
+shop` to `Team Shop`. Kept the published Contact email on one line by giving
+four-item contact grids a wider email column on large desktops, using a
+balanced two-column grid through medium widths, switching to one column at
+700px, and disabling word breaks only for `mailto:` values. Other contact
+values retain their existing wrapping behavior. Added focused contracts for
+the new copy and responsive email rules.
+
+**Verification:** focused Home and Contact contracts passed with 2 files and
+40 tests, the full local-Supabase `npm test` gate passed with 100 files and
+1130 tests, `npx tsc --noEmit` passed, and `git diff --check` passed. Browser
+verification confirmed `Team Shop` is present and `Badge shop` is absent on
+the local homepage. Contact checks at 1440, 996, 701, 700, and 390px widths
+measured the email at exactly one rendered line, contained inside its grid
+cell, with no document overflow. The 996px layout now renders a balanced
+two-column details grid matching the supplied problem view.
+
+**Exact next step:** Christian can review the homepage and Contact page at
+`http://lions.localhost:3015/` and `http://lions.localhost:3015/contact`.
+Keep these changes local unless Christian separately approves staging
+publication, and preserve the existing dirty worktree plus untracked
+`.claude/` directory.
+
+## Lions mobile menu numbers removed locally
+
+Agent: Codex with one focused subagent, 2026-08-13. Status: **requested mobile
+navigation cleanup complete and verified locally on
+`codex/lions-editorial-diversecity-v2`**. No commit, push, deployment, hosted
+Supabase write, Stripe mutation, or other hosted change was performed.
+
+**Completed work:** removed the `01`-through-`06` index labels from the
+`editorial@1` mobile navigation's direct links and Schedule accordion trigger.
+Removed the now-unused mobile index-label CSS and added a focused source
+contract so the numeric badge markup and styling do not return. Desktop
+navigation, mobile active states, Store entitlement gating, and the Schedule
+Fixtures/Tryouts accordion behavior were preserved.
+
+**Verification:** `npx vitest run tests/contracts/editorial-home.test.ts`
+passed with 29 tests, the full local-Supabase `npm test` gate passed with 100
+files and 1129 tests, `npx tsc --noEmit` passed, and `git diff --check` passed.
+Browser verification at 390x844 on `http://lions.localhost:3015/` confirmed
+the open menu contains only Home, About, Roster, Schedule, Store, and Contact;
+contains zero `small` index elements; and has no numeric badges or horizontal
+overflow. Schedule still expands to Fixtures and Tryouts. The console reported
+no errors; the existing hero-image LCP priority warning remains unrelated.
+
+**Exact next step:** Christian can review the open mobile menu at
+`http://lions.localhost:3015/`. Keep this change local unless Christian
+separately approves staging publication, and preserve the existing dirty
+worktree plus untracked `.claude/` directory.
+
+## Lions About champions photo linked locally
+
+Agent: Codex, 2026-08-13. Status: **requested About image replacement is
+complete and verified locally on `codex/lions-editorial-diversecity-v2`**. No
+commit, push, deployment, hosted Supabase write, Stripe mutation, or other
+hosted change was performed.
+
+**Completed work:** ingested
+`/Users/christianalcala/Downloads/lionsFC_aboutpicture.jpg` through the local
+tenant media pipeline and linked only the Lions About page to the resulting
+versioned WebP. The source JPEG remains untouched. The new published asset is
+`53138587-23a6-43da-88a5-162324789b91` at
+`9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/about/53138587-23a6-43da-88a5-162324789b91.webp`;
+it is 1080x720, 98,604 bytes, and has SHA-256
+`9eaf9b8a150f6bf90cf3a9e0189e1ac38ca06607e58bae78d9662ce5f069e8e3`.
+The prior About asset is also used by the homepage, so it was preserved and
+was not retired or deleted.
+
+**Verification:** `npx tsc --noEmit` passed and
+`npx vitest run tests/contracts/editorial-about.test.ts` passed with 2 tests.
+The locally published object was downloaded again and its checksum matched the
+recorded asset checksum. Browser checks at 1440x900 and 390px mobile width
+confirmed the new image loaded at 1080x720, found no horizontal overflow, and
+reported no console warnings or errors. Screenshots are at
+`/tmp/lions-about-new-photo-desktop.jpg` and
+`/tmp/lions-about-new-photo-mobile.jpg`.
+
+**Exact next step:** Christian can review the About page at
+`http://lions.localhost:3015/club/about`. Keep the change local unless
+Christian separately approves staging publication. A local Supabase reset can
+remove this local content change, so re-ingest the same source image if the
+local database is reset before approval.
+
+## Lions homepage flow, Schedule dropdown, and identity CTA refined locally
+
+Agent: Codex, 2026-08-13. Status: **requested homepage ordering and sizing
+changes complete and verified locally on
+`codex/lions-editorial-diversecity-v2`**. No commit, push, deployment, hosted
+Supabase write, Stripe mutation, or other hosted change was performed.
+
+**Completed work:** reordered the editorial homepage after the hero to Shop ->
+sponsor carousel -> Next Match -> Matchday slideshow -> standings -> Our
+Identity. Enlarged the desktop Schedule dropdown from its prior content-only
+footprint to a 112px minimum width with 10px by 18px link padding. Reduced the
+filled `Our story` CTA from 274x72px to 220x58px and added a one-pixel top
+divider to the identity/story section so it separates cleanly from standings.
+The existing content, links, carousel behavior, match data, slideshow controls,
+and standings data were not changed.
+
+**Verification:** the focused editorial Home contract passed with 28 tests,
+`npx tsc --noEmit` passed, the complete contract suite passed with 54 files
+and 648 tests, architecture tests passed with 3 files and 20 tests, and the
+full local-Supabase suite passed with 100 files and 1128 tests. `npm run lint`
+passed with the same five existing admin Hook warnings, and `git diff --check`
+passed. Browser checks at 1440x900 and 390x844 confirmed the requested section
+sequence, measured the desktop dropdown at 112x70px and the story CTA at
+220x58px, resolved the story divider to a visible 1px border, found no
+horizontal overflow, and reported no console errors. Desktop screenshots are
+at `/tmp/lions-home-order-dropdown-desktop.png` and
+`/tmp/lions-home-order-story-desktop.png`.
+
+**Exact next step:** Christian can review the homepage at
+`http://lions.localhost:3015/`. Keep the change local unless Christian
+separately approves staging publication, and preserve the existing dirty
+worktree plus untracked `.claude/` directory.
+
+## Lions editorial footer now uses the configured short name
+
+Agent: Codex, 2026-08-13. Status: **requested footer copy change complete and
+verified locally on `codex/lions-editorial-diversecity-v2`**. The visible
+footer brand and copyright now use `club_identity.short_name`, which resolves
+to “Lions FC” for the Lions tenant, with the full club name retained for crest
+alt text and social-link accessibility labels. Other tenants keep their own
+configured short name and fall back to the full club name when none is set.
+
+**Verification:** the focused editorial Home/footer contract passed with 28
+tests, the complete contract suite passed with 54 files and 648 tests, `npx
+tsc --noEmit` passed, `git diff --check` passed, and the local browser
+confirmed `Lions FC` plus `© 2026 Lions FC` with no old full-name copy
+remaining in visible footer brand/copyright elements. No commit, push,
+deployment, or hosted mutation was performed. Keep the change local unless
+Christian separately approves publication.
+
+## Lions Badge Shop reference gradient matched locally
+
+Agent: Codex, 2026-08-13. Status: **Christian-approved homepage Badge Shop
+gradient implemented and visually matched on
+`codex/lions-editorial-diversecity-v2`; aggregate local database verification
+NEEDS REFRESH because the previously documented cross-file Storage/RLS fixture
+leak recurred in the full suite**. No commit, push, deployment, hosted Supabase
+write, Stripe mutation, or other hosted change was performed.
+
+**Completed work:** replaced the homepage product card's hard white/navy split
+with the approved continuous near-white to cool-blue to Lions-navy gradient.
+The gradient now belongs to the full card while the jersey and detail panels
+remain transparent, so there is no center seam. Desktop uses the exact
+left-to-right reference progression; the responsive card converts the same
+progression to a top-to-bottom blend behind the stacked jersey and product
+copy. The existing Home/Away/Third selector order, default Home selection,
+tenant-authored jersey imagery/copy, and `/shop` CTA were preserved. Added a
+focused contract for the desktop gradient, transparent child panels, and
+mobile direction.
+
+**Verification:** `npx vitest run tests/contracts/editorial-home.test.ts`
+passed with 28 tests. `npx tsc --noEmit` passed. `npm run test:contracts`
+passed with 54 files and 648 tests. `npm run test:architecture` passed with 3
+files and 20 tests. `npm run test:db` passed in isolation with 18 files and 181
+tests. `npm run lint` passed with the same five existing admin Hook warnings.
+Browser checks at 1440x900 and 390x844 confirmed Home remains selected, the
+desktop card has a continuous horizontal gradient, the mobile card has the
+responsive vertical gradient, both child panels are transparent, and neither
+viewport has horizontal overflow. Screenshots are at
+`/tmp/lions-badge-shop-gradient-final-desktop.png` and
+`/tmp/lions-badge-shop-gradient-final-mobile.png`.
+
+**Aggregate-suite note:** the full local suite reached 1127/1128 and failed in
+the already documented `authenticated-rls` staging-upload fixture with a
+cross-file RLS state leak. That file passed immediately in isolation with
+10/10 tests, and the complete database-only gate then passed 181/181. Do not
+weaken the contract; run the aggregate suite against a clean isolated local
+database before treating the aggregate gate as current-green evidence.
+
+**Exact next step:** Christian can review the matched card at
+`http://lions.localhost:3015/`. Keep this work local unless Christian
+separately approves staging publication, and preserve the existing dirty
+worktree plus untracked `.claude/` directory.
+
+## Lions home Badge Shop selector and Shop ordering ready locally
+
+Agent: Codex, 2026-08-13. Status: **requested UI implementation complete on
+`codex/lions-editorial-diversecity-v2`; aggregate local database verification
+NEEDS REFRESH because unrelated cross-file fixtures intermittently leak state
+under the full suite**. No commit, push, deployment, hosted Supabase write,
+Stripe mutation, or other hosted change was performed.
+
+**Completed work:** replaced the homepage's three independent colored jersey
+cards with a compact interactive product showcase inspired by the approved
+Shop composition. The home variation retains “Three colors. One badge.” but
+uses a light jersey stage beside a Lions-navy product panel and red internal
+CTA, so it belongs to the same system without duplicating the full Shop page.
+Both selectors now render in `Home kit`, `Away kit`, `Third kit` order and
+initialize to Home. The homepage CTA is a Next.js link to `/shop`; the full
+Shop retains its existing admin-authored external vendor handoff. All kit
+titles, descriptions, photos, and vendor destinations remain tenant data.
+
+**Verification:** focused Home/Shop contracts passed with 2 files and 44
+tests. `npx tsc --noEmit` passed. `npm run test:contracts` passed with 54 files
+and 648 tests. `npm run test:architecture` passed with 3 files and 20 tests.
+`npm run lint` passed with the same five existing admin Hook warnings. Browser
+checks at 1440x900 and 390x844 confirmed both selectors show Home/Away/Third in
+that order, hard reload selects Home/Blue Jersey, Away and Third switch to the
+white and red products, the homepage CTA navigates to `/shop`, no horizontal
+overflow is present, and no console errors were reported.
+
+**Aggregate-suite note:** parallel full runs reached 1127/1128 and 1126/1128;
+a one-worker run reached 1126/1128. The failures moved among unrelated local
+Supabase RLS/storage/admin-public fixtures. Each affected file passed on an
+immediate isolated rerun: `authenticated-rls` 10/10, `storage-audit` 22/22,
+and `diverse-city-admin-public-acceptance` 1/1. Do not weaken those contracts;
+rerun the aggregate suite on a clean isolated local database before treating
+the aggregate gate as current-green evidence.
+
+**Exact next step:** Christian can review the homepage Badge Shop and `/shop`
+at `http://lions.localhost:3015`. Keep the work local unless Christian
+separately approves staging publication, and preserve the existing dirty
+worktree plus untracked `.claude/` directory.
+
+## Lions Store viewport, About colors, and Contact spacing refined locally
+
+Agent: Codex, 2026-08-13. Status: **requested visual refinements complete and
+verified locally on `codex/lions-editorial-diversecity-v2`**. No commit, push,
+deployment, hosted Supabase write, Stripe mutation, or other hosted change was
+performed.
+
+**Completed work:** constrained the desktop Store product stage with a
+viewport-aware `clamp(560px, 72svh, 760px)` height so the jersey, product copy,
+and vendor CTA fit together in a normal desktop viewport without changing the
+existing two-column design. Updated the About title to the tenant primary
+(Lions navy) and the closing “Roar as one for Columbus.” statement to the
+tenant secondary (Lions red). Removed the Contact page's inherited closing
+padding and reduced the social section's bottom padding to
+`clamp(28px, 4vw, 48px)`, eliminating the circled blank band while preserving
+deliberate breathing room. Added focused source contracts for all three
+requirements.
+
+**Verification:** the three focused editorial contract files passed with 28
+tests. `npx tsc --noEmit` passed. `npm run test:contracts` passed with 54 files
+and 648 tests. Full `npm test` passed against local Supabase with 100 files and
+1128 tests (an initial isolated About storage-policy fixture failure passed on
+immediate narrow rerun and the subsequent full rerun). Browser verification at
+2048x906 measured the Store product stage at 652px tall versus the previous
+940px, with the full selected-product panel visible in one viewport; Contact's
+social-to-footer gap is now 0px versus the previous 104px plus 116px section
+padding; and computed About colors resolve to Lions navy `rgb(27, 41, 88)` and
+Lions red `rgb(173, 50, 52)`. Responsive verification at 390x844 found no
+horizontal overflow and retained 28px Contact closing padding.
+
+**Exact next step:** Christian can review the local Lions Store, About, and
+Contact pages at `http://lions.localhost:3015`. Keep this local unless Christian
+separately approves staging publication. Preserve the existing dirty worktree
+and untracked `.claude/` directory.
+
+## Lions About layout and Contact social polish ready locally; supplied photo awaiting reattachment
+
+Agent: Codex with two focused subagents, 2026-08-13. Status: **layout and
+Contact implementation plus local verification complete on
+`codex/lions-editorial-diversecity-v2`; Christian's requested About photo is
+AWAITING CHRISTIAN reattachment because this task received the prompt as
+text-only with no image payload or local attachment path**. No commit, push,
+deployment, hosted Supabase write, Stripe mutation, or other hosted change was
+performed.
+
+**Completed work:** rebuilt `EditorialAboutPage` around the existing Diverse
+City `AboutClubPageClient` composition while retaining editorial tokens and
+tenant-safe `DBAboutPageContent`: title/rule hero, three-to-two story and
+feature-image split, numbered value cards with their real descriptions, and a
+centered closing statement/CTA. The image is resolved only from
+`content.feature_image_url` through `ResilientImage`; the current local Lions
+row therefore continues to show its existing captain photo until Christian's
+requested replacement photo is available and goes through the approved local
+media/content path. Empty closing fields do not render an empty link. The
+Contact `Follow along` section now uses a semantic centered heading, a centered
+wrapping social row, 62-72px responsive circular controls, 27-32px inline SVG
+marks, generous closing space, and an explicit keyboard-focus ring. Academy,
+Diverse City, classic, Clubhouse, tenant routing, database schema, and admin
+mutations were not changed.
+
+**Verification:** focused About/Contact contracts passed with 2 files and 12
+tests. `npx tsc --noEmit` passed. `npm run test:contracts` passed with 54 files
+and 648 tests. `npm run test:architecture` passed with 3 files and 20 tests.
+Full `npm test` passed against local Supabase with 100 files and 1128 tests.
+`npm run lint` passed with the same five existing admin Hook warnings.
+Local-Supabase `npm run build` passed with those warnings and the existing
+Supabase Edge Runtime warning. Scoped `git diff --check` passed. Read-only
+browser checks at 1440x900 and 390x844 returned HTTP 200 for About and Contact,
+showed no horizontal overflow or console errors, confirmed the About image had
+positive natural dimensions, confirmed three value cards and the closing CTA
+reveal on scroll, and measured centered social controls at 72px desktop and
+62px mobile.
+
+**Still open / exact next step:** Christian should reattach the intended About
+photo. Then ingest/link that exact asset through the approved local Lions media
+workflow, rerun focused media/About contracts and desktop/mobile browser
+checks, and keep the result local unless Christian separately approves staging
+publication. Preserve the pre-existing untracked `.claude/` directory and do
+not stage it.
+
+## Lions editorial@1 Diverse City design port v2 ready locally; staging not published
+
+Agent: Codex, 2026-08-13. Status: **implementation and local verification
+complete on `codex/lions-editorial-diversecity-v2`; hosted staging is
+AWAITING CHRISTIAN explicit approval**. This is the CSS-system-only retry from
+the rejected Tailwind/Diverse City migration: no Tailwind migration, new UI
+library, dependency change, global design-system rewrite, hosted Supabase
+write, Stripe mutation, production deployment, or staging deployment was
+performed.
+
+**Completed work:** rebuilt only the approved Lions `editorial@1` surfaces:
+header/nav styling, Fixtures, home Next Match, home Our Identity, and About
+values. The implementation stayed inside the requested boundaries:
+`components/editorial/*`, `styles/editorial.css`, `lib/editorial-fixtures.ts`,
+and focused contract tests. It preserved the existing header visibility logic
+and the `EditorialMotion` class hooks (`.fixture-row`, `.match-side`,
+`section:not(.hero)`, `.interior-hero`). Fixtures now render as a single
+linked editorial row list with the first upcoming row highlighted, no filter
+tabs, no month rail, no fixture card grid, and no Motion dependency. The home
+Next Match block no longer renders the latest-result footer/meta copy, and the
+identity/About value content now uses shared `.value-grid` / `.value-card`
+presentation instead of the old highlight/find-us sections.
+
+**Verification:** `npx tsc --noEmit` passed. `npm run test:contracts` passed
+with 54 files and 643 tests. `npm run lint` passed with the same five existing
+admin Hook warnings in analytics, homepage, and schedule admin pages. `npm run
+test:architecture` passed with 3 files and 20 tests. `npm run db:types:check`
+confirmed generated database types match local schema. `supabase db lint
+--local` reported no schema errors. `npm run test:db` passed outside the
+sandbox against local Supabase with 18 files and 181 tests. Full `npm test`
+passed outside the sandbox with 100 files and 1123 tests. Local-env `npm run
+build` passed with the same existing admin Hook warnings. `git diff --check`
+is clean.
+
+**Browser evidence:** local dev was run against local Supabase at
+`lions.localhost:3005`. Playwright smoke verified Lions Home, Schedule, and
+About at 1440x900 and 390x844; all six captures returned HTTP 200 with no
+console errors, no horizontal overflow, no schedule header/content overlap, no
+`Season Season` copy, no old schedule filter/month/card UI, no latest-result
+or match-meta copy on Home, no story-heading/story-copy overlap, and no About
+find-us/old highlight UI. Screenshots are in `/tmp/lions-dcfc-v2-final/`.
+Read-only local cross-template smoke also checked the Diverse City tenant's
+Home, Schedule, and About pages; Rose City local host smoke was not applicable
+because this local database has no Rose City tenant row.
+
+**Christian notes pass, 2026-08-13:** removed the Home identity eyebrow,
+tightened the identity/story grid so the heading no longer overlaps the copy
+or CTA, reduced the value-card text weight for easier scanning, collapsed
+extra story whitespace, enlarged and aligned the footer crest, moved the
+Powered by Onzio badge into the footer bottom row, added footer bottom padding
+so no white strip appears below the footer, moved interior hero copy below the
+fixed header on About/Contact, constrained the Contact email CTA to content
+width, restyled Contact details toward the cleaner column/divider reference,
+and tightened the Schedule dropdown while disabling dropdown-link underlines.
+
+**Latest notes-pass verification:** focused editorial contracts passed with 4
+files and 63 tests. `npx tsc --noEmit` passed. `npm run test:contracts`
+passed with 54 files and 644 tests. `npm run lint` passed with the same five
+existing admin Hook warnings. `npm run test:architecture` passed with 3 files
+and 20 tests. `npm run test:db` passed outside the sandbox against local
+Supabase with 18 files and 181 tests. Full `npm test` passed outside the
+sandbox with 100 files and 1124 tests. `npm run build` passed against local
+Supabase env with the same warnings. `git diff --check` is clean. Playwright
+screenshots and metrics for Home story/footer, About, Contact, and the
+Schedule dropdown at desktop/mobile are in `/tmp/lions-notes-fix-final/`; no
+console errors, horizontal overflow, story overlap, header clipping, stretched
+Contact CTA, or dropdown underline were detected.
+
+**Header/footer follow-up, 2026-08-13:** enlarged the footer crest again so it
+occupies the left brand field Christian circled, expanded the footer brand
+column/min-height around it, and added the white-header affiliation lockup
+beside the Lions crest using the already tracked US Soccer, FIFA, and UPSL
+local assets under `/images/logo/affiliations/`. The lockup follows the
+existing Rose City / Diverse City style pattern: crest, divider, affiliation
+marks, then nav. It hides with the crest on the transparent home header state
+and drops out on narrower headers so mobile remains uncluttered. Browser
+screenshots and metrics are in `/tmp/lions-header-footer-polish/`; desktop
+verification showed no console errors, no horizontal overflow, a visible
+affiliation lockup, and a 190px footer crest inside a 206px footer brand area.
+The local preview was restarted and verified at `http://lions.localhost:3006/`
+after port 3002 was found occupied by a stale listener.
+
+**Header logo tightening follow-up, 2026-08-13:** increased the desktop white
+header height only while the affiliation lockup is available, enlarged the
+club crest, and lowered the affiliation lockup slightly so the crest, divider,
+and affiliation marks read as one aligned group. A containment correction then
+set the crest to a 118px desktop cap inside the 124px header, with measured 3px
+top and bottom clearance, so it no longer bleeds into the navy band. Mobile
+keeps the previous 96px header and hides the affiliation lockup. Verification:
+`npx vitest run tests/contracts/editorial-home.test.ts`, `npm run
+test:contracts`, `npx tsc --noEmit`, and `git diff --check` passed.
+Playwright desktop/mobile screenshots and metrics are in
+`/tmp/lions-logo-tight/` and `/tmp/lions-logo-contained/`; no console errors or
+horizontal overflow were detected.
+
+**Homepage sponsor/standings follow-up, 2026-08-13:** added an editorial
+sponsor carousel immediately below Home Next Match, using the same marquee
+structure/timing as the shared Diverse City-style carousel while safely
+rendering text marks when Lions sponsor rows have blank logo URLs. Added a
+static editorial standings table from Christian's supplied Ohio Valley data,
+with the Lions crest in the first-place row and the same table anatomy as the
+shared standings surface: black header, white rows, red club highlight, and
+GP/W/D/L/GD/PTS columns. Tightened the Schedule dropdown again by shrinking it
+to content width and reducing link padding. Moved the hero crest upward and
+slightly enlarged it so the visible badge sits centered in the requested right
+hero band without horizontal overflow.
+
+**Latest homepage follow-up verification:** `npx vitest run
+tests/contracts/editorial-home.test.ts` passed with 26 tests. `npx tsc
+--noEmit` passed. `npm run test:contracts` passed with 54 files and 646 tests.
+`git diff --check` is clean. Playwright verified the local Lions homepage,
+Contact dropdown, and mobile standings at `http://lions.localhost:3008/`;
+desktop and mobile had no horizontal overflow, the sponsor/standings section
+order was Next Match -> sponsor carousel -> standings -> Matchday slideshow,
+the Lions standings crest loaded with natural dimensions, and the tightened
+dropdown measured about 92px wide by 60px tall. Screenshots and metrics are in
+`/tmp/lions-home-additions/`.
+
+**Homepage store/dummy sponsor follow-up, 2026-08-13:** added the requested
+mockup-style Home Store band immediately after the standings table, sourced
+from real `shop` kit rows in Blue/Red/White order, gated by `club.storeEnabled`,
+and linked to `/shop`. The Store band removes the `2026` label from the
+eyebrow and card labels. The sponsor carousel now uses the local Diverse
+City-style dummy sponsor image at `/images/sponsors/sponsor-placeholder.png`
+for fallback rows and for Lions sponsor rows with blank logo URLs, with a
+subtle framed treatment so the placeholder remains visible on the navy band.
+
+**Latest store/sponsor verification:** `npx vitest run
+tests/contracts/editorial-home.test.ts tests/contracts/editorial-store.test.ts`
+passed with 44 tests. `npx tsc --noEmit` passed. `npm run test:contracts`
+passed with 54 files and 647 tests. `git diff --check` is clean. The local dev
+preview was restarted at `http://lions.localhost:3009/`; HTTP returned 200 for
+`lions.localhost:3009`. Playwright desktop/mobile checks found no console
+errors or horizontal overflow, confirmed 24 sponsor placeholder images loaded
+with natural dimensions, confirmed three Store cards loaded from the local shop
+media, confirmed Store text does not include `2026`, and confirmed the red
+Store card text renders white. Screenshots and metrics are in
+`/tmp/lions-home-store-final/`.
+
+**Homepage structure/story/footer follow-up, 2026-08-13:** reordered the Home
+composition after the hero to Store -> Matchday slideshow -> Next Match ->
+sponsor carousel -> standings -> identity/story teaser. Removed the visible
+sponsor image containers while keeping fixed marquee sizing, restyled the
+identity/story teaser toward the Diverse City reference with a two-tone display
+heading, right-side copy/meta/link, and a flat horizontal values strip with no
+top rule above "What defines us." Removed the About page founded-year "15"
+mark and shifted the manifesto copy into the right-balanced two-column layout.
+Rebuilt the editorial footer toward the Diverse City footer anatomy: brand
+lockup with tagline, two-column Explore links, Connect details/socials, bottom
+divider, centered Onzio attribution, and separate rights text. The editorial
+CSS heading cluster now uses zero letter spacing and a shared heavier display
+weight across hero/slideshow/store/story/standings/Next Match/About headings.
+
+**Latest structure/story/footer verification:** focused editorial contracts
+passed with 3 files and 38 tests. `npx tsc --noEmit` passed. `npm run
+test:contracts` passed with 54 files and 647 tests. `git diff --check` is
+clean, and `styles/editorial.css` has no negative `letter-spacing` values. The
+local preview was restarted cleanly at `http://lions.localhost:3011/`.
+Playwright desktop/mobile checks returned HTTP 200 for Home and About with no
+console errors or horizontal overflow, confirmed the requested section order,
+confirmed sponsor wrappers have 0px border and transparent background,
+confirmed sponsor images loaded, confirmed the story values container and
+first mobile value have 0px top border, confirmed the story teaser no longer
+uses `.value-card`, confirmed About has no `.story-mark`, and confirmed footer
+grid areas are `brand links connect` on desktop and stacked on mobile.
+Screenshots and metrics are in `/tmp/lions-structure-footer-final/`.
+
+**Typography exploration follow-up, 2026-08-13:** Christian asked to compare
+font candidates outside the website instead of applying a font directly to
+Lions. The tiny footer-font trial was removed from the app code, and the
+separate local dashboard artifact, including a copied local crest preview, is
+`/Users/christianalcala/.codex/visualizations/2026/08/13/019ffbbe-97c1-7e63-85d5-c37f5ff6cc4c/lions-font-lab.html`.
+
+**Typography applied follow-up, 2026-08-13:** Christian approved the
+standalone comparison winner: Barlow Condensed ExtraBold 800 Italic. The
+approved display recipe is now captured in `styles/editorial.css` as
+`--editorial-display-weight: 800`, `--editorial-display-style: italic`,
+`--editorial-display-letter: -0.05em`, and `--editorial-display-line: 0.82`.
+The large `editorial@1` display moments now use that recipe for Home hero,
+Store band, Matchday slideshow, Next Match, standings, story teaser, interior
+heroes, roster/staff section headings, and the footer wordmark. `editorial@1`
+continues to load Barlow Condensed through `next/font`; body copy still reuses
+the Inter variable. The change is scoped through `styles/editorial.css`
+variables and does not alter classic, clubhouse, or academy template CSS.
+
+**Latest typography verification:** `npx vitest run
+tests/contracts/editorial-home.test.ts` passed with 28 tests. `npx tsc
+--noEmit` passed. `npm run test:contracts` passed with 54 files and 648 tests.
+`git diff --check -- styles/editorial.css tests/contracts/editorial-home.test.ts`
+passed. Port `3011` was occupied by a stale listener, so a clean local preview
+was started at `http://lions.localhost:3012/`. Playwright desktop/mobile
+checks for Home and About returned HTTP 200 with no console errors and no
+horizontal overflow. Computed styles confirmed Barlow Condensed 800 italic,
+`-0.05em` display tracking, and `0.82` display line-height on the visible Home
+hero, Next Match, standings, story, story pillar, footer wordmark, and About
+hero headings. Screenshots are in `/tmp/lions-barlow-800-italic-home.png`,
+`/tmp/lions-barlow-800-italic-about.png`,
+`/tmp/lions-barlow-800-italic-home-mobile.png`, and
+`/tmp/lions-barlow-800-italic-about-mobile.png`.
+
+**Mockup typography correction follow-up, 2026-08-13:** Christian asked to
+replace the Barlow type-lab choice with the actual
+`soccer-platform-mockups.vercel.app` typography direction. Removed the unused
+Barlow Condensed `next/font` registration from `app/layout.tsx`. Editorial@1
+now uses Geist Sans for both display and body copy, retains Geist Mono for
+small meta/numeric accents, and keeps large display emphasis normal/color-only
+with `--editorial-display-weight: 840`, `--editorial-display-style: normal`,
+`--editorial-display-letter: 0`, and `--editorial-display-line: 0.9`.
+
+**Latest mockup typography verification:** `npx vitest run
+tests/contracts/editorial-home.test.ts` passed with 28 tests. `npx tsc
+--noEmit` passed. `npm run test:contracts` passed with 54 files and 648 tests.
+`git diff --check -- app/layout.tsx styles/editorial.css
+tests/contracts/editorial-home.test.ts` passed. A fresh local preview was
+started at `http://lions.localhost:3013/`; the Codex browser hit
+`/_clubs/lions` with HTTP 200 after compiling the tenant route.
+
+**Heading weight/style follow-up, 2026-08-13:** Christian requested Lions site
+headings use weight `900` and italic. The shared editorial display recipe now
+keeps Geist Sans but sets `--editorial-display-weight: 900` and
+`--editorial-display-style: italic`, so the major editorial headings update
+together through the existing shared selector.
+
+**Latest heading verification:** `npx vitest run
+tests/contracts/editorial-home.test.ts` passed with 28 tests. `npx tsc
+--noEmit` passed. `npm run test:contracts` passed with 54 files and 648 tests.
+`git diff --check -- HANDOFF.md styles/editorial.css
+tests/contracts/editorial-home.test.ts` passed. The existing local preview at
+`http://lions.localhost:3013/` hot-reloaded and returned `/_clubs/lions` with
+HTTP 200.
+
+**Inspected mockup typography correction, 2026-08-13:** Christian rejected the
+`900` italic heading pass after inspecting `soccer-platform-mockups.vercel.app`.
+The shared `900` italic override was removed so per-section values can match
+the mockup. Home hero now uses `font-weight: 840`, `letter-spacing: -0.055em`,
+and `line-height: 0.9`; the Matchday heading uses `830`, `-0.055em`, and
+`0.88`; and the Store band heading uses `840`, `-0.06em`, and `0.86`.
+
+**Latest inspected typography verification:** `npx vitest run
+tests/contracts/editorial-home.test.ts` passed with 28 tests. `npx tsc
+--noEmit` passed. `npm run test:contracts` passed with 54 files and 648 tests.
+`git diff --check -- HANDOFF.md styles/editorial.css
+tests/contracts/editorial-home.test.ts` passed. The running local preview at
+`http://lions.localhost:3013/` hot-reloaded and returned `/_clubs/lions` with
+HTTP 200.
+
+**Responsive typography correction, 2026-08-13:** re-inspected the deployed
+`soccer-platform-mockups.vercel.app/store` page and its local source at
+`/Users/christianalcala/Downloads/onzioMockups`. The reference Store headings
+compute to Geist, normal style, weight `850`, `-0.065em` tracking, `0.86`/`0.88`
+line-height, and no forced uppercase transform. Lions already loaded the same
+Geist family, but a later global rule forced every large heading to uppercase;
+Next Match, standings, and story also used weight `950` with zero tracking.
+On a 390px viewport (375px layout width), the story heading measured about
+399px wide and was visibly clipped at the right edge.
+
+**Completed typography work:** removed the global `h1`/`h2` uppercase
+override so the mockup's mixed-case display treatment is preserved while
+surfaces that intentionally declare uppercase (Fixtures, roster groups, and
+staff) remain uppercase. Restored the exact Store page tracking, applied its
+`850`/`-0.065em` secondary-heading recipe to Next Match and standings, and
+applied the Store campaign recipe to the About hero. Restored the mockup's
+per-section negative tracking for interior, roster, staff, schedule, and match
+area headings. The Home story heading now uses the source-aligned `800`
+weight, `-0.055em` tracking, `0.9` line-height, and `6.25rem` desktop cap, plus
+an overflow-safe mobile wrap boundary. The mobile story heading now measures
+339px inside its 339px column with no clipping.
+
+**Latest responsive typography verification:** focused Home/Store contracts
+passed with 2 files and 45 tests. `npx tsc --noEmit` passed. `npm run
+test:contracts` passed with 54 files and 648 tests. `npm run lint` passed with
+the same five existing admin Hook warnings. The local-Supabase production
+build passed with those same warnings, and `git diff --check` is clean.
+Read-only browser checks covered Home, Store, About, Roster, and Fixtures at
+390x844 plus Home, Store, and About at 1440x900. All checked headings stayed
+inside their viewport and parent column, no checked heading overlapped its
+adjacent copy or controls, no horizontal overflow or framework overlay was
+present, and browser console error checks were empty. The Store H1/H2 now
+compute to the same family, weight, style, tracking ratio, line-height ratio,
+and case treatment as the deployed reference.
+
+**Footer bottom-row alignment follow-up, 2026-08-13:** corrected the
+editorial footer grid selector that was forcing `All rights reserved.` into a
+second row at the in-app browser width. The copyright span is now the only
+span pinned to column one; the centered Powered by Onzio attribution and the
+rights text occupy columns two and three on desktop and medium widths. At
+390px, copyright moves to its own row while Powered by Onzio and the rights
+text remain aligned together below it. Focused editorial contracts passed
+with 28 tests, `npx tsc --noEmit` passed, and `git diff --check` is clean.
+Browser verification at the default 996px width and at 390x844 found matching
+bottom edges for the attribution and rights text, no horizontal overflow, and
+no console errors.
+
+**Home Our Story CTA follow-up, 2026-08-13:** replaced the story teaser's
+small underlined text link and arrow with the requested filled-button
+treatment: a 274px-wide, 72px-tall square-corner Lions-red block with centered
+white uppercase `Our story` text. The button remains capped to its containing
+column and retains hover and keyboard-focus behavior. Focused editorial
+contracts passed with 28 tests, `npx tsc --noEmit` passed, and the browser
+verified the CTA at the default 996px width and at 390x844. At mobile it fits
+inside the 339px story column with no horizontal overflow or console errors.
+
+**Store vendor-handoff redesign, 2026-08-13:** Christian approved the
+standalone Real Madrid-inspired concept and asked for it to replace the Lions
+`editorial@1` Store page locally. `EditorialShopPage` now presents one
+admin-authored jersey at a time with Third/Away/Home pill tabs, the approved
+`Official Lions collection` / `Make it yours!` heading and intro copy, a much
+larger jersey image, the selected row's title and description, and one wide
+`Shop with our vendor` button. The button opens the selected row's
+`cta_link` in a new tab with `noopener noreferrer`. The previous campaign,
+three-card catalog, service strip, sizing-style details, arrows, and redundant
+Store CSS were removed. The product has no top or bottom border and no divider
+between its image and copy; the layout stacks cleanly at tablet/mobile widths.
+
+**Store redesign verification:** focused Store contracts passed with 16
+tests. `npx tsc --noEmit` passed. `npm run test:contracts` passed with 54 files
+and 647 tests. `npm run test:architecture` passed with 3 files and 20 tests.
+Full `npm test`, run with the local Supabase credentials, passed with 100 files
+and 1127 tests. `npm run lint` passed with the same five existing admin Hook
+warnings. `npm run build` passed with those same warnings and the existing
+Supabase Edge Runtime warning. `git diff --check` is clean. Browser checks on
+the real `lions.localhost:3013/shop` route covered 1280x720 and 390x844,
+verified Third-to-Away content/image switching, external vendor URL binding,
+zero product top/bottom/divider borders, no horizontal overflow, and the large
+jersey treatment at both widths.
+
+**Session closeout, 2026-08-13:** the local dev server on port `3013` was
+used for Christian's acceptance review and stopped after verification. The
+implemented Store tab was left open in the in-app browser. No deploy, commit,
+push, hosted Supabase write, or Stripe action was performed. Next session
+should start by reviewing the local worktree, then commit/push and publish only
+the staging target if Christian explicitly approves.
+
+**Still open / exact next step:** review the local changes, then with explicit
+Christian approval commit/push this branch and publish only the staging target.
+Production remains separately approval-gated. Preserve the pre-existing
+untracked `.claude/` directory and do not stage it.
+
 ## Lions editorial Tailwind/Diverse City migration reverted on staging
 
 Agent: Codex, 2026-08-13. Status: **rollback, Git publication, and Vercel

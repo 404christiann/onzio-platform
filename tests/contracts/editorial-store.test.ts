@@ -81,33 +81,41 @@ describe("editorial store page", () => {
     expect(source).toContain("content?.[variant]");
   });
 
-  it("reuses lib/shop-kit.ts's normalizers instead of reimplementing them", () => {
-    const source = read("components/editorial/EditorialShopPage.tsx");
-    expect(source).toContain(
-      'import {\n  normalizeKitBulletPoints,\n  normalizeKitStoreNote,\n} from "@/lib/shop-kit";',
-    );
-    expect(source).toContain("normalizeKitBulletPoints(section.bullet_points)");
-    expect(source).toContain("normalizeKitStoreNote(section.store_note)");
-  });
-
-  it("renders the approved campaign, three-variant catalog, and photo fallback", () => {
+  it("renders the approved heading, jersey tabs, single product, and photo fallback", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
-    expect(source).toContain('className="store-campaign"');
-    expect(source).toContain('className="store-featured-product"');
-    expect(source).toContain('className="store-product-grid"');
-    expect(source).toContain('className="store-product-card"');
+    expect(source).toContain('className="store-collection-label"');
+    expect(source).toContain("Official {collectionName} collection");
+    expect(source).toContain('identity?.shortName?.replace(/\\s+FC$/i, "").trim() || "Club"');
+    expect(source).toContain("Make it yours!");
+    expect(source).toContain(
+      "Pick your colors, then finish sizing and checkout with our official",
+    );
+    expect(source).toContain('className="store-kit-tabs"');
+    expect(source).toContain('role="tablist"');
+    expect(source).toContain('role="tab"');
+    expect(source).toContain("aria-selected={selectedProduct.variant === product.variant}");
+    expect(source).toContain("setSelectedVariant(product.variant)");
+    expect(source).toContain('className="store-product"');
+    expect(source).toContain('className="store-product-visual"');
+    expect(source).toContain('className="store-product-details"');
     expect(source).toContain("products.map(");
     expect(source).toContain("store-product-image-empty");
   });
 
-  it("keeps product links and the service strip driven by admin-authored content", () => {
+  it("keeps the selected product and vendor handoff driven by admin-authored content", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
-    expect(source).toContain("section.cta_link");
-    expect(source).toContain("section.cta_label");
-    expect(source).toContain('className="store-service-strip"');
-    expect(source).toContain("featured.bulletPoints[0]");
-    expect(source).toContain("featured.storeNote");
-    expect(source).not.toMatch(/\$[0-9]|checkout|Select size/i);
+    expect(source).toContain('useState<ShopKitVariant>("home")');
+    expect(source).toContain(
+      "products.find((product) => product.variant === selectedVariant) ?? products[0]",
+    );
+    expect(source).toContain("selectedProduct.section.title");
+    expect(source).toContain("selectedProduct.section.description");
+    expect(source).toContain("selectedProduct.section.cta_link");
+    expect(source).toContain('className="store-vendor-button"');
+    expect(source).toContain("Shop with our vendor");
+    expect(source).toContain('target="_blank"');
+    expect(source).toContain('rel="noopener noreferrer"');
+    expect(source).not.toMatch(/\$[0-9]|Select size|Add to Cart|store-service-strip|store-product-grid|store-product-card|→|↗/i);
   });
 
   it("has a loading state, following AcademyShopPage.tsx's pattern", () => {
@@ -125,9 +133,21 @@ describe("editorial store page", () => {
   it("appends its rules to styles/editorial.css, scoped under [data-site-template=\"editorial\"]", () => {
     const css = read("styles/editorial.css");
     expect(css).toContain("STORE (Lions E6)");
-    expect(css).toContain('[data-site-template="editorial"] .store-campaign {');
-    expect(css).toContain('[data-site-template="editorial"] .store-product-card {');
-    expect(css).toContain('[data-site-template="editorial"] .store-service-strip {');
+    expect(css).toContain("STORE (Lions E6) — approved vendor handoff");
+    expect(css).toContain('[data-site-template="editorial"] .store-heading {');
+    expect(css).toContain('[data-site-template="editorial"] .store-kit-tab[aria-selected="true"] {');
+    expect(css).toContain('[data-site-template="editorial"] .store-product {');
+    expect(css).toContain('[data-site-template="editorial"] .store-vendor-button {');
+    expect(css).toContain("@media (max-width: 1120px)");
+    expect(css).toContain(
+      "--store-product-stage: clamp(560px, 72svh, 760px);",
+    );
+    expect(css).toMatch(
+      /\.store-product-visual \{[^}]*min-height: var\(--store-product-stage\);/,
+    );
+    expect(css).toMatch(
+      /\.store-product-image \{[^}]*height: var\(--store-product-stage\);/,
+    );
   });
 });
 

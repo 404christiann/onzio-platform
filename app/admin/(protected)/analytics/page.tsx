@@ -1,6 +1,7 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { useRouter } from "next/navigation";
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
@@ -87,6 +88,15 @@ function avgRaw(nums: number[]) {
 
 export default function AnalyticsPage() {
   const clubId = useClubId();
+  const club = useClubContext();
+  const router = useRouter();
+  // editorial@1 (Lions) doesn't include Analytics in its Stripe plan -- the
+  // nav item is already hidden in AdminShell.tsx, this blocks direct URL
+  // access too.
+  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  useEffect(() => {
+    if (isEditorialTemplate) router.replace("/admin");
+  }, [isEditorialTemplate, router]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [seasonLabel, setSeasonLabel] = useState("2025–26");
   const [loading, setLoading] = useState(true);
@@ -114,6 +124,8 @@ export default function AnalyticsPage() {
   }, [posFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const player = filtered.find((p) => p.id === selectedId) ?? filtered[0] ?? null;
+
+  if (isEditorialTemplate) return null;
 
   if (loading) {
     return (

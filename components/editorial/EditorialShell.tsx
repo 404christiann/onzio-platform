@@ -132,6 +132,7 @@ export default function EditorialShell({
         identity={identity}
         contactProfile={contactProfile}
         socialLinks={socialLinks}
+        storeEnabled={club.storeEnabled}
       />
     </div>
   );

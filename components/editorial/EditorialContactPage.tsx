@@ -122,7 +122,7 @@ export default function EditorialContactPage({
 
       {content.socialLinks.length > 0 ? (
         <section className="contact-social">
-          <span className="eyebrow">Follow along</span>
+          <h2 className="eyebrow">Follow along</h2>
           <div className="contact-social-links">
             {content.socialLinks.map((link) => (
               <a

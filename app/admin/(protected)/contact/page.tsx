@@ -46,7 +46,11 @@ export default function AdminContactPage() {
   // is null), so the upload field only ever offered a way to darken that band.
   // The field is hidden rather than deleted: AcademyContactPage still renders a
   // hero image when one exists, and every other template keeps the editor.
+  // editorial@1's EditorialContactPage uses a plain interior hero with no image
+  // render slot, so the field is dead there too.
   const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const hidesHeroImageField = isAcademy || isEditorial;
   const heroInput = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<ContactDraft>(emptyContactDraft);
   const [loading, setLoading] = useState(true);
@@ -377,7 +381,7 @@ export default function AdminContactPage() {
               Page presentation
             </h2>
             <p className="mt-2 font-body text-sm leading-6 text-muted-foreground">
-              {isAcademy
+              {hidesHeroImageField
                 ? "This copy shapes the Contact page without changing shared club destinations."
                 : "This copy and hero image shape the Contact page without changing shared club destinations."}
             </p>
@@ -426,7 +430,7 @@ export default function AdminContactPage() {
               </div>
             </div>
 
-            {!isAcademy && (
+            {!hidesHeroImageField && (
             <div>
               <span className={ADMIN_LABEL_CLASS}>Hero image</span>
               <div className="overflow-hidden rounded-xl border border-dashed border-border bg-card">

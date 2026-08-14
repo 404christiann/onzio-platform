@@ -162,13 +162,23 @@ export default function AdminHomepagePage() {
   // template keeps the four-tab editor unchanged.
   const hidesLegacyHomepageSections =
     club.presentationTemplateKey === "academy@1";
+  // editorial@1 (Lions) has no "behind the rose" section type in
+  // templateRegistry.supportedSections, so its public homepage never renders
+  // this content. Filtering it out of the tab order itself (not just the
+  // rendered tab list) keeps slide-direction/active-tab indexing correct even
+  // if "behind" was ever the active tab.
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const tabOrder = isEditorial
+    ? ADMIN_TAB_ORDER.filter((tab) => tab !== "behind")
+    : ADMIN_TAB_ORDER;
+  const hidesBehindTheRoseSection = hidesLegacyHomepageSections || isEditorial;
   const [activeTab, setActiveTab] = useState<AdminTab>("hero");
   const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
   const selectTab = (next: AdminTab) => {
     setActiveTab((current) => {
       if (next === current) return current;
       setTabDirection(
-        ADMIN_TAB_ORDER.indexOf(next) > ADMIN_TAB_ORDER.indexOf(current) ? 1 : -1,
+        tabOrder.indexOf(next) > tabOrder.indexOf(current) ? 1 : -1,
       );
       return next;
     });
@@ -372,7 +382,7 @@ export default function AdminHomepagePage() {
     };
 
     if (
-      !hidesLegacyHomepageSections &&
+      !hidesBehindTheRoseSection &&
       cleanedBehindFields.visible &&
       !cleanedBehindFields.video_url
     ) {
@@ -410,7 +420,9 @@ export default function AdminHomepagePage() {
             updated_at: new Date().toISOString(),
           }]);
         if (slideshowSettingsError) throw new Error(slideshowSettingsError.message);
+      }
 
+      if (!hidesBehindTheRoseSection) {
         const { error: behindError } = await supabase
           .from("behind_the_rose_section")
           .upsert([{
@@ -519,8 +531,9 @@ export default function AdminHomepagePage() {
                 { id: "behind" as const, label: "Behind the Rose", count: null },
               ].filter(
                 (tab) =>
-                  !hidesLegacyHomepageSections ||
-                  (tab.id !== "slideshow" && tab.id !== "behind"),
+                  (!hidesLegacyHomepageSections ||
+                    (tab.id !== "slideshow" && tab.id !== "behind")) &&
+                  (!isEditorial || tab.id !== "behind"),
               ).map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (
@@ -980,7 +993,7 @@ export default function AdminHomepagePage() {
               {slideshowFields.season_label}
             </p>
 
-            {behindFields.visible && (
+            {!isEditorial && behindFields.visible && (
               <div className="mt-6 rounded-lg bg-background p-5 text-center">
                 <p className="font-display mb-2 text-xs font-bold uppercase tracking-widest text-destructive">
                   {behindFields.eyebrow}

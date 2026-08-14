@@ -32,6 +32,24 @@ type NavLink = {
   children?: { label: string; href: string }[];
 };
 
+const affiliationLogos = [
+  {
+    src: "/images/logo/affiliations/us-soccer-color.png",
+    alt: "US Soccer",
+    className: "affiliation-mark affiliation-us-soccer",
+  },
+  {
+    src: "/images/logo/affiliations/fifa-color.png",
+    alt: "FIFA",
+    className: "affiliation-mark affiliation-fifa",
+  },
+  {
+    src: "/images/logo/affiliations/upsl-color.png",
+    alt: "UPSL",
+    className: "affiliation-mark affiliation-upsl",
+  },
+];
+
 function editorialNavLinks(storeEnabled: boolean): NavLink[] {
   const links: NavLink[] = [
     { label: "Home", href: "/" },
@@ -156,6 +174,23 @@ export default function EditorialHeader({
         )}
       </Link>
 
+      <div className="editorial-affiliation-lockup" aria-label="Club affiliations">
+        <span className="editorial-affiliation-divider" aria-hidden="true" />
+        <div>
+          {affiliationLogos.map((logo) => (
+            <span className={logo.className} key={logo.alt}>
+              <Image
+                src={logo.src}
+                alt={logo.alt}
+                width={64}
+                height={64}
+                {...imageDeliveryProps("small-graphic")}
+              />
+            </span>
+          ))}
+        </div>
+      </div>
+
       <nav className="desktop-nav" aria-label="Main navigation">
         {navLinks.map((link) => {
           const isActive = isNavItemActive(pathname, link);
@@ -204,10 +239,9 @@ export default function EditorialHeader({
       {open && (
         <div className="mobile-menu" id="mobile-navigation">
           <div>
-            {navLinks.map((link, index) => {
+            {navLinks.map((link) => {
               const isActive = isNavItemActive(pathname, link);
               const isExpanded = expandedMobileLink === link.label;
-              const indexLabel = <small>0{index + 1}</small>;
 
               if (!link.children) {
                 return (
@@ -217,7 +251,6 @@ export default function EditorialHeader({
                     data-active={isActive}
                     onClick={() => setOpen(false)}
                   >
-                    {indexLabel}
                     {link.label}
                   </Link>
                 );
@@ -232,7 +265,6 @@ export default function EditorialHeader({
                     aria-expanded={isExpanded}
                     onClick={() => setExpandedMobileLink(isExpanded ? null : link.label)}
                   >
-                    {indexLabel}
                     <span>{link.label}</span>
                     <NavChevron expanded={isExpanded} />
                   </button>

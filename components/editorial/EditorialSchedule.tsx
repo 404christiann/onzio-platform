@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 import EditorialScheduleView from "@/components/editorial/EditorialScheduleView";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
-import { monogram } from "@/lib/editorial-fixtures";
 import type { Fixture } from "@/lib/data";
 
 /**
@@ -21,35 +19,30 @@ import type { Fixture } from "@/lib/data";
  */
 export default function EditorialSchedule() {
   const club = useClubContext();
-  const { identity, crestOnDarkUrl } = useEditorialIdentity();
   const [fixtures, setFixtures] = useState<Fixture[]>([]);
+  const [seasonLabel, setSeasonLabel] = useState("Current");
 
   useEffect(() => {
     let cancelled = false;
     fetchActiveSeason(club.id)
-      .then((season) => (season ? fetchSchedule(season.id, club.id) : Promise.resolve([])))
+      .then((season) => {
+        if (!cancelled) setSeasonLabel(season?.label ?? "Current");
+        return season ? fetchSchedule(season.id, club.id) : Promise.resolve([]);
+      })
       .then((rows) => {
         if (!cancelled) setFixtures(rows);
       })
       .catch((error: unknown) => {
         console.error("EditorialSchedule:", error);
-        if (!cancelled) setFixtures([]);
+        if (!cancelled) {
+          setSeasonLabel("Current");
+          setFixtures([]);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, [club.id]);
 
-  const clubShortName = identity?.shortName || club.name;
-  const clubInitials = identity?.initials || monogram(club.name);
-
-  return (
-    <EditorialScheduleView
-      fixtures={fixtures}
-      clubShortName={clubShortName}
-      clubInitials={clubInitials}
-      crestOnDarkUrl={crestOnDarkUrl}
-      league={identity?.league}
-    />
-  );
+  return <EditorialScheduleView fixtures={fixtures} seasonLabel={seasonLabel} />;
 }
