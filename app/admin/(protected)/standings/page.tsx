@@ -71,6 +71,7 @@ export default function AdminStandingsPage() {
   const club = useClubContext();
   const clubId = useClubId();
   const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
   const [settings, setSettings] =
     useState<DBLeagueStandingsSettings>(DEFAULT_STANDINGS_SETTINGS);
   const [rows, setRows] = useState<DraftRow[]>([]);
@@ -286,12 +287,20 @@ export default function AdminStandingsPage() {
     }
   }
 
-  // academy@1's real public standings table already renders nothing when
-  // there is no real data (no fabricated placeholder rows) — the preview
-  // should match that, rather than substituting the generic sample table,
-  // which hardcodes "Rose City FC" as its example club regardless of which
-  // club is actually being edited.
-  const previewRows = normalizeStandingsRows(rows, { fallbackToSample: !isAcademy });
+  // DEFAULT_STANDINGS_ROWS hardcodes "Rose City FC" (plus Ocelot, LA Sol,
+  // AMSG, AYSD, Montclair) as its example table, so substituting it for a
+  // club with no saved rows shows another club's teams in this club's admin.
+  // That is only tolerable for clubhouse@1, whose club *is* Rose City.
+  //
+  // academy@1's real public standings table renders nothing when there is no
+  // real data, so its preview matches by showing the empty state instead.
+  // editorial@1 never renders this data at all — Lions' public standings
+  // (components/editorial/EditorialStandingsTable.tsx) is a static
+  // Lions-specific table — so the Rose City sample is doubly wrong there;
+  // the empty state is the honest preview until rows are actually entered.
+  const previewRows = normalizeStandingsRows(rows, {
+    fallbackToSample: !isAcademy && !isEditorial,
+  });
 
   return (
     <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
@@ -498,14 +507,16 @@ export default function AdminStandingsPage() {
           </section>
 
           <section className="min-w-0 overflow-hidden rounded-xl border border-border">
-            {isAcademy ? (
-              previewRows.length > 0 ? (
-                <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
-              ) : (
-                <p className="font-body p-6 text-sm text-muted-foreground">
-                  Add a team below to see a preview of your standings table.
-                </p>
-              )
+            {/* previewRows is only ever empty for the templates excluded from
+                the sample fallback above (academy@1, editorial@1); templates
+                that still get DEFAULT_STANDINGS_ROWS always take a table
+                branch, exactly as before. */}
+            {previewRows.length === 0 ? (
+              <p className="font-body p-6 text-sm text-muted-foreground">
+                Add a team below to see a preview of your standings table.
+              </p>
+            ) : isAcademy ? (
+              <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
             ) : (
               <LeagueStandingsTable settings={settings} rows={previewRows} />
             )}

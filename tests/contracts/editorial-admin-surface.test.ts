@@ -18,6 +18,7 @@ const CONTACT_ADMIN = "app/admin/(protected)/contact/page.tsx";
 const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
+const STANDINGS_ADMIN = "app/admin/(protected)/standings/page.tsx";
 
 const EDITORIAL_GATE = 'presentationTemplateKey === "editorial@1"';
 const ACADEMY_GATE = 'presentationTemplateKey === "academy@1"';
@@ -31,14 +32,14 @@ const ACADEMY_GATE = 'presentationTemplateKey === "academy@1"';
  * academy@1 and the default templates.
  */
 describe("editorial@1 admin surface hides", () => {
-  describe("nav: Programs, About, Analytics dropped for editorial@1 only", () => {
-    it("filters exactly the three dead hrefs behind the editorial template check", () => {
+  describe("nav: Programs, About, Analytics, Match Stats, Season Stats dropped for editorial@1 only", () => {
+    it("filters exactly the five dead hrefs behind the editorial template check", () => {
       const shell = source(ADMIN_SHELL);
       expect(shell).toContain(
         `const isEditorialTemplate = club.${EDITORIAL_GATE};`,
       );
       expect(shell).toContain(
-        'const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/about", "/admin/analytics"];',
+        'const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/about", "/admin/analytics", "/admin/stats", "/admin/season-stats"];',
       );
       expect(shell).toContain(
         "(!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href))",
@@ -245,6 +246,37 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
+  describe("standings admin: Rose City sample preview hidden for editorial@1", () => {
+    it("extends the academy gate with AND-NOT — academy@1 branch unchanged", () => {
+      const page = source(STANDINGS_ADMIN);
+      expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
+      expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
+      expect(page).toContain("fallbackToSample: !isAcademy && !isEditorial,");
+    });
+
+    it("shows the empty-state copy instead of a blank panel when the fallback is off", () => {
+      const page = source(STANDINGS_ADMIN);
+      // LeagueStandingsTable renders null on zero rows, so editorial@1 would
+      // otherwise get an empty bordered box rather than guidance.
+      expect(page).toContain("{previewRows.length === 0 ? (");
+      expect(page).toContain(
+        "Add a team below to see a preview of your standings table.",
+      );
+      expect(count(page, "Add a team below to see a preview")).toBe(1);
+    });
+
+    it("keeps the sample fallback for templates whose club is Rose City", () => {
+      const page = source(STANDINGS_ADMIN);
+      // clubhouse@1 must still take a populated table branch — the exclusion
+      // is per-template, not a removal of the sample-fallback feature.
+      expect(page).not.toContain("fallbackToSample: false");
+      expect(page).toContain("<LeagueStandingsTable settings={settings} rows={previewRows} />");
+      expect(page).toContain(
+        "<AcademyLeagueStandingsTable settings={settings} rows={previewRows} />",
+      );
+    });
+  });
+
   describe("no gate is tenant-scoped", () => {
     it("hides key off presentationTemplateKey, never a club id or slug", () => {
       for (const path of [
@@ -259,6 +291,7 @@ describe("editorial@1 admin surface hides", () => {
         ROSTER_ADMIN,
         SCHEDULE_ADMIN,
         TRYOUTS_ADMIN,
+        STANDINGS_ADMIN,
       ]) {
         const page = source(path);
         expect(page, path).toContain(EDITORIAL_GATE);

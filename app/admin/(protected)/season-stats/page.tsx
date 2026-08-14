@@ -1,5 +1,8 @@
 "use client";
 
+import { useClubContext } from "@/components/ClubContextProvider";
+import { useRouter } from "next/navigation";
+
 import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
@@ -59,6 +62,14 @@ function isGK(s: FieldStats | GKStats): s is GKStats {
 // ── Main component ────────────────────────────
 
 export default function SeasonStatsPage() {
+  const club = useClubContext();
+  const router = useRouter();
+  // editorial@1 (Lions) doesn't need Season Stats -- the nav item is already
+  // hidden in AdminShell.tsx, this blocks direct URL access too.
+  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  useEffect(() => {
+    if (isEditorialTemplate) router.replace("/admin");
+  }, [isEditorialTemplate, router]);
   const {
     seasons,
     activeSeasonId,
@@ -199,6 +210,8 @@ export default function SeasonStatsPage() {
     }
     setSaving(false);
   }
+
+  if (isEditorialTemplate) return null;
 
   return (
     <div className="max-w-5xl mx-auto">

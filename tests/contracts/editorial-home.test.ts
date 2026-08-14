@@ -505,7 +505,7 @@ describe("editorial footer attribution", () => {
     );
     expect(editorialFooter).toContain('className="footer-link-grid"');
     expect(editorialFooter).toContain('className="footer-connect"');
-    expect(editorialFooter).toContain("storeEnabled ? <Link href=\"/store\">Store</Link> : null");
+    expect(editorialFooter).toContain("storeEnabled ? <Link href=\"/shop\">Store</Link> : null");
     expect(editorialFooter).toContain('className="footer-bottom-right"');
     expect(css).toContain("grid-template-areas: \"brand links connect\";");
     expect(css).toContain("width: clamp(84px, 7vw, 112px);");

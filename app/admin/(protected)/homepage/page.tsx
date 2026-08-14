@@ -9,6 +9,7 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import FileUpload from "@/components/admin/FileUpload";
+import ScaledSlideshowPreview from "@/components/admin/ScaledSlideshowPreview";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import type {
@@ -963,35 +964,48 @@ export default function AdminHomepagePage() {
               </div>
             ) : (
             <>
-            <div className="overflow-hidden rounded-lg border border-border">
-              {draftPhotos[0] ? (
-                <div className="relative aspect-[16/9] w-full">
-                  <Image
-                    src={draftPhotos[0].url}
-                    alt={draftPhotos[0].alt || "Homepage slideshow preview"}
-                    fill
-                    sizes="(min-width: 1280px) 760px, 90vw"
-                    className="object-cover"
-                  />
-                  <div className="absolute bottom-4 right-4 flex items-center gap-3">
-                    <span className="font-display text-xs tracking-widest text-white/60">
-                      01 / {String(draftPhotos.length).padStart(2, "0")}
-                    </span>
-                    <div className="h-0.5 w-8 bg-destructive" />
-                  </div>
+            {/* editorial@1's public slideshow is EditorialMatchdaySlideshow, so
+                the preview mounts that real component (scaled to the admin
+                column) instead of a hand-rolled still of draftPhotos[0]. Every
+                other template still renders the classic PhotoSlideshow, whose
+                still below is left untouched. */}
+            {isEditorial ? (
+              <ScaledSlideshowPreview photos={draftPhotos} />
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-lg border border-border">
+                  {draftPhotos[0] ? (
+                    <div className="relative aspect-[16/9] w-full">
+                      <Image
+                        src={draftPhotos[0].url}
+                        alt={draftPhotos[0].alt || "Homepage slideshow preview"}
+                        fill
+                        sizes="(min-width: 1280px) 760px, 90vw"
+                        className="object-cover"
+                      />
+                      <div className="absolute bottom-4 right-4 flex items-center gap-3">
+                        <span className="font-display text-xs tracking-widest text-white/60">
+                          01 / {String(draftPhotos.length).padStart(2, "0")}
+                        </span>
+                        <div className="h-0.5 w-8 bg-destructive" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex aspect-[16/9] items-center justify-center">
+                      <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+                        Slideshow hidden until a photo is added.
+                      </p>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex aspect-[16/9] items-center justify-center">
-                  <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                    Slideshow hidden until a photo is added.
-                  </p>
-                </div>
-              )}
-            </div>
 
-            <p className="font-display mt-3 text-xs font-semibold tracking-widest uppercase text-muted-foreground">
-              {slideshowFields.season_label}
-            </p>
+                {/* The season label is a classic-template caption; the
+                    editorial slideshow never renders it. */}
+                <p className="font-display mt-3 text-xs font-semibold tracking-widest uppercase text-muted-foreground">
+                  {slideshowFields.season_label}
+                </p>
+              </>
+            )}
 
             {!isEditorial && behindFields.visible && (
               <div className="mt-6 rounded-lg bg-background p-5 text-center">

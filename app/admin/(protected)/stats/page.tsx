@@ -1,5 +1,8 @@
 "use client";
 
+import { useClubContext } from "@/components/ClubContextProvider";
+import { useRouter } from "next/navigation";
+
 import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
@@ -73,6 +76,14 @@ const POSITIONS = ["Goalkeeper", "Defender", "Midfielder", "Forward"] as const;
 // ── Main component ────────────────────────────
 
 export default function StatsPage() {
+  const club = useClubContext();
+  const router = useRouter();
+  // editorial@1 (Lions) doesn't need Match Stats -- the nav item is already
+  // hidden in AdminShell.tsx, this blocks direct URL access too.
+  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  useEffect(() => {
+    if (isEditorialTemplate) router.replace("/admin");
+  }, [isEditorialTemplate, router]);
   const {
     seasons,
     selectedSeasonId,
@@ -273,6 +284,8 @@ export default function StatsPage() {
 
   const selectedMatchData = matches.find((m) => m.id === selectedMatch);
   const seasonMatches = matches.filter((match) => match.season_id === selectedSeasonId);
+
+  if (isEditorialTemplate) return null;
 
   return (
     <div className="max-w-5xl mx-auto">

@@ -2,6 +2,85 @@
 
 Last updated: 2026-08-13
 
+## Lions admin previews fixed: two were rendering the wrong thing entirely, one was showing another club's data
+
+Agent: Claude (5 subagents this round — 2 Opus for the investigative fixes, 3
+Sonnet — plus 1 Fable subagent for final verification), 2026-08-13. Status:
+**four admin-preview bugs found and fixed, verified locally, ready to commit
+on `codex/lions-editorial-diversecity-v2`**. Not yet pushed or synced to
+staging at the time of this entry.
+
+**Trigger:** Christian reviewed the Lions (`editorial@1`) admin from the
+prior HANDOFF entry and reported four preview panels not matching the real
+site, plus asked for Match Stats and Season Stats to be hidden from the
+sidebar.
+
+**Completed work:**
+- **Standings preview showed "Rose City FC."** `app/admin/(protected)/standings/page.tsx`
+  had `fallbackToSample: !isAcademy`, substituting a hardcoded six-team
+  sample table (headed by Rose City FC) whenever a non-`academy@1` club had
+  no real rows saved — Lions has none yet. Extended the exclusion to
+  `editorial@1` so it now shows an honest empty state instead. Investigation
+  surfaced a bigger, separate issue: Lions' real public standings table
+  (`components/editorial/EditorialStandingsTable.tsx`) is a fully hardcoded
+  static component with fake opponent data, not database-driven at all — so
+  the Standings admin page is currently a no-op for Lions regardless of this
+  fix. **Open decision for Christian:** make the editorial table DB-driven,
+  or hide the Standings admin page for `editorial@1` the way Programs/About
+  are already hidden.
+- **Homepage Slideshow preview wasn't a slideshow.** It was a static single
+  photo with a non-advancing "01/05" label. Replaced with a new
+  `components/admin/ScaledSlideshowPreview.tsx` that mounts the real
+  `EditorialMatchdaySlideshow` component at scale, following the same
+  `Scaled*Preview` convention already used for Tryouts/Contact/About.
+- **Tryouts preview was rendering the wrong club's page.**
+  `components/admin/ScaledTryoutsPreview.tsx` unconditionally rendered
+  DCFC's `AcademyTryoutsPage` for every tenant, regardless of template.
+  Lions' admin was previewing DCFC's navy academy layout, not its own
+  editorial one. Fixed to branch on `presentationTemplateKey`, matching the
+  real public route's own branching.
+- **Shop Kit preview showed fields with no effect on the live site.**
+  `components/admin/ScaledShopKitPreview.tsx` rendered the generic
+  `ShopKitSection`, which displays bullet points and a custom CTA label —
+  neither of which Lions' real public shop page
+  (`components/editorial/EditorialShopPage.tsx`) renders; its CTA text is
+  hardcoded ("Shop with our vendor") and it has no bullet-point slot at all.
+  Fixed to branch by template and show what the real page actually renders.
+  **Open decision for Christian:** the Shop admin's bullet-points and CTA-label
+  fields are now honestly *not previewed* for Lions, but they're still
+  present and saveable in the form — worth deciding whether to hide those
+  specific fields too, same as the other confirmed-dead fields already
+  hidden in the prior HANDOFF entry.
+- **Match Stats and Season Stats hidden from the Lions sidebar** — same
+  nav-filter + route-guard pattern as Programs/About/Analytics.
+- Fixed a stale test assertion (`tests/contracts/editorial-home.test.ts`)
+  left over from the prior committed round: it pinned the literal buggy
+  `href="/store"` string that round's footer fix had already corrected in
+  code to `/shop`.
+
+Every fix in this round is template-scoped (`editorial@1`), and DCFC's
+`academy@1` code paths were confirmed — by reading the actual fall-through
+logic, not just running tests — to be byte-identical to before in every
+touched file.
+
+**Verification:** full contract suite passed with 55 files and 676 tests
+(+3 over the prior round's baseline, all accounted for by new Standings
+coverage). `npm run lint` passed with the same 5 known baseline warnings.
+Full local-Supabase `npm test` gate passed with 101 files and 1157 tests
+(+4, all accounted for). `npx tsc --noEmit` and `git diff --check` both
+passed. No stray test routes or local auth users were left behind by the
+agents that verified against live renders.
+
+**Known gap, non-blocking:** the new Match Stats / Season Stats route guards
+have no dedicated contract-test coverage yet, unlike the Programs/About/
+Analytics guards — same pattern, just not pinned by a test. Worth adding
+before this pattern gets copied again for a future club.
+
+**Exact next step:** commit, sync to staging
+(`lions-onzio-staging.vercel.app`), and get Christian's decisions on the two
+open items above (Standings DB-wiring vs. hide, and the Shop dead fields)
+before considering this admin portal launch-ready.
+
 ## Lions admin portal: DCFC-only surfaces hidden for editorial@1, verified and committed
 
 Agent: Claude (5 subagents for edits — 4 Sonnet, 1 Fable for the highest-risk
