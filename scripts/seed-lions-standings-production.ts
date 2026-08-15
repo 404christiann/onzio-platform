@@ -12,6 +12,14 @@
 //                   This script never executes SQL, exactly like
 //                   scripts/import-lions-production.ts.
 //
+// SCOPE: THE NINE DATA ROWS ONLY. This script does not write
+// league_standings_settings — the eyebrow/title/intro are club-editable via
+// /admin/standings, and an earlier version of this script upserted them,
+// which silently reverted Christian's own heading on its first production
+// run. Any script that writes club-editable copy reverts the club's edits on
+// every execution, and this one is expected to run routinely. Data here,
+// wording in the admin.
+//
 // DELIBERATELY WEAKER GUARDS THAN THE CONTENT IMPORT, and the difference
 // matters. scripts/import-lions-production.ts asserts the full provisioned
 // fingerprint (tier=starter, lifecycle=onboarding, public_access=preview) and
@@ -36,9 +44,10 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
+// LIONS_STANDINGS_SETTINGS is deliberately NOT imported: this script must not
+// be able to write the club-editable heading copy even by accident.
 import {
   LIONS_STANDINGS,
-  LIONS_STANDINGS_SETTINGS,
   lionsStandingRowId,
 } from "@/lib/migration/lions-standings";
 
@@ -90,12 +99,17 @@ function sqlInt(value: number): string {
 }
 
 /**
- * Digest over the exact table being written. Used as the audit dedupe key, so
+ * Digest over the exact rows being written. Used as the audit dedupe key, so
  * replaying an unchanged table writes no second audit row, while a genuine
  * table update does.
+ *
+ * Covers the rows ONLY, deliberately. The heading copy is no longer written
+ * by this script (see buildStandingsSql), so folding it in would make an
+ * admin heading edit look like a standings change and write a spurious audit
+ * row for content this script did not touch.
  */
 export function standingsDigest(): string {
-  return sha256(JSON.stringify({ settings: LIONS_STANDINGS_SETTINGS, rows: LIONS_STANDINGS }));
+  return sha256(JSON.stringify({ rows: LIONS_STANDINGS }));
 }
 
 export function buildStandingsSql(staleIds: readonly string[]): string {
@@ -122,11 +136,16 @@ export function buildStandingsSql(staleIds: readonly string[]): string {
   // and the apply.
   const pruneStatement = `delete from onzio.league_standings where club_id = ${sqlText(TARGET_TENANT_ID)}::uuid and id not in (${seededIds.map((id) => `${sqlText(id)}::uuid`).join(", ")});`;
 
-  const statements = [
-    `insert into onzio.league_standings_settings as target (club_id, eyebrow, title, intro, updated_at) values (${sqlText(TARGET_TENANT_ID)}::uuid, ${sqlText(LIONS_STANDINGS_SETTINGS.eyebrow)}, ${sqlText(LIONS_STANDINGS_SETTINGS.title)}, ${sqlText(LIONS_STANDINGS_SETTINGS.intro)}, now()) on conflict (club_id) do update set eyebrow = excluded.eyebrow, title = excluded.title, intro = excluded.intro, updated_at = now() where (target.eyebrow, target.title, target.intro) is distinct from (excluded.eyebrow, excluded.title, excluded.intro);`,
-    ...rowStatements,
-    pruneStatement,
-  ];
+  // NO league_standings_settings statement, deliberately. The heading copy is
+  // club-editable through /admin/standings, and on 2026-08-15 the first
+  // production run of this script silently reverted a heading Christian had
+  // set there — because an upsert of club-editable copy overwrites the club's
+  // edit every single time it runs. Standings are re-seeded routinely as the
+  // table moves, so that was structural, not a one-off. The split is now
+  // absolute: this script owns the nine data rows, the admin owns all
+  // wording. The receipt below still REPORTS the settings row so an operator
+  // can see it exists; it never writes it.
+  const statements = [...rowStatements, pruneStatement];
 
   return `do $lions_standings$
 declare

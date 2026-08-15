@@ -30,11 +30,13 @@ export type LionsStandingRow = {
  * Conference, which is also the name consistent with the table below
  * containing Indy Gladiators SC.
  *
- * This matters beyond wording. The production seeder upserts this block, so
- * leaving the stale copy here would have silently reverted a real admin edit
- * every time the standings were re-seeded — and re-seeding is expected to be
- * routine as the table moves. Keeping the module in step with what the club
- * actually publishes is what stops the script and the admin fighting.
+ * CONSUMED BY THE LOOPBACK SEEDER ONLY. The production seeder deliberately
+ * does not import this block at all: writing club-editable copy from a script
+ * reverts the club's own admin edits on every run, which is exactly what
+ * happened on the first production seed. Production heading copy is owned by
+ * /admin/standings. These values are kept in step with what the club
+ * publishes so a fresh local database looks like production, not because
+ * anything hosted reads them.
  */
 export const LIONS_STANDINGS_SETTINGS = {
   eyebrow: "2026 Spring Season",
