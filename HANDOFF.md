@@ -2,6 +2,53 @@
 
 Last updated: 2026-08-15
 
+## Lions handed over to the club — price, store and owner invite all applied; only checkout remains
+
+Agent: Claude Opus 5 with Christian, 2026-08-15. Status: **complete up to the
+club's own payment.**
+
+Three production writes, all Christian-executed, all verified read-only after:
+
+- `scripts/set-lions-live-price.ts` → `clubs.stripe_price_id =
+  price_1Tw8RjK6WajTkwHYcTsgHNGc` (the shared $65/mo Starter price matching
+  Lions' tier). This was the real launch blocker: `clubPriceId()` rejects null
+  with `STRIPE_PRICE_REQUIRED` before any Stripe object is created, so the
+  owner's first click on "Start subscription" would have 403'd — exactly how
+  it surfaced for Diverse City FC.
+- `scripts/set-club-store-enabled.ts` → `clubs.store_enabled = true`.
+- `scripts/invite-lions-owner-production.ts` → the real club contact added as a
+  second `owner`, `status=active`. Christian remains co-owner, matching
+  `DCFC-D133`.
+
+Audit trail: `manual.lions_live_price_set`, `manual.club_store_enabled_set`,
+and the invite's `identity_invited` (which records only the recipient's email
+domain, never the address).
+
+The invite's resolved callback was
+`https://columbuslionsfc.com/admin/auth/callback`, confirming the deliberate
+ordering worked — the domain attach had to precede the invite, or the club
+contact would have received a sign-in link, and later a Stripe `success_url`,
+pointing at the internal `lions-fc-private.vercel.app` validation hostname.
+
+`lifecycle=onboarding` / `public_access=preview` are unchanged and correct:
+nothing about setting a price, enabling a store, or inviting an owner should
+move billing state. The public site still 404s anonymously until real Stripe
+checkout drives `apply_stripe_projection`.
+
+**The only remaining step belongs to the club contact**, per
+`docs/lions-fc-launch-plan.md` Phase 2 step 6: sign in at
+`columbuslionsfc.com/admin/login`, open `/admin/payments`, complete real
+Stripe Checkout. Neither Christian nor any agent performs or simulates it.
+
+Post-checkout verification sweep (Christian, read-only): confirm
+`lifecycle=active` / `public_access=live` and a `club_subscriptions` row with
+the expected price; load the public site WITHOUT cookies, since DCFC's history
+includes a clean import that still 404'd anonymously; confirm "Manage billing"
+opens a real Portal session (the DCFC failure mode); cross-tenant bleed check
+against DCFC and Rose City; one admin image-upload round trip as the
+sharp/libvips canary. Note the site stays `noindex, nofollow` unconditionally —
+going live does not make Lions indexable, which is a separate decision.
+
 ## columbuslionsfc.com is attached to Lions in production — both halves done and verified
 
 Agent: Claude Opus 5 with Christian, 2026-08-15. Status: **complete and
