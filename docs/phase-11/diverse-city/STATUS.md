@@ -4,7 +4,33 @@
 
 **Package:** closes the `league_standings` gap left by the content import.
 
-**Status:** `ready for review`. Nothing executed. Zero hosted mutations.
+**Status:** `complete`. Applied to production 2026-08-15 and verified
+read-only: 9 rows in the exact published order, `club_row_flagged` 1,
+settings 1.
+
+**Incident during the first apply, resolved.** The seeder upserts
+`league_standings_settings`, and the copy it carried was inherited from the
+original hardcoded `EditorialStandingsTable`. Christian had since set the
+real heading through `/admin/standings` on production, so the first seed
+silently reverted it. Caught by a read-only check immediately after. The
+module was corrected to the club's own wording ("2026 Spring Season" /
+"Ohio/Indy Conference Standings"), which is also the correct league name on
+its own merits — the table contains Indy Gladiators SC, which an Ohio Valley
+Division would not. A second apply restored it; the nine data rows were
+untouched throughout because the `is distinct from` guards made that half a
+no-op.
+
+`seed_audits` is now 2, which is correct rather than a duplicate: the audit
+dedupes on the standings digest, so replaying identical content writes
+nothing while a genuine content change writes a new row. The digest moved
+`94c45cd9…` → `0ce4579e…` when the heading changed.
+
+**Design note carried forward.** A script that upserts club-editable copy
+will revert admin edits every time it runs, and standings are expected to be
+re-seeded routinely as the table moves. Keeping the module in step with
+production is a mitigation, not a fix. The stronger split — the script owns
+the nine data rows, the admin owns all wording — means dropping the settings
+statement entirely. Offered to Christian; not done without his call.
 
 **Agent:** Claude Opus 5 (Claude Code).
 

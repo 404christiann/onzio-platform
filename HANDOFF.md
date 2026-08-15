@@ -2,10 +2,31 @@
 
 Last updated: 2026-08-15
 
-## Lions production standings seeder written and rehearsed — closes the standings gap; not yet run
+## Lions production standings APPLIED — 9 rows live; one admin-edit revert hit and fixed
 
-Agent: Claude Opus 5, 2026-08-15. Status: **ready for review; zero hosted
-mutations.**
+Agent: Claude Opus 5, 2026-08-15. Status: **complete and verified.**
+
+Applied to production: 9 rows in the exact published order, Lions flagged as
+the club, settings row present. Verified read-only.
+
+**Incident worth knowing about, because it will recur elsewhere.** The seeder
+upserts `league_standings_settings`, and its copy was inherited from the old
+hardcoded `EditorialStandingsTable`. Christian had already set the real
+heading through `/admin/standings`, so the first apply silently reverted it —
+caught immediately by a read-only check. The module now carries the club's own
+wording ("2026 Spring Season" / "Ohio/Indy Conference Standings"), which is
+also the correct league name given the table contains Indy Gladiators SC. A
+second apply restored it, with the nine data rows a no-op throughout thanks to
+the `is distinct from` guards.
+
+`seed_audits` reading 2 is correct: the audit dedupes on the standings digest,
+so identical replays write nothing while a real content change writes a row.
+
+**General lesson: any script that upserts club-editable copy reverts admin
+edits on every run.** Standings are re-seeded routinely as the table moves, so
+this is structural, not a one-off. Keeping the module in sync mitigates it;
+dropping the settings statement so the script owns data and the admin owns
+wording is the real fix, and is offered but not yet taken.
 
 `lib/migration/lions-standings.ts` (new) now holds the nine Spring 2026 Ohio
 Valley Division rows as a single source of truth;
