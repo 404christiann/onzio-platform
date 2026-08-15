@@ -2,6 +2,28 @@
 
 Last updated: 2026-08-15
 
+## Search indexing deferred deliberately — scoping note written, no code change
+
+Agent: Claude Opus 5 with Christian, 2026-08-15. Status: **deferred by
+decision; `docs/search-indexing-opt-in.md` written.**
+
+Every tenant page is served `X-Robots-Tag: noindex, nofollow` unconditionally
+from `applyTenantRobotsPolicy` in `middleware.ts`. Verified live on both
+`diversecityfc.com` and `columbuslionsfc.com` — this is platform-wide and
+intentional (`DCFC-D117`), not a Lions gap. Diverse City has been live and
+paying for days and is equally unindexed. Going live does NOT make a club
+findable on Google, which is the single most likely thing for a club to assume
+rather than ask about.
+
+Christian's call: revisit after Lions has been live long enough to observe,
+which is what "after observation closes" meant. Full scoping in
+`docs/search-indexing-opt-in.md`, including the two traps: the fix is an
+explicit per-club opt-in defaulting to blocked (NOT "if live then index", which
+would make a billing event silently make a site crawlable), and there is
+currently no `app/robots.ts` or `app/sitemap.ts` anywhere in the repo, so the
+header is the only signal we emit. `DCFC-1003`, the package referenced as
+carrying this, was never actually written.
+
 ## Lions handed over to the club — price, store and owner invite all applied; only checkout remains
 
 Agent: Claude Opus 5 with Christian, 2026-08-15. Status: **complete up to the
