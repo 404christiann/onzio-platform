@@ -230,7 +230,11 @@ describe("editorial home: section composition", () => {
   });
 
   it("keeps Christian's real Spring 2026 Ohio Valley Division numbers in the Lions standings seed", () => {
-    const seed = read("scripts/seed-lions-standings-local.ts");
+    // Moved 2026-08-15 from scripts/seed-lions-standings-local.ts into a
+    // shared module, so the loopback seeder and
+    // scripts/seed-lions-standings-production.ts read the same nine rows and
+    // cannot drift apart. This assertion follows the data to its new home.
+    const seed = read("lib/migration/lions-standings.ts");
 
     // The nine rows that used to live in EditorialStandingsTable.tsx. They are
     // real season data, so the move to the database must not lose or reorder
@@ -262,14 +266,23 @@ describe("editorial home: section composition", () => {
       'intro: "Current table for Lions Football Club\'s 2026 campaign."',
     );
 
-    // Local-only: no hosted seed may be reachable from this script. Checked
-    // against the code, not the prose, which discusses the hosted case.
-    const seedCode = stripComments(seed);
+    // Local-only: no hosted seed may be reachable from the loopback script.
+    // Checked against the code, not the prose, which discusses the hosted
+    // case. This half still reads the script itself — only the data moved to
+    // the shared module, the guards did not.
+    const seedCode = stripComments(read("scripts/seed-lions-standings-local.ts"));
     expect(seedCode).toContain("LOOPBACK_HOSTS.has(hostname)");
     expect(seedCode).toContain("--execute-local");
     expect(seedCode).toContain("--confirm-local");
     expect(seedCode).not.toContain("--confirm-project");
     expect(seedCode).not.toMatch(/supabase\.co/);
+
+    // The shared data module must stay data-only: no client, no credentials,
+    // no way to reach any project from it.
+    const sharedCode = stripComments(seed);
+    expect(sharedCode).not.toMatch(/supabase\.co/);
+    expect(sharedCode).not.toContain("createClient");
+    expect(sharedCode).not.toContain("SUPABASE_");
   });
 });
 

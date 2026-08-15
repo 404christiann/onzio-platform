@@ -1,5 +1,353 @@
 # Diverse City FC Status
 
+## 2026-08-15 - Lions production standings seeder written and rehearsed — NOT run
+
+**Package:** closes the `league_standings` gap left by the content import.
+
+**Status:** `ready for review`. Nothing executed. Zero hosted mutations.
+
+**Agent:** Claude Opus 5 (Claude Code).
+
+**What was built:**
+
+- `lib/migration/lions-standings.ts` (new) — the nine Spring 2026 Ohio Valley
+  Division rows, the heading copy, and `lionsStandingRowId`, extracted from
+  `scripts/seed-lions-standings-local.ts` so the loopback seeder and the new
+  production seeder read one copy. That drift is not hypothetical: this
+  session found local and hosted staging already carrying different Lions
+  content because later work landed on one and not the other.
+- `scripts/seed-lions-standings-production.ts` (new) — `--prepare-sql` only,
+  writes a reviewable SQL file, never executes. Zero hosted mutations.
+- `scripts/seed-lions-standings-local.ts` and
+  `tests/contracts/editorial-home.test.ts` updated to follow the data.
+
+**Deliberately weaker guards than the content import, and the difference is
+the point.** `import-lions-production.ts` asserts the full provisioned
+fingerprint (`tier=starter`, `lifecycle=onboarding`, `public_access=preview`)
+and refuses once `club_subscriptions` exists, because it is a one-shot
+pre-billing operation. Standings are recurring and most updates will happen
+after Lions goes live, so asserting lifecycle or billing state would break
+this script permanently the moment Stripe flips the club active. The identity
+assertion is therefore restricted to id + slug + name, which is still enough
+to guarantee the writes land on the right club on the right project.
+
+**Cross-tenant safety gap found during rehearsal and fixed.** Standing row
+ids derive from the team name alone, so the same team carries the same id on
+local, staging and production. The first rehearsal silently inserted nothing
+and instead updated the *local* Lions club's rows, because `on conflict (id)
+do update` matched a row owned by another club. The update set deliberately
+omits `club_id`, so it could not steal the row — but it made the conflict a
+silent no-op for the intended tenant. Fixed by adding
+`where target.club_id = <tenant>` to every DO UPDATE, so a foreign row is
+left untouched instead. Production has only one Lions tenant so this could
+not have fired there, but the guard is cheap and the failure was invisible.
+
+**Rehearsed against real Postgres, twice, rolled back**, with a ghost row
+from a renamed team and a row belonging to a different club:
+
+- 9 rows written, `table_order` exactly the published order (Lions, Leal
+  United, Columbus Astray, Fut Ohio, Indy Gladiators, Manu Ledesma, Ohio
+  International, Lightning, Mahoning Trumbull), `club_row_flagged` 1,
+  settings 1.
+- Ghost row pruned (`ghost_remaining` 0).
+- The other club's row survived untouched (1 before, 1 after), proving the
+  prune's `where club_id = <tenant>` scoping.
+- Byte-identical receipts on both applies and `seed_audits` stayed at 1, so
+  the seeder is idempotent.
+
+**Data flag for Christian, carried across verbatim rather than "corrected":**
+Manu Ledesma Academy shows 4 wins and 2 draws but 8 points, where 3-1-0
+scoring gives 14. Every other row's arithmetic is exact. This came from the
+originally hardcoded component data, so it is long-standing, not a new
+transcription error. It is far more likely to be a real league points
+deduction than a slip, and silently rewriting a customer's published league
+position would be worse than reproducing it. Documented in the shared
+module. Position is unchanged either way — at 14 points it would still sit
+below Indy Gladiators on goal difference, 9 vs 10.
+
+**Verification:** `npx tsc --noEmit` clean, `npm run lint` at the same 5
+baseline warnings, full contract suite 56 files / 734 tests all passing.
+
+**Exact next step:** Christian runs `--confirm-production --prepare-sql`,
+reviews the SQL, applies it with `supabase db query --linked --file`. Or
+enters the nine rows through `/admin/standings`, which exposes every field
+and derives `sort_order` from row order — the editor is not hidden for
+`editorial@1`.
+
+**Hosted mutations:** none.
+
+## 2026-08-15 - Lions production content import script written and tested — NOT run
+
+**Package:** Lions launch plan Phase 2 step 3
+(`docs/lions-fc-launch-plan.md`).
+
+**Status:** `complete`. Christian applied the generated SQL to production on
+2026-08-15 and then ran `--sync-storage`; both verified read-only
+immediately after.
+
+**Storage result, verified independently:** 10 objects in the public
+`onzio-media` bucket totalling 912,248 bytes, matching the script's reported
+`verifiedBytes` exactly and the plan's expected normalized byte total.
+Zero orphans — every `media_assets` row resolves to a real Storage object.
+Nothing left in the private `onzio-upload-staging` bucket, so the
+staging→publish→cleanup sequence completed and its post-removal proof held.
+Counters: 10 staged, 10 published, 10 staging-removed, 0 reused, 10 distinct
+normalized checksums.
+
+**Applied result, verified read-only against production by independent query
+(not by trusting the script's own receipt):** 27 content tables populated —
+players 22, staff 4, media_assets 10, site_sponsor_logos 6,
+homepage_slideshow_photos 5, matches 4, shop_carousel_photos 3,
+shop_kit_photos 3, shop_kit_section 3, tryouts 3, seasons 2,
+site_social_links 2, and 15 singletons including club_identity,
+presentation_documents/state/publications, site_branding and the four page
+content rows. `clubs` row now carries `accent_color=#F0F0F0`,
+`primary_color=#1B2958`, with `lifecycle=onboarding`,
+`public_access=preview`, `tier=starter`, `kind=customer` all unchanged.
+Exactly one `club_domains` and one `club_members` row — no junk domain
+attached. Diverse City FC and Rose City confirmed byte-for-byte unchanged.
+
+**Agent:** Claude Opus 5 (Claude Code), with two analysis subagents.
+
+**What was built:**
+
+- `scripts/import-lions-production.ts` — derived from
+  `scripts/import-lions-media-staging.ts` with the guard direction inverted
+  to `scripts/import-diverse-city-production.ts`'s shape, since the tenant
+  now exists. Same two modes: `--prepare-sql` (writes a reviewable SQL file,
+  zero hosted mutations, never executes it) and `--sync-storage` (checksum-
+  verified Storage writes only).
+- `tests/contracts/lions-production-import.test.ts` — 21 tests over the
+  actually-generated SQL string.
+
+**Four row sets deliberately dropped, each a real hazard:**
+
+1. `club` — the builder emits `lifecycle: "active"`, `public_access: "live"`,
+   `tier: "pro"`. Upserting it would publish Lions and promote its tier with
+   no billing, bypassing `apply_stripe_projection`. Only the three colour
+   columns are wanted, applied as a targeted UPDATE guarded on the
+   provisioned fingerprint.
+2. `domain` — the builder emits `lions.localhost` / `environment: "staging"`.
+   This would **not** conflict on production: the unique index is
+   `club_domains_one_active_primary_per_environment`, scoped per
+   environment, so it would silently attach a junk domain to the live
+   tenant.
+3. `subscription` — fake Stripe ids, `status: "active"`, `paid_through` 2027.
+4. `club_members` — production already has exactly one active owner.
+
+`clubs`, `club_domains`, `club_members`, `club_subscriptions`,
+`player_season_stats` and `goalkeeper_season_stats` were also removed from
+`CONFLICT_COLUMNS`, so `upsertSql` throws `Unexpected destination table` if a
+future edit reintroduces a statement for any of them. Omission as an active
+guard, not an oversight.
+
+**Roster and staff replaced, per Christian's decision:** the builder's 32
+players and 6 staff are prospect-mockup placeholders with invented human
+names (Marcus Hale, Elena Torres, …). Publishing invented people under a real
+club's name is not acceptable. Substituted: 22 players named `Player 1`…
+`Player 22` with shirt numbers 1–22 and a conventional position spread
+(2 GK / 7 DF / 6 MF / 7 FW), and 4 staff slots labelled by job title
+(Head Coach, Assistant Coach, Goalkeeper Coach, Team Manager). Ids are
+namespaced `onzio:lions:placeholder:*` so they can never collide with the
+mockup ids. The 28 + 4 season-stat rows were dropped with them — they are
+foreign-keyed to the original player ids and would fail on apply, and
+editorial@1 has no stats module.
+
+**Generated SQL:** 79 inserts across 24 tables plus 1 guarded `clubs` UPDATE,
+in a single `do $lions_prod$ … $lions_prod$` block with a
+`lions_production_result` verification receipt. In-transaction guards
+re-check the tenant fingerprint, the domain row, and refuse to run if
+`club_subscriptions` exists. The owner is resolved with
+`select user_id into strict v_owner from onzio.club_members`.
+
+**Bug the tests caught:** the seed-only actor
+`aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1` appears once in the generated SQL,
+inside `presentation_documents.configuration` at `metadata.createdBy` — the
+column-level `v_owner` substitution does not reach ids nested in JSONB.
+Verified read-only that hosted staging carries the identical value while its
+`created_by` **column** correctly holds the real owner, so this is
+pre-existing and inert provenance, not a leak introduced here. Left alone
+deliberately: `configuration_digest` is computed over the configuration, so
+rewriting it would fork production's digest from local and staging. Pinned by
+a test that asserts exactly one occurrence, double-quoted (inside JSON), and
+that no single-quoted SQL literal of it exists anywhere.
+
+**CONTENT GAP — DECIDED 2026-08-15: ship the 10-asset version now, the club
+uploads the rest through admin.** Christian's call. No script change; the
+importer already ships exactly this set. The consequence to expect on first
+load is that the Shop kit slideshow and the standings team logos will be
+missing until someone uploads them, and standings will be empty entirely.
+Recorded here so a later reader does not mistake the shortfall for a failed
+import. The detail behind the decision follows.
+
+The importer
+builds rows from `lib/migration/lions-media-local-import.ts` plus the
+byte-pinned plan JSON, and both are behind hosted staging. This session's
+Lions work (kit-photo slideshow, standings team logos, extra branding assets)
+reached staging by other means and was never folded back into the builder or
+the plan:
+
+| table | this import ships | staging has |
+|---|---|---|
+| media_assets | 10 | 21 |
+| shop_kit_photos | 3 | 4 |
+| shop_kit_section | 3 | 4 |
+| matches | 4 | 1 |
+| tryouts | 3 | 1 |
+| league_standings | 0 | 7 |
+
+The plan JSON is SHA-256 byte-pinned and `assertPlanSafeForLocalImport`
+refuses a `production` destination, so it cannot simply be regenerated —
+closing the media gap means a new approved plan digest and a builder update,
+which would also want re-running against staging.
+
+**Two bugs found by real execution, both fixed:**
+
+1. **`--confirm-production` was unparseable.** A missed substitution point:
+   `main()` was switched to the new flag but `parseArgs`'s boolean whitelist
+   still said `confirm-staging`, so the flag fell through to the value-flag
+   branch and tried to consume `--prepare-sql` as its value, reporting
+   `Missing value for --confirm-production`. Fixed, and both flag sets are
+   now explicit whitelists — the staging script whitelists only booleans, so
+   an unknown value flag like `--source-roots` is silently accepted and
+   ignored there. Six tests pin every flag name, including one that
+   explicitly rejects `--confirm-staging`.
+2. **`players.age` was set to null but is `not null`.** The first real apply
+   against production failed on it. The placeholder builder had been written
+   from the column list without checking nullability or CHECK constraints.
+   The DO block is one transaction so nothing landed — verified read-only
+   immediately after: 0 players, 0 media assets, 0 import audits,
+   `accent_color` still NULL. Fixed by reading the full constraint set first
+   rather than one error at a time, which also caught that `0` would have
+   failed next: `players_age_check` is `age >= 14 and age <= 80`. All 22
+   placeholders now use a uniform age of 18 — identical values read as an
+   unfilled default, where the mockup's varied 19–27 spread reads as real
+   data.
+
+**Verification:** `npx tsc --noEmit` clean. `npm run lint` at the same 5
+baseline warnings. Contract file 32/32.
+
+**Rehearsed against real Postgres, twice, rolled back.** The generated SQL
+was applied to local Supabase inside a transaction, against a
+production-shaped shell tenant (bare `clubs`/`club_domains`/`club_members`
+rows matching the provisioned fingerprint), with all real triggers, foreign
+keys and CHECK constraints active. Two setup notes worth recording: the
+local Lions club had to be cleared first, because the importer's
+deterministic ids are **byte-identical across local, staging and
+production**, so leaving it in place made the upsert try to move local's
+rows to the new club — the exact id-collision scenario that only arises when
+two Lions tenants share one project, which production does not; and
+`presentation_documents`/`presentation_publications` have an immutability
+trigger that blocks deletion, disabled for the cleanup only and restored
+before the import ran.
+
+Receipt, identical on both applies (so the import is genuinely idempotent,
+and `import_audits` stayed at 1):
+
+    players 22, staff 4, media_assets 10, seasons 2, matches 4, tryouts 3,
+    club_identity 1, presentation_documents 1, presentation_template
+    "editorial", accent_color "#F0F0F0", lifecycle "onboarding",
+    public_access "preview", tier "starter", club_subscriptions 0,
+    club_domains 1, club_members 1, import_audits 1
+
+Every one of the four dropped-row-set hazards is confirmed by that receipt:
+lifecycle, public_access and tier are unchanged, there is still exactly one
+domain (no junk `lions.localhost` row) and one member, and no subscription
+was written. The `presentation_digest`
+(`8ee3a2bd084552ca79680c1a294cdb87144cc1a7b94cff3cc83e192ee85c3154`) matches
+hosted staging exactly, confirming the presentation content is identical to
+what has already been reviewed there.
+
+**Files changed:** `scripts/import-lions-production.ts` (new),
+`tests/contracts/lions-production-import.test.ts` (new), `HANDOFF.md`, this
+file.
+
+**Exact next step:** Christian runs, in order, with the production
+`SUPABASE_SECRET_KEY` supplied inline so it never lands in `.env.local`:
+
+1. `--confirm-production --prepare-sql` — writes
+   `/private/tmp/lions-production-import.sql`, zero hosted mutations.
+2. Human review of that file, then apply it with
+   `supabase db query --linked --file`.
+3. `--confirm-production --sync-storage` — the 10 Storage objects.
+
+Note `store_enabled` remains `false`, so the imported Shop content is present
+but not publicly reachable until it is flipped via
+`scripts/set-club-store-enabled.ts`. That is a separate decision.
+
+**Hosted mutations:** none.
+
+## 2026-08-15 - Lions Football Club provisioned in production (DB only) — complete and verified
+
+**Package:** none — Lions equivalent of `DCFC-801`'s tenant half.
+
+**Status:** `complete` for DB provisioning. Vercel hostname attachment not
+done and not approved.
+
+**Agent:** Claude Opus 5 (Claude Code), executed by Christian.
+
+**Approval used:** Christian approved the four identity constants in chat and
+asked for the provisioning step to proceed.
+
+**What happened:** Christian ran `scripts/provision-lions-production.ts`
+himself in a real terminal, authenticating as operator with his own email OTP
+and TOTP. No operator credential or token passed through the assisting agent
+at any point — `scripts/operator-session.ts` enforces this structurally by
+refusing to run without a TTY on both stdin and stdout, which an agent's
+non-interactive shell cannot satisfy.
+
+Production credentials were supplied as shell exports for that one command
+rather than by editing `.env.local`. `loadEnv` is called without `override`,
+so exported variables win over the file (verified empirically against dotenv
+17.4.2 before the run). This left the local dev environment untouched and
+avoided leaving production credentials as the default in `.env.local`.
+
+**Result, verified read-only against production immediately after:**
+
+- `onzio.clubs`: id `3b6b71dc-b27a-4f39-bbee-a95ae9d6bf52`, slug `lions`,
+  name `Lions Football Club`, `kind=customer`, `lifecycle=onboarding`,
+  `public_access=preview`, `tier=starter`, `stripe_price_id=null`,
+  `store_enabled=false`.
+- `onzio.club_domains`: `hostname=lions-fc-private.vercel.app`,
+  `is_primary=true`, `active=true`, `environment=production`,
+  `verified_at=2026-08-15 00:49:32 UTC`.
+- `onzio.club_members`: Christian's existing production Auth user
+  `199d8437-1237-4098-99dd-8b089411255e` as `role=owner`, `status=active`.
+- `onzio.audit_events`: exactly one `operation=provision` row,
+  `actor_type=operator`. One row means the run succeeded on the first
+  attempt with no partial retries to clean up — `DCFC-801` took three.
+- Diverse City FC and Rose City confirmed unchanged; both hostnames still
+  200.
+
+**Pre-flight:** all four of `scripts/preflight-lions-production.ts`'s checks
+had already been answered read-only before the run (slug free, hostname
+unclaimed, owner Auth user resolves to the right email, one operator actor
+configured). Christian still ran it, primarily as a smoke test that the
+exported production environment was wired correctly.
+
+**Expected, not a defect:** `lions-fc-private.vercel.app` returns 404. The
+`club_domains` row exists but the hostname is not attached to the Vercel
+project, exactly as DCFC's private host behaved after `DCFC-801` until a
+separately-approved `vercel alias set`.
+
+**Known follow-up, flagged not fixed:** Lions has `store_enabled=false`. The
+column defaults false for new clubs and `provisionClub()` does not set it,
+but Lions' local row is `store_enabled=true` and the Shop is a genuine Lions
+feature. This will need flipping via `scripts/set-club-store-enabled.ts` when
+content lands. Same class of quiet gap as `DCFC-801`'s `clubs.kind` issue —
+recorded here so it does not have to be rediscovered.
+
+**Files changed:** `HANDOFF.md`, this file. No application code changed.
+
+**Exact next step:** Christian decides on Lions content/media import to
+production, `editorial@1` template selection, tier, `store_enabled`, and
+Vercel hostname attachment. None of these are approved; none proceed without
+a separate explicit go.
+
+**Hosted mutations:** 4 Supabase rows (`clubs`, `club_domains`,
+`club_members`, `audit_events`), 1 real email sent (owner sign-in code, to
+Christian himself). Zero Vercel, zero DNS, zero Stripe.
+
 ## 2026-08-14 - Production redeployed and verified live; `vercel --prod` alias-pinning trap found
 
 **Package:** none — completes the recovery from the 2026-08-14 incident.

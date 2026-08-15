@@ -3,6 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import ws from "ws";
 import { deterministicUuid } from "@/lib/migration/rose-city-plan";
 import { LIONS_LOCAL_TENANT_ID } from "@/lib/migration/lions-media-local-import";
+import {
+  LIONS_STANDINGS,
+  LIONS_STANDINGS_SETTINGS,
+  lionsStandingRowId,
+} from "@/lib/migration/lions-standings";
 
 /**
  * Seeds Lions FC's real Spring 2026 Ohio Valley Division table into
@@ -38,51 +43,12 @@ import { LIONS_LOCAL_TENANT_ID } from "@/lib/migration/lions-media-local-import"
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 const CLUB_SLUG = "lions";
 
-const SETTINGS = {
-  eyebrow: "League standings",
-  title: "Ohio Valley Division",
-  intro: "Current table for Lions Football Club's 2026 campaign.",
-};
-
-type SeedRow = {
-  team_name: string;
-  played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goal_difference: number;
-  points: number;
-  is_club: boolean;
-};
-
-/**
- * Real Spring 2026 season data, in the league's published order. `sort_order`
- * is the array index, and EditorialStandingsTable renders by `sort_order`
- * rather than re-deriving positions: the three 5-point sides are separated by
- * the league's own criteria, not by goal difference.
- */
-const STANDINGS: SeedRow[] = [
-  { team_name: "Lions Football Club", played: 10, wins: 7, draws: 3, losses: 0, goal_difference: 21, points: 24, is_club: true },
-  { team_name: "Leal United FC", played: 10, wins: 5, draws: 4, losses: 1, goal_difference: 11, points: 19, is_club: false },
-  { team_name: "Columbus Astray", played: 10, wins: 6, draws: 1, losses: 3, goal_difference: 7, points: 19, is_club: false },
-  { team_name: "Fut Ohio SC", played: 10, wins: 4, draws: 5, losses: 1, goal_difference: 27, points: 17, is_club: false },
-  { team_name: "Indy Gladiators SC", played: 10, wins: 3, draws: 5, losses: 2, goal_difference: 10, points: 14, is_club: false },
-  { team_name: "Manu Ledesma Academy", played: 10, wins: 4, draws: 2, losses: 4, goal_difference: 9, points: 8, is_club: false },
-  { team_name: "Ohio International FC", played: 10, wins: 1, draws: 2, losses: 7, goal_difference: -30, points: 5, is_club: false },
-  { team_name: "Lightning SC", played: 10, wins: 1, draws: 2, losses: 7, goal_difference: -27, points: 5, is_club: false },
-  { team_name: "Mahoning Trumbull United SC", played: 10, wins: 1, draws: 2, losses: 7, goal_difference: -28, points: 5, is_club: false },
-];
-
-function teamSeedSlug(teamName: string): string {
-  return teamName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function standingRowId(teamName: string): string {
-  return deterministicUuid(`onzio:lions:standing:${teamSeedSlug(teamName)}`);
-}
+// Data, copy and id derivation all live in lib/migration/lions-standings.ts
+// so this loopback seeder and scripts/seed-lions-standings-production.ts
+// cannot drift apart.
+const SETTINGS = LIONS_STANDINGS_SETTINGS;
+const STANDINGS = LIONS_STANDINGS;
+const standingRowId = lionsStandingRowId;
 
 function required(name: string): string {
   const value = process.env[name]?.trim();

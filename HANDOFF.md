@@ -1,6 +1,187 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-14
+Last updated: 2026-08-15
+
+## Lions production standings seeder written and rehearsed — closes the standings gap; not yet run
+
+Agent: Claude Opus 5, 2026-08-15. Status: **ready for review; zero hosted
+mutations.**
+
+`lib/migration/lions-standings.ts` (new) now holds the nine Spring 2026 Ohio
+Valley Division rows as a single source of truth;
+`scripts/seed-lions-standings-local.ts` and the new
+`scripts/seed-lions-standings-production.ts` both read it, so they cannot
+drift. `--prepare-sql` only — writes reviewable SQL, never executes.
+
+**Guards are deliberately weaker than the content import.** That script
+asserts `tier=starter`/`lifecycle=onboarding`/`public_access=preview` and
+refuses after billing exists, because it is one-shot and pre-billing.
+Standings are recurring and mostly updated *after* go-live, so those
+assertions would break this script the moment Stripe flips Lions active.
+Identity is asserted on id + slug + name only.
+
+**Cross-tenant safety gap found in rehearsal and fixed:** standing row ids
+derive from the team name alone, so they are identical across local, staging
+and production. The first rehearsal inserted nothing and silently updated the
+*local* Lions club's rows instead, because `on conflict (id) do update`
+matched a row owned by a different club. Fixed with
+`where target.club_id = <tenant>` on every DO UPDATE. Production has one
+Lions tenant so it could not have fired there, but the failure was invisible.
+
+**Rehearsed twice against real Postgres, rolled back**, with a ghost row and
+a foreign club's row present: 9 rows in exact published order,
+`club_row_flagged` 1, ghost pruned, the other club's row untouched (proving
+the prune's scoping), byte-identical receipts and `seed_audits` stable at 1.
+
+**Data flag:** Manu Ledesma Academy shows 4W 2D but 8 points, where 3-1-0
+gives 14; every other row is exact. Long-standing, from the originally
+hardcoded component data — likely a real points deduction, so it is carried
+across verbatim rather than "corrected", and documented in the module.
+Position unchanged either way.
+
+Verification: `tsc` clean, lint at the same 5 baseline warnings, full contract
+suite 56 files / 734 tests passing.
+
+## Lions production content import — COMPLETE, content and media both applied and verified
+
+Agent: Claude Opus 5 with two analysis subagents, 2026-08-15. Status:
+**complete and verified.**
+
+Christian applied the generated SQL to production. Verified read-only by
+independent query, not by trusting the script's receipt: 27 content tables
+populated (players 22, staff 4, media_assets 10, club_identity 1,
+presentation template `editorial`, accent `#F0F0F0`), `lifecycle`,
+`public_access`, `tier` and `kind` all unchanged, exactly one `club_domains`
+and one `club_members` row, and Diverse City FC and Rose City byte-for-byte
+unaffected.
+
+`--sync-storage` then published 10 objects to `onzio-media` (912,248 bytes,
+matching the plan's expected normalized total), left the private staging
+bucket clean, and produced zero orphans — every `media_assets` row resolves
+to a real object.
+
+**Immediate next step: attach `lions-fc-private.vercel.app` in Vercel.** The
+tenant is now fully populated but still unreachable — the `club_domains` row
+exists while nothing in the Vercel project serves that hostname, so it 404s.
+Same follow-up DCFC needed after `DCFC-801`.
+
+`scripts/import-lions-production.ts` (new) implements Phase 2 step 3 of
+`docs/lions-fc-launch-plan.md`, plus
+`tests/contracts/lions-production-import.test.ts` (new, 21 tests asserting
+against the actually-generated SQL).
+
+Derived from the Lions staging import, with the guard direction inverted to
+the DCFC-802 shape because the tenant now exists. **Four builder row sets are
+dropped, each a real hazard** — most importantly the `club` row (emits
+`lifecycle: "active"` / `public_access: "live"` / `tier: "pro"`, which would
+publish and promote Lions with no billing) and the `domain` row (emits
+`lions.localhost` / `environment: "staging"`, which would **not** conflict on
+production because the unique index is per-environment, silently attaching a
+junk domain to a live tenant). Colours are applied as a targeted, guarded
+UPDATE instead. Those tables are also removed from `CONFLICT_COLUMNS`, so
+`upsertSql` now throws if anyone reintroduces a statement for them.
+
+**Roster/staff replaced per Christian's decision:** the builder's 32 players
+and 6 staff are prospect-mockup placeholders with invented human names.
+Substituted with 22 neutral `Player N` rows (numbers 1–22, conventional
+position spread) and 4 job-title staff slots, on `:placeholder:`-namespaced
+ids. Season-stat rows dropped with them — FK'd to the old player ids, and
+editorial@1 has no stats module.
+
+Generated SQL: 79 inserts across 24 tables + 1 guarded `clubs` UPDATE, one
+`do $lions_prod$` block, in-transaction fingerprint/domain/billing guards,
+owner via `into strict v_owner`.
+
+**A test caught a real thing:** the seed actor id survives once inside
+`presentation_documents.configuration` at `metadata.createdBy`, because
+column-level substitution doesn't reach JSONB. Verified staging carries the
+identical value with a correct `created_by` column, so it is pre-existing
+inert provenance; left alone because rewriting it forks
+`configuration_digest`. Pinned by an explicit test.
+
+**Decided 2026-08-15: ship the 10-asset version, the club uploads the rest.**
+No script change — the importer already ships exactly that. Expect the Shop
+kit slideshow and standings team logos to be missing on first load, and
+standings empty entirely; that is the accepted shortfall, not a failed
+import. Background follows.
+
+**The importer is behind staging.** This session's Lions work
+(kit-photo slideshow, standings logos, extra branding) reached staging
+without being folded back into the builder or the byte-pinned plan JSON:
+media_assets 10 vs 21, shop_kit_photos 3 vs 4, shop_kit_section 3 vs 4,
+matches 4 vs 1, tryouts 3 vs 1, league_standings 0 vs 7. The plan is
+SHA-256-pinned and refuses a `production` destination, so closing the media
+gap needs a newly approved plan digest, not a regeneration.
+
+**Two bugs found by actually running it, both fixed.** (a) A missed
+substitution: `parseArgs`'s boolean whitelist still said `confirm-staging`
+while `main()` checked `confirm-production`, so the flag fell through to the
+value-flag branch and reported `Missing value for --confirm-production`. Both
+flag sets are now explicit whitelists, so unknown flags fail loudly instead of
+being silently ignored. (b) `players.age` was set to null but the column is
+`not null` — the first real apply against production failed on it. One
+transaction, so nothing landed (verified read-only: 0 rows, accent still
+NULL). Fixed by reading the whole constraint set rather than one error at a
+time, which also caught that `0` would have failed next
+(`players_age_check` is 14–80). All 22 placeholders now use a uniform 18.
+
+**Rehearsed against real Postgres, twice, rolled back.** Applied to local
+Supabase in a transaction against a production-shaped shell tenant with all
+real triggers/FKs/CHECKs active. Byte-identical receipts on both applies, so
+idempotency is proven rather than claimed. The receipt confirms every dropped
+row set: lifecycle `onboarding`, public_access `preview`, tier `starter`,
+club_subscriptions 0, club_domains 1, club_members 1 — plus players 22,
+staff 4, media_assets 10, template `editorial`, accent `#F0F0F0`. The
+presentation digest matches hosted staging exactly.
+
+Two rehearsal notes worth knowing: the importer's deterministic ids are
+**byte-identical across local, staging and production**, so the local Lions
+club had to be cleared first or the upsert tries to move its rows to the new
+club; and presentation documents/publications have an immutability trigger
+that blocks deletion.
+
+Verification: `tsc` clean, lint at the same 5 baseline warnings, contract file
+32/32. Detail in `docs/phase-11/diverse-city/STATUS.md`.
+
+## Lions Football Club now exists in production (DB only) — provisioning complete and verified
+
+Agent: Claude Opus 5 with Christian, 2026-08-15. Status: **complete for DB
+provisioning; Vercel hostname attachment not done and not approved.**
+
+Lions is provisioned in production: club
+`3b6b71dc-b27a-4f39-bbee-a95ae9d6bf52`, slug `lions`, name `Lions Football
+Club`, `kind=customer`, `lifecycle=onboarding`, `public_access=preview`,
+`tier=starter`. Owner is Christian's existing operator Auth user
+`199d8437-1237-4098-99dd-8b089411255e`. Primary domain row
+`lions-fc-private.vercel.app`.
+
+Christian ran `scripts/provision-lions-production.ts` himself with his own
+email OTP and TOTP. No credential passed through the assisting agent —
+`scripts/operator-session.ts` enforces that structurally by refusing to run
+without a TTY, which an agent's shell cannot provide. Production credentials
+were supplied as one-shot shell exports rather than by editing `.env.local`
+(`loadEnv` runs without `override`, so exports win — verified against dotenv
+17.4.2 first), leaving the local dev environment untouched.
+
+**Verified read-only immediately after:** all four rows present and correct
+(`clubs`, `club_domains`, `club_members`, `audit_events`), with exactly one
+`operation=provision` audit row — first-attempt success, no partial retries
+to clean up, where `DCFC-801` took three. Diverse City and Rose City
+confirmed unchanged and still 200.
+
+**Expected, not a defect:** `lions-fc-private.vercel.app` returns 404. The
+`club_domains` row exists but the hostname isn't attached to the Vercel
+project — same as DCFC's private host after `DCFC-801`.
+
+**Known follow-up:** Lions has `store_enabled=false` (the column defaults
+false and `provisionClub()` doesn't set it), but Lions' local row is `true`
+and the Shop is a real Lions feature. Needs
+`scripts/set-club-store-enabled.ts` when content lands. Same class of quiet
+gap as `DCFC-801`'s `clubs.kind` issue.
+
+**Exact next step:** Christian decides on Lions content/media import,
+`editorial@1` template selection, tier, `store_enabled`, and hostname
+attachment. None approved; none proceed without a separate go.
 
 ## Production redeployed successfully — and a second silent-failure trap found: `vercel --prod` does not move the alias after a rollback
 
