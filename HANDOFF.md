@@ -2,6 +2,45 @@
 
 Last updated: 2026-08-15
 
+## columbuslionsfc.com is attached to Lions in production — both halves done and verified
+
+Agent: Claude Opus 5 with Christian, 2026-08-15. Status: **complete and
+verified.** The club is reachable at its real domain; the public site remains
+gated pending billing.
+
+Vercel half (agent): `columbuslionsfc.com` and `www.columbuslionsfc.com` both
+registered as PROJECT domains on `onzio-platform` and aliased to the production
+deployment. Registering them as project domains rather than bare aliases is
+load-bearing — the project runs Vercel Authentication with
+`all_except_custom_domains`, so an unregistered hostname 302s every visitor to
+`vercel.com/sso-api`. `www` did exactly that until it was registered, the same
+root cause that had been walling `lions-fc-private.vercel.app`.
+
+Supabase half (Christian, operator TOTP):
+`scripts/attach-lions-domain-production.ts` attached both hostnames.
+`columbuslionsfc.com` is now `is_primary=true`, demoting
+`lions-fc-private.vercel.app` to non-primary while leaving it active — the same
+treatment `diverse-city-fc-private.vercel.app` got.
+
+**A display artifact worth not being alarmed by:** the script's stderr showed
+the www hostname as `[www.columbuslionsfc.com](https://www.columbuslionsfc.com)`.
+That was the terminal auto-linkifying a `www.`-prefixed string, not data.
+Verified read-only against production: the stored value is
+`www.columbuslionsfc.com`, length 23, plain.
+
+Verified after: `/admin/login` on `columbuslionsfc.com` returns 200, proving
+tenant resolution works on the real domain through middleware's
+`resolve_verified_tenant` fallback for admin requests. Public routes return 404
+on all three hostnames — the RLS `preview` gate
+(`onzio_private.is_publicly_accessible` allows only `live`/`grace`), which
+clears when real Stripe checkout flips the club. Diverse City FC and Rose City
+unaffected.
+
+**Known transient:** the owner invite immediately afterwards failed with
+Supabase's "you can only request this after 3 seconds" OTP throttle, because
+the operator sign-in collided with the attach run's. Nothing was sent and
+nothing partially applied; wait out the cooldown and re-run.
+
 ## Lions go-live prep: Vercel protection fixed, Stripe config verified, price script ready
 
 Agent: Claude Opus 5 with a research subagent, 2026-08-15. Status: **protection
