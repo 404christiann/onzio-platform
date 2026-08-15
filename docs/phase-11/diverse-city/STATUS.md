@@ -1,5 +1,151 @@
 # Diverse City FC Status
 
+## 2026-08-14 - Production redeployed and verified live; `vercel --prod` alias-pinning trap found
+
+**Package:** none — completes the recovery from the 2026-08-14 incident.
+
+**Status:** `complete`. Production is live on
+`codex/lions-editorial-diversecity-v2` HEAD `2e6ea28`.
+
+**Agent:** Claude Opus 5 (Claude Code).
+
+**Approval used:** Christian asked for the branch to be redeployed to
+production, after confirming the migration state.
+
+**Result:** `dpl_NZB1ow7vEHoMx5FbZVDA9u2fgszj`
+(`onzio-platform-q2gk5bs3o`) is the live production deployment. Previous
+live deployment, retained as the rollback target:
+`dpl_2Mi33ahNh6RCWqoHqnK2Fs663E3g` (`kg8no3pgt`, commit `26da2a6`).
+
+**Trap found — a deploy that reports success while changing nothing.** After
+a `vercel rollback`, the production alias stays pinned to the rolled-back
+deployment. `vercel --prod` still builds, still reports `● Ready` and
+`target: production`, and the alias does not move; the new deployment serves
+no traffic. Two `● Ready` production deployments from earlier the same day
+(`onzio-platform-dj53vi5xy`, `onzio-platform-9gdp5make`) sit unaliased for
+this reason — earlier redeploy attempts that silently never went live.
+`vercel promote` is required. A new section documenting this, including the
+validate-before-promote step below, was added to `CLAUDE.md` alongside the
+migration gate.
+
+**Verification, in the order run:**
+
+1. Migration gate: 33 local files, 33 matching remote entries, zero
+   Local-only. Physical schema separately confirmed by direct query.
+2. `npm run build` passed.
+3. Baseline captured before any change: all four production hostnames 200,
+   live alias recorded, rollback command held ready.
+4. `vercel --prod` → new deployment Ready; alias checked and found not
+   moved. Trap surfaced here.
+5. **New build validated against real production data before the public
+   alias moved**, by pointing `diverse-city-fc-private.vercel.app` at the
+   new deployment. All 11 routes 200 (`/`, `/roster`, `/schedule`, `/shop`,
+   `/club/about`, `/admin/login`, `/stats`, `/tryouts`, `/contact`,
+   `/sponsors`, `/staff`), `<title>Diverse City FC</title>`, zero
+   `UNKNOWN_TENANT` / `ContractError` markers.
+6. `vercel promote`, alias move confirmed via `vercel inspect`.
+7. Post-promotion: all public hostnames 200; `diversecityfc.com` renders
+   `Diverse City FC`, `onzio-platform.vercel.app` renders `Rose City Futbol
+   Club` (no cross-tenant leak); runtime logs show zero errors.
+
+**Files changed:** `CLAUDE.md` (new post-deploy alias section), `HANDOFF.md`,
+this file.
+
+**Exact next step:** Lions production tenant provisioning — see the entry
+below. Unblocked and waiting on Christian.
+
+**Hosted mutations:** 1 Vercel deployment created, 2 Vercel alias changes
+(`diverse-city-fc-private.vercel.app` for validation, then the production
+promote). Zero Supabase, zero DNS, zero Stripe.
+
+## 2026-08-14 - Lions production tenant provisioning prepared — scripts ready, NOT executed
+
+**Package:** none — Lions equivalent of `DCFC-801`'s tenant half, following
+the same operator-run pattern.
+
+**Status:** `ready for Christian to run`. Nothing has been executed against
+production. Zero hosted mutations of any kind this turn.
+
+**Agent:** Claude Opus 5 (Claude Code).
+
+**Approval used:** Christian confirmed in chat the four identity constants —
+slug `lions`, a private `*.vercel.app` hostname, his own email as owner, and
+reuse of his existing production Auth user.
+
+**What was built:**
+
+- `scripts/provision-lions-production.ts` — a structural twin of
+  `scripts/provision-diverse-city-production.ts`. Same hardcoded project-ref
+  guard (`ioalthwsdrlzrubomrow`), same `ONZIO_ENVIRONMENT=production` /
+  `sb_secret_` key / single-operator-actor assertions, same
+  `acquireOperatorAccessToken()` interactive operator auth, same 70-second
+  OTP cooldown before the owner-invite send. Confirmation string is
+  `lions-prod-provision:ioalthwsdrlzrubomrow:lions`. Calls `provisionClub()`
+  once with `kind: "customer"` and `existingAuthUserId` set, which yields
+  `lifecycle=onboarding`, `public_access=preview`, `tier=starter`.
+- `scripts/preflight-lions-production.ts` — new, no DCFC counterpart.
+  Read-only. Checks slug availability, hostname availability, that the owner
+  Auth user resolves with a matching email, that exactly one operator actor
+  is configured, and whether `clubs.store_enabled` exists yet. Added because
+  `DCFC-801` burned two provisioning attempts on Supabase's per-email OTP
+  cooldown; each failed attempt costs a real email and a ~60s wait, and every
+  one of those failure modes is answerable by a read.
+
+**Identity to be created:** slug `lions`, name `Lions Football Club`,
+hostname `lions-fc-private.vercel.app`, owner
+`christianjavieralcala@gmail.com` reusing Auth user
+`199d8437-1237-4098-99dd-8b089411255e`.
+
+**Deliberately out of scope, each needing its own approval:** content/media
+import, `editorial@1` template selection, tier promotion to pro,
+`store_enabled`, and Vercel hostname attachment. Lions' local row is
+`tier=pro`/`store_enabled=true`/`lifecycle=active`; this creates the
+pre-billing onboarding row only, matching DCFC's arc.
+
+**Verification run:** `npx tsc --noEmit` passed. `npm run lint` passed with
+the same 5 baseline warnings (unchanged count). `npx vitest run
+tests/contracts/provisioning-migration.test.ts` passed, 23/23. No rehearsal
+against loopback was run this turn — `provisionClub()`'s real-DB
+conflict/rollback path was already exercised for real during `DCFC-801`,
+including two genuine rollbacks that left zero orphaned rows.
+
+**Migration gap: already closed — the incident entry's "exact next step" was
+stale.** The 2026-08-14 incident entry says the 3 migrations
+(`20260812120000_editorial_presentation_template.sql`,
+`20260812120100_editorial_club_identity.sql`,
+`20260812120200_club_store_enabled.sql`) still needed applying to production.
+They do not. Verified two ways rather than one, because the whole incident
+was a ledger-vs-reality mismatch:
+
+- `supabase migration list --linked` shows all 33 local migrations with a
+  matching remote entry. Zero Local-only.
+- Physical schema confirmed by direct read-only query against production:
+  `clubs.store_enabled` present, `clubs.accent_color` present,
+  `onzio.club_identity` present with RLS enabled, 4 policies and 2 triggers,
+  `matches.attendance` and `matches.scorers` both present, and
+  `presentation_documents_template_id_check` now reads
+  `('cinematic','heritage','clubhouse','academy','editorial')`. Both existing
+  clubs (`diverse-city`, `rose-city`) carry `store_enabled=true` from the
+  migration's backfill.
+
+So the migrations are complete and correctly applied, not merely recorded.
+No `supabase db push` was run this turn and none was needed.
+
+**Pre-flight already satisfied, read-only against production:** slug `lions`
+is free (only `diverse-city` and `rose-city` exist), hostname
+`lions-fc-private.vercel.app` is unclaimed, and Auth user
+`199d8437-1237-4098-99dd-8b089411255e` resolves to
+`christianjavieralcala@gmail.com` as expected. Christian can still run
+`scripts/preflight-lions-production.ts` himself, but every check it makes now
+has a known answer.
+
+**Exact next step:** Christian runs `scripts/provision-lions-production.ts`
+with production credentials in `.env.local` and his own operator TOTP.
+(Production has since been redeployed onto this branch — see the entry
+above.)
+
+**Hosted mutations:** none. All production access this turn was read-only.
+
 ## 2026-08-12 - Nationality flags now render for all 74 admin-supported nationalities, not just 6
 
 **Package:** none — ad hoc bug fix from a live report on diversecityfc.com:
