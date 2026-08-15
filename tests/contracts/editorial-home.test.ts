@@ -259,11 +259,16 @@ describe("editorial home: section composition", () => {
       cursor = index;
     }
 
-    // Heading copy moves to league_standings_settings unchanged.
-    expect(seed).toContain('eyebrow: "League standings"');
-    expect(seed).toContain('title: "Ohio Valley Division"');
+    // Heading copy for league_standings_settings. Updated 2026-08-15 to the
+    // values Christian had set through /admin/standings on production: the
+    // originals were inherited from the hardcoded EditorialStandingsTable and
+    // named the wrong league. The seeder upserts this block, so a stale copy
+    // here silently reverts a real admin edit on every re-seed — which is
+    // exactly what happened once before this was corrected.
+    expect(seed).toContain('eyebrow: "2026 Spring Season"');
+    expect(seed).toContain('title: "Ohio/Indy Conference Standings"');
     expect(seed).toContain(
-      'intro: "Current table for Lions Football Club\'s 2026 campaign."',
+      'intro: "League standings and team statistics for the 2026 Spring season."',
     );
 
     // Local-only: no hosted seed may be reachable from the loopback script.

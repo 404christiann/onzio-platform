@@ -21,10 +21,25 @@ export type LionsStandingRow = {
   is_club: boolean;
 };
 
+/**
+ * Updated 2026-08-15 to match what Christian had already set through
+ * /admin/standings on production. The previous values ("League standings" /
+ * "Ohio Valley Division" / "Current table for Lions Football Club's 2026
+ * campaign.") were inherited from the original hardcoded
+ * EditorialStandingsTable copy and were stale: the league is the Ohio/Indy
+ * Conference, which is also the name consistent with the table below
+ * containing Indy Gladiators SC.
+ *
+ * This matters beyond wording. The production seeder upserts this block, so
+ * leaving the stale copy here would have silently reverted a real admin edit
+ * every time the standings were re-seeded — and re-seeding is expected to be
+ * routine as the table moves. Keeping the module in step with what the club
+ * actually publishes is what stops the script and the admin fighting.
+ */
 export const LIONS_STANDINGS_SETTINGS = {
-  eyebrow: "League standings",
-  title: "Ohio Valley Division",
-  intro: "Current table for Lions Football Club's 2026 campaign.",
+  eyebrow: "2026 Spring Season",
+  title: "Ohio/Indy Conference Standings",
+  intro: "League standings and team statistics for the 2026 Spring season.",
 } as const;
 
 /**
