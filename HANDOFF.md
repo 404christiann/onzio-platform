@@ -2,6 +2,64 @@
 
 Last updated: 2026-08-15
 
+## Lions go-live prep: Vercel protection fixed, Stripe config verified, price script ready
+
+Agent: Claude Opus 5 with a research subagent, 2026-08-15. Status: **protection
+fixed; price script written, NOT run; checkout still belongs to the club.**
+
+**Vercel Deployment Protection on `lions-fc-private.vercel.app` — fixed.** The
+project has `ssoProtection` enabled with
+`deploymentType: "all_except_custom_domains"`. Diverse City's private host was
+registered as a project domain and so counted as custom; Lions' existed only as
+a deployment alias, so every request 302'd to a Vercel login. Both were aliases
+on the same deployment, which is why it looked arbitrary. Fixed by registering
+`lions-fc-private.vercel.app` as a project domain — `/admin/login` now returns
+200 with no bypass header. The `ssoProtection` setting itself was deliberately
+NOT touched: disabling it would expose every preview deployment on the project.
+The public site still 404s, but that is now the app's own RLS 404 for a
+`preview` tenant, not Vercel's wall.
+
+**Stripe production config verified — the DCFC incident gap is NOT present.**
+An unsigned POST to `/api/stripe/webhook` returns `400 INVALID_SIGNATURE`
+rather than a 500. Because `getStripeRuntimeConfig()` runs before signature
+verification, that single probe proves all four variables are valid in
+Production. Confirmed independently: `vercel env ls production` shows
+`STRIPE_PORTAL_CONFIGURATION_ID` present (set 3 days ago), alongside
+`STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
+
+**The real blocker found: `clubs.stripe_price_id` is null for Lions.**
+`clubPriceId()` in `lib/stripe-event-routing.ts` rejects null with
+`STRIPE_PRICE_REQUIRED` before any Stripe object is created, so the owner's
+first click on "Start subscription" would 403. This is exactly how it surfaced
+for Diverse City FC — invisible until a real owner tried to pay.
+`scripts/set-lions-live-price.ts` (new) fixes it, a structural twin of the DCFC
+script: dry-run by default, `--execute --confirm-project=ioalthwsdrlzrubomrow`,
+audited update, read-back reconciliation. It pins the club id as well as the
+slug and refuses any club whose `kind` is not `customer`.
+
+Price: `price_1Tw8RjK6WajTkwHYcTsgHNGc`, $65/month, product
+`prod_Uw0SrC4bw23myw` "Onzio Starter Plan" — the standard shared Starter price,
+matching Lions' `tier=starter`. No new Stripe product or price needed, unlike
+DCFC's bespoke $85. **Not verified by the script:** that the price is live-mode
+and active on the account behind production's `STRIPE_SECRET_KEY`. Nothing in
+this repo can check that without calling Stripe; confirm in the Dashboard first.
+
+**Sequencing point that blocks the owner invite.**
+`lib/operator/invite-club-member.ts` builds its callback from the club's
+**verified primary domain**, and the checkout route builds `success_url` the
+same way. Inviting now bakes `lions-fc-private.vercel.app` into the real
+owner's sign-in link. If Lions is to launch on `columbuslionsfc.com`, attach
+and promote that domain BEFORE the invite. The invite script is therefore not
+written yet — its `EXPECTED_CALLBACK` constant depends on that decision.
+
+Also note `assertEmailIsNew`: Christian's own address is already the Lions
+owner Auth user, so the real contact must use a different one or the invite
+fails `AUTH_IDENTITY_EXISTS`.
+
+**Unchanged rule:** per `docs/lions-fc-launch-plan.md` Phase 2 step 6, the
+checkout itself "belongs exclusively to the real Lions FC contact — neither
+Christian nor any agent attempts, simulates, or test-mode-substitutes" it.
+
 ## Lions production standings APPLIED — 9 rows live; one admin-edit revert hit and fixed
 
 Agent: Claude Opus 5, 2026-08-15. Status: **complete and verified.**
