@@ -6,13 +6,15 @@ export type TemplateKey =
   | "heritage@1"
   | "clubhouse@1"
   | "academy@1"
-  | "editorial@1";
+  | "editorial@1"
+  | "pathway@1";
 export type TemplateId =
   | "cinematic"
   | "heritage"
   | "clubhouse"
   | "academy"
-  | "editorial";
+  | "editorial"
+  | "pathway";
 export type ProvenanceStatus =
   | "verified_public_source"
   | "club_supplied"
@@ -75,7 +77,7 @@ const sectionSchema = z.object({
 const documentSchema = z.object({
   schemaVersion: z.literal(1),
   template: z.object({
-    id: z.enum(["cinematic", "heritage", "clubhouse", "academy", "editorial"]),
+    id: z.enum(["cinematic", "heritage", "clubhouse", "academy", "editorial", "pathway"]),
     version: z.literal(1),
   }),
   fontPack: z.string(),
@@ -150,7 +152,8 @@ export type SectionRegistration = {
     | "heritage"
     | "clubhouse"
     | "academy"
-    | "editorial";
+    | "editorial"
+    | "pathway";
   contentDomain: string;
   compatibleTemplates: TemplateKey[];
   requiredModule: string | null;
@@ -251,7 +254,7 @@ export const fontPacks: Record<string, FontPackRegistration> = {
   "geist": {
     key: "geist",
     displayName: "Geist",
-    compatibleTemplates: ["clubhouse@1", "editorial@1"],
+    compatibleTemplates: ["clubhouse@1", "editorial@1", "pathway@1"],
   },
   // DCFC-D104: no existing pack matched the approved academy@1 type stack --
   // Montserrat headings, Inter body/UI, DM Sans desktop navigation.
@@ -276,6 +279,19 @@ export const routeRegistry = {
   tryouts: { path: "/tryouts" },
   programs: { path: "/programs" },
   contact: { path: "/contact" },
+  // MLA P1: generic route vocabulary for programs-and-pathway sites (first
+  // consumer: pathway@1). Named semantically for reuse by future non-sports
+  // academy-style templates, per the academy@1/editorial@1 precedent.
+  academy: { path: "/academy" },
+  training: { path: "/book-training" },
+  "youth-club": { path: "/youth-club" },
+  "senior-club": { path: "/senior-club" },
+  league: { path: "/upsl" },
+  "league-payments": { path: "/upsl-payments" },
+  merch: { path: "/merch" },
+  about: { path: "/about" },
+  promo: { path: "/winter-5v5" },
+  legal: { path: "/privacy" },
 } as const;
 
 export const moduleRegistry = {
@@ -522,6 +538,169 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     emptyBehavior: "hide",
     productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
   },
+  // pathway@1 sections (MLA P1). Each maps to a content domain that already
+  // exists -- no section is registered against a domain the schema cannot
+  // supply. Deliberately excluded: payment collection behind
+  // pathway.numbered-steps and pathway.price-cards (both are informational
+  // display only), and a scheduler behind the training CTA -- both Phase 2+.
+  "pathway.affiliation-bar": {
+    type: "pathway.affiliation-bar",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "site_branding",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.nav": {
+    type: "pathway.nav",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "site_branding",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.hero": {
+    type: "pathway.hero",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "homepage",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  // The signature Home-only module: the four-stage program spine with its
+  // connecting rail.
+  "pathway.pathway-rail": {
+    type: "pathway.pathway-rail",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "programs",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.split-feature": {
+    type: "pathway.split-feature",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "programs",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.inverted-feature": {
+    type: "pathway.inverted-feature",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "programs",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.spec-list": {
+    type: "pathway.spec-list",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "programs",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.numbered-steps": {
+    type: "pathway.numbered-steps",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "programs",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.price-cards": {
+    type: "pathway.price-cards",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "shop_kit_section",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: "store",
+    requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.partner-strip": {
+    type: "pathway.partner-strip",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "site_sponsor_logos",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: "sponsors",
+    requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.contact-form": {
+    type: "pathway.contact-form",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "contact",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: "contact",
+    requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.legal-doc": {
+    type: "pathway.legal-doc",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "about",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "pathway.footer": {
+    type: "pathway.footer",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "site_branding",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
 };
 
 export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
@@ -712,6 +891,62 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
     defaultRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
     supportedRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
     supportedModules: ["roster", "schedule", "store", "staff", "tryouts", "contact"],
+  },
+  // Pathway concept template (MLA P1). Like clubhouse@1, academy@1, and
+  // editorial@1 before it, this is a platform template, not
+  // Manu-Ledesma-Academy-exclusive -- any club may be assigned it, following
+  // the same extraction precedent. It carries a programs-and-pathway IA, not
+  // a sports-CMS shape.
+  "pathway@1": {
+    id: "pathway",
+    version: 1,
+    key: "pathway@1",
+    displayName: "Pathway",
+    originNote: "Based on the approved Manu Ledesma Academy prospect visual system.",
+    defaultFontPack: "geist",
+    compatibleFontPacks: ["geist"],
+    defaultSections: ["pathway.hero", "pathway.pathway-rail", "pathway.partner-strip"],
+    supportedSections: [
+      "pathway.affiliation-bar",
+      "pathway.nav",
+      "pathway.hero",
+      "pathway.pathway-rail",
+      "pathway.split-feature",
+      "pathway.inverted-feature",
+      "pathway.spec-list",
+      "pathway.numbered-steps",
+      "pathway.price-cards",
+      "pathway.partner-strip",
+      "pathway.contact-form",
+      "pathway.legal-doc",
+      "pathway.footer",
+    ],
+    defaultRoutes: [
+      "home",
+      "academy",
+      "training",
+      "youth-club",
+      "senior-club",
+      "league",
+      "merch",
+      "about",
+      "contact",
+    ],
+    supportedRoutes: [
+      "home",
+      "academy",
+      "training",
+      "youth-club",
+      "senior-club",
+      "league",
+      "merch",
+      "about",
+      "contact",
+      "league-payments",
+      "promo",
+      "legal",
+    ],
+    supportedModules: ["contact", "sponsors", "store", "affiliations"],
   },
 };
 

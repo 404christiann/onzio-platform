@@ -45,6 +45,9 @@ LIFECYCLE_SUSPENSION_ENABLED
 LIFECYCLE_RECONCILIATION_ENABLED
 LIFECYCLE_CRON_HEARTBEAT_URL
 RESEND_WEBHOOK_SECRET
+RESEND_API_KEY
+ONZIO_CONTACT_FROM
+ONZIO_CONTACT_FALLBACK_TO
 FORCE_PUBLIC_SITE_ONLINE
 ```
 
@@ -60,6 +63,13 @@ invoice history while disabling subscription cancellation and plan updates.
 Lifecycle suspension and reconciliation flags must each be the exact string
 `true` or `false`. `RESEND_WEBHOOK_SECRET` is needed only when the local
 receiver is separately authorized and configured with Resend.
+`RESEND_API_KEY` and `ONZIO_CONTACT_FROM` are needed only when the public
+contact-form send (`/api/contact`) should actually deliver email:
+`ONZIO_CONTACT_FROM` must be a Resend-verified sender address, and
+`ONZIO_CONTACT_FALLBACK_TO` is the recipient used when a club has not set a
+`contact_profile` email. With any of them unset, the route fails closed with
+an explicit `CONTACT_SEND_NOT_CONFIGURED` error instead of pretending to
+send.
 
 For local hostname routing, use `alpha.localhost:3000` or another verified
 seeded subdomain. Bare `localhost` is rejected unless development explicitly
@@ -71,6 +81,29 @@ ONZIO_LOCAL_TENANT_SLUG=alpha
 
 Do not run authenticated CRUD, webhook, Checkout, Portal, seed, or migration
 flows against hosted projects.
+
+## Logging in locally as a club owner or admin
+
+Local login uses the same passwordless email-code flow as the product. The
+account must already exist as a confirmed local Auth user with an active
+`club_members` row for the tenant (the local import scripts seed these with
+service-role `auth.admin.createUser` + `email_confirm: true`; there is no
+self-service signup).
+
+1. Open `http://<slug>.localhost:3000/admin/login` on the tenant host.
+2. Enter the seeded email and request a code.
+3. Local Supabase delivers all Auth email to Mailpit at
+   `http://127.0.0.1:54324`; the 6-digit code is the first token of the
+   message subject.
+4. Enter the code. The session cookie is host-scoped, so log in on the
+   tenant host you intend to browse.
+
+Preview tenants (`public_access = "preview"`) are anonymous-404 by design;
+`/admin/login` still resolves through the `resolve_verified_tenant`
+fallback, which requires the tenant's verified `club_domains` row for
+`ONZIO_ENVIRONMENT` — every local seed/import creates one. After signing
+in, the member session satisfies RLS and the public preview site renders on
+the same host.
 
 ## Contract-test environment
 

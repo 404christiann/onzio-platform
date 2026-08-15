@@ -16,6 +16,18 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/programs",
   "/contact",
   "/tryouts",
+  // MLA P1 Step 3: pathway@1's ten additional flat routes (home and contact
+  // are already covered above).
+  "/academy",
+  "/book-training",
+  "/youth-club",
+  "/senior-club",
+  "/upsl",
+  "/upsl-payments",
+  "/merch",
+  "/about",
+  "/winter-5v5",
+  "/privacy",
 ]);
 
 const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
@@ -123,12 +135,40 @@ export async function middleware(request: NextRequest) {
         .select("id, slug, lifecycle, public_access")
         .eq("slug", slug)
         .maybeSingle();
-      if (data) {
+      let club = data as
+        | {
+            id: string;
+            slug: string;
+            lifecycle: string;
+            public_access: string;
+          }
+        | null
+        | undefined;
+      // Private-preview admin entry, local parity with the hosted branch
+      // below: the RLS-gated clubs read returns nothing anonymously for a
+      // preview tenant, which would 404 /admin/login and make it impossible
+      // for a member to ever bootstrap the session that RLS wants. The
+      // security-definer resolve_verified_tenant RPC exists for exactly this
+      // (Phase 7); it only resolves verified, active, non-archived domain
+      // rows for the current environment, so local preview tenants must have
+      // seeded their verified *.localhost club_domains row (all local
+      // imports/seeds do). Public paths stay fail-closed for anonymous
+      // visitors — this fallback is admin/billing entry only.
+      if (!club && (isAdminRequest || isBillingRequest)) {
+        const { data: rpcResolved } = await onzio
+          .rpc("resolve_verified_tenant", {
+            p_hostname: hostname,
+            p_environment: process.env.ONZIO_ENVIRONMENT!,
+          })
+          .maybeSingle();
+        club = rpcResolved as typeof club;
+      }
+      if (club) {
         resolved = {
-          id: data.id,
-          slug: data.slug,
-          lifecycle: data.lifecycle,
-          publicAccess: data.public_access,
+          id: club.id,
+          slug: club.slug,
+          lifecycle: club.lifecycle,
+          publicAccess: club.public_access,
         };
       }
     } else {

@@ -16,6 +16,10 @@ export default async function TenantTryoutsPage({
 }) {
   const club = await getClubContextBySlug((await params).slug);
 
+  // MLA P1 Step 6: pathway@1 is not a sports-CMS site, so this route 404s
+  // for that tenant instead of falling into the academy@1 branch below.
+  if (club.presentationTemplateKey === "pathway@1") notFound();
+
   if (club.presentationTemplateKey === "editorial@1") {
     const onzio = (await createClient()).schema("onzio");
     const [tryouts, contactProfile, content] = await Promise.all([

@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import AboutClubPageClient from "@/components/AboutClubPageClient";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
@@ -12,6 +13,10 @@ export default async function TenantAboutPage({
   params: Promise<{ slug: string }>;
 }) {
   const club = await getClubContextBySlug((await params).slug);
+  // MLA P1 Step 6: pathway@1 uses the flat /about route, not this
+  // sports-CMS-shaped club/about route, so it 404s here instead of falling
+  // into the generic AboutClubPageClient default below.
+  if (club.presentationTemplateKey === "pathway@1") notFound();
   const onzio = (await createClient()).schema("onzio");
   const content = await fetchAboutClubContent(club.id, onzio).catch((error) => {
     console.error("TenantAboutPage:", error);

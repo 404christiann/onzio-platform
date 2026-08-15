@@ -9,6 +9,7 @@ import FixtureRow from "@/components/FixtureRow";
 import AcademyFixtureRow from "@/components/AcademyFixtureRow";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
+import { notFound } from "next/navigation";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
 import EditorialSchedule from "@/components/editorial/EditorialSchedule";
@@ -57,6 +58,9 @@ function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
 
 export default function SchedulePage() {
   const club = useClubContext();
+  // MLA P1 Step 6: pathway@1 is not a sports-CMS site, so this route 404s
+  // for that tenant instead of falling through to the legacy schedule below.
+  if (club.presentationTemplateKey === "pathway@1") notFound();
   if (club.presentationTemplateKey === "editorial@1") return <EditorialSchedule />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSchedulePage />;
   return <LegacySchedulePage />;

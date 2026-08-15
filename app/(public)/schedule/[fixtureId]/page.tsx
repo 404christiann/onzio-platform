@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import ClubhouseMatchAreaPage from "@/components/ClubhouseMatchAreaPage";
 import EditorialMatchArea from "@/components/editorial/EditorialMatchArea";
 import { getClubContext } from "@/lib/club-context";
@@ -39,6 +40,10 @@ export default async function MatchAreaPage({
   const club = await getClubContext({
     hostname: requestHeaders.get("host") ?? "",
   }).catch(() => null);
+
+  // MLA P1 Step 6: pathway@1 is not a sports-CMS site, so this route 404s
+  // for that tenant instead of falling through to ClubhouseMatchAreaPage.
+  if (club?.presentationTemplateKey === "pathway@1") notFound();
 
   if (club?.presentationTemplateKey === "editorial@1") {
     return <EditorialMatchArea fixtureId={fixtureId} />;

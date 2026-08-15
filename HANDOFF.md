@@ -1,6 +1,53 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-14
+Last updated: 2026-08-15
+
+## Local preview-tenant admin login unblocked; MLA owner login seeded and verified end-to-end
+
+Agent: Claude, 2026-08-15. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian wants to view the seeded Manu Ledesma Academy preview
+tenant locally as its authenticated owner (matching the real product's
+owner-login flow) instead of flipping `public_access` to `live`.
+
+**Gap found:** on hosted domains, anonymous `/admin/login` on a preview
+tenant resolves through the Phase 7 security-definer
+`resolve_verified_tenant` RPC fallback in `middleware.ts` — that fallback
+existed only in the non-`.localhost` branch. The `.localhost` slug branch
+used only the RLS-gated `clubs` read, which returns nothing anonymously for
+a preview tenant, so every path 404'd (bravo and manu-ledesma-academy
+both), making it impossible to ever bootstrap the member session RLS wants.
+
+**Fix:** `middleware.ts` `.localhost` branch now falls back to the same
+`resolve_verified_tenant` RPC for admin/billing requests only, mirroring
+the hosted branch byte-for-byte in behavior. Anonymous public paths on
+preview tenants still 404 (verified). The RPC needs the tenant's verified
+`club_domains` row, which `scripts/seed-mla-local.ts` already seeds.
+
+**Local owner seeded (one-off, service-role, loopback-guarded, mirroring
+`ensureLocalUser` in `scripts/import-rose-city-local.ts`):** auth user
+`christianjavieralcala@gmail.com` (id `76b45da8-e083-41c0-bdba-a78486d86e17`,
+`email_confirm: true`) plus `onzio.club_members` row (club
+`b729b62f-2aae-5c46-b607-6a9437111530` manu-ledesma-academy, `role: owner`,
+`status: active`). Not part of any checked-in seed — a `supabase db reset`
+removes both; re-run the same two inserts afterwards.
+
+**Login mechanism (no new auth invented):** the standard passwordless OTP
+flow at `http://manu-ledesma-academy.localhost:3000/admin/login`; the
+6-digit code lands in local Mailpit (`http://127.0.0.1:54324`) as the first
+token of the email subject.
+
+**Verification:** full browser walk-through — login page loads on the
+preview tenant, code requested and read from Mailpit, `/admin` dashboard
+renders as MANU LEDESMA ACADEMY with the owner signed in, and the public
+pathway@1 home renders authenticated. `npx tsc --noEmit` clean;
+`npm run test:contracts` 56 files / 707 tests green; `npm run
+test:architecture` green. `npm run test:db` fails identically with and
+without this change ("Expected 3 parts in JWT; got 1" from the local
+stack/.env.test key mismatch) — pre-existing environment drift, not this
+work; contract suites that load `middleware.ts`
+(`tenant-routing`, `tenant-robots`) pass.
 
 ## Dashboard's dead "Enter Match Stats" quick-action replaced for Lions
 

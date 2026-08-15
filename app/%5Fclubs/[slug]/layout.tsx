@@ -6,6 +6,7 @@ import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import EditorialShell from "@/components/editorial/EditorialShell";
+import PathwayShell from "@/components/pathway/PathwayShell";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
 import type { Metadata } from "next";
@@ -71,6 +72,21 @@ export default async function TenantLayout({
       <ClubContextProvider club={club}>
         <ClubBrandingProvider>
           <EditorialShell>{children}</EditorialShell>
+        </ClubBrandingProvider>
+      </ClubContextProvider>
+    );
+  }
+
+  if (club.presentationTemplateKey === "pathway@1") {
+    // pathway@1 is likewise a completely custom shell (own affiliation bar/
+    // nav/main/footer, see components/pathway/PathwayShell.tsx) -- it does
+    // not reuse Nav/Footer/TemplateFontScope at all, structured identically
+    // to the editorial@1 branch above. Every other template keeps the exact
+    // byte-identical return below.
+    return (
+      <ClubContextProvider club={club}>
+        <ClubBrandingProvider>
+          <PathwayShell>{children}</PathwayShell>
         </ClubBrandingProvider>
       </ClubContextProvider>
     );
