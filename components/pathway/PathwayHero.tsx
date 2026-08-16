@@ -1,3 +1,4 @@
+import ResilientImage from "@/components/ResilientImage";
 import {
   PathwayCtaRow,
   type PathwayCta,
@@ -16,6 +17,19 @@ import {
  * treatment and neither line depends on the viewport width to break where
  * the mockup breaks it.
  *
+ * `backgroundMedia` (optional, currently Home only) places a full-bleed
+ * photograph behind the band under a club-navy scrim, and flips the band
+ * to its on-photo treatment (`data-photo="true"` in pathway.css): white
+ * text, the accent moved off the type onto a small underline rule and the
+ * primary CTA fill. A photograph's brightness varies across the frame in
+ * ways no light tint can neutralize, so the scrim is deliberately strong
+ * enough that the text passes contrast over *any* pixel of *any*
+ * photograph — the legibility guarantee lives in the scrim + white type,
+ * not in the particular image seeded behind it. The image is decorative
+ * (empty alt, aria-hidden wrapper); if it fails to load, ResilientImage
+ * renders nothing and the scrim alone paints a solid navy band with the
+ * same legible text.
+ *
  * Content is passed in from components/pathway/content.ts; this component
  * holds no copy of its own so Phase 2 can swap that module for DB-backed
  * content without touching the markup.
@@ -31,6 +45,7 @@ export type PathwayHeroProps = {
   primaryCta?: PathwayCta;
   secondaryCta?: PathwayCta;
   variant?: PathwayHeroVariant;
+  backgroundMedia?: { src: string; alt: string };
 };
 
 export default function PathwayHero({
@@ -41,11 +56,28 @@ export default function PathwayHero({
   primaryCta,
   secondaryCta,
   variant = "left",
+  backgroundMedia,
 }: PathwayHeroProps) {
   const align = variant === "centered" ? "center" : "start";
 
   return (
-    <section className="pathway-hero" data-variant={variant}>
+    <section
+      className="pathway-hero"
+      data-variant={variant}
+      data-photo={backgroundMedia ? "true" : undefined}
+    >
+      {backgroundMedia && (
+        <div className="pathway-hero-photo" aria-hidden="true">
+          <ResilientImage
+            src={backgroundMedia.src}
+            alt=""
+            fill
+            sizes="100vw"
+            priority
+          />
+          <div className="pathway-hero-scrim" />
+        </div>
+      )}
       <div className="pathway-hero-inner">
         {eyebrow && <span className="pathway-eyebrow">{eyebrow}</span>}
         <h1 className="pathway-hero-headline">

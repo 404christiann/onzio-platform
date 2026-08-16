@@ -16,26 +16,31 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
  * pattern as academyNavLinks() in components/Nav.tsx, but living here in
  * the pathway shell.
  *
- * The nine links are pathway@1's defaultRoutes
+ * The visible link row carries six of pathway@1's defaultRoutes
  * (packages/presentation/index.ts templateRegistry["pathway@1"]) resolved
  * through routeRegistry to the real paths the app serves:
- * home → /, academy → /academy, training → /book-training,
- * youth-club → /youth-club, senior-club → /senior-club, league → /upsl,
- * merch → /merch, about → /about, contact → /contact.
+ * academy → /academy, youth-club → /youth-club,
+ * senior-club → /senior-club, league → /upsl, merch → /merch,
+ * about → /about.
+ *
+ * Three defaultRoutes are deliberately absent from this array because each
+ * is already reachable from adjacent chrome, so listing it again only
+ * lengthens the row: home (the crest lockup above links to /), training
+ * (the primaryCta pill below), and contact (that same pill's destination,
+ * plus PathwayFooter). PathwayFooter intentionally keeps the fuller link
+ * set and remains the site's complete sitemap — this trim is scoped to the
+ * primary nav only.
  */
 
 type NavLink = { label: string; href: string };
 
 const pathwayNavLinks: NavLink[] = [
-  { label: "Home", href: "/" },
   { label: "Academy", href: "/academy" },
-  { label: "Book Training", href: "/book-training" },
   { label: "Youth Club", href: "/youth-club" },
   { label: "Senior Club", href: "/senior-club" },
   { label: "UPSL", href: "/upsl" },
   { label: "Merch", href: "/merch" },
   { label: "About", href: "/about" },
-  { label: "Contact", href: "/contact" },
 ];
 
 // Routes to the contact form, not the /book-training page: Phase 1 has no

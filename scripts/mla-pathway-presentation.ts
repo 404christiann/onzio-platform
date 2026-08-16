@@ -73,12 +73,22 @@ function rawConfiguration(metadata: { createdBy: string; createdAt: string }) {
       store: true,
     },
     homepage: {
+      // The real Home composition in render order (Home sections pass):
+      // matches the registry's pathway@1 defaultSections exactly, asserted
+      // below. emptyBehavior mirrors each type's registered default.
       sections: [
         {
           id: "hero-main",
           type: "pathway.hero",
           enabled: true,
           emptyBehavior: "error",
+          config: {},
+        },
+        {
+          id: "leader-feature",
+          type: "pathway.inverted-feature",
+          enabled: true,
+          emptyBehavior: "hide",
           config: {},
         },
         {
@@ -89,8 +99,22 @@ function rawConfiguration(metadata: { createdBy: string; createdAt: string }) {
           config: {},
         },
         {
+          id: "expect-grid",
+          type: "pathway.feature-grid",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
           id: "partner-strip",
           type: "pathway.partner-strip",
+          enabled: true,
+          emptyBehavior: "hide",
+          config: {},
+        },
+        {
+          id: "mission",
+          type: "pathway.mission",
           enabled: true,
           emptyBehavior: "hide",
           config: {},

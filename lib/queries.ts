@@ -848,6 +848,49 @@ export async function fetchHomepageHeroContent(
   return ((data ?? []) as DBHomepageHeroContent[])[0] ?? fallback;
 }
 
+/**
+ * Fetches a club's homepage photos as a sort_order-keyed map of public URLs
+ * (MLA P1, pathway@1 Home sections).
+ *
+ * pathway@1 reads the same homepage_slideshow_photos rows the slideshow
+ * templates read, but consumes them as fixed photo slots by sort_order (see
+ * HOME_PHOTO_SLOTS in components/pathway/content.ts). Rows whose media
+ * asset cannot be resolved to a public URL for this viewer — RLS returns
+ * nothing rather than erroring, e.g. anonymously on a preview-lifecycle
+ * tenant — are dropped so callers fall back to honest placeholders instead
+ * of rendering a bare storage path as an image src.
+ */
+export async function fetchPathwayHomePhotos(
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<Map<number, { src: string; alt: string }>> {
+  const tenantId = requireClubId(clubId);
+  const photos = new Map<number, { src: string; alt: string }>();
+  const { data, error } = await client
+    .from("homepage_slideshow_photos")
+    .select("*")
+    .eq("club_id", tenantId)
+    .order("sort_order", { ascending: true });
+  if (error || !data) return photos;
+  const hydrated = await resolveMediaReferences(
+    data as Record<string, unknown>[],
+    tenantId,
+    [{ assetId: "media_asset_id", url: "url" }],
+    client,
+  );
+  for (const row of hydrated) {
+    const url = row.url;
+    const sortOrder = row.sort_order;
+    if (typeof url !== "string" || !/^https?:\/\//.test(url)) continue;
+    if (typeof sortOrder !== "number") continue;
+    photos.set(sortOrder, {
+      src: url,
+      alt: typeof row.alt === "string" ? row.alt : "",
+    });
+  }
+  return photos;
+}
+
 /** Fetches admin-managed homepage hero, slideshow, and Behind the Rose content. */
 export async function fetchHomepageContent(clubId?: string): Promise<HomepageContent> {
   const tenantId = requireClubId(clubId);

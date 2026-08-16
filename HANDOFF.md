@@ -1,6 +1,419 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
+
+## pathway@1 Home hero gains its background photograph; the centered hero learns an on-photo treatment with a measured legibility guarantee
+
+Agent: Claude, 2026-08-16. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian supplied a squad team photograph
+(`mla_group_team_pic.png`, 1536×1024) for the Home hero background, with
+one hard requirement — the hero text must stay legible — and a soft
+suggestion of "a very light orange or blue overlay."
+
+**The color-vs-legibility call (deliberate, measured):** the hero's
+existing type is orange/navy on white paper. Over a photograph a *light*
+tint of any hue cannot make that legible — photo brightness varies
+per-pixel, and this photo genuinely contains near-white pixels (venue
+banners, kits). So the treatment follows the template's own dark-band
+precedent instead: a substantial club-navy scrim (78% `--primary` over an
+16–38% black depth gradient), the type flipped to the on-dark voice
+(white headline both lines, near-white sub/eyebrow), and the accent kept
+alive as a 56px orange rule under the emphasis line plus the orange
+primary-CTA fill — the exact inversion `data-tone="dark"` bands already
+use. The navy-washed photograph reads as a branded duotone, echoing the
+leader band and footer rather than fighting them. Not "very light," on
+purpose: legibility was the requirement, the tint strength was not.
+
+**Evidence, not vibes:** a per-pixel check
+(scratchpad `hero-contrast-check.mjs`, sharp over the published
+normalized webp) composites the exact CSS scrim math over *every* pixel
+and reports the minimum contrast anywhere in the frame — headline 7.12:1,
+sub (.92 white) 6.31:1, eyebrow/secondary CTA 5.22:1 (after bumping them
+from `--on-dark-muted`'s .68 alpha, which measured 4.26:1 — just under AA
+for small text). The floor equals the pure-white-pixel floor, so the
+guarantee holds for *any* future photograph, and cover-crop repositioning
+cannot break it (worst-case gradient alpha was applied to every row).
+Orange text measured 2.60:1 worst-case — the numeric reason it stays off
+the type. If the image fails to load, ResilientImage renders nothing and
+the scrim alone paints a solid navy band, same legible text (observed
+mid-load).
+
+**Mechanics (established patterns only):** `PathwayHero` gains a strictly
+optional `backgroundMedia` prop → `data-photo="true"` + an aria-hidden
+ResilientImage (fill/cover, empty alt) under a `.pathway-hero-scrim`; all
+new CSS is gated on `[data-photo="true"]`, so every `left`-variant hero
+and any centered hero without a photo renders byte-identically. The
+photograph rides the existing pipeline: `~/Downloads/mlaAssets/home-hero.png`
+(byte-verified copy), a fifth `MLA_MEDIA_SPECS` entry, strict
+validate→normalize→checksum-idempotent upload, published media_assets row
+(surface `homepage`), `homepage_slideshow_photos` link row at the new
+`HOME_PHOTO_SLOTS.heroBackground: 4`, resolved by the untouched
+`fetchPathwayHomePhotos` and passed in `app/%5Fclubs/[slug]/page.tsx`.
+Presentation document unchanged (hero's contentDomain was already
+`homepage`); seed re-run is a no-op (all six objects `reused`).
+
+**Verification:** `npx tsc --noEmit` clean; lint clean (same pre-existing
+warnings); contracts 706/707 — the one failure is the same
+`editorial-home` next-fixture date-rollover already documented below,
+unrelated; architecture 20 green; legacy 280 green; seed reconciliation
+green (5 homepage assets + 5 link rows + crest). On :3015: desktop hero
+shows the squad photo navy-washed under crisp white type with the orange
+rule and CTA; mobile 375px puts the eyebrow directly over the photo's
+brightest banner region and it stays clearly readable (the measured
+worst case). `/upsl` and `/academy` left heroes unchanged
+(orange/navy-on-white intact). No-bleed: diverse-city and the editorial
+tenant render their own templates with zero pathway-classed elements.
+Naming guard clean on every touched file.
+
+## pathway@1 Home gains its leader, expect-grid and mission sections; two new section types; four real photos through the media pipeline
+
+Agent: Claude, 2026-08-15. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian supplied three reference sections from the club's
+older site (leader bio, three-column "what your player can expect" grid,
+and an Instagram-style mission graphic) plus four real photographs, to be
+added to the pathway@1 Home page in the established design language.
+
+**Registry (`packages/presentation/index.ts`):** two new pathway-scoped
+section types, same shape as the existing thirteen — `pathway.feature-grid`
+(contentDomain `homepage_slideshow_photos`, the domain the slideshow
+templates already read; hide-on-empty) and `pathway.mission` (contentDomain
+`about`; hide-on-empty). pathway@1 `defaultSections` now records the real
+six-section Home order (hero, inverted-feature, pathway-rail, feature-grid,
+partner-strip, mission) and `supportedSections` carries both new types. No
+new component for the leader section: it is `pathway.inverted-feature`,
+with `PathwaySplitFeature` extended by strictly optional props (`media` for
+a real photo inside the same figure/ratio contract, `subsections` for
+titled sub-blocks, and bullets that may be `{title, description}` pairs) —
+one continuous card like the reference, rather than two stacked
+split-features that would break the photo's relationship to the card.
+Existing call sites pass none of the new props and render byte-identically
+(UPSL dark band re-verified). Images go through `@/components/ResilientImage`
+— the architecture contract rejects direct `next/image`/`<img>` and caught
+the first attempt.
+
+**Media (4 new photos, strict pipeline, no gates loosened):**
+`scripts/seed-mla-local.ts` generalized from the one-crest pipeline to a
+declarative spec table: each asset is validateMediaUpload'd (photo kind) and
+normalizePhoto'd (webp, ≤2400 long edge) **before any insert**, uploaded
+checksum-verified/idempotent to `onzio-media` at
+`{club}/homepage/{asset_id}.webp`, one published media_assets row each
+(surface `homepage`, media_kind `photograph` — the sibling importers'
+homepage-photography precedent, not the crest's `branding` shape), linked
+through `onzio.homepage_slideshow_photos` rows (url = storage path, real
+alt text, stable per-role row ids) with the sort_order contract
+`HOME_PHOTO_SLOTS` (0 leader, 1 agility, 2 foot-skills, 3 teamwork) that
+`fetchPathwayHomePhotos` (lib/queries.ts) resolves server-side into public
+URLs; unreadable assets (e.g. anonymous on the preview tenant) drop out so
+components fall back to honest placeholders. Source files live at
+`~/Downloads/mlaAssets/home-{leader,agility,foot-skills,teamwork}.*`
+(byte-verified copies of Christian's originals), so `supabase db reset` +
+reseed reproduces everything. All four passed strict validation unmodified
+— no repeat of the truncated-crest incident.
+
+**Presentation document versioning:** the published document now lists the
+six real Home sections, which forced the seed to stop pretending the
+insert-only `presentation_documents` row could be rewritten: the document
+id is now deterministic on the configuration digest, an unseen digest
+inserts the club's next version (v2 exists locally; v1 preserved),
+presentation_state re-points, and a publication row records the
+supersession with previous_document_id. Re-running is a no-op (verified:
+second run all-reused, no new rows).
+
+**Mission section (deliberate redesign, not a port):** the reference is a
+square social graphic — quote and crest baked over a gradient-washed photo.
+That idiom was not reproduced; `PathwayMission` sets the same quote
+(verbatim from the club's graphic) as a centered navy pull-quote on the
+paper ground with a mono attribution and a "Follow the academy" row of
+circular hairline icon links (inline SVGs following the editorial footer's
+icon convention; no icon dependency). Deliberately photo-free: the same
+photo already anchors the leader band two sections up, and the navy band +
+navy footer would sandwich a third dark block. Social hrefs are the club's
+published first-party channels as documented in the mlasoccer.com research
+(`MLAWebsiteInfo.md`) — instagram.com/manuledesmaacademy,
+facebook.com/manuledesmaacademy, x.com/ledesmaacademy — **flagged: confirm
+with the club before launch.**
+
+**Verification:** `npx tsc --noEmit` clean; lint clean (same pre-existing
+warnings); contracts 706/707 — the one failure
+(`editorial-home` next-fixture) fails identically on the stashed baseline,
+a date rollover on 2026-08-15 evening, not this change; architecture 20
+green (after the ResilientImage fix); legacy 280 green. Seed run:
+reconciliation green (4 homepage assets + 4 link rows + crest reused),
+production-surface re-parse passed. Authenticated on :3015: Home renders
+hero → navy leader band (real photo of Manu at the goal beside the bio,
+"Our leader" / "What we offer" hairline list, orange primary CTA) → rail →
+three-photo expect-grid (square crops) → partner strip → mission quote in
+navy with three social circles; mobile 375px stacks correctly. No-bleed:
+diverse-city tenant has zero pathway-classed elements and zero matching
+pathway rules; the editorial tenant renders its own template with zero MLA
+media rows leaking (link rows are club-scoped). Naming guard clean on
+every touched file.
+
+## MLA gets its real crest; seed-mla-local.ts now runs the one-asset media pipeline
+
+Agent: Claude, 2026-08-15. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian supplied the real Manu Ledesma Academy crest artwork
+(1254×1254 RGBA PNG). Phase 1 had shipped with PathwayNav's initials
+fallback; the render path (`useClubBranding` → `fetchClubBranding` →
+`resolveMediaStoragePath`) already existed and only needed data.
+
+**Data (exact diverse-city local-import crest shape, no new pattern):** one
+published `onzio.media_assets` row (surface `branding`, media_kind
+`graphic`, bucket `onzio-media`, path
+`b729b62f-2aae-5c46-b607-6a9437111530/branding/5c86e70f-4983-519b-befb-ea458b2b3d25.webp`,
+normalizeGraphic picked webp over png, 95,704 bytes) plus
+`onzio.site_branding` for the MLA tenant referencing it by **both**
+`club_logo_path` (read by the `/club-logo` favicon/OG route) and
+`club_logo_asset_id` (read by `fetchClubBranding`). `scripts/seed-mla-local.ts`
+now reproduces all of it on reseed: it validates
+(`validateMediaUpload`, graphic kind) and normalizes the crest **before any
+insert**, uploads idempotently (existing object must checksum-match), and
+the asset id is deterministic on the source checksum so re-running is a
+no-op while new artwork gets a fresh versioned path. Crest source follows
+the sibling importers' Downloads-rooted convention:
+`~/Downloads/mlaAssets/crest.png`, overridable via `--source-root`.
+`provision-mla-staging.ts` untouched — staging crest remains a manual step,
+same as the brand colors.
+
+**Two traps worth recording:** (1) the first supplied crest file was a
+silent 192 KiB truncation (exactly 3×64 KiB, mid-IDAT, no IEND) of the real
+1,057,337-byte PNG — sharp's `failOn: "warning"` rejected it, and
+re-encoding leniently to "fix the warning" laundered a garbled image past
+the gate and into the nav. The strict pipeline was right; when it refuses a
+file, suspect the file. The complete original passes strict validation
+unmodified. (2) `supabase status -o env` sets shell vars without exporting
+them — pass `DB_URL`/`SERVICE_ROLE_KEY` etc. explicitly on the command line
+or child processes silently see nothing (pg then dials localhost:5432).
+
+**Verification:** `npx tsc --noEmit` clean; lint clean (same pre-existing
+warnings); contracts 56 files / 707 green; architecture 20 green; legacy
+280 green; seed re-run reports `storageObject: "reused"` with all counts 1.
+Authenticated on :3015 as the seeded owner: PathwayNav renders the real
+crest (complete circular badge, 1254×1254 natural, 40×40 rendered, square
+so undistorted; empty alt with the accessible name on the lockup's
+aria-label, matching Nav.tsx) on Home and /academy; initials span gone.
+`/club-logo` still redirects to the legacy default for MLA because the
+route reads site_branding with the server's anon client and
+`onzio_private.can_read_feature(club_id,'branding')` is false for a
+preview-lifecycle tenant — pre-existing preview behavior, self-resolving at
+go-live (returns true for the live diverse-city tenant). No-bleed: the
+diverse-city site renders its own crest asset unchanged, and every other
+tenant's site_branding/media_assets rows are byte-identical; MLA has
+exactly one published media asset (a stale row+object from the truncated
+first pass was deleted).
+
+## pathway@1 colors reconciled against the exported design-canvas CSS (supersedes the three-role entry below)
+
+Agent: Claude, 2026-08-15. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian handed over the self-contained HTML export of the
+actual Claude Design canvas for the pathway restyle; its embedded CSS is the
+authoritative color mapping and supersedes the verbal three-role spec the
+entry below implemented (an intermediate rework toward "orange owns every
+primary action" was started and fully reversed mid-task when this file
+surfaced — none of it survives). Net effect vs the entry below is small
+because the canvas mapping mostly matches it.
+
+**Change (`styles/pathway.css` only, color pass):** the file now matches the
+canvas CSS rule-for-rule except five deliberate deviations: (1) HTML-export
+artifacts stripped (leading `><style>`, truncated trailing style block);
+(2) stale canvas comments corrected — the canvas header comment still
+described the pre-color "ink fill / near-black bands" iteration its own
+rules contradict; (3) crest img size kept at `clamp(40px,4vw,52px)` (canvas
+says 52-64px — a size change, out of color-only scope, and the crest-image
+work owns that area); (4) `.pathway-nav-cta:hover` keeps a pinned
+`color: var(--on-dark)` — the canvas omits it, and the generic template
+`a:hover` would paint the label blue on the blue hover fill; (5) form-focus
+keeps the `padding-bottom: 7px` compensation so the 2px focus border never
+shifts layout (canvas lacks it; colors identical). What actually changed vs
+the entry below: on-dark muted/line tokens now
+`rgba(245,245,247,0.68)/0.22`, affiliation-bar border navy, dark-band
+eyebrows orange, nav-CTA label `--on-dark`, dark-band primary button label
+`#fff` with `brightness(1.08)` hover, a dark-band secondary-button hover
+rule (on-dark text/underline), split-bullets hover is an animated 1px
+orange top underline (`::before` width transition) instead of a text-color
+change, and rail-label hover navy instead of muted. Roles otherwise as
+below: navy structure/authority, orange small emphasis + dark-band primary
+button, mid blue lift states; `--primary-lift` still rides the CSS-only
+`var(--club-tertiary, #077df2)` fallback — no DB column, no wrapper prop.
+
+**Verification:** `npx tsc --noEmit` clean; lint same pre-existing warnings;
+contracts 56 files / 707 green; architecture 20 green; legacy 280 green;
+class parity with the committed baseline (same 84-class set). Computed
+styles on :3015 authenticated — Home: hero `rgb(252,102,1)` →
+`rgb(0,43,128)`, nav CTA navy with `rgb(245,245,247)` label, affiliation
+bar and footer navy with `rgba(245,245,247,0.68)` muted (proves fresh CSS),
+rail numerals `rgb(7,125,242)` over 2px navy rule; UPSL: active nav navy
+with orange 2px underline, dark band navy with orange eyebrow and orange
+`#fff`-labelled button, TBC badge orange at 10%/45% mixes, step indices
+navy; /academy and /privacy spot-checked; every :hover/:focus rule read
+back from the live CSSOM and matching the canvas. No-bleed: diverse-city
+tenant has zero pathway-classed elements and zero matching pathway rules;
+its `rgb(30,54,83)` Montserrat-uppercase chrome unchanged.
+
+## pathway@1 gets its full three-role club color system (superseded by the canvas reconciliation above)
+
+Agent: Claude, 2026-08-15. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian supplied an authoritative color spec for `pathway@1`
+that supersedes the two ad-hoc accent passes below (navy CTA fill, orange
+active-nav underline, orange hero top-line). Three colors, one role each:
+navy `--primary` (structure/authority: filled bars, filled buttons, 2px
+rules, active state, numerals/figures), orange `--accent` (small emphasis:
+badges, hover accents, one hero line), and a new mid blue `--primary-lift`
+(the lift state: hover on navy fills, link hover, resting rail numerals).
+
+**Change (`styles/pathway.css` only, color pass — no markup, layout,
+spacing, type or copy changes; no new classes or `data-*`):**
+`--primary-lift: var(--club-tertiary, #077df2)` added alongside the
+existing aliases — there is no `--club-tertiary` column or wrapper prop and
+none was added; the CSS fallback carries it, verified resolving `#077df2`
+at runtime with the wrapper supplying nothing. Navy: affiliation bar
+(`rgba(245,245,247,0.82)` text, `0.28` chips), footer (on-dark tokens
+re-pointed locally in the footer rule), `--band-dark` re-pointed to
+`var(--club-primary)` so dark bands paint navy, CTA/primary-button fills
+with `--paper` labels, active/hover nav text, 2px top rules on
+rail/spec-list/steps and the legal-updated underline, step
+indices/price amounts, 2px form focus (padding compensated so focus never
+shifts layout), success status, crest-fallback circle. Orange: base hero
+line (emphasized line is now navy), 2px nav underline, TBC badge
+(10%/45% color-mix fill/border), rail-node + split-bullets hover (hover
+rule added — the spec references one that didn't exist), partner/legal
+labels, footer link hovers, and the dark-band primary button (navy on navy
+would vanish; hover darkens the accent via the file's color-mix idiom
+since the spec leaves it unspecified). Mid blue: navy-fill hovers, generic
+template-scope `a:hover` (nav-CTA hover pins `color: var(--paper)` because
+the generic rule would otherwise outrank the pill's label at hover),
+resting rail numerals. Mobile-menu active link also moved muted → navy to
+match the active-state role. Left alone per spec: section
+headings/step titles/price names/rail+legal labels (`--ink`), eyebrows
+(`--muted-soft`), grayscale media/partner hatches, body copy.
+
+**Verification:** `npx tsc --noEmit` clean; `npm run lint` clean (same
+pre-existing warnings); contracts 56 files / 707 green; architecture 20
+green; legacy 280 green. Authenticated on :3015 (stale :3000 dev server
+killed — it 404'd tenant login, pre-middleware-fix compile): Home and UPSL
+confirmed by computed styles — dark band `rgb(0,43,128)`, affiliation bar
+navy with translucent chips, hero orange-then-navy, UPSL TBC badges
+`rgb(252,102,1)` on 10%-orange fill against navy `01–04` numerals, footer
+navy with `rgb(245,245,247)` text; `/academy` (2px navy spec rule, orange
+badge) and `/privacy` (orange updated-label, 2px navy underline) spot-checked;
+no `var(--*)` resolves empty at any usage site (`--club-tertiary` and
+`--pathway-rail-count` are consumed only through fallbacks). No-bleed:
+diverse-city tenant has zero elements matching any pathway rule; its own
+chrome unchanged.
+
+## MLA brand colors seeded; pathway@1 gains two surgical club-color accents
+
+Agent: Claude, 2026-08-15. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian supplied the real MLA palette for the first time —
+`#FC6601` orange, `#002B80` dark navy, `#077DF2` bright blue — and wants the
+calm restyle kept but with exactly two accents added: navy on the primary
+CTA/primary-button fill, orange on the active-nav underline. The bright blue
+is deliberately unplaced.
+
+**Data:** `scripts/seed-mla-local.ts` now seeds `primary_color = '#002B80'` /
+`secondary_color = '#FC6601'` on the manu-ledesma-academy clubs row (and the
+on-conflict update now carries both columns, so re-running upgrades an
+existing row — which is how the live local row was updated). The only schema
+constraint is the `^#[0-9A-Fa-f]{6}$` check in the phase2_foundation
+migration; the presentation document's theme-contrast gates apply to the
+document's own neutral theme, not to clubs columns, and are untouched.
+`provision-mla-staging.ts` goes through `provisionClub`, which has no color
+parameters — staging colors remain a future manual step.
+
+**CSS (`styles/pathway.css`, surgical):** `.pathway-nav-cta` and
+`.pathway-button[data-variant="primary"]` fill moved from `var(--ink)` to
+`var(--club-primary)`, hover from `var(--ink-deep)` to
+`color-mix(in srgb, var(--club-primary) 82%, black)`. Dark-band primary
+buttons are pinned to their previous inverted rendering (`--on-dark` fill,
+`--ink-deep` hover) since they used to inherit the band's re-pointed
+`--ink`. The nav-link `::after` underline (shared by hover reveal and
+`data-active="true"`) moved from `var(--ink)` to `var(--club-secondary)`,
+geometry unchanged. Nothing else changed; the brand-initials circle stays
+ink.
+
+**Verification:** `npx tsc --noEmit` clean; `npm run lint` clean (same
+pre-existing warnings); contracts 56 files / 707 green; architecture 20
+green; legacy 280 green. Visual on :3015 authenticated: hero and nav pills
+render `rgb(0, 43, 128)` with near-white text (~11.5:1 contrast), active
+UPSL underline `rgb(252, 102, 1)` at the same 1.5px, paper still `#fafafa`,
+dark band and its inverted pill byte-identical. Diverse City FC tenant
+confirmed unchanged (zero pathway-classed elements on the page).
+
+## pathway@1 restyled to the calm editorial language; club color now near-unused by design
+
+Agent: Claude, 2026-08-15. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian produced a visual iteration of `pathway@1` in a
+separate design tool and wanted it applied as a full replacement of
+`styles/pathway.css` — not a merge.
+
+**Change:** `styles/pathway.css` replaced wholesale (424 insertions / 418
+deletions, 1155 → 1161 lines). Restyle only: no component markup, no
+section type and no route changed. The selector set is provably identical
+across the two revisions — 84 class selectors in each, same set, and the
+same `data-*` attribute API — so the design file's DOM-contract claim holds
+exactly and no class-parity patching was needed.
+
+**Two facts worth knowing before the next pathway change:**
+
+1. **The club's primary color is now consumed by nothing.** `--primary:
+   var(--club-primary)` is still declared on the wrapper but no rule reads
+   it, and `--accent` (`--club-secondary`) survives in exactly two places:
+   the text-selection highlight and the `:focus-visible` ring. The previous
+   revision referenced club-color tokens 25 times. This is the intended
+   "accent used sparingly" direction, but the practical effect is that a
+   tenant's brand colors are invisible in a normal screenshot of a
+   `pathway@1` site. Any future request to "use the club colors more" is a
+   design decision, not a bug fix. Note the design file's own header
+   comment claims the accent also carries the step index — it does not; the
+   step index is a neutral (`--line-strong`).
+2. **Scoping containment verified at runtime, not just by inspection.** All
+   185 selectors (including those inside the seven media queries) are
+   scoped under `[data-site-template="pathway"]`; there are no
+   `@keyframes`, no `@font-face`, and no bare `:root`/`html`/`body` rules.
+   On a non-pathway tenant page in dev, 145 pathway rules are still loaded
+   into `document.styleSheets` (Next bundles the import globally) but zero
+   of them match any element — the wrapper attribute is what makes them
+   inert, so the containment technique must survive any future refactor of
+   `PathwayShell`.
+
+**Verification:** `npx tsc --noEmit` clean; `npm run lint` clean (only the
+three pre-existing `react-hooks/exhaustive-deps` warnings in
+`app/admin/(protected)/`); `npm run test:contracts` 56 files / 707 tests
+green; `npm run test:architecture` 3 / 20 green; `npm run test:legacy` 25 /
+280 green. `npm test` is 18 failed / 84 passed **identically with and
+without this change** (re-run against a stashed baseline to confirm) — all
+18 are `tests/database/*` hitting the known "Expected 3 parts in JWT; got
+1" local env drift. No contract test asserts on `styles/pathway.css`; the
+`editorial.css` string assertions in `tests/contracts/editorial-contact.test.ts`
+are the only CSS-content contracts in the repo and they are untouched.
+
+**Visual:** all 12 MLA routes loaded authenticated as the seeded owner and
+confirmed rendering the new language (near-white ground, hairline
+dividers, sentence-case 600 headings, mono eyebrows, ink pill primary /
+underlined-text secondary, near-black dark band on `/upsl`). Nav shows the
+trimmed six links plus the Book Training pill; mobile (375px) collapses to
+the white hairline-ruled panel with a full-width pill CTA. No-bleed
+regression confirmed on the Diverse City FC tenant: its navy footer slab,
+uppercase italic condensed headings and red accent are unchanged.
+
+**Note on the long-page whitespace:** `.pathway-main { min-height: 60vh }`
+is carried over unchanged from the previous revision. It only shows as a
+gap when a short page is rendered into an artificially tall viewport; at
+1440x900 the footer sits flush against the last section (measured gap 0).
 
 ## Local preview-tenant admin login unblocked; MLA owner login seeded and verified end-to-end
 

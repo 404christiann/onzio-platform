@@ -653,6 +653,41 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     emptyBehavior: "hide",
     productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
   },
+  // Home's three-column "what your player can expect" photo grid. Its
+  // content domain is the homepage photo link table
+  // (homepage_slideshow_photos: url + media_asset_id + alt + sort_order),
+  // the same domain clubhouse.slideshow and editorial.slideshow read --
+  // pathway@1 renders those rows as a static editorial grid, not a
+  // slideshow, but the underlying content is identical: ordered, captioned
+  // homepage photography.
+  "pathway.feature-grid": {
+    type: "pathway.feature-grid",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "homepage_slideshow_photos",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  // Home's closing mission statement: a pull-quote with a social-links row.
+  // Content domain "about" for the same reason shared.history uses it --
+  // the mission text is club-identity copy; the social links themselves
+  // graduate to site_social_links when Phase 2 wires DB-backed content.
+  "pathway.mission": {
+    type: "pathway.mission",
+    version: 1,
+    scope: "pathway",
+    contentDomain: "about",
+    compatibleTemplates: ["pathway@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
   "pathway.partner-strip": {
     type: "pathway.partner-strip",
     version: 1,
@@ -905,7 +940,19 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
     originNote: "Based on the approved Manu Ledesma Academy prospect visual system.",
     defaultFontPack: "geist",
     compatibleFontPacks: ["geist"],
-    defaultSections: ["pathway.hero", "pathway.pathway-rail", "pathway.partner-strip"],
+    // The real Home composition, in render order: hero, the leader/bio dark
+    // band (inverted-feature), the signature rail, the expect-grid, the
+    // partner strip, and the closing mission statement. Kept in lockstep
+    // with the page's pathway branch and asserted against the published MLA
+    // document by scripts/mla-pathway-presentation.ts.
+    defaultSections: [
+      "pathway.hero",
+      "pathway.inverted-feature",
+      "pathway.pathway-rail",
+      "pathway.feature-grid",
+      "pathway.partner-strip",
+      "pathway.mission",
+    ],
     supportedSections: [
       "pathway.affiliation-bar",
       "pathway.nav",
@@ -913,6 +960,8 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "pathway.pathway-rail",
       "pathway.split-feature",
       "pathway.inverted-feature",
+      "pathway.feature-grid",
+      "pathway.mission",
       "pathway.spec-list",
       "pathway.numbered-steps",
       "pathway.price-cards",

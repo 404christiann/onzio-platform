@@ -1,10 +1,10 @@
-// MLA P1 Step 8: seed Manu Ledesma Academy as a local preview tenant on the
-// pathway@1 presentation template.
+// MLA P1 Step 8 (+ Home sections pass): seed Manu Ledesma Academy as a local
+// preview tenant on the pathway@1 presentation template.
 //
 // Local-only, service-role seeding against the developer's local Supabase
-// stack -- the structural sibling of the other local import scripts, minus
-// the media pipeline (Phase 1 ships no crest asset; PathwayNav renders its
-// initials fallback for a club with no site_branding row).
+// stack -- the structural sibling of the other local import scripts,
+// including their media pipeline for the club's real assets: the crest and
+// the five Home photographs.
 //
 // It inserts:
 //   - one onzio.clubs row (deterministic id, kind "test", lifecycle
@@ -25,6 +25,37 @@
 //     invalid published document does not error at render time, it silently
 //     degrades the tenant to presentationTemplateKey null.
 //
+//     presentation_documents is insert-only by design, so the document id
+//     is deterministic on the *configuration digest*: re-running with an
+//     unchanged configuration is a no-op, while a changed configuration
+//     inserts the next version for the club and re-points
+//     presentation_state at it (with a publication row recording the
+//     supersession). History is never rewritten.
+//   - the real club media, validate -> normalize -> upload to the public
+//     onzio-media bucket at the versioned {club_id}/{surface}/{asset_id}.{ext}
+//     path -> one published onzio.media_assets row each -> content links:
+//       * crest (graphic, surface "branding"): onzio.site_branding by both
+//         club_logo_path and club_logo_asset_id -- the exact diverse-city
+//         local-import shape. That is what makes useClubBranding()'s
+//         clubLogoUrl resolve so PathwayNav renders the real crest, and
+//         what /club-logo (favicon + link-preview image) redirects to.
+//       * five Home photographs (photo, surface "homepage"):
+//         onzio.homepage_slideshow_photos rows (url = storage path,
+//         media_asset_id, alt, sort_order) -- the same link-table shape the
+//         sibling homepage-photography imports use. pathway@1's Home reads
+//         them as fixed slots by sort_order (HOME_PHOTO_SLOTS in
+//         components/pathway/content.ts): 0 leader band, 1-3 expect-grid,
+//         4 hero background (the team photograph behind the opening band).
+//
+//     Asset ids are deterministic on the source checksum, so re-running
+//     with the same artwork is idempotent while new artwork gets a fresh
+//     versioned path (immutable caching stays honest -- the old object is
+//     never overwritten; the link row moves to the new asset).
+//
+//     Source files follow the sibling importers' Downloads-rooted
+//     convention: /Users/christianalcala/Downloads/mlaAssets by default,
+//     overridable with --source-root <dir>.
+//
 // Usage (env sourced from the running local stack, same as the sibling
 // import scripts' npm entries):
 //
@@ -34,14 +65,30 @@
 //     SUPABASE_DB_URL="$DB_URL" \
 //     npx tsx scripts/seed-mla-local.ts
 //
+// (Note: `supabase status -o env` sets those vars WITHOUT exporting them --
+// pass them explicitly on the command line as above or child processes see
+// nothing.)
+//
 // Never run against a hosted project; the loopback assertions below refuse
 // non-localhost targets. The hosted counterpart is
 // scripts/provision-mla-staging.ts (written for Christian to run explicitly;
 // never executed by agents).
 
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import { createClient } from "@supabase/supabase-js";
 import { Client as PostgresClient } from "pg";
+import WebSocket from "ws";
+import {
+  normalizeGraphic,
+  normalizePhoto,
+  type NormalizedMedia,
+} from "@/lib/media-processing";
+import { validateMediaUpload } from "@/lib/media-validation";
 import { deterministicUuid } from "@/lib/migration/rose-city-plan";
+import { buildStoragePath } from "@/lib/storage-path";
 import {
   buildMlaPathwayPresentationConfiguration,
   MLA_NAME,
@@ -56,12 +103,6 @@ export const MLA_LOCAL_HOSTNAME = `${MLA_SLUG}.localhost`;
 export const MLA_LOCAL_DOMAIN_ID = deterministicUuid(
   `onzio:domain:${MLA_LOCAL_HOSTNAME}`,
 );
-export const MLA_LOCAL_PRESENTATION_DOCUMENT_ID = deterministicUuid(
-  `onzio:${MLA_SLUG}:presentation:pathway@1:published`,
-);
-export const MLA_LOCAL_PRESENTATION_PUBLICATION_ID = deterministicUuid(
-  `onzio:${MLA_SLUG}:presentation-publication:pathway@1:published`,
-);
 // The deterministic local-contract auth fixture from supabase/seed.sql --
 // the same actor the sibling local imports use to satisfy the
 // `created_by ... references auth.users(id)` constraints on the
@@ -71,6 +112,205 @@ export const MLA_LOCAL_PRESENTATION_ACTOR_ID =
   "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 
 const SEED_TIMESTAMP = "2026-08-15T00:00:00.000Z";
+
+// Real MLA brand palette (provided by Christian 2026-08-15). Must satisfy the
+// clubs check constraint `^#[0-9A-Fa-f]{6}$` (phase2_foundation migration);
+// uppercase matches the repo's existing hex convention. The third brand color
+// (#077df2 bright blue) is deliberately unplaced for now.
+export const MLA_PRIMARY_COLOR = "#002B80"; // dark navy — CTA / primary-button fill
+export const MLA_SECONDARY_COLOR = "#FC6601"; // orange — active-nav underline accent
+
+// Media source convention: like the sibling local importers, real club
+// artwork lives in a Downloads-rooted asset directory, not in the repo.
+export const MLA_DEFAULT_SOURCE_ROOT =
+  "/Users/christianalcala/Downloads/mlaAssets";
+
+// Everything the tenant's media pipeline carries, in one declarative table
+// (the sibling importers' ASSET_ROLES shape). Home photo sort_order values
+// must agree with HOME_PHOTO_SLOTS in components/pathway/content.ts.
+type MlaMediaSpec = {
+  role:
+    | "crest"
+    | "home-hero"
+    | "home-leader"
+    | "home-agility"
+    | "home-foot-skills"
+    | "home-teamwork";
+  fileName: string;
+  mimeType: "image/png" | "image/jpeg";
+  kind: "photo" | "graphic";
+  mediaKind: "photograph" | "graphic";
+  surface: "branding" | "homepage";
+  homeSlot?: { sortOrder: number; alt: string };
+};
+
+export const MLA_MEDIA_SPECS: readonly MlaMediaSpec[] = [
+  {
+    role: "crest",
+    fileName: "crest.png",
+    mimeType: "image/png",
+    kind: "graphic",
+    mediaKind: "graphic",
+    surface: "branding",
+  },
+  {
+    role: "home-hero",
+    fileName: "home-hero.png",
+    mimeType: "image/png",
+    kind: "photo",
+    mediaKind: "photograph",
+    surface: "homepage",
+    homeSlot: {
+      sortOrder: 4,
+      alt: "The academy squad gathered together for a team photograph on the field",
+    },
+  },
+  {
+    role: "home-leader",
+    fileName: "home-leader.png",
+    mimeType: "image/png",
+    kind: "photo",
+    mediaKind: "photograph",
+    surface: "homepage",
+    homeSlot: {
+      sortOrder: 0,
+      alt: "Manu Ledesma standing beside the goal, holding a match ball",
+    },
+  },
+  {
+    role: "home-agility",
+    fileName: "home-agility.jpeg",
+    mimeType: "image/jpeg",
+    kind: "photo",
+    mediaKind: "photograph",
+    surface: "homepage",
+    homeSlot: {
+      sortOrder: 1,
+      alt: "A young player sprinting through a cone agility drill while a coach watches",
+    },
+  },
+  {
+    role: "home-foot-skills",
+    fileName: "home-foot-skills.png",
+    mimeType: "image/png",
+    kind: "photo",
+    mediaKind: "photograph",
+    surface: "homepage",
+    homeSlot: {
+      sortOrder: 2,
+      alt: "A player in orange club kit striking the ball on a turf field",
+    },
+  },
+  {
+    role: "home-teamwork",
+    fileName: "home-teamwork.png",
+    mimeType: "image/png",
+    kind: "photo",
+    mediaKind: "photograph",
+    surface: "homepage",
+    homeSlot: {
+      sortOrder: 3,
+      alt: "Teammates in orange kits celebrating together on the field",
+    },
+  },
+];
+
+type MlaMediaPlan = {
+  spec: MlaMediaSpec;
+  assetId: string;
+  linkRowId: string | null;
+  destinationPath: string;
+  normalized: NormalizedMedia;
+  sourceChecksumSha256: string;
+};
+
+function sha256(value: Buffer): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+// Validate + normalize exactly like the diverse-city local import's plan
+// step: real signature/dimension validation first, then the kind-appropriate
+// normalization (normalizeGraphic picks png-vs-webp by size; normalizePhoto
+// re-encodes to webp at a bounded long edge). The strict validator is the
+// gate that caught a silently truncated crest source last time -- when it
+// refuses a file, suspect the file, never loosen the gate.
+async function planMedia(
+  spec: MlaMediaSpec,
+  sourceRoot: string,
+): Promise<MlaMediaPlan> {
+  const sourcePath = resolve(sourceRoot, spec.fileName);
+  let bytes: Buffer;
+  try {
+    bytes = await readFile(sourcePath);
+  } catch {
+    throw new Error(
+      `Media source ${sourcePath} is missing. Place the club artwork ` +
+        "there (or pass --source-root <dir>) and re-run.",
+    );
+  }
+  const sourceChecksumSha256 = sha256(bytes);
+  await validateMediaUpload({
+    bytes,
+    metadata: {
+      fileName: spec.fileName,
+      mimeType: spec.mimeType,
+      size: bytes.length,
+      kind: spec.kind,
+    },
+  });
+  const normalized =
+    spec.kind === "photo"
+      ? await normalizePhoto(bytes)
+      : await normalizeGraphic(bytes);
+  const assetId = deterministicUuid(
+    ["onzio", MLA_SLUG, "local-media", spec.fileName, sourceChecksumSha256].join(
+      ":",
+    ),
+  );
+  return {
+    spec,
+    assetId,
+    // Stable per role, so replacement artwork moves the same link row to the
+    // new asset instead of accumulating rows.
+    linkRowId: spec.homeSlot
+      ? deterministicUuid(`onzio:${MLA_SLUG}:home-photo:${spec.role}`)
+      : null,
+    destinationPath: buildStoragePath({
+      clubId: MLA_LOCAL_TENANT_ID,
+      surface: spec.surface,
+      assetId,
+      extension: normalized.format,
+    }),
+    normalized,
+    sourceChecksumSha256,
+  };
+}
+
+// Idempotent storage publish, same discipline as the sibling importers'
+// ensureStorageObjects: an existing object must match the normalized
+// checksum byte-for-byte; otherwise upload once with immutable caching.
+async function ensureMediaObject(
+  bucket: ReturnType<ReturnType<typeof createClient>["storage"]["from"]>,
+  plan: MlaMediaPlan,
+): Promise<"uploaded" | "reused"> {
+  const existing = await bucket.download(plan.destinationPath);
+  if (!existing.error && existing.data) {
+    const bytes = Buffer.from(await existing.data.arrayBuffer());
+    if (sha256(bytes) !== plan.normalized.checksumSha256) {
+      throw new Error(
+        `Existing local object checksum mismatch: ${plan.destinationPath}`,
+      );
+    }
+    return "reused";
+  }
+  const upload = await bucket.upload(plan.destinationPath, plan.normalized.bytes, {
+    contentType: plan.normalized.mimeType,
+    cacheControl: "31536000",
+    upsert: false,
+  });
+  if (upload.error) throw upload.error;
+  return "uploaded";
+}
 
 function assertLoopbackUrl(raw: string | undefined, name: string): string {
   if (!raw) throw new Error(`${name} is required.`);
@@ -82,7 +322,7 @@ function assertLoopbackUrl(raw: string | undefined, name: string): string {
 }
 
 async function main() {
-  assertLoopbackUrl(
+  const supabaseUrl = assertLoopbackUrl(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     "NEXT_PUBLIC_SUPABASE_URL",
   );
@@ -91,6 +331,22 @@ async function main() {
   if (!serviceRoleKey || serviceRoleKey.length < 32) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is required.");
   }
+  const sourceRootFlag = process.argv.indexOf("--source-root");
+  const sourceRoot =
+    sourceRootFlag !== -1 && process.argv[sourceRootFlag + 1]
+      ? resolve(process.argv[sourceRootFlag + 1])
+      : MLA_DEFAULT_SOURCE_ROOT;
+
+  // Validate/normalize every asset before touching storage or the database,
+  // so a missing or corrupt source file fails the whole seed instead of
+  // half-applying.
+  const plans: MlaMediaPlan[] = [];
+  for (const spec of MLA_MEDIA_SPECS) {
+    plans.push(await planMedia(spec, sourceRoot));
+  }
+  const crest = plans.find((plan) => plan.spec.role === "crest");
+  if (!crest) throw new Error("Crest plan missing.");
+  const homePhotos = plans.filter((plan) => plan.spec.homeSlot);
 
   // Throws (non-zero exit via the catch below) on any schema, registry,
   // provenance, config-safety, or theme-contrast failure -- see the module's
@@ -100,6 +356,19 @@ async function main() {
       createdBy: MLA_LOCAL_PRESENTATION_ACTOR_ID,
       createdAt: SEED_TIMESTAMP,
     });
+
+  // Storage first, rows second (the sibling importers' order): a published
+  // media_assets row must never reference an object that is not there yet.
+  const service = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    // Node 20 lacks a native WebSocket; same shim the sibling importers use.
+    realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
+  });
+  const bucket = service.storage.from("onzio-media");
+  const storageResults: Record<string, "uploaded" | "reused"> = {};
+  for (const plan of plans) {
+    storageResults[plan.spec.role] = await ensureMediaObject(bucket, plan);
+  }
 
   const now = SEED_TIMESTAMP;
   const client = new PostgresClient({ connectionString: dbUrl });
@@ -116,6 +385,8 @@ async function main() {
       );
     }
 
+    let documentId: string;
+    let publicationId: string;
     await client.query("begin");
     try {
       await client.query(
@@ -123,7 +394,7 @@ async function main() {
            (id, slug, name, kind, lifecycle, public_access, tier,
             stripe_price_id, primary_color, secondary_color,
             created_at, updated_at, archived_at)
-         values ($1, $2, $3, $4, $5, $6, $7, null, null, null, $8, $8, null)
+         values ($1, $2, $3, $4, $5, $6, $7, null, $8, $9, $10, $10, null)
          on conflict (id) do update set
            slug = excluded.slug,
            name = excluded.name,
@@ -131,6 +402,8 @@ async function main() {
            lifecycle = excluded.lifecycle,
            public_access = excluded.public_access,
            tier = excluded.tier,
+           primary_color = excluded.primary_color,
+           secondary_color = excluded.secondary_color,
            updated_at = excluded.updated_at`,
         [
           MLA_LOCAL_TENANT_ID,
@@ -140,6 +413,8 @@ async function main() {
           "onboarding",
           "preview",
           "starter",
+          MLA_PRIMARY_COLOR,
+          MLA_SECONDARY_COLOR,
           now,
         ],
       );
@@ -163,24 +438,57 @@ async function main() {
       );
 
       // presentation_documents rows are immutable/insert-only by design
-      // (same as the sibling importers' INSERT_ONLY_TABLES): conflict does
-      // nothing rather than rewriting history.
-      await client.query(
-        `insert into onzio.presentation_documents
-           (id, club_id, version, schema_version, template_id,
-            template_version, configuration, configuration_digest,
-            created_by, created_at)
-         values ($1, $2, 1, 1, 'pathway', 1, $3::jsonb, $4, $5, $6)
-         on conflict (id) do nothing`,
-        [
-          MLA_LOCAL_PRESENTATION_DOCUMENT_ID,
-          MLA_LOCAL_TENANT_ID,
-          JSON.stringify(configuration),
-          configurationDigest,
-          MLA_LOCAL_PRESENTATION_ACTOR_ID,
-          now,
-        ],
+      // (same as the sibling importers' INSERT_ONLY_TABLES). The current
+      // configuration is looked up by digest; when it has never been
+      // published for this club, the next version is inserted -- history is
+      // appended to, never rewritten.
+      const existingDocument = await client.query(
+        `select id from onzio.presentation_documents
+          where club_id = $1 and configuration_digest = $2
+          order by version desc limit 1`,
+        [MLA_LOCAL_TENANT_ID, configurationDigest],
       );
+      if (existingDocument.rowCount === 1) {
+        documentId = existingDocument.rows[0].id as string;
+      } else {
+        const nextVersion = await client.query(
+          `select coalesce(max(version), 0)::integer + 1 as version
+             from onzio.presentation_documents where club_id = $1`,
+          [MLA_LOCAL_TENANT_ID],
+        );
+        const version = nextVersion.rows[0].version as number;
+        documentId = deterministicUuid(
+          `onzio:${MLA_SLUG}:presentation:pathway@1:v${version}:${configurationDigest}`,
+        );
+        await client.query(
+          `insert into onzio.presentation_documents
+             (id, club_id, version, schema_version, template_id,
+              template_version, configuration, configuration_digest,
+              created_by, created_at)
+           values ($1, $2, $3, 1, 'pathway', 1, $4::jsonb, $5, $6, $7)
+           on conflict (id) do nothing`,
+          [
+            documentId,
+            MLA_LOCAL_TENANT_ID,
+            version,
+            JSON.stringify(configuration),
+            configurationDigest,
+            MLA_LOCAL_PRESENTATION_ACTOR_ID,
+            now,
+          ],
+        );
+      }
+
+      // Record what was published before this run so the publication row
+      // can carry an honest previous_document_id on upgrades.
+      const previousState = await client.query(
+        `select published_document_id from onzio.presentation_state
+          where club_id = $1`,
+        [MLA_LOCAL_TENANT_ID],
+      );
+      const previousDocumentId =
+        (previousState.rows[0]?.published_document_id as string | undefined) ??
+        null;
 
       await client.query(
         `insert into onzio.presentation_state
@@ -192,31 +500,103 @@ async function main() {
            published_document_id = excluded.published_document_id,
            updated_by = excluded.updated_by,
            updated_at = excluded.updated_at`,
-        [
-          MLA_LOCAL_TENANT_ID,
-          MLA_LOCAL_PRESENTATION_DOCUMENT_ID,
-          MLA_LOCAL_PRESENTATION_ACTOR_ID,
-          now,
-        ],
+        [MLA_LOCAL_TENANT_ID, documentId, MLA_LOCAL_PRESENTATION_ACTOR_ID, now],
       );
 
+      publicationId = deterministicUuid(
+        `onzio:${MLA_SLUG}:presentation-publication:${configurationDigest}`,
+      );
       await client.query(
         `insert into onzio.presentation_publications
            (id, club_id, action, previous_document_id, next_document_id,
             next_configuration_digest, validation_result, override_reason,
             created_by, created_at)
-         values ($1, $2, 'publish', null, $3, $4, $5::jsonb, null, $6, $7)
+         values ($1, $2, 'publish', $3, $4, $5, $6::jsonb, null, $7, $8)
          on conflict (id) do nothing`,
         [
-          MLA_LOCAL_PRESENTATION_PUBLICATION_ID,
+          publicationId,
           MLA_LOCAL_TENANT_ID,
-          MLA_LOCAL_PRESENTATION_DOCUMENT_ID,
+          previousDocumentId === documentId ? null : previousDocumentId,
+          documentId,
           configurationDigest,
           JSON.stringify({ valid: true, errors: [], warnings: [] }),
           MLA_LOCAL_PRESENTATION_ACTOR_ID,
           now,
         ],
       );
+
+      // Published media rows, byte-identical in shape to the sibling
+      // importers' mediaRow(): published rows live in onzio-media with
+      // published_at set (enforced by the table check), surface and
+      // media_kind from the spec, dimensions/checksum of the *normalized*
+      // bytes.
+      for (const plan of plans) {
+        await client.query(
+          `insert into onzio.media_assets
+             (id, club_id, storage_bucket, storage_path, surface, media_kind,
+              mime_type, byte_size, width, height, checksum_sha256, status,
+              created_by, created_at, published_at, deleted_at)
+           values ($1, $2, 'onzio-media', $3, $4, $5,
+                   $6, $7, $8, $9, $10, 'published', null, $11, $11, null)
+           on conflict (id) do nothing`,
+          [
+            plan.assetId,
+            MLA_LOCAL_TENANT_ID,
+            plan.destinationPath,
+            plan.spec.surface,
+            plan.spec.mediaKind,
+            plan.normalized.mimeType,
+            plan.normalized.bytes.length,
+            plan.normalized.width,
+            plan.normalized.height,
+            plan.normalized.checksumSha256,
+            now,
+          ],
+        );
+      }
+
+      // Both columns on purpose: fetchClubBranding resolves through
+      // club_logo_asset_id (media_assets is authoritative), while the
+      // /club-logo favicon/link-preview route still reads club_logo_path.
+      // The on-conflict update touches only the crest columns so any
+      // admin-edited footer tagline or inverse logo survives a re-seed.
+      await client.query(
+        `insert into onzio.site_branding
+           (club_id, club_logo_path, club_logo_asset_id, updated_at)
+         values ($1, $2, $3, $4)
+         on conflict (club_id) do update set
+           club_logo_path = excluded.club_logo_path,
+           club_logo_asset_id = excluded.club_logo_asset_id,
+           updated_at = excluded.updated_at`,
+        [MLA_LOCAL_TENANT_ID, crest.destinationPath, crest.assetId, now],
+      );
+
+      // Home photo link rows: url stores the storage path (the sibling
+      // homepage-photography importers' convention; resolveMediaReferences
+      // hydrates it to a public URL at read time), sort_order is the
+      // HOME_PHOTO_SLOTS contract. Row ids are stable per role so
+      // replacement artwork updates in place.
+      for (const plan of homePhotos) {
+        await client.query(
+          `insert into onzio.homepage_slideshow_photos
+             (id, club_id, url, media_asset_id, alt, sort_order, created_at)
+           values ($1, $2, $3, $4, $5, $6, $7)
+           on conflict (id) do update set
+             url = excluded.url,
+             media_asset_id = excluded.media_asset_id,
+             alt = excluded.alt,
+             sort_order = excluded.sort_order`,
+          [
+            plan.linkRowId,
+            MLA_LOCAL_TENANT_ID,
+            plan.destinationPath,
+            plan.assetId,
+            plan.spec.homeSlot!.alt,
+            plan.spec.homeSlot!.sortOrder,
+            now,
+          ],
+        );
+      }
 
       await client.query("commit");
     } catch (error) {
@@ -227,6 +607,7 @@ async function main() {
     // Reconcile: re-read what render-time resolution will read and re-parse
     // it at the production surface, so a bad seed fails here instead of
     // silently degrading the tenant chrome.
+    const photoAssetIds = homePhotos.map((plan) => plan.assetId);
     const seeded = await client.query(
       `select
          (select count(*)::integer from onzio.clubs where id = $1) as clubs,
@@ -234,14 +615,34 @@ async function main() {
             where club_id = $1 and is_primary and active
               and verified_at is not null and environment = 'staging') as domains,
          (select count(*)::integer from onzio.presentation_documents
-            where club_id = $1) as documents,
+            where club_id = $1 and id = $2
+              and configuration_digest = $3) as documents,
          (select count(*)::integer from onzio.presentation_state
             where club_id = $1 and published_document_id = $2) as state,
          (select count(*)::integer from onzio.presentation_publications
-            where club_id = $1) as publications,
+            where club_id = $1 and next_document_id = $2) as publications,
+         (select count(*)::integer from onzio.media_assets
+            where club_id = $1 and id = $4 and status = 'published'
+              and storage_bucket = 'onzio-media') as crest_assets,
+         (select count(*)::integer from onzio.site_branding
+            where club_id = $1 and club_logo_asset_id = $4
+              and club_logo_path = $5) as branding,
+         (select count(*)::integer from onzio.media_assets
+            where club_id = $1 and id = any($6::uuid[])
+              and status = 'published' and surface = 'homepage'
+              and storage_bucket = 'onzio-media') as home_photo_assets,
+         (select count(*)::integer from onzio.homepage_slideshow_photos
+            where club_id = $1 and media_asset_id = any($6::uuid[])) as home_photo_links,
          (select configuration from onzio.presentation_documents
             where id = $2) as configuration`,
-      [MLA_LOCAL_TENANT_ID, MLA_LOCAL_PRESENTATION_DOCUMENT_ID],
+      [
+        MLA_LOCAL_TENANT_ID,
+        documentId,
+        configurationDigest,
+        crest.assetId,
+        crest.destinationPath,
+        photoAssetIds,
+      ],
     );
     const row = seeded.rows[0];
     if (
@@ -249,7 +650,11 @@ async function main() {
       row.domains !== 1 ||
       row.documents !== 1 ||
       row.state !== 1 ||
-      row.publications !== 1
+      row.publications !== 1 ||
+      row.crest_assets !== 1 ||
+      row.branding !== 1 ||
+      row.home_photo_assets !== homePhotos.length ||
+      row.home_photo_links !== homePhotos.length
     ) {
       throw new Error(`MLA seed reconciliation failed: ${JSON.stringify(row)}`);
     }
@@ -272,18 +677,33 @@ async function main() {
         },
         domain: { id: MLA_LOCAL_DOMAIN_ID, hostname: MLA_LOCAL_HOSTNAME },
         presentation: {
-          documentId: MLA_LOCAL_PRESENTATION_DOCUMENT_ID,
-          publicationId: MLA_LOCAL_PRESENTATION_PUBLICATION_ID,
+          documentId,
+          publicationId,
           templateKey: "pathway@1",
           configurationDigest,
           productionSurfaceParse: "passed",
         },
+        media: plans.map((plan) => ({
+          role: plan.spec.role,
+          assetId: plan.assetId,
+          storagePath: plan.destinationPath,
+          mimeType: plan.normalized.mimeType,
+          width: plan.normalized.width,
+          height: plan.normalized.height,
+          sourceChecksumSha256: plan.sourceChecksumSha256,
+          storageObject: storageResults[plan.spec.role],
+          homeSlot: plan.spec.homeSlot?.sortOrder ?? null,
+        })),
         counts: {
           clubs: row.clubs,
           domains: row.domains,
           documents: row.documents,
           state: row.state,
           publications: row.publications,
+          crestAssets: row.crest_assets,
+          branding: row.branding,
+          homePhotoAssets: row.home_photo_assets,
+          homePhotoLinks: row.home_photo_links,
         },
         hostedMutations: 0,
       }),

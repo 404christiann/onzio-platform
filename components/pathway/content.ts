@@ -3,6 +3,8 @@ import type { PathwayHeroProps } from "@/components/pathway/PathwayHero";
 import type { PathwayRailProps } from "@/components/pathway/PathwayRail";
 import type { PathwaySplitFeatureProps } from "@/components/pathway/PathwaySplitFeature";
 import type { PathwayInvertedFeatureProps } from "@/components/pathway/PathwayInvertedFeature";
+import type { PathwayFeatureGridProps } from "@/components/pathway/PathwayFeatureGrid";
+import type { PathwayMissionProps } from "@/components/pathway/PathwayMission";
 import type { PathwaySpecListProps } from "@/components/pathway/PathwaySpecList";
 import type { PathwayNumberedStepsProps } from "@/components/pathway/PathwayNumberedSteps";
 import type { PathwayPriceCardsProps } from "@/components/pathway/PathwayPriceCards";
@@ -50,10 +52,35 @@ const TBC_NOTE =
 
 /* ============================ HOME ============================ */
 
+/**
+ * Home photo slots. The photographs themselves live in the media pipeline
+ * (onzio-media objects + media_assets rows, linked through
+ * homepage_slideshow_photos by sort_order — seeded by
+ * scripts/seed-mla-local.ts); the page resolves them server-side and merges
+ * them into these props. This module carries only words, per the Phase 1
+ * rule above. The sort_order convention is:
+ *
+ *   0 — leader photo (Manu at the goal), Home leader band
+ *   1 — strength & agility photo, expect-grid column 1
+ *   2 — foot-skills photo, expect-grid column 2
+ *   3 — teamwork photo, expect-grid column 3
+ *   4 — squad team photo, Home hero background (behind the opening band)
+ */
+export const HOME_PHOTO_SLOTS = {
+  leader: 0,
+  agility: 1,
+  footSkills: 2,
+  teamwork: 3,
+  heroBackground: 4,
+} as const;
+
 export const homeContent: {
   hero: PathwayHeroProps;
+  leader: PathwayInvertedFeatureProps;
   rail: PathwayRailProps;
+  expect: PathwayFeatureGridProps;
   partners: PathwayPartnerStripProps;
+  mission: PathwayMissionProps;
 } = {
   hero: {
     variant: "centered",
@@ -63,6 +90,51 @@ export const homeContent: {
     sub: `Technical training, youth football, senior football and a route into the ${LEAGUE_NAME} — all under one badge.`,
     primaryCta: BOOK_TRAINING_CTA,
     secondaryCta: { label: "See the pathway", href: "/academy" },
+  },
+  // The leader/bio band. Facts are drawn from the club's own published
+  // material: Manu's journey from Quilmes, Argentina through an
+  // international professional career (including FC Cincinnati) to
+  // Cincinnati, and the academy's offer of elite training, expert coaching
+  // and mentorship. This is a real person's professional bio — reword only
+  // with care.
+  leader: {
+    eyebrow: "Who we are",
+    heading: CLUB_NAME,
+    body: [
+      "We're dedicated to nurturing the next generation of soccer players through elite training, expert coaching and mentorship — building technical skill, tactical understanding and physical fitness, and shaping character along the way.",
+    ],
+    subsections: [
+      {
+        heading: "Our leader: Manu Ledesma",
+        body: [
+          "Manu's journey began in Quilmes, Argentina, and carried him through an international professional career — including his years with FC Cincinnati — before Cincinnati became home. He brings the lessons of that career to every session, committed to mentoring young players in the game and beyond it.",
+        ],
+      },
+      {
+        heading: "What we offer",
+        bullets: [
+          {
+            title: "Elite training programs",
+            description:
+              "Technical, tactical and physical development built around the individual player.",
+          },
+          {
+            title: "Expert coaching",
+            description:
+              "Sessions led by professionals who have played the game at the highest level.",
+          },
+          {
+            title: "Mentorship",
+            description:
+              "Guidance in soccer and personal development, on and off the field.",
+          },
+        ],
+      },
+    ],
+    primaryCta: BOOK_TRAINING_CTA,
+    secondaryCta: { label: "More about the club", href: "/about" },
+    mediaCaption: "Club photography to come.",
+    mediaSide: "end",
   },
   rail: {
     eyebrow: "The pathway",
@@ -92,10 +164,62 @@ export const homeContent: {
       },
     ],
   },
+  // The three-column expect-grid. Column titles are the club's own
+  // established program names; the paragraphs are the club's published
+  // descriptions tightened to this site's voice.
+  expect: {
+    eyebrow: "Inside the sessions",
+    heading: "What your player can expect",
+    columns: [
+      {
+        title: "Strength & Agility Training",
+        body: "Footwork drills, plyometrics, reaction work and balance training that sharpen how quickly a player changes direction. The return is speed, coordination and stability — and a body better protected against injury.",
+        mediaCaption: "Agility session photography to come.",
+      },
+      {
+        title: "Leveled Up Foot Skills",
+        body: "Dribbling, passing, receiving, juggling, toe touches — repetition that puts the ball under a player's command, even under pressure. Better ball handling builds confidence, and confidence changes performance.",
+        mediaCaption: "Foot-skills photography to come.",
+      },
+      {
+        title: "Teamwork & Teammates",
+        body: "Soccer is decided by players working together. Sessions build the communication, coordination and trust that turn individuals into a team — one that keeps the ball, makes better decisions and backs each other up.",
+        mediaCaption: "Team photography to come.",
+      },
+    ],
+  },
   partners: {
     label: "Club partners",
     count: 6,
     note: "Partner announcements to come.",
+  },
+  // The closing mission statement. The quote is the club's own, verbatim
+  // from its published mission graphic. Social destinations are the club's
+  // published first-party channels (documented in the site research of
+  // mlasoccer.com) — confirm with the club before launch.
+  mission: {
+    eyebrow: "Our mission",
+    quote:
+      "We're dedicated to fostering a soccer culture and supporting the growth of the sport in Cincinnati, working every day to inspire and strengthen the next generation. This is just the beginning!",
+    attribution: `${CLUB_NAME} — Cincinnati, Ohio`,
+    socialLabel: "Follow the academy",
+    socialLinks: [
+      {
+        network: "instagram",
+        label: `${CLUB_NAME} on Instagram`,
+        href: "https://www.instagram.com/manuledesmaacademy/",
+      },
+      {
+        network: "facebook",
+        label: `${CLUB_NAME} on Facebook`,
+        href: "https://www.facebook.com/manuledesmaacademy/",
+      },
+      {
+        network: "x",
+        label: `${CLUB_NAME} on X`,
+        href: "https://x.com/ledesmaacademy",
+      },
+    ],
   },
 };
 
