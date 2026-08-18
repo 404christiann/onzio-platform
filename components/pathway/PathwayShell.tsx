@@ -47,7 +47,6 @@ export default function PathwayShell({
       }
     >
       <PathwayTrainingGatewayProvider>
-        <div className="pathway-top-rail" aria-hidden="true" />
         <PathwayNav />
         <main className="pathway-main">{children}</main>
         <PathwayFooter />

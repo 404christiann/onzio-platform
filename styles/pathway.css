@@ -51,7 +51,6 @@
   --on-dark: #f5f5f7;
   --on-dark-muted: rgba(245, 245, 247, 0.68);
   --on-dark-line: rgba(245, 245, 247, 0.22);
-  --bar-h: 20px;
   --pad-x: clamp(20px, 5vw, 72px);
   --pathway-body-font: var(--font-geist-sans), -apple-system,
     BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
@@ -124,14 +123,11 @@
   line-height: 1.12;
 }
 
-/* ============ TOP RAIL + AFFILIATION LOCKUP ============
-   The club-color rail stays as the quiet top edge from the approved pathway
-   chrome. The real federation marks now sit beside the crest in the white
-   header, matching the established clubhouse/editorial identity pattern. */
-[data-site-template="pathway"] .pathway-top-rail {
-  height: var(--bar-h);
-  background: var(--primary);
-}
+/* ============ AFFILIATION LOCKUP ============
+   The club-color top rail was removed entirely at the client's request — the
+   header now starts directly with the white nav tier. The federation marks
+   sit beside the crest in that white header, matching the established
+   clubhouse/editorial identity pattern. */
 [data-site-template="pathway"] .pathway-affiliation-lockup {
   display: flex;
   align-items: center;
@@ -294,6 +290,22 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+/* Flexbox's row-level gap is a fixed value applied between every adjacent
+   item's margin-box edge, so geometrically the box-to-box gap after the
+   UPSL item (which ends at its 24px disclosure button) already matches
+   every other item-to-item gap. The visible mismatch is that the chevron
+   glyph inside that button is centered with ~7px of transparent padding on
+   each side, so the *ink* (the part the eye actually reads) ends ~7px
+   before the button's true edge — reading as extra dead space before
+   "Merch" that the plain text-only items don't have, since their box edge
+   is their ink edge. Pull the trailing edge back by that padding only (not
+   the button's full footprint) so the glyph-to-glyph spacing reads even.
+   This only affects flex spacing (not the button's own hit area, and not
+   the dropdown menu's own left: 50% position, which centers on the item's
+   own box irrespective of margin). */
+[data-site-template="pathway"] .pathway-nav-item-upsl {
+  margin-right: -7px;
 }
 [data-site-template="pathway"] .pathway-nav-disclosure {
   width: 24px;

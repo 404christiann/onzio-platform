@@ -132,8 +132,11 @@ describe("pathway Presidential White navigation", () => {
     const shell = read("components/pathway/PathwayShell.tsx");
     const css = read("styles/pathway.css");
     const chromeBlock = css.slice(
-      css.indexOf("/* ============ TOP RAIL + AFFILIATION LOCKUP"),
-      css.indexOf("/* ============ MAIN ============", css.indexOf("TOP RAIL")),
+      css.indexOf("/* ============ AFFILIATION LOCKUP"),
+      css.indexOf(
+        "/* ============ MAIN ============",
+        css.indexOf("AFFILIATION LOCKUP"),
+      ),
     );
 
     expect(nav).toContain(
@@ -142,9 +145,10 @@ describe("pathway Presidential White navigation", () => {
     expect(nav).toMatch(
       /<div className="pathway-identity-lockup">[\s\S]*<\/Link>\s*<PathwayAffiliationBar \/>\s*<\/div>\s*<nav className="pathway-nav-row"/,
     );
-    expect(shell).toContain(
-      '<div className="pathway-top-rail" aria-hidden="true" />',
-    );
+    // The club-color top rail above the white header was removed entirely
+    // at the client's request (visual fix, 2026-08-18) — no rail markup, no
+    // rail CSS, and no leftover --bar-h custom property.
+    expect(shell).not.toContain("pathway-top-rail");
     expect(shell).not.toContain("<PathwayAffiliationBar />");
 
     expect(affiliations).toContain('aria-label="Club affiliations"');
@@ -162,8 +166,8 @@ describe("pathway Presidential White navigation", () => {
     expect(affiliations).not.toContain("pathway-affiliation-placeholder");
     expect(affiliations).not.toContain('aria-hidden="true">\n      <span');
 
-    expect(chromeBlock).toContain(".pathway-top-rail");
-    expect(chromeBlock).toContain("height: var(--bar-h);");
+    expect(chromeBlock).not.toContain(".pathway-top-rail");
+    expect(css).not.toContain("--bar-h");
     expect(chromeBlock).toContain(".pathway-affiliation-lockup");
     expect(chromeBlock).toContain(".pathway-affiliation-divider");
     expect(chromeBlock).toContain(".pathway-affiliation-us-soccer");

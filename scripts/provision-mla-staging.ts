@@ -28,6 +28,7 @@
 import { randomUUID } from "node:crypto";
 import { config as loadEnv } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
+import WebSocket from "ws";
 import { provisionClub } from "@/lib/operator/provision-club";
 import { acquireOperatorAccessToken } from "@/scripts/operator-session";
 import {
@@ -46,15 +47,15 @@ const EXPECTED_URL = `https://${EXPECTED_PROJECT_REF}.supabase.co`;
 // PLACEHOLDER -- Christian must replace this with the real staging review
 // alias he actually creates on Vercel before running. The
 // "REPLACE-ME" marker below doubles as a refuse-to-run guard.
-const PRIMARY_DOMAIN = "REPLACE-ME-manu-ledesma-academy-onzio-staging.vercel.app";
+const PRIMARY_DOMAIN = "manu-ledesma-academy-onzio-staging.vercel.app";
 
 // PLACEHOLDER -- the owner identity for the staging club. If OWNER_EMAIL
 // already has an auth user on staging (e.g. Christian's own account),
 // EXISTING_OWNER_AUTH_USER_ID must be set to that user's id or provisionClub
 // will fail trying to create a duplicate auth user; leave it null only for
 // an email with no staging auth user yet.
-const OWNER_EMAIL = "REPLACE-ME@example.com";
-const EXISTING_OWNER_AUTH_USER_ID: string | null = null;
+const OWNER_EMAIL = "christianjavieralcala@gmail.com";
+const EXISTING_OWNER_AUTH_USER_ID: string | null = "cdc588f1-334b-47d6-9dfa-051230c15324";
 
 const CONFIRMATION = `mla-p1-provision-staging:${EXPECTED_PROJECT_REF}:${MLA_SLUG}`;
 
@@ -107,6 +108,9 @@ async function publishPresentationTriple(input: {
 
   const onzio = createClient(EXPECTED_URL, required("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false, autoRefreshToken: false },
+    realtime: {
+      transport: WebSocket as unknown as typeof globalThis.WebSocket,
+    },
   }).schema("onzio");
 
   const documentId = randomUUID();
@@ -168,18 +172,77 @@ async function main() {
   const operatorAccessToken = await acquireOperatorAccessToken();
   process.stderr.write(`${JSON.stringify({ stage: "operator_authorized" })}\n`);
 
-  const result = await provisionClub({
-    slug: MLA_SLUG,
-    name: MLA_NAME,
-    primaryDomain: PRIMARY_DOMAIN,
-    kind: "test",
-    ownerEmail: OWNER_EMAIL,
-    ...(EXISTING_OWNER_AUTH_USER_ID
-      ? { existingAuthUserId: EXISTING_OWNER_AUTH_USER_ID }
-      : {}),
-    operatorAccessToken,
-    environment: "staging",
-  });
+  let result: Awaited<ReturnType<typeof provisionClub>>;
+  try {
+    result = await provisionClub({
+      slug: MLA_SLUG,
+      name: MLA_NAME,
+      primaryDomain: PRIMARY_DOMAIN,
+      kind: "test",
+      ownerEmail: OWNER_EMAIL,
+      ...(EXISTING_OWNER_AUTH_USER_ID
+        ? { existingAuthUserId: EXISTING_OWNER_AUTH_USER_ID }
+        : {}),
+      operatorAccessToken,
+      environment: "staging",
+    });
+  } catch (error) {
+    // A previous run can have already created the club row and then died
+    // later, in publishPresentationTriple (e.g. the pre-fix realtime/ws
+    // crash) -- in that case provisionClub correctly refuses to double
+    // -provision, but this script still needs to reach the publish step.
+    // Resume from the existing row instead of failing outright.
+    const isSlugConflict =
+      error instanceof Error && error.message === "SLUG_CONFLICT";
+    if (!isSlugConflict || !EXISTING_OWNER_AUTH_USER_ID) throw error;
+
+    process.stderr.write(
+      `${JSON.stringify({ stage: "resuming_existing_club" })}\n`,
+    );
+    const lookupClient = createClient(
+      EXPECTED_URL,
+      required("SUPABASE_SERVICE_ROLE_KEY"),
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        realtime: {
+          transport: WebSocket as unknown as typeof globalThis.WebSocket,
+        },
+      },
+    ).schema("onzio");
+    const existing = await lookupClient
+      .from("clubs")
+      .select("id, slug, name, kind, lifecycle, public_access")
+      .eq("slug", MLA_SLUG)
+      .single();
+    if (existing.error || !existing.data) {
+      throw new Error(
+        `SLUG_CONFLICT but could not load the existing club: ${
+          existing.error?.message ?? "not found"
+        }`,
+      );
+    }
+
+    result = {
+      club: {
+        id: existing.data.id,
+        slug: existing.data.slug,
+        name: existing.data.name,
+        kind: existing.data.kind,
+        lifecycle: existing.data.lifecycle,
+        publicAccess: existing.data.public_access,
+      },
+      domain: { hostname: PRIMARY_DOMAIN, primary: true, verified: true },
+      owner: {
+        email: OWNER_EMAIL,
+        role: "owner",
+        userId: EXISTING_OWNER_AUTH_USER_ID,
+        authUserCreated: false,
+        codeSent: false,
+      },
+      public: false,
+      committed: true,
+    } as Awaited<ReturnType<typeof provisionClub>>;
+  }
   process.stderr.write(`${JSON.stringify({ stage: "club_provisioned" })}\n`);
 
   const presentation = await publishPresentationTriple({
