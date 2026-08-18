@@ -29,7 +29,7 @@ export function digestJson(value: unknown): string {
 // hasUnsafeConfiguration rejects URL/path-ish config content -- and no
 // `provenance` key at all: the production-surface parser rejects
 // sample/unresolved provenance, and Phase 1 has no provenanced values to
-// record. navigation carries the registry's nine defaultRoutes (asserted
+// record. navigation carries the registry's eleven defaultRoutes (asserted
 // below). The neutral light theme passes the production contrast gates:
 // text.primary #17201B on surface.canvas #FFFFFF and action.primaryText
 // #FFFFFF on action.primary #17201B both clear them comfortably.
@@ -71,6 +71,8 @@ function rawConfiguration(metadata: { createdBy: string; createdAt: string }) {
       contact: true,
       sponsors: true,
       store: true,
+      roster: true,
+      staff: true,
     },
     homepage: {
       // The real Home composition in render order (Home sections pass):
@@ -133,6 +135,8 @@ function rawConfiguration(metadata: { createdBy: string; createdAt: string }) {
             "youth-club",
             "senior-club",
             "league",
+            "roster",
+            "schedule",
             "merch",
             "about",
             "contact",

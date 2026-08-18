@@ -542,7 +542,8 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
   // exists -- no section is registered against a domain the schema cannot
   // supply. Deliberately excluded: payment collection behind
   // pathway.numbered-steps and pathway.price-cards (both are informational
-  // display only), and a scheduler behind the training CTA -- both Phase 2+.
+  // display only), plus any embedded scheduler or checkout. The training
+  // gateway only selects an offer before handing off to Acuity.
   "pathway.affiliation-bar": {
     type: "pathway.affiliation-bar",
     version: 1,
@@ -977,6 +978,8 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "youth-club",
       "senior-club",
       "league",
+      "roster",
+      "schedule",
       "merch",
       "about",
       "contact",
@@ -988,6 +991,8 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "youth-club",
       "senior-club",
       "league",
+      "roster",
+      "schedule",
       "merch",
       "about",
       "contact",
@@ -995,7 +1000,7 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "promo",
       "legal",
     ],
-    supportedModules: ["contact", "sponsors", "store", "affiliations"],
+    supportedModules: ["contact", "sponsors", "store", "affiliations", "roster", "schedule", "staff"],
   },
 };
 

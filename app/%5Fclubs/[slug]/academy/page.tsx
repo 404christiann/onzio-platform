@@ -1,14 +1,12 @@
 import { notFound } from "next/navigation";
 import { getClubContextBySlug } from "@/lib/club-context";
 import PathwayHero from "@/components/pathway/PathwayHero";
-import PathwaySplitFeature from "@/components/pathway/PathwaySplitFeature";
-import PathwaySpecList from "@/components/pathway/PathwaySpecList";
-import PathwayPriceCards from "@/components/pathway/PathwayPriceCards";
+import PathwayAcademyEditorial from "@/components/pathway/PathwayAcademyEditorial";
 import { academyContent } from "@/components/pathway/content";
 
 // pathway@1 Academy page (MLA P1 Step 6): the flagship first stage of the
-// pathway. Composition per the phase plan: hero (left) + split-feature +
-// spec-list + price-cards, all sourced from content.ts's academyContent.
+// pathway. The supplied Academy story/photo now opens the page, followed by
+// the focused technical-work invitation; all copy remains in content.ts.
 export default async function TenantAcademyPage({
   params,
 }: {
@@ -19,10 +17,11 @@ export default async function TenantAcademyPage({
 
   return (
     <>
-      <PathwayHero {...academyContent.hero} />
-      <PathwaySplitFeature {...academyContent.feature} />
-      <PathwaySpecList {...academyContent.specs} />
-      <PathwayPriceCards {...academyContent.packages} />
+      <PathwayAcademyEditorial
+        {...academyContent.editorial}
+        headingLevel="h1"
+      />
+      <PathwayHero {...academyContent.hero} headingLevel="h2" />
     </>
   );
 }

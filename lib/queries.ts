@@ -637,9 +637,12 @@ export async function fetchActiveSeason(clubId?: string): Promise<DBSeason | nul
 }
 
 /** Returns the shared club-branding record with the shipped crest as fallback. */
-export async function fetchClubBranding(clubId?: string): Promise<ClubBranding> {
+export async function fetchClubBranding(
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<ClubBranding> {
   const tenantId = requireClubId(clubId);
-  const query = supabase
+  const query = client
     .from("site_branding")
     .select("club_id, club_logo_path, club_logo_asset_id, inverse_logo_path, inverse_logo_asset_id, footer_tagline, updated_at");
   const { data, error } = await (
@@ -652,11 +655,13 @@ export async function fetchClubBranding(clubId?: string): Promise<ClubBranding> 
       tenantId,
       row?.club_logo_asset_id,
       row?.club_logo_path?.trim() || (clubId ? "" : DEFAULT_CLUB_LOGO_PATH),
+      client,
     ),
     inverseLogoPath: await resolveMediaStoragePath(
       tenantId,
       row?.inverse_logo_asset_id,
       row?.inverse_logo_path?.trim() || "",
+      client,
     ),
     footerTagline: resolveFooterTagline(row?.footer_tagline),
   };
@@ -1034,17 +1039,20 @@ export async function fetchSiteSponsorLogos(
   return rows.length > 0 || clubId ? rows : defaultSponsorLogosForPlacement(placement);
 }
 
-/** Fetches the DB-backed league standings table for the homepage. */
-export async function fetchLeagueStandings(clubId?: string): Promise<StandingsTableContent> {
+/** Fetches the DB-backed league standings table for a public tenant surface. */
+export async function fetchLeagueStandings(
+  clubId?: string,
+  client: typeof supabase = supabase,
+): Promise<StandingsTableContent> {
   const tenantId = requireClubId(clubId);
   const tenantScoped = Boolean(clubId);
   const [settingsResult, rowsResult] = await Promise.all([
-    supabase
+    client
       .from("league_standings_settings")
       .select("*")
       .eq("club_id", tenantId)
       .limit(1),
-    supabase
+    client
       .from("league_standings")
       .select("*")
       .eq("club_id", tenantId)
@@ -1066,6 +1074,7 @@ export async function fetchLeagueStandings(clubId?: string): Promise<StandingsTa
     (rowsResult.data ?? []) as Record<string, unknown>[],
     tenantId,
     [{ assetId: "logo_asset_id", url: "logo_url" }],
+    client,
   )) as unknown as DBLeagueStandingRow[];
 
   // normalizeStandingsRows/normalizeStandingsSettings intentionally show a

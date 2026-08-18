@@ -10,8 +10,7 @@ import {
 
 /**
  * pathway.split-feature — text column beside a media column
- * (MLA P1 Step 5). Used on Academy, Book Training, Youth Club and About,
- * and (as pathway.inverted-feature) the Home leader section.
+ * (MLA P1 Step 5). Used on Academy, Book Training, Youth Club and About.
  *
  * Desktop grid is `minmax(0, 1fr) minmax(460px, 480px)`: the copy column
  * takes the remaining space and the media column holds the mockup's fixed
@@ -26,8 +25,8 @@ import {
  * `mediaSide` flips which column the media sits in so consecutive features
  * on one page can alternate without a second component.
  *
- * Home-leader extensions (MLA P1, Home sections pass) — all optional, so
- * every existing call site is untouched:
+ * Editorial extensions (MLA P1, Home sections pass) — all optional, so every
+ * existing call site is untouched:
  *
  *  - `media`: a real photograph. When supplied it replaces
  *    PathwayMediaPlaceholder inside the same figure/ratio contract, so the

@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import ResilientImage from "@/components/ResilientImage";
+import PoweredByOnzio from "@/components/PoweredByOnzio";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubBranding } from "@/components/ClubBrandingProvider";
+import PathwayTrainingTrigger from "@/components/pathway/PathwayTrainingTrigger";
+import { imageDeliveryProps } from "@/lib/image-delivery";
 
 /**
  * Pathway public site footer (shell chrome, MLA P1 Step 4): Explore/Connect
@@ -22,22 +27,39 @@ const exploreLinks = [
 ];
 
 const connectLinks = [
-  { label: "Book Training", href: "/book-training" },
+  { label: "Book Training", href: "/book-training", action: "training-gateway" },
   { label: "Contact", href: "/contact" },
   { label: "About", href: "/about" },
-];
+] as const;
 
 export default function PathwayFooter() {
   const club = useClubContext();
+  const { clubLogoUrl, inverseLogoUrl } = useClubBranding();
+  const footerLogoUrl = inverseLogoUrl || clubLogoUrl;
   const year = new Date().getFullYear();
 
   return (
     <footer className="pathway-footer">
       <div className="pathway-footer-grid">
-        <div className="pathway-footer-brand">
-          <strong>{club.name}</strong>
-          <p>One pathway from first touch to senior football.</p>
-        </div>
+        <Link
+          className="pathway-footer-brand-lockup"
+          href="/"
+          aria-label={`${club.name} home`}
+        >
+          {footerLogoUrl && (
+            <ResilientImage
+              src={footerLogoUrl}
+              alt=""
+              width={72}
+              height={72}
+              {...imageDeliveryProps("club-logo")}
+            />
+          )}
+          <span className="pathway-footer-brand">
+            <strong>{club.name}</strong>
+            <span>One pathway from first touch to senior football.</span>
+          </span>
+        </Link>
         <div>
           <span className="pathway-footer-label">Explore</span>
           <nav className="pathway-footer-links" aria-label="Explore">
@@ -52,9 +74,15 @@ export default function PathwayFooter() {
           <span className="pathway-footer-label">Connect</span>
           <nav className="pathway-footer-links" aria-label="Connect">
             {connectLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
-                {link.label}
-              </Link>
+              "action" in link && link.action === "training-gateway" ? (
+                <PathwayTrainingTrigger key={link.href} href={link.href}>
+                  {link.label}
+                </PathwayTrainingTrigger>
+              ) : (
+                <Link key={link.href} href={link.href}>
+                  {link.label}
+                </Link>
+              )
             ))}
           </nav>
         </div>
@@ -63,6 +91,10 @@ export default function PathwayFooter() {
         <span>
           © {year} {club.name}. All rights reserved.
         </span>
+        <PoweredByOnzio
+          className="pathway-footer-powered-by"
+          textClassName="pathway-footer-powered-by-text"
+        />
         <Link href="/privacy">Privacy Policy</Link>
       </div>
     </footer>

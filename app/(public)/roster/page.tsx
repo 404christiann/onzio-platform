@@ -9,10 +9,11 @@ import PlayerCard from "@/components/PlayerCard";
 import StaffCard from "@/components/StaffCard";
 import { fetchRoster, fetchStaff } from "@/lib/queries";
 import { Player, Staff } from "@/lib/data";
-import { notFound } from "next/navigation";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
 import EditorialRoster from "@/components/editorial/EditorialRoster";
+import PathwayUpslRoster from "@/components/pathway/PathwayUpslRoster";
+import { upslRosterContent } from "@/components/pathway/content";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -75,9 +76,7 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
 
 export default function RosterPage() {
   const club = useClubContext();
-  // MLA P1 Step 6: pathway@1 is not a sports-CMS site, so this route 404s
-  // for that tenant instead of falling through to the legacy roster below.
-  if (club.presentationTemplateKey === "pathway@1") notFound();
+  if (club.presentationTemplateKey === "pathway@1") return <PathwayUpslRoster {...upslRosterContent} />;
   if (club.presentationTemplateKey === "editorial@1") return <EditorialRoster />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseRosterPage />;
   return <LegacyRosterPage />;

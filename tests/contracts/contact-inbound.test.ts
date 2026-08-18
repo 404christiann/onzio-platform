@@ -17,6 +17,7 @@ const validSubmission = {
   firstName: "  Jordan ",
   lastName: "Rivera",
   email: " jordan.rivera@example.com ",
+  phone: " +1 (937) 555-0123 ",
   message: "  Interested in training sessions for my daughter.  ",
 };
 
@@ -33,6 +34,7 @@ describe("contact inbound validation (lib/contact-inbound)", () => {
         firstName: "Jordan",
         lastName: "Rivera",
         email: "jordan.rivera@example.com",
+        phone: "+1 (937) 555-0123",
         message: "Interested in training sessions for my daughter.",
       },
     });
@@ -63,6 +65,36 @@ describe("contact inbound validation (lib/contact-inbound)", () => {
     ).toBe("invalid");
     expect(parse(null).outcome).toBe("invalid");
     expect(parse([validSubmission]).outcome).toBe("invalid");
+    expect(
+      parse({ ...validSubmission, phone: "1".repeat(51) }).outcome,
+    ).toBe("invalid");
+  });
+
+  it("accepts an omitted or blank optional phone number", async () => {
+    const parse = await loadContract<Parse>(
+      "@/lib/contact-inbound",
+      "parseContactInbound",
+    );
+    const { phone: _phone, ...withoutPhone } = validSubmission;
+
+    expect(parse(withoutPhone)).toEqual({
+      outcome: "accepted",
+      submission: {
+        firstName: "Jordan",
+        lastName: "Rivera",
+        email: "jordan.rivera@example.com",
+        message: "Interested in training sessions for my daughter.",
+      },
+    });
+    expect(parse({ ...validSubmission, phone: "   " })).toEqual({
+      outcome: "accepted",
+      submission: {
+        firstName: "Jordan",
+        lastName: "Rivera",
+        email: "jordan.rivera@example.com",
+        message: "Interested in training sessions for my daughter.",
+      },
+    });
   });
 
   it("silently drops a honeypot-filled submission, never erroring", async () => {
@@ -114,8 +146,33 @@ describe("contact inbound validation (lib/contact-inbound)", () => {
       subject: "New inquiry — Manu Ledesma Academy",
     });
     expect(message.text).toContain("Jordan Rivera");
+    expect(message.text).toContain("Phone: +1 (937) 555-0123");
     expect(message.text).toContain(
       "Interested in training sessions for my daughter.",
     );
+  });
+
+  it("makes a missing phone explicit in the outbound plain-text message", async () => {
+    const parse = await loadContract<Parse>(
+      "@/lib/contact-inbound",
+      "parseContactInbound",
+    );
+    const build = await loadContract<Build>(
+      "@/lib/contact-inbound",
+      "buildContactOutboundMessage",
+    );
+    const { phone: _phone, ...withoutPhone } = validSubmission;
+    const parsed = parse(withoutPhone);
+    if (parsed.outcome !== "accepted") {
+      throw new Error("Expected the fixture submission to be accepted.");
+    }
+
+    const message = build({
+      clubName: "Manu Ledesma Academy",
+      from: "inquiries@platform-sender.example",
+      to: "club-inbox@example.com",
+      submission: parsed.submission,
+    });
+    expect(message.text).toContain("Phone: Not provided");
   });
 });

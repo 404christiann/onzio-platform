@@ -40,11 +40,35 @@ Commands:
 - `npm run test:architecture` — static architecture contracts
 - `ROSTER_MEDIA_BASE_URL=https://onzio-platform.vercel.app npm run test:browser:roster`
   — retained focused roster compatibility check
+- `PATHWAY_GATEWAY_BASE_URL=http://manu-ledesma-academy.localhost:3000 npm run
+  test:browser:pathway-training-gateway` — desktop and 390×844 mobile checks for
+  the age-first training gateway, direct Acuity handoffs, focus restoration,
+  scroll locking, full-screen takeover, full-page fallback, and reduced motion
+  (the base URL must permit anonymous public access; for a private-preview
+  tenant, also provide an approved `PATHWAY_GATEWAY_STORAGE_STATE` file)
 - `SITE_MEDIA_BASE_URL=http://127.0.0.1:3000 npx playwright test
   --config=playwright.site-media.config.ts` — desktop and iPhone checks for
   every public image surface. Normal mode requires direct raw URLs, positive
   `naturalWidth`, and no unexpected fallback. Simulated source failure requires
-  deliberate fallbacks and no broken-image chrome.
+  deliberate fallbacks and no broken-image chrome. Pathway sites conditionally
+  include Academy, About, Youth Club, UPSL, and Merch media routes.
+- `npx vitest run tests/contracts/pathway-about-editorial.test.ts
+  tests/contracts/pathway-academy-editorial.test.ts
+  tests/contracts/pathway-calm-story.test.ts
+  tests/contracts/pathway-editorial-carousel.test.ts
+  tests/contracts/pathway-home-hero.test.ts
+  tests/contracts/pathway-merch-store.test.ts
+  tests/contracts/pathway-presidential-nav.test.ts
+  tests/contracts/pathway-royal-training-gallery.test.ts
+  tests/contracts/pathway-senior-interest.test.ts
+  tests/contracts/pathway-stage-pages.test.ts
+  tests/contracts/pathway-upsl-roster.test.ts
+  tests/contracts/pathway-upsl-sections.test.ts` — focused route-composition,
+  semantic-heading, nav/footer, responsive story and auto-carousel geometry,
+  supplied-media integrity, Home order, external merch handoff, removal-copy,
+  MLA-owned standings, Diverse City-reference roster cards with flags,
+  accessible UPSL disclosure, direct crest delivery, and responsive table/card
+  contracts for the Pathway refinements.
 
 The database suite accepts only loopback Supabase URLs. Stripe fixtures accept
 only test-mode keys and events.

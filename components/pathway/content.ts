@@ -1,8 +1,8 @@
 import type { PathwayCta } from "@/components/pathway/PathwaySection";
+import type { PathwayCalmStoryProps } from "@/components/pathway/PathwayCalmStory";
+import type { PathwayHomeHeroProps } from "@/components/pathway/PathwayHomeHero";
 import type { PathwayHeroProps } from "@/components/pathway/PathwayHero";
 import type { PathwayRailProps } from "@/components/pathway/PathwayRail";
-import type { PathwaySplitFeatureProps } from "@/components/pathway/PathwaySplitFeature";
-import type { PathwayInvertedFeatureProps } from "@/components/pathway/PathwayInvertedFeature";
 import type { PathwayFeatureGridProps } from "@/components/pathway/PathwayFeatureGrid";
 import type { PathwayMissionProps } from "@/components/pathway/PathwayMission";
 import type { PathwaySpecListProps } from "@/components/pathway/PathwaySpecList";
@@ -11,6 +11,16 @@ import type { PathwayPriceCardsProps } from "@/components/pathway/PathwayPriceCa
 import type { PathwayPartnerStripProps } from "@/components/pathway/PathwayPartnerStrip";
 import type { PathwayContactFormProps } from "@/components/pathway/PathwayContactForm";
 import type { PathwayLegalDocProps } from "@/components/pathway/PathwayLegalDoc";
+import type { PathwayAcademyEditorialProps } from "@/components/pathway/PathwayAcademyEditorial";
+import type { PathwayYouthJoinProps } from "@/components/pathway/PathwayYouthJoin";
+import type { PathwaySeniorInterestProps } from "@/components/pathway/PathwaySeniorInterest";
+import type { PathwayUpslTryoutSpotlightProps } from "@/components/pathway/PathwayUpslTryoutSpotlight";
+import type { PathwayUpslMatchChannelPanelProps } from "@/components/pathway/PathwayUpslMatchChannelPanel";
+import type { PathwayMerchStoreProps } from "@/components/pathway/PathwayMerchStore";
+import type { PathwayAboutEditorialProps } from "@/components/pathway/PathwayAboutEditorial";
+import type { PathwayEditorialCarouselProps } from "@/components/pathway/PathwayEditorialCarousel";
+import type { PathwayUpslRosterProps } from "@/components/pathway/PathwayUpslRoster";
+import type { PathwayUpslFixturesProps } from "@/components/pathway/PathwayUpslFixtures";
 
 /**
  * Hardcoded copy for every pathway@1 route (MLA P1 Step 5).
@@ -24,25 +34,27 @@ import type { PathwayLegalDocProps } from "@/components/pathway/PathwayLegalDoc"
  *
  * 1. Real identity is used where it is real: the club name, the four
  *    pathway stage names, and the United Premier Soccer League affiliation.
- * 2. Nothing else is invented. Prices, dates, venues, age groups, squad
- *    details, staff names and partner names are not known at Phase 1, so
- *    they render as first-class TBC rows and neutral placeholders rather
- *    than plausible-looking fiction that someone downstream might mistake
- *    for confirmed fact. Positioning copy describing what a stage *is* is
- *    fine; a claim about when, where or how much is not.
+ * 2. Nothing is invented. Prices, dates, venues, age groups, squad details,
+ *    staff names and partner names remain TBC unless Christian supplies a
+ *    first-party reference for them. Confirmed reference material may be
+ *    transcribed here; unknown facts stay first-class TBC rows rather than
+ *    plausible-looking fiction.
  *
- * Every CTA points at /contact. Phase 1 has no scheduler and no commerce
- * backend, so the contact form is the site's only real action — including
- * for "Book training", matching the nav CTA's own routing.
+ * Booking CTAs use an explicit gateway action and retain /book-training as a
+ * progressive fallback. The site presents verified options, then hands the
+ * selected action to Acuity; it never embeds scheduling or collects payment.
  */
 
 export const CLUB_NAME = "Manu Ledesma Academy";
 export const LEAGUE_NAME = "United Premier Soccer League";
 
-const CONTACT_CTA: PathwayCta = { label: "Get in touch", href: "/contact" };
-const BOOK_TRAINING_CTA: PathwayCta = { label: "Book training", href: "/contact" };
+const BOOK_TRAINING_CTA: PathwayCta = {
+  label: "Book training",
+  href: "/book-training",
+  action: "training-gateway",
+};
 
-/** Shared line for any section whose figures are informational only. */
+/** Shared line for informational figures elsewhere on the pathway site. */
 const NO_PAYMENT_NOTE =
   "Nothing is bought or paid for on this site. Get in touch and we'll confirm availability and cost with you directly.";
 
@@ -57,14 +69,15 @@ const TBC_NOTE =
  * (onzio-media objects + media_assets rows, linked through
  * homepage_slideshow_photos by sort_order — seeded by
  * scripts/seed-mla-local.ts); the page resolves them server-side and merges
- * them into these props. This module carries only words, per the Phase 1
- * rule above. The sort_order convention is:
+ * them into these props. The club-supplied editorial posters are a separate
+ * normalized static set below; they do not consume these database slots. The
+ * sort_order convention for the five dynamic photographs is:
  *
  *   0 — leader photo (Manu at the goal), Home leader band
  *   1 — strength & agility photo, expect-grid column 1
  *   2 — foot-skills photo, expect-grid column 2
  *   3 — teamwork photo, expect-grid column 3
- *   4 — squad team photo, Home hero background (behind the opening band)
+ *   4 — squad team photo, Home hero editorial media panel
  */
 export const HOME_PHOTO_SLOTS = {
   leader: 0,
@@ -75,21 +88,19 @@ export const HOME_PHOTO_SLOTS = {
 } as const;
 
 export const homeContent: {
-  hero: PathwayHeroProps;
-  leader: PathwayInvertedFeatureProps;
+  hero: PathwayHomeHeroProps;
+  leader: PathwayCalmStoryProps;
   rail: PathwayRailProps;
   expect: PathwayFeatureGridProps;
   partners: PathwayPartnerStripProps;
   mission: PathwayMissionProps;
 } = {
   hero: {
-    variant: "centered",
     eyebrow: CLUB_NAME,
     headlineTop: "One club.",
     headlineBottom: "Every stage of the game.",
     sub: `Technical training, youth football, senior football and a route into the ${LEAGUE_NAME} — all under one badge.`,
     primaryCta: BOOK_TRAINING_CTA,
-    secondaryCta: { label: "See the pathway", href: "/academy" },
   },
   // The leader/bio band. Facts are drawn from the club's own published
   // material: Manu's journey from Quilmes, Argentina through an
@@ -98,21 +109,29 @@ export const homeContent: {
   // and mentorship. This is a real person's professional bio — reword only
   // with care.
   leader: {
-    eyebrow: "Who we are",
     heading: CLUB_NAME,
-    body: [
-      "We're dedicated to nurturing the next generation of soccer players through elite training, expert coaching and mentorship — building technical skill, tactical understanding and physical fitness, and shaping character along the way.",
-    ],
-    subsections: [
+    portraitCaption: "Experience passed forward.",
+    items: [
       {
-        heading: "Our leader: Manu Ledesma",
-        body: [
-          "Manu's journey began in Quilmes, Argentina, and carried him through an international professional career — including his years with FC Cincinnati — before Cincinnati became home. He brings the lessons of that career to every session, committed to mentoring young players in the game and beyond it.",
+        label: "Why the academy exists",
+        paragraphs: [
+          {
+            text: "We're dedicated to nurturing the next generation of soccer players through elite training, expert coaching and mentorship — building technical skill, tactical understanding and physical fitness, and shaping character along the way.",
+          },
         ],
       },
       {
-        heading: "What we offer",
-        bullets: [
+        label: "Who leads the work",
+        paragraphs: [
+          {
+            lead: "Our leader: Manu Ledesma.",
+            text: "Manu's journey began in Quilmes, Argentina, and carried him through an international professional career — including his years with FC Cincinnati — before Cincinnati became home. He brings the lessons of that career to every session, committed to mentoring young players in the game and beyond it.",
+          },
+        ],
+      },
+      {
+        label: "What players receive",
+        offers: [
           {
             title: "Elite training programs",
             description:
@@ -134,7 +153,6 @@ export const homeContent: {
     primaryCta: BOOK_TRAINING_CTA,
     secondaryCta: { label: "More about the club", href: "/about" },
     mediaCaption: "Club photography to come.",
-    mediaSide: "end",
   },
   rail: {
     eyebrow: "The pathway",
@@ -172,16 +190,19 @@ export const homeContent: {
     heading: "What your player can expect",
     columns: [
       {
+        focusLabel: "Physical readiness",
         title: "Strength & Agility Training",
         body: "Footwork drills, plyometrics, reaction work and balance training that sharpen how quickly a player changes direction. The return is speed, coordination and stability — and a body better protected against injury.",
         mediaCaption: "Agility session photography to come.",
       },
       {
+        focusLabel: "Technical command",
         title: "Leveled Up Foot Skills",
         body: "Dribbling, passing, receiving, juggling, toe touches — repetition that puts the ball under a player's command, even under pressure. Better ball handling builds confidence, and confidence changes performance.",
         mediaCaption: "Foot-skills photography to come.",
       },
       {
+        focusLabel: "Collective intelligence",
         title: "Teamwork & Teammates",
         body: "Soccer is decided by players working together. Sessions build the communication, coordination and trust that turn individuals into a team — one that keeps the ball, makes better decisions and backs each other up.",
         mediaCaption: "Team photography to come.",
@@ -227,105 +248,26 @@ export const homeContent: {
 
 export const academyContent: {
   hero: PathwayHeroProps;
-  feature: PathwaySplitFeatureProps;
-  specs: PathwaySpecListProps;
-  packages: PathwayPriceCardsProps;
+  editorial: PathwayAcademyEditorialProps;
 } = {
   hero: {
     variant: "left",
-    eyebrow: "Academy",
     headlineTop: "Start with",
     headlineBottom: "the technical work.",
     sub: "The academy is the first stage of the pathway, and where players build the individual foundation everything after it rests on.",
     primaryCta: BOOK_TRAINING_CTA,
   },
-  feature: {
-    eyebrow: "Inside the programme",
-    heading: "Technique first, then everything else.",
+  editorial: {
+    eyebrow: "Player development",
+    heading: "Our Academy",
     body: [
-      "Academy sessions are built around the ball. Players work on the parts of the game they own individually — the touch, the turn, the pass, the decision — before any of it has to survive a match.",
-      "Groups are kept small enough that a coach can see every repetition, and players are pushed at the level they're actually at rather than the level their age group suggests.",
+      `${CLUB_NAME} stands out due to its personalized coaching approach, tailored to each player's unique needs and skill level. Our elite training programs focus on developing technical proficiency, tactical understanding, and physical conditioning. We offer specialized drills and exercises designed by professional coaches, ensuring players receive top-tier instruction.`,
+      `Additionally, our academy emphasizes a supportive and motivating environment, fostering a love for the game and encouraging continuous improvement. With a commitment to excellence and a track record of success, ${CLUB_NAME} provides an unparalleled soccer training experience that prepares players for competitive play and personal growth.`,
     ],
-    bullets: [
-      "Ball mastery and first touch",
-      "Receiving and passing under pressure",
-      "1v1 attacking and defending",
-      "Finishing and decision-making",
-    ],
-    primaryCta: BOOK_TRAINING_CTA,
-    mediaCaption: "Academy session photography to come.",
-    mediaSide: "end",
-  },
-  specs: {
-    eyebrow: "Details",
-    heading: "Academy at a glance",
-    rows: [
-      { label: "Focus", value: "Individual and small-group technical development" },
-      { label: "Stage", value: `Entry point to the ${CLUB_NAME} pathway` },
-      { label: "Age groups", state: "tbc" },
-      { label: "Session times", state: "tbc" },
-      { label: "Venue", state: "tbc" },
-      { label: "Season dates", state: "tbc" },
-    ],
-    note: TBC_NOTE,
-  },
-  packages: {
-    eyebrow: "Training packages",
-    heading: "Ways to train with us",
-    cards: [
-      {
-        name: "Single session",
-        description:
-          "One academy session, for players trying the programme for the first time.",
-        price: { state: "tbc" },
-      },
-      {
-        name: "Session block",
-        description:
-          "A run of sessions booked together, for players committing to a stretch of work.",
-        price: { state: "tbc" },
-      },
-      {
-        name: "Small group",
-        description:
-          "A closed session for a small group of players who want to train together.",
-        price: { state: "tbc" },
-      },
-    ],
-    note: NO_PAYMENT_NOTE,
-    cta: { label: "Ask about packages", href: "/contact" },
-  },
-};
-
-/* ======================== BOOK TRAINING ======================== */
-
-export const bookTrainingContent: {
-  hero: PathwayHeroProps;
-  feature: PathwaySplitFeatureProps;
-} = {
-  hero: {
-    variant: "left",
-    eyebrow: "Book training",
-    headlineTop: "Tell us about",
-    headlineBottom: "the player.",
-    sub: "There's no online booking system yet. Send us a message and we'll come back to you with availability, times and cost.",
-    primaryCta: { label: "Send a message", href: "/contact" },
-  },
-  feature: {
-    eyebrow: "How it works",
-    heading: "One message, one reply.",
-    body: [
-      "Booking is handled by a person, not a calendar widget. You tell us who the player is and what they're looking for, and we reply with what we can offer.",
-      "The more you can tell us up front, the fewer messages it takes to get a session in the diary.",
-    ],
-    bullets: [
-      "What the player wants to work on",
-      "Their age group",
-      "Rough availability across the week",
-    ],
-    primaryCta: { label: "Send a message", href: "/contact" },
-    mediaCaption: "Training photography to come.",
-    mediaSide: "end",
+    media: {
+      src: "/images/pathway/academy-session-4558c673.webp",
+      alt: "Academy players listen to their coach during a field session.",
+    },
   },
 };
 
@@ -333,136 +275,193 @@ export const bookTrainingContent: {
 
 export const youthClubContent: {
   hero: PathwayHeroProps;
-  feature: PathwaySplitFeatureProps;
-  specs: PathwaySpecListProps;
+  join: PathwayYouthJoinProps;
 } = {
   hero: {
     variant: "left",
-    eyebrow: "Youth Club",
     headlineTop: "From training",
     headlineBottom: "into a team.",
     sub: "The youth club is the second stage of the pathway — where academy work turns into competitive team football.",
-    primaryCta: CONTACT_CTA,
+    primaryCta: {
+      label: "Book Training",
+      href: "/book-training",
+      action: "training-gateway",
+    },
   },
-  feature: {
-    eyebrow: "Youth Club",
-    heading: "Team football, same standards.",
+  join: {
+    heading: "Join us!",
     body: [
-      "Playing in a team changes what technical work is for. The touch has to hold up with an opponent on it, the pass has to arrive at the right moment, and the decision has to be made before there's time to think about it.",
-      "Youth club players keep the academy habits and apply them across a season, in a squad, against other clubs.",
+      "Our youth team is founded on the belief that soccer can leave a lasting impact beyond the field. We are building a program dedicated to growth, community and the love of the game.",
     ],
-    bullets: [
-      "Competitive fixtures across a season",
-      "Positional work inside a team shape",
-      "A route on to the senior club",
+    listIntro: "We offer year-round play:",
+    items: [
+      { label: "Indoor teams in both Summer and Winter" },
+      { label: "Year-round training" },
     ],
-    primaryCta: CONTACT_CTA,
-    mediaCaption: "Youth Club matchday photography to come.",
-    mediaSide: "start",
-  },
-  specs: {
-    eyebrow: "Details",
-    heading: "Youth Club at a glance",
-    rows: [
-      { label: "Focus", value: "Competitive team football" },
-      { label: "Stage", value: "Second stage of the pathway" },
-      { label: "Age groups", state: "tbc" },
-      { label: "Training nights", state: "tbc" },
-      { label: "Home venue", state: "tbc" },
-      { label: "League and division", state: "tbc" },
-    ],
-    note: TBC_NOTE,
+    media: {
+      src: "/images/pathway/academy-huddle-a9b9250f.webp",
+      alt: "Youth players and their coach bring their hands together on the field.",
+    },
   },
 };
 
 /* ========================= SENIOR CLUB ========================= */
 
 export const seniorClubContent: {
-  hero: PathwayHeroProps;
-  specs: PathwaySpecListProps;
+  interest: PathwaySeniorInterestProps;
 } = {
-  hero: {
-    variant: "left",
-    eyebrow: "Senior Club",
-    headlineTop: "The last step",
-    headlineBottom: "before the league.",
-    sub: `The senior club is the adult end of the pathway, and the stage that leads into our ${LEAGUE_NAME} football.`,
-    primaryCta: CONTACT_CTA,
-  },
-  specs: {
-    eyebrow: "Details",
-    heading: "Senior Club at a glance",
-    rows: [
-      { label: "Stage", value: "Adult football, third stage of the pathway" },
-      { label: "Leads into", value: LEAGUE_NAME },
-      { label: "Squad", state: "tbc" },
-      { label: "Training nights", state: "tbc" },
-      { label: "Home venue", state: "tbc" },
-      { label: "Trial dates", state: "tbc" },
-    ],
-    // The senior club is the least settled stage of the pathway, so this
-    // page carries the most TBC rows by some distance. That is the honest
-    // state of the club, not an unfinished page.
-    note: "The senior club is still being set up. Everything marked TBC is genuinely undecided — we'd rather leave it open than publish something we'd have to take back.",
+  interest: {
+    heading: "Coming soon!",
+    intro:
+      "The next stage of the pathway is taking shape. Register your interest and we'll share senior-team opportunities as soon as they are confirmed.",
+    formEyebrow: "Register interest",
+    formHeading: "Want to be part of it?",
+    formIntro:
+      "Tell us who you are, how to reach you and what you are looking for from senior football.",
+    submitLabel: "Register interest",
+    successMessage:
+      "Thanks — your interest is registered. The club will be in touch when there is an update.",
+    fallbackEmail: "manuledesmaacademy@gmail.com",
   },
 };
 
 /* ============================ UPSL ============================ */
 
 export const upslContent: {
-  hero: PathwayHeroProps;
-  feature: PathwayInvertedFeatureProps;
-  steps: PathwayNumberedStepsProps;
+  tryouts: PathwayUpslTryoutSpotlightProps;
+  channel: Omit<
+    PathwayUpslMatchChannelPanelProps,
+    "channelName" | "channelCrest"
+  >;
 } = {
-  hero: {
-    variant: "left",
-    eyebrow: LEAGUE_NAME,
-    headlineTop: "The pathway",
-    headlineBottom: "has a destination.",
-    sub: `UPSL is the adult league our senior football is built around — the end of a route that starts with a first academy session.`,
-    primaryCta: CONTACT_CTA,
-  },
-  feature: {
-    eyebrow: "The league",
-    heading: "Where the pathway leads.",
+  tryouts: {
+    heading: "Fall Season UPSL — Free Tryouts",
+    subheading: "Your next opportunity starts here.",
     body: [
-      "UPSL is adult football: adult standards, adult opposition, a full season. It is the reason the earlier stages of the pathway are built the way they are.",
-      "A player who comes through the academy, the youth club and the senior club arrives here having been coached by the same club the whole way, rather than starting again at every level.",
+      "Think you have what it takes to compete at the next level?",
+      "This schedule reflects the free UPSL Fall Season Tryouts previously advertised by the club, where players could showcase their talent in front of the coaching staff.",
+      "Contact the academy to ask about upcoming UPSL opportunities and confirmed registration dates.",
     ],
-    primaryCta: { label: "Talk to us about the senior route", href: "/contact" },
-    mediaCaption: "UPSL matchday photography to come.",
-    mediaSide: "end",
+    date: "July 2 & July 3",
+    time: "9:00 PM",
+    location: "Riverside Park | Cincinnati, Ohio",
+    cta: {
+      label: "Register Here",
+      href: "https://docs.google.com/forms/d/e/1FAIpQLSdc4zEO4hF3rDazZz2IkEpYf5hf2PKgYkAwe3uQ9cWYf0fxrA/viewform",
+    },
+    image: {
+      src: "/images/pathway/upsl-celebration-c31bfab4.webp",
+      alt: "UPSL players celebrate together after a match.",
+    },
   },
-  steps: {
-    eyebrow: "Entry",
-    heading: "How entry works",
-    intro:
-      "The steps below explain the process end to end. They're here to be read, not paid — no payment is collected anywhere on this site.",
-    steps: [
-      {
-        title: "Get in touch",
-        body: "Send us a message telling us where you are as a player and what you're looking for. We'll reply with what the current route in looks like.",
-        cost: { amount: "No cost" },
-      },
-      {
-        title: "Trial",
-        body: "Come and train with the group so the coaching staff can see you play and you can see how the club works.",
-        cost: { state: "tbc" },
-      },
-      {
-        title: "Registration",
-        body: "Squad registration with the league, completed with the club before you can be named in a matchday squad.",
-        cost: { state: "tbc" },
-      },
-      {
-        title: "Season fees",
-        body: "The player contribution towards running the senior side across the season.",
-        cost: { state: "tbc" },
-      },
+  channel: {
+    kicker: "Official match channel",
+    headlineLead: "Subscribe to our official YouTube channel",
+    headlineEmphasis: "Watch our games live!",
+    body: [
+      "Follow match coverage, team updates and the moments behind the season on our official YouTube channel.",
     ],
-    disclaimer:
-      "Figures are informational. Anything due is arranged with the club directly — see the UPSL payments page for the full explanation.",
+    bannerMedia: {
+      src: "/images/pathway/upsl-teamwork-54151d0d.webp",
+      alt: "Five players in orange kits pose together on the field after a match.",
+    },
+    channelHandle: "@ManuLedesmaAcademy · Official channel",
+    subscribeAction: {
+      label: "Subscribe on YouTube",
+      href: "https://www.youtube.com/@ManuLedesmaAcademy?sub_confirmation=1",
+    },
+    watchAction: {
+      label: "Watch games live",
+      href: "https://www.youtube.com/@ManuLedesmaAcademy/streams",
+    },
   },
+};
+
+const DEFAULT_ROSTER_POSITIONS = [
+  ...Array<PathwayUpslRosterProps["players"][number]["position"]>(2).fill(
+    "GK",
+  ),
+  ...Array<PathwayUpslRosterProps["players"][number]["position"]>(6).fill(
+    "DF",
+  ),
+  ...Array<PathwayUpslRosterProps["players"][number]["position"]>(7).fill(
+    "MF",
+  ),
+  ...Array<PathwayUpslRosterProps["players"][number]["position"]>(7).fill(
+    "FW",
+  ),
+];
+
+/**
+ * Phase 1 UPSL roster placeholders requested by the club. These names do not
+ * represent published athletes or staff biographies. Display numbers and
+ * nationalities support the approved roster-card treatment only; statistics,
+ * photographs and profile destinations remain deliberately absent.
+ */
+export const upslRosterContent: PathwayUpslRosterProps = {
+  players: DEFAULT_ROSTER_POSITIONS.map((position, index) => ({
+    id: `default-player-${index + 1}`,
+    name: `Player ${index + 1}`,
+    position,
+    squadNumber: index + 1,
+    nationality: "American",
+  })),
+  staff: Array.from({ length: 4 }, (_, index) => ({
+    id: `default-staff-${index + 1}`,
+    name: `Staff ${index + 1}`,
+    role: "Technical Staff",
+    nationality: "American",
+  })),
+};
+
+/**
+ * Phase 1 UPSL fixtures placeholders. These are not published matches: the
+ * club has no confirmed UPSL fixture list yet, so the opponents are numbered
+ * placeholders rather than named teams, venues stay unset so every row reads
+ * "Venue TBA", and no fixture carries a result — nothing here should be read
+ * as a record of matches this club has played. The weekly cadence and the one
+ * time-less row exist only so the fixtures page shows its real states
+ * (upcoming, next, and kickoff-not-set) before Phase 2 makes the list
+ * DB-backed.
+ */
+export const upslFixturesContent: PathwayUpslFixturesProps = {
+  seasonLabel: "Fall 2026",
+  fixtures: [
+    {
+      id: "default-fixture-1",
+      date: "2026-08-29",
+      time: "19:00",
+      opponent: "Opponent 1",
+      home: true,
+    },
+    {
+      id: "default-fixture-2",
+      date: "2026-09-05",
+      time: "18:00",
+      opponent: "Opponent 2",
+      home: false,
+    },
+    {
+      id: "default-fixture-3",
+      date: "2026-09-12",
+      time: "19:00",
+      opponent: "Opponent 3",
+      home: true,
+    },
+    {
+      id: "default-fixture-4",
+      date: "2026-09-19",
+      time: "17:30",
+      opponent: "Opponent 4",
+      home: false,
+    },
+    {
+      id: "default-fixture-5",
+      date: "2026-09-26",
+      opponent: "Opponent 5",
+      home: true,
+    },
+  ],
 };
 
 /* ======================== UPSL PAYMENTS ======================== */
@@ -530,75 +529,167 @@ export const upslPaymentsContent: {
 
 /* ============================ MERCH ============================ */
 
-export const merchContent: {
-  hero: PathwayHeroProps;
-  kits: PathwayPriceCardsProps;
-} = {
-  hero: {
-    variant: "left",
-    eyebrow: "Merch",
-    headlineTop: "Wear",
-    headlineBottom: "the badge.",
-    sub: "Club kit and training wear for players, families and anyone who follows the pathway.",
-    primaryCta: { label: "Ask about kit", href: "/contact" },
-  },
-  kits: {
-    eyebrow: "Club kit",
-    heading: "What's coming",
-    intro:
-      "The club store isn't open yet. These are the kits being put together; prices and availability are published here once they're confirmed.",
-    cards: [
-      {
-        name: "Training kit",
-        description: "Training top and shorts in club colours.",
-        price: { state: "tbc" },
-      },
-      {
-        name: "Matchday kit",
-        description: "The playing kit worn by club teams.",
-        price: { state: "tbc" },
-      },
-      {
-        name: "Travel wear",
-        description: "Outerwear for cold sessions and travelling to fixtures.",
-        price: { state: "tbc" },
-      },
-      {
-        name: "Supporters",
-        description: "Everyday items for families and supporters of the club.",
-        price: { state: "tbc" },
-      },
-    ],
-    note: "Nothing is sold on this page. Once kit is confirmed you'll be able to order it through the club.",
-    cta: { label: "Ask about kit", href: "/contact" },
+export const merchContent: PathwayMerchStoreProps = {
+  collectionLabel: `Official ${CLUB_NAME} collection`,
+  heading: "Make it yours!",
+  intro:
+    "Choose your color, explore the match and training jerseys, then open the matching DIAZA product page for current ordering details.",
+  collections: [
+    {
+      id: "match-jerseys",
+      eyebrow: "Match jerseys",
+      heading: "The colors we compete in.",
+      intro:
+        "Two official matchday looks, each shown front and back in the supplied club artwork.",
+      variants: [
+        {
+          id: "match-orange",
+          label: "Orange",
+          color: "orange",
+          title: "Orange match jersey",
+          description:
+            "The orange match shirt pairs the academy crest and sleeve badge with navy trim and tonal Cincinnati artwork.",
+          image: {
+            src: "/images/pathway/match-orange-38e98dfc.webp",
+            alt: "Front and back views of the orange Manu Ledesma Academy match jersey.",
+          },
+          cta: {
+            label: "Buy Now",
+            href: "https://diaza.com/collections/manu-ledesma-team/products/manu-ledesma-upsl-home-jersey",
+          },
+        },
+        {
+          id: "match-black",
+          label: "Black",
+          color: "black",
+          title: "Black match jersey",
+          description:
+            "The black match shirt uses gold detailing, a split front panel and tonal patterning around the academy crest.",
+          image: {
+            src: "/images/pathway/match-black-33c55d27.webp",
+            alt: "Front and back views of the black Manu Ledesma Academy match jersey.",
+          },
+          cta: {
+            label: "Buy Now",
+            href: "https://diaza.com/collections/manu-ledesma-team/products/manu-ledesma-upsl-away-jersey",
+          },
+        },
+      ],
+    },
+    {
+      id: "training-jerseys",
+      eyebrow: "Training jerseys",
+      heading: "Made for every session.",
+      intro:
+        "The training collection keeps the same two club colorways in a lighter, session-ready design.",
+      variants: [
+        {
+          id: "training-orange",
+          label: "Orange",
+          color: "orange",
+          title: "Orange training jersey",
+          description:
+            "The orange training shirt carries the academy crest over an energetic blue brush pattern, with a clean orange back.",
+          image: {
+            src: "/images/pathway/training-orange-6159ef5a.webp",
+            alt: "Front and back views of the orange Manu Ledesma Academy training jersey.",
+          },
+          cta: {
+            label: "Buy Now",
+            href: "https://diaza.com/collections/manu-ledesma-team/products/manu-ledesma-away-training-jersey",
+          },
+        },
+        {
+          id: "training-black",
+          label: "Black",
+          color: "black",
+          title: "Black training jersey",
+          description:
+            "The black training shirt sets the academy crest against blue brush detailing and a clean black back.",
+          image: {
+            src: "/images/pathway/training-black-f7b23c23.webp",
+            alt: "Front and back views of the black Manu Ledesma Academy training jersey.",
+          },
+          cta: {
+            label: "Buy Now",
+            href: "https://diaza.com/collections/manu-ledesma-team/products/manu-ledesma-home-training-jersey",
+          },
+        },
+      ],
+    },
+  ],
+  note:
+    "Each Buy Now button opens the matching DIAZA product page in a new tab for current sizing, availability, pricing and ordering details.",
+  mentality: {
+    heading: "#DIAZAMENTALITY",
+    body:
+      "It’s a term we came up with for our teams; it stands for family, strength, leadership, daily improvement, and conquering obstacles.",
+    image: {
+      src: "/images/pathway/diaza-mentality-b219504f.png",
+      alt: "DIAZA",
+    },
   },
 };
 
 /* ============================ ABOUT ============================ */
 
 export const aboutContent: {
-  hero: PathwayHeroProps;
-  feature: PathwaySplitFeatureProps;
+  editorial: PathwayAboutEditorialProps;
+  carousel: PathwayEditorialCarouselProps;
 } = {
-  hero: {
-    variant: "left",
-    eyebrow: "About",
-    headlineTop: "Built around",
-    headlineBottom: "one pathway.",
-    sub: `${CLUB_NAME} is a single club with four stages, from a player's first technical session to adult league football.`,
-    primaryCta: CONTACT_CTA,
+  editorial: {
+    leader: {
+      heading: "From our Leader",
+      body: [
+        "As we welcome 2026, I feel an even deeper sense of pride and gratitude for everything this academy represents and continues to build.",
+        "Year after year, we keep growing, not just in numbers, but in purpose. More boys and girls choosing this badge, our UPSL getting wider, more families becoming part of our community, and a shared love for the game that shows up every time we step on the field. That’s what truly matters.",
+        "What excites me most is the spirit behind it all: the commitment to development, the respect for the game, and the belief that soccer can leave a lasting impact beyond results.",
+        "We’re building something meaningful here in Cincinnati and across the region. A culture, a pathway, and a legacy that our players will carry with them wherever they go.",
+        "None of this would be possible without the players, families, coaches, and supporters who continue to trust us and believe in this project. Your confidence pushes us to raise the standard every single day.",
+        "Here’s to 2026! To growth, community, hard work, and the love of the game.",
+        "Let’s keep building, together.",
+      ],
+      media: {
+        src: "/images/pathway/about-leader-108a1c42.webp",
+        alt: "Academy leader celebrating on the field in an orange Manu Ledesma Academy kit.",
+      },
+    },
   },
-  feature: {
-    eyebrow: "The idea",
-    heading: "One club, not four.",
-    body: [
-      "Most players meet a new badge every time they move up — a different academy, a different youth side, a different senior club. Every move means starting again with coaches who don't know them.",
-      `${CLUB_NAME} is built the other way round. The academy, the youth club, the senior club and our ${LEAGUE_NAME} football are stages of the same club, so a player who joins at the start can go all the way through without ever leaving.`,
-      "That's the whole idea, and every page on this site is a stage of it.",
+  carousel: {
+    photos: [
+      {
+        src: "/images/pathway/carousel-development-pathway-0c0bbcd7.webp",
+        alt: "Development Pathway poster showing Manu coaching, explaining the academy's route from youth development to adult competition.",
+      },
+      {
+        src: "/images/pathway/carousel-looking-ahead-1a7f0175.webp",
+        alt: "Looking Ahead poster showing youth players training indoors and describing plans to expand the club's competitive teams.",
+      },
+      {
+        src: "/images/pathway/carousel-coaching-philosophy-39574da7.webp",
+        alt: "Coaching Philosophy poster showing Manu with academy players and emphasizing possession, hard work and intensity.",
+      },
+      {
+        src: "/images/pathway/carousel-consistency-515ae11b.webp",
+        alt: "Blue portrait of Manu with the words Consistency above all else.",
+      },
+      {
+        src: "/images/pathway/carousel-cincinnati-growth-48aa6132.webp",
+        alt: "Cincinnati's Soccer Growth poster showing an outdoor academy session and Manu's commitment to the city's soccer culture.",
+      },
+      {
+        src: "/images/pathway/carousel-meet-manu-d454a169.webp",
+        alt: "Blue Meet Manu Ledesma portrait poster introducing a three-minute read about the academy's leader.",
+      },
+      {
+        src: "/images/pathway/carousel-player-coach-e11e68ac.webp",
+        alt: "Player-Coach poster showing Manu working with academy players and describing his connection to both roles.",
+      },
+      {
+        src: "/images/pathway/carousel-global-journey-3664408f.webp",
+        alt: "Global Journey poster showing a coach and young player and describing Manu's path from Argentina to Cincinnati.",
+      },
     ],
-    primaryCta: CONTACT_CTA,
-    mediaCaption: "Club photography to come.",
-    mediaSide: "end",
   },
 };
 
@@ -675,7 +766,7 @@ export const privacyContent: {
       {
         label: "What we collect",
         body: [
-          "The contact form asks for your first name, last name, email address and message. Nothing else on this site asks you for personal information.",
+          "The contact form asks for your first name, last name, email address and message. It also offers an optional phone field. Nothing else on this site asks you for personal information.",
           "The form also carries a hidden field used only to detect automated submissions. Real visitors never fill it in.",
         ],
       },

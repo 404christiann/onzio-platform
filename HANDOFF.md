@@ -1,6 +1,1420 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-16
+Last updated: 2026-08-18
+
+## pathway@1 roster card polish, a new UPSL Fixtures tab, and Contact added to the primary nav
+
+Agent: Claude (Sonnet/Opus subagents per sub-task), 2026-08-18. Status:
+**implementation complete, locally verified, committed on
+`claude/mla-pathway`.**
+
+**Roster card fidelity:** extended the prior round's Diverse City port. The
+squad number now matches the live DCFC card's computed geometry exactly
+(non-italic, weight 900, `clamp(2.5rem, 5vw, 3.5rem)`, `line-height: 1`,
+tokenized to `var(--accent)` instead of DCFC's literal red) and the
+nationality flag uses its default size instead of a smaller override. The
+staff card was recomposed to match DCFC's real `StaffCard.tsx` — a solid
+initials badge next to the role/title row — replacing the earlier "Staff"
+text label that had no equivalent in the reference.
+
+**New UPSL Fixtures tab:** added `components/pathway/PathwayUpslFixtures.tsx`
+(and its pure-logic helpers in `lib/pathway-upsl-fixtures.ts`, split out
+because this repo's vitest has no JSX transform), matching DCFC's live
+`/schedule` page (`AcademyFixtureRow.tsx`) — date/time, opponent crest, venue,
+a "Next" pill, and W/D/L results — translated to Pathway's own design tokens
+rather than DCFC's literal colors/fonts. Placeholder content
+(`upslFixturesContent` in `components/pathway/content.ts`) follows the same
+non-published-placeholder convention as `upslRosterContent`: generic
+"Opponent 1..5" names, no invented results. Wired the `/schedule` route to
+render it for `pathway@1` (previously a deliberate 404), added "Fixtures"
+next to "Roster" in the UPSL nav dropdown (desktop and mobile), and added
+`"schedule"` to `pathway@1`'s `defaultRoutes`/`supportedRoutes`/
+`supportedModules` in `packages/presentation/index.ts` (plus the matching
+array in `scripts/mla-pathway-presentation.ts`, which asserts against it).
+
+**Contact added to the primary nav:** `pathwayNavLinks` now includes
+`{ label: "Contact", href: "/contact" }` as an eighth destination — a
+prior round had deliberately left it out in favor of the footer link, which
+Christian has now overridden. The existing `/contact` route and footer link
+were reused as-is; the nav's flex-centered row rebalances with the extra
+item without any layout fix needed.
+
+**Files:** `components/pathway/PathwayUpslRoster.tsx`,
+`components/pathway/PathwayUpslFixtures.tsx`,
+`lib/pathway-upsl-fixtures.ts`, `components/pathway/PathwayNav.tsx`,
+`components/pathway/content.ts`, `app/(public)/schedule/page.tsx`,
+`packages/presentation/index.ts`, `scripts/mla-pathway-presentation.ts`,
+scoped additions to `styles/pathway.css`, and new/updated contract tests
+(`tests/contracts/pathway-upsl-roster.test.ts`,
+`tests/contracts/pathway-upsl-fixtures.test.ts`,
+`tests/contracts/pathway-presidential-nav.test.ts`).
+
+**Verification:** each sub-task verified independently — `npx tsc --noEmit`
+clean throughout; `npx vitest run tests/contracts` at 800/801, the one
+failure being the pre-existing date-sensitive `editorial-home.test.ts`
+assertion unrelated to this work; every change live-checked in the browser
+against a local Supabase + seeded MLA tenant (desktop and mobile), with the
+tenant's `lifecycle`/`public_access` flags temporarily flipped for viewing
+and restored to `onboarding`/`preview` afterward each time, confirmed by
+follow-up query.
+
+No hosted change, push, deploy, hosted migration, or Vercel action ran
+before this commit.
+
+**Exact next step:** Christian runs `scripts/provision-mla-staging.ts`
+himself (2FA-gated operator sign-in) with the confirmed staging alias
+`manu-ledesma-academy-onzio-staging.vercel.app` to provision MLA's staging
+tenant row and get a client-shareable review link.
+
+## pathway@1 roster cards match the supplied Diverse City reference
+
+Agent: Codex, 2026-08-17. Status: **implementation complete and locally
+verified; uncommitted on `claude/mla-pathway`.**
+
+**Result:** Pathway's UPSL player cards now use the exact visual hierarchy in
+Christian's Diverse City reference: a flat square-edged white 3:4 field, the
+tenant crest filling the upper card, a white bottom fade, large italic orange
+squad number, nationality flag, italic navy player name, and compact uppercase
+position. The latest reference supersedes the earlier no-number direction, so
+the approved default `Player 1` through `Player 22` entries now visibly carry
+numbers 1–22. All placeholder players and default staff use an American flag
+rather than implying unverified mixed nationalities. Staff cards keep the same
+crest/fade/flag language without player numbers. Every card remains
+noninteractive, with no profile link, modal, statistics, biography, or player
+photograph.
+
+**Reference evidence:** the local Diverse City tenant and its actual classic
+`PlayerCard`/`StaffCard` implementation were inspected. An isolated render
+using MLA's real 1254x1254 crest and the production Pathway card CSS was then
+checked at 1440x900 and 390x844; the four-column desktop and two-column mobile
+cards preserve the reference overlap and do not clip. The seeded MLA tenant
+remains a private preview, so anonymous `/roster` correctly fails closed; its
+access policy was not weakened for screenshot convenience.
+
+**Files:** `components/pathway/PathwayUpslRoster.tsx`, Pathway roster content,
+scoped `styles/pathway.css`, the focused UPSL roster contract,
+`tests/README.md`, the MLA Phase 1 plan, and this handoff.
+
+**Verification:** focused roster contract passes 5/5; the combined Pathway
+roster/nav/stage/UPSL slice passes 28/28; architecture passes 20/20; legacy
+regressions pass 280/280; TypeScript, lint, `git diff --check`, and the
+optimized production build pass. Lint/build retain the same five pre-existing
+admin Hook warnings. Full contracts remain 776/777 only because the unrelated
+date-sensitive Editorial fixture expects `Capital City Athletic` while the
+current resolver returns `Dayton Rovers SC`. The local-only MLA seed reconciled
+one tenant, its crest/media, and publication with `hostedMutations: 0`.
+
+No hosted change, commit, push, deploy, hosted migration, form submission,
+booking action, external registration navigation, or purchase action ran.
+
+**Exact next step:** Christian reviews `/roster` through the existing private
+preview session; commit/push only when explicitly requested.
+
+## pathway@1 adds its UPSL roster destination and final booking/tryout CTAs
+
+Agent: Codex with CTA implementation plus read-only Lions-roster and UPSL-nav
+audit subagents, 2026-08-17. Status: **implementation complete and locally
+verified; rendered browser review pending, uncommitted on
+`claude/mla-pathway`.**
+
+**Requested CTAs:** the Youth Club `From training into a team.` hero now says
+`Book Training`, opens the existing age-first training gateway, and retains
+`/book-training` as its progressive fallback. The UPSL tryout action now says
+`Register Here` and points to Christian's exact Google Form URL; the existing
+external-link boundary opens it in a new tab with `noopener noreferrer`.
+
+**Roster:** Pathway now renders a dedicated UPSL roster at canonical `/roster`
+instead of falling through to the legacy page or 404ing. It follows the
+accepted Lions roster hierarchy—a compact filter followed by Goalkeepers,
+Defenders, Midfielders, Forwards, and Technical Staff—but uses Pathway's
+tenant-token design and the current tenant crest. Phase 1 shows exactly
+`Player 1` through `Player 22` (2 GK, 6 DF, 7 MF, 7 FW) and four neutral
+`Staff 1`–`Staff 4` entries. Cards are noninteractive and deliberately carry
+no separate jersey-number graphic, statistics, profiles, links, or invented
+biographical details. The grid is four columns on desktop, three at 1050px,
+and two at 800px and below; resilient direct crest delivery retains a
+Pathway-scoped failure state.
+
+**Navigation and registry:** UPSL remains a direct `/upsl` top-level link and
+now has a separate Roster disclosure without creating an eighth top-level tab.
+Desktop supports hover, focus, click, outside click, blur, and Escape with
+focus restoration; mobile uses a separate 44px disclosure control and nested
+Roster link. Only the exact child receives `aria-current` on `/roster`, while
+UPSL retains ancestor-active styling. The canonical roster route and
+roster/staff modules are now registered and published for `pathway@1`;
+`/roster/[playerId]` remains intentionally unavailable.
+
+**Files:** `components/pathway/{PathwayNav,PathwayUpslRoster}.tsx`, Pathway
+content, the shared roster route dispatch, scoped Pathway CSS, the presentation
+registry and MLA publication document, focused contracts, `tests/README.md`,
+the MLA Phase 1 plan, and this handoff. The CTA subagent also updated the
+focused stage/UPSL contracts.
+
+**Verification:** focused Pathway CTA/nav/roster checks pass 33/33;
+architecture passes 20/20; legacy regressions pass 280/280; TypeScript, lint,
+`git diff --check`, and the optimized production build pass. Lint/build retain
+the same five pre-existing admin Hook warnings. Full contracts are 776/777;
+the only failure is the unchanged date-sensitive Editorial fixture expecting
+`Capital City Athletic` while the current resolver returns
+`Dayton Rovers SC`. The first production build encountered a missing generated
+`.next` chunk; clearing only that generated cache and rebuilding cleanly
+resolved it.
+
+The approved local dev server started and compiled successfully on port 3015,
+but the in-app browser blocked the tenant-localhost URL with
+`ERR_BLOCKED_BY_CLIENT` before a rendered page inspection could begin. The
+server was stopped, and no alternate browser/network workaround was used.
+
+No hosted change, commit, push, deploy, migration, seed, database mutation,
+form submission, booking action, or external registration navigation ran.
+
+**Exact next step:** Christian reviews `/roster`, the UPSL desktop/mobile
+disclosure, Youth Club's booking handoff, and the UPSL registration label
+locally. Commit/push only when explicitly requested.
+
+## pathway@1 moves the eight-poster carousel to About and auto-rotates it
+
+Agent: Codex, 2026-08-17. Status: **implementation complete and locally
+verified; rendered browser review pending, uncommitted on
+`claude/mla-pathway`.**
+
+**Result:** About now places the full-bleed navy editorial carousel immediately
+after `From our Leader`; Home no longer renders it. All eight supplied 4:5
+posters remain uncropped, with one dominant centered frame and neighboring
+frames visible. The gallery advances every 4.5 seconds and loops through the
+complete set. It has no visible heading, caption, counter, progress rail,
+previous/next buttons, or other control chrome. Hover, focus, and pointer
+position do not stop the timer, so it visibly moves on its own during normal
+viewing. Reduced-motion preference disables automatic and smooth movement.
+Touch scrolling and ArrowLeft/ArrowRight/Home/End remain as non-visual
+navigation affordances.
+
+**Academy:** `Our Academy` now uses Christian's supplied square field-session
+photograph with meaningful alt text and the existing resilient direct-media
+fallback.
+
+**Media:** the untouched Downloads sources were signature/dimension checked
+and normalized once with metadata removed at WebP quality 82. The Academy
+asset is 1254x1254, 601,256 bytes, SHA-256
+`2893d6003ba411f971e4b4188b44ab964b3f0f4ce78ba6e9410c81d053b58d60`.
+The eight carousel assets retain their native 1080x1350 dimensions and are
+versioned under `public/images/pathway/carousel-*.webp`; focused contracts pin
+every exact path, RIFF/WebP signature, and checksum.
+
+**Files:** new `components/pathway/PathwayEditorialCarousel.tsx`, the Pathway
+About/Home route composition and About content block, the Academy content media assignment, scoped
+`styles/pathway.css`, nine normalized assets, focused carousel/Academy
+contracts, `tests/README.md`, the MLA Phase 1 plan, and this handoff.
+
+**Verification:** the focused About/Carousel/Academy/Home slice passes 24/24;
+TypeScript, architecture 20/20, legacy regressions 280/280, lint,
+`git diff --check`, and the optimized production build pass. Lint/build retain
+the same five pre-existing admin Hook warnings. Full contracts are 770/771;
+the sole failure remains the unrelated date-sensitive Editorial fixture that
+expects `Capital City Athletic` while the current resolver returns `Dayton
+Rovers SC`.
+
+Rendered localhost QA remains pending because the app's automatic localhost
+permission review blocked browser access in the immediately preceding Pathway
+pass. No alternate browser/network workaround was used.
+
+No hosted change, commit, push, deploy, migration, seed, database mutation,
+form submission, booking action, external navigation, or purchase action ran.
+
+**Exact next step:** Christian reviews local `/about` at desktop and mobile
+widths and `/academy`; commit/push only when explicitly requested.
+
+## pathway@1 navigation, footer, merch, and Home polish
+
+Agent: Codex with read-only nav/footer, Home-layout, and merch/content audit
+subagents, 2026-08-17. Status: **implementation complete and locally verified;
+rendered browser review pending, uncommitted on `claude/mla-pathway`.**
+
+**Result:** the Pathway header now begins with a real `Home` route followed by
+Academy, Youth Club, Senior Club, UPSL, Merch, and About. The equal-flank grid
+still centers the route set against the viewport, and the mobile transition
+now occurs at 940px so the seventh route does not crowd the booking action.
+Only the Home tab owns the current-page state at `/`; the crest remains a
+separate home link. The footer now carries the tenant crest/name lockup and
+the shared tenant-relative `Powered by Onzio` attribution between copyright
+and Privacy.
+
+**Requested content changes:** the Academy hero eyebrow, both Youth Club
+eyebrows, and the UPSL `Previous tryout schedule` status label are removed at
+their conditional content sources, so their element-owned margins disappear
+with them. The Home hero no longer renders `See the pathway`. `What your
+player can expect` now precedes `Four stages, one club.`
+
+**Merch:** the DIAZA panel's orange top rule is removed while its rounded navy
+panel remains. Each colorway now owns a visible `Buy Now` link to Christian's
+exact DIAZA product URL; changing the accessible color tab changes the link.
+Every handoff opens in a new tab with `noopener noreferrer`. The page still
+does not invent local price, cart, checkout, or purchase state.
+
+**Desktop story correction:** the story media wrapper now owns the responsive
+minimum height and its real image/fallback fills the complete stretched grid
+column. Expanding `Who leads the work` or `What players receive` can therefore
+grow the right column without exposing a blue strip below the portrait. The
+single-column tablet/mobile clamps remain intact.
+
+**Files:** `components/pathway/{PathwayNav,PathwayFooter,
+PathwayMerchStore}.tsx`, `components/pathway/content.ts`, the Pathway Home
+route, scoped `styles/pathway.css`, six focused Pathway contracts,
+`tests/README.md`, the MLA Phase 1 plan, and this handoff.
+
+**Verification:** focused Pathway contracts pass 28/28; legacy regressions
+pass 280/280; TypeScript, architecture 20/20, lint, `git diff --check`, and the
+optimized production build pass. Lint/build retain the same five pre-existing
+admin Hook warnings.
+Full contracts are 764/765 solely because the unrelated date-sensitive
+Editorial fixture expects `Capital City Athletic` while the current resolver
+returns `Dayton Rovers SC`. A plain `npm test` cannot be used as acceptance in
+this sandbox because loopback Supabase is inaccessible (`EPERM
+127.0.0.1:54321`); the non-database suites are covered separately.
+
+The intended 1440/2048 desktop and 940/941/390 responsive browser pass could
+not run: both a fresh local dev-server bind and access to the existing tenant
+localhost were denied by the app's automatic permission review. No alternate
+browser or network workaround was used.
+
+No hosted change, deploy, push, commit, migration, seed, database mutation,
+contact submission, booking action, external product navigation, or purchase
+action ran.
+
+**Exact next step:** Christian reviews local `/`, `/academy`, `/youth-club`,
+`/upsl`, and `/merch`, including expanded Home disclosures and both merch
+color tabs. Commit/push only when explicitly requested.
+
+## pathway@1 simplifies Academy and Youth Club section order
+
+Agent: Codex, 2026-08-17. Status: **complete, verified locally,
+uncommitted on `claude/mla-pathway`.**
+
+**Result:** Academy now opens with the existing `Our Academy` editorial and
+places `Start with the technical work.` immediately below it. The entire
+`Technique first, then everything else.` and `Academy at a glance` sections
+and their content objects are removed. Youth Club now opens with the existing
+`Join us!` editorial and places `From training into a team.` immediately
+below it. The entire `Youth Club at a glance` section and its content object
+are removed. `Year-round training` remains visible in the Join Us list but is
+plain text with no link.
+
+**Semantics and reuse:** the neutral shared hero, Academy editorial, and Youth
+invitation accept an optional `h1`/`h2` heading level without changing their
+visual classes. The two lead editorial sections are the sole `h1` on their
+routes; the moved hero bands are `h2`, preserving a valid page outline after
+the reorder. No slug/name branch or template-external style changed.
+
+**Files:** `app/%5Fclubs/[slug]/{academy,youth-club}/page.tsx`,
+`components/pathway/{PathwayHero,PathwayAcademyEditorial,
+PathwayYouthJoin}.tsx`, the Academy and Youth Club blocks in
+`components/pathway/content.ts`, focused pathway contracts,
+`tests/README.md`, the MLA Phase 1 plan, and this handoff.
+
+**Verification:** focused Academy/Home/stage contracts pass 10/10;
+TypeScript, architecture 20/20, legacy 280/280, `git diff --check`, lint, and
+the optimized production build pass. Lint/build retain the same five
+pre-existing Hook warnings. Full contracts remain 763/764 solely because the
+unrelated date-sensitive Editorial fixture expects `Capital City Athletic`
+while the current resolver returns `Dayton Rovers SC`.
+
+Browser QA at 1440x900 and 390x844 confirms the exact section order and
+removals, one `h1` plus the moved `h2` on each route, zero anchors labelled
+`Year-round training`, healthy direct imagery with no fallbacks, no horizontal
+overflow, no framework overlay, and no console warnings/errors.
+
+No hosted change, deploy, push, commit, migration, seed, database mutation,
+contact submission, booking action, or purchase action ran.
+
+**Exact next step:** Christian reviews local `/academy` and `/youth-club`.
+Commit and push the accumulated MLA work only when explicitly requested.
+
+## pathway@1 removes the extra About/Senior/UPSL narratives and adds MLA standings
+
+Agent: Codex with independent About/Senior, pathway UPSL, and Lions-table
+audit subagents, 2026-08-17. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Current page composition:** Christian asked for three focused reductions.
+About now begins directly with the existing `From our Leader` portrait and
+letter; the `Built around one pathway.` hero and `One club, not four.` story
+are gone. Senior Club now begins with a centered `Coming soon!` heading and
+intro followed by the secure interest form; the `Senior Club` eyebrow and
+`The last step before the league.` hero are gone. UPSL now contains only the
+club's tryout spotlight, official match-channel panel, and league standings;
+the `United Premier Soccer League / The pathway has a destination.`, `Where
+the pathway leads`, and `How entry works` sections are gone. Each route still
+has one real `h1` after removing its shared hero.
+
+**Standings:** UPSL ends with a pathway-native version of the accepted Lions
+FC table: the same `# / Team / GP / W / D / L / GD / PTS` structure, row
+geometry, nine-team Spring 2026 Ohio Valley snapshot, responsive stat widths,
+and direct crest delivery, restyled with MLA's navy/orange tenant tokens. The
+implementation deliberately does not import Lions presentation identity or
+read Lions rows. `fetchLeagueStandings` accepts the route's tenant-authorized
+client, and MLA's local seed owns an independent copy of the snapshot with
+only `Manu Ledesma Academy` marked as the club row.
+
+**Review correction:** the final UPSL audit found that the Lions-derived
+tablet grid kept a 280px minimum team column while six 58px stat columns were
+also fixed, which could clip `PTS` between the 560px and 800px breakpoints.
+The tablet team track now uses `minmax(0, 1fr)` so the card remains contained;
+the smallest 34px stat layout still takes over at 560px. The standings
+contract now pins every value and the order of all nine rows as well as the
+flexible tablet geometry.
+
+**Files:** `app/%5Fclubs/[slug]/{about,senior-club,upsl}/page.tsx`,
+`components/pathway/{PathwayAboutEditorial,PathwaySeniorInterest,
+PathwayUpslTryoutSpotlight,PathwayUpslStandingsTable}.tsx`, the About,
+Senior, and UPSL blocks in `components/pathway/content.ts`, `lib/queries.ts`,
+`scripts/seed-mla-local.ts`, scoped `styles/pathway.css`, focused contracts,
+the MLA Phase 1 plan, `tests/README.md`, and this handoff.
+
+**Verification:** the MLA local seed reconciles exactly one standings-settings
+row and nine standings rows and reports `hostedMutations: 0`. Focused
+About/Home/Senior/stage/UPSL contracts pass 27/27. TypeScript,
+architecture 20/20, legacy 280/280, `git diff --check`, lint, and the optimized
+production build pass. Lint/build retain the same five pre-existing Hook
+warnings. Full contracts are 763/764 and the complete loopback-Supabase suite
+is 1244/1245; their sole failure is the unrelated date-sensitive Editorial
+fixture (`Capital City Athletic` expected, current resolver returns `Dayton
+Rovers SC`).
+
+Browser QA at 1440x900 confirms About has one `h1`, seven paragraphs, equal
+720px portrait/letter columns and no removed story copy; UPSL has one `h1`,
+the correct three-section composition, a 1260px table with all nine rows, one
+highlighted MLA row (`10 / 4 / 2 / 4 / +9 / 8`), a healthy direct 1254x1254
+crest, and none of the removed explanation copy; Senior has one centered
+`Coming soon!` `h1`, no removed hero/eyebrow copy, and a left-aligned form.
+At 390x844, About stacks at the exact portrait bottom, the UPSL table fits a
+366px card with `140px + 6×34px` columns, and Senior remains centered. All
+three have zero horizontal overflow and no error overlay. A fresh three-route
+pass recorded zero console warnings/errors.
+
+No hosted change, deploy, push, commit, migration, hosted seed/database
+mutation, contact submission, booking action, or purchase action ran.
+
+**Exact next step:** Christian reviews local `/about`, `/upsl`, and
+`/senior-club`. Commit and push the accumulated MLA work only when explicitly
+requested.
+
+## pathway@1 About becomes a one-club editorial and 2026 leader letter
+
+Agent: Codex with independent design, asset/test, and final-review subagents,
+2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger and result:** Christian asked for the About page to receive a
+Real-Madrid-level redesign, include his exact seven-paragraph `From our
+Leader` message, and use the supplied `mla_finalized_about_photo.png`. The
+shared inner-page hero remains intact. The former generic split feature is now
+a dedicated About-only editorial sequence: a spacious white `One club, not
+four.` story band establishes the academy's single-pathway idea, followed by a
+full-width navy leader feature with the portrait, orange seam, oversized white
+heading, readable letter, and emphasized closing line. Its equal desktop
+columns end on one edge; mobile stacks the story, portrait, and letter in that
+order.
+
+**Christian follow-up — matched portrait/copy ending:** the decorative `2026`
+watermark and its content field are now removed completely; the two occurrences
+of 2026 inside Christian's supplied letter remain unchanged. The desktop
+portrait and letter now use equal 720px columns, share the same measured
+857.23px height, and end on the same horizontal edge with no empty panel below
+the photograph. Letter spacing and type were tightened to fit without deleting
+or rewriting copy. At 1180px and below the feature stacks before the letter can
+outgrow the native-ratio portrait.
+
+**Content and accessibility:** all seven supplied paragraphs are preserved
+verbatim and in source order. No name, title, attribution, signature, role,
+CTA, or unsupported fact was invented. Both editorial bands are labelled
+semantic sections with real `h2` headings. The component stays server-side;
+the portrait uses the existing resilient image boundary, meaningful alt text,
+and an intentional failed-image state.
+
+**Media:** the supplied 1149x1368 RGB PNG was signature-checked and normalized
+to a metadata-free quality-82 WebP at
+`public/images/pathway/about-leader-108a1c42.webp` (167,330 bytes, SHA-256
+`49462ac5a6747b8da33cea5e3abaca55f0e6d7de88b94bc8fbfac3b8c35db5cc`).
+It retains the source dimensions and native aspect ratio, uses direct
+`photograph` delivery with `object-fit: cover`, and does not depend on runtime
+image transformations. The Downloads source remains untouched.
+
+**Files added:** `components/pathway/PathwayAboutEditorial.tsx`,
+`tests/contracts/pathway-about-editorial.test.ts`, and the versioned portrait
+WebP.
+
+**Existing files updated:** `app/%5Fclubs/[slug]/about/page.tsx`, the About
+block in `components/pathway/content.ts`, `styles/pathway.css`,
+`tests/browser/site-media.spec.ts`, `tests/README.md`, the MLA Phase 1 plan,
+and this handoff.
+
+**Verification:** the final About contract passes 5/5 and the combined
+About/Home/stage slice passes 12/12. TypeScript, architecture 20/20, legacy
+280/280, `git diff --check`, lint, and the optimized production build pass.
+Lint/build retain the same five pre-existing Hook warnings. Full contracts are
+759/760 and the complete local-Supabase suite is 1240/1241; their sole failure
+remains the unrelated date-sensitive Editorial fixture (`Capital City
+Athletic` expected, current resolver returns `Dayton Rovers SC`). The final
+review subagent found no blocking or functional issue; its paragraph-order
+test-hardening suggestion was implemented as exact array equality.
+
+Authenticated browser QA at 1440x900 confirms one `h1`, seven leader
+paragraphs, the healthy native 1149x1368 direct asset, equal 720px columns,
+equal 857.23px portrait/letter heights, no decorative year, zero image
+fallbacks, and document width equal to viewport width. At 390x844 the portrait
+renders at 390x464.33, the feature stacks in the intended order, all copy
+remains present, and there is no horizontal overflow. The final browser pass
+recorded no error overlay and no console warnings or errors.
+
+No hosted change, deploy, push, commit, migration, seed, database mutation,
+contact submission, booking action, or purchase action ran.
+
+**Exact next step:** Christian reviews the updated local `/about` page. If the
+visual direction is accepted, commit and push the accumulated MLA work only
+when explicitly requested.
+
+## pathway@1 Merch frames the supplied products and closes with DIAZA mentality
+
+Agent: Codex with merch-polish audit, asset/test audit, and independent review
+subagents, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger and result:** Christian asked for `Made for every session.` to remain
+on one line, for each supplied white-background jersey image to sit in a
+visible rounded container, and for the page to end with the exact
+`#DIAZAMENTALITY` definition beside the supplied DIAZA logo. The training
+heading now uses a dedicated single-line responsive scale. Both match and
+training products use contained white stages with subtle borders, shadows,
+clipping, and 42px-to-22px responsive radii; mobile no longer oversizes those
+stages beyond the viewport.
+
+**Closing brand section:** `PathwayMerchStore` now accepts content-driven
+mentality copy and renders it after the ordering note. The final panel uses a
+disciplined navy field, one orange top rule, large white type, a two-column
+text/mark composition on desktop, and a single-column composition on mobile.
+The exact supplied definition is preserved. The supplied transparent white
+1448x1086 RGBA PNG was copied byte-for-byte to
+`public/images/pathway/diaza-mentality-b219504f.png` (395,125 bytes, SHA-256
+`b219504fa3bc6655cfe79317dbd18224690f7d4af091af6262cb2e39f0260231`). It
+uses resilient direct `small-graphic` delivery and an intentional failed-image
+state; the Downloads source remains untouched.
+
+**Interaction and review correction:** the independent review found that the
+existing ARIA tab roles relied on Enter/Space without the full tabs keyboard
+pattern. Both color selectors now use roving tab focus and support
+ArrowLeft/Right, ArrowUp/Down, Home and End, while retaining independent
+match/training selection. No price, cart, checkout, stock, sizing or vendor
+claim was introduced.
+
+**Files updated:** `components/pathway/PathwayMerchStore.tsx`, the Merch block
+in `components/pathway/content.ts`, `styles/pathway.css`,
+`tests/contracts/pathway-merch-store.test.ts`, the MLA Phase 1 plan, and this
+handoff. The versioned DIAZA PNG is new.
+
+**Verification:** focused Merch/Home/stage contracts pass 15/15; TypeScript,
+architecture 20/20, legacy 280/280, `git diff --check`, lint, and the optimized
+production build pass. Lint/build retain the same five pre-existing Hook
+warnings. Full contracts are 754/755 and the full local-Supabase suite is
+1235/1236; their sole failure remains the unrelated date-sensitive Editorial
+fixture (`Capital City Athletic` expected, current resolver returns
+`Dayton Rovers SC`).
+
+Authenticated browser QA at 1440px confirms two visible white clipped product
+frames with 40.32px radii, the one-line training heading, a two-column 1296px
+closing panel, a healthy native 1448x1086 logo, zero image fallbacks, no error
+overlay, and no console warnings/errors. At 390x844, the heading remains one
+line, both frames are contained at 350x350 with 22px radii, the closing panel
+stacks cleanly, the Black training selector loads its correct direct asset,
+and document width equals viewport width with no horizontal overflow.
+
+No hosted change, deploy, push, commit, migration, seed, database mutation,
+contact submission or purchase action ran.
+
+**Exact next step:** Christian reviews the updated local `/merch` page. If the
+visual direction is accepted, commit and push the accumulated MLA work only
+when explicitly requested.
+
+## pathway@1 Merch adopts the approved store treatment with match and training collections
+
+Agent: Codex, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger and design authority:** Christian asked for `/merch` to match the
+platform's approved editorial store design and style exactly, while limiting
+the real catalog to two match jerseys and adding a separate two-jersey
+training collection. The production reference was inspected in source and in
+the browser. The pathway implementation now carries the same centered
+collection label, oversized `Make it yours!` heading, supporting copy, pill
+tabs, image-left/details-right product grid, oversized jersey stage, product
+type, divider, full-width gradient action, responsive collapse and mobile
+geometry. The training collection repeats that treatment below the match
+collection; it does not introduce a different visual system.
+
+**Content and interaction:** `PathwayMerchStore` owns two independent native
+tab groups. Match jerseys and training jerseys each start on Orange and switch
+to Black without navigation or stale cross-collection state. The tab/panel
+relationships carry explicit accessible IDs, selected state and polite product
+updates. The page presents no invented size, availability, price, vendor,
+cart, checkout or purchasing claim. Both product actions route to the existing
+club contact page for confirmed ordering details.
+
+**Media:** the four supplied 1500x1500 WebPs were signature-checked and copied
+byte-for-byte to versioned direct-delivery paths:
+`match-black-33c55d27.webp` (123,664 bytes, SHA-256 `33c55d27...`),
+`match-orange-38e98dfc.webp` (219,336 bytes, `38e98dfc...`),
+`training-black-f7b23c23.webp` (105,846 bytes, `f7b23c23...`) and
+`training-orange-6159ef5a.webp` (149,992 bytes, `6159ef5a...`). The sources in
+Downloads remain untouched. Every selected image uses `ResilientImage`, the
+direct `shop-photo` delivery contract and a pathway-tokenized failed-image
+state; no runtime optimizer or transformation URL was added.
+
+**Files added:** `components/pathway/PathwayMerchStore.tsx`,
+`tests/contracts/pathway-merch-store.test.ts`, and the four versioned WebPs in
+`public/images/pathway/`.
+
+**Existing files updated:** `app/%5Fclubs/[slug]/merch/page.tsx`,
+`components/pathway/content.ts`, `styles/pathway.css`,
+`tests/contracts/pathway-home-hero.test.ts`, `tests/browser/site-media.spec.ts`,
+`tests/README.md`, the MLA Phase 1 plan, and this handoff.
+
+**Verification:** focused merch contract 6/6; architecture 20/20; legacy
+280/280; TypeScript passes with incremental output disabled; lint and the
+optimized production build pass with the same five pre-existing hook
+warnings; `git diff --check` passes. Full contracts are 752/753 and the full
+local suite is 1233/1234. Their sole failure is the already documented
+date-sensitive Editorial next-fixture expectation (`Capital City Athletic`
+expected, current resolver returns `Dayton Rovers SC`), unrelated to Merch.
+
+Authenticated browser comparison at 1710px confirms parity for the headline
+(109.44px/850), pill tabs (190x66), product grid columns/gap, product title
+(56.43px/820), and action (78px high, 18px radius). Both Black selectors
+replace the correct collection independently and load the correct versioned
+asset at 1500x1500 with raw direct delivery and no fallback. At 390x844 the
+tabs remain side by side at 171x52, both collections switch correctly, every
+image remains healthy, and document width equals viewport width with zero
+horizontal overflow.
+
+No hosted change, deploy, push, commit, migration, seed, database mutation,
+contact submission or external purchase action ran.
+
+**Exact next step:** Christian reviews the local `/merch` page on desktop and
+mobile. If accepted, commit and push the accumulated MLA work only when
+explicitly requested.
+
+## pathway@1 Book Training visual cleanup
+
+Agent: Codex, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+Removed the partial navy rule above the modal, the navy side rules on the
+session and unlimited cards, and the orange top rule on the best-value pass.
+The cards retain their complete neutral outlines and the best-value label
+remains. The three class-pass restrictions now stay on one desktop line; at
+narrow widths the heading stacks before the restriction row, and mobile keeps
+the readable single-column treatment. Updated the focused CSS contract to
+protect the simplified treatment. The focused gateway contract passes 5/5,
+TypeScript passes with incremental output disabled, and `git diff --check`
+passes. No hosted services were changed.
+
+## pathway@1 Book Training becomes an age-first Acuity selection gateway
+
+Agent: Codex with booking-entry, interaction-test, and visual-design audit
+subagents, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger and accepted decisions:** Christian asked for every explicit `Book
+Training` action to open a polished, easy-to-understand, Real Madrid-inspired
+modal while leaving scheduling and payment on the provider's site. The
+approved flow starts with no default selection and asks for `Ages 6–10` or
+`Ages 11–14`; after selection it shows the one-hour session, all finite passes
+in one scrollable view, and the unlimited pass. Desktop uses a centered modal;
+mobile uses a full-screen takeover. The design is primarily white with navy
+structure, blue interaction, one restrained orange best-value marker, no
+legacy flyer/tag images, no crest imitation, and no arrow decoration on
+booking actions. `/book-training` remains the shareable progressive fallback.
+
+**Verified destination boundary:** the attached blue package interface was
+verified as Acuity's own Products and Packages catalog, not Squarespace
+Commerce. Both session and pass actions therefore say `Continues to Acuity`
+and use direct verified Acuity URLs. The site embeds no scheduler, iframe,
+checkout, SDK, cart, or payment collection. The one-session actions point to
+appointment IDs `75737120` and `75737217`; the ten pass actions point to their
+individual Acuity catalog product IDs. All links remain ordinary same-tab
+anchors.
+
+**Centralized data and pricing:**
+`components/pathway/training-gateway-config.ts` is the single source for age
+groups, exact totals, Acuity destinations, visible restrictions, disclosure
+copy, contact fallback, and pricing note. Ages 6–10 carry session `$50`, passes
+`$95/$175/$250/$325`, and unlimited `$400`; ages 11–14 carry session `$60`,
+passes `$115/$200/$275/$325`, and unlimited `$450`. Per-class values are
+calculated in the shared component and formatted to two decimals, never stored
+as duplicate literals.
+
+**Interaction and accessibility:** one provider mounted inside `PathwayShell`
+owns a native modal dialog so pathway tokens remain inherited without a body
+portal. `PathwayTrainingTrigger` intercepts only unmodified primary clicks and
+retains `/book-training` for no-JavaScript, modifier-click, and new-tab use.
+Only explicitly tagged booking actions open the gateway: desktop/mobile nav,
+footer, Home, and Academy. Contact, Get in touch, Year-round training, and
+ordinary links remain unchanged. The dialog has an accessible name, native
+focus trap, Escape cancellation, desktop backdrop dismissal, 44px close
+control, body-scroll lock/restore, exact trigger-focus restoration, real
+fieldset/radio controls, and a native details disclosure. Selecting another
+age replaces all prices in place without animation. The page mode reuses the
+same selector without dialog semantics, backdrop, focus trap, close control,
+or scroll lock.
+
+**Responsive design:** the desktop dialog is a bounded white dossier with a
+fixed title rail and one independent offer scroller. Session and unlimited
+offers use full-width rows; 2/4/6/8 passes use a two-column grid with an
+oversized truthful class count. At 720px and below the dialog becomes a
+`100dvh` edge-to-edge takeover with safe-area padding, sticky age controls,
+single-column cards, full-width actions, minimum 44px targets, internal
+overscroll containment, and no horizontal rail. Reduced-motion preferences
+remove modal and control transitions.
+
+**Files added:**
+`components/pathway/training-gateway-config.ts`,
+`components/pathway/PathwayTrainingGateway.tsx`,
+`components/pathway/PathwayTrainingGatewayProvider.tsx`,
+`components/pathway/PathwayTrainingTrigger.tsx`,
+`tests/contracts/pathway-training-gateway.test.ts`,
+`tests/browser/pathway-training-gateway.spec.ts`, and
+`playwright.pathway-training-gateway.config.ts`.
+
+**Existing files updated:** `components/pathway/PathwayShell.tsx`,
+`PathwayNav.tsx`, `PathwayFooter.tsx`, `PathwaySection.tsx`, `content.ts`,
+`app/%5Fclubs/[slug]/academy/page.tsx`,
+`app/%5Fclubs/[slug]/book-training/page.tsx`, `styles/pathway.css`,
+`packages/presentation/index.ts`, `package.json`, `tests/README.md`, the
+focused Presidential Nav and Home Hero contracts, and the MLA Phase 1 plan.
+The obsolete Academy TBC package cards and contact-only Book Training page
+were removed so they cannot contradict the verified gateway.
+
+**Verification:** focused booking/nav/home contracts pass 13/13; TypeScript
+passes with incremental output disabled; architecture passes 20/20; legacy
+passes 280/280; lint passes with the same five pre-existing hook warnings; the
+optimized Next production build passes; and `git diff --check` passes. Full
+contracts pass 746/747, with only the already documented date-sensitive
+Editorial fixture expectation failing (`Capital City Athletic` expected,
+current resolver returns `Dayton Rovers SC`).
+
+Authenticated desktop browser QA on the local MLA tenant verifies the modal
+opens without URL navigation, starts with neither age selected and no prices,
+shows the contact fallback, renders every approved total and calculated unit
+price, switches from the 6–10 to 11–14 dataset without stale values, exposes
+the direct Acuity links, expands the operational details, restores the exact
+trigger and original body overflow on close, and renders the same no-default
+selector as an H1 page at `/book-training`. The dedicated Playwright suite
+defines six desktop/mobile/reduced-motion checks and compiles successfully;
+its anonymous local execution is currently blocked as expected by the MLA
+tenant's private-preview 404 gate. An approved authenticated storage state or
+an anonymously public preview URL is required to execute that suite end to
+end; no security gate was bypassed or weakened for testing.
+
+No hosted change, deploy, push, commit, migration, seed, database mutation,
+cart mutation, or external booking/purchase action ran.
+
+**Exact next step:** Christian reviews the local Book Training gateway on
+desktop and mobile. If accepted, commit and push the accumulated MLA work only
+when explicitly requested; run the dedicated Playwright suite against an
+approved authenticated or public preview before any separately authorized
+hosted release.
+
+## pathway@1 Royal Channel Card adds explicit YouTube identity
+
+Agent: Codex, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian changed the editorial emphasis from `and watch our
+games live!` to `Watch our games live!` and asked for a visible YouTube logo
+so the platform is unmistakable.
+
+**Implementation:** Christian's copy edit is preserved in content and its
+focused contract. The team-photo banner now carries one non-interactive
+YouTube identity badge: the repository's established rounded video-frame and
+play-triangle SVG pattern plus visible `YouTube` text. It sits above the navy
+wash in a restrained tokenized white pill at the upper-right of the photo,
+without covering the five foreground faces. The mark is decorative to
+assistive technology because the visible label already names the platform;
+the two explicit external links remain the only actions. The card stays a
+server component, and no dependency, asset, brand-color literal, tenant
+branch, runtime image transform, or hosted integration was added.
+
+**Files changed for this refinement:**
+`components/pathway/PathwayUpslMatchChannelPanel.tsx`,
+`styles/pathway.css`, `tests/contracts/pathway-upsl-sections.test.ts`, and this
+handoff. Christian's pre-existing `components/pathway/content.ts` and focused
+test copy change remain intact.
+
+**Verification:** focused UPSL/stage contracts pass 12/12; TypeScript passes
+with incremental output disabled; lint passes with the same five pre-existing
+hook warnings; `git diff --check` passes. Full contracts remain 741/742 with
+only the documented date-sensitive Editorial fixture expectation failing
+(`Capital City Athletic` expected, current resolver returns `Dayton Rovers
+SC`). Authenticated browser QA at 1440x1000 and 390x844 confirms the badge is
+110.9x39 inside the existing banner, the YouTube label and 21px mark are
+visible, exactly two actions remain, no images are broken, and horizontal
+overflow is zero at both widths.
+
+No hosted change, push, commit, migration, seed, database mutation, or
+external YouTube action ran.
+
+**Exact next step:** Christian reviews the local `/upsl` refinement; commit
+and push the accumulated accepted MLA work only when explicitly requested.
+
+## pathway@1 Royal Channel Card gains the approved editorial lockup and team banner
+
+Agent: Codex with typography, media-normalization, CSS, and independent-review
+subagents, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian asked for the `Subscribe to our official YouTube
+channel and watch our games live!` copy to reach a more premium Real
+Madrid-inspired design level and supplied `MLAteamwork.png` for the blue
+header of the approved Royal Channel Card.
+
+**Implementation:** the original sentence remains one semantic H2 but is split
+into two presentation spans: a compact Sora utility lead, `Subscribe to our
+official YouTube channel`, followed by the larger editorial statement, `and
+watch our games live!`. An information-bearing `Official match channel`
+kicker and hairline establish the hierarchy, while the unchanged supporting
+copy now sits beside a restrained accent rule. The mobile layout centers the
+lockup and converts the side rule to a horizontal rule without duplicating or
+hiding heading text.
+
+**Banner media:** the supplied 1536x1024 RGB PNG was signature-checked and
+normalized once to the versioned direct-delivery asset
+`public/images/pathway/upsl-teamwork-54151d0d.webp` (1536x1024, 329,866 bytes,
+SHA-256 `54151d0d3e900719bb4f752124d4823f763239e59ea0dae61e3537c671910517`).
+The 3,033,216-byte source remains untouched. The card renders the WebP with
+`ResilientImage` and the photograph delivery contract, uses `object-fit:
+cover` with a reviewed `50% 5%` crop that preserves all five foreground
+faces, and applies a token-only 38% primary wash so the header remains blue.
+Missing or failed media returns to the full-size tokenized blue banner and
+ring composition without broken-image chrome. No runtime optimizer,
+transformation URL, gradient, package, tenant branch, or brand literal was
+added.
+
+**Files changed for this refinement:**
+`components/pathway/PathwayUpslMatchChannelPanel.tsx`,
+`components/pathway/content.ts`, `styles/pathway.css`,
+`tests/contracts/pathway-upsl-sections.test.ts`, and the new versioned WebP.
+
+**Verification:** focused UPSL/stage/query suites pass 66/66; TypeScript passes
+with incremental output disabled; lint passes with the same five pre-existing
+hook warnings; `git diff --check` passes. Full contracts are 741/742; the sole
+failure remains the documented date-sensitive Editorial next-fixture
+expectation (`Capital City Athletic` expected, current resolver returns
+`Dayton Rovers SC`), unrelated to this refinement.
+
+Authenticated browser QA on
+`http://manu-ledesma-academy.localhost:3000/upsl` confirms the banner loads
+directly from `/images/pathway/upsl-teamwork-54151d0d.webp` at natural
+1536x1024 dimensions. At 1440x1000, the section is 1440x610, centered content
+is 1120px wide, the card is 547.2x316, the image fills a 545.2x118 banner,
+both actions remain 44px tall, and horizontal overflow is zero. At 390x844,
+the card is 346px wide, the image fills a 344x118 banner, both actions stack
+at 296x44, all images have positive natural dimensions, and horizontal
+overflow remains zero. The exact combined heading text and exactly two
+YouTube actions were also verified in the rendered DOM; no Next error dialog
+was present.
+
+No hosted change, push, commit, migration, seed, database mutation, or
+external YouTube action ran.
+
+**Exact next step:** Christian reviews the refined local `/upsl` section;
+commit and push the accumulated accepted MLA work only when explicitly
+requested.
+
+## pathway@1 UPSL channel becomes the approved Royal Channel Card
+
+Agent: Codex with component, CSS, tenant-branding audit, and independent-review
+subagents, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian selected Option 03, `Royal channel card` — a rebuilt,
+accessible channel identity with two explicit YouTube actions — and asked for
+the real MLA crest to replace the concept's initials placeholder.
+
+**Implementation:** `/upsl` now replaces the earlier photo-overlay/social-pill
+channel treatment with the approved light royal editorial composition: a
+balanced uppercase headline and supporting copy beside a white channel card,
+tokenized blue banner/rings, one accent edge, the club identity, and exactly
+two labelled actions. `Subscribe on YouTube` opens the official channel with
+YouTube's subscription confirmation parameter; `Watch games live` opens the
+channel's streams surface. Both links are explicit external anchors with
+`target="_blank"` and `rel="noopener noreferrer"`. The obsolete Instagram,
+Facebook, generic YouTube pill, background-photo, scrim, and hidden compatibility
+branches were removed from this component; no iframe, fake playback control,
+or dependency was added.
+
+**Tenant-correct crest:** the UPSL route keeps the card server-rendered and
+resolves branding through the request's cookie-backed `onzio` client. The
+existing `fetchClubBranding` helper now accepts an optional injected client and
+passes that same authority to both published media lookups, while preserving
+its default for every existing browser caller. The route converts the resolved
+published asset path to its direct immutable `onzio-media` URL and supplies the
+tenant's real name and crest to the neutral component. This deliberately does
+not use `/club-logo`, which can fall back to the legacy crest while a pathway
+tenant is still in authenticated preview. If branding lookup or image delivery
+fails, the fixed 80px crest slot shows a neutral tenant-derived initials mark.
+The decorative successful crest uses empty alt text because the adjacent H3
+and card label already expose the club identity.
+
+**Design and isolation:** the selected 1120px `0.8fr / 1.2fr` editorial grid,
+610px section, 118px banner, 80px crest, 44px actions, 760px single-column
+collapse, and 560px stacked mobile actions are implemented only beneath
+`[data-site-template="pathway"]`. Long names/handles wrap safely, keyboard
+focus remains visible, and reduced motion removes link transitions. The CSS is
+derived only from pathway tokens and contains no MLA/Real Madrid branch, brand
+literal, gradient, global selector, or new package.
+
+**Files changed for this slice:**
+`components/pathway/PathwayUpslMatchChannelPanel.tsx`,
+`components/pathway/content.ts`, `app/%5Fclubs/[slug]/upsl/page.tsx`,
+`lib/queries.ts`, `styles/pathway.css`,
+`tests/contracts/pathway-upsl-sections.test.ts`, and the existing focused
+stage-page contract.
+
+**Verification:** focused UPSL/stage/query suites pass 65/65; TypeScript passes
+with incremental output disabled; lint passes with the same five pre-existing
+hook warnings; `git diff --check` passes. Full contracts are 740/741; the sole
+failure remains the documented date-sensitive Editorial next-fixture
+expectation (`Capital City Athletic` expected, current resolver returns
+`Dayton Rovers SC`), unrelated to this channel card.
+
+Authenticated browser QA on
+`http://manu-ledesma-academy.localhost:3000/upsl` confirms the real published
+1254x1254 crest loads directly from `onzio-media`. At 1440x1000, the section is
+1440x610, its centered content is 1120px wide, the card is 547.2x316, the crest
+renders 80x80, both actions are 44px tall, and document width is exactly
+1440px. At 390x844, the card is 346px wide, both actions stack at 296x44, the
+crest remains 80x80 with positive natural dimensions, and document width is
+exactly 390px with zero overflow. Both URLs, safe external attributes, heading
+order, labelled action list, and runtime console (zero errors) were verified.
+
+No hosted change, push, commit, migration, seed, database mutation, or external
+YouTube action ran.
+
+**Exact next step:** Christian reviews the completed local `/upsl` section;
+commit and push the accumulated accepted MLA work only when explicitly
+requested.
+
+## pathway@1 stage pages receive the approved royal editorial treatment
+
+Agent: Codex with Academy, UPSL, Senior/contact, and independent-review
+subagents, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian supplied five screenshots plus
+`mla_academy_image.png` and `mla_upsl_image1.jpg`, then asked for four
+Real Madrid-inspired route additions: an Academy story, UPSL tryout and live
+channel sections, a Senior Club coming-soon section with the referenced form,
+and a Youth Club invitation.
+
+**Shared visual direction:** the four pages now use a disciplined royal
+editorial language derived from the approved pathway system: oversized
+sentence-case headings, club-navy fields, luminous white information
+surfaces, Sora utility/navigation accents, one orange rule/action cue, and
+photography used as a structural column or full-width matchday backdrop. The
+implementation uses only existing tenant/pathway tokens and remains fully
+scoped beneath `[data-site-template="pathway"]`; it contains no Real Madrid
+name, mark, asset, literal palette, tenant slug branch, dependency, migration,
+seed, or query change.
+
+**Academy:** `/academy` now places a full-width `Our Academy` editorial story
+immediately after the existing hero. It preserves Christian's supplied
+personalized-coaching, technical/tactical/physical-development, professional
+instruction, supportive-environment, continuous-improvement, competitive-play
+and personal-growth copy. The navy copy column sits beside the supplied youth
+huddle photograph, with an honest equal-size fallback if the source is
+missing or fails.
+
+**UPSL:** `/upsl` now leads with a photo-led Fall Season UPSL Free Tryouts
+section containing the supplied `Your next opportunity starts here` story,
+`July 2 & July 3`, `9:00 PM`, and `Riverside Park | Cincinnati, Ohio` details.
+Because those yearless dates are already past on 2026-08-17, the section
+labels them `Previous tryout schedule` and routes `Ask about upcoming tryouts`
+to the existing contact flow instead of presenting stale registration as
+live. A second navy matchday panel asks visitors to subscribe to the
+official YouTube channel and watch games live, with explicit safe external
+links to the screenshot-provided YouTube handle and the existing first-party
+Instagram/Facebook destinations. The established league explanation and
+entry steps remain below both additions.
+
+**Senior Club and contact pipeline:** `/senior-club` now replaces the mostly
+TBC detail grid with the requested `Senior Club` / `Coming soon!` statement
+and a `Want to be part of it?` interest form. The form reuses the existing
+tenant-safe `/api/contact` capability rather than adding a parallel backend.
+It collects required first name, last name, email and message plus optional
+phone, with visible required/optional indicators matching the supplied
+reference. Phone is trimmed and capped at 50 characters by Zod, blank phone is
+normalized away, and the outbound plain-text email records either the value
+or `Not provided`. The honeypot still runs before validation, the browser sends
+no club identifier, middleware/server headers remain the only tenant source,
+and missing recipient or Resend configuration still fails closed. Privacy
+copy now discloses the optional phone field.
+
+**Youth Club:** `/youth-club` replaces the earlier generic split feature with
+the supplied `Join us!` invitation, the lasting-impact/growth/community copy,
+year-round play introduction, indoor Summer/Winter teams, and year-round
+training link. It uses the supplied youth huddle photograph as the full-height
+second column while preserving the existing at-a-glance section below.
+
+**Media:** the two user-supplied sources were signature/dimension checked and
+normalized once to versioned direct-delivery WebP files:
+`public/images/pathway/academy-huddle-a9b9250f.webp` (1207x1303, 415KB) and
+`public/images/pathway/upsl-celebration-c31bfab4.webp` (1080x1350, 234KB).
+Every new photo renders through `ResilientImage` with `unoptimized` direct
+delivery and stable missing/failed fallbacks. The fallback is a dedicated,
+token-driven pathway surface, so a failed image cannot leak the legacy club's
+red inline fallback palette. The Academy image is explicitly prioritized after
+local LCP detection. No runtime transformation URL or `/_next/image`
+dependency was added.
+
+**Regression coverage:** new focused contracts cover the reusable Academy,
+UPSL, Senior and Youth component APIs, semantic server markup, exact route
+wiring, supplied copy and destinations, versioned WebP signatures, resilient
+direct media, safe external-link attributes, pathway-only CSS scope,
+responsive breakpoints, fallback geometry, and absence of tenant/palette
+branches. The site-media browser suite now conditionally includes Academy,
+Youth Club and UPSL healthy/failure routes whenever the target resolves as a
+pathway site. Existing contact contracts cover trimmed/blank/overlong phone
+input and both present/missing phone email output. The focused five-file run is
+21/21.
+
+**Verification:** TypeScript clean with incremental output disabled; lint and
+the production build pass with the same five pre-existing hook warnings;
+architecture 20/20; legacy 280/280; `git diff --check` clean. Contracts are
+737/738; the sole failure remains the already documented date-sensitive
+Editorial next-fixture expectation (`Capital City Athletic` expected, current
+resolver returns `Dayton Rovers SC`), unrelated to these stage pages. Database
+tests were not rerun because this package changes no schema, query, RLS,
+migration, or storage policy.
+
+Browser QA on Christian's :3000 review server confirms all four routes at
+1440px and 390px. Academy renders the 1207x1303 source with no fallback in a
+662/778px split; Youth renders the same source in a 631/809px split; the UPSL
+tryout split is 634/806px and both UPSL images report 1080x1350 natural
+dimensions; the Senior form exposes the five requested visible fields plus an
+untabbable honeypot. At 390px every composition collapses to one column, all
+photographs retain positive natural dimensions, and every route reports
+exactly zero document overflow. The local review routes are
+`http://manu-ledesma-academy.localhost:3000/academy`, `/upsl`, `/senior-club`,
+and `/youth-club`. No hosted change, push, commit, migration, or seed ran.
+
+The final focused Playwright failure-state rerun could not resolve the tenant
+from its isolated CLI browser (`/` returned `Not found`), so its new conditional
+route coverage remains ready for the next correctly configured
+`SITE_MEDIA_BASE_URL` run. This does not replace the completed healthy desktop
+and mobile browser QA above; the final review refinements were limited to an
+inline historical-status label, visible form status labels, image priority,
+and the token-only fallback state.
+
+**Exact next step:** Christian reviews the four local routes; commit and push
+the accumulated accepted MLA work only when explicitly requested.
+
+## pathway@1 navigation adopts the approved Sora direction
+
+Agent: Codex, 2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian selected option 03, `Sora — Modern academy`, from the
+Real Madrid-inspired navigation typography comparison.
+
+**Implementation and isolation:** `app/layout.tsx` now loads Sora 500 through
+`next/font/google` as `--font-pathway-nav`; Next self-hosts the generated font
+asset, so the production page does not depend on a Google Fonts stylesheet at
+runtime. The new token is consumed only by the six pathway route tabs and the
+equivalent links inside the mobile menu. The crest, club and affiliation
+lockup, page headings/body copy, and `Book Training` CTA retain their existing
+families. The selected preview's medium weight and neutral tracking are kept
+at `500` and `0` rather than introducing uppercase or display-font styling.
+
+Sora's wider glyphs required a compact-desktop fit refinement. At 1100px and
+below, route gaps now resolve through `clamp(6px, 0.7vw, 8px)` and the
+affiliation lockup tightens to 10px between the divider/marks and 9px between
+the three marks. The symmetric `1fr / auto / 1fr` header grid, 84px crest,
+12px crest-to-affiliation distance, exact viewport-centered route group, and
+900px mobile transition are unchanged. All styling remains scoped beneath
+`[data-site-template="pathway"]`; there is no tenant branch, brand literal,
+route change, dependency addition, migration, seed, or query change.
+
+**Regression coverage:** `tests/contracts/pathway-presidential-nav.test.ts`
+is now 5/5 and pins the Sora import/configuration, generated CSS variable,
+500 weight, neutral tracking, pathway font-token fallback, desktop and mobile
+route-link scope, unchanged CTA family, absence of a runtime Google Fonts CSS
+URL, and the compact gaps needed to preserve collision-free geometry.
+
+**Verification:** focused Presidential nav contract 5/5; TypeScript clean
+with incremental output disabled; production build passes with the same five
+pre-existing hook warnings; `git diff --check` clean. The complete contract
+run is 721/722; the sole failure remains the already documented date-sensitive
+Editorial next-fixture expectation (`Capital City Athletic` expected, current
+resolver returns `Dayton Rovers SC`), unrelated to the pathway navigation.
+
+Browser QA on Christian's :3000 review server confirms Sora 500 is the
+computed desktop and mobile route-link family while the CTA remains Geist. At
+1440px the route group remains centered at 720/720 with zero overflow. At
+1100px it remains centered at 550/550 with 105.4px identity clearance. At the
+901px desktop boundary it remains exactly centered, retains 14.3px clearance
+from the identity cluster, and has zero overflow. At 390px the opened menu
+uses Sora 500 for its route links, retains Geist on the CTA, and produces zero
+page overflow. The local review URL is
+`http://manu-ledesma-academy.localhost:3000/`. No hosted change, push, commit,
+migration, or seed ran.
+
+**Exact next step:** Christian reviews Sora on the local site; commit and push
+the accumulated accepted MLA work only when explicitly requested.
+
+## pathway@1 header now matches the approved crest-and-affiliation lockup
+
+Agent: Codex with geometry, implementation, and independent-review subagents,
+2026-08-17. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian supplied the Diverse City/Lions reference and asked for
+the MLA header to use the same club-crest, divider, US Soccer, FIFA, and UPSL
+composition exactly beside one another.
+
+Christian then observed that the six desktop navigation links were centered
+inside the leftover middle space rather than on the header/viewport axis and
+asked for the MLA crest to grow again. The asymmetric 255px identity cluster
+and 119px booking action made the previous `auto / 1fr / auto` grid place the
+link group about 64–68px to the right of true center.
+
+**Implementation and isolation:** the pathway shell retains a 20px
+tenant-tokenized top rail, while the existing affiliation component now sits
+inside the white desktop navigation row immediately after the live club crest.
+It uses the same checked-in color assets as the established Lions and
+Editorial headers:
+`/images/logo/affiliations/us-soccer-color.png`,
+`/images/logo/affiliations/fifa-color.png`, and
+`/images/logo/affiliations/upsl-color.png`. All three remain resilient,
+direct-delivery images. The current refinement enlarges the desktop crest from
+76x76 to 84x84 and keeps the crest plus affiliations inside the dedicated
+identity lockup. A fixed 12px gap continues to place the crest directly beside
+the fine vertical divider, which leads into the unchanged 159x32 affiliation
+lockup made from 32x32 US Soccer, 56x32 FIFA, and 32x32 UPSL marks. Four-pixel
+row padding offsets the larger crest, preserving the 93px rendered header
+height. The visible desktop club name remains suppressed so the crest and
+affiliations form the same compact signature as the reference.
+
+The desktop row now uses symmetric `minmax(0, 1fr) / auto / minmax(0, 1fr)`
+tracks: the identity cluster is start-aligned, the six-link navigation is
+center-aligned in the true middle track, and the booking action is end-aligned.
+No transform, negative margin, or arbitrary offset is used. At 1100px and
+below, smaller tokenized row/link gaps keep the centered group collision-free
+through the 901px desktop boundary.
+
+At 900px and below the affiliation lockup hides, the crest returns to 48x48,
+and the tenant name plus the accepted mobile menu remain visible. This avoids
+crowding without changing mobile navigation behavior. CSS stays entirely
+under `[data-site-template="pathway"]`, consumes only pathway/tenant tokens,
+and contains no MLA slug/name branch or literal brand palette. Lions,
+Editorial, registry, schema, routes, migrations, seeds, queries, dependencies,
+and every other template are unchanged.
+
+**Regression coverage:** `tests/contracts/pathway-presidential-nav.test.ts`
+now locks the affiliation component's position beside the crest, the exact
+three local assets and order, resilient small-graphic delivery, the dedicated
+identity wrapper, 84px crest, 12px internal gap, 4px row padding, symmetric
+three-column desktop geometry, start/center/end alignment, and the absence of
+transform/margin hacks. It separately pins the compact <=1100px grid, gaps,
+and padding plus the <=900px two-column reset, 48px crest, hidden desktop
+elements/affiliations, visible menu trigger, containment, pathway-only CSS
+scoping, and the absence of the old placeholder marks and palette literals.
+
+**Verification:** focused Presidential nav contract 4/4; TypeScript clean
+with incremental output disabled; `git diff --check` clean. The complete
+contract run is 720/721; the sole failure remains the already documented
+date-sensitive Editorial next-fixture expectation (`Capital City Athletic`
+expected, current resolver returns `Dayton Rovers SC`), unrelated to this
+header. The independent review initially identified missing responsive
+contract coverage; the <=1100px and <=900px assertions were added, and the
+re-review closed with no remaining actionable findings. The
+broader lint, build, architecture, legacy, database, and local-Supabase results
+recorded for the immediately preceding header implementation were not rerun
+for this markup/CSS-only refinement.
+
+Browser QA against Christian's :3000 review server confirms the 84x84 crest,
+unchanged 93px white header, exact 12px crest-to-divider distance, 255px-wide
+identity cluster, 159x32 affiliation lockup, and zero page overflow/errors. The
+link group center equals the viewport center exactly at 1440px (720/720),
+1100px (550/550), and 901px (450.496/450.5), with all six links sharing the
+same vertical center. The 901px boundary retains 9.7px identity-to-nav
+clearance. Clicking Academy, Youth Club, Senior Club, UPSL, Merch, and About
+confirmed each destination retains zero horizontal/vertical alignment delta,
+one correct active link, and zero overflow. At 390px the affiliations/nav/CTA
+hide, the 48x48 crest/name/menu composition remains intact, the header is 79px,
+and overflow is zero. The clean local review URL is
+`http://manu-ledesma-academy.localhost:3000/`. No hosted change, push, commit,
+migration, or seed ran.
+
+**Exact next step:** Christian reviews the reference-matched affiliation
+header at the local URL above; commit and push the accumulated accepted MLA
+work only when explicitly requested.
+
+## pathway@1 session feature grid becomes the approved Royal Training Gallery
+
+Agent: Codex with component, styling, and independent-review subagents,
+2026-08-16. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian selected Royal Training Gallery from the four-option
+Real Madrid-inspired comparison for Home's `Inside the sessions` / `What your
+player can expect` section and asked for the approved direction to be
+implemented with subagents. The production translation borrows the editorial
+discipline and photo-led geometry only; it contains no Real Madrid name, mark,
+asset, literal palette, or tenant-specific component branch.
+
+**Implementation and design:** the existing server-rendered
+`PathwayFeatureGrid` now owns an asymmetric editorial heading: the existing
+eyebrow and an accent-over-hairline rule sit in the narrow column while the
+existing heading occupies the wide column. The three existing training
+stories retain their exact titles, bodies, order, and Home media-slot wiring.
+They add the neutral focus labels `Physical readiness`, `Technical command`,
+and `Collective intelligence` before their titles. Each story uses an equal
+4:5 rounded photograph with a restrained fine-pointer hover; direct
+`ResilientImage` delivery and both the missing-media placeholder and
+failed-image fallback retain the same geometry.
+
+The shared CSS remains fully scoped beneath
+`[data-site-template="pathway"]` and uses only pathway tenant tokens. At 900px
+and below the three columns become one contained, focusable horizontal
+scroll-snap rail with visible keyboard focus, negative inset margins balanced
+by matching internal padding, and no document-level overflow. Reduced motion
+removes the photo transform. No registry, schema, migration, seed, query,
+dependency, route, or other template changed.
+
+**Regression coverage and review:** new
+`tests/contracts/pathway-royal-training-gallery.test.ts` locks the server and
+semantic list structure, asymmetric heading, exact copy/order/focus labels,
+resilient direct delivery, honest fallback geometry, Home slots, pathway-only
+CSS scoping, 4:5 crop, contained mobile rail, visible focus, reduced motion,
+and the absence of inspiration, tenant, and palette literals. The independent
+review initially found that the visual CSS was not pinned; the contract was
+strengthened and the re-review closed with no remaining actionable findings.
+
+**Verification:** focused Royal Training Gallery contract 5/5; TypeScript
+clean with incremental output disabled; `git diff --check` clean; lint and the
+production build pass with only the same five pre-existing hook warnings;
+architecture 20/20; legacy 280/280; database 181/181. Contracts are 718/719
+and the complete local-Supabase suite is 1200/1201; the sole failure remains
+the already documented date-sensitive Editorial next-fixture expectation
+(`Capital City Athletic` expected, current resolver returns
+`Dayton Rovers SC`), unrelated to this gallery.
+
+Browser QA on :3015 confirms the three real photographs load with natural
+widths 1800, 1254, and 1536. At 1440px the gallery is a three-column grid with
+three equal 408px cards, exact 0.8 media width/height ratios, 28px radii, and
+zero page overflow. At 390px it is a flex rail with three equal 328px cards,
+`overflow-x: auto`, `scroll-snap-type: inline mandatory`, a 1055px internal
+scroll width contained inside a 390px page, and exact 0.8 media ratios.
+Arrow-key input moved the focused rail from scroll-left 0 to 306.5px and its
+navy focus outline remained visible. Desktop and mobile browser logs contained
+no warnings or errors. The local review server remains at
+`http://manu-ledesma-academy.localhost:3015/`. No hosted change, push, commit,
+migration, or seed ran.
+
+**Exact next step:** Christian reviews the approved production translation at
+the local URL above; commit and push the accumulated accepted MLA work only
+when explicitly requested.
+
+## pathway@1 navbar becomes the approved Presidential White direction
+
+Agent: Codex, 2026-08-16. Status: **complete, verified locally, uncommitted
+on `claude/mla-pathway`.**
+
+**Trigger:** Christian selected Direction 01 — Presidential White from the
+four-option navbar comparison and asked for it to replace the production
+pathway navbar without changing routes, active states, responsive behavior,
+tenant branding, or accessibility.
+
+**Implementation and isolation:** `PathwayNav` is now one crisp horizontal
+white tier: the live tenant crest/name at the start, the existing six visible
+route links centered, and the existing `Book Training` → `/contact` action at
+the end. The route array and tenant-path normalization are unchanged. Desktop
+and mobile links now expose `aria-current="page"` alongside the existing
+`data-active` styling; Contact marks the booking action current, while Home
+marks the branded home lockup current. The crest still resolves through
+`useClubBranding` and resilient direct delivery, the initials fallback still
+derives from `club.name`, and colors still come only from the pathway tenant
+tokens—there is no MLA name, slug, asset URL, or palette literal in the shared
+component.
+
+At 1100px the long desktop lockup contracts by hiding only the visible club
+name while preserving the link's tenant-derived accessible name. At 900px the
+same horizontal crest/name lockup returns beside a native 44×44 menu button;
+the route list moves into the existing scroll-locked white panel with the
+orange current-route rule and full-width booking action. The button now has an
+explicit `type="button"`; the mobile menu is a labelled `nav`; Escape closes
+the panel and restores focus to its trigger; route changes and link activation
+still close it. Reduced-motion users receive no underline or hamburger
+transition. All rules remain under `[data-site-template="pathway"]`; registry,
+shell branching, content, media, migrations, routes, other templates, and the
+accepted Home hero/Calm Story work are untouched.
+
+**Regression coverage:** new
+`tests/contracts/pathway-presidential-nav.test.ts` locks the six routes and
+Contact CTA, active/current-page semantics, tenant branding and crest fallback,
+mobile menu controls, Presidential White grid geometry, responsive breakpoints,
+reduced-motion behavior, palette neutrality, and pathway-only CSS scoping.
+
+**Verification:** focused Presidential nav + Home hero + Calm Story contracts
+8/8; TypeScript clean; `git diff --check` clean; lint and the production build
+pass with only the same five pre-existing hook warnings; architecture 20/20;
+legacy 280/280. Contracts are 714/715 and the complete local-Supabase suite is
+1195/1196; the sole failure remains the already documented date-sensitive
+Editorial next-fixture expectation (`Capital City Athletic` expected, current
+resolver returns `Dayton Rovers SC`), unrelated to this navbar.
+
+Authenticated browser QA on :3015 confirms the real crest loads at natural
+1254×1254 and renders 48×48. At 1710px the white header is a three-column
+1710×87 tier with six route links and zero overflow. At 768px and 390px the
+header is 79px tall, the desktop nav is hidden, the menu button is visible,
+and the page has zero horizontal overflow. Academy exposes exactly one current
+desktop/mobile route; Contact marks the Book Training action current; the menu
+locks body scroll, opens with all seven destinations, closes on Escape,
+restores trigger focus, and removes the scroll lock. Lions (`editorial`) and
+Diverse City render zero `.pathway-header` nodes at 390px. The review server is
+running again at `http://manu-ledesma-academy.localhost:3015/`. No hosted
+change, push, commit, migration, or seed ran.
+
+**Exact next step:** Christian reviews the accepted production translation at
+the local URL above; commit and push the accumulated accepted MLA work only
+when explicitly requested.
+
+## pathway@1 Home hero becomes the approved Club Editorial Direction 01
+
+Agent: Codex with architecture, design-translation, and verification
+subagents, 2026-08-16. Status: **complete, verified locally, uncommitted on
+`claude/mla-pathway`.**
+
+**Trigger:** Christian rejected the full-bleed navy-washed hero, selected Club
+Editorial Direction 01 from the four-option prototype, and asked for the real
+squad photograph to remain visible in the production implementation. After
+reviewing the first inset-card implementation locally, he liked the direction
+and asked for the section itself to bleed edge-to-edge. He then selected the
+Whole-club crop permanently and asked to remove both crop buttons and the
+"Choose how the club story enters the frame" helper copy.
+
+**Architecture and isolation:** Home alone now renders the server component
+`PathwayHomeHero` at the existing registered `pathway.hero` boundary. Its
+`PathwayHomeHeroMedia` helper is also server-rendered: removing the crop choice
+eliminated the hero-specific state, event handler, and bespoke client leaf.
+Only the existing shared `ResilientImage` client boundary remains to manage
+delivery fallback. The hero continues to resolve
+`HOME_PHOTO_SLOTS.heroBackground` (sort order 4) through
+`fetchPathwayHomePhotos`; there is no slug special case, new registry section,
+migration, document, seed, query, dependency, or media-path change. Every
+inner pathway route continues to use the shared `PathwayHero` unchanged.
+
+**Design:** the Home opening is now a restrained full-bleed 64/36 editorial
+band: a large true-color squad photograph beside a pale copy panel, large
+sentence-case Geist headline, orange signature rule, and compact CTAs. The
+section and frame are 100% wide with no exterior
+gutter, max-width, border, radius, or shadow; photograph and panel meet the
+viewport edges directly. There is no scrim, blend mode, grayscale, image hover
+zoom, autoplay, or ornamental gradient. At 900px the band becomes image-first
+with a stable 3:2 frame; at 620px it uses a 4:3 frame and compact copy spacing.
+The approved Whole-club crop is fixed at `50% 52%` on desktop and `50% 54%` on
+mobile, always at `scale(1)`, with no image transition or state that can change
+its geometry. All new CSS is scoped beneath `[data-site-template="pathway"]`
+and uses tenant color roles rather than MLA palette literals.
+
+**Media and accessibility hardening:** the real media retains
+`ResilientImage`, direct `imageDeliveryProps("hero-photo")` delivery, priority,
+responsive sizes, and its meaningful database alt. Both a missing slot and a
+failed loaded source preserve the frame with an `ImageFallback`. CTA focus uses
+a primary-color outline, reduced motion removes CTA movement, and the orange
+CTA uses dark ink for AA contrast.
+
+**Verification:** focused Home-hero plus Calm Story contracts 5/5; TypeScript
+clean; `git diff --check` clean; lint and the production build pass with only
+the same five pre-existing hook warnings; architecture 20/20; legacy 280/280;
+database 181/181. Contracts are 711/712 and the complete local-Supabase suite
+is 1192/1193; the sole failure is the already documented date-sensitive
+Editorial next-fixture expectation (`Capital City Athletic` expected, current
+resolver returns `Dayton Rovers SC`), unrelated to this work.
+
+Authenticated browser QA on :3015 confirms the direct Storage object loads at
+natural width 1536. At 1440px the hero frame reaches x=0 through x=1440 and is
+1440×680; its media frame is 922.5×680 and the image remains `50% 52%`,
+`scale(1)`, with `transition: none`. The 768px layout reaches both viewport
+edges and uses a 768×512 3:2 media frame; the 390px layout is exactly 390px wide
+with a 390×292.5 4:3 media frame and no horizontal overflow. Browser DOM checks
+confirm zero photo-focus controls and no helper copy. `/academy` and `/upsl`
+each contain zero Home-editorial heroes and one unchanged shared hero. The
+full-bleed static refinement re-passed the focused 5/5 contracts, TypeScript,
+diff check, and production build. No hosted change, push, commit, migration, or
+seed was run.
+
+**Exact next step:** Christian reviews the local Home page at
+`http://manu-ledesma-academy.localhost:3015/`; if accepted, commit/push only
+when explicitly requested. Preserve the earlier uncommitted Calm Story changes
+in this same worktree.
+
+## pathway@1 Home leader becomes the approved Calm Story; accordion state can no longer resize or re-crop the portrait
+
+Agent: Codex with implementation and audit subagents, 2026-08-16. Status:
+**complete, verified locally, uncommitted on `claude/mla-pathway`.**
+
+**Trigger:** Christian selected the Calm Story direction from the three-option
+prototype, asked to remove the redundant "Who we are" eyebrow, and reported
+that opening a disclosure such as "Why the academy exists" made the portrait
+look as though it zoomed. After accepting the Home hero's full-bleed treatment,
+he asked for this Manu Ledesma Academy section to bleed edge-to-edge too.
+
+**Root cause and invariant:** the prototype's two-column grid stretched its
+portrait cell to the accordion row while the image used `height: 100%` and
+`object-fit: cover`; opening a panel therefore changed the image box height and
+its cover crop. The production section now separates those responsibilities:
+the navy media column may stretch with the card, but its inner portrait owns a
+viewport-specific fixed frame. The image has stable width/height, `cover`, a
+fixed `54% center` position, `transform: none`, and `transition: none`; no
+`[open]` selector targets the media, portrait, or image. Extra expanded-copy
+height becomes navy space below the portrait rather than a taller crop.
+
+**Implementation:** Home alone now renders the server-only
+`PathwayCalmStory` at its existing leader boundary. It uses native
+`details`/`summary` disclosures (first item initially open, Enter/Space work
+without client state), the approved mission/leader/offer copy and existing
+CTAs, `ResilientImage` plus `imageDeliveryProps("photograph")`, and fully
+pathway-scoped `.pathway-calm-story-*` CSS. `homeContent.leader` is typed to the
+new component and no longer contains or renders `eyebrow: "Who we are"`. The
+Home-only section now overrides the shared section shell to remove exterior
+padding and the 1200px inner constraint; its band is 100% wide with no card
+border, radius, or shadow, so the navy media and white story columns meet the
+viewport edges directly.
+The registry/default section type, document, migration, media slots, seed, and
+uploaded portrait are unchanged; `/academy` retains `PathwaySplitFeature` and
+`/upsl` retains its dark `PathwayInvertedFeature`.
+
+**Verification:** focused Calm Story contract 2/2 green; TypeScript clean;
+lint completes with only the same five pre-existing hook warnings;
+architecture 20/20; legacy 280/280; production build succeeds. Contracts are
+711/712 and complete `npm test` is 1192/1193; the sole failure is the already
+documented date-sensitive Editorial next-fixture expectation (`Capital City
+Athletic` expected, current resolver returns `Dayton Rovers SC`), unrelated to
+this work. Authenticated local browser verification on :3015: the desktop band
+is 1440px wide at x=0, and opening all three disclosures grows the card from
+720px to 997.64px while the portrait remains exactly 590.4×720. At 390px, the
+band and portrait both reach both viewport edges; the all-open card grows to
+1507.08px while the portrait remains 390×358.80. Source, natural size
+(1537×1023), object-fit, object-position, transform, and transition remain
+identical. "Who we are" is absent, mobile has no horizontal overflow, keyboard
+disclosure works, `/academy` has zero Calm Story nodes and one split feature,
+and `/upsl` has zero Calm Story nodes and its existing dark split feature. The
+bleed refinement re-passed the combined focused 5/5 contracts, TypeScript, and
+diff check. No hosted changes, push, commit, migration, or seed run.
+
+**Exact next step:** Christian reviews the local Home page at
+`http://manu-ledesma-academy.localhost:3015/`; if accepted, commit/push only
+when explicitly requested. The worktree intentionally contains the seven
+source, test, style, and handoff files from this change.
 
 ## pathway@1 Home hero gains its background photograph; the centered hero learns an on-photo treatment with a measured legibility guarantee
 

@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { getClubContextBySlug } from "@/lib/club-context";
 import PathwayHero from "@/components/pathway/PathwayHero";
-import PathwaySplitFeature from "@/components/pathway/PathwaySplitFeature";
-import PathwaySpecList from "@/components/pathway/PathwaySpecList";
+import PathwayYouthJoin from "@/components/pathway/PathwayYouthJoin";
 import { youthClubContent } from "@/components/pathway/content";
 
 // pathway@1 Youth Club page (MLA P1 Step 6): the second pathway stage.
-// Composition: hero (left) + split-feature + spec-list.
+// The supplied invitation/photo opens the page before the focused transition
+// from training into a team.
 export default async function TenantYouthClubPage({
   params,
 }: {
@@ -17,9 +17,8 @@ export default async function TenantYouthClubPage({
 
   return (
     <>
-      <PathwayHero {...youthClubContent.hero} />
-      <PathwaySplitFeature {...youthClubContent.feature} />
-      <PathwaySpecList {...youthClubContent.specs} />
+      <PathwayYouthJoin {...youthClubContent.join} headingLevel="h1" />
+      <PathwayHero {...youthClubContent.hero} headingLevel="h2" />
     </>
   );
 }

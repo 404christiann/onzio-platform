@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import { getClubContextBySlug } from "@/lib/club-context";
-import PathwayHero from "@/components/pathway/PathwayHero";
-import PathwaySplitFeature from "@/components/pathway/PathwaySplitFeature";
+import PathwayAboutEditorial from "@/components/pathway/PathwayAboutEditorial";
+import PathwayEditorialCarousel from "@/components/pathway/PathwayEditorialCarousel";
 import { aboutContent } from "@/components/pathway/content";
 
 // pathway@1 About page (MLA P1 Step 6): the flat `/about` route (distinct
 // from the sports-CMS `club/about` route, which pathway@1 does not use --
 // see the notFound() guard added to app/%5Fclubs/[slug]/club/about/page.tsx).
-// Composition: hero (left) + split-feature.
+// Composition: the supplied leader portrait and letter, followed immediately
+// by the club's automatically rotating editorial poster gallery.
 export default async function TenantPathwayAboutPage({
   params,
 }: {
@@ -18,8 +19,8 @@ export default async function TenantPathwayAboutPage({
 
   return (
     <>
-      <PathwayHero {...aboutContent.hero} />
-      <PathwaySplitFeature {...aboutContent.feature} />
+      <PathwayAboutEditorial {...aboutContent.editorial} />
+      <PathwayEditorialCarousel {...aboutContent.carousel} />
     </>
   );
 }

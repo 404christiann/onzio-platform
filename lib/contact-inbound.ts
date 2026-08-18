@@ -21,10 +21,14 @@ const contactInboundSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   email: z.string().trim().email().max(254),
+  phone: z.string().trim().max(50).optional(),
   message: z.string().trim().min(1).max(5000),
 });
 
-export type ContactInbound = z.infer<typeof contactInboundSchema>;
+export type ContactInbound = Omit<
+  z.infer<typeof contactInboundSchema>,
+  "phone"
+> & { phone?: string };
 
 export type ContactInboundResult =
   | { outcome: "accepted"; submission: ContactInbound }
@@ -57,7 +61,11 @@ export function parseContactInbound(value: unknown): ContactInboundResult {
       message: issue ? `${issue.path.join(".")}: ${issue.message}` : "Invalid contact submission",
     };
   }
-  return { outcome: "accepted", submission: parsed.data };
+  const { phone, ...submission } = parsed.data;
+  return {
+    outcome: "accepted",
+    submission: phone ? { ...submission, phone } : submission,
+  };
 }
 
 export type ContactOutboundMessage = {
@@ -88,6 +96,7 @@ export function buildContactOutboundMessage(input: {
     text: [
       `Name: ${submission.firstName} ${submission.lastName}`,
       `Email: ${submission.email}`,
+      `Phone: ${submission.phone ?? "Not provided"}`,
       "",
       submission.message,
     ].join("\n"),

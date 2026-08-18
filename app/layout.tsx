@@ -5,6 +5,7 @@ import {
   Montserrat,
   Inter,
   DM_Sans,
+  Sora,
 } from "next/font/google";
 import Script from "next/script";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
@@ -43,6 +44,14 @@ const academyNav = DM_Sans({
   subsets: ["latin"],
 });
 
+// pathway@1 uses Sora only for public navigation links. The crest lockup,
+// federation marks, CTA, and page typography retain their existing families.
+const pathwayNav = Sora({
+  variable: "--font-pathway-nav",
+  subsets: ["latin"],
+  weight: "500",
+});
+
 export const metadata: Metadata = {
   title: "Onzio Platform",
   description:
@@ -65,7 +74,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${academyHeading.variable} ${academyBody.variable} ${academyNav.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${academyHeading.variable} ${academyBody.variable} ${academyNav.variable} ${pathwayNav.variable}`}
     >
       <body>
         <ClubBrandingProvider>{children}</ClubBrandingProvider>

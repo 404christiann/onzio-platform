@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import { getClubContextBySlug } from "@/lib/club-context";
-import PathwayHero from "@/components/pathway/PathwayHero";
-import PathwaySpecList from "@/components/pathway/PathwaySpecList";
+import PathwaySeniorInterest from "@/components/pathway/PathwaySeniorInterest";
 import { seniorClubContent } from "@/components/pathway/content";
 
 // pathway@1 Senior Club page (MLA P1 Step 6): the third pathway stage.
-// Composition: hero (left) + spec-list. seniorClubContent.specs carries a
-// heavy proportion of TBC rows deliberately -- the senior club is the least
-// settled stage of the club, and that's the honest state, not a bug.
+// The stage remains honestly marked coming soon, followed by the shared,
+// tenant-safe contact flow for players who want to register interest.
 export default async function TenantSeniorClubPage({
   params,
 }: {
@@ -16,10 +14,5 @@ export default async function TenantSeniorClubPage({
   const club = await getClubContextBySlug((await params).slug);
   if (club.presentationTemplateKey !== "pathway@1") notFound();
 
-  return (
-    <>
-      <PathwayHero {...seniorClubContent.hero} />
-      <PathwaySpecList {...seniorClubContent.specs} />
-    </>
-  );
+  return <PathwaySeniorInterest {...seniorClubContent.interest} />;
 }

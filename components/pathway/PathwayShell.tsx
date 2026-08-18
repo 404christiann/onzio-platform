@@ -1,9 +1,9 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import PathwayAffiliationBar from "@/components/pathway/PathwayAffiliationBar";
 import PathwayNav from "@/components/pathway/PathwayNav";
 import PathwayFooter from "@/components/pathway/PathwayFooter";
+import PathwayTrainingGatewayProvider from "@/components/pathway/PathwayTrainingGatewayProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
 import "@/styles/pathway.css";
 
@@ -46,10 +46,12 @@ export default function PathwayShell({
         } as CSSProperties
       }
     >
-      <PathwayAffiliationBar />
-      <PathwayNav />
-      <main className="pathway-main">{children}</main>
-      <PathwayFooter />
+      <PathwayTrainingGatewayProvider>
+        <div className="pathway-top-rail" aria-hidden="true" />
+        <PathwayNav />
+        <main className="pathway-main">{children}</main>
+        <PathwayFooter />
+      </PathwayTrainingGatewayProvider>
     </div>
   );
 }

@@ -46,6 +46,7 @@ export type PathwayHeroProps = {
   secondaryCta?: PathwayCta;
   variant?: PathwayHeroVariant;
   backgroundMedia?: { src: string; alt: string };
+  headingLevel?: "h1" | "h2";
 };
 
 export default function PathwayHero({
@@ -57,8 +58,10 @@ export default function PathwayHero({
   secondaryCta,
   variant = "left",
   backgroundMedia,
+  headingLevel = "h1",
 }: PathwayHeroProps) {
   const align = variant === "centered" ? "center" : "start";
+  const HeadingTag = headingLevel;
 
   return (
     <section
@@ -80,12 +83,12 @@ export default function PathwayHero({
       )}
       <div className="pathway-hero-inner">
         {eyebrow && <span className="pathway-eyebrow">{eyebrow}</span>}
-        <h1 className="pathway-hero-headline">
+        <HeadingTag className="pathway-hero-headline">
           <span className="pathway-hero-line">{headlineTop}</span>
           <span className="pathway-hero-line" data-emphasis="true">
             {headlineBottom}
           </span>
-        </h1>
+        </HeadingTag>
         {sub && <p className="pathway-hero-sub">{sub}</p>}
         <PathwayCtaRow primary={primaryCta} secondary={secondaryCta} align={align} />
       </div>

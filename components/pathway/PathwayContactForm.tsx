@@ -11,7 +11,8 @@ import {
  * pathway.contact-form — the only interactive pathway@1 section
  * (MLA P1 Step 5), and therefore the only one that is a client component.
  *
- * Posts `{ firstName, lastName, email, message }` as JSON to /api/contact.
+ * Posts `{ firstName, lastName, email, phone?, message }` as JSON to
+ * /api/contact.
  * That route resolves the tenant exclusively from the middleware-set
  * x-onzio-club-id / x-onzio-club-slug headers, so this form deliberately
  * sends no club identifier — a club id in the body would be ignored, and
@@ -77,6 +78,7 @@ export default function PathwayContactForm({
       firstName: String(data.get("firstName") ?? ""),
       lastName: String(data.get("lastName") ?? ""),
       email: String(data.get("email") ?? ""),
+      phone: String(data.get("phone") ?? ""),
       message: String(data.get("message") ?? ""),
       [CONTACT_HONEYPOT_FIELD]: String(data.get(CONTACT_HONEYPOT_FIELD) ?? ""),
     };
@@ -124,7 +126,9 @@ export default function PathwayContactForm({
       <form className="pathway-form" onSubmit={handleSubmit}>
         <div className="pathway-form-grid">
           <div className="pathway-field">
-            <label htmlFor={`${fieldId}-first`}>First name</label>
+            <label htmlFor={`${fieldId}-first`}>
+              First name <span>(required)</span>
+            </label>
             <input
               id={`${fieldId}-first`}
               name="firstName"
@@ -135,7 +139,9 @@ export default function PathwayContactForm({
             />
           </div>
           <div className="pathway-field">
-            <label htmlFor={`${fieldId}-last`}>Last name</label>
+            <label htmlFor={`${fieldId}-last`}>
+              Last name <span>(required)</span>
+            </label>
             <input
               id={`${fieldId}-last`}
               name="lastName"
@@ -146,7 +152,9 @@ export default function PathwayContactForm({
             />
           </div>
           <div className="pathway-field" data-span="full">
-            <label htmlFor={`${fieldId}-email`}>Email</label>
+            <label htmlFor={`${fieldId}-email`}>
+              Email <span>(required)</span>
+            </label>
             <input
               id={`${fieldId}-email`}
               name="email"
@@ -157,7 +165,22 @@ export default function PathwayContactForm({
             />
           </div>
           <div className="pathway-field" data-span="full">
-            <label htmlFor={`${fieldId}-message`}>Message</label>
+            <label htmlFor={`${fieldId}-phone`}>
+              Phone <span>(optional)</span>
+            </label>
+            <input
+              id={`${fieldId}-phone`}
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              inputMode="tel"
+              maxLength={50}
+            />
+          </div>
+          <div className="pathway-field" data-span="full">
+            <label htmlFor={`${fieldId}-message`}>
+              Message <span>(required)</span>
+            </label>
             <textarea
               id={`${fieldId}-message`}
               name="message"

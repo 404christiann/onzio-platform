@@ -120,6 +120,46 @@ const SEED_TIMESTAMP = "2026-08-15T00:00:00.000Z";
 export const MLA_PRIMARY_COLOR = "#002B80"; // dark navy — CTA / primary-button fill
 export const MLA_SECONDARY_COLOR = "#FC6601"; // orange — active-nav underline accent
 
+const MLA_UPSL_STANDINGS_SETTINGS = {
+  eyebrow: "League standings",
+  title: "Ohio Valley Division",
+  intro: "Current table for Manu Ledesma Academy's 2026 campaign.",
+};
+
+type MlaUpslStanding = {
+  teamName: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalDifference: number;
+  points: number;
+  isClub: boolean;
+};
+
+// The exact Spring 2026 Ohio Valley snapshot used by Lions FC. MLA shares
+// the division, so the values and published order stay identical while the
+// tenant ownership marker moves from Lions to Manu Ledesma Academy.
+const MLA_UPSL_STANDINGS: readonly MlaUpslStanding[] = [
+  { teamName: "Lions Football Club", played: 10, wins: 7, draws: 3, losses: 0, goalDifference: 21, points: 24, isClub: false },
+  { teamName: "Leal United FC", played: 10, wins: 5, draws: 4, losses: 1, goalDifference: 11, points: 19, isClub: false },
+  { teamName: "Columbus Astray", played: 10, wins: 6, draws: 1, losses: 3, goalDifference: 7, points: 19, isClub: false },
+  { teamName: "Fut Ohio SC", played: 10, wins: 4, draws: 5, losses: 1, goalDifference: 27, points: 17, isClub: false },
+  { teamName: "Indy Gladiators SC", played: 10, wins: 3, draws: 5, losses: 2, goalDifference: 10, points: 14, isClub: false },
+  { teamName: "Manu Ledesma Academy", played: 10, wins: 4, draws: 2, losses: 4, goalDifference: 9, points: 8, isClub: true },
+  { teamName: "Ohio International FC", played: 10, wins: 1, draws: 2, losses: 7, goalDifference: -30, points: 5, isClub: false },
+  { teamName: "Lightning SC", played: 10, wins: 1, draws: 2, losses: 7, goalDifference: -27, points: 5, isClub: false },
+  { teamName: "Mahoning Trumbull United SC", played: 10, wins: 1, draws: 2, losses: 7, goalDifference: -28, points: 5, isClub: false },
+];
+
+function standingRowId(teamName: string): string {
+  const teamSlug = teamName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return deterministicUuid(`onzio:${MLA_SLUG}:standing:${teamSlug}`);
+}
+
 // Media source convention: like the sibling local importers, real club
 // artwork lives in a Downloads-rooted asset directory, not in the repo.
 export const MLA_DEFAULT_SOURCE_ROOT =
@@ -371,6 +411,11 @@ async function main() {
   }
 
   const now = SEED_TIMESTAMP;
+  const standingsRows = MLA_UPSL_STANDINGS.map((standing, sortOrder) => ({
+    ...standing,
+    id: standingRowId(standing.teamName),
+    sortOrder,
+  }));
   const client = new PostgresClient({ connectionString: dbUrl });
   await client.connect();
   try {
@@ -435,6 +480,70 @@ async function main() {
            active = excluded.active,
            updated_at = excluded.updated_at`,
         [MLA_LOCAL_DOMAIN_ID, MLA_LOCAL_TENANT_ID, MLA_LOCAL_HOSTNAME, now],
+      );
+
+      await client.query(
+        `insert into onzio.league_standings_settings
+           (club_id, eyebrow, title, intro, updated_at)
+         values ($1, $2, $3, $4, $5)
+         on conflict (club_id) do update set
+           eyebrow = excluded.eyebrow,
+           title = excluded.title,
+           intro = excluded.intro,
+           updated_at = excluded.updated_at`,
+        [
+          MLA_LOCAL_TENANT_ID,
+          MLA_UPSL_STANDINGS_SETTINGS.eyebrow,
+          MLA_UPSL_STANDINGS_SETTINGS.title,
+          MLA_UPSL_STANDINGS_SETTINGS.intro,
+          now,
+        ],
+      );
+
+      for (const standing of standingsRows) {
+        await client.query(
+          `insert into onzio.league_standings
+             (id, club_id, team_name, team_abbreviation, logo_url,
+              logo_asset_id, played, wins, draws, losses, goal_difference,
+              points, is_club, sort_order, created_at, updated_at)
+           values ($1, $2, $3, null, null, null, $4, $5, $6, $7, $8,
+                   $9, $10, $11, $12, $12)
+           on conflict (id) do update set
+             team_name = excluded.team_name,
+             team_abbreviation = excluded.team_abbreviation,
+             logo_url = excluded.logo_url,
+             logo_asset_id = excluded.logo_asset_id,
+             played = excluded.played,
+             wins = excluded.wins,
+             draws = excluded.draws,
+             losses = excluded.losses,
+             goal_difference = excluded.goal_difference,
+             points = excluded.points,
+             is_club = excluded.is_club,
+             sort_order = excluded.sort_order,
+             updated_at = excluded.updated_at`,
+          [
+            standing.id,
+            MLA_LOCAL_TENANT_ID,
+            standing.teamName,
+            standing.played,
+            standing.wins,
+            standing.draws,
+            standing.losses,
+            standing.goalDifference,
+            standing.points,
+            standing.isClub,
+            standing.sortOrder,
+            now,
+          ],
+        );
+      }
+
+      await client.query(
+        `delete from onzio.league_standings
+          where club_id = $1
+            and not (id = any($2::uuid[]))`,
+        [MLA_LOCAL_TENANT_ID, standingsRows.map((standing) => standing.id)],
       );
 
       // presentation_documents rows are immutable/insert-only by design
@@ -633,6 +742,10 @@ async function main() {
               and storage_bucket = 'onzio-media') as home_photo_assets,
          (select count(*)::integer from onzio.homepage_slideshow_photos
             where club_id = $1 and media_asset_id = any($6::uuid[])) as home_photo_links,
+         (select count(*)::integer from onzio.league_standings_settings
+            where club_id = $1) as standings_settings,
+         (select count(*)::integer from onzio.league_standings
+            where club_id = $1) as standings_rows,
          (select configuration from onzio.presentation_documents
             where id = $2) as configuration`,
       [
@@ -654,10 +767,39 @@ async function main() {
       row.crest_assets !== 1 ||
       row.branding !== 1 ||
       row.home_photo_assets !== homePhotos.length ||
-      row.home_photo_links !== homePhotos.length
+      row.home_photo_links !== homePhotos.length ||
+      row.standings_settings !== 1 ||
+      row.standings_rows !== standingsRows.length
     ) {
       throw new Error(`MLA seed reconciliation failed: ${JSON.stringify(row)}`);
     }
+
+    const persistedStandings = await client.query(
+      `select team_name, played, wins, draws, losses, goal_difference,
+              points, is_club, sort_order
+         from onzio.league_standings
+        where club_id = $1
+        order by sort_order asc`,
+      [MLA_LOCAL_TENANT_ID],
+    );
+    standingsRows.forEach((expected, index) => {
+      const actual = persistedStandings.rows[index];
+      if (
+        actual?.team_name !== expected.teamName ||
+        actual?.played !== expected.played ||
+        actual?.wins !== expected.wins ||
+        actual?.draws !== expected.draws ||
+        actual?.losses !== expected.losses ||
+        actual?.goal_difference !== expected.goalDifference ||
+        actual?.points !== expected.points ||
+        actual?.is_club !== expected.isClub ||
+        actual?.sort_order !== expected.sortOrder
+      ) {
+        throw new Error(
+          `MLA standings reconciliation failed at row ${index + 1}: ${JSON.stringify(actual)}`,
+        );
+      }
+    });
     // jsonb does not preserve key order, so the re-read document cannot be
     // compared by re-digesting its serialization -- deep equality against
     // the validated in-memory document is the honest check.
@@ -704,6 +846,8 @@ async function main() {
           branding: row.branding,
           homePhotoAssets: row.home_photo_assets,
           homePhotoLinks: row.home_photo_links,
+          standingsSettings: row.standings_settings,
+          standingsRows: row.standings_rows,
         },
         hostedMutations: 0,
       }),

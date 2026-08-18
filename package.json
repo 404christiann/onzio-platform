@@ -14,6 +14,7 @@
     "test:db": "SUPABASE_LOCAL=1 vitest run tests/database",
     "test:architecture": "vitest run tests/architecture",
     "test:browser:roster": "playwright test --config=playwright.roster.config.ts",
+    "test:browser:pathway-training-gateway": "playwright test --config=playwright.pathway-training-gateway.config.ts",
     "test:browser:dcfc-304": "playwright test --config=playwright.dcfc-304.config.ts",
     "test:browser:dcfc-403": "playwright test --config=playwright.dcfc-403.config.ts",
     "test:browser:plat-101": "playwright test --config=playwright.plat-101.config.ts",

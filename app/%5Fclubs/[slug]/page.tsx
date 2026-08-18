@@ -1,6 +1,6 @@
 import HomePageClient from "@/components/HomePageClient";
-import PathwayHero from "@/components/pathway/PathwayHero";
-import PathwayInvertedFeature from "@/components/pathway/PathwayInvertedFeature";
+import PathwayHomeHero from "@/components/pathway/PathwayHomeHero";
+import PathwayCalmStory from "@/components/pathway/PathwayCalmStory";
 import PathwayRail from "@/components/pathway/PathwayRail";
 import PathwayFeatureGrid from "@/components/pathway/PathwayFeatureGrid";
 import PathwayPartnerStrip from "@/components/pathway/PathwayPartnerStrip";
@@ -25,7 +25,8 @@ export default async function TenantHomePage({
   const club = await getClubContextBySlug((await params).slug);
 
   // pathway@1 (MLA P1 Step 6 + Home sections pass): a fully custom homepage
-  // composed of hero (centered), the leader/bio dark band, pathway-rail
+  // composed of the Home-only editorial hero, the leader/bio calm story,
+  // pathway-rail
   // (the signature Home-only stage spine), the expect-grid, partner-strip
   // and the closing mission statement -- copy from hardcoded content.ts,
   // photographs resolved server-side from the club's
@@ -47,15 +48,14 @@ export default async function TenantHomePage({
     ];
     return (
       <>
-        <PathwayHero
+        <PathwayHomeHero
           {...homeContent.hero}
-          backgroundMedia={photos.get(HOME_PHOTO_SLOTS.heroBackground)}
+          media={photos.get(HOME_PHOTO_SLOTS.heroBackground)}
         />
-        <PathwayInvertedFeature
+        <PathwayCalmStory
           {...homeContent.leader}
           media={photos.get(HOME_PHOTO_SLOTS.leader)}
         />
-        <PathwayRail {...homeContent.rail} />
         <PathwayFeatureGrid
           {...homeContent.expect}
           columns={homeContent.expect.columns.map((column, index) => ({
@@ -63,6 +63,7 @@ export default async function TenantHomePage({
             media: photos.get(gridSlots[index]),
           }))}
         />
+        <PathwayRail {...homeContent.rail} />
         <PathwayPartnerStrip {...homeContent.partners} />
         <PathwayMission {...homeContent.mission} />
       </>

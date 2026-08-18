@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import PathwayTrainingTrigger from "@/components/pathway/PathwayTrainingTrigger";
 
 /**
  * Internal layout primitives shared by the pathway@1 section components
@@ -10,7 +11,11 @@ import Link from "next/link";
  * [data-site-template="pathway"] scope, matching the Step 4 chrome.
  */
 
-export type PathwayCta = { label: string; href: string };
+export type PathwayCta = {
+  label: string;
+  href: string;
+  action?: "training-gateway";
+};
 
 /**
  * Light bands sit on --paper; dark bands sit on --primary-deep and flip to
@@ -65,9 +70,9 @@ export function PathwaySectionHead({
 
 /**
  * Primary is the filled accent action, secondary the outlined one — the same
- * pair the nav CTA establishes. Both render as links: Phase 1 has no
- * scheduler or checkout, so nothing in a pathway section is a submit control
- * except the contact form's own button.
+ * pair the nav CTA establishes. Both render as links. Training CTAs carry an
+ * explicit action tag so JavaScript can open the hosted-selection gateway;
+ * their normal href remains the shareable, progressive fallback page.
  */
 export function PathwayCtaRow({
   primary,
@@ -82,14 +87,34 @@ export function PathwayCtaRow({
   return (
     <div className="pathway-cta-row" data-align={align}>
       {primary && (
-        <Link className="pathway-button" data-variant="primary" href={primary.href}>
-          {primary.label}
-        </Link>
+        primary.action === "training-gateway" ? (
+          <PathwayTrainingTrigger
+            className="pathway-button"
+            data-variant="primary"
+            href={primary.href}
+          >
+            {primary.label}
+          </PathwayTrainingTrigger>
+        ) : (
+          <Link className="pathway-button" data-variant="primary" href={primary.href}>
+            {primary.label}
+          </Link>
+        )
       )}
       {secondary && (
-        <Link className="pathway-button" data-variant="secondary" href={secondary.href}>
-          {secondary.label}
-        </Link>
+        secondary.action === "training-gateway" ? (
+          <PathwayTrainingTrigger
+            className="pathway-button"
+            data-variant="secondary"
+            href={secondary.href}
+          >
+            {secondary.label}
+          </PathwayTrainingTrigger>
+        ) : (
+          <Link className="pathway-button" data-variant="secondary" href={secondary.href}>
+            {secondary.label}
+          </Link>
+        )
       )}
     </div>
   );

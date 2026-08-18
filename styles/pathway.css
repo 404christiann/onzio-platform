@@ -1,10 +1,9 @@
 /*
  * Pathway site-template stylesheet — visual iteration (restyle only).
  *
- * Selector set, DOM contract and data-attribute API are UNCHANGED from the
- * previous revision: every rule still lives under [data-site-template="pathway"],
- * no component markup needs editing, no section type is added or removed.
- * What changed is the visual language:
+ * Every rule lives under [data-site-template="pathway"] so template-specific
+ * component markup and interactions cannot bleed into another tenant. The
+ * visual language is:
  *
  *   - Calm editorial ground: white panels on near-white paper, separated by
  *     hairlines instead of hard colour blocks.
@@ -52,10 +51,11 @@
   --on-dark: #f5f5f7;
   --on-dark-muted: rgba(245, 245, 247, 0.68);
   --on-dark-line: rgba(245, 245, 247, 0.22);
-  --bar-h: 34px;
+  --bar-h: 20px;
   --pad-x: clamp(20px, 5vw, 72px);
   --pathway-body-font: var(--font-geist-sans), -apple-system,
     BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --pathway-nav-font: var(--font-pathway-nav), var(--pathway-body-font);
   --pathway-mono-font: ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius: 8px;
   --pill: 980px;
@@ -124,215 +124,452 @@
   line-height: 1.12;
 }
 
-/* ============ AFFILIATION BAR ============
-   Navy utility rail: club-primary ground, translucent near-white text. */
-[data-site-template="pathway"] .pathway-affiliation-bar {
-  min-height: var(--bar-h);
+/* ============ TOP RAIL + AFFILIATION LOCKUP ============
+   The club-color rail stays as the quiet top edge from the approved pathway
+   chrome. The real federation marks now sit beside the crest in the white
+   header, matching the established clubhouse/editorial identity pattern. */
+[data-site-template="pathway"] .pathway-top-rail {
+  height: var(--bar-h);
+  background: var(--primary);
+}
+[data-site-template="pathway"] .pathway-affiliation-lockup {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: clamp(14px, 2vw, 24px);
-  padding: 0 var(--pad-x);
-  background: var(--primary);
-  border-bottom: 1px solid var(--primary);
-  color: rgba(245, 245, 247, 0.82);
-  font-family: var(--pathway-mono-font);
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  gap: 14px;
+  min-width: 0;
 }
-[data-site-template="pathway"] .pathway-affiliation-placeholder {
-  width: 54px;
-  height: 12px;
-  border-radius: 2px;
-  background: rgba(245, 245, 247, 0.28);
+[data-site-template="pathway"] .pathway-affiliation-divider {
+  width: 1px;
+  height: 32px;
+  flex: none;
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+[data-site-template="pathway"] .pathway-affiliation-lockup > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+[data-site-template="pathway"] .pathway-affiliation-mark {
+  position: relative;
+  display: block;
   flex: none;
 }
+[data-site-template="pathway"] .pathway-affiliation-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+[data-site-template="pathway"] .pathway-affiliation-us-soccer,
+[data-site-template="pathway"] .pathway-affiliation-upsl {
+  width: 32px;
+  height: 32px;
+}
+[data-site-template="pathway"] .pathway-affiliation-fifa {
+  width: 56px;
+  height: 32px;
+}
 
-/* ============ NAV ============
-   Same centered lockup, lighter: smaller crest, sentence-case links, a
-   hairline active underline and one navy pill CTA. */
+/* ============ NAV — PRESIDENTIAL WHITE ============
+   One crisp white tier: tenant crest and name at the start, the route set in
+   the center, and one navy booking action at the end. The orange active rule
+   is the only decorative flourish. */
 [data-site-template="pathway"] .pathway-header {
   position: sticky;
   top: 0;
   z-index: 70;
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: var(--panel);
   border-bottom: 1px solid var(--line);
 }
+[data-site-template="pathway"] .pathway-header :focus-visible {
+  outline-color: var(--primary);
+}
 [data-site-template="pathway"] .pathway-brand-row {
-  display: flex;
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: clamp(14px, 1.6vw, 20px) var(--pad-x) 0;
+  gap: clamp(16px, 2vw, 30px);
+  padding: 4px clamp(20px, 3.2vw, 48px);
+}
+[data-site-template="pathway"] .pathway-identity-lockup {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-self: start;
+  gap: 12px;
 }
 [data-site-template="pathway"] .pathway-brand-lockup {
+  width: 84px;
+  height: 84px;
   display: grid;
   place-items: center;
-  gap: 8px;
-  text-align: center;
+  flex: none;
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-brand-lockup:hover {
+  color: var(--primary);
 }
 [data-site-template="pathway"] .pathway-brand-lockup img {
-  width: clamp(40px, 4vw, 52px);
-  height: clamp(40px, 4vw, 52px);
+  width: 84px;
+  height: 84px;
+  flex: none;
   object-fit: contain;
 }
 [data-site-template="pathway"] .pathway-brand-initials {
-  width: clamp(40px, 4vw, 52px);
+  width: 84px;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
+  flex: none;
   border-radius: 50%;
   background: var(--primary);
   color: var(--on-dark);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 [data-site-template="pathway"] .pathway-brand-name {
-  color: var(--ink);
-  font-size: 0.8rem;
+  display: none;
+  max-width: 190px;
+  overflow: hidden;
+  color: currentColor;
+  font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
   text-transform: none;
+  white-space: nowrap;
 }
 [data-site-template="pathway"] .pathway-nav-row {
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  justify-self: center;
   gap: clamp(16px, 2vw, 30px);
-  padding: 12px var(--pad-x) 14px;
 }
-[data-site-template="pathway"] .pathway-nav-row a:not(.pathway-nav-cta) {
+[data-site-template="pathway"] .pathway-nav-link,
+[data-site-template="pathway"] .pathway-nav-parent-link {
   position: relative;
-  padding: 6px 0;
+  padding: 12px 0;
   color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 400;
+  font-family: var(--pathway-nav-font);
+  font-size: clamp(0.75rem, 0.86vw, 0.84rem);
+  font-weight: 500;
   letter-spacing: 0;
+  line-height: 1;
   text-transform: none;
   white-space: nowrap;
   transition: color 0.2s ease;
 }
-[data-site-template="pathway"] .pathway-nav-row a:not(.pathway-nav-cta):hover {
+[data-site-template="pathway"] .pathway-nav-link:hover,
+[data-site-template="pathway"] .pathway-nav-parent-link:hover {
   color: var(--primary);
 }
-[data-site-template="pathway"] .pathway-nav-row a:not(.pathway-nav-cta)::after {
+[data-site-template="pathway"] .pathway-nav-link::after,
+[data-site-template="pathway"] .pathway-nav-parent-link::after {
   content: "";
   position: absolute;
-  left: 0;
   right: 100%;
-  bottom: 0;
+  bottom: 3px;
+  left: 0;
   height: 2px;
   background: var(--accent);
   transition: right 0.2s ease;
 }
-[data-site-template="pathway"] .pathway-nav-row a:not(.pathway-nav-cta):hover::after,
-[data-site-template="pathway"] .pathway-nav-row a[data-active="true"]::after {
+[data-site-template="pathway"] .pathway-nav-link:hover::after,
+[data-site-template="pathway"] .pathway-nav-link[data-active="true"]::after,
+[data-site-template="pathway"] .pathway-nav-parent-link:hover::after,
+[data-site-template="pathway"] .pathway-nav-parent-link[data-active="true"]::after {
   right: 0;
 }
-[data-site-template="pathway"] .pathway-nav-row a[data-active="true"] {
+[data-site-template="pathway"] .pathway-nav-link[data-active="true"],
+[data-site-template="pathway"] .pathway-nav-parent-link[data-active="true"] {
   color: var(--primary);
 }
-[data-site-template="pathway"] .pathway-nav-cta {
-  min-height: 36px;
-  display: inline-flex;
+[data-site-template="pathway"] .pathway-nav-item {
+  position: relative;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  margin-left: clamp(6px, 1vw, 16px);
-  padding: 8px 18px;
-  border-radius: var(--pill);
-  background: var(--primary);
-  color: var(--on-dark);
+  gap: 4px;
+}
+[data-site-template="pathway"] .pathway-nav-disclosure {
+  width: 24px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+[data-site-template="pathway"] .pathway-nav-disclosure:hover,
+[data-site-template="pathway"] .pathway-nav-disclosure[aria-expanded="true"] {
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-nav-disclosure span,
+[data-site-template="pathway"] .pathway-mobile-nav-disclosure span {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s ease;
+}
+[data-site-template="pathway"] .pathway-nav-disclosure[aria-expanded="true"] span,
+[data-site-template="pathway"] .pathway-mobile-nav-disclosure[aria-expanded="true"] span {
+  transform: translateY(2px) rotate(225deg);
+}
+[data-site-template="pathway"] .pathway-nav-dropdown {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 50%;
+  z-index: 90;
+  min-width: 156px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--primary) 16%, transparent);
+  transform: translateX(-50%);
+}
+[data-site-template="pathway"] .pathway-nav-dropdown::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 15px;
+}
+[data-site-template="pathway"] .pathway-nav-dropdown a {
+  display: block;
+  padding: 12px 14px;
+  border-radius: 8px;
+  color: var(--ink);
+  font-family: var(--pathway-nav-font);
   font-size: 0.82rem;
   font-weight: 500;
   letter-spacing: 0;
+  line-height: 1.2;
   text-transform: none;
   white-space: nowrap;
-  transition: background 0.2s ease, transform 0.2s ease;
+}
+[data-site-template="pathway"] .pathway-nav-dropdown a:hover,
+[data-site-template="pathway"] .pathway-nav-dropdown a[aria-current="page"] {
+  background: var(--paper);
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-nav-cta {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 20px;
+  border-radius: var(--pill);
+  background: var(--primary);
+  color: var(--on-dark);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  text-transform: none;
+  white-space: nowrap;
+  transition: background 0.2s ease;
 }
 [data-site-template="pathway"] .pathway-nav-cta:hover {
   background: var(--primary-lift);
-  /* Pinned: the generic template-scope a:hover would otherwise win the
-     label color at hover and paint it blue on the blue fill. */
   color: var(--on-dark);
-  transform: none;
+}
+[data-site-template="pathway"] .pathway-nav-cta[data-active="true"] {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+[data-site-template="pathway"] .pathway-nav-cta-desktop {
+  justify-self: end;
 }
 
-/* Mobile: crest row gains a hamburger; links collapse into a panel. */
+/* Mobile: the same tenant lockup stays horizontal while routes move into an
+   independently scrollable panel. */
 [data-site-template="pathway"] .pathway-menu-button {
   display: none;
-  position: absolute;
-  right: var(--pad-x);
-  top: 50%;
-  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  padding: 12px;
   border: 0;
-  background: none;
-  width: 42px;
-  height: 42px;
-  padding: 11px;
-  color: var(--ink);
+  background: transparent;
+  color: var(--primary);
 }
 [data-site-template="pathway"] .pathway-menu-button span {
   display: block;
+  width: 20px;
   height: 1.5px;
-  background: currentColor;
   margin: 6px 0;
+  background: currentColor;
+  transform-origin: center;
+  transition: transform 0.2s ease;
+}
+[data-site-template="pathway"] .pathway-menu-button[aria-expanded="true"] span:first-child {
+  transform: translateY(3.75px) rotate(45deg);
+}
+[data-site-template="pathway"] .pathway-menu-button[aria-expanded="true"] span:last-child {
+  transform: translateY(-3.75px) rotate(-45deg);
 }
 [data-site-template="pathway"] .pathway-mobile-menu {
   display: none;
 }
 
-@media (max-width: 900px) {
-  [data-site-template="pathway"] .pathway-nav-row {
-    display: none;
-  }
+@media (max-width: 1100px) {
   [data-site-template="pathway"] .pathway-brand-row {
-    padding-bottom: 14px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: clamp(8px, 1.2vw, 14px);
+    padding-inline: clamp(18px, 2.5vw, 30px);
+  }
+  [data-site-template="pathway"] .pathway-nav-row {
+    gap: clamp(6px, 0.7vw, 8px);
+  }
+  [data-site-template="pathway"] .pathway-affiliation-lockup {
+    gap: 10px;
+  }
+  [data-site-template="pathway"] .pathway-affiliation-lockup > div {
+    gap: 9px;
+  }
+}
+
+@media (max-width: 940px) {
+  [data-site-template="pathway"] .pathway-brand-row {
+    min-height: 78px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 10px clamp(16px, 5vw, 32px);
+  }
+  [data-site-template="pathway"] .pathway-brand-lockup {
+    width: auto;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-self: start;
+    gap: 12px;
+  }
+  [data-site-template="pathway"] .pathway-identity-lockup {
+    min-width: 0;
+  }
+  [data-site-template="pathway"] .pathway-brand-name {
+    display: block;
+    max-width: min(48vw, 220px);
+    font-size: 0.76rem;
+  }
+  [data-site-template="pathway"] .pathway-brand-lockup img,
+  [data-site-template="pathway"] .pathway-brand-initials {
+    width: 48px;
+    height: 48px;
+  }
+  [data-site-template="pathway"] .pathway-nav-row,
+  [data-site-template="pathway"] .pathway-nav-cta-desktop,
+  [data-site-template="pathway"] .pathway-affiliation-lockup {
+    display: none;
   }
   [data-site-template="pathway"] .pathway-menu-button {
     display: block;
   }
   [data-site-template="pathway"] .pathway-mobile-menu {
-    display: block;
     position: absolute;
     top: 100%;
-    left: 0;
     right: 0;
-    height: calc(100dvh - 100%);
-    padding: clamp(20px, 6vw, 40px) var(--pad-x);
-    background: var(--panel);
-    color: var(--ink);
+    left: 0;
     z-index: 80;
+    display: block;
+    height: calc(100dvh - 78px);
+    padding: clamp(20px, 6vw, 38px) clamp(16px, 5vw, 32px);
     overflow: auto;
     overscroll-behavior: contain;
     border-top: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
   }
   [data-site-template="pathway"] .pathway-mobile-menu > div {
+    width: min(100%, 560px);
     display: flex;
     flex-direction: column;
+    margin-inline: auto;
   }
-  [data-site-template="pathway"] .pathway-mobile-menu a:not(.pathway-nav-cta) {
-    padding: 16px 2px;
+  [data-site-template="pathway"] .pathway-mobile-nav-link {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 13px 4px;
     border-bottom: 1px solid var(--line);
     color: var(--ink);
-    font-size: clamp(1.2rem, 5vw, 1.6rem);
+    font-family: var(--pathway-nav-font);
+    font-size: 1.02rem;
     font-weight: 500;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
     line-height: 1.2;
     text-transform: none;
   }
-  [data-site-template="pathway"] .pathway-mobile-menu a[data-active="true"] {
+  [data-site-template="pathway"] .pathway-mobile-nav-link[data-active="true"] {
+    padding-left: 14px;
+    box-shadow: inset 2px 0 0 var(--accent);
+    color: var(--primary);
+  }
+  [data-site-template="pathway"] .pathway-mobile-nav-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: stretch;
+    border-bottom: 1px solid var(--line);
+  }
+  [data-site-template="pathway"] .pathway-mobile-nav-row .pathway-mobile-nav-link {
+    border-bottom: 0;
+  }
+  [data-site-template="pathway"] .pathway-mobile-nav-disclosure {
+    width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    align-self: center;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+  }
+  [data-site-template="pathway"] .pathway-mobile-nav-children {
+    padding: 7px 0 10px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+  }
+  [data-site-template="pathway"] .pathway-mobile-nav-children a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-left: 2px solid transparent;
+    color: var(--muted);
+    font-family: var(--pathway-nav-font);
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  [data-site-template="pathway"] .pathway-mobile-nav-children a[aria-current="page"] {
+    border-left-color: var(--accent);
     color: var(--primary);
   }
   [data-site-template="pathway"] .pathway-mobile-menu .pathway-nav-cta {
-    margin: 26px 0 0;
+    width: 100%;
     min-height: 50px;
-    font-size: 1rem;
+    margin-top: 24px;
+    font-size: 0.94rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-nav-link,
+  [data-site-template="pathway"] .pathway-nav-link::after,
+  [data-site-template="pathway"] .pathway-nav-parent-link,
+  [data-site-template="pathway"] .pathway-nav-parent-link::after,
+  [data-site-template="pathway"] .pathway-nav-disclosure span,
+  [data-site-template="pathway"] .pathway-mobile-nav-disclosure span,
+  [data-site-template="pathway"] .pathway-nav-cta,
+  [data-site-template="pathway"] .pathway-menu-button span {
+    transition: none;
   }
 }
 
@@ -361,6 +598,26 @@
   grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
   gap: clamp(28px, 5vw, 72px);
 }
+[data-site-template="pathway"] .pathway-footer-brand-lockup {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  align-self: start;
+  gap: 18px;
+  color: var(--ink);
+}
+[data-site-template="pathway"] .pathway-footer-brand-lockup:hover {
+  color: var(--ink);
+}
+[data-site-template="pathway"] .pathway-footer-brand-lockup img {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  object-fit: contain;
+}
+[data-site-template="pathway"] .pathway-footer-brand {
+  min-width: 0;
+}
 [data-site-template="pathway"] .pathway-footer-brand strong {
   display: block;
   font-size: 0.95rem;
@@ -368,7 +625,8 @@
   letter-spacing: -0.01em;
   text-transform: none;
 }
-[data-site-template="pathway"] .pathway-footer-brand p {
+[data-site-template="pathway"] .pathway-footer-brand > span {
+  display: block;
   max-width: 38ch;
   margin: 12px 0 0;
   color: var(--muted);
@@ -404,18 +662,27 @@
   margin: clamp(36px, 5vw, 52px) auto 0;
   padding-top: 18px;
   border-top: 1px solid var(--line);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
-  flex-wrap: wrap;
   color: var(--muted-soft);
   font-size: 0.76rem;
+}
+[data-site-template="pathway"] .pathway-footer-powered-by {
+  justify-self: center;
+}
+[data-site-template="pathway"] .pathway-footer-powered-by-text {
+  color: var(--muted-soft);
+  font-size: 0.72rem;
 }
 [data-site-template="pathway"] .pathway-footer-legal a {
   color: var(--muted);
   font-weight: 400;
   transition: color 0.2s ease;
+}
+[data-site-template="pathway"] .pathway-footer-legal > a {
+  justify-self: end;
 }
 [data-site-template="pathway"] .pathway-footer-legal a:hover {
   color: var(--accent);
@@ -424,6 +691,23 @@
 @media (max-width: 720px) {
   [data-site-template="pathway"] .pathway-footer-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  [data-site-template="pathway"] .pathway-footer-legal {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  [data-site-template="pathway"] .pathway-footer-legal > span {
+    grid-column: 1 / -1;
+  }
+  [data-site-template="pathway"] .pathway-footer-powered-by {
+    grid-column: 1;
+    justify-self: start;
+  }
+  [data-site-template="pathway"] .pathway-footer-legal > a {
+    grid-column: 2;
+    justify-self: end;
   }
 }
 
@@ -568,6 +852,213 @@
 [data-site-template="pathway"] .pathway-button[disabled] {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ============ HOME HERO — CLUB EDITORIAL ============
+   The registered pathway.hero section has a Home-only, full-bleed
+   composition: a true-color squad photograph beside a quiet editorial copy
+   panel. The shared PathwayHero below remains the standard renderer for every
+   inner route. The approved Whole-club photograph composition is fixed. */
+[data-site-template="pathway"] .pathway-home-hero {
+  padding: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+[data-site-template="pathway"] .pathway-home-hero-frame {
+  display: grid;
+  grid-template-columns: minmax(0, 1.64fr) minmax(390px, 0.92fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "media content";
+  width: 100%;
+  min-height: 680px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+}
+[data-site-template="pathway"] .pathway-home-hero-media {
+  position: relative;
+  grid-area: media;
+  min-width: 0;
+  min-height: 680px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary) 9%, var(--paper));
+}
+[data-site-template="pathway"] .pathway-home-hero-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 52%;
+  filter: none;
+  transform: scale(1);
+  transition: none;
+}
+[data-site-template="pathway"] .pathway-home-hero-accent {
+  position: absolute;
+  z-index: 2;
+  right: 24px;
+  bottom: 24px;
+  width: 62px;
+  height: 7px;
+  border-radius: var(--pill);
+  background: var(--accent);
+  pointer-events: none;
+}
+[data-site-template="pathway"] .pathway-home-hero-content {
+  display: flex;
+  align-items: center;
+  grid-area: content;
+  min-width: 0;
+  padding: clamp(52px, 5vw, 68px) clamp(38px, 4vw, 56px) 30px;
+  background: color-mix(in srgb, var(--primary) 2.5%, var(--panel));
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 22px;
+  color: var(--primary);
+  letter-spacing: 0.17em;
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-eyebrow::before {
+  width: 26px;
+  height: 3px;
+  border-radius: var(--pill);
+  background: var(--accent);
+  content: "";
+  flex: none;
+}
+[data-site-template="pathway"] .pathway-home-hero-headline {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  color: var(--ink-deep);
+  font-size: clamp(3.6rem, 5.25vw, 5.1rem);
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+}
+[data-site-template="pathway"] .pathway-home-hero-headline span {
+  display: block;
+}
+[data-site-template="pathway"] .pathway-home-hero-sub {
+  max-width: 36ch;
+  margin: clamp(24px, 3vw, 32px) 0 0;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.2vw, 1.08rem);
+  line-height: 1.68;
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-cta-row {
+  gap: 14px;
+  margin-top: clamp(28px, 3.2vw, 34px);
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button {
+  gap: 14px;
+  min-height: 48px;
+  padding-inline: 22px;
+  transition:
+    transform 0.18s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button::after {
+  content: "→";
+  font-size: 1rem;
+  line-height: 1;
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button:hover {
+  transform: translateY(-2px);
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button[data-variant="primary"] {
+  background: var(--accent);
+  color: var(--ink-deep);
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button[data-variant="primary"]:hover {
+  background: var(--accent);
+  color: var(--ink-deep);
+  filter: brightness(1.06);
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button[data-variant="secondary"] {
+  border-bottom-color: transparent;
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button[data-variant="secondary"]:hover {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-home-hero .pathway-button:focus-visible {
+  outline-color: var(--primary);
+}
+
+@media (max-width: 900px) {
+  [data-site-template="pathway"] .pathway-home-hero-frame {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "media"
+      "content";
+    min-height: 0;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-media {
+    min-height: 0;
+    aspect-ratio: 3 / 2;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-content {
+    padding: 44px 40px 28px;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-headline {
+    font-size: clamp(3.55rem, 10vw, 5.1rem);
+  }
+}
+
+@media (max-width: 620px) {
+  [data-site-template="pathway"] .pathway-home-hero-media {
+    aspect-ratio: 4 / 3;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-image {
+    object-position: 50% 54%;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-accent {
+    right: 18px;
+    bottom: 18px;
+    width: 48px;
+    height: 6px;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-content {
+    padding: 32px 22px 24px;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-content .pathway-eyebrow {
+    margin-bottom: 18px;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-headline {
+    font-size: clamp(3rem, 14.5vw, 3.55rem);
+    line-height: 0.91;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-sub {
+    font-size: 0.94rem;
+  }
+}
+
+@media (max-width: 360px) {
+  [data-site-template="pathway"] .pathway-home-hero-content .pathway-cta-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-content .pathway-button[data-variant="primary"] {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-home-hero-content .pathway-button {
+    transition: none;
+  }
+  [data-site-template="pathway"] .pathway-home-hero-content .pathway-button:hover {
+    transform: none;
+  }
 }
 
 /* ============ HERO ============
@@ -773,6 +1264,867 @@
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* ============ TRAINING RESERVATION GATEWAY ============
+   A white-led selection dossier: navy carries structure, blue carries
+   interaction, and orange appears only as the best-value marker. The same
+   component renders inside the modal and on the /book-training fallback. */
+[data-site-template="pathway"] .pathway-training-dialog {
+  width: min(1040px, calc(100vw - 48px));
+  height: min(900px, calc(100dvh - 48px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary) 17%, var(--line));
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 26px 80px rgba(0, 20, 58, 0.26);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+[data-site-template="pathway"] .pathway-training-dialog:modal {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+[data-site-template="pathway"] .pathway-training-dialog::backdrop {
+  background: rgba(0, 26, 77, 0.68);
+  opacity: 1;
+  transition: opacity 140ms ease;
+}
+@starting-style {
+  [data-site-template="pathway"] .pathway-training-dialog:modal {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  [data-site-template="pathway"] .pathway-training-dialog:modal::backdrop {
+    opacity: 0;
+  }
+}
+[data-site-template="pathway"] .pathway-training-gateway {
+  min-width: 0;
+  background: var(--panel);
+  color: var(--ink);
+}
+[data-site-template="pathway"] .pathway-training-gateway[data-mode="dialog"] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+[data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] {
+  width: min(1120px, 100%);
+  min-height: calc(100svh - 200px);
+  margin-inline: auto;
+  padding: clamp(38px, 6vw, 76px) var(--pad-x) clamp(70px, 9vw, 120px);
+}
+[data-site-template="pathway"] .pathway-training-header {
+  position: relative;
+  z-index: 4;
+  min-height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex: none;
+  padding: 22px clamp(24px, 4vw, 44px) 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-header {
+  min-height: 0;
+  padding: 0 0 30px;
+  border-bottom-color: var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-training-header h1,
+[data-site-template="pathway"] .pathway-training-header h2 {
+  margin: 4px 0 0;
+  color: var(--ink-deep);
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+[data-site-template="pathway"] .pathway-training-header h1:focus,
+[data-site-template="pathway"] .pathway-training-header h2:focus {
+  outline: none;
+}
+[data-site-template="pathway"] .pathway-training-kicker {
+  display: block;
+  color: var(--primary);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-training-close {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--primary);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+[data-site-template="pathway"] .pathway-training-close span {
+  font-size: 1.75rem;
+  font-weight: 300;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+[data-site-template="pathway"] .pathway-training-close:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-dark);
+}
+[data-site-template="pathway"] .pathway-training-close:focus-visible,
+[data-site-template="pathway"] .pathway-training-action:focus-visible,
+[data-site-template="pathway"] .pathway-training-age-options input:focus-visible + span,
+[data-site-template="pathway"] .pathway-training-details summary:focus-visible {
+  outline: 3px solid var(--primary-lift);
+  outline-offset: 3px;
+}
+[data-site-template="pathway"] .pathway-training-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+[data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-scroll {
+  overflow: visible;
+}
+[data-site-template="pathway"] .pathway-training-content {
+  width: min(100%, 920px);
+  min-height: 100%;
+  margin-inline: auto;
+  padding: clamp(28px, 4vw, 46px) clamp(22px, 5vw, 52px) 56px;
+}
+[data-site-template="pathway"] .pathway-training-content:not([data-has-selection="true"]) {
+  width: min(100%, 720px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: clamp(50px, 10vh, 108px);
+}
+[data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-content {
+  width: 100%;
+  padding: 42px 0 0;
+}
+[data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-content:not([data-has-selection="true"]) {
+  width: min(720px, 100%);
+  min-height: 430px;
+}
+[data-site-template="pathway"] .pathway-training-age-panel {
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-training-age-panel[data-sticky="true"] {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: calc(clamp(28px, 4vw, 46px) * -1) calc(clamp(22px, 5vw, 52px) * -1) 36px;
+  padding: 20px clamp(22px, 5vw, 52px);
+  border-bottom: 1px solid var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-age-panel[data-sticky="true"] {
+  top: 84px;
+  margin: -42px 0 40px;
+  padding: 20px 0;
+}
+[data-site-template="pathway"] .pathway-training-age-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+[data-site-template="pathway"] .pathway-training-age-fieldset legend {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--ink-deep);
+  font-family: var(--pathway-body-font);
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+[data-site-template="pathway"] .pathway-training-age-fieldset > p {
+  max-width: 58ch;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+[data-site-template="pathway"] .pathway-training-age-panel[data-sticky="true"] legend {
+  font-family: var(--pathway-nav-font);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-training-age-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+[data-site-template="pathway"] .pathway-training-age-panel[data-sticky="true"] .pathway-training-age-options {
+  margin-top: 10px;
+}
+[data-site-template="pathway"] .pathway-training-age-options label {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+[data-site-template="pathway"] .pathway-training-age-options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+[data-site-template="pathway"] .pathway-training-age-options span {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--primary);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+[data-site-template="pathway"] .pathway-training-age-options label:hover span {
+  border-color: var(--primary-lift);
+  color: var(--primary-lift);
+}
+[data-site-template="pathway"] .pathway-training-age-options input:checked + span {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-dark);
+}
+[data-site-template="pathway"] .pathway-training-contact-fallback {
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-training-contact-fallback a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+[data-site-template="pathway"] .pathway-training-offers {
+  display: grid;
+  gap: 34px;
+}
+[data-site-template="pathway"] .pathway-training-session-card,
+[data-site-template="pathway"] .pathway-training-unlimited-card {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) minmax(190px, 0.65fr);
+  align-items: center;
+  gap: 24px;
+  padding: 26px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--primary) 2%, var(--panel));
+}
+[data-site-template="pathway"] .pathway-training-card-anchor {
+  min-width: 0;
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-training-card-anchor strong {
+  display: block;
+  font-size: clamp(3.5rem, 7vw, 5rem);
+  font-weight: 600;
+  letter-spacing: -0.07em;
+  line-height: 0.82;
+}
+[data-site-template="pathway"] .pathway-training-card-anchor span {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--pathway-nav-font);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-training-card-copy {
+  min-width: 0;
+}
+[data-site-template="pathway"] .pathway-training-card-copy h3,
+[data-site-template="pathway"] .pathway-training-card-copy h4 {
+  margin: 6px 0 0;
+  color: var(--ink-deep);
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+[data-site-template="pathway"] .pathway-training-card-copy p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+[data-site-template="pathway"] .pathway-training-action {
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 10px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background: var(--primary);
+  color: var(--on-dark);
+  font-family: var(--pathway-body-font);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+[data-site-template="pathway"] .pathway-training-action small {
+  color: inherit;
+  font-size: 0.68rem;
+  font-weight: 450;
+  opacity: 0.72;
+}
+[data-site-template="pathway"] .pathway-training-action:hover {
+  border-color: var(--primary-lift);
+  background: var(--primary-lift);
+  color: var(--on-dark);
+}
+[data-site-template="pathway"] .pathway-training-passes {
+  display: grid;
+  gap: 20px;
+}
+[data-site-template="pathway"] .pathway-training-passes-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 30px;
+  align-items: end;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-training-passes-head h3 {
+  margin: 6px 0 0;
+  color: var(--ink-deep);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+[data-site-template="pathway"] .pathway-training-passes-head p {
+  max-width: 58ch;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+[data-site-template="pathway"] .pathway-training-passes-head ul {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 5px 15px;
+  margin: 0;
+  padding: 0;
+  color: var(--primary);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.45;
+  list-style: none;
+  white-space: nowrap;
+}
+[data-site-template="pathway"] .pathway-training-passes-head li + li {
+  padding-left: 15px;
+  border-left: 1px solid var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-training-pass-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+[data-site-template="pathway"] .pathway-training-pass-card {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  grid-template-rows: minmax(116px, auto) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-training-best-value {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: var(--ink-deep);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.62rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-training-pass-card .pathway-training-card-anchor strong {
+  font-size: clamp(3.7rem, 7vw, 5.3rem);
+}
+[data-site-template="pathway"] .pathway-training-pass-card .pathway-training-action {
+  grid-column: 1 / -1;
+}
+[data-site-template="pathway"] .pathway-training-unlimited-card {
+  margin-top: -6px;
+}
+[data-site-template="pathway"] .pathway-training-details {
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-training-details summary {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 2px;
+  color: var(--primary);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+[data-site-template="pathway"] .pathway-training-details summary::-webkit-details-marker {
+  display: none;
+}
+[data-site-template="pathway"] .pathway-training-details summary::after {
+  content: "+";
+  font-family: var(--pathway-body-font);
+  font-size: 1.4rem;
+  font-weight: 350;
+  line-height: 1;
+}
+[data-site-template="pathway"] .pathway-training-details ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0 2px 20px 22px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+[data-site-template="pathway"] .pathway-training-pricing-note {
+  margin: -16px 0 0;
+  color: var(--muted-soft);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-home-hero-content .pathway-button[data-pathway-training-trigger]::after {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  [data-site-template="pathway"] .pathway-training-passes-head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  [data-site-template="pathway"] .pathway-training-passes-head ul {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 800px) {
+  [data-site-template="pathway"] .pathway-training-session-card,
+  [data-site-template="pathway"] .pathway-training-unlimited-card {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  [data-site-template="pathway"] .pathway-training-session-card .pathway-training-action,
+  [data-site-template="pathway"] .pathway-training-unlimited-card .pathway-training-action {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  [data-site-template="pathway"] .pathway-training-dialog {
+    inset: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform: translateY(5px);
+  }
+  [data-site-template="pathway"] .pathway-training-dialog:modal {
+    transform: translateY(0);
+  }
+  [data-site-template="pathway"] .pathway-training-header {
+    min-height: calc(90px + env(safe-area-inset-top));
+    padding: calc(16px + env(safe-area-inset-top)) 18px 14px;
+  }
+  [data-site-template="pathway"] .pathway-training-header h1,
+  [data-site-template="pathway"] .pathway-training-header h2 {
+    font-size: clamp(1.8rem, 9vw, 2.3rem);
+  }
+  [data-site-template="pathway"] .pathway-training-content {
+    padding: 24px 18px calc(40px + env(safe-area-inset-bottom));
+  }
+  [data-site-template="pathway"] .pathway-training-content:not([data-has-selection="true"]) {
+    justify-content: flex-start;
+    padding-top: clamp(44px, 10vh, 90px);
+  }
+  [data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] {
+    min-height: calc(100svh - 160px);
+    padding: 34px 18px calc(64px + env(safe-area-inset-bottom));
+  }
+  [data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-header {
+    min-height: 0;
+    padding: 0 0 24px;
+  }
+  [data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-content {
+    padding-top: 34px;
+  }
+  [data-site-template="pathway"] .pathway-training-age-panel[data-sticky="true"] {
+    margin: -24px -18px 28px;
+    padding: 14px 18px;
+  }
+  [data-site-template="pathway"] .pathway-training-gateway[data-mode="page"] .pathway-training-age-panel[data-sticky="true"] {
+    top: 70px;
+    margin: -34px 0 30px;
+    padding: 14px 0;
+  }
+  [data-site-template="pathway"] .pathway-training-age-fieldset legend {
+    font-size: 1.5rem;
+  }
+  [data-site-template="pathway"] .pathway-training-age-options {
+    gap: 8px;
+    margin-top: 20px;
+  }
+  [data-site-template="pathway"] .pathway-training-age-options span {
+    min-height: 56px;
+    padding-inline: 12px;
+    font-size: 0.82rem;
+  }
+  [data-site-template="pathway"] .pathway-training-offers {
+    gap: 30px;
+  }
+  [data-site-template="pathway"] .pathway-training-session-card,
+  [data-site-template="pathway"] .pathway-training-unlimited-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 20px;
+  }
+  [data-site-template="pathway"] .pathway-training-session-card .pathway-training-action,
+  [data-site-template="pathway"] .pathway-training-unlimited-card .pathway-training-action {
+    grid-column: auto;
+  }
+  [data-site-template="pathway"] .pathway-training-card-anchor strong {
+    font-size: 4.2rem;
+  }
+  [data-site-template="pathway"] .pathway-training-pass-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-site-template="pathway"] .pathway-training-pass-card {
+    grid-template-columns: 94px minmax(0, 1fr);
+    grid-template-rows: minmax(112px, auto) auto;
+    padding: 20px;
+  }
+  [data-site-template="pathway"] .pathway-training-best-value {
+    top: 11px;
+    right: 12px;
+  }
+  [data-site-template="pathway"] .pathway-training-action {
+    width: 100%;
+    min-height: 54px;
+  }
+  [data-site-template="pathway"] .pathway-training-passes-head ul {
+    display: grid;
+    gap: 4px;
+    white-space: normal;
+  }
+  [data-site-template="pathway"] .pathway-training-passes-head li + li {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-training-dialog,
+  [data-site-template="pathway"] .pathway-training-dialog::backdrop,
+  [data-site-template="pathway"] .pathway-training-close,
+  [data-site-template="pathway"] .pathway-training-age-options span,
+  [data-site-template="pathway"] .pathway-training-action {
+    transition: none;
+  }
+  [data-site-template="pathway"] .pathway-training-dialog,
+  [data-site-template="pathway"] .pathway-training-dialog:modal {
+    transform: none;
+  }
+}
+
+
+/* ============ CALM STORY (HOME LEADER) ============
+   This Home-only story is a full-bleed editorial band. The media column owns
+   a responsive minimum height, then stretches with the adjacent disclosures;
+   the portrait fills that complete column so no wrapper ground is exposed. */
+[data-site-template="pathway"] .pathway-calm-story-section {
+  padding: 0;
+  background: var(--paper);
+}
+[data-site-template="pathway"] .pathway-calm-story-section > .pathway-section-inner {
+  width: 100%;
+  margin-inline: 0;
+}
+[data-site-template="pathway"] .pathway-calm-story-card {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.18fr);
+  align-items: start;
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+  box-shadow: none;
+}
+[data-site-template="pathway"] .pathway-calm-story-media {
+  position: relative;
+  align-self: stretch;
+  width: 100%;
+  min-height: clamp(600px, 56vw, 720px);
+  overflow: hidden;
+  background: var(--primary);
+}
+[data-site-template="pathway"] .pathway-calm-story-portrait {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--primary);
+}
+[data-site-template="pathway"] .pathway-calm-story-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 54% center;
+  filter: saturate(0.88) contrast(1.03);
+  transform: none;
+  transition: none;
+}
+[data-site-template="pathway"] .pathway-calm-story-scrim {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--primary) 76%, transparent),
+    transparent 52%
+  );
+}
+[data-site-template="pathway"] .pathway-calm-story-caption {
+  position: absolute;
+  z-index: 2;
+  left: clamp(22px, 3vw, 32px);
+  bottom: clamp(22px, 3vw, 32px);
+  width: min(260px, calc(100% - 44px));
+  color: #fff;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+[data-site-template="pathway"] .pathway-calm-story-caption > span {
+  display: block;
+  width: 44px;
+  height: 5px;
+  margin-bottom: 12px;
+  border-radius: var(--pill);
+  background: var(--accent);
+}
+[data-site-template="pathway"] .pathway-calm-story-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+[data-site-template="pathway"] .pathway-calm-story-placeholder.pathway-media[data-ratio="portrait"] .pathway-media-fill {
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+}
+[data-site-template="pathway"] .pathway-calm-story-placeholder .pathway-media-caption {
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-calm-story-content {
+  min-width: 0;
+  padding: clamp(36px, 5vw, 68px);
+}
+[data-site-template="pathway"] .pathway-calm-story-content .pathway-section-heading {
+  max-width: 12ch;
+}
+[data-site-template="pathway"] .pathway-calm-story-accordion {
+  margin-top: clamp(28px, 3vw, 38px);
+  border-top: 1px solid var(--line);
+}
+[data-site-template="pathway"] .pathway-calm-story-item {
+  border-bottom: 1px solid var(--line);
+}
+[data-site-template="pathway"] .pathway-calm-story-summary {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 34px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 17px 0;
+  color: var(--primary);
+  cursor: pointer;
+  list-style: none;
+}
+[data-site-template="pathway"] .pathway-calm-story-summary::-webkit-details-marker {
+  display: none;
+}
+[data-site-template="pathway"] .pathway-calm-story-marker {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--primary-lift);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 3px var(--panel),
+    inset 0 0 0 10px var(--primary-lift);
+}
+[data-site-template="pathway"] .pathway-calm-story-label {
+  font-size: 1.04rem;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+  line-height: 1.25;
+}
+[data-site-template="pathway"] .pathway-calm-story-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--primary-lift);
+  font-size: 1.24rem;
+  font-weight: 400;
+  line-height: 1;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+[data-site-template="pathway"] .pathway-calm-story-item[open] .pathway-calm-story-icon {
+  background: color-mix(in srgb, var(--primary-lift) 8%, var(--panel));
+  transform: rotate(45deg);
+}
+[data-site-template="pathway"] .pathway-calm-story-panel {
+  padding: 0 0 22px 40px;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.68;
+}
+[data-site-template="pathway"] .pathway-calm-story-panel p {
+  margin: 0;
+}
+[data-site-template="pathway"] .pathway-calm-story-panel p + p {
+  margin-top: 12px;
+}
+[data-site-template="pathway"] .pathway-calm-story-panel strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+[data-site-template="pathway"] .pathway-calm-story-offers {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-site-template="pathway"] .pathway-calm-story-offers li {
+  display: grid;
+  gap: 3px;
+  padding-left: 14px;
+  border-left: 3px solid var(--accent);
+}
+[data-site-template="pathway"] .pathway-calm-story-offers span {
+  color: var(--muted);
+}
+[data-site-template="pathway"] .pathway-calm-story-content > .pathway-cta-row {
+  margin-top: clamp(24px, 3vw, 32px);
+}
+
+@media (max-width: 1024px) {
+  [data-site-template="pathway"] .pathway-calm-story-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-site-template="pathway"] .pathway-calm-story-media {
+    min-height: clamp(400px, 65vw, 560px);
+  }
+}
+
+@media (max-width: 640px) {
+  [data-site-template="pathway"] .pathway-calm-story-media {
+    min-height: clamp(330px, 92vw, 430px);
+  }
+  [data-site-template="pathway"] .pathway-calm-story-content {
+    padding: 28px 22px 32px;
+  }
+  [data-site-template="pathway"] .pathway-calm-story-summary {
+    grid-template-columns: 24px minmax(0, 1fr) 32px;
+    gap: 10px;
+    padding: 15px 0;
+  }
+  [data-site-template="pathway"] .pathway-calm-story-marker {
+    width: 18px;
+    height: 18px;
+  }
+  [data-site-template="pathway"] .pathway-calm-story-panel {
+    padding-left: 0;
+  }
+  [data-site-template="pathway"] .pathway-calm-story-content > .pathway-cta-row {
+    align-items: stretch;
+  }
+  [data-site-template="pathway"] .pathway-calm-story-content > .pathway-cta-row .pathway-button[data-variant="primary"] {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-calm-story-icon {
+    transition: none;
+  }
 }
 
 /* ============ SPLIT / INVERTED FEATURE ============ */
@@ -1209,37 +2561,309 @@
   font-size: 0.85rem;
 }
 
-/* ============ FEATURE GRID (Home expect-grid) ============
-   Three photo columns over titled captions; square crops keep the rhythm
-   across mixed source orientations. */
+/* ============ FEATURE GRID — ROYAL TRAINING GALLERY ============
+   A luminous, photo-led Home section: an asymmetric editorial heading over
+   three equal training stories. At compact widths the stories become one
+   contained, keyboard-focusable snap rail; the document itself never grows
+   wider than the viewport. */
+[data-site-template="pathway"] .pathway-feature-grid-section {
+  padding: clamp(72px, 8vw, 112px) var(--pad-x);
+  overflow: hidden;
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-feature-grid-section > .pathway-section-inner {
+  width: min(100%, 1320px);
+}
+[data-site-template="pathway"] .pathway-feature-grid-head {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr);
+  column-gap: clamp(30px, 5vw, 90px);
+  align-items: end;
+  margin-bottom: clamp(46px, 6vw, 78px);
+}
+[data-site-template="pathway"] .pathway-feature-grid-kicker {
+  min-width: 0;
+}
+[data-site-template="pathway"] .pathway-feature-grid-kicker .pathway-eyebrow {
+  margin-bottom: 0;
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-feature-grid-rule {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 2px;
+  margin-top: 20px;
+  overflow: hidden;
+  background: var(--line);
+}
+[data-site-template="pathway"] .pathway-feature-grid-rule::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 32%;
+  background: var(--accent);
+  content: "";
+}
+[data-site-template="pathway"] .pathway-feature-grid-head .pathway-section-heading {
+  max-width: 780px;
+  color: var(--primary);
+  font-size: clamp(2.8rem, 6vw, 6.35rem);
+  font-weight: 600;
+  letter-spacing: -0.064em;
+  line-height: 0.92;
+}
+[data-site-template="pathway"] .pathway-feature-grid-head .pathway-section-intro {
+  grid-column: 2;
+  margin-top: 20px;
+}
 [data-site-template="pathway"] .pathway-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 2.5vw, 38px);
   margin: 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(28px, 4vw, 56px);
+}
+[data-site-template="pathway"] .pathway-feature-cell {
+  min-width: 0;
 }
 [data-site-template="pathway"] .pathway-feature-cell .pathway-media {
-  margin-bottom: 20px;
+  position: relative;
+  aspect-ratio: 4 / 5;
+  margin: 0 0 24px;
+  overflow: hidden;
+  border-radius: clamp(18px, 2vw, 28px);
+  background: color-mix(in srgb, var(--primary) 6%, var(--paper));
+}
+[data-site-template="pathway"] .pathway-feature-cell .pathway-media-image,
+[data-site-template="pathway"] .pathway-feature-cell .pathway-media-fill {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+[data-site-template="pathway"] .pathway-feature-cell .pathway-media-image {
+  object-fit: cover;
+  transform: scale(1);
+  transition: transform 240ms ease;
+}
+[data-site-template="pathway"] .pathway-feature-cell .pathway-media-fill {
+  background: color-mix(in srgb, var(--primary) 6%, var(--paper));
+}
+[data-site-template="pathway"] .pathway-feature-cell .pathway-media-caption {
+  position: absolute;
+  right: 16px;
+  bottom: 14px;
+  left: 16px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--muted);
+}
+[data-site-template="pathway"] .pathway-feature-cell .pathway-media > [data-image-fallback="true"] {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  border: 0 !important;
+  background: color-mix(in srgb, var(--primary) 6%, var(--paper)) !important;
+  color: var(--muted) !important;
+  font-family: var(--pathway-mono-font);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-site-template="pathway"] .pathway-feature-cell:hover .pathway-media-image {
+    transform: scale(1.018);
+  }
+}
+[data-site-template="pathway"] .pathway-feature-focus {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+  color: var(--primary-lift);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-feature-focus::before {
+  width: 24px;
+  height: 2px;
+  flex: none;
+  background: currentColor;
+  content: "";
 }
 [data-site-template="pathway"] .pathway-feature-title {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  color: var(--primary);
+  font-size: clamp(1.24rem, 1.8vw, 1.65rem);
+  font-weight: 600;
+  letter-spacing: -0.032em;
+  line-height: 1.08;
 }
 [data-site-template="pathway"] .pathway-feature-body {
-  margin: 10px 0 0;
+  max-width: 39ch;
+  margin: 14px 0 0;
   color: var(--muted);
   font-size: 0.95rem;
-  line-height: 1.65;
+  line-height: 1.7;
 }
 
 @media (max-width: 900px) {
-  [data-site-template="pathway"] .pathway-feature-grid {
+  [data-site-template="pathway"] .pathway-feature-grid-section {
+    padding-block: clamp(62px, 10vw, 88px);
+  }
+  [data-site-template="pathway"] .pathway-feature-grid-head {
     grid-template-columns: minmax(0, 1fr);
-    gap: clamp(36px, 6vw, 48px);
+    row-gap: 26px;
+    align-items: start;
+    margin-bottom: clamp(40px, 7vw, 56px);
+  }
+  [data-site-template="pathway"] .pathway-feature-grid-head .pathway-section-heading {
+    font-size: clamp(2.8rem, 10vw, 5.2rem);
+  }
+  [data-site-template="pathway"] .pathway-feature-grid-head .pathway-section-intro {
+    grid-column: 1;
+    margin-top: -8px;
+  }
+  [data-site-template="pathway"] .pathway-feature-grid {
+    display: flex;
+    gap: 16px;
+    margin-inline: calc(0px - var(--pad-x));
+    padding: 0 var(--pad-x) 14px;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: var(--pad-x);
+    scroll-snap-type: inline mandatory;
+    scrollbar-color: var(--line-strong) var(--panel);
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  [data-site-template="pathway"] .pathway-feature-grid:focus-visible {
+    outline-color: var(--primary);
+    outline-offset: -2px;
+  }
+  [data-site-template="pathway"] .pathway-feature-cell {
+    flex: 0 0 84%;
+    flex-basis: min(84dvi, 420px);
+    scroll-snap-align: center;
+  }
+}
+
+@media (max-width: 520px) {
+  [data-site-template="pathway"] .pathway-feature-grid-head .pathway-section-heading {
+    font-size: clamp(2.65rem, 13vw, 3.75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-feature-cell .pathway-media-image {
+    transform: none;
+    transition: none;
+  }
+  [data-site-template="pathway"] .pathway-feature-cell:hover .pathway-media-image {
+    transform: none;
+  }
+}
+
+/* ============ EDITORIAL CAROUSEL ============
+   A full-bleed navy gallery for club-supplied 4:5 editorial posters. The
+   centered slide remains fully readable while neighboring frames provide
+   depth and touch context. It advances automatically without visual chrome;
+   reduced motion is the automatic-movement opt-out. */
+[data-site-template="pathway"] .pathway-editorial-carousel-section {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(52px, 6vw, 84px) 0;
+  background:
+    radial-gradient(
+      circle at 78% 12%,
+      color-mix(in srgb, var(--primary-lift) 40%, transparent),
+      transparent 34%
+    ),
+    var(--primary);
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-viewport {
+  width: 100%;
+  padding: 0 max(24px, calc((100% - min(68%, 520px)) / 2)) 24px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-behavior: smooth;
+  scroll-padding-inline: max(24px, calc((100% - min(68%, 520px)) / 2));
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-viewport::-webkit-scrollbar {
+  display: none;
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-viewport:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-track {
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: clamp(18px, 2.4vw, 36px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-slide {
+  flex: 0 0 min(68dvi, 520px);
+  scroll-snap-align: center;
+  opacity: 0.42;
+  transform: scale(0.92);
+  transform-origin: center;
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-slide[data-active="true"] {
+  opacity: 1;
+  transform: scale(1);
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-frame {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--on-dark-line);
+  border-radius: clamp(18px, 2vw, 28px);
+  background: color-mix(in srgb, var(--primary) 82%, #000);
+  box-shadow: 0 32px 70px -38px rgb(0 0 0 / 72%);
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+[data-site-template="pathway"] .pathway-editorial-carousel-fallback {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  border: 0 !important;
+  background: color-mix(in srgb, var(--primary) 84%, #000) !important;
+  color: var(--on-dark-muted) !important;
+}
+
+@media (max-width: 700px) {
+  [data-site-template="pathway"] .pathway-editorial-carousel-viewport {
+    padding-inline: max(18px, calc((100% - min(82%, 360px)) / 2));
+    scroll-padding-inline: max(18px, calc((100% - min(82%, 360px)) / 2));
+  }
+  [data-site-template="pathway"] .pathway-editorial-carousel-slide {
+    flex-basis: min(82dvi, 360px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-editorial-carousel-viewport {
+    scroll-behavior: auto;
+  }
+  [data-site-template="pathway"] .pathway-editorial-carousel-slide {
+    transition: none;
   }
 }
 
@@ -1347,6 +2971,11 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+[data-site-template="pathway"] .pathway-field label span {
+  color: var(--muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
 [data-site-template="pathway"] .pathway-field input,
 [data-site-template="pathway"] .pathway-field textarea {
   width: 100%;
@@ -1447,3 +3076,2281 @@
 [data-site-template="pathway"] .pathway-legal-body p:last-child {
   margin-bottom: 0;
 }
+
+/* ============ UPSL ROSTER ============
+   The accepted Lions roster hierarchy translated into the Pathway visual
+   system: a compact filter, position groups and non-interactive crest cards.
+   Cards follow the supplied flat editorial reference: crest, number, flag,
+   name and position on one uninterrupted white field. */
+[data-site-template="pathway"] .pathway-roster-page {
+  min-height: 70vh;
+  padding: clamp(36px, 5vw, 68px) var(--pad-x) clamp(80px, 9vw, 132px);
+  overflow: clip;
+  background:
+    linear-gradient(var(--line), var(--line)) top / 100% 1px no-repeat,
+    color-mix(in srgb, var(--primary) 4%, var(--panel));
+  color: var(--ink);
+}
+[data-site-template="pathway"] .pathway-roster-filter-bar {
+  width: min(100%, 1240px);
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-inline: auto;
+  padding-bottom: clamp(24px, 3vw, 34px);
+  border-bottom: 2px solid var(--primary);
+}
+[data-site-template="pathway"] .pathway-roster-filter-bar > div:first-child > span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--accent);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-roster-filter-bar h1 {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(2.35rem, 5vw, 4.4rem);
+  font-weight: 650;
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+}
+[data-site-template="pathway"] .pathway-roster-filter-control {
+  min-width: min(100%, 250px);
+  display: grid;
+  gap: 8px;
+}
+[data-site-template="pathway"] .pathway-roster-filter-control label {
+  color: var(--muted-soft);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-roster-filter-control select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 40px 10px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+[data-site-template="pathway"] .pathway-roster-filter-control select:focus-visible {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  outline-offset: 2px;
+}
+[data-site-template="pathway"] .pathway-roster-content {
+  width: min(100%, 1240px);
+  margin-inline: auto;
+}
+[data-site-template="pathway"] .pathway-roster-group {
+  padding-top: clamp(54px, 7vw, 86px);
+}
+[data-site-template="pathway"] .pathway-roster-group-heading {
+  display: grid;
+  grid-template-columns: auto minmax(32px, 1fr) auto;
+  align-items: center;
+  gap: clamp(14px, 2vw, 24px);
+  margin-bottom: clamp(24px, 3vw, 36px);
+}
+[data-site-template="pathway"] .pathway-roster-group-heading::after {
+  content: "";
+  grid-column: 2;
+  grid-row: 1;
+  height: 1px;
+  background: var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-roster-group-heading h2 {
+  grid-column: 1;
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  font-weight: 620;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+[data-site-template="pathway"] .pathway-roster-group-heading > span {
+  grid-column: 3;
+  color: var(--muted-soft);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-roster-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(12px, 1.6vw, 22px);
+}
+[data-site-template="pathway"] .pathway-roster-card {
+  min-width: 0;
+  aspect-ratio: 3 / 4;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-roster-card-media {
+  position: absolute;
+  inset: 0;
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-roster-card-media img {
+  object-fit: contain;
+  object-position: center top;
+}
+[data-site-template="pathway"] .pathway-roster-card-media .pathway-image-fallback {
+  border: 0;
+}
+[data-site-template="pathway"] .pathway-roster-card-copy {
+  position: absolute;
+  z-index: 2;
+  inset: auto 0 0;
+  min-width: 0;
+  padding: clamp(38px, 5vw, 64px) clamp(16px, 1.9vw, 24px)
+    clamp(16px, 2vw, 24px);
+  background: linear-gradient(
+    to top,
+    var(--panel) 0%,
+    color-mix(in srgb, var(--panel) 94%, transparent) 38%,
+    color-mix(in srgb, var(--panel) 45%, transparent) 60%,
+    transparent 88%
+  );
+}
+[data-site-template="pathway"] .pathway-roster-card-headline {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* Squad numeral: the reference sets it upright and heavy at its natural
+   width — no italic slant and no negative tracking — so the flag beside it
+   reads as a companion rather than a collision. */
+[data-site-template="pathway"] .pathway-roster-card-number {
+  display: block;
+  overflow: hidden;
+  color: var(--accent);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: normal;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-site-template="pathway"] .pathway-roster-card-flag {
+  flex: 0 0 auto;
+  margin-bottom: 0.18rem;
+}
+[data-site-template="pathway"] .pathway-roster-card-name {
+  display: block;
+  margin-top: 12px;
+  overflow: hidden;
+  color: var(--primary);
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+[data-site-template="pathway"] .pathway-roster-card-position {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--muted-soft);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Staff cards carry no squad numeral, so they follow the reference's second
+   composition: name and flag on the top line, then a small solid monogram
+   block paired with the role beneath it. */
+[data-site-template="pathway"] .pathway-roster-staff-card .pathway-roster-card-headline {
+  align-items: center;
+}
+/* The player card nudges the flag up to sit on the numeral's baseline; the
+   staff row is centred instead, so that nudge would only decentre it. */
+[data-site-template="pathway"] .pathway-roster-staff-card .pathway-roster-card-flag {
+  margin-bottom: 0;
+}
+[data-site-template="pathway"] .pathway-roster-staff-card .pathway-roster-card-name {
+  margin-top: 0;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+[data-site-template="pathway"] .pathway-roster-card-staff-role {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(9px, 1vw, 12px);
+  margin-top: clamp(10px, 1.4vw, 14px);
+}
+[data-site-template="pathway"] .pathway-roster-card-staff-initials {
+  flex: none;
+  min-width: clamp(30px, 3vw, 38px);
+  height: clamp(30px, 3vw, 38px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 4px;
+  background: var(--accent);
+  color: var(--ink);
+  font-size: clamp(0.68rem, 1.25vw, 0.9rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-roster-card-staff-title {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  color: var(--accent);
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+@media (max-width: 1050px) {
+  [data-site-template="pathway"] .pathway-roster-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  [data-site-template="pathway"] .pathway-roster-filter-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  [data-site-template="pathway"] .pathway-roster-filter-control {
+    width: 100%;
+    min-width: 0;
+  }
+  [data-site-template="pathway"] .pathway-roster-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  [data-site-template="pathway"] .pathway-roster-page {
+    padding-inline: 14px;
+  }
+  [data-site-template="pathway"] .pathway-roster-grid {
+    gap: 10px;
+  }
+  [data-site-template="pathway"] .pathway-roster-group-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  [data-site-template="pathway"] .pathway-roster-group-heading::after {
+    display: none;
+  }
+  [data-site-template="pathway"] .pathway-roster-group-heading > span {
+    grid-column: 2;
+  }
+  [data-site-template="pathway"] .pathway-roster-card-copy {
+    padding: 34px 12px 15px;
+  }
+  [data-site-template="pathway"] .pathway-roster-card-number {
+    font-size: clamp(2.15rem, 12vw, 2.85rem);
+  }
+  [data-site-template="pathway"] .pathway-roster-card-name {
+    margin-top: 9px;
+    font-size: clamp(0.84rem, 4.4vw, 1rem);
+  }
+  [data-site-template="pathway"] .pathway-roster-card-position {
+    margin-top: 5px;
+    font-size: 0.54rem;
+  }
+  [data-site-template="pathway"] .pathway-roster-card-staff-role {
+    gap: 8px;
+    margin-top: 8px;
+  }
+  [data-site-template="pathway"] .pathway-roster-card-staff-initials {
+    min-width: 26px;
+    height: 26px;
+    font-size: 0.62rem;
+  }
+  [data-site-template="pathway"] .pathway-roster-card-staff-title {
+    font-size: 0.72rem;
+  }
+}
+
+
+/* ============ STAGE PAGES — ROYAL EDITORIAL ============
+   Academy, Youth Club, Senior Club and UPSL use one disciplined stage-page
+   language: club navy, luminous white, a single accent rule and photography
+   as architecture. Every selector remains pathway-scoped and token-driven. */
+
+[data-site-template="pathway"] .pathway-image-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px solid var(--on-dark-line);
+  background: color-mix(in srgb, var(--primary) 88%, var(--paper));
+  color: var(--on-dark-muted);
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-image-fallback span {
+  font-family: var(--pathway-mono-font);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Academy — a full-width club story paired with Christian's supplied image. */
+[data-site-template="pathway"] .pathway-academy-editorial-section {
+  padding: 0;
+  overflow: hidden;
+  border-bottom-color: var(--on-dark-line);
+  background: var(--primary);
+}
+[data-site-template="pathway"] .pathway-academy-editorial-section > .pathway-section-inner {
+  width: 100%;
+}
+[data-site-template="pathway"] .pathway-academy-editorial {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.92fr) minmax(0, 1.08fr);
+  min-height: 720px;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(58px, 7vw, 104px) clamp(34px, 6vw, 92px);
+  background: var(--primary);
+  color: var(--on-dark);
+}
+[data-site-template="pathway"] .pathway-academy-editorial-head {
+  margin-bottom: clamp(30px, 4vw, 48px);
+}
+[data-site-template="pathway"] .pathway-academy-editorial-kicker {
+  display: grid;
+  grid-template-columns: auto minmax(48px, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-kicker .pathway-eyebrow {
+  margin: 0;
+  color: var(--accent);
+}
+[data-site-template="pathway"] .pathway-academy-editorial-rule {
+  height: 1px;
+  background: var(--on-dark-line);
+}
+[data-site-template="pathway"] .pathway-academy-editorial-head .pathway-section-heading {
+  max-width: 9ch;
+  color: var(--on-dark);
+  font-size: clamp(3.8rem, 6.2vw, 6.8rem);
+  letter-spacing: -0.065em;
+  line-height: 0.91;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-body {
+  max-width: 63ch;
+  color: var(--on-dark-muted);
+  font-size: clamp(0.98rem, 1.2vw, 1.08rem);
+  line-height: 1.75;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-body p {
+  margin: 0;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-body p + p {
+  margin-top: 18px;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-media {
+  position: relative;
+  min-width: 0;
+  min-height: 720px;
+  margin: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary) 86%, var(--paper));
+}
+[data-site-template="pathway"] .pathway-academy-editorial-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 48%;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-media > [data-image-fallback="true"] {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+[data-site-template="pathway"] .pathway-academy-editorial-accent {
+  position: absolute;
+  right: clamp(20px, 3vw, 34px);
+  bottom: clamp(20px, 3vw, 34px);
+  width: 76px;
+  height: 7px;
+  background: var(--accent);
+}
+
+/* Youth Club — the invitation from the supplied reference, as one bold split. */
+[data-site-template="pathway"] .pathway-youth-join-section {
+  padding: 0;
+  overflow: hidden;
+  border-bottom-color: var(--on-dark-line);
+  background: var(--primary);
+}
+[data-site-template="pathway"] .pathway-youth-join-section > .pathway-section-inner {
+  width: 100%;
+}
+[data-site-template="pathway"] .pathway-youth-join {
+  display: grid;
+  grid-template-columns: minmax(380px, 0.92fr) minmax(0, 1.18fr);
+  min-height: 680px;
+}
+[data-site-template="pathway"] .pathway-youth-join-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(58px, 7vw, 104px) clamp(34px, 6vw, 92px);
+  background: var(--primary);
+  color: var(--on-dark);
+}
+[data-site-template="pathway"] .pathway-youth-join-copy .pathway-eyebrow {
+  margin-bottom: 24px;
+  color: var(--accent);
+}
+[data-site-template="pathway"] .pathway-youth-join-heading {
+  max-width: 8ch;
+  margin: 0;
+  color: var(--on-dark);
+  font-size: clamp(4.2rem, 7vw, 7.4rem);
+  letter-spacing: -0.07em;
+  line-height: 0.88;
+}
+[data-site-template="pathway"] .pathway-youth-join-body {
+  max-width: 48ch;
+  margin-top: clamp(34px, 4vw, 48px);
+  color: var(--on-dark-muted);
+  font-size: clamp(1rem, 1.25vw, 1.1rem);
+  line-height: 1.72;
+}
+[data-site-template="pathway"] .pathway-youth-join-body p,
+[data-site-template="pathway"] .pathway-youth-join-list-intro {
+  margin: 0;
+}
+[data-site-template="pathway"] .pathway-youth-join-list-intro {
+  margin-top: 26px;
+  color: var(--on-dark);
+  font-weight: 500;
+}
+[data-site-template="pathway"] .pathway-youth-join-list {
+  display: grid;
+  gap: 13px;
+  margin: 18px 0 0;
+  padding: 0;
+  color: var(--on-dark);
+  list-style: none;
+}
+[data-site-template="pathway"] .pathway-youth-join-list li {
+  position: relative;
+  padding-left: 22px;
+}
+[data-site-template="pathway"] .pathway-youth-join-list li::before {
+  position: absolute;
+  top: 0.68em;
+  left: 0;
+  width: 10px;
+  height: 2px;
+  background: var(--accent);
+  content: "";
+}
+[data-site-template="pathway"] .pathway-youth-join-list a {
+  color: var(--on-dark);
+  border-bottom: 1px solid var(--accent);
+}
+[data-site-template="pathway"] .pathway-youth-join-list a:hover {
+  color: var(--accent);
+}
+[data-site-template="pathway"] .pathway-youth-join-media {
+  position: relative;
+  min-width: 0;
+  min-height: 680px;
+  margin: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary) 86%, var(--paper));
+}
+[data-site-template="pathway"] .pathway-youth-join-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 45%;
+}
+[data-site-template="pathway"] .pathway-youth-join-media > [data-image-fallback="true"] {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+[data-site-template="pathway"] .pathway-youth-join-accent {
+  position: absolute;
+  top: clamp(20px, 3vw, 34px);
+  right: clamp(20px, 3vw, 34px);
+  width: 7px;
+  height: 76px;
+  background: var(--accent);
+}
+
+/* UPSL — matchday tryout photography followed by the approved royal channel
+   identity card. The channel treatment mirrors its frost-and-white prototype;
+   legacy optional media stays outside the visible composition. */
+[data-site-template="pathway"] .pathway-upsl-spotlight-section,
+[data-site-template="pathway"] .pathway-upsl-channel-section {
+  padding: 0;
+  overflow: hidden;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-section > .pathway-section-inner,
+[data-site-template="pathway"] .pathway-upsl-channel-section > .pathway-section-inner {
+  width: 100%;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.88fr) minmax(0, 1.12fr);
+  min-height: 760px;
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-visual {
+  position: relative;
+  min-width: 0;
+  min-height: 760px;
+  overflow: hidden;
+  background: var(--primary);
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-media > [data-image-fallback="true"] {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-image {
+  object-position: 50% 44%;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  pointer-events: none;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(58px, 7vw, 108px) clamp(36px, 6vw, 96px);
+  background: color-mix(in srgb, var(--primary) 2.5%, var(--panel));
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-status {
+  margin: 0 0 18px;
+  color: var(--muted-soft);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-heading {
+  margin: 0 0 22px;
+  padding-left: 16px;
+  border-left: 4px solid var(--accent);
+  color: var(--primary);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-subheading {
+  max-width: 11ch;
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(3.5rem, 6vw, 6.6rem);
+  font-weight: 600;
+  letter-spacing: -0.07em;
+  line-height: 0.89;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-body {
+  max-width: 58ch;
+  margin-top: clamp(28px, 3vw, 38px);
+  color: var(--muted);
+  line-height: 1.72;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-body p {
+  margin: 0;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-body p + p {
+  margin-top: 12px;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: clamp(32px, 4vw, 46px) 0 0;
+  padding: 18px 0;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-detail {
+  min-width: 0;
+  padding: 0 18px;
+  border-left: 1px solid var(--line);
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-detail:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-detail dt {
+  color: var(--muted-soft);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.62rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-detail dd {
+  margin: 7px 0 0;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+[data-site-template="pathway"] .pathway-upsl-spotlight-cta[data-variant="primary"] {
+  align-self: flex-start;
+  min-width: 220px;
+  margin-top: 32px;
+  background: var(--accent);
+  color: var(--ink-deep);
+}
+
+[data-site-template="pathway"] .pathway-upsl-channel {
+  position: relative;
+  display: grid;
+  min-height: 610px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary) 4%, var(--panel));
+  color: var(--ink);
+}
+[data-site-template="pathway"] .pathway-upsl-channel::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 38%;
+  background: var(--accent);
+  content: "";
+  pointer-events: none;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-content {
+  width: min(100%, 1120px);
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 64px);
+  margin-inline: auto;
+  padding: clamp(64px, 8vw, 96px) var(--pad-x);
+}
+[data-site-template="pathway"] .pathway-upsl-channel-copy {
+  min-width: 0;
+  align-self: center;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-kicker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 22px;
+  color: var(--primary);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-kicker::before {
+  width: 32px;
+  height: 1px;
+  flex: none;
+  background: color-mix(in srgb, var(--primary) 32%, transparent);
+  content: "";
+}
+[data-site-template="pathway"] .pathway-upsl-channel-heading {
+  margin: 0;
+  color: var(--primary);
+  text-wrap: balance;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-heading-lead {
+  max-width: 34ch;
+  display: block;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-family: var(--pathway-nav-font);
+  font-size: clamp(0.72rem, 0.82vw, 0.82rem);
+  font-weight: 600;
+  letter-spacing: 0.105em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-heading-emphasis {
+  max-width: 13ch;
+  display: block;
+  font-size: clamp(2.35rem, 3.4vw, 3.5rem);
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  line-height: 0.99;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-body {
+  max-width: 43ch;
+  margin-top: 28px;
+  padding-left: 18px;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
+  font-size: clamp(1rem, 1.1vw, 1.08rem);
+  line-height: 1.72;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-body p {
+  margin: 0;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-body p + p {
+  margin-top: 12px;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: calc(var(--radius) + var(--radius));
+  background: var(--panel);
+  box-shadow: 0 22px 55px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+[data-site-template="pathway"] .pathway-upsl-channel-banner {
+  position: relative;
+  min-height: 118px;
+  overflow: hidden;
+  background: var(--primary-lift);
+}
+[data-site-template="pathway"] .pathway-upsl-channel-banner-image {
+  object-fit: cover;
+  object-position: 50% 5%;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-banner::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: color-mix(in srgb, var(--primary) 38%, transparent);
+  content: "";
+  pointer-events: none;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-platform {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--panel) 48%, transparent);
+  border-radius: var(--pill);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--primary) 22%, transparent);
+  color: var(--primary);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-platform svg {
+  width: 21px;
+  height: 21px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-platform-play {
+  fill: currentColor;
+  stroke: none;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-banner-fallback {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  background: var(--primary-lift);
+}
+[data-site-template="pathway"] .pathway-upsl-channel-banner-fallback::before,
+[data-site-template="pathway"] .pathway-upsl-channel-banner-fallback::after {
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--on-dark) 28%, transparent);
+  border-radius: 50%;
+  content: "";
+}
+[data-site-template="pathway"] .pathway-upsl-channel-banner-fallback::before {
+  top: -96px;
+  right: 42px;
+  width: 180px;
+  height: 180px;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-banner-fallback::after {
+  right: 76px;
+  bottom: -72px;
+  width: 110px;
+  height: 110px;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding: 24px;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-identity > div {
+  min-width: 0;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-mark {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border: 5px solid color-mix(in srgb, var(--primary) 8%, var(--panel));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 8%, var(--panel));
+}
+[data-site-template="pathway"] .pathway-upsl-channel-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-initials {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: var(--on-dark);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-name,
+[data-site-template="pathway"] .pathway-upsl-channel-handle {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-name {
+  color: var(--ink-deep);
+  font-family: var(--pathway-nav-font);
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+  font-weight: 500;
+  line-height: 1.25;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-handle {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0 24px 24px;
+  list-style: none;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 0;
+  background: var(--primary);
+  color: var(--on-dark);
+  font-family: var(--pathway-nav-font);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.2;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-link::before {
+  width: 18px;
+  color: currentColor;
+  font-size: 0.86rem;
+  line-height: 1;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-upsl-channel-link[data-network="youtube"]::before {
+  content: "▶";
+}
+[data-site-template="pathway"] .pathway-upsl-channel-link[data-variant="secondary"] {
+  background: transparent;
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-upsl-channel-link:hover {
+  background: var(--primary-lift);
+  color: var(--on-dark);
+}
+[data-site-template="pathway"] .pathway-upsl-channel-link[data-variant="secondary"]:hover {
+  border-color: var(--primary-lift);
+}
+[data-site-template="pathway"] .pathway-upsl-channel-link:focus-visible {
+  outline-color: var(--primary);
+}
+
+/* UPSL standings — Lions' accepted league-table geometry in pathway colors. */
+[data-site-template="pathway"] .pathway-upsl-standings {
+  padding: clamp(66px, 8vw, 112px) var(--pad-x);
+  background: color-mix(in srgb, var(--primary) 3%, var(--panel));
+  color: var(--ink-deep);
+}
+[data-site-template="pathway"] .pathway-upsl-standings-inner {
+  width: min(100%, 1260px);
+  margin-inline: auto;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--pathway-mono-font);
+  font-size: clamp(0.72rem, 0.9vw, 0.88rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-standings h2 {
+  margin: 18px 0 0;
+  color: var(--primary);
+  font-family: var(--pathway-body-font);
+  font-size: clamp(3rem, 6.2vw, 6rem);
+  font-weight: 850;
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+  text-wrap: balance;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-intro {
+  max-width: 620px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: clamp(0.92rem, 1vw, 1.05rem);
+  line-height: 1.65;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-card {
+  margin-top: 34px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row {
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) repeat(6, 78px);
+  align-items: center;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 8%, transparent);
+  background: var(--panel);
+  padding: 0 20px;
+  transition: background-color 0.2s ease;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row:hover {
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row[data-club="true"] {
+  border-left: 4px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+  padding-left: 16px;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row[data-club="true"]:hover {
+  background: color-mix(in srgb, var(--accent) 15%, var(--panel));
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row-head {
+  min-height: 44px;
+  border-top: 0;
+  background: var(--primary);
+  color: var(--on-dark-muted);
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row-head:hover {
+  background: var(--primary);
+}
+[data-site-template="pathway"] .pathway-upsl-standings-team-head,
+[data-site-template="pathway"] .pathway-upsl-standings-team {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-team-head {
+  gap: 20px;
+  font-family: var(--pathway-mono-font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-team-head span:first-child,
+[data-site-template="pathway"] .pathway-upsl-standings-rank {
+  width: 26px;
+  flex: none;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row-head > span {
+  text-align: center;
+  font-family: var(--pathway-mono-font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-rank {
+  color: color-mix(in srgb, var(--primary) 38%, transparent);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-row[data-club="true"] .pathway-upsl-standings-rank,
+[data-site-template="pathway"] .pathway-upsl-standings-row[data-club="true"] strong {
+  color: var(--primary);
+}
+[data-site-template="pathway"] .pathway-upsl-standings-crest,
+[data-site-template="pathway"] .pathway-upsl-standings-abbr {
+  width: 38px;
+  height: 38px;
+  flex: none;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-crest {
+  position: relative;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-crest-img {
+  object-fit: contain;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-abbr {
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--panel));
+  color: var(--primary);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-logo-fallback {
+  position: absolute;
+  inset: 0;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-team strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-deep);
+  font-size: clamp(0.98rem, 1.25vw, 1.18rem);
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-site-template="pathway"] .pathway-upsl-standings-stat {
+  text-align: center;
+  color: var(--ink-deep);
+  font-size: clamp(0.88rem, 1vw, 1rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Senior Club — an honest coming-soon statement and the shared secure form. */
+[data-site-template="pathway"] .pathway-senior-interest-intro {
+  border-bottom-color: var(--on-dark-line);
+  background: var(--primary);
+  color: var(--on-dark);
+}
+[data-site-template="pathway"] .pathway-senior-interest-intro .pathway-section-head {
+  max-width: 820px;
+  margin-inline: auto;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-senior-interest-intro .pathway-section-heading {
+  color: var(--on-dark);
+  font-size: clamp(4rem, 7vw, 7.3rem);
+  letter-spacing: -0.07em;
+  line-height: 0.88;
+}
+[data-site-template="pathway"] .pathway-senior-interest-intro .pathway-section-intro {
+  max-width: 54ch;
+  margin-inline: auto;
+  color: var(--on-dark-muted);
+}
+[data-site-template="pathway"] .pathway-senior-interest > .pathway-contact-section {
+  background: color-mix(in srgb, var(--primary) 2%, var(--panel));
+}
+[data-site-template="pathway"] .pathway-senior-interest > .pathway-contact-section .pathway-section-head {
+  max-width: 760px;
+}
+[data-site-template="pathway"] .pathway-senior-interest > .pathway-contact-section .pathway-section-heading {
+  color: var(--primary);
+  font-size: clamp(3.4rem, 6vw, 6.4rem);
+  letter-spacing: -0.065em;
+  line-height: 0.92;
+}
+[data-site-template="pathway"] .pathway-senior-interest .pathway-form {
+  max-width: 100%;
+  padding-top: clamp(34px, 5vw, 56px);
+  border-top: 1px solid var(--line-strong);
+}
+[data-site-template="pathway"] .pathway-senior-interest .pathway-form-grid {
+  column-gap: clamp(28px, 5vw, 72px);
+  row-gap: 34px;
+}
+[data-site-template="pathway"] .pathway-senior-interest .pathway-form .pathway-button {
+  min-width: 190px;
+  background: var(--accent);
+  color: var(--ink-deep);
+}
+[data-site-template="pathway"] .pathway-senior-interest .pathway-form .pathway-button:hover {
+  background: var(--accent);
+  color: var(--ink-deep);
+  filter: brightness(1.06);
+}
+
+/* ============ UPSL FIXTURES ============
+   The accepted Diverse City fixtures-row geometry translated into the
+   Pathway visual system. Proportions, weights and composition are carried
+   over literally — a 44px ordinal gutter, a 240px date/time column, the
+   opponent column, a 160px status column, 150px minimum row height, and
+   the 32px/20px row padding — while every colour resolves through the
+   pathway palette (--primary / --accent / --muted) instead of that
+   tenant's navy and red hexes. Rows collapse to a stacked card at the
+   same 800px breakpoint the sibling standings table uses. */
+[data-site-template="pathway"] .pathway-upsl-fixtures {
+  min-height: 70vh;
+  padding: clamp(36px, 5vw, 68px) var(--pad-x) clamp(80px, 9vw, 132px);
+  overflow: clip;
+  background:
+    linear-gradient(var(--line), var(--line)) top / 100% 1px no-repeat,
+    color-mix(in srgb, var(--primary) 4%, var(--panel));
+  color: var(--ink);
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-inner {
+  width: min(100%, 1240px);
+  margin-inline: auto;
+}
+
+/* Hero — the reference's eyebrow / display heading / short accent rule,
+   set in pathway's heading voice at the roster page's matching scale so
+   the two UPSL pages read as one pair. */
+[data-site-template="pathway"] .pathway-upsl-fixtures-hero {
+  padding-bottom: clamp(30px, 4vw, 46px);
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-title {
+  margin: 14px 0 0;
+  color: var(--primary);
+  font-size: clamp(2.35rem, 5vw, 4.4rem);
+  font-weight: 650;
+  letter-spacing: -0.065em;
+  line-height: 0.88;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-rule {
+  width: clamp(56px, 6vw, 80px);
+  height: 4px;
+  margin-top: clamp(22px, 3vw, 32px);
+  background: var(--accent);
+}
+
+/* Column headers — hidden with the grid below the collapse breakpoint,
+   exactly as the reference's md:grid header row is. */
+[data-site-template="pathway"] .pathway-upsl-fixtures-head {
+  display: grid;
+  grid-template-columns: 44px 240px minmax(0, 1fr) 160px;
+  align-items: center;
+  padding: 0 20px 16px;
+  border-bottom: 2px solid var(--primary);
+  color: var(--primary);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-row {
+  min-height: 150px;
+  display: grid;
+  grid-template-columns: 44px 240px minmax(0, 1fr) 160px;
+  align-items: center;
+  padding: 32px 20px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--primary) 10%, transparent);
+  transition: background-color 0.2s ease;
+}
+/* Played fixtures recede; a played row keeps more presence than an
+   unplayed one that simply slipped by, matching the reference's
+   0.78 / 0.55 pair. */
+[data-site-template="pathway"] .pathway-upsl-fixtures-row[data-past="true"] {
+  opacity: 0.55;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-row[data-past="true"][data-played="true"] {
+  opacity: 0.78;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-row[data-next="true"] {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-index {
+  color: color-mix(in srgb, var(--primary) 30%, transparent);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-when {
+  min-width: 0;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-date {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-time {
+  margin: 8px 0 0;
+  color: var(--muted-soft);
+  font-size: clamp(0.95rem, 1.25vw, 1.15rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-match {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+/* Opponent crest: scoped to pathway rather than shared with
+   components/OpponentCrest.tsx, which hardcodes the legacy global
+   --color-gray-* tokens. Same decision the standings table made. */
+[data-site-template="pathway"] .pathway-upsl-fixtures-crest,
+[data-site-template="pathway"] .pathway-upsl-fixtures-abbr {
+  width: 56px;
+  height: 56px;
+  flex: none;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-crest {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-crest-img {
+  object-fit: contain;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-abbr {
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--panel));
+  color: var(--primary);
+  font-family: var(--pathway-mono-font);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-logo-fallback {
+  position: absolute;
+  inset: 0;
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-identity {
+  min-width: 0;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-name-row {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+/* The opponent name is the row's headline and takes the same italic
+   uppercase treatment the accepted pathway roster card gives a player
+   name — the one display voice pathway keeps. */
+[data-site-template="pathway"] .pathway-upsl-fixtures-opponent {
+  min-width: 0;
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.45rem, 3vw, 2.4rem);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-next-pill {
+  flex: none;
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-venue {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-status {
+  text-align: right;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-side,
+[data-site-template="pathway"] .pathway-upsl-fixtures-final {
+  margin: 0;
+  color: color-mix(in srgb, var(--primary) 38%, transparent);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-result {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.35rem, 2vw, 1.6rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+/* A win takes the accent; draws and losses stay structural navy, the same
+   two-tone split the reference uses. */
+[data-site-template="pathway"] .pathway-upsl-fixtures-result[data-outcome="W"] {
+  color: var(--accent);
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-final {
+  margin-top: 6px;
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-note {
+  margin: clamp(30px, 4vw, 40px) 0 0;
+  color: var(--muted-soft);
+  font-family: var(--pathway-mono-font);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+[data-site-template="pathway"] .pathway-upsl-fixtures-empty {
+  padding: clamp(48px, 7vw, 84px) 20px;
+  border-top: 2px solid var(--primary);
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-empty h2 {
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  font-weight: 620;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+[data-site-template="pathway"] .pathway-upsl-fixtures-empty p {
+  max-width: 46ch;
+  margin: 16px auto 0;
+  color: var(--muted);
+  font-size: clamp(0.92rem, 1vw, 1.05rem);
+  line-height: 1.6;
+}
+
+@media (max-width: 800px) {
+  [data-site-template="pathway"] .pathway-upsl-fixtures-head {
+    display: none;
+  }
+  [data-site-template="pathway"] .pathway-upsl-fixtures-list {
+    border-top: 2px solid var(--primary);
+  }
+  [data-site-template="pathway"] .pathway-upsl-fixtures-row {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-fixtures-status {
+    text-align: left;
+  }
+}
+
+@media (max-width: 460px) {
+  [data-site-template="pathway"] .pathway-upsl-fixtures {
+    padding-inline: 14px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-fixtures-row {
+    gap: 18px;
+    padding-block: 26px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-fixtures-match {
+    gap: 14px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-fixtures-crest,
+  [data-site-template="pathway"] .pathway-upsl-fixtures-abbr {
+    width: 44px;
+    height: 44px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-fixtures-abbr {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 980px) {
+  [data-site-template="pathway"] .pathway-academy-editorial,
+  [data-site-template="pathway"] .pathway-youth-join,
+  [data-site-template="pathway"] .pathway-upsl-spotlight {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  [data-site-template="pathway"] .pathway-academy-editorial-media,
+  [data-site-template="pathway"] .pathway-youth-join-media,
+  [data-site-template="pathway"] .pathway-upsl-spotlight-visual {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+  [data-site-template="pathway"] .pathway-youth-join-media {
+    grid-row: 2;
+  }
+  [data-site-template="pathway"] .pathway-upsl-spotlight-details {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block: 0;
+  }
+  [data-site-template="pathway"] .pathway-upsl-spotlight-detail,
+  [data-site-template="pathway"] .pathway-upsl-spotlight-detail:first-child {
+    padding: 15px 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  [data-site-template="pathway"] .pathway-upsl-spotlight-detail:first-child {
+    border-top: 0;
+  }
+}
+
+@media (max-width: 800px) {
+  [data-site-template="pathway"] .pathway-upsl-standings-row {
+    grid-template-columns: minmax(0, 1fr) repeat(6, 58px);
+    padding-inline: 16px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-row[data-club="true"] {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  [data-site-template="pathway"] .pathway-upsl-channel-content {
+    width: min(100%, 620px);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 30px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-copy {
+    max-width: 520px;
+    justify-self: center;
+    text-align: center;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-heading,
+  [data-site-template="pathway"] .pathway-upsl-channel-body {
+    margin-inline: auto;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-heading-lead,
+  [data-site-template="pathway"] .pathway-upsl-channel-heading-emphasis {
+    margin-inline: auto;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-kicker {
+    justify-content: center;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-body {
+    padding-top: 18px;
+    padding-left: 0;
+    border-top: 2px solid var(--accent);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  [data-site-template="pathway"] .pathway-upsl-standings {
+    padding-inline: 12px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings h2 {
+    font-size: clamp(2.25rem, 12vw, 3.1rem);
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-row {
+    min-height: 64px;
+    grid-template-columns: minmax(0, 1fr) repeat(6, 34px);
+    padding-inline: 10px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-row[data-club="true"] {
+    padding-left: 6px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-row-head {
+    min-height: 48px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-team,
+  [data-site-template="pathway"] .pathway-upsl-standings-team-head {
+    gap: 8px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-team-head span:first-child,
+  [data-site-template="pathway"] .pathway-upsl-standings-rank {
+    width: 18px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-crest,
+  [data-site-template="pathway"] .pathway-upsl-standings-abbr {
+    width: 32px;
+    height: 32px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-team strong {
+    font-size: 0.82rem;
+  }
+  [data-site-template="pathway"] .pathway-upsl-standings-row-head > span,
+  [data-site-template="pathway"] .pathway-upsl-standings-team-head,
+  [data-site-template="pathway"] .pathway-upsl-standings-stat {
+    font-size: 0.62rem;
+  }
+  [data-site-template="pathway"] .pathway-academy-editorial-copy,
+  [data-site-template="pathway"] .pathway-youth-join-copy,
+  [data-site-template="pathway"] .pathway-upsl-spotlight-content {
+    padding: 46px 22px 52px;
+  }
+  [data-site-template="pathway"] .pathway-academy-editorial-head .pathway-section-heading,
+  [data-site-template="pathway"] .pathway-youth-join-heading,
+  [data-site-template="pathway"] .pathway-upsl-spotlight-subheading,
+  [data-site-template="pathway"] .pathway-senior-interest-intro .pathway-section-heading,
+  [data-site-template="pathway"] .pathway-senior-interest > .pathway-contact-section .pathway-section-heading {
+    font-size: clamp(3.15rem, 15vw, 4.35rem);
+  }
+  [data-site-template="pathway"] .pathway-academy-editorial-media,
+  [data-site-template="pathway"] .pathway-youth-join-media,
+  [data-site-template="pathway"] .pathway-upsl-spotlight-visual {
+    aspect-ratio: 4 / 5;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel {
+    min-height: 0;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-content {
+    padding: 52px 22px;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-heading-emphasis {
+    max-width: 15ch;
+    font-size: clamp(2rem, 9.4vw, 2.65rem);
+    line-height: 1.02;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-identity {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-actions {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+  [data-site-template="pathway"] .pathway-upsl-channel-link {
+    justify-content: center;
+    width: 100%;
+  }
+  [data-site-template="pathway"] .pathway-upsl-spotlight-cta,
+  [data-site-template="pathway"] .pathway-senior-interest .pathway-form .pathway-button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-upsl-channel-link,
+  [data-site-template="pathway"] .pathway-upsl-standings-row {
+    transition: none;
+  }
+}
+
+/* Pathway merch store — approved single-product collection
+   This intentionally carries the platform's established store geometry and
+   styling into pathway@1. The only new structure is a second identical
+   collection for training jerseys. */
+[data-site-template="pathway"] .pathway-merch-page {
+  --store-display: #151515;
+  --store-primary-deep: color-mix(in srgb, var(--primary) 74%, #05070f);
+  --store-muted: color-mix(in srgb, var(--primary) 52%, #a9adb6);
+  --store-line: color-mix(in srgb, var(--primary) 12%, #f1f1f3);
+  --store-line-soft: color-mix(in srgb, var(--primary) 6%, #f4f4f6);
+  min-height: 100svh;
+  overflow: hidden;
+  padding: clamp(42px, 5vw, 74px) var(--pad-x) clamp(88px, 9vw, 140px);
+  background: var(--panel);
+  font-size: 15.5px;
+  line-height: 1.55;
+  letter-spacing: normal;
+}
+[data-site-template="pathway"] .pathway-merch-page-head {
+  max-width: 760px;
+  margin-inline: auto;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-merch-collection-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 820;
+  letter-spacing: 0.17em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-merch-collection-label::before,
+[data-site-template="pathway"] .pathway-merch-collection-label::after {
+  content: "";
+  width: 27px;
+  height: 2px;
+  flex: none;
+  background: currentColor;
+}
+[data-site-template="pathway"] .pathway-merch-page-head h1 {
+  margin: 20px 0 0;
+  color: var(--store-display);
+  font-family: var(--pathway-body-font);
+  font-size: clamp(3.7rem, 6.4vw, 7rem);
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+  text-wrap: balance;
+}
+[data-site-template="pathway"] .pathway-merch-page-head > p {
+  max-width: 610px;
+  margin: 25px auto 0;
+  color: var(--store-muted);
+  font-size: clamp(0.95rem, 1.2vw, 1.08rem);
+  line-height: 1.65;
+  text-wrap: balance;
+}
+[data-site-template="pathway"] .pathway-merch-collections {
+  width: min(100%, 1640px);
+  margin: 0 auto;
+}
+[data-site-template="pathway"] .pathway-merch-collection {
+  min-width: 0;
+}
+[data-site-template="pathway"] .pathway-merch-collection + .pathway-merch-collection {
+  margin-top: clamp(96px, 10vw, 156px);
+  padding-top: clamp(76px, 8vw, 124px);
+  border-top: 1px solid var(--store-line);
+}
+[data-site-template="pathway"] .pathway-merch-collection-head {
+  max-width: 980px;
+  margin-inline: auto;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-merch-eyebrow {
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 820;
+  letter-spacing: 0.17em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-merch-collection-head h2 {
+  margin: 17px 0 0;
+  color: var(--store-display);
+  font-family: var(--pathway-body-font);
+  font-size: clamp(2.45rem, 4.2vw, 4.6rem);
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+[data-site-template="pathway"] #training-jerseys-heading {
+  font-size: clamp(1.5rem, 7.4vw, 4.6rem);
+  white-space: nowrap;
+}
+[data-site-template="pathway"] .pathway-merch-collection-head > p {
+  max-width: 610px;
+  margin: 22px auto 0;
+  color: var(--store-muted);
+  font-size: clamp(0.95rem, 1.2vw, 1.08rem);
+  line-height: 1.65;
+  text-wrap: balance;
+}
+[data-site-template="pathway"] .pathway-merch-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 38px;
+}
+[data-site-template="pathway"] .pathway-merch-tab {
+  min-width: 190px;
+  min-height: 66px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--store-line);
+  border-radius: 999px;
+  padding: 12px 28px;
+  background: var(--panel);
+  color: var(--store-muted);
+  font-size: 0.98rem;
+  font-weight: 720;
+  line-height: 1;
+  transition: border-color 160ms ease, background-color 160ms ease,
+    color 160ms ease, transform 160ms ease;
+}
+[data-site-template="pathway"] .pathway-merch-tab:hover {
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--store-line));
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+[data-site-template="pathway"] .pathway-merch-tab[aria-selected="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--panel));
+  color: var(--accent);
+}
+[data-site-template="pathway"] .pathway-merch-product {
+  --store-product-stage: clamp(560px, 72svh, 760px);
+  width: 100%;
+  margin: clamp(50px, 6vw, 88px) auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
+  align-items: center;
+  gap: clamp(40px, 5vw, 92px);
+}
+[data-site-template="pathway"] .pathway-merch-visual {
+  min-width: 0;
+  min-height: var(--store-product-stage);
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+[data-site-template="pathway"] .pathway-merch-image {
+  width: min(100%, 960px);
+  height: var(--store-product-stage);
+  position: relative;
+  display: block;
+  flex: none;
+  margin: 0;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid var(--store-line);
+  border-radius: clamp(24px, 2.8vw, 42px);
+  background: #fff;
+  box-shadow: 0 30px 80px -58px
+    color-mix(in srgb, var(--store-primary-deep) 42%, transparent);
+}
+[data-site-template="pathway"] .pathway-merch-image img {
+  object-fit: contain;
+}
+[data-site-template="pathway"] .pathway-merch-image-fallback {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed var(--store-line);
+  border-radius: inherit;
+  background: var(--store-line-soft);
+}
+[data-site-template="pathway"] .pathway-merch-details {
+  min-width: 0;
+  padding-block: 24px;
+}
+[data-site-template="pathway"] .pathway-merch-color-label {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 820;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+[data-site-template="pathway"] .pathway-merch-details h3 {
+  max-width: 19ch;
+  margin: 0;
+  color: var(--primary);
+  font-family: var(--pathway-body-font);
+  font-size: clamp(2.15rem, 3.3vw, 4.15rem);
+  font-weight: 820;
+  letter-spacing: -0.045em;
+  line-height: 1.06;
+  text-wrap: balance;
+}
+[data-site-template="pathway"] .pathway-merch-details > p {
+  max-width: 58ch;
+  margin: 25px 0 0;
+  color: var(--store-muted);
+  font-size: clamp(0.97rem, 1.14vw, 1.08rem);
+  line-height: 1.7;
+}
+[data-site-template="pathway"] .pathway-merch-action {
+  margin-top: 38px;
+  padding-top: 38px;
+  border-top: 1px solid var(--store-line);
+}
+[data-site-template="pathway"] .pathway-merch-action a {
+  width: 100%;
+  min-height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  padding: 18px 28px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 84%, #fff),
+    var(--accent)
+  );
+  color: #fff;
+  box-shadow: 0 18px 34px -24px color-mix(in srgb, var(--accent) 72%, transparent);
+  font-size: 1.03rem;
+  font-weight: 760;
+  line-height: 1.1;
+  text-align: center;
+  transition: filter 160ms ease, transform 160ms ease;
+}
+[data-site-template="pathway"] .pathway-merch-action a:hover {
+  color: #fff;
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+[data-site-template="pathway"] .pathway-merch-note {
+  width: min(100%, 720px);
+  margin: clamp(78px, 8vw, 118px) auto 0;
+  color: var(--store-muted);
+  font-size: 0.86rem;
+  line-height: 1.7;
+  text-align: center;
+}
+[data-site-template="pathway"] .pathway-merch-mentality {
+  width: min(100%, 1640px);
+  min-height: clamp(480px, 40vw, 660px);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  align-items: center;
+  gap: clamp(44px, 6vw, 112px);
+  margin: clamp(62px, 7vw, 104px) auto 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: clamp(28px, 3vw, 46px);
+  padding: clamp(52px, 7vw, 112px);
+  background:
+    radial-gradient(
+      circle at 88% 18%,
+      color-mix(in srgb, var(--accent) 26%, transparent),
+      transparent 32%
+    ),
+    linear-gradient(
+      132deg,
+      color-mix(in srgb, var(--primary) 93%, #03040a),
+      color-mix(in srgb, var(--primary) 74%, #000) 74%
+    );
+  box-shadow: 0 36px 90px -54px
+    color-mix(in srgb, var(--store-primary-deep) 78%, transparent);
+}
+[data-site-template="pathway"] .pathway-merch-mentality-copy {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+[data-site-template="pathway"] .pathway-merch-mentality-copy h2 {
+  margin: 0;
+  color: #fff;
+  font-family: var(--pathway-body-font);
+  font-size: clamp(3rem, 4.4vw, 5.4rem);
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  line-height: 0.92;
+  white-space: nowrap;
+}
+[data-site-template="pathway"] .pathway-merch-mentality-copy p {
+  max-width: 35ch;
+  margin: clamp(28px, 3vw, 42px) 0 0;
+  color: rgb(255 255 255 / 78%);
+  font-size: clamp(1.05rem, 1.45vw, 1.38rem);
+  line-height: 1.65;
+}
+[data-site-template="pathway"] .pathway-merch-mentality-mark {
+  min-width: 0;
+  min-height: clamp(290px, 30vw, 470px);
+  position: relative;
+  z-index: 1;
+  border-left: 1px solid rgb(255 255 255 / 16%);
+  padding-left: clamp(36px, 5vw, 84px);
+}
+[data-site-template="pathway"] .pathway-merch-mentality-mark img {
+  object-fit: contain;
+}
+[data-site-template="pathway"] .pathway-merch-mentality-fallback {
+  position: absolute;
+  inset: 0 0 0 clamp(36px, 5vw, 84px);
+  border: 1px dashed rgb(255 255 255 / 28%);
+  border-radius: 24px;
+  background: rgb(255 255 255 / 5%);
+  color: rgb(255 255 255 / 72%);
+}
+
+@media (max-width: 1120px) {
+  [data-site-template="pathway"] .pathway-merch-product {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  [data-site-template="pathway"] .pathway-merch-visual {
+    min-height: 830px;
+    overflow: hidden;
+  }
+  [data-site-template="pathway"] .pathway-merch-image {
+    width: min(100%, 960px);
+    height: 850px;
+  }
+  [data-site-template="pathway"] .pathway-merch-details {
+    width: min(100%, 760px);
+    margin-inline: auto;
+    padding-top: 12px;
+  }
+  [data-site-template="pathway"] .pathway-merch-details h3 {
+    max-width: 22ch;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality {
+    grid-template-columns: 1fr;
+    gap: clamp(44px, 7vw, 72px);
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality-copy p {
+    max-width: 48ch;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality-mark {
+    min-height: clamp(280px, 50vw, 480px);
+    border-top: 1px solid rgb(255 255 255 / 16%);
+    border-left: 0;
+    padding-top: clamp(36px, 5vw, 60px);
+    padding-left: 0;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality-fallback {
+    inset: clamp(36px, 5vw, 60px) 0 0;
+  }
+}
+
+@media (max-width: 720px) {
+  [data-site-template="pathway"] .pathway-merch-page {
+    padding-inline: 20px;
+  }
+  [data-site-template="pathway"] .pathway-merch-tabs {
+    gap: 8px;
+  }
+  [data-site-template="pathway"] .pathway-merch-tab {
+    min-width: 0;
+    flex: 1;
+    padding-inline: 12px;
+  }
+  [data-site-template="pathway"] .pathway-merch-visual {
+    width: 100%;
+    min-height: 0;
+    margin-inline: 0;
+  }
+  [data-site-template="pathway"] .pathway-merch-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality {
+    border-radius: 26px;
+  }
+}
+
+@media (max-width: 540px) {
+  [data-site-template="pathway"] .pathway-merch-page {
+    padding-top: 42px;
+    padding-bottom: 76px;
+  }
+  [data-site-template="pathway"] .pathway-merch-collection-label {
+    gap: 8px;
+    font-size: 0.56rem;
+    letter-spacing: 0.13em;
+  }
+  [data-site-template="pathway"] .pathway-merch-collection-label::before,
+  [data-site-template="pathway"] .pathway-merch-collection-label::after {
+    width: 19px;
+  }
+  [data-site-template="pathway"] .pathway-merch-page-head h1 {
+    margin-top: 17px;
+    font-size: clamp(3rem, 14.5vw, 4.3rem);
+  }
+  [data-site-template="pathway"] .pathway-merch-page-head > p,
+  [data-site-template="pathway"] .pathway-merch-collection-head > p {
+    margin-top: 20px;
+    font-size: 0.9rem;
+  }
+  [data-site-template="pathway"] .pathway-merch-collection-head h2 {
+    font-size: clamp(2.35rem, 12.5vw, 3.6rem);
+  }
+  [data-site-template="pathway"] #training-jerseys-heading {
+    font-size: clamp(1.5rem, 7.4vw, 3.6rem);
+  }
+  [data-site-template="pathway"] .pathway-merch-tabs {
+    margin-top: 30px;
+  }
+  [data-site-template="pathway"] .pathway-merch-tab {
+    min-height: 52px;
+    padding: 10px 8px;
+    font-size: 0.78rem;
+  }
+  [data-site-template="pathway"] .pathway-merch-product {
+    margin-top: 38px;
+  }
+  [data-site-template="pathway"] .pathway-merch-visual {
+    min-height: 0;
+  }
+  [data-site-template="pathway"] .pathway-merch-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 22px;
+  }
+  [data-site-template="pathway"] .pathway-merch-details {
+    padding-top: 2px;
+  }
+  [data-site-template="pathway"] .pathway-merch-details h3 {
+    font-size: clamp(2rem, 10.2vw, 3rem);
+  }
+  [data-site-template="pathway"] .pathway-merch-details > p {
+    margin-top: 18px;
+  }
+  [data-site-template="pathway"] .pathway-merch-action {
+    margin-top: 30px;
+    padding-top: 30px;
+  }
+  [data-site-template="pathway"] .pathway-merch-action a {
+    min-height: 66px;
+    border-radius: 15px;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality {
+    min-height: 0;
+    gap: 36px;
+    border-radius: 22px;
+    padding: 42px 24px 34px;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality-copy h2 {
+    font-size: clamp(1.55rem, 8.2vw, 3.1rem);
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality-copy p {
+    margin-top: 24px;
+    font-size: 1rem;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality-mark {
+    min-height: 230px;
+    padding-top: 28px;
+  }
+  [data-site-template="pathway"] .pathway-merch-mentality-fallback {
+    inset: 28px 0 0;
+    border-radius: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-merch-tab,
+  [data-site-template="pathway"] .pathway-merch-action a {
+    transition: none;
+  }
+}
+/* End pathway merch store */
+
+/* Pathway About — leader portrait and letter editorial. */
+[data-site-template="pathway"] .pathway-about-editorial {
+  overflow: hidden;
+  background: var(--panel);
+}
+[data-site-template="pathway"] .pathway-about-leader {
+  position: relative;
+  overflow: hidden;
+  background: var(--primary);
+  color: #fff;
+}
+[data-site-template="pathway"] .pathway-about-leader-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+[data-site-template="pathway"] .pathway-about-leader-media {
+  width: 100%;
+  position: relative;
+  aspect-ratio: 1149 / 1368;
+  margin: 0;
+  overflow: hidden;
+  background: var(--band-dark);
+}
+[data-site-template="pathway"] .pathway-about-leader-media img {
+  object-fit: cover;
+  object-position: 50% 50%;
+  transform: scale(1);
+  transition: none;
+}
+[data-site-template="pathway"] .pathway-about-leader-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: var(--band-dark);
+  color: var(--on-dark-muted);
+}
+[data-site-template="pathway"] .pathway-about-leader-letter {
+  min-width: 0;
+  border-left: 4px solid var(--accent);
+  padding: clamp(44px, 4.2vw, 72px) clamp(44px, 5.3vw, 86px)
+    clamp(40px, 4.2vw, 72px);
+}
+[data-site-template="pathway"] .pathway-about-leader-letter h1 {
+  max-width: 8ch;
+  margin: 0;
+  color: #fff;
+  font-family: var(--pathway-body-font);
+  font-size: clamp(3.25rem, 4.55vw, 5.5rem);
+  font-weight: 850;
+  letter-spacing: -0.06em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+[data-site-template="pathway"] .pathway-about-leader-body {
+  max-width: 62ch;
+  margin-top: clamp(26px, 2.4vw, 38px);
+}
+[data-site-template="pathway"] .pathway-about-leader-body p {
+  margin: 0;
+  color: rgb(255 255 255 / 84%);
+  font-size: clamp(0.88rem, 0.96vw, 1rem);
+  line-height: 1.52;
+}
+[data-site-template="pathway"] .pathway-about-leader-body p + p {
+  margin-top: clamp(12px, 1.15vw, 18px);
+}
+[data-site-template="pathway"] .pathway-about-leader-body p[data-closing="true"] {
+  margin-top: clamp(20px, 1.8vw, 28px);
+  border-top: 1px solid rgb(255 255 255 / 22%);
+  padding-top: clamp(16px, 1.6vw, 24px);
+  color: #fff;
+  font-size: clamp(1.12rem, 1.35vw, 1.35rem);
+  font-weight: 680;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+@media (max-width: 1180px) {
+  [data-site-template="pathway"] .pathway-about-leader-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [data-site-template="pathway"] .pathway-about-leader-media {
+    width: min(100%, 760px);
+    margin-inline: auto;
+  }
+  [data-site-template="pathway"] .pathway-about-leader-letter {
+    border-top: 4px solid var(--accent);
+    border-left: 0;
+  }
+  [data-site-template="pathway"] .pathway-about-leader-letter h1 {
+    max-width: 11ch;
+  }
+  [data-site-template="pathway"] .pathway-about-leader-body {
+    max-width: 64ch;
+  }
+}
+
+@media (max-width: 560px) {
+  [data-site-template="pathway"] .pathway-about-leader-media {
+    width: 100%;
+  }
+  [data-site-template="pathway"] .pathway-about-leader-letter {
+    padding: 50px 22px 72px;
+  }
+  [data-site-template="pathway"] .pathway-about-leader-letter h1 {
+    font-size: clamp(3rem, 13.4vw, 4.8rem);
+  }
+  [data-site-template="pathway"] .pathway-about-leader-body {
+    margin-top: 38px;
+  }
+  [data-site-template="pathway"] .pathway-about-leader-body p {
+    font-size: 0.98rem;
+    line-height: 1.72;
+  }
+  [data-site-template="pathway"] .pathway-about-leader-body p + p {
+    margin-top: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-site-template="pathway"] .pathway-about-leader-media img {
+    transform: none;
+    transition: none;
+  }
+}
+/* End pathway About editorial */

@@ -10,6 +10,18 @@ const PUBLIC_ROUTES = [
 ] as const;
 
 const FAILURE_ROUTES = ["/", "/roster", "/shop", "/club/about"] as const;
+const PATHWAY_MEDIA_ROUTES = [
+  "/academy",
+  "/about",
+  "/youth-club",
+  "/upsl",
+  "/merch",
+] as const;
+
+async function isPathwaySite(page: Page) {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  return (await page.locator('[data-site-template="pathway"]').count()) > 0;
+}
 
 async function scrollThroughPage(page: Page) {
   await page.evaluate(async () => {
@@ -76,21 +88,28 @@ async function expectHealthyMedia(
 }
 
 test("every public route renders direct healthy images", async ({ page }) => {
-  for (const route of PUBLIC_ROUTES) {
+  const pathwaySite = await isPathwaySite(page);
+  const routes = pathwaySite
+    ? ["/", ...PATHWAY_MEDIA_ROUTES]
+    : PUBLIC_ROUTES;
+
+  for (const route of routes) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await scrollThroughPage(page);
     await expectHealthyMedia(page, route);
   }
 
-  await page.goto("/roster", { waitUntil: "domcontentloaded" });
-  const playerCard = page.locator("[data-roster-player-card='true']").first();
-  await expect(playerCard).toBeVisible();
-  await playerCard.click();
-  await expectHealthyMedia(
-    page,
-    "/roster player modal",
-    "img[data-roster-modal-image='true']",
-  );
+  if (!pathwaySite) {
+    await page.goto("/roster", { waitUntil: "domcontentloaded" });
+    const playerCard = page.locator("[data-roster-player-card='true']").first();
+    await expect(playerCard).toBeVisible();
+    await playerCard.click();
+    await expectHealthyMedia(
+      page,
+      "/roster player modal",
+      "img[data-roster-modal-image='true']",
+    );
+  }
 });
 
 test("source failures render deliberate fallbacks without broken-image chrome", async ({
@@ -108,7 +127,12 @@ test("source failures render deliberate fallbacks without broken-image chrome", 
     await route.continue();
   });
 
-  for (const route of FAILURE_ROUTES) {
+  const pathwaySite = await isPathwaySite(page);
+  const routes = pathwaySite
+    ? ["/", ...PATHWAY_MEDIA_ROUTES]
+    : FAILURE_ROUTES;
+
+  for (const route of routes) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
     await scrollThroughPage(page);
 
@@ -136,5 +160,12 @@ test("source failures render deliberate fallbacks without broken-image chrome", 
         },
       )
       .toBe(true);
+
+    if (
+      pathwaySite &&
+      PATHWAY_MEDIA_ROUTES.some((pathwayRoute) => pathwayRoute === route)
+    ) {
+      await expect(page.locator(".pathway-image-fallback").first()).toBeVisible();
+    }
   }
 });
