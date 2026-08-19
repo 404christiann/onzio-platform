@@ -29,6 +29,14 @@ export type DBTryoutsPageContent = Tables<
   { schema: "onzio" },
   "tryouts_page_content"
 >;
+export type DBRegistrationForm = Tables<
+  { schema: "onzio" },
+  "registration_forms"
+>;
+export type DBRegistrationResponse = Tables<
+  { schema: "onzio" },
+  "registration_responses"
+>;
 
 export type DBPlayer = {
   id: string;

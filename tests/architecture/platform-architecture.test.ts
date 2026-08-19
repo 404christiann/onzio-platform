@@ -208,7 +208,21 @@ describe("tenant and privileged-boundary architecture contract", () => {
     ).flat();
     const approved = [
       /^app\/api\/stripe\/webhook\//,
+      // Stripe Connect webhook for club registration payments. A distinct
+      // endpoint from the subscription webhook above: different Stripe event
+      // source, different signing secret, different replay ledger. It writes
+      // onzio.registration_responses payment state, which no client role may
+      // write, so it is a service-role boundary like its sibling.
+      /^app\/api\/stripe\/connect-webhook\//,
       /^app\/api\/webhooks\/resend\//,
+      // CV United C1: the academy-registration submit route. Public writes
+      // to onzio.registration_responses are funnelled through this
+      // service-role boundary only -- anon holds no grant on that table at
+      // all (20260818120100_registration_forms_responses.sql).
+      /^app\/api\/registrations\/academy\//,
+      // CV United C1: the general-interest submit route, same boundary and
+      // same table as its academy sibling above.
+      /^app\/api\/registrations\/interest\//,
       /^lib\/operator\//,
       /^lib\/owner-admin-membership\.ts$/,
       /^lib\/migration\//,
@@ -219,6 +233,15 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^lib\/media-authorization-token\.ts$/,
       /^lib\/media-processing\.ts$/,
       /^lib\/billing-lifecycle\.ts$/,
+      // Creates the Checkout Session for a family's registration payment on
+      // the club's connected account. Called from the public /join submission
+      // route with only ids, so it must resolve club, form, and response state
+      // itself; onzio.registration_responses grants no write to anon or
+      // authenticated, so the service role is the only writer that exists.
+      // The sibling Connect modules (connect-config, connect-client,
+      // connect-origin, connect-account-status, connect-webhook) deliberately
+      // take an injected client instead and stay outside this boundary.
+      /^lib\/stripe\/connect-checkout\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
     ];
     const violations: string[] = [];

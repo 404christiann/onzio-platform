@@ -52,6 +52,15 @@ const pathwayNav = Sora({
   weight: "500",
 });
 
+// crest@1's registered font pack was "playfair-inter" (Playfair Display +
+// Inter, loaded here as crestDisplay/crestBody) until the 2026-08-18 visual
+// refresh moved it onto the shared "geist" pack instead -- matching
+// pathway@1's real bold-grotesk headline register (see
+// packages/presentation/index.ts and styles/globals.css's `.crest-home`
+// block for the full rationale). geistSans/geistMono above already cover
+// it; crest@1 needs no dedicated font loading or `[data-font-pack]`
+// override any more (compare the academy@1 fonts above, which still do).
+
 export const metadata: Metadata = {
   title: "Onzio Platform",
   description:

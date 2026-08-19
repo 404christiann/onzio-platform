@@ -28,6 +28,18 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/about",
   "/winter-5v5",
   "/privacy",
+  // CV United C1: crest@1's standing player-registration route. Generic and
+  // reusable like every other entry here -- the tenant page itself gates on
+  // presentationTemplateKey, not on any club slug.
+  "/join",
+  // CV United C1: the academy-registration form nested under /join. A
+  // separate route (not a query param on /join) so it can be linked,
+  // bookmarked, and gated independently; same rewrite treatment as every
+  // other entry here.
+  "/join/academy",
+  // CV United C1: the general-interest registration form nested under
+  // /join, same rewrite treatment as its /join/academy sibling above.
+  "/join/interest",
 ]);
 
 const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";

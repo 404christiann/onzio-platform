@@ -14,6 +14,7 @@ const ShopKitSection  = nextDynamic(() => import("@/components/ShopKitSectionCon
 const BehindTheRose   = nextDynamic(() => import("@/components/BehindTheRose"),   { ssr: false });
 const ClubhouseHomePage = nextDynamic(() => import("@/components/ClubhouseHomePage"), { ssr: false });
 const EditorialHome = nextDynamic(() => import("@/components/editorial/EditorialHome"), { ssr: false });
+const CrestHomePage = nextDynamic(() => import("@/components/crest/CrestHomePage"), { ssr: false });
 const DevelopingNextGeneration = nextDynamic(() => import("@/components/DevelopingNextGeneration"), { ssr: false });
 const AcademyHomeShopFeature = nextDynamic(() => import("@/components/AcademyHomeShopFeature"), { ssr: false });
 const AcademyProgramsPathway = nextDynamic(() => import("@/components/AcademyProgramsPathway"), { ssr: false });
@@ -37,6 +38,9 @@ export default function HomePageClient({
   }
   if (club.presentationTemplateKey === "clubhouse@1") {
     return <ClubhouseHomePage initialHeroContent={initialHeroContent} />;
+  }
+  if (club.presentationTemplateKey === "crest@1") {
+    return <CrestHomePage initialHeroContent={initialHeroContent} />;
   }
   const isAcademy = club.presentationTemplateKey === "academy@1";
 

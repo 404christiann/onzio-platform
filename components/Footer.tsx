@@ -33,6 +33,19 @@ const academyFooterLinks = [
   { label: "Tryouts", href: "/tryouts" },
 ];
 
+// CV United C1 shop scope: crest@1 falls through to the shared `footerLinks`
+// default below (same as cinematic@1/heritage@1), which hardcodes a "Shop"
+// link regardless of onzio.clubs.store_enabled. That's fine for
+// cinematic@1/heritage@1 -- unchanged here -- but crest@1's Shop is
+// conditionally present per the operator-only toggle, matching Nav.tsx's
+// crestNavLinks. Filtering footerLinks (rather than restating it) keeps this
+// in lockstep with the default array instead of forking it.
+function crestFooterLinks(storeEnabled: boolean) {
+  return storeEnabled
+    ? footerLinks
+    : footerLinks.filter((link) => link.label !== "Shop");
+}
+
 export default function Footer() {
   const club = useClubContext();
   const clubId = club.id;
@@ -43,7 +56,11 @@ export default function Footer() {
     useState<DBSiteSocialLink[]>([]);
   const [contactProfile, setContactProfile] =
     useState<ContactProfileContent | null>(null);
-  const activeFooterLinks = isAcademy ? academyFooterLinks : footerLinks;
+  const activeFooterLinks = isAcademy
+    ? academyFooterLinks
+    : club.presentationTemplateKey === "crest@1"
+    ? crestFooterLinks(club.storeEnabled)
+    : footerLinks;
 
   useEffect(() => {
     fetchSiteSponsorLogos("footer", clubId)

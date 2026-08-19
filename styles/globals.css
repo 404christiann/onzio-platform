@@ -205,6 +205,18 @@ body:has([data-font-pack="academy"]) {
   font-family: var(--font-body);
 }
 
+/* crest@1's font pack was "playfair-inter" (Playfair Display headlines +
+   Inter body, scoped to `[data-font-pack="crest"]`) until the 2026-08-18
+   visual refresh moved it onto the shared "geist" pack instead -- matching
+   pathway@1's real bold-grotesk headline register, verified against the
+   live reference site. "geist" is already the `:root` default for
+   `--font-display`/`--font-body` above, so crest@1 needs no font-pack
+   override block here at all (same as pathway@1). crest@1's own
+   surface/text/action color tokens still live separately under
+   `.crest-home` further down this file (components/crest/CrestHomePage.tsx),
+   since -- unlike academy@1's palette override -- they are not expressed
+   through the shared `--color-*` tokens. */
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -4659,4 +4671,480 @@ body:has([data-font-pack="academy"]) {
       text-align: center;
     }
   }
+}
+
+/*
+ * crest@1 (CV United C1) template styles.
+ *
+ * Visual refresh (2026-08-18): Christian compared the earlier
+ * Real-Madrid-inspired navy/gold/white mock against the real reference site
+ * he actually wants matched (Manu Ledesma Academy, pathway@1) and supplied
+ * CV United's real crest and real brand colors -- Black #060605, Red
+ * #EC0A0C, Gold #E3A71C, Light Gold #F9D444. This block now carries that
+ * real palette: white-dominant ground still, black plays the role navy
+ * played (dominant ink / inverse surface, e.g. the hero's crest showcase
+ * panel), red is the primary action color (was navy), and gold is a
+ * secondary accent used sparingly -- dividers, eyebrow/kicker text, the
+ * crest showcase ring -- never a dominant fill, mirroring how the crest
+ * artwork itself only uses gold for trim/wordmark/stars against a black
+ * ground.
+ *
+ * Typography + section-rhythm precision pass (2026-08-19): the 08-18 pass
+ * matched MLA's visual language by impression; this pass pulled MLA's
+ * exact computed CSS values live from its DOM (font sizes, weights,
+ * line-heights, letter-spacing, the monospace eyebrow, true-pill button
+ * padding/radius, per-section padding) and matched them precisely -- see
+ * the per-rule comments below (.crest-hero-kicker, .crest-hero-headline,
+ * .crest-cta*, .crest-feature-band*). It also removed the black inverted
+ * feature band entirely: MLA has no dark/inverted section anywhere on its
+ * real page, only white and near-white (#FAFAFA) sections, so
+ * .crest-feature-band no longer uses --crest-surface-inverse as a section
+ * fill (that token is still used elsewhere, e.g. the hero's crest showcase
+ * panel) -- see .crest-feature-band's own comment further down.
+ *
+ * Unlike editorial@1/pathway@1 (which derive their palette per-club from
+ * --club-primary/--club-secondary through their own shells), crest@1 has a
+ * fixed template identity -- the same "template owns its own palette" shape
+ * clubhouse@1 uses for its --clubhouse-* tokens above, not the per-club-brand
+ * shape. Every custom property below is scoped to `.crest-home`
+ * (components/crest/CrestHomePage.tsx renders the Home root with this
+ * class) and named to mirror the presentation-document theme schema 1:1
+ * (packages/presentation/index.ts's `theme` object: surface/text/action/
+ * border/status/accent) even though this template's values are fixed at
+ * build time rather than sourced from a club-authored document.
+ *
+ * `.crest-home` is not Home-exclusive despite the name -- crest@1's
+ * `/join`, `/join/interest`, and `/join/academy` routes (JoinPage.tsx,
+ * JoinInterestForm.tsx, JoinInterestOpeningSoon.tsx,
+ * AcademyRegistrationForm.tsx, RegistrationOpeningSoon.tsx) render it on
+ * their own root elements too, so the same black/red/gold/white tokens and
+ * `.crest-cta` buttons apply there. All of those routes already 404 for
+ * every template but crest@1 (see their page.tsx guards), so there is no
+ * cross-template bleed risk in reusing the class outside Home.
+ */
+.crest-home {
+  --crest-surface-canvas: #FFFFFF;
+  --crest-surface-elevated: #FBF8EF;
+  /* Barely-off-white (2026-08-19 pass): MLA's real section background,
+     measured live as rgb(250,250,250) -- MLA has no dark/inverted section
+     anywhere on the page, only white or this near-white. Was a warm cream
+     (#F4EFE2, matched the earlier Real-Madrid-inspired mock's palette);
+     now the feature band's own background (replacing the removed black
+     inverted band -- see .crest-feature-band below). */
+  --crest-surface-subtle: #FAFAFA;
+  --crest-surface-inverse: #060605;
+  --crest-text-primary: #060605;
+  --crest-text-secondary: #46413A;
+  --crest-text-muted: #767065;
+  --crest-text-inverse: #FFFFFF;
+  --crest-action-primary: #EC0A0C;
+  --crest-action-primary-hover: #C40809;
+  --crest-action-primary-text: #FFFFFF;
+  --crest-action-secondary: #E3A71C;
+  --crest-border-subtle: #E5DFCE;
+  --crest-border-strong: #060605;
+  --crest-status-success: #1B7A43;
+  --crest-status-warning: #B45309;
+  --crest-status-danger: #B42318;
+  /* Gold, decorative only: dividers, the crest showcase ring. Not used for
+     text on a light surface -- see --crest-accent-two below for the
+     contrast-legible gold used by the eyebrow/kicker text (both
+     .crest-hero-kicker and .crest-feature-band-kicker; the feature band's
+     background stopped being dark in the 2026-08-19 pass, see
+     .crest-feature-band's own comment). */
+  --crest-accent-one: #E3A71C;
+  /* Deep gold: a darkened, contrast-legible tint of the same brand gold
+     (#E3A71C), for anywhere gold text must sit on a light surface --
+     secondary-CTA border color aside, the bright gold fails text contrast
+     on white the same way the prior mock's bright gold did. Also the
+     eyebrow/kicker color on light sections (2026-08-19 pass): computed
+     contrast against white is 5.69:1, a safer margin than red's 4.55:1 at
+     the eyebrow's small 10.56px measured size, where the AA threshold for
+     normal-weight text is 4.5:1 -- see the MLA-measurement pass note below
+     `.crest-hero-kicker`. */
+  --crest-accent-two: #8A5E12;
+  /* Light gold, decorative-highlight only (never text) -- the crest
+     artwork's lighter gold trim/stars, used sparingly for hover glow. */
+  --crest-highlight: #F9D444;
+  /* CSS-only decorative extra (like --crest-highlight above), not part of
+     the published theme schema (packages/presentation/index.ts has no
+     "muted link" slot): MLA's real secondary-CTA text color, measured live
+     via computed styles as rgb(110,110,115). Deliberately distinct from
+     --crest-text-muted (#767065, a warmer brown-gray used elsewhere) --
+     this is the exact cooler gray MLA uses for its plain-text secondary
+     link, not a reuse of an existing token. */
+  --crest-text-link: #6E6E73;
+
+  background: var(--crest-surface-canvas);
+  color: var(--crest-text-primary);
+}
+
+.crest-home * {
+  box-sizing: border-box;
+}
+
+/* ---- Hero ------------------------------------------------------------ */
+
+.crest-hero {
+  background: var(--crest-surface-canvas);
+  /* Vertical clamp max raised from 6rem (96px) to 6.4rem (102.4px), MLA's
+     measured content-section padding-block (see .crest-feature-band
+     below); horizontal clamp's max was already 4rem (64px), matching
+     MLA's measured padding-inline exactly. */
+  padding: clamp(3rem, 8vw, 6.4rem) clamp(1.5rem, 5vw, 4rem);
+}
+
+.crest-hero-inner {
+  display: grid;
+  align-items: center;
+  gap: clamp(2.5rem, 6vw, 5rem);
+  max-width: 1200px;
+  margin: 0 auto;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .crest-hero-inner {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  }
+}
+
+/* No crest logo to show (edge case -- CV United's real crest is seeded by
+   scripts/seed-cv-united.ts): the copy column is the only grid child, so it
+   should take the full hero width rather than sit in a half-width column
+   next to empty space. */
+.crest-hero-inner:has(.crest-hero-copy:only-child) {
+  grid-template-columns: 1fr;
+}
+
+.crest-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.crest-hero-kicker-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+/* Eyebrow/kicker (2026-08-19 pass): MLA's real eyebrow above its H1 is a
+   deliberate monospace choice, not its Geist display/body pack -- measured
+   live via computed styles as font-family "ui-monospace", 10.56px, weight
+   500, letter-spacing 1.7952px (wide positive tracking, the opposite of
+   the tight-negative headlines below), uppercase. Hardcoded as a raw
+   system stack rather than routed through --font-mono, because --font-mono
+   resolves to the Geist Mono webfont here (`var(--font-geist-mono),
+   ui-monospace, monospace`) -- MLA's eyebrow is specifically the system
+   UI monospace (SF Mono et al.), not Geist's mono cut, and this is a
+   component-level typography choice, not a registered font pack (see the
+   `.crest-home` header comment and packages/presentation/index.ts). Color
+   uses --crest-accent-two (dark gold) rather than red: see that token's
+   definition above for the contrast-margin reasoning at this small size. */
+.crest-hero-kicker {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.56px;
+  font-weight: 500;
+  letter-spacing: 1.7952px;
+  text-transform: uppercase;
+  color: var(--crest-accent-two);
+}
+
+.crest-hero-rule {
+  display: block;
+  width: 64px;
+  height: 2px;
+  background: var(--crest-accent-one);
+}
+
+/* Huge, tight-tracking sans headline -- the MLA-matched register
+   (styles/globals.css's `:root` default `--font-display` is Geist Sans; see
+   the `.crest-home` header comment and packages/presentation/index.ts for
+   why crest@1 dropped its serif "playfair-inter" pack). `text-transform:
+   none` overrides `@layer base`'s project-wide `h1..h6 { uppercase }` --
+   MLA's real headline is mixed-case, not all-caps.
+   2026-08-19 pass: weight, line-height, and letter-spacing corrected to
+   MLA's real measured H1 computed styles (67.2px / weight 600 / line-height
+   61.824px / letter-spacing -3.696px) rather than the earlier approximation
+   (was weight 800, line-height 1.02, letter-spacing -0.03em). Note
+   line-height 61.824px is LESS than the 67.2px font-size -- 61.824/67.2 =
+   0.92 exactly, a tight/condensed leading, not the browser default -- easy
+   to miss if you only copy the font-size. letter-spacing -3.696/67.2 =
+   -0.055em exactly. clamp() max bumped from 4.6rem to 4.2rem (67.2px, the
+   measured desktop value) with the same min/vw scaling as before for
+   smaller viewports. */
+.crest-hero-headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-style: normal;
+  text-transform: none;
+  line-height: 0.92;
+  letter-spacing: -0.055em;
+  font-size: clamp(2.6rem, 5.6vw, 4.2rem);
+  color: var(--crest-text-primary);
+  margin: 0;
+}
+
+.crest-hero-headline span {
+  display: block;
+}
+
+.crest-hero-headline em {
+  display: block;
+  font-style: normal;
+  color: var(--crest-action-primary);
+}
+
+.crest-hero-intro {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--crest-text-secondary);
+  max-width: 46ch;
+  margin: 0;
+}
+
+.crest-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+/* CTA type shared by both buttons (2026-08-19 pass): MLA's real primary
+   CTA computed style is Geist 15.68px / weight 500 -- corrected from the
+   earlier approximation (0.95rem/15.2px, weight 600). Padding, radius,
+   background, and per-variant shape live on .crest-cta-primary/
+   .crest-cta-secondary below since MLA's two CTAs are shaped completely
+   differently (a filled pill vs. a plain text link), not two colorways of
+   the same button shape. */
+.crest-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+    text-decoration-color 0.2s ease;
+}
+
+/* True pill (MLA's real button shape: border-radius 980px, i.e. a radius
+   far larger than the button is tall -- 999px here is the same "true pill"
+   shape). Padding corrected to MLA's measured 12px 22px (was 0.9rem 2rem =
+   14.4px 32px). Text color stays white: this build's contrast validator
+   (packages/presentation/index.ts's parsePresentationDocument) requires
+   >= 3:1 for action.primaryText against action.primary, and white-on-red
+   computes to ~4.55:1 -- comfortably clears even the stricter 4.5:1
+   normal-text AA threshold. Near-black text (MLA's own choice on its
+   orange button) was checked too: #161617 on this red computes to ~3.97:1,
+   which clears the validator's >= 3 gate but not full AA-normal-text 4.5,
+   and reads visibly muddier on a saturated red than on MLA's lighter
+   orange -- so white was kept rather than blindly copied from MLA. */
+.crest-cta-primary {
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--crest-action-primary);
+  color: var(--crest-action-primary-text);
+  border: 1px solid var(--crest-action-primary);
+}
+
+.crest-cta-primary:hover {
+  background: var(--crest-action-primary-hover);
+  border-color: var(--crest-action-primary-hover);
+}
+
+/* Plain text link, per MLA's real secondary CTA: no background, no
+   border, no border-radius, padding 2px 0 (click-target only, not a
+   button silhouette), color rgb(110,110,115) -- muted gray, not
+   brand-colored (--crest-text-link; see that token's definition above),
+   no underline by default. Replaces the earlier dark-ink outline button,
+   which didn't match MLA's actual "secondary = plain link" pattern. An
+   underline on hover/focus is an added affordance beyond the literal
+   measurement (MLA still needs *some* visible interactive state). */
+.crest-cta-secondary {
+  padding: 2px 0;
+  background: transparent;
+  color: var(--crest-text-link);
+  border: none;
+  text-decoration: none;
+}
+
+.crest-cta-secondary:hover,
+.crest-cta-secondary:focus-visible {
+  text-decoration: underline;
+}
+
+.crest-hero-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Real-crest showcase panel, replacing the earlier circular "CU" initials
+   medallion and its "coming soon" caption -- the crest is real now, not a
+   placeholder. Deliberately modest (well under the copy column's visual
+   weight) rather than hero-dominant: CV United has no real team
+   photography yet, so per Christian's direction this hero does not
+   fabricate stock photography -- the black panel + gold ring supplies the
+   hero's secondary visual interest instead, echoing the crest artwork's
+   own black ground and gold trim. Rendered only when a real logo URL
+   exists (see CrestHero.tsx); there is no placeholder fallback any more. */
+.crest-hero-mark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(320px, 62vw);
+  aspect-ratio: 1 / 1;
+  border-radius: 28px;
+  background: var(--crest-surface-inverse);
+  box-shadow: inset 0 0 0 2px var(--crest-accent-one);
+  padding: clamp(1.75rem, 5vw, 2.75rem);
+}
+
+.crest-hero-mark img {
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Feature band ------------------------------------------------------
+ * 2026-08-19 pass: this was a black inverted band (var(--crest-surface-
+ * inverse), white text, gold-tinted top/bottom rules). Live-measured MLA
+ * has NO dark/inverted section anywhere on the page -- every section is
+ * white or barely-off-white, with color coming from text/accent (a
+ * brand-colored large headline, an orange button) against a light ground,
+ * never from a dark section fill. Reworked to a near-white section
+ * (--crest-surface-subtle, now #FAFAFA -- see that token's definition
+ * above) with dark ink body copy and a red headline, matching that pattern
+ * instead of inverting. The gold-tinted borders were a device for
+ * separating a dark band from white neighbors; with no dark band left
+ * there is nothing for them to separate, so they're removed rather than
+ * recolored -- MLA's own sections are separated by whitespace/padding
+ * alone, no colored divider rules. Padding's vertical clamp max raised
+ * from 5.5rem (88px) to 6.4rem (102.4px), MLA's real measured section
+ * padding-block; the horizontal clamp's max was already 4rem (64px),
+ * matching MLA's measured padding-inline exactly.
+ */
+.crest-feature-band {
+  background: var(--crest-surface-subtle);
+  color: var(--crest-text-primary);
+  padding: clamp(3rem, 7vw, 6.4rem) clamp(1.5rem, 5vw, 4rem);
+}
+
+.crest-feature-band-inner {
+  max-width: 880px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.crest-feature-band-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+/* Same monospace eyebrow treatment as .crest-hero-kicker above (see that
+   rule's comment for the measured values and the --crest-accent-two
+   contrast-margin reasoning) -- was --crest-accent-one (bright gold),
+   which only worked against the removed black band; --crest-accent-two
+   (dark gold) is the legible-on-light-surface variant, same choice the
+   pre-existing .crest-partner-strip sponsor-band-eyebrow already made. */
+.crest-feature-band-kicker {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 10.56px;
+  font-weight: 500;
+  letter-spacing: 1.7952px;
+  text-transform: uppercase;
+  color: var(--crest-accent-two);
+}
+
+/* MLA's large feature-headline variant (e.g. its "What your player can
+   expect" H2, distinct from its smaller standard H2) -- live-measured
+   computed styles: 76.8px, weight 600, letter-spacing -4.9152px
+   (-4.9152/76.8 = -0.064em exactly), color rgb(0,43,128) navy. MLA uses
+   its brand navy AS the headline color at this size/weight rather than
+   black; red (var(--crest-action-primary)) is the direct analog for CV
+   United per the same brief -- verified: red-on-white computes to
+   ~4.55:1, which clears even the strict 4.5:1 AA-normal-text bar, and at
+   this size/weight easily clears the 3:1 AA-large-text bar that actually
+   applies. line-height isn't part of MLA's measured large-H2 values;
+   scaled to the same tight 0.92 ratio the H1 above uses (huge/bold/tight
+   is the consistent register across both), not fabricated independently. */
+.crest-feature-band-head h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: -0.064em;
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+  line-height: 0.92;
+  margin: 0;
+  color: var(--crest-action-primary);
+}
+
+.crest-feature-band-story {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--crest-text-secondary);
+  margin: 0;
+}
+
+.crest-feature-band-values {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crest-feature-band-values li {
+  position: relative;
+  padding: 0 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--crest-text-secondary);
+}
+
+/* Neutral divider (was a gold-tinted rgba, matched to the removed black
+   band) -- var(--crest-border-subtle) is this template's existing neutral
+   divider token, used consistently now that the band sits on a light
+   surface. */
+.crest-feature-band-values li + li {
+  border-left: 1px solid var(--crest-border-subtle);
+}
+
+/* ---- Partner strip ----------------------------------------------------- */
+
+.crest-partner-strip {
+  --sponsor-band-bg: var(--crest-surface-elevated, #FBF8EF);
+  --sponsor-band-eyebrow: var(--crest-accent-two, #8A5E12);
+  padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.5rem, 5vw, 4rem);
+}
+
+.crest-partner-strip .sponsor-carousel-section {
+  color: var(--crest-text-secondary, #46413A);
+  border-block-color: var(--crest-border-subtle, #E5DFCE);
+  background: var(--sponsor-band-bg);
+}
+
+.crest-partner-strip .sponsor-carousel-marquee {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
 }

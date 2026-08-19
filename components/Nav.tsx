@@ -121,6 +121,37 @@ const lionsNavLinks: NavLink[] = [
   { label: "Shop", href: "/shop" },
 ];
 
+// crest@1's registered routes (packages/presentation/index.ts
+// templateRegistry["crest@1"]) are ["home", "club", "roster", "schedule",
+// "store", "contact", "join"], and "club" resolves to a plain About page
+// (crest@1 has no "club-logo" route, unlike cinematic@1, so the two-item
+// Club dropdown used elsewhere doesn't apply here). Contact and Join are
+// real registered routes and must be reachable from the nav -- Join in
+// particular is the General Interest/Academy Registration entry point.
+// Falling through to the shared `navLinks` default below would drop
+// Contact/Join entirely and render an unconditional (rather than
+// storeEnabled-gated) Shop link.
+//
+// CV United C1 shop scope: Shop is a real crest@1 route now (a kit/merch
+// showcase, not e-commerce), but store_enabled is an operator-only toggle
+// (onzio.clubs.store_enabled) -- the same store-gating mechanism this
+// codebase already uses elsewhere for a template's Store nav link -- so
+// this only shows Shop when the club actually has it turned on.
+function crestNavLinks(storeEnabled: boolean): NavLink[] {
+  const links: NavLink[] = [
+    { label: "Home", href: "/" },
+    { label: "Roster", href: "/roster" },
+    { label: "About", href: "/club/about" },
+    { label: "Schedule", href: "/schedule" },
+  ];
+  if (storeEnabled) {
+    links.push({ label: "Shop", href: "/shop" });
+  }
+  links.push({ label: "Contact", href: "/contact" });
+  links.push({ label: "Join", href: "/join" });
+  return links;
+}
+
 function academyNavLinks(programs: ProgramContent[]): NavLink[] {
   return [
     { label: "Home", href: "/" },
@@ -230,6 +261,8 @@ export default function Nav() {
     (isDarkHeroPage && !scrolled && !(isAcademy && menuOpen));
   const activeNavLinks = club.presentationTemplateKey === "academy@1"
     ? academyNavLinks(academyPrograms)
+    : club.presentationTemplateKey === "crest@1"
+    ? crestNavLinks(club.storeEnabled)
     : navLinks;
 
   if (club.presentationTemplateKey === "clubhouse@1") {

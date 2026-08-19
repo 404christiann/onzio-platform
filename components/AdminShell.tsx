@@ -27,6 +27,13 @@ type AdminNavItem = {
   icon: ReactNode;
   feature?: string;
   ownerOnly?: boolean;
+  // CV United C1: gates a nav item to crest@1 clubs only, the same
+  // template check app/admin/(protected)/responses/page.tsx itself uses
+  // (`club.presentationTemplateKey !== "crest@1"` redirects away) --
+  // registrations is declared in supportedModules on crest@1 only
+  // (packages/presentation/index.ts), so a club running any other template
+  // has nothing to see there.
+  crestOnly?: boolean;
 };
 
 const NAV_ITEMS: AdminNavItem[] = [
@@ -217,6 +224,18 @@ const NAV_ITEMS: AdminNavItem[] = [
       </svg>
     ),
   },
+  {
+    label: "Responses",
+    href: "/admin/responses",
+    crestOnly: true,
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M4 5h16v14H4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M4 5l8 7 8-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 13l-4 6M16 13l4 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
 ];
 
 type AdminNavGroup = {
@@ -277,6 +296,7 @@ const NAV_STRUCTURE: AdminNavEntry[] = [
     },
   },
   { type: "link", href: "/admin/payments" },
+  { type: "link", href: "/admin/responses" },
 ];
 
 function groupKeyForPathname(pathname: string): string | null {
@@ -333,7 +353,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     (item) =>
       (!item.ownerOnly || club.role === "owner") &&
       (item.href !== "/admin/payments" || isBillingAdmin) &&
-      (!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href)),
+      (!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href)) &&
+      (!item.crestOnly || club.presentationTemplateKey === "crest@1"),
   );
 
   async function handleSignOut() {

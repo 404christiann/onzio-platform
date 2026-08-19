@@ -7,14 +7,16 @@ export type TemplateKey =
   | "clubhouse@1"
   | "academy@1"
   | "editorial@1"
-  | "pathway@1";
+  | "pathway@1"
+  | "crest@1";
 export type TemplateId =
   | "cinematic"
   | "heritage"
   | "clubhouse"
   | "academy"
   | "editorial"
-  | "pathway";
+  | "pathway"
+  | "crest";
 export type ProvenanceStatus =
   | "verified_public_source"
   | "club_supplied"
@@ -77,7 +79,15 @@ const sectionSchema = z.object({
 const documentSchema = z.object({
   schemaVersion: z.literal(1),
   template: z.object({
-    id: z.enum(["cinematic", "heritage", "clubhouse", "academy", "editorial", "pathway"]),
+    id: z.enum([
+      "cinematic",
+      "heritage",
+      "clubhouse",
+      "academy",
+      "editorial",
+      "pathway",
+      "crest",
+    ]),
     version: z.literal(1),
   }),
   fontPack: z.string(),
@@ -153,7 +163,8 @@ export type SectionRegistration = {
     | "clubhouse"
     | "academy"
     | "editorial"
-    | "pathway";
+    | "pathway"
+    | "crest";
   contentDomain: string;
   compatibleTemplates: TemplateKey[];
   requiredModule: string | null;
@@ -254,7 +265,10 @@ export const fontPacks: Record<string, FontPackRegistration> = {
   "geist": {
     key: "geist",
     displayName: "Geist",
-    compatibleTemplates: ["clubhouse@1", "editorial@1", "pathway@1"],
+    // crest@1 added 2026-08-18: the visual refresh replaced its serif
+    // "playfair-inter" pack with this one, matching pathway@1's real
+    // bold-grotesk headline register (see the crest@1 registration below).
+    compatibleTemplates: ["clubhouse@1", "editorial@1", "pathway@1", "crest@1"],
   },
   // DCFC-D104: no existing pack matched the approved academy@1 type stack --
   // Montserrat headings, Inter body/UI, DM Sans desktop navigation.
@@ -262,6 +276,20 @@ export const fontPacks: Record<string, FontPackRegistration> = {
     key: "montserrat-inter-dmsans",
     displayName: "Montserrat + Inter + DM Sans",
     compatibleTemplates: ["academy@1"],
+  },
+  // CV United C1 (superseded 2026-08-18): this pack matched an earlier
+  // Real-Madrid-inspired crest@1 mock's high-contrast editorial-prestige
+  // direction. Once Christian's verified real reference (Manu Ledesma
+  // Academy, pathway@1) showed the approved direction is actually a bold
+  // grotesk headline, not a serif display face, crest@1 moved to the
+  // "geist" pack above instead. Left registered (unreferenced by any
+  // template's compatibleFontPacks) rather than deleted -- removing a font
+  // pack registration outright is a separate concern from this visual
+  // refresh.
+  "playfair-inter": {
+    key: "playfair-inter",
+    displayName: "Playfair Display + Inter",
+    compatibleTemplates: [],
   },
 } as const;
 
@@ -292,6 +320,12 @@ export const routeRegistry = {
   about: { path: "/about" },
   promo: { path: "/winter-5v5" },
   legal: { path: "/privacy" },
+  // CV United C1: generic route vocabulary for clubs that register players
+  // directly (first consumer: crest@1). Named semantically rather than after
+  // any one club's funnel -- `tryouts` already covers open evaluation events,
+  // while `join` covers the standing "register with the club" entry point --
+  // so other templates may adopt it without inheriting CV United's wording.
+  join: { path: "/join" },
 } as const;
 
 export const moduleRegistry = {
@@ -313,6 +347,13 @@ export const moduleRegistry = {
   programs: { entitlement: "pro" },
   contact: { entitlement: "starter" },
   analytics: { entitlement: "pro" },
+  // CV United C1: player registration capture, the standing sibling of the
+  // event-shaped `tryouts` module. Pro-only, matching `tryouts`/`programs` --
+  // the same descriptive, non-authorizing label those carry since PLAT-102
+  // removed onzio_private.club_has_feature from the policy wrappers. Declared
+  // in supportedModules on crest@1 only, following the way `programs` is
+  // scoped to academy@1 alone.
+  registrations: { entitlement: "pro" },
 } as const;
 
 export const sectionRegistry: Record<string, SectionRegistration> = {
@@ -737,6 +778,53 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     emptyBehavior: "error",
     productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
   },
+  // crest@1 sections (CV United C1). Each maps to a content domain that already
+  // exists -- no section is registered against a domain the schema cannot
+  // supply. This is the minimal registration set that makes the template
+  // structurally valid; the rendering components and any further sections
+  // land in the sibling crest@1 steps. Deliberately excluded for now:
+  // anything reading a domain crest@1 has not yet earned, and any section
+  // backed by the `registrations` module, which has no content domain until
+  // the registration tables exist.
+  "crest.hero": {
+    type: "crest.hero",
+    version: 1,
+    scope: "crest",
+    contentDomain: "homepage",
+    compatibleTemplates: ["crest@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  // The inverted navy band: a full-bleed dark feature section carrying club
+  // identity copy. Content domain "about" for the same reason shared.history
+  // and pathway.mission use it -- the band's text is club-identity copy.
+  "crest.feature-band": {
+    type: "crest.feature-band",
+    version: 1,
+    scope: "crest",
+    contentDomain: "about",
+    compatibleTemplates: ["crest@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "crest.partner-strip": {
+    type: "crest.partner-strip",
+    version: 1,
+    scope: "crest",
+    contentDomain: "site_sponsor_logos",
+    compatibleTemplates: ["crest@1"],
+    requiredModule: "sponsors",
+    requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
 };
 
 export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
@@ -1001,6 +1089,53 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "legal",
     ],
     supportedModules: ["contact", "sponsors", "store", "affiliations", "roster", "schedule", "staff"],
+  },
+  // Crest concept template (CV United C1). Like clubhouse@1, academy@1,
+  // editorial@1, and pathway@1 before it, this is a platform template, not
+  // CV-United-exclusive -- any club may be assigned it, following the same
+  // extraction precedent. Unlike pathway@1 it carries a full sports-CMS
+  // shape: roster and schedule are first-class, and the standing `join`
+  // registration entry sits alongside contact.
+  "crest@1": {
+    id: "crest",
+    version: 1,
+    key: "crest@1",
+    displayName: "Crest",
+    originNote:
+      "Based on the approved CV United prospect visual system; generic and reusable, not CV-United-exclusive.",
+    // Visual refresh (2026-08-18): the original "playfair-inter" pack
+    // matched an earlier Real-Madrid-inspired mock's high-contrast didone
+    // headline register. Christian's verified real reference (Manu Ledesma
+    // Academy, pathway@1) instead carries a huge, bold, tight-tracking
+    // grotesk headline -- not a serif display face -- so crest@1 now shares
+    // pathway@1's registered "geist" pack rather than keeping a serif pack
+    // that no longer matches the approved direction. "playfair-inter"
+    // stays registered below (unused by any template now) rather than
+    // deleted, since removing a font pack registration is not this change's
+    // concern.
+    defaultFontPack: "geist",
+    compatibleFontPacks: ["geist"],
+    // Minimal on purpose: only the crest.* sections registered below. The
+    // shared.next-match / shared.history sections are deliberately NOT listed
+    // yet -- adding them means additively extending those shared entries'
+    // compatibleTemplates too (the editorial@1 precedent), which belongs with
+    // the step that actually builds crest@1's Home composition.
+    defaultSections: ["crest.hero", "crest.feature-band", "crest.partner-strip"],
+    supportedSections: ["crest.hero", "crest.feature-band", "crest.partner-strip"],
+    // CV United C1 shop scope: a kit/merch showcase page (photos, kit
+    // variant toggle, purchase-details info), not real e-commerce -- the
+    // same shared `store` route/module every other template already uses
+    // for /shop. Additive only: inserted before "contact", mirroring where
+    // academy@1 and editorial@1 place "store" in their own route lists.
+    defaultRoutes: ["home", "club", "roster", "schedule", "store", "contact", "join"],
+    supportedRoutes: ["home", "club", "roster", "schedule", "store", "contact", "join"],
+    supportedModules: [
+      "roster",
+      "schedule",
+      "sponsors",
+      "contact",
+      "registrations",
+    ],
   },
 };
 

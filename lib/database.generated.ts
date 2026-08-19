@@ -481,11 +481,13 @@ export type Database = {
           kind: string
           lifecycle: string
           name: string
+          payments_live_enabled: boolean
           primary_color: string | null
           public_access: string
           secondary_color: string | null
           slug: string
           store_enabled: boolean
+          stripe_connect_account_id: string | null
           stripe_price_id: string | null
           tier: string
           updated_at: string
@@ -498,11 +500,13 @@ export type Database = {
           kind?: string
           lifecycle?: string
           name: string
+          payments_live_enabled?: boolean
           primary_color?: string | null
           public_access?: string
           secondary_color?: string | null
           slug: string
           store_enabled?: boolean
+          stripe_connect_account_id?: string | null
           stripe_price_id?: string | null
           tier?: string
           updated_at?: string
@@ -515,11 +519,13 @@ export type Database = {
           kind?: string
           lifecycle?: string
           name?: string
+          payments_live_enabled?: boolean
           primary_color?: string | null
           public_access?: string
           secondary_color?: string | null
           slug?: string
           store_enabled?: boolean
+          stripe_connect_account_id?: string | null
           stripe_price_id?: string | null
           tier?: string
           updated_at?: string
@@ -1917,6 +1923,149 @@ export type Database = {
           },
         ]
       }
+      registration_forms: {
+        Row: {
+          club_id: string
+          created_at: string
+          currency: string | null
+          description: string | null
+          form_type: string
+          id: string
+          price_cents: number | null
+          requires_payment: boolean
+          status: string
+          title: string
+          updated_at: string
+          waiver_text: string | null
+          waiver_version: number | null
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          form_type: string
+          id?: string
+          price_cents?: number | null
+          requires_payment?: boolean
+          status?: string
+          title: string
+          updated_at?: string
+          waiver_text?: string | null
+          waiver_version?: number | null
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          form_type?: string
+          id?: string
+          price_cents?: number | null
+          requires_payment?: boolean
+          status?: string
+          title?: string
+          updated_at?: string
+          waiver_text?: string | null
+          waiver_version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_forms_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registration_responses: {
+        Row: {
+          amount_paid_cents: number | null
+          club_id: string
+          created_at: string
+          form_id: string
+          id: string
+          interest_area: string | null
+          notes: string | null
+          paid_at: string | null
+          parent_guardian_email: string
+          parent_guardian_name: string
+          parent_guardian_phone: string
+          payment_status: string
+          player_dob: string
+          player_first_name: string
+          player_last_name: string
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
+          submitted_at: string
+          updated_at: string
+          waiver_accepted_at: string | null
+          waiver_version_accepted: number | null
+        }
+        Insert: {
+          amount_paid_cents?: number | null
+          club_id: string
+          created_at?: string
+          form_id: string
+          id?: string
+          interest_area?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          parent_guardian_email: string
+          parent_guardian_name: string
+          parent_guardian_phone: string
+          payment_status?: string
+          player_dob: string
+          player_first_name: string
+          player_last_name: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          submitted_at?: string
+          updated_at?: string
+          waiver_accepted_at?: string | null
+          waiver_version_accepted?: number | null
+        }
+        Update: {
+          amount_paid_cents?: number | null
+          club_id?: string
+          created_at?: string
+          form_id?: string
+          id?: string
+          interest_area?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          parent_guardian_email?: string
+          parent_guardian_name?: string
+          parent_guardian_phone?: string
+          payment_status?: string
+          player_dob?: string
+          player_first_name?: string
+          player_last_name?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
+          submitted_at?: string
+          updated_at?: string
+          waiver_accepted_at?: string | null
+          waiver_version_accepted?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_responses_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "registration_responses_club_id_form_id_fkey"
+            columns: ["club_id", "form_id"]
+            isOneToOne: false
+            referencedRelation: "registration_forms"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
       seasons: {
         Row: {
           active: boolean
@@ -2343,6 +2492,56 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "media_assets"
             referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      stripe_connect_events: {
+        Row: {
+          applied_at: string | null
+          club_id: string | null
+          connected_account_id: string
+          created_at: string
+          event_type: string
+          id: string
+          livemode: boolean
+          outcome: string
+          payload_digest: string
+          rejection_code: string | null
+          stripe_created_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          club_id?: string | null
+          connected_account_id: string
+          created_at?: string
+          event_type: string
+          id: string
+          livemode: boolean
+          outcome?: string
+          payload_digest: string
+          rejection_code?: string | null
+          stripe_created_at: string
+        }
+        Update: {
+          applied_at?: string | null
+          club_id?: string | null
+          connected_account_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          livemode?: boolean
+          outcome?: string
+          payload_digest?: string
+          rejection_code?: string | null
+          stripe_created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_connect_events_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
           },
         ]
       }

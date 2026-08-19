@@ -1,6 +1,719 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-18
+Last updated: 2026-08-19
+
+## crest@1 (CV United C1): typography + section-rhythm precision pass, exact MLA computed-style match, black inverted band removed
+
+Agent: Claude (Sonnet 5), 2026-08-19. Worktree
+`~/Downloads/onzio-platform-cv-united`, branch `claude/cv-united-crest`.
+Status: **implementation complete, locally verified (including a live
+browser screenshot with computed-style assertions), uncommitted.**
+
+Christian said the earlier 2026-08-18 visual refresh (entry below) still
+"looks nothing like" the reference site
+(https://manu-ledesma-academy-onzio-staging.vercel.app/, MLA, pathway@1).
+That pass matched MLA's visual language by impression; this pass instead
+pulled MLA's exact computed CSS values live from its rendered DOM (browser
+JS execution against `getComputedStyle`, not eyeballing) and matched them
+precisely. All changes are scoped to `styles/globals.css`'s `.crest-home`
+block, `scripts/crest-presentation.ts`'s theme object, and doc-comment
+updates in `components/crest/CrestHero.tsx` / `CrestFeatureBand.tsx` (no
+JSX/markup changes in either component -- both were already structurally
+close enough that only CSS needed to change).
+
+**Typography (`styles/globals.css`).**
+- `.crest-hero-headline` (H1): corrected from an approximation (weight 800,
+  line-height 1.02, letter-spacing -0.03em, clamp max 4.6rem) to MLA's real
+  measured values -- weight 600, line-height 0.92 (61.824px/67.2px, tight
+  leading *less* than the font-size, not the browser default),
+  letter-spacing -0.055em (-3.696px/67.2px), clamp max 4.2rem (67.2px, the
+  measured desktop size).
+- `.crest-feature-band-head h2` (large feature-headline variant, MLA's
+  "What your player can expect" register): weight 600, letter-spacing
+  -0.064em (-4.9152px/76.8px), font-size clamp max 4.8rem (76.8px),
+  color switched from white (was on the removed dark band) to red
+  (`--crest-action-primary`) -- red plays the role MLA's navy plays as an
+  occasional large-headline color; verified red-on-white computes to
+  ~4.55:1, clearing even the strict 4.5:1 AA-normal-text bar, well past the
+  3:1 bar that actually applies at this size/weight.
+- Eyebrow/kicker (`.crest-hero-kicker`, `.crest-feature-band-kicker`): font
+  changed from the body pack (Geist) to a hardcoded system monospace stack
+  (`ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace`) --
+  MLA's real eyebrow is a deliberate monospace choice, not its Geist
+  display/body pack. Not routed through the existing `--font-mono` token
+  because that resolves to the Geist Mono webfont, a different typeface
+  from the system UI monospace MLA actually uses. Size 10.56px, weight 500,
+  letter-spacing 1.7952px (wide positive tracking, opposite the tight
+  negative headlines), uppercase. Color changed from `--crest-text-secondary`
+  (hero) / `--crest-accent-one` bright gold (feature band, only legible
+  against the removed dark background) to `--crest-accent-two` (dark gold)
+  on both: computed contrast against white is 5.69:1, a safer margin than
+  red's 4.55:1 at this small size where the AA threshold for normal-weight
+  text is 4.5:1 -- red was rejected here specifically for that thin margin,
+  even though it was the right choice for the large H2 above.
+
+**Buttons (`styles/globals.css`'s `.crest-cta*`).** Split what was one
+`.crest-cta` base carrying shared padding/radius into a lighter shared base
+(font/size/weight/transition only) plus per-variant shape, since MLA's two
+CTAs are shaped completely differently, not two colorways of one shape:
+- `.crest-cta-primary`: font corrected to Geist 15.68px/weight 500 (was
+  0.95rem/15.2px, weight 600); padding corrected to MLA's measured
+  `12px 22px` (was 0.9rem 2rem = 14.4px 32px); `border-radius: 999px`
+  (already a true pill, unchanged, matching MLA's 980px). Text color
+  verified rather than assumed: white-on-red computes to ~4.55:1 (clears
+  the build's contrast validator's >= 3:1 gate and full AA-normal-text
+  4.5:1); near-black (MLA's own choice on its lighter orange) was checked
+  too and computes to only ~3.97:1 on this red -- clears the validator's
+  gate but not full AA-normal-text, and reads muddier on a saturated red
+  than MLA's orange -- so white was kept, not blindly copied from MLA.
+- `.crest-cta-secondary`: rebuilt from a dark-ink outline button into
+  MLA's real plain-text-link pattern -- no background, no border, no
+  border-radius, padding `2px 0` (click-target only), color
+  `rgb(110,110,115)` via a new CSS-only token `--crest-text-link: #6E6E73`
+  (deliberately distinct from the existing warmer `--crest-text-muted`
+  #767065; not part of the published theme schema, same "component-level
+  CSS extra" treatment as the pre-existing `--crest-highlight`), no
+  underline by default. Added an underline on hover/focus as an affordance
+  beyond the literal measurement -- MLA still needs some visible
+  interactive state.
+
+**Section rhythm -- black inverted feature band removed
+(`styles/globals.css`'s `.crest-feature-band*`, doc comments in
+`components/crest/CrestFeatureBand.tsx`).** Live-measured MLA has no
+dark/inverted section anywhere on the real page -- every section is white
+or barely-off-white (`rgb(250,250,250)`), with color coming from
+text/accent against that light ground, never from a dark section fill.
+`.crest-feature-band` no longer uses `--crest-surface-inverse` (black) as
+its background; it now uses `--crest-surface-subtle`, whose *value* also
+changed from a warm cream `#F4EFE2` (matched the earlier Real-Madrid-
+inspired mock's palette) to `#FAFAFA` (MLA's real measured near-white),
+kept byte-identical in `scripts/crest-presentation.ts`'s
+`theme.surface.subtle` per the established cross-file convention. Body copy
+and the values-list items switched from white/`rgba(255,255,255,0.82)` to
+`--crest-text-primary`/`--crest-text-secondary`. The gold-tinted
+top/bottom border rules and the values-list's gold divider were removed
+entirely rather than recolored -- they existed to separate a dark band
+from white neighbors, and with no dark band left there's nothing for them
+to separate; MLA's own sections are separated by whitespace/padding alone,
+no colored divider rules. Padding's vertical clamp max raised from 5.5rem
+(88px) to 6.4rem (102.4px, MLA's measured section padding-block) on both
+`.crest-feature-band` and `.crest-hero` for consistency; the horizontal
+clamp max was already 4rem (64px), matching MLA's measured padding-inline
+exactly, on both.
+
+**`scripts/crest-presentation.ts`.** Only `theme.surface.subtle` changed
+(`#F4EFE2` -> `#FAFAFA`, synced with the CSS change above); every other
+color token, `fontPack`, section list, and route list is unchanged --
+everything else in this pass (the removed dark band, the corrected type
+scale, the monospace eyebrow, the true-pill button shape) is
+component-level CSS typography/layout, not a color, so it has no schema
+slot and lives only in `styles/globals.css` and the two component files'
+doc comments, per the task brief's explicit guidance not to force
+typography mechanics into the theme JSON schema.
+
+**Other templates verified unaffected:** `git diff styles/globals.css`
+shows exactly two hunks -- a small pre-existing comment-only addition near
+line 205 from the 2026-08-18 pass (untouched today), and one continuous
+hunk covering the entire `.crest-home`-scoped block (~4676 onward); no
+edits landed outside that block. `academy@1`/`clubhouse@1`/`editorial@1`/
+`cinematic@1`/`heritage@1`/`pathway@1` CSS, font loading, and registry
+entries are untouched. Grepped every `.crest-cta` usage across the repo
+(`AcademyRegistrationForm.tsx`, `JoinPage.tsx`, `JoinInterestForm.tsx`,
+`RegistrationOpeningSoon.tsx`, `JoinInterestOpeningSoon.tsx`,
+`CrestHero.tsx`) to confirm every instance pairs the base class with
+`.crest-cta-primary` or `.crest-cta-secondary` (never the bare base class
+alone), since the button restructure moved padding/radius off the shared
+base and onto the variant classes -- confirmed live on `/join` (see below),
+not just by reading the CSS.
+
+**Verification:**
+- `npx tsc --noEmit` -- clean.
+- `npm run test:contracts` -- **888/889 passing** (77/78 files), the same
+  pre-existing unrelated `editorial-home.test.ts` date-sensitive flake
+  called out in the entry below (confirmed again unrelated to this pass).
+- `npm run test:architecture` -- **20/20 passing** (3/3 files).
+- Re-ran `scripts/seed-cv-united.ts` against the running local Supabase
+  instance three times across this pass (before the live check, after
+  flipping the local preview gate on, and again after reverting it) --
+  every run publishes the updated theme through
+  `parsePresentationDocument({ surface: "production" })`'s schema/contrast
+  validation without weakening any check, and the second/third runs are
+  fully idempotent (`"storageObject": "reused"`, same asset id and IDs
+  throughout, no duplicate rows).
+- **Live browser verification with computed-style assertions** (not just a
+  visual screenshot): used `scripts/local-preview-toggle.mjs on` (a small
+  local-only helper this task added, wrapping the same
+  lifecycle="active"/public_access="live" flip the 08-18 pass did by hand
+  via direct `psql` -- this worktree has no `psql` binary, hence the
+  script) to bypass the preview-gate 404, opened
+  `cv-united.localhost:3016` via the `onzio-platform-cv-united-preview`
+  launch config, and ran `getComputedStyle` against the live DOM. Measured
+  results matched the target values exactly: H1 `font-size: 67.2px;
+  font-weight: 600; letter-spacing: -3.696px; line-height: 61.824px`;
+  primary CTA `font-size: 15.68px; font-weight: 500; border-radius: 999px;
+  padding: 12px 22px; background: rgb(236, 10, 12); color: rgb(255, 255,
+  255)`; secondary CTA `padding: 2px 0px; color: rgb(110, 110, 115)`;
+  feature-band kicker `font-family: ui-monospace, ...; font-size: 10.56px;
+  font-weight: 500; letter-spacing: 1.7952px; color: rgb(138, 94, 18)`;
+  feature-band H2 `font-size: 76.8px; font-weight: 600; letter-spacing:
+  -4.9152px; color: rgb(236, 10, 12)`; feature-band background `rgb(250,
+  250, 250)`. Screenshotted the rendered result: white hero with the black/
+  gold crest showcase panel intact, bold tight-tracking black headline, red
+  pill primary CTA + plain gray-text secondary CTA, then a near-white
+  "About" section with a small gold monospace eyebrow and a large red
+  headline -- no black band anywhere on the page except the (unrelated,
+  out-of-scope) site footer, which was already black before this pass and
+  isn't a "content section" in the sense the task's section-rhythm
+  correction addressed. Also visited `/join` and confirmed both CTA
+  variants (`Register` pill, `Sign up` plain link) still render correctly
+  post-restructure. Reverted the preview-gate flip
+  (`scripts/local-preview-toggle.mjs off`) immediately after, then
+  re-ran `scripts/seed-cv-united.ts` once more to confirm the reverted
+  state still reconciles cleanly (see above).
+
+**Files changed:** `styles/globals.css`, `scripts/crest-presentation.ts`,
+`components/crest/CrestHero.tsx` (doc comment only),
+`components/crest/CrestFeatureBand.tsx` (doc comment only),
+`scripts/local-preview-toggle.mjs` (new, small local-only dev helper --
+see its own header comment), this entry (`HANDOFF.md`).
+
+**Next step:** none required for this scope. Per the task brief, CV United
+still has no hero eyebrow text seeded (`homepage_hero_content.eyebrow` is
+empty for this tenant, confirmed live -- the kicker markup/CSS is correct
+and would render once real eyebrow copy exists, it's just conditionally
+absent today) and no "standard" (smaller, non-feature) H2 usage anywhere in
+crest@1 today to apply MLA's measured 41.6px/weight 600/-0.9984px standard-
+H2 values to -- only the large feature variant (`.crest-feature-band-head
+h2`) exists in this template currently, and that's the one this pass
+matched. CV United still needs its own real marketing copy and real team
+photography whenever it exists (both explicitly out of scope, unchanged
+from the entry below).
+
+## crest@1 (CV United C1): visual refresh to match the real MLA (pathway@1) reference site, real crest wired in
+
+Agent: Claude (Sonnet 5), 2026-08-18. Worktree
+`~/Downloads/onzio-platform-cv-united`, branch `claude/cv-united-crest`.
+Status: **implementation complete, locally verified (including a live
+browser screenshot), uncommitted.**
+
+Christian reviewed the live crest@1 build and said it "looks nothing like"
+the reference site he actually wants matched:
+https://manu-ledesma-academy-onzio-staging.vercel.app/ (MLA, pathway@1).
+The orchestrating session browsed that live site and supplied a verified
+visual-language brief, plus Christian's real assets: the real crest
+(`/Users/christianalcala/Downloads/cvUnitedFCLogo.png`) and real brand
+colors (Black `#060605`, Red `#EC0A0C`, Gold `#E3A71C`, Light Gold
+`#F9D444`), replacing the earlier Real-Madrid-inspired navy/gold placeholder
+mock built earlier this session.
+
+**Color tokens (`styles/globals.css`'s `.crest-home` block,
+`scripts/crest-presentation.ts`'s theme object, `scripts/seed-cv-united.ts`'s
+`CV_UNITED_PRIMARY_COLOR`/`CV_UNITED_SECONDARY_COLOR`).** All three updated
+to the same mapping (kept byte-identical across all three, per the
+established convention): Black `#060605` plays the role the old navy
+played (dominant ink / `--crest-surface-inverse`); Red `#EC0A0C` is the new
+`--crest-action-primary` (was navy); Gold `#E3A71C` is
+`--crest-action-secondary`/`--crest-accent-one` (dividers, inverted-band
+kicker text, decorative only); `--crest-accent-two` is `#8A5E12`, a
+darkened/legible tint of the same brand gold (not a separately-supplied
+color) for anywhere gold text sits on a light surface, since the bright
+gold fails contrast the same way the old mock's bright gold did. Added
+`--crest-highlight: #F9D444` (Light Gold) as a CSS-only decorative extra
+(not part of the published theme schema) for the crest showcase panel's
+ring/hover glow. Contrast validator in `packages/presentation/index.ts`
+(`text.primary` vs `surface.canvas` >= 4.5, `action.primaryText` vs
+`action.primary` >= 3) passes with real margin (red-on-white computes to
+~4.55:1); confirmed by `scripts/seed-cv-united.ts` actually publishing
+through `parsePresentationDocument({ surface: "production" })` without
+weakening any check.
+
+**Typography (`packages/presentation/index.ts`, `app/layout.tsx`,
+`components/TemplateFontScope.tsx`, `styles/globals.css`).** Swapped
+crest@1's font pack from `"playfair-inter"` (Playfair Display serif
+headlines) to `"geist"` -- the same pack `pathway@1` (MLA) already uses,
+matching MLA's real huge/bold/tight-tracking grotesk headline, verified
+live rather than guessed. `"geist"`'s `compatibleTemplates` gained
+`"crest@1"`; `"playfair-inter"` stays registered (now with an empty
+`compatibleTemplates`) rather than deleted, since removing a registration
+outright was judged out of scope for this pass. Removed the
+`Playfair_Display`/dedicated-Inter font loading and the
+`[data-font-pack="crest"]` CSS override block entirely: Geist Sans is
+already the `:root` default for `--font-display`/`--font-body`, so -- like
+pathway@1 -- crest@1 now needs no override at all.
+`TemplateFontScope.tsx`'s `academy@1` branch is untouched.
+
+**Real crest (`scripts/seed-cv-united.ts`, `components/crest/CrestHero.tsx`,
+`styles/globals.css`, `components/Nav.tsx` unchanged).** Wired the real
+crest through the actual platform mechanism (Supabase Storage), not a
+static `public/` fallback -- copied `scripts/seed-mla-local.ts`'s
+established media pipeline (validate -> `normalizeGraphic` -> upload to the
+public `onzio-media` bucket at `{club_id}/branding/{asset_id}.{ext}` ->
+one published `onzio.media_assets` row -> `onzio.site_branding`
+`club_logo_path`/`club_logo_asset_id`) rather than inventing a new one,
+since the lift was small (the pipeline already exists and is well-tested)
+and the task brief asked to prefer the real mechanism when not much
+harder. Source: `/Users/christianalcala/Downloads/cvUnitedFCLogo.png`
+(1122x1402 PNG, normalized to webp), overridable with `--crest-source
+<path>`. `Nav.tsx`'s existing generic `clubLogoUrl`-driven badge (shared
+across every template, no crest@1-specific code) now renders the real
+crest automatically once `clubLogoUrl` resolves -- no `Nav.tsx` edit was
+needed or made. `CrestHero.tsx`'s old circular "CU" initials medallion +
+"Placeholder crest — coming soon" caption was removed entirely (the crest
+is real now, not a placeholder) and replaced with `.crest-hero-mark`, a
+modest black showcase panel with a gold ring, deliberately not
+hero-dominant; it simply doesn't render when `clubLogoUrl` is unset (no
+placeholder fallback), with a `:has()` CSS rule giving the copy column the
+full hero width in that case.
+
+**Hero restructure + buttons + feature band
+(`components/crest/CrestHero.tsx`, `styles/globals.css`).** Hero keeps its
+existing eyebrow-rule + headline + intro + CTA structure (already close to
+MLA's pattern from earlier this session) but the headline lost its
+inherited `uppercase`/italic-accent-line styling (`text-transform: none`,
+`font-weight: 800`, non-italic `<em>`) to match MLA's real mixed-case bold
+sans headline. `.crest-cta` changed from a sharp 2px-radius uppercase
+button to a rounded pill (`border-radius: 999px`, mixed-case, `font-weight:
+600`); secondary CTA changed from a gold-bordered/gold-text outline to a
+plain dark-ink outline, keeping gold as a sparing accent rather than a
+second dominant UI color (per the brief's explicit "gold used sparingly"
+direction). `.crest-feature-band-head h2` lost its italic serif styling
+the same way the hero headline did (same eyebrow + huge bold headline
+pattern, not the old inverted-band-with-serif-italic look); its gold
+divider/border rgba values were recomputed from the new gold hex. CV
+United has no real team photography yet, so per Christian's explicit
+direction the hero does **not** fabricate stock photography -- the crest
+showcase panel's black ground + gold ring supplies the hero's secondary
+visual interest instead of a photo. Hero/feature-band copy itself was left
+alone (not asked to write CV United's own marketing copy in this pass).
+
+**Other templates verified unaffected:** every edit above is scoped to
+`.crest-home`/`crest`-prefixed CSS selectors, `crest@1`'s registry entries,
+or `components/crest/*`; `academy@1`/`clubhouse@1`/`editorial@1`/
+`cinematic@1`/`heritage@1`/`pathway@1` CSS blocks, font loading, and
+registry entries are untouched (confirmed by reading the diffs, not just
+assuming). `Nav.tsx`/`Footer.tsx` routing/gating logic from the two earlier
+entries below is untouched -- only the crest-scoped visual tokens those
+components already read from changed.
+
+**Verification:**
+- `npx tsc --noEmit` -- clean.
+- `npm run test:contracts` -- **888/889 passing** (77/78 files), the same
+  pre-existing unrelated `editorial-home.test.ts` date-sensitive flake
+  called out in the entry below (confirmed again unrelated to this pass).
+- `npm run test:architecture` -- **20/20 passing** (3/3 files).
+- Re-ran `scripts/seed-cv-united.ts` twice against the running local
+  Supabase instance: first run uploads the crest (`"storageObject":
+  "uploaded"`) and publishes the new theme/font-pack document through
+  `parsePresentationDocument`'s production-surface validation without
+  weakening any check; second run is fully idempotent
+  (`"storageObject": "reused"`, same asset id, no duplicate rows).
+- **Live browser verification** (something the two entries below could not
+  get past the `public_access = "preview"` anonymous-404 gate for): opened
+  `cv-united.localhost:3016` via the `onzio-platform-cv-united-preview`
+  launch config. Confirmed the doc'd preview-gate is real (this build's
+  local seed intentionally leaves `lifecycle = "onboarding"`/
+  `public_access = "preview"`, so anonymous local visitors correctly get
+  middleware's `notFound()` -- see `docs/local-development.md`, unrelated
+  to this pass). To actually see the rendered page rather than fixing or
+  weakening that gate, temporarily flipped `cv-united`'s `clubs.lifecycle`
+  to `"active"` and `public_access` to `"live"` plus a throwaway
+  `club_subscriptions` row with `status = "active"` directly via local
+  `psql`/`pg` -- local-sandbox-only, never touched a migration or script --
+  screenshotted the rendered hero/nav/feature-band (real crest badge in
+  nav, red active-link underline, bold mixed-case sans headline, red pill
+  primary CTA + dark-outline secondary CTA, black feature band with gold
+  eyebrow + bold headline), then reverted `lifecycle`/`public_access` back
+  to `"onboarding"`/`"preview"` and deleted the throwaway subscription row
+  immediately after. Re-ran `scripts/seed-cv-united.ts` once more afterward
+  to confirm the reverted state still reconciles cleanly.
+
+**Files changed:** `styles/globals.css`, `packages/presentation/index.ts`,
+`app/layout.tsx`, `components/TemplateFontScope.tsx`,
+`components/crest/CrestHero.tsx`, `scripts/crest-presentation.ts`,
+`scripts/seed-cv-united.ts`, this entry (`HANDOFF.md`).
+
+**Next step:** none required for this scope. CV United still needs its own
+real hero/feature-band marketing copy (not written in this pass -- was
+explicitly out of scope) and real team photography whenever it exists, at
+which point the hero's showcase-panel-only right column could be revisited
+in favor of MLA's real full-bleed-photo hero pattern.
+
+## crest@1 (CV United C1): added the Shop/merch showcase page (new scope, storeEnabled-gated)
+
+Agent: Claude (Sonnet 5), 2026-08-18. Worktree
+`~/Downloads/onzio-platform-cv-united`, branch `claude/cv-united-crest`.
+Status: **implementation complete, locally verified, uncommitted.**
+
+New scope confirmed by Christian after the earlier build: CV United's owner
+wants a Shop/merch page after all -- a kit/merch **showcase** (photos, kit
+variant toggle, purchase-details info), explicitly NOT real e-commerce (no
+cart, in-app checkout, or inventory). This reuses the shared platform
+`/shop` route (`app/(public)/shop/page.tsx`) and the operator-only
+`onzio.clubs.store_enabled` toggle already built for `editorial@1` (Lions
+E1/E3) -- no new infrastructure, only crest@1 wiring.
+
+**Registry (`packages/presentation/index.ts`, `templateRegistry["crest@1"]`
+only).** Added `"store"` to both `defaultRoutes` and `supportedRoutes`,
+inserted before `"contact"` (`["home", "club", "roster", "schedule",
+"store", "contact", "join"]`), mirroring where `academy@1`/`editorial@1`
+place `"store"` in their own route lists. `routeRegistry.store` already
+maps to `/shop`; no new route or module key was registered. Nothing else in
+the `crest@1` entry, and no other template's entry, was touched (confirmed
+by diff).
+
+**`scripts/crest-presentation.ts` (CV United's published presentation
+document builder, not explicitly in scope but required by the registry
+change).** `assertMatchesRegistryDefaults` in this file hard-asserts the
+published document's `navigation.groups[0].routes` equals
+`templateRegistry["crest@1"].defaultRoutes` exactly -- so the registry edit
+above would have broken `scripts/seed-cv-united.ts` at publish time without
+a matching edit here. Added `"store"` to `rawConfiguration`'s navigation
+routes array in the same position, keeping the two in sync.
+
+**Shop page (`app/(public)/shop/page.tsx`).** Added a `crest@1` branch
+after the `editorial@1` branch: `if (!club.storeEnabled) return
+notFound();` (same gating convention as `editorial@1`), then renders the
+same shared `ShopKitSectionContainer` + `ShopPhotoStripContainer` +
+`ShopPurchaseDetailsContainer` stack the untouched generic fallback uses.
+Decided **against** a bespoke `CrestShopPage` component: investigated
+whether the plain generic default reads acceptably under crest@1's
+navy/gold/white identity and found it does not -- `ShopKitSection.tsx` and
+`ShopPurchaseDetailsSection.tsx` hardcode the base `--color-red`/
+`--color-black` tokens (Rose City red/black) for the CTA button, eyebrow
+text, bullet points, and dark band, and crest@1 deliberately never remaps
+those base tokens globally (see the `[data-font-pack="crest"]` comment in
+`styles/globals.css` -- unlike `academy@1`, which does remap them). Wrapping
+in `.crest-home` alone would therefore have shipped a bright red CTA button
+on an otherwise navy/gold/serif page. Fixed with a **light wrapper**, not a
+new component: the crest@1 branch wraps the same three shared containers in
+a `div.crest-home` and locally aliases `--color-white`/`--color-black`/
+`--color-red`/`--color-red-dark`/`--color-gray-mid` to the existing
+`--crest-surface-canvas`/`--crest-surface-inverse`/`--crest-action-primary`/
+`--crest-action-primary-hover`/`--crest-text-muted` values already defined
+in `.crest-home` (`styles/globals.css`) -- reusing established hex values
+via inline `style`, scoped only to this wrapper, no new CSS tokens invented,
+no other crest@1 route or template touched.
+
+**Nav (`components/Nav.tsx`).** `crestNavLinks` (added earlier this
+session for the Contact/Join fix) changed from a static array to
+`function crestNavLinks(storeEnabled: boolean): NavLink[]`, mirroring
+`academyNavLinks`/editorial's own header pattern: Shop is
+`links.push({ label: "Shop", href: "/shop" })`ed only `if (storeEnabled)`,
+inserted between Schedule and Contact. Call site updated to
+`crestNavLinks(club.storeEnabled)`.
+
+**Footer (`components/Footer.tsx`).** This was the originally-reported bug:
+the shared default `footerLinks` array (used by crest@1 **and**
+cinematic@1/heritage@1, none of which had their own branch) hardcodes an
+unconditional Shop link. Rather than gating `footerLinks` itself (which
+would change cinematic@1/heritage@1 behavior too, violating "no other
+template changes"), added a crest@1-only
+`crestFooterLinks(storeEnabled)` helper that filters the existing
+`footerLinks` array (`storeEnabled ? footerLinks :
+footerLinks.filter(link => link.label !== "Shop")`) and wired it in only
+for `club.presentationTemplateKey === "crest@1"`. `footerLinks` itself, and
+every other template's footer branch, is byte-unchanged.
+
+**Seed (`scripts/seed-cv-united.ts`).** The `clubs` insert/upsert didn't
+set `store_enabled` at all (column default is `false`). Added
+`store_enabled` to both the column list/`values()` and the `on conflict do
+update set` clause, set to `true`, per Christian's confirmation that CV
+United should actually have this live.
+
+**Other templates verified unaffected:** `git diff` on every touched file
+shows only additive crest@1-branch/array insertions; `academy@1`'s
+`academyNavLinks`, `clubhouse@1`'s early-return branch/`lionsNavLinks`, the
+shared default `navLinks`/`footerLinks` arrays, and `editorial@1`'s own
+`EditorialHeader`/`EditorialFooter` (which never touch `components/Nav.tsx`
+or `components/Footer.tsx` at all -- confirmed in
+`app/%5Fclubs/[slug]/layout.tsx`) are all untouched.
+
+**Verification:**
+- `npx tsc --noEmit` -- clean.
+- `npm run test:contracts` -- **888/889 passing** (77/78 files). The one
+  failure, `editorial-home.test.ts` > "resolves the real next upcoming
+  fixture", is the same pre-existing date-sensitive fixture assertion
+  already called out as unrelated in earlier entries below (confirmed again
+  unrelated: it has nothing to do with crest@1, Nav, Footer, or the shop
+  route).
+- `npm run test:architecture` -- **20/20 passing** (3/3 files).
+- Added `tests/contracts/crest-shop-gating.test.ts` (new): asserts the
+  `crest@1` branch in `app/(public)/shop/page.tsx` gates on
+  `club.storeEnabled` with `notFound()`, renders the shared Shop* stack
+  wrapped in the `.crest-home`-aliased theme, and leaves every other
+  template's shop branch byte-identical; asserts `crestFooterLinks` in
+  `components/Footer.tsx` filters the shared `footerLinks` array on
+  `storeEnabled` without touching `footerLinks` itself or any other
+  template's footer branch; asserts the registry's `store` route addition
+  and every other template's `defaultRoutes` staying untouched; asserts the
+  seed script's `store_enabled = true` insert/upsert.
+- Updated `tests/contracts/crest-nav-links.test.ts` (existing, from the
+  earlier Contact/Join fix in this session) to match `crestNavLinks`
+  becoming a function of `storeEnabled` instead of a static array --
+  Shop's presence is now asserted as conditional (`if (storeEnabled) {
+  links.push(...) }`) rather than absent.
+- Re-ran `scripts/seed-cv-united.ts` against the running local Supabase
+  instance -- succeeds; confirmed directly via `psql`-equivalent query that
+  `onzio.clubs.store_enabled = true` for `cv-united` and the published
+  `presentation_documents.configuration.navigation` now carries `"store"`
+  in its routes.
+- Attempted a live browser check at `cv-united.localhost:3016/shop` (via
+  the existing `onzio-platform-cv-united-preview` launch config) and got a
+  404 from `middleware.ts` on every path, including `/`. Root-caused this
+  to **pre-existing, unrelated, by-design** behavior, not a regression:
+  CV United's seeded `public_access` is `"preview"`, and
+  `docs/local-development.md` documents that preview tenants are
+  anonymous-404 by design under RLS -- viewing the public site locally
+  requires first logging in as a seeded club owner/admin at
+  `/admin/login` (not part of `scripts/seed-cv-united.ts`, which seeds no
+  `auth.users`/`club_members` rows), so no browser-level visual
+  confirmation of the crest@1 theme fix was possible in this pass. Source-
+  level test coverage (above) and the DB verification stand in for it.
+
+**Files changed:** `packages/presentation/index.ts`,
+`scripts/crest-presentation.ts`, `app/(public)/shop/page.tsx`,
+`components/Nav.tsx`, `components/Footer.tsx`, `scripts/seed-cv-united.ts`,
+`tests/contracts/crest-nav-links.test.ts`,
+`tests/contracts/crest-shop-gating.test.ts` (new), this entry
+(`HANDOFF.md`).
+
+**Next step:** none required for this scope; if Christian wants a live
+visual check of the crest@1 Shop page's navy/gold theming, either seed a
+CV United owner account for local `/admin/login`, or temporarily flip
+`cv-united`'s `public_access` to `"live"` in a local-only session.
+
+## crest@1 (CV United C1): fixed missing Contact/Join nav links and a dead Shop link in `components/Nav.tsx`
+
+Agent: Claude (Sonnet 5), 2026-08-18. Worktree
+`~/Downloads/onzio-platform-cv-united`, branch `claude/cv-united-crest`.
+Status: **implementation complete, locally verified, uncommitted.**
+
+Found during live preview verification of the CV United site:
+`components/Nav.tsx` hardcodes nav link sets per template
+(`academy@1`/`clubhouse@1` each get their own branch), and every template
+without its own branch — including `crest@1`, which had none — fell
+through to the shared default `navLinks` array (Home/Roster/Club/Schedule/
+**Shop**). `crest@1`'s registered routes
+(`packages/presentation/index.ts` `templateRegistry["crest@1"]`) are
+`["home", "club", "roster", "schedule", "contact", "join"]` — there is no
+store/shop module at all, and Contact/Join (the General Interest and
+Academy Registration entry point — the whole point of this build) were
+missing from the nav entirely. Confirmed live: the rendered CV United nav
+showed Home/Roster/Club/Schedule/Shop, with no way to reach `/join` from
+navigation.
+
+**Fix:** added a dedicated `crestNavLinks` array (Home `/`, Roster
+`/roster`, About `/club/about`, Schedule `/schedule`, Contact `/contact`,
+Join `/join`) and a new branch in the `activeNavLinks` selection ternary
+gated on `club.presentationTemplateKey === "crest@1"`. Used a plain
+"About" link rather than the existing "Club" dropdown pattern (About/Club
+Logo) because `crest@1` has no registered `club-logo` route, unlike
+`cinematic@1`. Mobile menu: `crest@1` was not (and is not) in the
+`isAcademy` full-viewport-overlay branch, so it already gets the standard
+compact drawer — no code path change was needed there. Left it on the
+existing default/neutral (white/black) visual treatment rather than
+wiring in the `.crest-home` navy/gold/white tokens, since Nav is a sibling
+of `<main>`, not a descendant of the `.crest-home`-scoped subtree, so
+those CSS custom properties aren't in scope there without a larger
+plumbing change; noted as a tradeoff rather than scope-creeping into a nav
+redesign.
+
+**Other templates verified unaffected:** `academy@1` and `clubhouse@1`
+keep their pre-existing dedicated branches/arrays (`academyNavLinks`,
+`lionsNavLinks`), untouched. `cinematic@1`/`heritage@1` still read the
+unmodified shared `navLinks` default. `editorial@1` and `pathway@1` never
+render `components/Nav.tsx` at all — confirmed in
+`app/%5Fclubs/[slug]/layout.tsx`, both have their own custom shells
+(`EditorialShell`, `PathwayShell`) — so this change cannot affect either
+regardless of Nav.tsx's contents.
+
+**Verification:**
+- `npx tsc --noEmit` — clean.
+- `npm run test:contracts` — **877/878 passing** (76/77 files). The one
+  failure, `tests/contracts/editorial-home.test.ts` > "resolves the real
+  next upcoming fixture", is the same pre-existing date-sensitive fixture
+  assertion already called out as unrelated in the entry below — confirmed
+  again unrelated (`editorial@1` doesn't use `Nav.tsx`).
+- `npm run test:architecture` — **20/20 passing** (3/3 files).
+- Added `tests/contracts/crest-nav-links.test.ts`, a targeted contract
+  test (following the existing source-string convention in
+  `tests/contracts/navbar-affiliation-media.test.ts`) asserting the exact
+  `crest@1` link/href order, that Shop is absent from it, and that the
+  `academy@1`/`clubhouse@1`/default `navLinks` arrays are byte-unchanged —
+  passing (6/6 tests).
+
+**Files changed:** `components/Nav.tsx`,
+`tests/contracts/crest-nav-links.test.ts` (new), this entry
+(`HANDOFF.md`).
+
+## crest@1 (CV United C1) wrap-up: `/join` visual theme, admin nav entry, DB test-env investigation, type regen
+
+Agent: Claude (Sonnet 5), 2026-08-18. Worktree
+`~/Downloads/onzio-platform-cv-united`, branch `claude/cv-united-crest`.
+Status: **implementation complete, locally verified, uncommitted.** This is
+the wrap-up pass on a large parallel build (8 prior agents) that put
+`crest@1` (CV United's Real-Madrid-inspired navy/gold/white prospect
+template) together: template+route+module registry, migrations, the
+`crest@1` Home (hero/feature-band/partner-strip), the `/join` registration
+flow with Stripe Connect checkout, and an admin Responses/CSV page. This
+entry covers only the four remaining wrap-up items; it does not re-describe
+the underlying build.
+
+**Fix 1 — `/join*` pages now carry the crest visual theme.** The Home page
+already had the full `.crest-home` navy/gold/white theme
+(`styles/globals.css`); the agent who built `/join`, `/join/interest`, and
+`/join/academy` had deliberately left them on plain base tokens
+(`--color-gray-mid` borders/text, `--color-green` buttons) for internal
+consistency between the three, with a code comment explaining why. That
+was a real requirement gap (Christian: "make sure we build this following
+the Real Madrid UI design and styling"). Fixed by wrapping the root
+`<main>` of `components/JoinPage.tsx`, `JoinInterestForm.tsx`,
+`JoinInterestOpeningSoon.tsx`, `AcademyRegistrationForm.tsx`, and
+`RegistrationOpeningSoon.tsx` in the existing `.crest-home` class (all five
+routes already 404 for every template but `crest@1`, so there is no
+cross-template bleed risk) and swapping every `--color-*` reference for the
+matching `--crest-*` token (`--crest-text-secondary` for muted copy,
+`--crest-border-subtle` for field/card borders, `--crest-status-warning`
+for draft-preview banners, `--crest-status-danger` for form errors). All
+buttons/links now reuse the existing `.crest-cta`/`.crest-cta-primary`/
+`.crest-cta-secondary` classes instead of inline green `style=`: navy
+primary for Academy registration and both "Contact the club" fallbacks,
+gold secondary for the free/low-friction General Interest sign-up. No new
+CSS mechanism was invented — this only extends the mechanism the Home
+components already established. Playfair Display / Inter fonts on these
+routes were already correct (`components/TemplateFontScope.tsx` scopes
+`--font-display`/`--font-body` to `[data-font-pack="crest"]` for the whole
+crest@1 page tree, independent of `.crest-home`), so no font work was
+needed. Forms, gating, honeypot, and all other functionality are untouched
+— this was styling-only. `styles/globals.css`'s `.crest-home` doc comment
+was updated to note it now also covers these five routes, not just Home.
+
+**Fix 2 — admin "Responses" nav entry.** `components/AdminShell.tsx` had
+the Responses page (`app/admin/(protected)/responses/page.tsx`) built but
+unlinked. Added a `crestOnly?: boolean` flag to `AdminNavItem` (alongside
+the existing `ownerOnly`) and a new "Responses" entry gated by
+`club.presentationTemplateKey === "crest@1"` — the exact same template
+check the Responses page itself already uses to redirect non-crest@1 clubs
+away, so the nav and the page can't drift out of sync. Added as a
+top-level link (alongside Analytics/Payments) in both `NAV_ITEMS` and
+`NAV_STRUCTURE`.
+
+**Fix 3 — investigated the reported `test:db` failure; not a platform
+bug.** A prior agent reported `Expected 3 parts in JWT; got 1` from
+`npm run test:db`/`npm test`, theorizing `.env.test` held new-style
+`sb_publishable_`/`sb_secret_` keys where the harness expects legacy JWTs.
+Checked `supabase status` against the running local stack and compared to
+`.env.test`: `.env.test` already held the correct legacy-JWT
+`SUPABASE_TEST_ANON_KEY`/`SUPABASE_TEST_SERVICE_ROLE_KEY` values, byte-for-
+byte matching `supabase status`'s `ANON_KEY`/`SERVICE_ROLE_KEY`. Reproduced
+the reported error directly: running `npm run test:db` **without** first
+`set -a && . ./.env.test && set +a` gives exactly `Expected 3 parts in
+JWT; got 1` on 217/226 tests (vitest never loads `.env.test` on its own);
+sourcing it first gives 226/226 passing. This is the exact pitfall
+`tests/README.md` already documents by name (precedent `DCFC-702`,
+2026-08-06) — the prior agent's report was the same misdiagnosis
+recurring, not a genuine CLI/key-format mismatch. No platform code or
+`.env.test.example` change was needed for this part. Separately, while
+comparing files, found `.env.test` was missing the
+`STRIPE_CONNECT_TEST_SECRET_KEY`/`STRIPE_CONNECT_TEST_WEBHOOK_SECRET`
+placeholders that `.env.test.example` already declares (needed by
+`tests/contracts/stripe-connect-payments.test.ts`) and added them so
+`.env.test` fully matches the example again. Ran the full suite for real
+afterward (see Verification below).
+
+**Fix 4 — regenerated database types.** `lib/database.generated.ts` was
+missing `stripe_connect_events`. Cause: `supabase migration list --local`
+showed migration `20260818123000_stripe_connect_events.sql` as
+local-file-only (not applied to the running local Postgres instance) even
+though the file was already checked in. Applied it with
+`supabase migration up --local`, then `npm run db:types` — the table is
+now present in `lib/database.generated.ts`, and `npm run db:types:check`
+confirms the generated types match the local schema exactly.
+
+**Verification (all run for real, in this worktree, against local
+Supabase):**
+- `npx tsc --noEmit` — clean, both before and after this session's own
+  changes.
+- `npx next lint` — zero errors; three pre-existing warnings
+  (`react-hooks/exhaustive-deps` in `app/admin/(protected)/analytics/page.tsx`,
+  `homepage/page.tsx`, `schedule/page.tsx`), unrelated to this work and
+  untouched by it.
+- `npm run test:contracts` — **873/874 passing** (75/76 files). The one
+  failure, `tests/contracts/editorial-home.test.ts` > "resolves the real
+  next upcoming fixture", is the same pre-existing date-sensitive fixture
+  assertion already called out as unrelated in the pathway@1 entry above —
+  confirmed still unrelated to crest@1/CV United.
+- `npm run test:architecture` — **20/20 passing** (3/3 files).
+- `npm run test:db` (properly sourced per Fix 3) — **226/226 passing**
+  (20/20 files).
+- `npm test` (full suite, properly sourced) — **1399/1400 passing**, same
+  single pre-existing `editorial-home.test.ts` failure as above.
+
+No test was skipped, weakened, or mocked to get these numbers.
+
+**Files changed, by area:**
+- Styling (Fix 1): `components/JoinPage.tsx`, `components/JoinInterestForm.tsx`,
+  `components/JoinInterestOpeningSoon.tsx`,
+  `components/AcademyRegistrationForm.tsx`,
+  `components/RegistrationOpeningSoon.tsx`, `styles/globals.css` (doc
+  comment only — no new selectors were added, existing `.crest-home`/
+  `.crest-cta` classes were reused).
+- Admin nav (Fix 2): `components/AdminShell.tsx`.
+- Test environment / types (Fix 3/4): `.env.test` (gitignored, not in this
+  diff — added the two missing `STRIPE_CONNECT_TEST_*` vars),
+  `lib/database.generated.ts` (regenerated), local Supabase instance
+  (applied the already-checked-in `20260818123000_stripe_connect_events.sql`
+  migration — no new migration file was authored).
+- This entry: `HANDOFF.md`.
+
+No hosted Supabase/Vercel command, live Stripe key, CV United `club_members`
+row, or commit was made during this pass, per the constraints for this
+worktree.
+
+**Open items blocking a real CV United launch** (this worktree has no
+`docs/cv-united-launch-plan.md` — checked and confirmed it does not exist
+anywhere in this repo or its history; noting that as drift from what this
+wrap-up task expected to mirror, not something fixed here):
+- Signed contract with CV United.
+- Real crest, colors, roster, and schedule assets from the club (the
+  current tenant is `kind = "test"`, `public_access = "preview"` — a
+  sales-preview/prospect tenant, not a real one; `CrestHero.tsx` already
+  falls back to an honest "crest coming soon" initials placeholder rather
+  than inventing a crest, and the seed script's brand colors are explicitly
+  commented as placeholders).
+- Real kit/merch photos for the Shop page (`clubs.store_enabled = true`,
+  `/shop` is a real, correctly-gated `crest@1` route — hard 404s if
+  `store_enabled` is ever false, even on a direct URL — but no kit-photo
+  content has been seeded, so it currently renders an honest empty page
+  rather than fabricated merch imagery).
+- Real academy registration pricing (the seeded `academy_registration` form
+  is `status = "draft"` with a placeholder price).
+- Real, club-approved waiver text (`AcademyRegistrationForm.tsx` renders an
+  explicit "[Waiver text pending — do not treat as final]" notice when
+  `waiver_text` is null, which it currently is).
+- The real CV United owner's own Stripe Connect KYC/onboarding — and only
+  after signature; nothing in this build performs or simulates that.
+  Stripe is test-mode-only in every environment right now, enforced by
+  three independent guards in `lib/stripe/connect-config.ts`
+  (`payments_live_enabled` flag, presence of a live key, and the key's own
+  `sk_live_`/`sk_test_` prefix agreeing with the declared mode); this is
+  exercised by `tests/contracts/stripe-connect-payments.test.ts`'s
+  dedicated "Stripe Connect live-mode gate" describe block, which mutates
+  each guard independently (live-flagged-but-no-key, live-key-in-test-var,
+  key/mode mismatch, etc.) and asserts a refusal every time — the
+  live-mode block is verified by that mutation testing, not just asserted
+  by convention.
+- No CV United owner/admin access exists yet — no `club_members` row was
+  created for CV United by this build or this pass, consistent with the
+  constraint that only Christian invites the real owner once there is a
+  signed contract.
+
+**Exact next step:** none of the above are agent-executable; they all wait
+on Christian's sales process with CV United (signature, then real assets/
+pricing/waiver text from the club, then the owner's own Stripe Connect
+onboarding). Once contract-first, this worktree's diff is otherwise ready
+for Christian's own review and, if he chooses, a commit and staging
+provisioning pass.
 
 ## pathway@1 roster card polish, a new UPSL Fixtures tab, and Contact added to the primary nav
 
