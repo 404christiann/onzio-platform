@@ -2,6 +2,44 @@
 
 Last updated: 2026-08-19
 
+## Registration image navy letterbox removed — fixed and deployed to production
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-19. Status: **complete —
+committed, pushed, deployed to production, live-verified.** Follow-up to
+the crop fix directly below: Christian didn't like the solid navy
+(`#1E3653`) letterbox left behind `object-contain` and asked for it
+transparent instead, and asked to see screenshots before deploying.
+
+**Fix:** dropped `bg-[#1E3653]` from the same two image containers
+(`components/AcademyProgramDetailPage.tsx` line 148,
+`components/AcademyProgramRegistrationSlideshow.tsx` line 61) — 2 lines.
+No background class means the section's own `bg-[#F9FAFD]` shows through
+instead of solid navy.
+
+**Verification before asking for approval:** pulled the real Special
+Kickers flyer off production (`https://.../programs/50ebbf50-...webp`,
+1254×1254) and loaded it into the local seeded `diverse-city` tenant (a
+new local-only `media_assets` row + local-only `registration_enabled`
+toggle on `special-kickers-program`, reverted after), so the preview used
+the actual flyer content, not a placeholder. Used Playwright (already a
+project devDependency) to capture real before/after screenshots — navy
+vs. transparent, desktop and mobile — since the in-session browser tool
+has no save-to-file path, and sent those to Christian via file delivery
+before touching git. He confirmed after seeing them.
+
+**Deploy:** same narrow-branch pattern as the crop fix — found the
+current live production commit via the Vercel API (still `9649d9c`, the
+crop fix from the round below), built a throwaway worktree there,
+cherry-picked just this commit (`66f9914` → `1153849`, clean), re-ran
+`tsc`/contract tests (100/100)/`build`, re-ran the mandatory
+`supabase migration list --linked` gate (clean), then `vercel --prod`.
+Confirmed via the Vercel API that `diversecityfc.com` now aliases
+`dpl_9siE8jp41BnnqyDJvtmJ3T5vs27M` (commit `1153849`), live-verified in a
+real browser — the flyer now sits on light pillarboxing, not navy.
+
+`hotfix/registration-transparent-letterbox` pushed to origin for the
+record. `staging` also carries this fix (commit `66f9914`).
+
 ## Registration flyer image cropped on the public program page — fixed and deployed to production
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-19. Status: **complete —
