@@ -145,7 +145,7 @@ export default function AcademyProgramDetailPage({
                 label={programName}
               />
             ) : (program.detailMediaUrl || program.heroMediaUrl) ? (
-              <div className="relative aspect-[16/10] overflow-hidden bg-[#1E3653] lg:aspect-auto lg:h-[clamp(24rem,60svh,34rem)]">
+              <div className="relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:h-[clamp(24rem,60svh,34rem)]">
                 <ResilientImage
                   src={program.detailMediaUrl || program.heroMediaUrl}
                   alt=""

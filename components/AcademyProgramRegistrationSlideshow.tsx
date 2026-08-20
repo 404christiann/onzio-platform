@@ -58,7 +58,7 @@ export default function AcademyProgramRegistrationSlideshow({
       aria-roledescription="carousel"
       aria-label={`${label} photo slideshow. Focus or hover to pause.`}
       tabIndex={0}
-      className="group relative aspect-[16/10] overflow-hidden bg-[#1E3653] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF1616] lg:aspect-auto lg:h-[clamp(24rem,60svh,34rem)]"
+      className="group relative aspect-[16/10] overflow-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF1616] lg:aspect-auto lg:h-[clamp(24rem,60svh,34rem)]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onFocusCapture={() => setHasFocus(true)}
