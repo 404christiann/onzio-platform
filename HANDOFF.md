@@ -1,6 +1,50 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-18
+Last updated: 2026-08-19
+
+## Registration flyer image cropped on the public program page — fixed and deployed to production
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-19. Status: **complete —
+committed, pushed, deployed to production, live-verified.** Reported by
+Christian via a screenshot of `diversecityfc.com`'s Special Kickers program
+page: the registration section's flyer image ("Special Kickers Fall 2026")
+was cropped, cutting off the top and bottom banners.
+
+**Root cause:** `components/AcademyProgramDetailPage.tsx` (single-image
+fallback path) and `components/AcademyProgramRegistrationSlideshow.tsx`
+(admin-media slideshow path) both rendered the registration image inside a
+fixed `aspect-[16/10]` / `lg:h-[clamp(24rem,60svh,34rem)]` box with
+`object-cover` on a `fill`-mode `next/image`. Any image whose natural
+aspect ratio didn't match that box got cropped. Not club-specific — shared
+multi-tenant code, so any club's uploaded flyer could hit the same bug.
+
+**Fix:** switched `object-cover` → `object-contain` in both places (2 lines
+total), keeping the existing `bg-[#1E3653]` container as letterboxing.
+Verified locally by temporarily enabling `registration_enabled` on a local
+seeded program with a portrait (1365×2048) test image — confirmed the fix
+renders the full image letterboxed instead of cropped — then reverted that
+local-only data change.
+
+**Deploy discovery:** the `staging` worktree
+(`~/Downloads/onzio-platform-diverse-city`) was 33 commits behind
+`origin/staging` (Lions editorial rebuild, MLA pathway work). Fast-forwarded
+it (clean, no local-only commits lost) and re-verified there
+(`tsc`/`lint`/`build`/100 contract tests green), but per Christian's
+decision this fix was deployed **without** the other 33 commits: built a
+throwaway worktree at production's actual live commit (`2e6ea28`, found via
+the Vercel API — production was running behind even `staging`'s previous
+head), cherry-picked just the fix commit (`af0c14f` → `9649d9c`, clean, no
+conflicts), re-ran the full verification suite there, ran the mandatory
+`supabase migration list --linked` gate (clean — no local-only migrations
+on that narrow branch), then `vercel --prod`. Confirmed via the Vercel API
+that `diversecityfc.com`/`www.diversecityfc.com` now alias deployment
+`dpl_HW4D5oUQ6amsA4iWdkMtbce1p8c5` (commit `9649d9c`), and live-verified in
+a real browser against `https://www.diversecityfc.com/programs/special-kickers-program`
+— full flyer visible top-to-bottom, letterboxed, no crop.
+
+`hotfix/registration-image-crop` pushed to origin for the record (1 commit
+ahead of the pre-fix production commit). `staging` also carries the fix
+(commit `af0c14f`) but was not itself deployed this round.
 
 ## pathway@1 roster card polish, a new UPSL Fixtures tab, and Contact added to the primary nav
 
