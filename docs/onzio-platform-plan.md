@@ -30,6 +30,8 @@ migrated in place.
 - **Staging database:** separate Supabase Free project
 - **Hosting:** one Vercel project and deployment serving every tenant domain
 - **Billing:** existing Stripe account, one subscription per club
+- **Club registrations:** tier-free native forms and waivers for every club; direct
+  Stripe Connect charges on club-owned accounts with no Onzio application fee
 - **Rose City:** full tenant migration, including data, storage, admins, domain, and billing
 - **Authentication:** passwordless email codes for owners/admins; operator TOTP
 - **Authentication email:** Supabase Auth through Resend SMTP from one
@@ -133,8 +135,8 @@ Content records reference media assets rather than treating arbitrary URLs as au
 
 Editable homepage content is tenant-scoped and immediately published in v1.
 The first section uses `homepage_hero_content` keyed by `club_id` for
-headline, intro, and CTA copy. It follows the same public-read and
-MFA-protected admin-mutation rules as slideshow and other homepage tables.
+headline, intro, and CTA copy. It follows the same public-read and fresh
+club-session admin-mutation rules as slideshow and other homepage tables.
 
 #### `audit_events`
 
@@ -407,6 +409,8 @@ The service-role client is allowed only in:
 
 - operator provisioning/recovery
 - Stripe webhook processing
+- native registration submission, status, Connect projection, and expiry
+  boundaries
 - migration tooling
 - media finalization
 
@@ -500,6 +504,53 @@ During migration:
 5. Disable the legacy webhook only after platform verification.
 
 No refund or new Checkout is required.
+
+## Native Club Registrations and Direct Payments
+
+Native registration intake supersedes the earlier external-link-only boundary
+and is available to every club without a tier gate. Forms are tenant-owned and may run
+independently, with typed core/custom fields, one or more USD price options,
+an admin-editable required waiver, and an adult/minor field mode.
+
+The registration security model is:
+
+- anonymous visitors may read only open definitions for publicly accessible
+  clubs
+- submitted answers, contact details, payment references, and delivery state
+  have no anonymous access
+- owners and admins with a fresh passwordless AAL1 club session may manage
+  their own club's definitions, manage its Connect account, and read its
+  registrant records; no club-facing MFA step-up is required
+- all submission/payment-state writes are server-mediated and terminate in
+  database constraints or service-role-only private functions
+- tenant identity, price, amount, fields, waiver, connected account, lifecycle,
+  and form status are resolved from server/database state, never trusted from
+  the browser
+- status polling uses a random opaque token whose SHA-256 hash is stored; the
+  response exposes only `pending|paid|refunded|expired`
+
+Each club connects a club-owned Stripe account. Registration Checkout Sessions
+are direct charges created on that connected account with dynamic `price_data`,
+USD currency, dynamic payment methods, and no `application_fee_amount`,
+destination, or transfer. Onzio subscription billing remains a separate Stripe
+integration and ledger concern.
+
+The Connect webhook has its own route and signing secret. It retrieves canonical
+connected-account objects, verifies account/club/environment/session/form/
+registration/amount metadata, and atomically projects
+`checkout.session.completed`, `charge.refunded`, and `account.updated` through
+the existing immutable `stripe_events` ledger. Browser redirects never mark a
+paid registration. A pending row exists before Checkout; $0 registrations are
+completed server-side without Stripe. Query-time expiration excludes pending
+rows after 24 hours even if the cleanup cron has not run.
+
+The current review implementation is deliberately limited to local Supabase and
+Stripe test mode. When a Resend API key and verified sender are configured, the
+registrant receives confirmation at the submitted address and active club owners
+receive a separate notification at addresses resolved live from club membership
+and Supabase Auth. Email acceptance or failure is recorded independently and
+never changes paid registration state. Enabling production Connect accounts,
+deployment, or club-specific CTA placement requires separate review and approval.
 
 ## Secure Media Pipeline
 
@@ -830,6 +881,23 @@ Gate:
 
 - Stripe and subscription contracts become green
 - duplicate, stale, foreign, mismatched, and obsolete events are rejected
+
+### Registration feature track — native forms and club payments
+
+- Add tenant-scoped form, field, price, Connect, and submission records.
+- Add Standard Account Links onboarding and direct connected-account Checkout
+  in Stripe test mode with zero platform fee.
+- Add separate Connect webhook projection, passive refund state, real recipient
+  email outcomes, expiration cleanup, admin management/CSV, and public modal/status
+  polling.
+- Keep Rose City and Diverse City wiring outside the generic feature change.
+
+Gate:
+
+- local database, contract, architecture, unit, and build checks are green
+- no production/live key, hosted Supabase, deployment, domain, or tenant-specific
+  mutation is performed
+- manual review approves the generic workflow before club-specific wiring
 
 ### Phase 7 — Staging gate
 

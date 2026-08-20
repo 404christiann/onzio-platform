@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  getStripeConnectRuntimeConfig,
+  getRegistrationLedgerEnvironment,
+  getStripeRegistrationRuntimeConfig,
   getStripeRuntimeConfig,
   verifiedClubOrigin,
+  verifiedClubRequestOrigin,
 } from "@/lib/stripe-config";
 
 afterEach(() => {
@@ -16,6 +20,7 @@ function configureEnvironment(
   vi.stubEnv("STRIPE_SECRET_KEY", secretKey);
   vi.stubEnv("STRIPE_PORTAL_CONFIGURATION_ID", "bpc_contract");
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_test");
+  vi.stubEnv("STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_connect_test");
 }
 
 describe("Stripe runtime configuration", () => {
@@ -79,5 +84,48 @@ describe("Stripe runtime configuration", () => {
     expect(verifiedClubOrigin("alpha.localhost")).toBe(
       "http://alpha.localhost",
     );
+  });
+  it("allows only the matching tenant localhost origin in staging", () => {
+    vi.stubEnv("ONZIO_ENVIRONMENT", "staging");
+    expect(verifiedClubRequestOrigin({
+      primaryDomain: "alpha-onzio.vercel.app",
+      clubSlug: "alpha",
+      requestHost: "alpha.localhost:3100",
+    })).toBe("http://alpha.localhost:3100");
+    expect(verifiedClubRequestOrigin({
+      primaryDomain: "alpha-onzio.vercel.app",
+      clubSlug: "alpha",
+      requestHost: "bravo.localhost:3100",
+    })).toBe("https://alpha-onzio.vercel.app");
+    expect(verifiedClubRequestOrigin({
+      primaryDomain: "alpha-onzio.vercel.app",
+      clubSlug: "alpha",
+      requestHost: "attacker.example",
+    })).toBe("https://alpha-onzio.vercel.app");
+  });
+
+  it("keeps Connect webhook configuration separate from Billing Prices", () => {
+    vi.stubEnv("ONZIO_ENVIRONMENT", "staging");
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_safe");
+    vi.stubEnv("STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_connect_test");
+
+    expect(getStripeConnectRuntimeConfig()).toEqual({
+      environment: "staging",
+      ledgerEnvironment: "test",
+      webhookSecret: "whsec_connect_test",
+    });
+  });
+
+  it("fails closed if registration payments are configured for live mode", () => {
+    configureEnvironment("production", "sk_live_safe");
+    expect(() => getStripeRegistrationRuntimeConfig()).toThrowError(
+      expect.objectContaining({ code: "REGISTRATION_STRIPE_TEST_MODE_REQUIRED" }),
+    );
+  });
+
+  it("allows $0 registration setup without Stripe secrets in staging", () => {
+    vi.stubEnv("ONZIO_ENVIRONMENT", "staging");
+    vi.stubEnv("STRIPE_SECRET_KEY", "");
+    expect(getRegistrationLedgerEnvironment()).toBe("test");
   });
 });

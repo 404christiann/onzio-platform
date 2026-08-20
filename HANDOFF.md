@@ -1,6 +1,57 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-19
+Last updated: 2026-08-20
+
+## Registration forms rebased onto staging — resolved, commit blocked by one staging baseline contract
+
+Agent: Codex (GPT-5.6), 2026-08-20. Status: **reconciliation complete in the
+paused rebase; not committed because the requested all-green gate is not met.**
+
+The single registration commit was replayed onto `origin/staging` at
+`8149bbe`. Conflicts were resolved staging-first: passwordless login and the
+current admin shell/routing/lifecycle model were retained; registration routes,
+admin navigation, Connect webhook handling, the registration cron, Stripe
+Connect configuration, admin data tables, and hardened SECURITY DEFINER tests
+were added. Staging's deletion of `lib/club-features.ts` and the obsolete
+recovery-code contract was preserved. `package.json` and `package-lock.json`
+retain staging's dependency set (`resend` 6.20.0), and generated database types
+were rebuilt from a successful local reset rather than hand-merged.
+
+Final auth decision: registrations use the ordinary fresh passwordless club
+session at AAL1 for both active owners and active admins. The registration
+route helper now calls `requireFreshClubSession` and authorizes `content` with
+`aal: "aal1"`; it contains no MFA assurance lookup. The migrations do not
+recreate `club_has_feature` and use staging's tier-free
+`can_mutate_feature(..., 'registrations')` wrapper for definition management,
+Connect reads, and registrant-record reads. Anonymous registration/Connect
+reads and writes remain denied, tenant isolation remains RLS/composite-FK
+enforced, and registration/payment projection writes remain service-role-only.
+
+Verification:
+
+- `supabase db reset`: passed; all 36 migrations and seed applied in order
+- `npm run db:types`: passed
+- `npm run db:types:check`: passed
+- `npm run test:db`: 19 files / 199 tests passed
+- `npm run test:architecture`: 3 files / 21 tests passed
+- `npx tsc --noEmit`: passed
+- `npm run build` (`next build`): passed; existing hook warnings only
+- focused AAL1 route contracts: 3 files / 6 tests passed
+- focused registration RLS: 1 file / 13 tests passed, including owner and
+  admin AAL1 definition CRUD, Connect/registrant reads, cross-club denial,
+  anonymous denial, and service-role-only writes
+- `npm test`: 134 files / 1,386 tests passed; one unrelated staging contract
+  remains red
+- `npm run test:contracts`: 76 files / 828 tests passed; the same unrelated
+  staging contract remains red
+
+The remaining failure is
+`tests/contracts/editorial-home.test.ts` expecting `Capital City Athletic`
+while the unchanged staging resolver returns `Dayton Rovers SC`. Both that test
+and `lib/editorial-fixtures.ts` are byte-identical to `origin/staging`, so the
+registration reconciliation did not cause it. Per the strict no-commit-until-
+green instruction, the rebase remains paused before `git rebase --continue`.
+The Register CTA was not wired in this pass.
 
 ## Registration image navy letterbox removed — fixed and deployed to production
 

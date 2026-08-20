@@ -32,14 +32,27 @@ const PUBLIC_TENANT_PATHS = new Set([
 
 const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
 const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);
+const REGISTRATION_PATH =
+  /^\/register\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/confirmation)?$/;
 
 function isPublicTenantPath(pathname: string): boolean {
   if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
   return (
     /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
     /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
-    PROGRAM_DETAIL_PATH.test(pathname)
+    PROGRAM_DETAIL_PATH.test(pathname) ||
+    REGISTRATION_PATH.test(pathname)
   );
+}
+
+/** Protected endpoints that must resolve their tenant on fallback deployment hosts. */
+export function requiresTenantFallback(pathname: string): boolean {
+  return pathname === "/admin/payments" ||
+    pathname === "/api/stripe/checkout" ||
+    pathname === "/api/stripe/portal" ||
+    pathname === "/api/stripe/connect" ||
+    pathname === "/api/stripe/billing-admin" ||
+    pathname.startsWith("/api/admin/registrations/");
 }
 
 type ResolvedTenant = {
@@ -77,16 +90,16 @@ function applyTenantRobotsPolicy(response: NextResponse): NextResponse {
 }
 
 export async function middleware(request: NextRequest) {
-  if (request.nextUrl.pathname === "/api/stripe/webhook") {
+  if (
+    request.nextUrl.pathname === "/api/stripe/webhook" ||
+    request.nextUrl.pathname === "/api/stripe/connect-webhook"
+  ) {
     return NextResponse.next({ request });
   }
   const isAdminRequest =
     request.nextUrl.pathname === "/admin" ||
     request.nextUrl.pathname.startsWith("/admin/");
-  const isBillingRequest =
-    request.nextUrl.pathname === "/admin/payments" ||
-    request.nextUrl.pathname === "/api/stripe/checkout" ||
-    request.nextUrl.pathname === "/api/stripe/portal";
+  const isBillingRequest = requiresTenantFallback(request.nextUrl.pathname);
 
   let sessionResponse = NextResponse.next({ request });
   const supabase = createServerClient(

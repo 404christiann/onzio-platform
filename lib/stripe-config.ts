@@ -39,7 +39,7 @@ function required(name: string): string {
   return value;
 }
 
-export function getStripeRuntimeConfig() {
+function getStripeBaseRuntimeConfig() {
   const environment = process.env.ONZIO_ENVIRONMENT;
   if (environment !== "staging" && environment !== "production") {
     failContract(
@@ -56,17 +56,19 @@ export function getStripeRuntimeConfig() {
     );
   }
 
-  const webhookSecret = required("STRIPE_WEBHOOK_SECRET");
+  return {
+    environment,
+    ledgerEnvironment: environment === "production" ? "production" : "test",
+  } as const;
+}
 
-  // The Portal configuration is validated here, in the shared check every
-  // Stripe route runs, rather than in a portal-only helper. In August 2026 a
-  // portal-only check let production go live with Checkout and the webhook
-  // working while STRIPE_PORTAL_CONFIGURATION_ID was unset; the gap stayed
-  // silent until a paying customer clicked "Manage billing". There is one
-  // Stripe account and one Portal configuration for the whole platform, so no
-  // deploy is correctly configured without it. The fault keeps its own code
-  // (not the generic STRIPE_CONFIGURATION_MISSING) so it is identifiable from
-  // the response alone — the DCFC-701 discipline.
+/** Billing-specific Stripe configuration. Keep this API stable for billing. */
+export function getStripeRuntimeConfig() {
+  const baseConfig = getStripeBaseRuntimeConfig();
+  // The Portal configuration is validated in the shared billing check every
+  // billing Stripe route runs. In August 2026 a portal-only check let
+  // production go live with Checkout and the webhook working while the Portal
+  // ID was unset. Connect deliberately uses its own smaller configuration.
   const portalConfigurationId =
     process.env.STRIPE_PORTAL_CONFIGURATION_ID?.trim();
   if (!portalConfigurationId) {
@@ -77,15 +79,79 @@ export function getStripeRuntimeConfig() {
   }
 
   return {
-    environment,
-    ledgerEnvironment: environment === "production" ? "production" : "test",
-    webhookSecret,
+    ...baseConfig,
+    webhookSecret: required("STRIPE_WEBHOOK_SECRET"),
     portalConfigurationId,
   } as const;
+}
+
+/**
+ * Connect has a separate webhook endpoint and deliberately does not depend on
+ * the platform subscription Price configuration.
+ */
+export function getStripeConnectRuntimeConfig() {
+  return {
+    ...getStripeBaseRuntimeConfig(),
+    webhookSecret: required("STRIPE_CONNECT_WEBHOOK_SECRET"),
+  } as const;
+}
+
+/** This review build is deliberately incapable of registration live-mode calls. */
+export function getStripeRegistrationRuntimeConfig() {
+  const config = getStripeConnectRuntimeConfig();
+  if (config.environment !== "staging" || config.ledgerEnvironment !== "test") {
+    failContract(
+      "REGISTRATION_STRIPE_TEST_MODE_REQUIRED",
+      "Registration payments are restricted to Stripe test mode in this build.",
+    );
+  }
+  return config;
+}
+
+/** $0 registrations need only the isolated local/test ledger environment. */
+export function getRegistrationLedgerEnvironment(): "test" {
+  if (process.env.ONZIO_ENVIRONMENT !== "staging") {
+    failContract(
+      "REGISTRATION_STRIPE_TEST_MODE_REQUIRED",
+      "Registrations are restricted to the staging/test environment in this build.",
+    );
+  }
+  return "test";
 }
 
 export function verifiedClubOrigin(primaryDomain: string): string {
   const isLocal =
     primaryDomain === "localhost" || primaryDomain.endsWith(".localhost");
   return `${isLocal ? "http" : "https"}://${primaryDomain}`;
+}
+
+/**
+ * Keeps hosted redirects pinned to the verified primary domain while allowing
+ * a matching tenant localhost (and its development port) in staging only.
+ */
+export function verifiedClubRequestOrigin(input: {
+  primaryDomain: string;
+  clubSlug: string;
+  requestHost: string | null;
+}): string {
+  const canonical = verifiedClubOrigin(input.primaryDomain);
+  if (process.env.ONZIO_ENVIRONMENT !== "staging") return canonical;
+
+  let request: URL;
+  try {
+    request = new URL(`http://${input.requestHost ?? ""}`);
+  } catch {
+    return canonical;
+  }
+  if (request.username || request.password) return canonical;
+  const hostname = request.hostname.toLowerCase().replace(/\.$/, "");
+  const matchingSubdomain = hostname === `${input.clubSlug}.localhost`;
+  const matchingBareLocalhost = hostname === "localhost" &&
+    process.env.ONZIO_LOCAL_TENANT_SLUG === input.clubSlug;
+  if (
+    matchingSubdomain || matchingBareLocalhost
+  ) {
+    return request.origin;
+  }
+  return canonical;
 }
