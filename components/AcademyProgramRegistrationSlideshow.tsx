@@ -81,7 +81,7 @@ export default function AcademyProgramRegistrationSlideshow({
             alt={slide.alt}
             fill
             sizes="(max-width: 1023px) 100vw, 1280px"
-            className="object-cover"
+            className="object-contain"
           />
         </div>
       ))}
