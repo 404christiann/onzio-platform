@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { adminDataRequestSchema } from "@/lib/admin-data-contract";
+import {
+  ADMIN_TABLE_FEATURES,
+  adminDataRequestSchema,
+} from "@/lib/admin-data-contract";
 
 describe("admin data request contract", () => {
   it("accepts a tenant-free validated content mutation", () => {
@@ -55,5 +58,20 @@ describe("admin data request contract", () => {
       },
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it.each([
+    "registrations",
+    "registration_forms",
+    "registration_form_fields",
+    "registration_price_options",
+  ] as const)("allows the %s registration admin entity", (table) => {
+    expect(ADMIN_TABLE_FEATURES[table]).toBe("registrations");
+    expect(
+      adminDataRequestSchema.safeParse({
+        table,
+        operation: "select",
+      }).success,
+    ).toBe(true);
   });
 });

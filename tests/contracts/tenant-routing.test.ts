@@ -25,6 +25,7 @@ type GetClubContext = (input: {
   userId?: string | null;
 }) => Promise<Record<string, unknown>>;
 type Middleware = (request: NextRequest) => Promise<Response>;
+type RequiresTenantFallback = (pathname: string) => boolean;
 
 describe("hostname normalization contract", () => {
   const validCases = [
@@ -71,6 +72,22 @@ describe("hostname normalization contract", () => {
 });
 
 describe("tenant route resolution contract", () => {
+  it("keeps protected billing and registration endpoints on tenant fallback resolution", async () => {
+    const requiresTenantFallback = await loadContract<RequiresTenantFallback>(
+      "@/middleware",
+      "requiresTenantFallback",
+    );
+
+    for (const pathname of [
+      "/api/stripe/connect",
+      "/api/stripe/billing-admin",
+      "/api/admin/registrations/export",
+    ]) {
+      expect(requiresTenantFallback(pathname)).toBe(true);
+    }
+    expect(requiresTenantFallback("/api/admin/registrations")).toBe(false);
+  });
+
   it("lets the signature-verified Stripe webhook bypass tenant host routing", async () => {
     const middleware = await loadContract<Middleware>(
       "@/middleware",
@@ -79,6 +96,21 @@ describe("tenant route resolution contract", () => {
     const response = await middleware(
       new NextRequest(
         "https://onzio-platform-git-staging-team.vercel.app/api/stripe/webhook",
+        { method: "POST" },
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("lets the separate Connect webhook bypass tenant host routing", async () => {
+    const middleware = await loadContract<Middleware>(
+      "@/middleware",
+      "middleware",
+    );
+    const response = await middleware(
+      new NextRequest(
+        "https://onzio-platform-git-staging-team.vercel.app/api/stripe/connect-webhook",
         { method: "POST" },
       ),
     );

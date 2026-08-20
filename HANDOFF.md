@@ -1,6 +1,140 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-14
+Last updated: 2026-08-20
+
+## Registration forms rebased onto staging — resolved, commit blocked by one staging baseline contract
+
+Agent: Codex (GPT-5.6), 2026-08-20. Status: **reconciliation complete in the
+paused rebase; not committed because the requested all-green gate is not met.**
+
+The single registration commit was replayed onto `origin/staging` at
+`8149bbe`. Conflicts were resolved staging-first: passwordless login and the
+current admin shell/routing/lifecycle model were retained; registration routes,
+admin navigation, Connect webhook handling, the registration cron, Stripe
+Connect configuration, admin data tables, and hardened SECURITY DEFINER tests
+were added. Staging's deletion of `lib/club-features.ts` and the obsolete
+recovery-code contract was preserved. `package.json` and `package-lock.json`
+retain staging's dependency set (`resend` 6.20.0), and generated database types
+were rebuilt from a successful local reset rather than hand-merged.
+
+Final auth decision: registrations use the ordinary fresh passwordless club
+session at AAL1 for both active owners and active admins. The registration
+route helper now calls `requireFreshClubSession` and authorizes `content` with
+`aal: "aal1"`; it contains no MFA assurance lookup. The migrations do not
+recreate `club_has_feature` and use staging's tier-free
+`can_mutate_feature(..., 'registrations')` wrapper for definition management,
+Connect reads, and registrant-record reads. Anonymous registration/Connect
+reads and writes remain denied, tenant isolation remains RLS/composite-FK
+enforced, and registration/payment projection writes remain service-role-only.
+
+Verification:
+
+- `supabase db reset`: passed; all 36 migrations and seed applied in order
+- `npm run db:types`: passed
+- `npm run db:types:check`: passed
+- `npm run test:db`: 19 files / 199 tests passed
+- `npm run test:architecture`: 3 files / 21 tests passed
+- `npx tsc --noEmit`: passed
+- `npm run build` (`next build`): passed; existing hook warnings only
+- focused AAL1 route contracts: 3 files / 6 tests passed
+- focused registration RLS: 1 file / 13 tests passed, including owner and
+  admin AAL1 definition CRUD, Connect/registrant reads, cross-club denial,
+  anonymous denial, and service-role-only writes
+- `npm test`: 134 files / 1,386 tests passed; one unrelated staging contract
+  remains red
+- `npm run test:contracts`: 76 files / 828 tests passed; the same unrelated
+  staging contract remains red
+
+The remaining failure is
+`tests/contracts/editorial-home.test.ts` expecting `Capital City Athletic`
+while the unchanged staging resolver returns `Dayton Rovers SC`. Both that test
+and `lib/editorial-fixtures.ts` are byte-identical to `origin/staging`, so the
+registration reconciliation did not cause it. Per the strict no-commit-until-
+green instruction, the rebase remains paused before `git rebase --continue`.
+The Register CTA was not wired in this pass.
+
+## Registration image navy letterbox removed — fixed and deployed to production
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-19. Status: **complete —
+committed, pushed, deployed to production, live-verified.** Follow-up to
+the crop fix directly below: Christian didn't like the solid navy
+(`#1E3653`) letterbox left behind `object-contain` and asked for it
+transparent instead, and asked to see screenshots before deploying.
+
+**Fix:** dropped `bg-[#1E3653]` from the same two image containers
+(`components/AcademyProgramDetailPage.tsx` line 148,
+`components/AcademyProgramRegistrationSlideshow.tsx` line 61) — 2 lines.
+No background class means the section's own `bg-[#F9FAFD]` shows through
+instead of solid navy.
+
+**Verification before asking for approval:** pulled the real Special
+Kickers flyer off production (`https://.../programs/50ebbf50-...webp`,
+1254×1254) and loaded it into the local seeded `diverse-city` tenant (a
+new local-only `media_assets` row + local-only `registration_enabled`
+toggle on `special-kickers-program`, reverted after), so the preview used
+the actual flyer content, not a placeholder. Used Playwright (already a
+project devDependency) to capture real before/after screenshots — navy
+vs. transparent, desktop and mobile — since the in-session browser tool
+has no save-to-file path, and sent those to Christian via file delivery
+before touching git. He confirmed after seeing them.
+
+**Deploy:** same narrow-branch pattern as the crop fix — found the
+current live production commit via the Vercel API (still `9649d9c`, the
+crop fix from the round below), built a throwaway worktree there,
+cherry-picked just this commit (`66f9914` → `1153849`, clean), re-ran
+`tsc`/contract tests (100/100)/`build`, re-ran the mandatory
+`supabase migration list --linked` gate (clean), then `vercel --prod`.
+Confirmed via the Vercel API that `diversecityfc.com` now aliases
+`dpl_9siE8jp41BnnqyDJvtmJ3T5vs27M` (commit `1153849`), live-verified in a
+real browser — the flyer now sits on light pillarboxing, not navy.
+
+`hotfix/registration-transparent-letterbox` pushed to origin for the
+record. `staging` also carries this fix (commit `66f9914`).
+
+## Registration flyer image cropped on the public program page — fixed and deployed to production
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-19. Status: **complete —
+committed, pushed, deployed to production, live-verified.** Reported by
+Christian via a screenshot of `diversecityfc.com`'s Special Kickers program
+page: the registration section's flyer image ("Special Kickers Fall 2026")
+was cropped, cutting off the top and bottom banners.
+
+**Root cause:** `components/AcademyProgramDetailPage.tsx` (single-image
+fallback path) and `components/AcademyProgramRegistrationSlideshow.tsx`
+(admin-media slideshow path) both rendered the registration image inside a
+fixed `aspect-[16/10]` / `lg:h-[clamp(24rem,60svh,34rem)]` box with
+`object-cover` on a `fill`-mode `next/image`. Any image whose natural
+aspect ratio didn't match that box got cropped. Not club-specific — shared
+multi-tenant code, so any club's uploaded flyer could hit the same bug.
+
+**Fix:** switched `object-cover` → `object-contain` in both places (2 lines
+total), keeping the existing `bg-[#1E3653]` container as letterboxing.
+Verified locally by temporarily enabling `registration_enabled` on a local
+seeded program with a portrait (1365×2048) test image — confirmed the fix
+renders the full image letterboxed instead of cropped — then reverted that
+local-only data change.
+
+**Deploy discovery:** the `staging` worktree
+(`~/Downloads/onzio-platform-diverse-city`) was 33 commits behind
+`origin/staging` (Lions editorial rebuild, MLA pathway work). Fast-forwarded
+it (clean, no local-only commits lost) and re-verified there
+(`tsc`/`lint`/`build`/100 contract tests green), but per Christian's
+decision this fix was deployed **without** the other 33 commits: built a
+throwaway worktree at production's actual live commit (`2e6ea28`, found via
+the Vercel API — production was running behind even `staging`'s previous
+head), cherry-picked just the fix commit (`af0c14f` → `9649d9c`, clean, no
+conflicts), re-ran the full verification suite there, ran the mandatory
+`supabase migration list --linked` gate (clean — no local-only migrations
+on that narrow branch), then `vercel --prod`. Confirmed via the Vercel API
+that `diversecityfc.com`/`www.diversecityfc.com` now alias deployment
+`dpl_HW4D5oUQ6amsA4iWdkMtbce1p8c5` (commit `9649d9c`), and live-verified in
+a real browser against `https://www.diversecityfc.com/programs/special-kickers-program`
+— full flyer visible top-to-bottom, letterboxed, no crop.
+
+`hotfix/registration-image-crop` pushed to origin for the record (1 commit
+ahead of the pre-fix production commit). `staging` also carries the fix
+(commit `af0c14f`) but was not itself deployed this round.
+
 
 ## Dashboard's dead "Enter Match Stats" quick-action replaced for Lions
 

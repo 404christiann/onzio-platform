@@ -50,6 +50,20 @@ async function sourceFiles(root: string): Promise<string[]> {
   }
 }
 
+function createFunctionStatements(sql: string): string[] {
+  return [
+    ...sql.matchAll(
+      /create\s+(?:or\s+replace\s+)?function\b[\s\S]*?\bas\s+(\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$)[\s\S]*?\1\s*[^;]*;/gi,
+    ),
+  ].map((match) => match[0]);
+}
+
+function unhardenedSecurityDefinerStatements(sql: string): string[] {
+  return createFunctionStatements(sql)
+    .filter((statement) => /security\s+definer/i.test(statement))
+    .filter((statement) => !/set\s+search_path\s*=\s*''/i.test(statement));
+}
+
 describe("Next image architecture contract", () => {
   it("globally bypasses runtime optimization and has no Supabase loader file", async () => {
     const config = await requireFile("next.config.mjs");
@@ -188,6 +202,10 @@ describe("tenant and privileged-boundary architecture contract", () => {
       "lib/club-context.ts",
       "lib/authorization.ts",
       "lib/club-access.ts",
+      "lib/registration-route-auth.ts",
+      "lib/registration-service.ts",
+      "lib/registration-fields.ts",
+      "lib/stripe-connect.ts",
       "lib/stripe-event-routing.ts",
       "lib/stripe-portal.ts",
       "lib/billing-lifecycle.ts",
@@ -219,6 +237,7 @@ describe("tenant and privileged-boundary architecture contract", () => {
       /^lib\/media-authorization-token\.ts$/,
       /^lib\/media-processing\.ts$/,
       /^lib\/billing-lifecycle\.ts$/,
+      /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
     ];
     const violations: string[] = [];
@@ -304,7 +323,37 @@ describe("migration SQL security contract", () => {
 
     expect(definerFunctions.length).toBeGreaterThan(0);
     expect(missingEmptySearchPath).toEqual([]);
+
+    // Independently parse complete dollar-quoted function statements so
+    // tagged bodies and SECURITY DEFINER clauses after the body cannot evade
+    // the header-oriented check above.
+    const definers = createFunctionStatements(sql).filter((statement) =>
+      /security\s+definer/i.test(statement),
+    );
+    const unhardened = unhardenedSecurityDefinerStatements(sql);
+    expect(definers.length).toBeGreaterThan(0);
+    expect(unhardened).toEqual([]);
     expect(sql).toMatch(/revoke execute on function .* from public/i);
+  });
+
+  it("detects trailing security-definer clauses after tagged dollar-quoted bodies", () => {
+    const hardened = `
+      create function onzio_private.trailing_hardened()
+      returns void
+      as $registration$
+      begin
+        perform 1;
+      end;
+      $registration$
+      language plpgsql
+      security definer
+      set search_path = '';
+    `;
+    const unhardened = hardened.replace("set search_path = '';", ";");
+
+    expect(createFunctionStatements(hardened)).toHaveLength(1);
+    expect(unhardenedSecurityDefinerStatements(hardened)).toEqual([]);
+    expect(unhardenedSecurityDefinerStatements(unhardened)).toHaveLength(1);
   });
 });
 
