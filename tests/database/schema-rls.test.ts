@@ -66,6 +66,49 @@ describe("planned schema contract", () => {
     );
   });
 
+  it("seeds a verified staging primary domain for every local club", async () => {
+    const { data, error } = await clients.service
+      .from("club_domains")
+      .select(
+        "club_id, hostname, is_primary, verified_at, environment, active",
+      )
+      .eq("environment", "staging")
+      .in("hostname", [
+        "alpha.localhost",
+        "bravo.localhost",
+        "charlie.localhost",
+      ])
+      .order("hostname");
+
+    expect(error?.message).toBeUndefined();
+    expect(
+      data?.map(({ verified_at: _verifiedAt, ...domain }) => domain),
+    ).toEqual([
+      {
+        club_id: CLUB_IDS.alpha,
+        hostname: "alpha.localhost",
+        is_primary: true,
+        environment: "staging",
+        active: true,
+      },
+      {
+        club_id: CLUB_IDS.bravo,
+        hostname: "bravo.localhost",
+        is_primary: true,
+        environment: "staging",
+        active: true,
+      },
+      {
+        club_id: CLUB_IDS.charlie,
+        hostname: "charlie.localhost",
+        is_primary: true,
+        environment: "staging",
+        active: true,
+      },
+    ]);
+    expect(data?.every(({ verified_at }) => verified_at !== null)).toBe(true);
+  });
+
   it("rejects duplicate singleton rows within one club", async () => {
     const { error } = await clients.service.from("site_branding").insert([
       { club_id: CLUB_IDS.alpha, club_logo_path: "alpha/one.png" },

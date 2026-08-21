@@ -2,6 +2,29 @@
 
 Last updated: 2026-08-20
 
+## Local staging primary domains — fixed and verified
+
+Agent: Codex (GPT-5.6 with Terra seed audit), 2026-08-20. Status: **complete
+locally on `claude/registration-forms`; not pushed or deployed.**
+
+`supabase/seed.sql` now creates verified, active staging primary-domain rows
+for all three base local tenants: `alpha.localhost`, `bravo.localhost`, and
+`charlie.localhost`. The hostname values intentionally omit ports because
+`normalizeHostname` strips valid local-development ports before tenant lookup.
+Charlie was included because it is a seeded live club but previously had no
+domain row, so it was subject to the same `PRIMARY_DOMAIN_REQUIRED` failure.
+
+Verification:
+
+- `supabase db reset`: passed; all migrations and the updated seed applied
+- focused tenant/database contracts: 3 files / 72 tests passed
+- full database suite: 20 files / 206 tests passed
+- `npx tsc --noEmit`: passed
+- `http://alpha.localhost:3001/`: Alpha public site rendered with no browser
+  error overlay, console errors, or `PRIMARY_DOMAIN_REQUIRED` server error
+- `http://alpha.localhost:3001/admin`: redirected to `/admin/login`, which
+  rendered successfully with the same clean error checks
+
 ## Phase H participant modes, Special Kickers draft, and native CTA links — implemented locally
 
 Agent: Codex (GPT-5.6 with Terra inspection subagents), 2026-08-20. Status:
