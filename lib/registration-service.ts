@@ -1,4 +1,9 @@
 import { ContractError } from "@/lib/contract-error";
+import type {
+  RegistrationParticipantMode,
+  RegistrationParticipantScope,
+  RegistrationParticipantType,
+} from "@/lib/registration-fields";
 import { RegistrationInfrastructureError } from "@/lib/registration-infrastructure-error";
 import { getRegistrationLedgerEnvironment } from "@/lib/stripe-config";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
@@ -9,7 +14,7 @@ export type RegistrationFormRecord = {
   slug: string;
   title: string;
   description: string;
-  is_minor: boolean;
+  participant_mode: RegistrationParticipantMode;
   waiver_text: string;
 };
 
@@ -25,6 +30,7 @@ export type RegistrationFieldRecord = {
   options: unknown;
   required: boolean;
   is_core: boolean;
+  participant_scope: RegistrationParticipantScope;
   position: number;
 };
 
@@ -66,7 +72,7 @@ export async function loadOpenRegistrationForm(
   const service = serviceSchema();
   const { data: form, error: formError } = await service
     .from("registration_forms")
-    .select("id,club_id,slug,title,description,is_minor,waiver_text,status")
+    .select("id,club_id,slug,title,description,participant_mode,waiver_text,status")
     .eq("club_id", clubId)
     .eq("slug", formSlug)
     .maybeSingle();
@@ -86,7 +92,7 @@ export async function loadOpenRegistrationForm(
   const [fieldsResult, pricesResult, connectResult] = await Promise.all([
     service
       .from("registration_form_fields")
-      .select("id,field_key,label,field_type,options,required,is_core,position")
+      .select("id,field_key,label,field_type,options,required,is_core,participant_scope,position")
       .eq("club_id", clubId)
       .eq("form_id", form.id)
       .order("position", { ascending: true }),
@@ -128,6 +134,7 @@ export async function createPendingRegistration(input: {
   formId: string;
   answers: Record<string, string | number | boolean>;
   registrantEmail: string;
+  participantType: RegistrationParticipantType;
   priceOptionId: string;
   waiverAcceptedAt: string;
   statusTokenHash: string;
@@ -140,6 +147,7 @@ export async function createPendingRegistration(input: {
       p_form_id: input.formId,
       p_answers: input.answers,
       p_registrant_email: input.registrantEmail,
+      p_participant_type: input.participantType,
       p_price_option_id: input.priceOptionId,
       p_waiver_accepted_at: input.waiverAcceptedAt,
       p_status_token_hash: input.statusTokenHash,
@@ -450,12 +458,12 @@ export type RegistrationNotificationData = {
 
 function registrationParticipantName(
   answers: unknown,
-  isMinor: boolean,
+  participantType: RegistrationParticipantType,
 ): string {
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
     databaseFailure("REGISTRATION_NOTIFICATION_DATA_INVALID");
   }
-  const key = isMinor ? "player_name" : "registrant_name";
+  const key = participantType === "minor" ? "player_name" : "registrant_name";
   const value = (answers as Record<string, unknown>)[key];
   if (typeof value !== "string" || !value.trim()) {
     databaseFailure("REGISTRATION_NOTIFICATION_DATA_INVALID");
@@ -470,7 +478,7 @@ export async function loadRegistrationNotificationData(
   const service = client.schema("onzio");
   const { data: registration, error } = await service
     .from("registrations")
-    .select("id,club_id,form_id,status,answers,registrant_email,price_label,amount_cents")
+    .select("id,club_id,form_id,status,answers,registrant_email,participant_type,price_label,amount_cents")
     .eq("id", registrationId)
     .maybeSingle();
   if (error) databaseFailure("REGISTRATION_NOTIFICATION_READ_FAILED", error);
@@ -482,7 +490,7 @@ export async function loadRegistrationNotificationData(
     service.from("clubs").select("name").eq("id", registration.club_id).single(),
     service
       .from("registration_forms")
-      .select("title,description,is_minor")
+      .select("title,description")
       .eq("club_id", registration.club_id)
       .eq("id", registration.form_id)
       .single(),
@@ -518,7 +526,7 @@ export async function loadRegistrationNotificationData(
     clubName: clubResult.data.name,
     participantName: registrationParticipantName(
       registration.answers,
-      formResult.data.is_minor,
+      registration.participant_type as RegistrationParticipantType,
     ),
     formTitle: formResult.data.title,
     formDescription: formResult.data.description.trim(),

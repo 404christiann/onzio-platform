@@ -1969,6 +1969,7 @@ export type Database = {
           is_core: boolean
           label: string
           options: Json
+          participant_scope: string
           position: number
           required: boolean
           updated_at: string
@@ -1983,6 +1984,7 @@ export type Database = {
           is_core?: boolean
           label: string
           options?: Json
+          participant_scope?: string
           position?: number
           required?: boolean
           updated_at?: string
@@ -1997,6 +1999,7 @@ export type Database = {
           is_core?: boolean
           label?: string
           options?: Json
+          participant_scope?: string
           position?: number
           required?: boolean
           updated_at?: string
@@ -2025,7 +2028,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
-          is_minor: boolean
+          participant_mode: string
           slug: string
           status: string
           title: string
@@ -2038,7 +2041,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          is_minor?: boolean
+          participant_mode?: string
           slug: string
           status?: string
           title: string
@@ -2051,7 +2054,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
-          is_minor?: boolean
+          participant_mode?: string
           slug?: string
           status?: string
           title?: string
@@ -2131,6 +2134,7 @@ export type Database = {
           form_id: string
           id: string
           paid_at: string | null
+          participant_type: string
           payment_recovery_detected_at: string | null
           payment_recovery_reason: string | null
           payment_recovery_required: boolean
@@ -2157,6 +2161,7 @@ export type Database = {
           form_id: string
           id?: string
           paid_at?: string | null
+          participant_type: string
           payment_recovery_detected_at?: string | null
           payment_recovery_reason?: string | null
           payment_recovery_required?: boolean
@@ -2183,6 +2188,7 @@ export type Database = {
           form_id?: string
           id?: string
           paid_at?: string | null
+          participant_type?: string
           payment_recovery_detected_at?: string | null
           payment_recovery_reason?: string | null
           payment_recovery_required?: boolean
@@ -2901,6 +2907,7 @@ export type Database = {
           p_club_id: string
           p_environment: string
           p_form_id: string
+          p_participant_type: string
           p_price_option_id: string
           p_registrant_email: string
           p_status_token_hash: string

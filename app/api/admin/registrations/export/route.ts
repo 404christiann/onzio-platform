@@ -19,7 +19,7 @@ export async function GET(request: Request) {
         .eq("form_id", formId)
         .order("position", { ascending: true }),
       onzio.from("registrations")
-        .select("answers,price_label,amount_cents,status,submitted_at")
+        .select("participant_type,answers,price_label,amount_cents,status,submitted_at")
         .eq("club_id", club.id)
         .eq("form_id", formId)
         .in("status", ["paid", "refunded"])
@@ -29,6 +29,7 @@ export async function GET(request: Request) {
       throw new ContractError("REGISTRATION_EXPORT_READ_FAILED");
     }
     const csv = buildRegistrationExportCsv((registrationsResult.data ?? []).map((row) => ({
+      participantType: row.participant_type as "minor" | "adult",
       answers: row.answers as Record<string, string | number | boolean | null | undefined>,
       priceLabel: row.price_label, amountCents: row.amount_cents,
       status: row.status, submittedAt: row.submitted_at,

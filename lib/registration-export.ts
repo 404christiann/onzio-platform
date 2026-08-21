@@ -1,6 +1,7 @@
 import { failContract } from "@/lib/contract-error";
 
 export type RegistrationExportRow = {
+  participantType: "minor" | "adult";
   answers: Record<string, string | number | boolean | null | undefined>;
   priceLabel: string;
   amountCents: number;
@@ -45,6 +46,7 @@ export function buildRegistrationExportCsv(
   }
 
   const headers = [
+    "Participant Type",
     ...answerKeys,
     "Price Label",
     "Amount Paid",
@@ -54,6 +56,7 @@ export function buildRegistrationExportCsv(
   const lines = [headers.map(escapeCsv).join(",")];
   for (const row of rows) {
     lines.push([
+      row.participantType,
       ...answerKeys.map((key) => row.answers[key]),
       row.priceLabel,
       amountPaid(row.amountCents),

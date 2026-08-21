@@ -9,6 +9,9 @@ import {
 import { buildRegistrationCheckout } from "@/lib/registration-checkout";
 import {
   type RegistrationFieldDefinition,
+  type RegistrationParticipantType,
+  registrationParticipantTypeSchema,
+  resolveRegistrationParticipantType,
   validateRegistrationAnswers,
 } from "@/lib/registration-fields";
 import {
@@ -36,6 +39,7 @@ export const dynamic = "force-dynamic";
 const submitSchema = z.object({
   formSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80),
   priceOptionId: z.uuid(),
+  participantType: registrationParticipantTypeSchema.optional(),
   answers: z.record(z.string(), z.unknown()),
   waiverAccepted: z.literal(true),
 }).strict();
@@ -66,14 +70,17 @@ function fieldDefinitions(
       ? field.options as string[]
       : undefined,
     isCore: field.is_core,
+    participantScope: field.participant_scope,
   }));
 }
 
 function registrationEmail(
-  isMinor: boolean,
+  participantType: RegistrationParticipantType,
   answers: Record<string, string | number | boolean>,
 ): string {
-  const value = answers[isMinor ? "guardian_email" : "registrant_email"];
+  const value = answers[
+    participantType === "minor" ? "guardian_email" : "registrant_email"
+  ];
   if (typeof value !== "string") {
     throw new ContractError("REGISTRATION_EMAIL_REQUIRED");
   }
@@ -106,9 +113,14 @@ export async function POST(request: Request) {
     }
 
     const aggregate = await loadOpenRegistrationForm(club.id, parsed.data.formSlug);
+    const participantType = resolveRegistrationParticipantType(
+      aggregate.form.participant_mode,
+      parsed.data.participantType,
+    );
     const answers = validateRegistrationAnswers(
       fieldDefinitions(aggregate.fields),
       parsed.data.answers,
+      participantType,
     );
     const price = aggregate.prices.find(
       (option) => option.id === parsed.data.priceOptionId,
@@ -117,12 +129,13 @@ export async function POST(request: Request) {
 
     const ledgerEnvironment = getRegistrationLedgerEnvironment();
     const statusToken = generateRegistrationStatusToken();
-    const registrantEmail = registrationEmail(aggregate.form.is_minor, answers);
+    const registrantEmail = registrationEmail(participantType, answers);
     const registrationId = await createPendingRegistration({
       clubId: club.id,
       formId: aggregate.form.id,
       answers,
       registrantEmail,
+      participantType,
       priceOptionId: price.id,
       waiverAcceptedAt: new Date().toISOString(),
       statusTokenHash: hashRegistrationStatusToken(statusToken),

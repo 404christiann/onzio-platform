@@ -8,11 +8,42 @@ export const registrationFieldTypeSchema = z.enum([
   "date",
   "number",
   "short_text",
+  "long_text",
   "dropdown",
   "checkbox",
+  "signature",
 ]);
 
 export type RegistrationFieldType = z.infer<typeof registrationFieldTypeSchema>;
+
+export const registrationParticipantModeSchema = z.enum([
+  "minor_only",
+  "adult_only",
+  "both",
+]);
+
+export type RegistrationParticipantMode = z.infer<
+  typeof registrationParticipantModeSchema
+>;
+
+export const registrationParticipantTypeSchema = z.enum(["minor", "adult"]);
+
+export type RegistrationParticipantType = z.infer<
+  typeof registrationParticipantTypeSchema
+>;
+
+export const registrationParticipantScopeSchema = z.enum([
+  "all",
+  "minor",
+  "adult",
+]);
+
+export type RegistrationParticipantScope = z.infer<
+  typeof registrationParticipantScopeSchema
+>;
+
+export const REGISTRATION_PARTICIPANT_QUESTION =
+  "Is this registration for a minor or an adult?";
 
 const fieldKeySchema = z
   .string()
@@ -26,6 +57,7 @@ export const registrationFieldDefinitionSchema = z
     required: z.boolean(),
     options: z.array(z.string().trim().min(1).max(120)).max(100).optional(),
     isCore: z.boolean().optional(),
+    participantScope: registrationParticipantScopeSchema.optional(),
   })
   .strict()
   .superRefine((definition, context) => {
@@ -151,9 +183,19 @@ function normalizeValue(
       ) {
         return normalized;
       }
+      if (definition.type === "long_text" && normalized.length <= 10000) {
+        return normalized;
+      }
       if (
         definition.type === "dropdown" &&
         definition.options?.includes(normalized)
+      ) {
+        return normalized;
+      }
+      if (
+        definition.type === "signature" &&
+        normalized.length <= 200000 &&
+        /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(normalized)
       ) {
         return normalized;
       }
@@ -166,6 +208,7 @@ function normalizeValue(
 export function validateRegistrationAnswers(
   definitions: readonly RegistrationFieldDefinition[],
   answers: unknown,
+  participantType?: RegistrationParticipantType,
 ): RegistrationAnswers {
   const normalizedDefinitions = parseDefinitions(definitions);
   if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
@@ -173,17 +216,30 @@ export function validateRegistrationAnswers(
   }
 
   const input = answers as Record<string, unknown>;
+  const activeDefinitions = participantType
+    ? normalizedDefinitions.filter((definition) =>
+        registrationFieldAppliesToParticipant(definition, participantType),
+      )
+    : normalizedDefinitions;
   const definitionByKey = new Map(
-    normalizedDefinitions.map((definition) => [definition.key, definition]),
+    activeDefinitions.map((definition) => [definition.key, definition]),
   );
   for (const key of Object.keys(input)) {
     if (!definitionByKey.has(key)) {
-      failContract("UNKNOWN_REGISTRATION_FIELD", key);
+      const knownDefinition = normalizedDefinitions.some(
+        (definition) => definition.key === key,
+      );
+      failContract(
+        knownDefinition
+          ? "REGISTRATION_FIELD_NOT_APPLICABLE"
+          : "UNKNOWN_REGISTRATION_FIELD",
+        key,
+      );
     }
   }
 
   const normalized: RegistrationAnswers = {};
-  for (const definition of normalizedDefinitions) {
+  for (const definition of activeDefinitions) {
     const value = input[definition.key];
     if (definition.required) requiredValue(value, definition);
     if (value === undefined || value === null) continue;
@@ -192,8 +248,32 @@ export function validateRegistrationAnswers(
   return normalized;
 }
 
+export function resolveRegistrationParticipantType(
+  participantMode: RegistrationParticipantMode,
+  selectedType?: RegistrationParticipantType,
+): RegistrationParticipantType {
+  if (participantMode === "both") {
+    if (!selectedType) failContract("REGISTRATION_PARTICIPANT_TYPE_REQUIRED");
+    return selectedType;
+  }
+
+  const resolved = participantMode === "minor_only" ? "minor" : "adult";
+  if (selectedType && selectedType !== resolved) {
+    failContract("REGISTRATION_PARTICIPANT_TYPE_INVALID");
+  }
+  return resolved;
+}
+
+export function registrationFieldAppliesToParticipant(
+  definition: Pick<RegistrationFieldDefinition, "participantScope">,
+  participantType: RegistrationParticipantType,
+): boolean {
+  const scope = definition.participantScope ?? "all";
+  return scope === "all" || scope === participantType;
+}
+
 export function buildCoreRegistrationFields(
-  isMinor: boolean,
+  participantMode: RegistrationParticipantMode,
 ): RegistrationFieldDefinition[] {
   const shared = [
     {
@@ -202,6 +282,7 @@ export function buildCoreRegistrationFields(
       type: "name" as const,
       required: true,
       isCore: true,
+      participantScope: "all" as const,
     },
     {
       key: "emergency_contact_phone",
@@ -209,21 +290,23 @@ export function buildCoreRegistrationFields(
       type: "phone" as const,
       required: true,
       isCore: true,
+      participantScope: "all" as const,
     },
   ];
 
-  return isMinor
-    ? [
-        { key: "player_name", label: "Player name", type: "name", required: true, isCore: true },
-        { key: "guardian_name", label: "Guardian name", type: "name", required: true, isCore: true },
-        { key: "guardian_email", label: "Guardian email", type: "email", required: true, isCore: true },
-        { key: "guardian_phone", label: "Guardian phone", type: "phone", required: true, isCore: true },
-        ...shared,
-      ]
-    : [
-        { key: "registrant_name", label: "Registrant name", type: "name", required: true, isCore: true },
-        { key: "registrant_email", label: "Registrant email", type: "email", required: true, isCore: true },
-        { key: "registrant_phone", label: "Registrant phone", type: "phone", required: true, isCore: true },
-        ...shared,
-      ];
+  const minor = [
+    { key: "player_name", label: "Player name", type: "name" as const, required: true, isCore: true, participantScope: "minor" as const },
+    { key: "guardian_name", label: "Guardian name", type: "name" as const, required: true, isCore: true, participantScope: "minor" as const },
+    { key: "guardian_email", label: "Guardian email", type: "email" as const, required: true, isCore: true, participantScope: "minor" as const },
+    { key: "guardian_phone", label: "Guardian phone", type: "phone" as const, required: true, isCore: true, participantScope: "minor" as const },
+  ];
+  const adult = [
+    { key: "registrant_name", label: "Registrant name", type: "name" as const, required: true, isCore: true, participantScope: "adult" as const },
+    { key: "registrant_email", label: "Registrant email", type: "email" as const, required: true, isCore: true, participantScope: "adult" as const },
+    { key: "registrant_phone", label: "Registrant phone", type: "phone" as const, required: true, isCore: true, participantScope: "adult" as const },
+  ];
+
+  if (participantMode === "minor_only") return [...minor, ...shared];
+  if (participantMode === "adult_only") return [...adult, ...shared];
+  return [...minor, ...adult, ...shared];
 }

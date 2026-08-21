@@ -106,6 +106,19 @@ ONZIO_LOCAL_TENANT_SLUG=alpha
 Do not run authenticated CRUD, webhook, Checkout, Portal, seed, or migration
 flows against hosted projects.
 
+The Special Kickers review form is intentionally a local-only draft. After
+the Diverse City local import exists, preview its deterministic definition or
+write it to the local database with:
+
+```bash
+npm run seed:special-kickers-registration:local
+npm run seed:special-kickers-registration:local -- --execute-local --confirm-local
+```
+
+The script rejects non-loopback Supabase hosts, refuses to replace a non-draft
+or a form with registrations, never creates a Connect account, and never opens
+or links the form to the public Programs page.
+
 ## Logging in locally as a club owner or admin
 
 Local login uses the same passwordless email-code flow as the product. The
