@@ -2,12 +2,14 @@
 
 Last updated: 2026-08-20
 
-## Phase H participant modes and Special Kickers review draft — implemented locally
+## Phase H participant modes, Special Kickers draft, and native CTA links — implemented locally
 
 Agent: Codex (GPT-5.6 with Terra inspection subagents), 2026-08-20. Status:
-**Parts 1–3 complete for local review; Part 4 deliberately not implemented;
-not committed, published, deployed, or connected to Stripe.** The worktree is
-still in the pre-existing paused rebase described below.
+**Parts 1–4 complete locally on the normal `claude/registration-forms` branch;
+not pushed, published, deployed, or connected to Stripe.** The paused rebase
+was consolidated without losing the staged boundary: reconciliation landed as
+`31370eb`, then participant modes and the Special Kickers review draft landed
+separately as `30c7533`. Part 4 remains a separate scoped change from both.
 
 The live Tally reference (`https://tally.so/r/pbNQyb`) was inspected through
 all 15 pages without submitting payment. It has no conditional logic and no
@@ -42,24 +44,40 @@ Stripe Connect mutations. Final readback: form ID
 `9d28590d-98de-56d6-a9da-c2f4843c2d70`, draft, 55 fields, 13,000 cents,
 unpublished. No Programs/Tryouts link was added.
 
-Verification after the final fixture adjustment:
+Programs and Tryouts now have nullable `registration_form_id` references with
+composite `(club_id, registration_form_id)` foreign keys. Their existing admin
+editors offer an optional tenant-scoped form selector. Public queries batch
+resolve only linked forms whose status is `open`; those render the existing
+`RegistrationCtaButton` modal in place. A missing reference, or a draft/closed
+form, preserves the existing Program external CTA and Tryout external-link or
+mailto behavior. Closed Tryout events never receive a native CTA. Both the
+academy and editorial Tryouts templates use the same precedence rule.
 
-- local database reset: passed; all 37 migrations and seed applied
+This capability is opt-in only. The locally reseeded Special Kickers form is
+still `draft`, remains `participant_mode = both`, and has zero Program links
+and zero Tryout links. No Stripe Connect or webhook files changed.
+
+Verification after the rebase split and Part 4 implementation:
+
+- local database reset: passed; all 38 migrations and seed applied
 - generated database types and `npm run db:types:check`: passed
-- focused participant-mode/form/submit/export suite: 6 files / 34 tests passed
-- focused registration RLS: 1 file / 15 tests passed
-- full database suite: 19 files / 201 tests passed
+- focused Part 4 contracts: 4 files / 100 tests passed
+- focused Part 4 composite-FK database contract: 1 file / 4 tests passed
+- full database suite: 20 files / 205 tests passed (an initial transient fresh
+  email-code `SESSION_EXPIRED` failure passed immediately in isolation and the
+  complete confirmation rerun passed)
 - architecture suite: 3 files / 21 tests passed
-- `npx tsc --noEmit --incremental false`: passed
-- lint and production build: passed; five pre-existing hook warnings only
-- final `npm test` with local Supabase credentials: 135 files / 1,397 tests
-  passed; the one unrelated staging fixture below remains red
+- `npx tsc --noEmit`: passed
+- production `next build`: passed; five pre-existing hook warnings only
+- final `npm test`: 136 files / 1,407 tests passed; one unrelated staging
+  fixture remains red
+- `npm run test:contracts`: 76 files / 836 tests passed; the same unrelated
+  fixture remains red
 
-Next step after Christian's review and explicit approval: implement the
-smallest Part 4 bridge by adding an optional tenant-safe registration-form
-reference to Programs/Tryouts, exposing it in those admin editors, and using
-`RegistrationCtaButton` only when the reference resolves to an open native
-form; otherwise preserve the current external-link/mailto behavior unchanged.
+The only aggregate failure is unchanged from the pre-Part-4 baseline:
+`tests/contracts/editorial-home.test.ts` expects `Capital City Athletic` while
+the unchanged staging resolver returns `Dayton Rovers SC`. No Phase H file is
+in that path.
 
 ## Registration forms rebased onto staging — resolved, commit blocked by one staging baseline contract
 

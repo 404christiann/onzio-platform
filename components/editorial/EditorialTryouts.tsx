@@ -1,6 +1,7 @@
 "use client";
 
 import { useClubContext } from "@/components/ClubContextProvider";
+import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
 import type { TryoutContent } from "@/lib/queries";
 import type { TryoutsPageContent } from "@/lib/tryouts-page-content";
 
@@ -17,11 +18,9 @@ import type { TryoutsPageContent } from "@/lib/tryouts-page-content";
  * (interior hero + content sections) is carried over from that reference
  * branch; its data logic is not ported at all.
  *
- * Read-only: no <form>, no mutation. Registration/interest happens off-site
- * (a third-party `action.href`) or via a mailto fallback -- identical to the
- * academy@1 page's read-only render pattern, just restyled with editorial's
- * own --club-primary/secondary/accent tokens instead of DCFC's hardcoded
- * navy/red.
+ * Registration can open an explicitly linked native form in place. Missing,
+ * draft, or closed native forms keep the existing off-site/mailto fallback,
+ * restyled with editorial's own --club-primary/secondary/accent tokens.
  */
 
 function formatEventDate(value: string | null): string {
@@ -106,7 +105,13 @@ export default function EditorialTryouts({
                     {tryout.closedMessage}
                   </p>
                 ) : null}
-                {tryout.action ? (
+                {tryout.nativeRegistration ? (
+                  <RegistrationCtaButton
+                    form={tryout.nativeRegistration.form}
+                    label={tryout.nativeRegistration.label}
+                    className="tryout-event-action"
+                  />
+                ) : tryout.action ? (
                   <a
                     className="tryout-event-action"
                     href={tryout.action.href}

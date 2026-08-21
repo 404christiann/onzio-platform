@@ -1,4 +1,5 @@
 import ResilientImage from "@/components/ResilientImage";
+import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
 import type { TryoutContent } from "@/lib/queries";
 import {
   resolveTryoutsPageContent,
@@ -179,7 +180,15 @@ export default function AcademyTryoutsPage({
                         {tryout.closedMessage}
                       </p>
                     ) : null}
-                    {tryout.action ? (
+                    {tryout.nativeRegistration ? (
+                      <div className="mt-8">
+                        <RegistrationCtaButton
+                          form={tryout.nativeRegistration.form}
+                          label={tryout.nativeRegistration.label}
+                          className="rounded-none bg-[#FF1616] px-7 py-4 text-sm tracking-normal hover:bg-[#D70000] hover:opacity-100"
+                        />
+                      </div>
+                    ) : tryout.action ? (
                       <div className="mt-8">
                         <a
                           href={tryout.action.href}

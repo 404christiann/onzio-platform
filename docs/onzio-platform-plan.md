@@ -518,6 +518,16 @@ notifications and exports remain correct if the draft definition later
 changes. One waiver acceptance applies to either branch, and a combined CSV
 keeps both branch columns with non-applicable values blank.
 
+Programs and tryouts may opt into one native form through a nullable
+`registration_form_id`. The relationship is tenant-safe at the database
+boundary through composite `(club_id, registration_form_id)` foreign keys.
+Public queries resolve only linked forms whose status is `open`; that native
+form opens in `RegistrationCtaButton` and takes CTA precedence. A missing
+reference, or one whose form is draft or closed, preserves the existing
+program external CTA and tryout external-link/mailto behavior exactly. This is
+an explicit per-entry opt-in: adding the capability does not change any club's
+site, and form status never gets inferred from the program or tryout status.
+
 The registration security model is:
 
 - anonymous visitors may read only open definitions for publicly accessible

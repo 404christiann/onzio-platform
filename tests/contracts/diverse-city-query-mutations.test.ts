@@ -12,6 +12,78 @@ import {
 } from "@/lib/queries";
 
 const CLUB_ID = clubs.alpha.id;
+const REGISTRATION_FORM_ID = "77777777-7777-4777-8777-777777777701";
+
+function linkedProgramRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "program-native",
+    club_id: CLUB_ID,
+    slug: "native-program",
+    nav_label: "Native program",
+    display_title: "Native program",
+    kicker: "",
+    summary: "",
+    body: "",
+    highlights: [],
+    layout_variant: "statement_band",
+    hero_media_asset_id: null,
+    detail_media_asset_id: null,
+    external_cta_label: "Register",
+    external_cta_href: "https://registration.example.test/fallback",
+    registration_form_id: REGISTRATION_FORM_ID,
+    registration_enabled: true,
+    registration_eyebrow: "",
+    registration_headline: "",
+    registration_body: "",
+    registration_pending_body: "",
+    registration_pending_label: "",
+    status: "active",
+    sort_order: 0,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function linkedTryoutRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "tryout-native",
+    club_id: CLUB_ID,
+    program_id: null,
+    registration_form_id: REGISTRATION_FORM_ID,
+    status: "open",
+    eyebrow: "Tryouts",
+    headline: "Join the club",
+    intro: "Open now.",
+    hero_media_asset_id: null,
+    eligibility_copy: "",
+    what_to_expect_copy: "",
+    preparation_copy: "",
+    event_date: null,
+    location: "",
+    cost_text: "",
+    cta_label: "Register",
+    registration_href: "https://registration.example.test/fallback",
+    closed_message: "Registration is closed.",
+    sort_order: 0,
+    created_at: "2026-08-01T00:00:00Z",
+    updated_at: "2026-08-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function openFormRow() {
+  return {
+    id: REGISTRATION_FORM_ID,
+    club_id: CLUB_ID,
+    slug: "native-registration",
+    title: "Native registration",
+    description: "Register with the club.",
+    participant_mode: "both",
+    waiver_text: "I accept the waiver.",
+    status: "open",
+  };
+}
 
 const { mockFrom, mockResolveMediaReferences } = vi.hoisted(() => ({
   mockFrom: vi.fn(),
@@ -35,7 +107,9 @@ vi.mock("@/lib/supabase", () => ({
 
 vi.mock("@/lib/media-assets", () => ({
   resolveMediaReferences: mockResolveMediaReferences,
-  resolveMediaStoragePath: vi.fn(async (_clubId, _assetId, fallback) => fallback),
+  resolveMediaStoragePath: vi.fn(
+    async (_clubId, _assetId, fallback) => fallback,
+  ),
 }));
 
 function chain(result: { data: unknown; error: unknown }) {
@@ -115,11 +189,96 @@ describe("DCFC-204 tenant-scoped public query mappings", () => {
     expect(query.order).toHaveBeenCalledWith("sort_order", { ascending: true });
   });
 
+  it("hydrates a linked open program form while retaining the external fallback", async () => {
+    const queries = {
+      programs: chain({ data: [linkedProgramRow()], error: null }),
+      program_media: chain({ data: [], error: null }),
+      registration_forms: chain({ data: [openFormRow()], error: null }),
+      registration_form_fields: chain({
+        data: [
+          {
+            id: "field-1",
+            form_id: REGISTRATION_FORM_ID,
+            field_key: "participant_first_name",
+            label: "First name",
+            field_type: "text",
+            options: [],
+            required: true,
+            is_core: true,
+            participant_scope: "participant",
+            position: 0,
+          },
+        ],
+        error: null,
+      }),
+      registration_price_options: chain({
+        data: [
+          {
+            id: "price-1",
+            form_id: REGISTRATION_FORM_ID,
+            label: "Registration",
+            amount_cents: 13_000,
+            position: 0,
+          },
+        ],
+        error: null,
+      }),
+    };
+    mockFrom.mockImplementation(
+      (table: keyof typeof queries) => queries[table],
+    );
+
+    const [program] = await fetchPrograms(CLUB_ID);
+    expect(program.nativeRegistration).toMatchObject({
+      label: "Register",
+      form: {
+        slug: "native-registration",
+        title: "Native registration",
+        participantMode: "both",
+        prices: [{ id: "price-1", amountCents: 13_000 }],
+      },
+    });
+    expect(program.externalCta).toEqual({
+      label: "Register",
+      href: "https://registration.example.test/fallback",
+    });
+    expect(queries.registration_forms.eq).toHaveBeenCalledWith(
+      "status",
+      "open",
+    );
+    for (const query of Object.values(queries)) {
+      expect(query.eq).toHaveBeenCalledWith("club_id", CLUB_ID);
+    }
+  });
+
+  it("keeps a program's existing CTA when its linked form is draft, closed, or missing", async () => {
+    const queries = {
+      programs: chain({ data: [linkedProgramRow()], error: null }),
+      program_media: chain({ data: [], error: null }),
+      // The open-only public lookup returns no row for all three states.
+      registration_forms: chain({ data: [], error: null }),
+    };
+    mockFrom.mockImplementation(
+      (table: keyof typeof queries) => queries[table],
+    );
+
+    const [program] = await fetchPrograms(CLUB_ID);
+    expect(program.nativeRegistration).toBeNull();
+    expect(program.externalCta).toEqual({
+      label: "Register",
+      href: "https://registration.example.test/fallback",
+    });
+    expect(mockFrom).not.toHaveBeenCalledWith("registration_form_fields");
+    expect(mockFrom).not.toHaveBeenCalledWith("registration_price_options");
+  });
+
   it("returns null for an unknown active program slug without dropping tenant scope", async () => {
     const query = chain({ data: [], error: null });
     mockFrom.mockReturnValue(query);
 
-    await expect(fetchProgramBySlug(CLUB_ID, "removed-program")).resolves.toBeNull();
+    await expect(
+      fetchProgramBySlug(CLUB_ID, "removed-program"),
+    ).resolves.toBeNull();
     expect(query.eq).toHaveBeenCalledWith("club_id", CLUB_ID);
     expect(query.eq).toHaveBeenCalledWith("slug", "removed-program");
     expect(query.eq).toHaveBeenCalledWith("status", "active");
@@ -303,18 +462,75 @@ describe("DCFC-204 tenant-scoped public query mappings", () => {
     ]);
     expect(tryoutsQuery.eq).toHaveBeenCalledWith("club_id", CLUB_ID);
     expect(contactQuery.eq).toHaveBeenCalledWith("club_id", CLUB_ID);
+    expect(result.every((tryout) => tryout.nativeRegistration === null)).toBe(
+      true,
+    );
+  });
+
+  it("hydrates an open native tryout form but never overrides a closed event", async () => {
+    const queries = {
+      tryouts: chain({
+        data: [
+          linkedTryoutRow(),
+          linkedTryoutRow({ id: "tryout-closed-native", status: "closed" }),
+        ],
+        error: null,
+      }),
+      contact_profile: chain({
+        data: [{ public_email: "tryouts@example.test" }],
+        error: null,
+      }),
+      registration_forms: chain({ data: [openFormRow()], error: null }),
+      registration_form_fields: chain({ data: [], error: null }),
+      registration_price_options: chain({ data: [], error: null }),
+    };
+    mockFrom.mockImplementation(
+      (table: keyof typeof queries) => queries[table],
+    );
+
+    const [openTryout, closedTryout] = await fetchTryouts(CLUB_ID);
+    expect(openTryout.nativeRegistration).toMatchObject({
+      label: "Register",
+      form: { slug: "native-registration" },
+    });
+    expect(openTryout.action).toEqual({
+      kind: "registration",
+      label: "Register",
+      href: "https://registration.example.test/fallback",
+    });
+    expect(closedTryout.nativeRegistration).toBeNull();
+    expect(closedTryout.action).toEqual({
+      kind: "contact",
+      label: "Contact the club",
+      href: "mailto:tryouts@example.test",
+    });
+  });
+
+  it("renders the native modal branch in both public tryout templates", async () => {
+    for (const path of [
+      "components/AcademyTryoutsPage.tsx",
+      "components/editorial/EditorialTryouts.tsx",
+    ]) {
+      const component = await readFile(resolve(process.cwd(), path), "utf8");
+      expect(component).toContain("tryout.nativeRegistration");
+      expect(component).toContain("<RegistrationCtaButton");
+      expect(component).toContain(": tryout.action ? (");
+    }
   });
 
   it.each([
     ["Programs", () => fetchPrograms(CLUB_ID)],
     ["Contact", () => fetchContactContent(CLUB_ID)],
     ["Tryouts", () => fetchTryouts(CLUB_ID)],
-  ])("fails closed when the %s public query returns an error", async (_name, action) => {
-    mockFrom.mockReturnValue(
-      chain({ data: null, error: { message: "public content unavailable" } }),
-    );
-    await expect(action()).rejects.toThrow(/public content unavailable/);
-  });
+  ])(
+    "fails closed when the %s public query returns an error",
+    async (_name, action) => {
+      mockFrom.mockReturnValue(
+        chain({ data: null, error: { message: "public content unavailable" } }),
+      );
+      await expect(action()).rejects.toThrow(/public content unavailable/);
+    },
+  );
 });
 
 describe("DCFC-204 protected mutation schemas", () => {
@@ -366,9 +582,11 @@ describe("DCFC-204 protected mutation schemas", () => {
   it.each([
     ["programs", { slug: "bad slug", display_title: "Bad" }],
     ["programs", { slug: "valid", display_title: "Bad", unknown: true }],
+    ["programs", { registration_form_id: "not-a-uuid" }],
     ["contact_profile", { public_email: "not-an-email" }],
     ["contact_profile", { public_phone: "javascript:alert(1)" }],
     ["tryouts", { status: "accepting-payments" }],
+    ["tryouts", { registration_form_id: "not-a-uuid" }],
     ["tryouts", { registration_href: "javascript:alert(1)" }],
     ["tryouts", { registration_href: "//evil.example/registration" }],
     ["tryouts", { registration_href: "/\\evil.example/registration" }],

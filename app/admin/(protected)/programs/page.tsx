@@ -21,6 +21,7 @@ import type {
   DBProgram,
   DBProgramMedia,
   DBProgramsPageContent,
+  DBRegistrationForm,
 } from "@/lib/db-types";
 import {
   buildProgramMediaMutationPayload,
@@ -55,6 +56,7 @@ import {
 import { deriveProgramSlug } from "@/lib/slugify";
 
 type MediaRole = "hero" | "detail";
+type RegistrationFormOption = Pick<DBRegistrationForm, "id" | "title" | "status">;
 
 /**
  * The per-program editor is split into three tabs instead of one flat list of
@@ -140,6 +142,7 @@ export default function AdminProgramsPage() {
   // keeps the editor.
   const hidesPageCopyEditor = club.presentationTemplateKey === "academy@1";
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
+  const [registrationForms, setRegistrationForms] = useState<RegistrationFormOption[]>([]);
   const [draft, setDraft] = useState<ProgramDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -188,7 +191,7 @@ export default function AdminProgramsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [{ data, error: loadError }, mediaResult, pageCopyResult] =
+      const [{ data, error: loadError }, mediaResult, pageCopyResult, registrationFormsResult] =
         await Promise.all([
           createClient()
             .from("programs")
@@ -199,10 +202,16 @@ export default function AdminProgramsPage() {
             .select("*")
             .order("sort_order", { ascending: true }),
           createClient().from("programs_page_content").select("*").limit(1),
+          createClient()
+            .from("registration_forms")
+            .select("id,title,status")
+            .order("title", { ascending: true }),
         ]);
       if (loadError) throw new Error(loadError.message);
       if (mediaResult.error) throw new Error(mediaResult.error.message);
       if (pageCopyResult.error) throw new Error(pageCopyResult.error.message);
+      if (registrationFormsResult.error) throw new Error(registrationFormsResult.error.message);
+      setRegistrationForms((registrationFormsResult.data ?? []) as RegistrationFormOption[]);
       setPageCopy(
         programsPageToDraft(
           ((pageCopyResult.data ?? []) as DBProgramsPageContent[])[0] ?? null,
@@ -646,7 +655,7 @@ export default function AdminProgramsPage() {
           </h1>
           <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-muted-foreground">
             Manage program pages, their order, media, highlights, visibility, and
-            external destinations.
+            registration destinations.
           </p>
         </div>
         {!hidesProgramCreation && (
@@ -1149,10 +1158,10 @@ export default function AdminProgramsPage() {
                     The band shown partway down the public program page. Every
                     field below starts filled in with the standard wording —
                     edit it, or clear a field to keep it updating automatically
-                    if the standard wording ever changes. The button itself
-                    comes from the button label and link fields below — with
-                    no link saved, visitors see the &ldquo;coming soon&rdquo;
-                    text instead of a link.
+                    if the standard wording ever changes. An open Onzio form
+                    takes priority when selected. A draft or closed form falls
+                    back to the existing button link; with neither available,
+                    visitors see the &ldquo;coming soon&rdquo; text.
                   </p>
                 </div>
 
@@ -1176,9 +1185,22 @@ export default function AdminProgramsPage() {
                   </span>
                 </label>
 
-                {/* The register button itself. Unchanged fields and unchanged
-                    public behaviour — they simply live beside the section they
-                    drive now, instead of several groups above it. */}
+                <div className="mt-5">
+                  <FormField label="Onzio registration form">
+                    <NativeSelect value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
+                      <NativeSelectOption value="">No native form — use the button link below</NativeSelectOption>
+                      {registrationForms.map((form) => (
+                        <NativeSelectOption key={form.id} value={form.id}>{form.title} — {form.status}</NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                  </FormField>
+                  <p className="mt-2 font-body text-xs leading-5 text-muted-foreground">
+                    Only an open form launches the native registration modal. Draft and closed forms preserve the external-link fallback.
+                  </p>
+                </div>
+
+                {/* These fields remain the fallback whenever no linked Onzio
+                    form resolves open. */}
                 <div className="mt-5 grid gap-5 sm:grid-cols-2">
                   <FormField label="Button label" error={fieldError(errors, "externalCtaLabel")}>
                     <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
@@ -1466,4 +1488,3 @@ function FormField({
     </label>
   );
 }
-

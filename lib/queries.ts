@@ -90,6 +90,15 @@ import {
   type ProgramMediaItem,
   type ProgramRegistrationContent,
 } from "@/lib/program-content";
+import {
+  toPublicRegistrationForm,
+  type PublicRegistrationForm,
+} from "@/lib/registration-public";
+import type {
+  RegistrationFieldRecord,
+  RegistrationFormRecord,
+  RegistrationPriceRecord,
+} from "@/lib/registration-service";
 
 const TEST_CLUB_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -215,6 +224,8 @@ export type ProgramContent = {
   heroMediaUrl: string;
   detailMediaUrl: string;
   externalCta: { label: string; href: string } | null;
+  /** An open native form takes precedence over the external CTA when linked. */
+  nativeRegistration: NativeRegistrationAction | null;
   /** Admin-editable registration band copy, resolved against template defaults. */
   registration: ProgramRegistrationContent;
   /** Ordered admin-managed gallery images for this program (onzio.program_media). */
@@ -242,6 +253,11 @@ export type TryoutAction =
   | { kind: "registration"; label: string; href: string }
   | { kind: "contact"; label: "Contact the club"; href: string };
 
+export type NativeRegistrationAction = {
+  form: PublicRegistrationForm;
+  label: string;
+};
+
 export type TryoutContent = {
   id: string;
   programId: string | null;
@@ -259,6 +275,8 @@ export type TryoutContent = {
   closedMessage: string;
   sortOrder: number;
   action: TryoutAction | null;
+  /** An open native form takes precedence over `action` for non-closed events. */
+  nativeRegistration: NativeRegistrationAction | null;
 };
 
 type HydratedProgram = DBProgram & {
@@ -292,7 +310,10 @@ function stringArray(value: unknown): string[] {
     : [];
 }
 
-function mapProgram(row: HydratedProgram): ProgramContent {
+function mapProgram(
+  row: HydratedProgram,
+  nativeForm?: PublicRegistrationForm,
+): ProgramContent {
   const href = normalizePublicHref(row.external_cta_href);
   const label = row.external_cta_label.trim();
   return {
@@ -309,10 +330,101 @@ function mapProgram(row: HydratedProgram): ProgramContent {
     heroMediaUrl: row.hero_media_url ?? "",
     detailMediaUrl: row.detail_media_url ?? "",
     externalCta: href && label ? { label, href } : null,
+    nativeRegistration: nativeForm
+      ? { form: nativeForm, label: label || "Register now" }
+      : null,
     registration: resolveProgramRegistration(row),
     media: normalizeProgramMedia(row.program_media),
     sortOrder: row.sort_order,
   };
+}
+
+type LinkedRegistrationFormRecord = RegistrationFormRecord & {
+  status: "draft" | "open" | "closed";
+};
+
+type LinkedRegistrationFieldRecord = RegistrationFieldRecord & {
+  form_id: string;
+};
+
+type LinkedRegistrationPriceRecord = RegistrationPriceRecord & {
+  form_id: string;
+};
+
+/**
+ * Resolves only open forms referenced by already tenant-scoped public rows.
+ * The explicit club/status predicates complement registration RLS, and the
+ * empty-ID fast path means clubs that have not opted in keep their old query
+ * shape and rendering behavior.
+ */
+async function loadLinkedOpenRegistrationForms(
+  rows: ReadonlyArray<{ registration_form_id?: string | null }>,
+  tenantId: string,
+  client: typeof supabase,
+): Promise<Map<string, PublicRegistrationForm>> {
+  const linkedIds = [...new Set(rows
+    .map((row) => row.registration_form_id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0))];
+  if (linkedIds.length === 0) return new Map();
+
+  const { data: formData, error: formError } = await client
+    .from("registration_forms")
+    .select("id,club_id,slug,title,description,participant_mode,waiver_text,status")
+    .eq("club_id", tenantId)
+    .in("id", linkedIds)
+    .eq("status", "open");
+  if (formError) {
+    throw new Error(`loadLinkedOpenRegistrationForms: ${formError.message}`);
+  }
+
+  const forms = ((formData ?? []) as LinkedRegistrationFormRecord[]).filter(
+    (form) => form.status === "open" && linkedIds.includes(form.id),
+  );
+  if (forms.length === 0) return new Map();
+
+  const openIds = forms.map((form) => form.id);
+  const [fieldsResult, pricesResult] = await Promise.all([
+    client
+      .from("registration_form_fields")
+      .select("id,form_id,field_key,label,field_type,options,required,is_core,participant_scope,position")
+      .eq("club_id", tenantId)
+      .in("form_id", openIds)
+      .order("position", { ascending: true }),
+    client
+      .from("registration_price_options")
+      .select("id,form_id,label,amount_cents,position")
+      .eq("club_id", tenantId)
+      .in("form_id", openIds)
+      .eq("active", true)
+      .order("position", { ascending: true }),
+  ]);
+  const relatedError = fieldsResult.error ?? pricesResult.error;
+  if (relatedError) {
+    throw new Error(`loadLinkedOpenRegistrationForms: ${relatedError.message}`);
+  }
+
+  const fieldsByForm = new Map<string, RegistrationFieldRecord[]>();
+  for (const field of (fieldsResult.data ?? []) as LinkedRegistrationFieldRecord[]) {
+    const fields = fieldsByForm.get(field.form_id) ?? [];
+    fields.push(field);
+    fieldsByForm.set(field.form_id, fields);
+  }
+  const pricesByForm = new Map<string, RegistrationPriceRecord[]>();
+  for (const price of (pricesResult.data ?? []) as LinkedRegistrationPriceRecord[]) {
+    const prices = pricesByForm.get(price.form_id) ?? [];
+    prices.push(price);
+    pricesByForm.set(price.form_id, prices);
+  }
+
+  return new Map(forms.map((form) => [
+    form.id,
+    toPublicRegistrationForm({
+      form,
+      fields: fieldsByForm.get(form.id) ?? [],
+      prices: pricesByForm.get(form.id) ?? [],
+      connect: null,
+    }),
+  ]));
 }
 
 /**
@@ -380,7 +492,11 @@ function contactHref(email: unknown): string {
  * registration link is trusted, and where TBA appears — instead of a second
  * copy that can drift.
  */
-export function mapTryout(row: HydratedTryout, email: unknown): TryoutContent {
+export function mapTryout(
+  row: HydratedTryout,
+  email: unknown,
+  nativeForm?: PublicRegistrationForm,
+): TryoutContent {
   const registrationHref = normalizePublicHref(row.registration_href);
   const registrationLabel = row.cta_label.trim();
   const fallbackHref = contactHref(email);
@@ -419,6 +535,10 @@ export function mapTryout(row: HydratedTryout, email: unknown): TryoutContent {
     closedMessage: row.closed_message,
     sortOrder: row.sort_order,
     action,
+    nativeRegistration:
+      row.status !== "closed" && nativeForm
+        ? { form: nativeForm, label: registrationLabel || "Register now" }
+        : null,
   };
 }
 
@@ -439,21 +559,25 @@ export async function fetchPrograms(
     .order("sort_order", { ascending: true });
   if (error) throw new Error(`fetchPrograms: ${error.message}`);
 
-  const rows = await resolveMediaReferences(
-    (data ?? []) as DBProgram[],
-    tenantId,
-    [
-      { assetId: "hero_media_asset_id", url: "hero_media_url" },
-      { assetId: "detail_media_asset_id", url: "detail_media_url" },
-    ],
-    client,
-  );
-  const withMedia = await attachProgramMedia(
-    rows as HydratedProgram[],
-    tenantId,
-    client,
-  );
-  return withMedia.map(mapProgram);
+  const rawRows = (data ?? []) as DBProgram[];
+  const [withMedia, nativeForms] = await Promise.all([
+    resolveMediaReferences(
+      rawRows,
+      tenantId,
+      [
+        { assetId: "hero_media_asset_id", url: "hero_media_url" },
+        { assetId: "detail_media_asset_id", url: "detail_media_url" },
+      ],
+      client,
+    ).then((rows) => attachProgramMedia(rows as HydratedProgram[], tenantId, client)),
+    loadLinkedOpenRegistrationForms(rawRows, tenantId, client),
+  ]);
+  return withMedia.map((row) => mapProgram(
+    row,
+    row.registration_form_id
+      ? nativeForms.get(row.registration_form_id)
+      : undefined,
+  ));
 }
 
 /** Fetches one active Program by tenant-scoped slug, or null when unavailable. */
@@ -473,19 +597,28 @@ export async function fetchProgramBySlug(
     .eq("status", "active")
     .limit(1);
   if (error) throw new Error(`fetchProgramBySlug: ${error.message}`);
-  const rows = await resolveMediaReferences(
-    (data ?? []) as DBProgram[],
-    tenantId,
-    [
-      { assetId: "hero_media_asset_id", url: "hero_media_url" },
-      { assetId: "detail_media_asset_id", url: "detail_media_url" },
-    ],
-    client,
-  );
+  const rawRows = (data ?? []) as DBProgram[];
+  const [rows, nativeForms] = await Promise.all([
+    resolveMediaReferences(
+      rawRows,
+      tenantId,
+      [
+        { assetId: "hero_media_asset_id", url: "hero_media_url" },
+        { assetId: "detail_media_asset_id", url: "detail_media_url" },
+      ],
+      client,
+    ),
+    loadLinkedOpenRegistrationForms(rawRows, tenantId, client),
+  ]);
   const row = (rows as HydratedProgram[])[0];
   if (!row) return null;
   const [withMedia] = await attachProgramMedia([row], tenantId, client);
-  return mapProgram(withMedia);
+  return mapProgram(
+    withMedia,
+    withMedia.registration_form_id
+      ? nativeForms.get(withMedia.registration_form_id)
+      : undefined,
+  );
 }
 
 /** Fetches canonical Contact data, page copy, and shared social destinations. */
@@ -599,16 +732,26 @@ export async function fetchTryouts(
   const error = tryoutsResult.error ?? contactResult.error;
   if (error) throw new Error(`fetchTryouts: ${error.message}`);
 
-  const rows = await resolveMediaReferences(
-    (tryoutsResult.data ?? []) as DBTryout[],
-    tenantId,
-    [{ assetId: "hero_media_asset_id", url: "hero_media_url" }],
-    client,
-  );
+  const rawRows = (tryoutsResult.data ?? []) as DBTryout[];
+  const [rows, nativeForms] = await Promise.all([
+    resolveMediaReferences(
+      rawRows,
+      tenantId,
+      [{ assetId: "hero_media_asset_id", url: "hero_media_url" }],
+      client,
+    ),
+    loadLinkedOpenRegistrationForms(rawRows, tenantId, client),
+  ]);
   const email = (
     (contactResult.data ?? []) as Pick<DBContactProfile, "public_email">[]
   )[0]?.public_email;
-  return (rows as HydratedTryout[]).map((row) => mapTryout(row, email));
+  return (rows as HydratedTryout[]).map((row) => mapTryout(
+    row,
+    email,
+    row.registration_form_id
+      ? nativeForms.get(row.registration_form_id)
+      : undefined,
+  ));
 }
 
 /** Returns all seasons ordered newest first. */

@@ -1817,6 +1817,7 @@ export type Database = {
           registration_body: string
           registration_enabled: boolean
           registration_eyebrow: string
+          registration_form_id: string | null
           registration_headline: string
           registration_pending_body: string
           registration_pending_label: string
@@ -1843,6 +1844,7 @@ export type Database = {
           registration_body?: string
           registration_enabled?: boolean
           registration_eyebrow?: string
+          registration_form_id?: string | null
           registration_headline?: string
           registration_pending_body?: string
           registration_pending_label?: string
@@ -1869,6 +1871,7 @@ export type Database = {
           registration_body?: string
           registration_enabled?: boolean
           registration_eyebrow?: string
+          registration_form_id?: string | null
           registration_headline?: string
           registration_pending_body?: string
           registration_pending_label?: string
@@ -1898,6 +1901,13 @@ export type Database = {
             columns: ["club_id", "hero_media_asset_id"]
             isOneToOne: false
             referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "programs_registration_form_tenant_fkey"
+            columns: ["club_id", "registration_form_id"]
+            isOneToOne: false
+            referencedRelation: "registration_forms"
             referencedColumns: ["club_id", "id"]
           },
         ]
@@ -2721,6 +2731,7 @@ export type Database = {
           location: string
           preparation_copy: string
           program_id: string | null
+          registration_form_id: string | null
           registration_href: string
           sort_order: number
           status: string
@@ -2743,6 +2754,7 @@ export type Database = {
           location?: string
           preparation_copy?: string
           program_id?: string | null
+          registration_form_id?: string | null
           registration_href?: string
           sort_order?: number
           status?: string
@@ -2765,6 +2777,7 @@ export type Database = {
           location?: string
           preparation_copy?: string
           program_id?: string | null
+          registration_form_id?: string | null
           registration_href?: string
           sort_order?: number
           status?: string
@@ -2791,6 +2804,13 @@ export type Database = {
             columns: ["club_id", "program_id"]
             isOneToOne: false
             referencedRelation: "programs"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "tryouts_registration_form_tenant_fkey"
+            columns: ["club_id", "registration_form_id"]
+            isOneToOne: false
+            referencedRelation: "registration_forms"
             referencedColumns: ["club_id", "id"]
           },
         ]
