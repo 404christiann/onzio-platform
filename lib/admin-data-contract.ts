@@ -144,6 +144,7 @@ const programMutation = z
     detail_media_asset_id: nullableUuid.optional(),
     external_cta_label: optionalText(40),
     external_cta_href: externalHref,
+    registration_form_id: nullableUuid.optional(),
     // Registration band copy. Ceilings mirror the CHECK constraints added in
     // 20260808020000_dcfc_program_media_registration_content.sql exactly, so a
     // rejection surfaces as a field message instead of a database error.
@@ -233,6 +234,7 @@ const tryoutMutation = z
     cost_text: optionalText(120),
     cta_label: optionalText(40),
     registration_href: externalHref,
+    registration_form_id: nullableUuid.optional(),
     closed_message: optionalText(320),
     sort_order: z.number().int().optional(),
   })

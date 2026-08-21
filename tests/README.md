@@ -45,6 +45,13 @@ Commands:
   tests/database/registration-rls.test.ts` — participant-mode branching,
   branch-scoped validation, combined CSV behavior, the local-only Special
   Kickers draft definition, submission routing, and database enforcement
+- `npx vitest run tests/contracts/diverse-city-programs-admin.test.ts
+  tests/contracts/diverse-city-program-registration-admin.test.ts
+  tests/contracts/diverse-city-tryouts-admin.test.ts
+  tests/contracts/diverse-city-query-mutations.test.ts
+  tests/database/registration-form-links.test.ts` — optional tenant-safe
+  Program/Tryout form links, admin round-tripping, open native-modal precedence,
+  unchanged draft/closed/no-link fallbacks, and composite-FK enforcement
 - `ROSTER_MEDIA_BASE_URL=https://onzio-platform.vercel.app npm run test:browser:roster`
   — retained focused roster compatibility check
 - `SITE_MEDIA_BASE_URL=http://127.0.0.1:3000 npx playwright test

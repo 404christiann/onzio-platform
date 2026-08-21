@@ -35,6 +35,7 @@ export type TryoutDraft = {
   costText: string;
   ctaLabel: string;
   registrationHref: string;
+  registrationFormId: string | null;
   closedMessage: string;
   sortOrder: number;
 };
@@ -75,6 +76,7 @@ export function emptyTryoutDraft(sortOrder = 0): TryoutDraft {
     costText: "",
     ctaLabel: "",
     registrationHref: "",
+    registrationFormId: null,
     closedMessage: "",
     sortOrder,
   };
@@ -108,6 +110,7 @@ export function tryoutToDraft(row: AdminTryoutRow): TryoutDraft {
     costText: row.cost_text,
     ctaLabel: row.cta_label,
     registrationHref: row.registration_href,
+    registrationFormId: row.registration_form_id,
     closedMessage: row.closed_message,
     sortOrder: row.sort_order,
   };
@@ -199,6 +202,7 @@ export function buildTryoutMutationPayload(
     cost_text: draft.costText.trim(),
     cta_label: draft.ctaLabel.trim(),
     registration_href: draft.registrationHref.trim(),
+    registration_form_id: draft.registrationFormId,
     closed_message: draft.closedMessage.trim(),
     sort_order: draft.sortOrder,
   };

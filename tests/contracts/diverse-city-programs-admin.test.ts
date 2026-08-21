@@ -33,6 +33,7 @@ function program(overrides: Partial<DBProgram> = {}): DBProgram {
     detail_media_asset_id: null,
     external_cta_label: "Learn more",
     external_cta_href: "https://registration.example.test/program",
+    registration_form_id: null,
     registration_enabled: false,
     registration_eyebrow: "",
     registration_headline: "",
@@ -57,6 +58,7 @@ describe("DCFC-301 Programs admin state and validation", () => {
         highlights: [],
         heroMediaAssetId: null,
         detailMediaAssetId: null,
+        registrationFormId: null,
         layoutVariant: "statement_band",
         status: "active",
         sortOrder: 3,
@@ -80,6 +82,7 @@ describe("DCFC-301 Programs admin state and validation", () => {
       detailMediaAssetId: null,
       externalCtaLabel: "Learn more",
       externalCtaHref: "https://registration.example.test/program",
+      registrationFormId: null,
       status: "active",
       sortOrder: 0,
     });
@@ -171,7 +174,10 @@ describe("DCFC-301 Programs admin state and validation", () => {
 describe("Programs admin draft preview", () => {
   it("renders an unsaved draft through the real public program shape", () => {
     const draft = programToDraft(
-      program({ nav_label: "  Academy  ", body: "  Long-form program copy.  " }),
+      program({
+        nav_label: "  Academy  ",
+        body: "  Long-form program copy.  ",
+      }),
     );
     const content = programDraftToContent({
       ...draft,
@@ -199,7 +205,9 @@ describe("Programs admin draft preview", () => {
   });
 
   it("gives a brand new program a stable preview identity", () => {
-    expect(programDraftToContent(emptyProgramDraft(0)).id).toBe("draft-program");
+    expect(programDraftToContent(emptyProgramDraft(0)).id).toBe(
+      "draft-program",
+    );
   });
 
   it("previews the registration band exactly as the public page resolves it", () => {
@@ -223,9 +231,9 @@ describe("Programs admin draft preview", () => {
 
     // The toggle is what the public template branches on, and it is off by
     // default for a new program — this redesign does not change that.
-    expect(programDraftToContent(emptyProgramDraft(0)).registration.enabled).toBe(
-      false,
-    );
+    expect(
+      programDraftToContent(emptyProgramDraft(0)).registration.enabled,
+    ).toBe(false);
   });
 
   it("previews unsaved gallery uploads as ordered slides", () => {
@@ -311,7 +319,9 @@ describe("DCFC-301 protected Programs admin surface", () => {
 
   it("adds the Programs surface to secure media authorization and payload attachment", () => {
     expect(MEDIA_SURFACES).toContain("programs");
-    expect(clientSource).toContain('programs: { surface: "programs", kind: "photo" }');
+    expect(clientSource).toContain(
+      'programs: { surface: "programs", kind: "photo" }',
+    );
   });
 
   it("organizes the per-program editor into Content, Media, and Registration tabs", () => {
@@ -350,7 +360,7 @@ describe("DCFC-301 protected Programs admin surface", () => {
     expect(pageSource).toContain("{hidesSlugField ? (");
     expect(pageSource).toContain("Page address");
     // Still the manual Slug input for every other template.
-    expect(pageSource).toContain('<FormField label="Slug"');
+    expect(pageSource).toMatch(/<FormField\s+label="Slug"/);
   });
 
   it("reveals the tab owning a validation error instead of hiding it", () => {
@@ -380,18 +390,20 @@ describe("DCFC-301 protected Programs admin surface", () => {
     expect(previewSource).not.toContain("presentationTemplateKey");
   });
 
-  it("leaves the public registration mechanism untouched", () => {
+  it("adds an opt-in native registration mechanism with the old CTA fallback", () => {
     const detailSource = readFileSync(
       resolve(process.cwd(), "components/AcademyProgramDetailPage.tsx"),
       "utf8",
     );
-    expect(detailSource).toContain(
-      "registration.enabled || program.externalCta !== null",
-    );
+    expect(detailSource).toContain("program.nativeRegistration !== null");
+    expect(detailSource).toContain("<RegistrationCtaButton");
+    expect(detailSource).toContain(": program.externalCta ? (");
     // A new program still defaults to the registration section switched off.
     expect(emptyProgramDraft(0).registrationEnabled).toBe(false);
+    expect(emptyProgramDraft(0).registrationFormId).toBeNull();
     expect(buildProgramMutationPayload(emptyProgramDraft(0))).toMatchObject({
       registration_enabled: false,
+      registration_form_id: null,
     });
   });
 });

@@ -17,6 +17,10 @@ export type DBContactPageContent = Tables<
   "contact_page_content"
 >;
 export type DBTryout = Tables<{ schema: "onzio" }, "tryouts">;
+export type DBRegistrationForm = Tables<
+  { schema: "onzio" },
+  "registration_forms"
+>;
 export type DBHomepageStorySection = Tables<
   { schema: "onzio" },
   "homepage_story_section"

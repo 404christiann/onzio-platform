@@ -14,6 +14,7 @@ import { createClient } from "@/lib/admin-client";
 import type {
   DBContactProfile,
   DBProgram,
+  DBRegistrationForm,
   DBTryout,
   DBTryoutsPageContent,
 } from "@/lib/db-types";
@@ -40,6 +41,7 @@ import {
 } from "@/lib/tryouts-page-content";
 
 type ProgramOption = Pick<DBProgram, "id" | "display_title">;
+type RegistrationFormOption = Pick<DBRegistrationForm, "id" | "title" | "status">;
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -67,6 +69,7 @@ export default function AdminTryoutsPage() {
   const heroInput = useRef<HTMLInputElement>(null);
   const [tryouts, setTryouts] = useState<TryoutDraft[]>([]);
   const [programs, setPrograms] = useState<ProgramOption[]>([]);
+  const [registrationForms, setRegistrationForms] = useState<RegistrationFormOption[]>([]);
   const [draft, setDraft] = useState<TryoutDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -99,7 +102,7 @@ export default function AdminTryoutsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [tryoutsResult, programsResult, contactResult, pageCopyResult] =
+      const [tryoutsResult, programsResult, contactResult, pageCopyResult, registrationFormsResult] =
         await Promise.all([
           createClient()
             .from("tryouts")
@@ -111,9 +114,14 @@ export default function AdminTryoutsPage() {
             .order("sort_order", { ascending: true }),
           createClient().from("contact_profile").select("public_email").limit(1),
           createClient().from("tryouts_page_content").select("*").limit(1),
+          createClient()
+            .from("registration_forms")
+            .select("id,title,status")
+            .order("title", { ascending: true }),
         ]);
       const loadError =
-        tryoutsResult.error ?? programsResult.error ?? pageCopyResult.error;
+        tryoutsResult.error ?? programsResult.error ?? contactResult.error ??
+        pageCopyResult.error ?? registrationFormsResult.error;
       if (loadError) throw new Error(loadError.message);
       setPageCopy(
         tryoutsPageToDraft(
@@ -131,6 +139,7 @@ export default function AdminTryoutsPage() {
       const next = ((tryoutsResult.data ?? []) as DBTryout[]).map(tryoutToDraft);
       setTryouts(next);
       setPrograms((programsResult.data ?? []) as ProgramOption[]);
+      setRegistrationForms((registrationFormsResult.data ?? []) as RegistrationFormOption[]);
       const selected =
         next.find((tryout) => tryout.id === preferredId) ?? next[0] ?? null;
       setDraft(selected ? { ...selected } : null);
@@ -403,8 +412,8 @@ export default function AdminTryoutsPage() {
           </h1>
           <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-muted-foreground">
             {showsProgramAndHeroFields
-              ? "Manage public event status, logistics, media, program association, and the external registration action. Registration stays on the external destination."
-              : "Manage public event status, logistics, and the external registration action. Registration stays on the external destination."}
+              ? "Manage public event status, logistics, media, program association, and native or external registration actions."
+              : "Manage public event status, logistics, and native or external registration actions."}
           </p>
         </div>
         <button
@@ -626,6 +635,19 @@ export default function AdminTryoutsPage() {
               </div>
 
               <div className="mt-7 grid gap-5 border-t border-border pt-7 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Field label="Onzio registration form">
+                    <NativeSelect value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
+                      <NativeSelectOption value="">No native form — use the destination below</NativeSelectOption>
+                      {registrationForms.map((form) => (
+                        <NativeSelectOption key={form.id} value={form.id}>{form.title} — {form.status}</NativeSelectOption>
+                      ))}
+                    </NativeSelect>
+                  </Field>
+                  <p className="mt-2 font-body text-xs leading-5 text-muted-foreground">
+                    An open form launches the native modal. Draft, closed, or unselected forms preserve the external or contact fallback.
+                  </p>
+                </div>
                 <Field label="Button text" error={errors.ctaLabel}>
                   <input className={ADMIN_INPUT_CLASS} value={draft.ctaLabel} onChange={(event) => updateDraft("ctaLabel", event.target.value)} maxLength={40} placeholder="Register externally" />
                 </Field>
@@ -661,7 +683,7 @@ export default function AdminTryoutsPage() {
                 <div>
                   <AdminSaveFeedback saving={saving || uploading} saved={saved} savingLabel={uploading ? "Uploading hero image…" : "Saving tryout…"} successLabel="Tryout saved" />
                   <p className="mt-2 max-w-xl font-body text-xs leading-5 text-muted-foreground">
-                    Onzio stores public content only—never registrations, participant details, payment, waiver, or medical data.
+                    Native form submissions are managed in Registrations. The external destination remains the fallback when no open native form is linked.
                   </p>
                 </div>
                 <button type="button" onClick={() => void saveTryout()} disabled={saving || uploading || !dirty} className="rounded-lg bg-brand px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35">

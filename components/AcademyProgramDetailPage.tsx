@@ -3,6 +3,7 @@ import AcademyProgramRegistrationSlideshow, {
   type RegistrationSlide,
 } from "@/components/AcademyProgramRegistrationSlideshow";
 import ResilientImage from "@/components/ResilientImage";
+import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
 import type { ProgramContent } from "@/lib/queries";
 
 function isExternal(href: string): boolean {
@@ -16,10 +17,9 @@ function isExternal(href: string): boolean {
 // (falling back to the approved academy@1 template defaults in
 // lib/program-content.ts when a club has not changed them), and
 // onzio.program_media supplies the ordered slideshow.
-// The CTA itself stays driven by `external_cta_label`/`external_cta_href`:
-// empty means the honest DCFC-D102 pending block, never a placeholder URL, and
-// publishing an approved destination through admin flips it to the real red
-// link automatically.
+// An explicitly linked open Onzio form takes CTA precedence. If the form is
+// absent, draft, or closed, the existing external-link/pending branches remain
+// unchanged.
 
 // Mockup-parity program detail template (DCFC-D132 pass), rebuilt from the
 // sales mockup's app/(public)/programs/[programId]/page.tsx and driven
@@ -56,7 +56,9 @@ export default function AcademyProgramDetailPage({
   }));
   const usesRegistrationSlideshow = slides.length > 0;
   const showsRegistrationSection =
-    registration.enabled || program.externalCta !== null;
+    registration.enabled ||
+    program.nativeRegistration !== null ||
+    program.externalCta !== null;
 
   return (
     <div className="bg-[#F9FAFD]">
@@ -114,11 +116,17 @@ export default function AcademyProgramDetailPage({
               </h2>
               <div className="mt-7 h-px w-16 bg-[#B9E3F6]" />
               <p className="mt-6 max-w-md font-body text-base leading-8 text-[#1E3653]/70 md:text-lg">
-                {program.externalCta
+                {program.nativeRegistration || program.externalCta
                   ? registration.body
                   : registration.pendingBody}
               </p>
-              {program.externalCta ? (
+              {program.nativeRegistration ? (
+                <RegistrationCtaButton
+                  form={program.nativeRegistration.form}
+                  label={program.nativeRegistration.label}
+                  className="mt-7 rounded-none px-6 text-xs tracking-normal transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#D70000] hover:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1E3653]"
+                />
+              ) : program.externalCta ? (
                 <a
                   href={program.externalCta.href}
                   {...(isExternal(program.externalCta.href)

@@ -47,6 +47,7 @@ function tryout(overrides: Partial<DBTryout> = {}): DBTryout {
     cost_text: "Contact the club",
     cta_label: "Register externally",
     registration_href: "https://registration.example.test/tryouts",
+    registration_form_id: null,
     closed_message: "Registration is closed for this opportunity.",
     sort_order: 0,
     created_at: "2026-08-01T00:00:00Z",
@@ -64,6 +65,7 @@ describe("DCFC-303 Tryouts admin state and validation", () => {
         status: "upcoming",
         eventDate: "",
         registrationHref: "",
+        registrationFormId: null,
         heroMediaAssetId: null,
         sortOrder: 3,
       }),
@@ -87,6 +89,7 @@ describe("DCFC-303 Tryouts admin state and validation", () => {
       costText: "Contact the club",
       ctaLabel: "Register externally",
       registrationHref: "https://registration.example.test/tryouts",
+      registrationFormId: null,
       closedMessage: "Registration is closed for this opportunity.",
       sortOrder: 0,
     });
@@ -221,7 +224,9 @@ describe("Tryouts page intro copy", () => {
 
   it("lets a saved value win over the default, independently per field", () => {
     expect(
-      resolveTryoutsPageContent({ intro_with_tryouts: "  Come and try out.  " }),
+      resolveTryoutsPageContent({
+        intro_with_tryouts: "  Come and try out.  ",
+      }),
     ).toEqual({
       introWithTryouts: "Come and try out.",
       introNoTryouts: DEFAULT_TRYOUTS_PAGE_CONTENT.introNoTryouts,
@@ -326,7 +331,9 @@ describe("Tryouts page intro copy", () => {
     );
     expect(migration).toContain("intro_with_tryouts text not null default ''");
     expect(migration).toContain("intro_no_tryouts text not null default ''");
-    expect(migration).toContain("check (char_length(intro_with_tryouts) <= 320)");
+    expect(migration).toContain(
+      "check (char_length(intro_with_tryouts) <= 320)",
+    );
     expect(migration).toContain("check (char_length(intro_no_tryouts) <= 320)");
     expect(migration).toContain(
       "alter table onzio.tryouts_page_content enable row level security",
@@ -498,8 +505,9 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     expect(pageSource).toContain("content={previewPageContent}");
   });
 
-  it("keeps registration external and stores no participant, payment, waiver, medical, or FAQ data", () => {
-    expect(pageSource).toContain("Registration stays on the external destination");
+  it("offers native registration with external fallback and stores no submission data here", () => {
+    expect(pageSource).toContain('label="Onzio registration form"');
+    expect(pageSource).toContain("Draft, closed, or");
     expect(pageSource).not.toContain("<form");
     for (const forbidden of [
       "participant_name",

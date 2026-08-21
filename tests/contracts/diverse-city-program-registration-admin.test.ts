@@ -48,6 +48,7 @@ function program(overrides: Partial<DBProgram> = {}): DBProgram {
     detail_media_asset_id: null,
     external_cta_label: "",
     external_cta_href: "",
+    registration_form_id: null,
     registration_enabled: false,
     registration_eyebrow: "",
     registration_headline: "",
@@ -131,6 +132,7 @@ describe("program registration copy is real admin content", () => {
       registration_body: "Complete registration with our partner.",
       registration_pending_body: "Details land here shortly.",
       registration_pending_label: "Opening soon",
+      registration_form_id: "77777777-7777-4777-8777-777777777701",
     });
     const payload = buildProgramMutationPayload(programToDraft(row));
     expect(payload).toMatchObject({
@@ -140,6 +142,7 @@ describe("program registration copy is real admin content", () => {
       registration_body: "Complete registration with our partner.",
       registration_pending_body: "Details land here shortly.",
       registration_pending_label: "Opening soon",
+      registration_form_id: "77777777-7777-4777-8777-777777777701",
     });
     expect(payload).not.toHaveProperty("club_id");
   });
@@ -152,7 +155,10 @@ describe("program registration copy is real admin content", () => {
     ["registrationPendingLabel", 60],
   ] as const)("rejects %s beyond %i characters", (field, maximum) => {
     const draft = programToDraft(program());
-    const errors = validateProgramDraft({ ...draft, [field]: "x".repeat(maximum + 1) });
+    const errors = validateProgramDraft({
+      ...draft,
+      [field]: "x".repeat(maximum + 1),
+    });
     expect(errors[field]).toBeTruthy();
     expect(
       validateProgramDraft({ ...draft, [field]: "x".repeat(maximum) })[field],
@@ -182,7 +188,9 @@ describe("program gallery admin state", () => {
       { id: "b", url: "/b.webp", mediaAssetId: null, alt: "", sortOrder: 1 },
       { id: "c", url: "/c.webp", mediaAssetId: null, alt: "", sortOrder: 2 },
     ];
-    expect(moveProgramMedia(gallery, 2, -1).map((i) => [i.id, i.sortOrder])).toEqual([
+    expect(
+      moveProgramMedia(gallery, 2, -1).map((i) => [i.id, i.sortOrder]),
+    ).toEqual([
       ["a", 0],
       ["c", 1],
       ["b", 2],
@@ -254,7 +262,8 @@ describe("program_media admin data contract", () => {
       request({ payload: { url: "/images/programs/slide-01.webp" } }).success,
     ).toBe(false);
     expect(
-      request({ payload: { program_id: PROGRAM_ID, alt: "No source" } }).success,
+      request({ payload: { program_id: PROGRAM_ID, alt: "No source" } })
+        .success,
     ).toBe(false);
   });
 
@@ -379,6 +388,7 @@ describe("academy@1 program surfaces render stored content, not literals", () =>
   it("exposes every new field in the programs admin form", () => {
     const adminPage = source("app/admin/(protected)/programs/page.tsx");
     for (const field of [
+      "registrationFormId",
       "registrationEnabled",
       "registrationEyebrow",
       "registrationHeadline",
@@ -386,9 +396,10 @@ describe("academy@1 program surfaces render stored content, not literals", () =>
       "registrationPendingBody",
       "registrationPendingLabel",
     ]) {
-      expect(adminPage, `${field} must be editable in /admin/programs`).toContain(
-        field,
-      );
+      expect(
+        adminPage,
+        `${field} must be editable in /admin/programs`,
+      ).toContain(field);
     }
     expect(adminPage).toContain("uploadGalleryImage");
     expect(adminPage).toContain("program_media");

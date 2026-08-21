@@ -38,6 +38,7 @@ export type ProgramDraft = {
   detailMediaPreviewUrl: string;
   externalCtaLabel: string;
   externalCtaHref: string;
+  registrationFormId: string | null;
   registrationEnabled: boolean;
   registrationEyebrow: string;
   registrationHeadline: string;
@@ -85,6 +86,7 @@ export function emptyProgramDraft(sortOrder = 0): ProgramDraft {
     detailMediaPreviewUrl: "",
     externalCtaLabel: "",
     externalCtaHref: "",
+    registrationFormId: null,
     registrationEnabled: false,
     registrationEyebrow: "",
     registrationHeadline: "",
@@ -139,6 +141,7 @@ export function programToDraft(row: AdminProgramRow): ProgramDraft {
     detailMediaPreviewUrl: row.detail_media_url ?? "",
     externalCtaLabel: row.external_cta_label,
     externalCtaHref: row.external_cta_href,
+    registrationFormId: row.registration_form_id,
     registrationEnabled: row.registration_enabled === true,
     registrationEyebrow: registration.eyebrow,
     registrationHeadline: registration.headline,
@@ -324,6 +327,7 @@ export function buildProgramMutationPayload(
     detail_media_asset_id: draft.detailMediaAssetId,
     external_cta_label: draft.externalCtaLabel.trim(),
     external_cta_href: draft.externalCtaHref.trim(),
+    registration_form_id: draft.registrationFormId,
     registration_enabled: draft.registrationEnabled,
     // Empty is preserved deliberately: it means "use the academy@1 template
     // default" (lib/program-content.ts), not "render nothing".
@@ -370,6 +374,7 @@ export function programDraftToContent(
     heroMediaUrl: draft.heroMediaPreviewUrl,
     detailMediaUrl: draft.detailMediaPreviewUrl,
     externalCta: href && label ? { label, href } : null,
+    nativeRegistration: null,
     registration: resolveProgramRegistration({
       registration_enabled: draft.registrationEnabled,
       registration_eyebrow: String(payload.registration_eyebrow ?? ""),
