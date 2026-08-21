@@ -38,6 +38,13 @@ Commands:
 - `npm run test:contracts` — TypeScript behavior contracts
 - `npm run test:db` — local Supabase/RLS contracts
 - `npm run test:architecture` — static architecture contracts
+- `npx vitest run lib/__tests__/registration-fields.test.ts
+  lib/__tests__/registration-export.test.ts
+  lib/__tests__/special-kickers-registration.test.ts
+  tests/contracts/registration-submit.test.ts
+  tests/database/registration-rls.test.ts` — participant-mode branching,
+  branch-scoped validation, combined CSV behavior, the local-only Special
+  Kickers draft definition, submission routing, and database enforcement
 - `ROSTER_MEDIA_BASE_URL=https://onzio-platform.vercel.app npm run test:browser:roster`
   — retained focused roster compatibility check
 - `SITE_MEDIA_BASE_URL=http://127.0.0.1:3000 npx playwright test

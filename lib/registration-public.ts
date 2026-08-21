@@ -1,10 +1,14 @@
 import type { OpenRegistrationForm } from "@/lib/registration-service";
-import type { RegistrationFieldDefinition } from "@/lib/registration-fields";
+import type {
+  RegistrationFieldDefinition,
+  RegistrationParticipantMode,
+} from "@/lib/registration-fields";
 
 export type PublicRegistrationForm = {
   slug: string;
   title: string;
   description: string;
+  participantMode: RegistrationParticipantMode;
   waiverText: string;
   fields: RegistrationFieldDefinition[];
   prices: Array<{ id: string; label: string; amountCents: number }>;
@@ -18,6 +22,7 @@ export function toPublicRegistrationForm(
     slug: aggregate.form.slug,
     title: aggregate.form.title,
     description: aggregate.form.description,
+    participantMode: aggregate.form.participant_mode,
     waiverText: aggregate.form.waiver_text,
     fields: aggregate.fields.map((field) => ({
       key: field.field_key,
@@ -30,6 +35,7 @@ export function toPublicRegistrationForm(
             : [])
         : undefined,
       isCore: field.is_core,
+      participantScope: field.participant_scope,
     })),
     prices: aggregate.prices.map((price) => ({
       id: price.id,

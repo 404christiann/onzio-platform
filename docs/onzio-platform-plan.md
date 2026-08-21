@@ -510,7 +510,13 @@ No refund or new Checkout is required.
 Native registration intake supersedes the earlier external-link-only boundary
 and is available to every club without a tier gate. Forms are tenant-owned and may run
 independently, with typed core/custom fields, one or more USD price options,
-an admin-editable required waiver, and an adult/minor field mode.
+an admin-editable required waiver, and an explicit participant mode:
+`minor_only`, `adult_only`, or `both`. A `both` form begins with a required
+minor/adult choice and renders only the matching core/scoped fields. The
+resolved `minor|adult` participant type is stored on each registration so
+notifications and exports remain correct if the draft definition later
+changes. One waiver acceptance applies to either branch, and a combined CSV
+keeps both branch columns with non-applicable values blank.
 
 The registration security model is:
 

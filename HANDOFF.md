@@ -2,6 +2,65 @@
 
 Last updated: 2026-08-20
 
+## Phase H participant modes and Special Kickers review draft — implemented locally
+
+Agent: Codex (GPT-5.6 with Terra inspection subagents), 2026-08-20. Status:
+**Parts 1–3 complete for local review; Part 4 deliberately not implemented;
+not committed, published, deployed, or connected to Stripe.** The worktree is
+still in the pre-existing paused rebase described below.
+
+The live Tally reference (`https://tally.so/r/pbNQyb`) was inspected through
+all 15 pages without submitting payment. It has no conditional logic and no
+minor/adult participant question: it is a minor-focused flow using Child and
+Parent/Guardian fields. The only participant-age use of “Adult” is in the
+jersey-size choices (`Adult S` through `Adult XXL`). No adult participant,
+volunteer, or coach branch exists. The inventory includes participant identity
+and address, support/accommodation, medical, soccer experience and jersey
+size, two guardian sections, non-parent emergency contact, authorized pickup,
+five waiver sections, photo/video authorization, consent name/date/signature,
+and a required $130 Stripe payment page. The local draft adapts those waiver
+topics for either a self-registering adult or a minor's guardian and is
+explicitly marked for DCFC/legal review before opening.
+
+Registration definitions now use `participant_mode` with `minor_only`,
+`adult_only`, and `both`. `both` forms ask the required question “Is this
+registration for a minor or an adult?” and render/validate only the selected
+branch. The migration backfills existing forms and registrations, scopes form
+fields to all/minor/adult, persists the selected participant type per
+registration, and updates the publishability and pending-registration RPC
+contracts. The admin builder exposes all three modes and branch scopes;
+the public modal supports long text and drawn signatures; submission,
+notifications, and CSV export use the stored branch. A mixed export keeps one
+stable union of columns, leaving guardian cells empty for adult submissions.
+
+The reproducible local-only fixture and guarded seed create
+`Special Kickers Registration & Waiver` for the local `diverse-city` tenant
+with participant mode `both`, status `draft`, 55 fields, and one active
+$130.00 option. The seed refuses non-loopback Supabase hosts, refuses to
+replace a non-draft or a form with registrations, and reports zero hosted or
+Stripe Connect mutations. Final readback: form ID
+`9d28590d-98de-56d6-a9da-c2f4843c2d70`, draft, 55 fields, 13,000 cents,
+unpublished. No Programs/Tryouts link was added.
+
+Verification after the final fixture adjustment:
+
+- local database reset: passed; all 37 migrations and seed applied
+- generated database types and `npm run db:types:check`: passed
+- focused participant-mode/form/submit/export suite: 6 files / 34 tests passed
+- focused registration RLS: 1 file / 15 tests passed
+- full database suite: 19 files / 201 tests passed
+- architecture suite: 3 files / 21 tests passed
+- `npx tsc --noEmit --incremental false`: passed
+- lint and production build: passed; five pre-existing hook warnings only
+- final `npm test` with local Supabase credentials: 135 files / 1,397 tests
+  passed; the one unrelated staging fixture below remains red
+
+Next step after Christian's review and explicit approval: implement the
+smallest Part 4 bridge by adding an optional tenant-safe registration-form
+reference to Programs/Tryouts, exposing it in those admin editors, and using
+`RegistrationCtaButton` only when the reference resolves to an open native
+form; otherwise preserve the current external-link/mailto behavior unchanged.
+
 ## Registration forms rebased onto staging — resolved, commit blocked by one staging baseline contract
 
 Agent: Codex (GPT-5.6), 2026-08-20. Status: **reconciliation complete in the

@@ -71,12 +71,12 @@ async function insertDraftForm(clubId: string = CLUB_IDS.alpha) {
 
 async function insertAdultCoreFields(formRow: Awaited<ReturnType<typeof insertDraftForm>>) {
   const fields = [
-    ["registrant_name", "Registrant name", "name"],
-    ["registrant_email", "Registrant email", "email"],
-    ["registrant_phone", "Registrant phone", "phone"],
-    ["emergency_contact_name", "Emergency contact name", "name"],
-    ["emergency_contact_phone", "Emergency contact phone", "phone"],
-  ].map(([field_key, label, field_type], position) => ({
+    ["registrant_name", "Registrant name", "name", "adult"],
+    ["registrant_email", "Registrant email", "email", "adult"],
+    ["registrant_phone", "Registrant phone", "phone", "adult"],
+    ["emergency_contact_name", "Emergency contact name", "name", "all"],
+    ["emergency_contact_phone", "Emergency contact phone", "phone", "all"],
+  ].map(([field_key, label, field_type, participant_scope], position) => ({
     id: randomUUID(),
     club_id: formRow.club_id,
     form_id: formRow.id,
@@ -85,6 +85,7 @@ async function insertAdultCoreFields(formRow: Awaited<ReturnType<typeof insertDr
     field_type,
     is_core: true,
     required: true,
+    participant_scope,
     position,
   }));
   createdIds.registration_form_fields.push(...fields.map((field) => field.id));
@@ -97,15 +98,36 @@ async function insertAdultCoreFields(formRow: Awaited<ReturnType<typeof insertDr
 
 async function insertMinorCoreFields(formRow: Awaited<ReturnType<typeof insertDraftForm>>) {
   const fields = [
-    ["player_name", "Player name", "name"],
-    ["guardian_name", "Guardian name", "name"],
-    ["guardian_email", "Guardian email", "email"],
-    ["guardian_phone", "Guardian phone", "phone"],
-    ["emergency_contact_name", "Emergency contact name", "name"],
-    ["emergency_contact_phone", "Emergency contact phone", "phone"],
-  ].map(([field_key, label, field_type], position) => ({
+    ["player_name", "Player name", "name", "minor"],
+    ["guardian_name", "Guardian name", "name", "minor"],
+    ["guardian_email", "Guardian email", "email", "minor"],
+    ["guardian_phone", "Guardian phone", "phone", "minor"],
+    ["emergency_contact_name", "Emergency contact name", "name", "all"],
+    ["emergency_contact_phone", "Emergency contact phone", "phone", "all"],
+  ].map(([field_key, label, field_type, participant_scope], position) => ({
     id: randomUUID(), club_id: formRow.club_id, form_id: formRow.id,
-    field_key, label, field_type, is_core: true, required: true, position,
+    field_key, label, field_type, is_core: true, required: true, participant_scope, position,
+  }));
+  createdIds.registration_form_fields.push(...fields.map((field) => field.id));
+  const insert = await clients.service.from("registration_form_fields").insert(fields);
+  expect(insert.error?.message).toBeUndefined();
+  return fields;
+}
+
+async function insertBothCoreFields(formRow: Awaited<ReturnType<typeof insertDraftForm>>) {
+  const fields = [
+    ["player_name", "Player name", "name", "minor"],
+    ["guardian_name", "Guardian name", "name", "minor"],
+    ["guardian_email", "Guardian email", "email", "minor"],
+    ["guardian_phone", "Guardian phone", "phone", "minor"],
+    ["registrant_name", "Registrant name", "name", "adult"],
+    ["registrant_email", "Registrant email", "email", "adult"],
+    ["registrant_phone", "Registrant phone", "phone", "adult"],
+    ["emergency_contact_name", "Emergency contact name", "name", "all"],
+    ["emergency_contact_phone", "Emergency contact phone", "phone", "all"],
+  ].map(([field_key, label, field_type, participant_scope], position) => ({
+    id: randomUUID(), club_id: formRow.club_id, form_id: formRow.id,
+    field_key, label, field_type, is_core: true, required: true, participant_scope, position,
   }));
   createdIds.registration_form_fields.push(...fields.map((field) => field.id));
   const insert = await clients.service.from("registration_form_fields").insert(fields);
@@ -180,6 +202,7 @@ function registrationRow(formRow: Awaited<ReturnType<typeof insertOpenForm>>) {
     form_id: formRow.id,
     answers: {},
     registrant_email: "family@contract.test",
+    participant_type: "adult",
     price_option_id: formRow.price.id,
     price_label: formRow.price.label,
     amount_cents: formRow.price.amount_cents,
@@ -232,6 +255,7 @@ async function insertPaidPendingRegistration() {
     form_id: formRow.id,
     answers: {},
     registrant_email: "paid@contract.test",
+    participant_type: "adult",
     price_option_id: price.id,
     price_label: price.label,
     amount_cents: price.amount_cents,
@@ -306,7 +330,7 @@ describe("registration definition visibility and RLS contract", () => {
   });
 
   it("requires the distinct player, guardian, and emergency-contact core fields for minor forms", async () => {
-    const minor = { ...form(CLUB_IDS.alpha), is_minor: true };
+    const minor = { ...form(CLUB_IDS.alpha), participant_mode: "minor_only" };
     const formInsert = await clients.service.from("registration_forms").insert(minor);
     expect(formInsert.error?.message).toBeUndefined();
     const priceId = randomUUID();
@@ -334,6 +358,31 @@ describe("registration definition visibility and RLS contract", () => {
     const open = await clients.service.from("registration_forms")
       .update({ status: "open" }).eq("id", minor.id);
     expect(open.error?.message).toBeUndefined();
+  });
+
+  it("requires both core branches before a both-mode form can open", async () => {
+    const both = { ...form(CLUB_IDS.alpha), participant_mode: "both" };
+    const formInsert = await clients.service.from("registration_forms").insert(both);
+    expect(formInsert.error?.message).toBeUndefined();
+    const priceId = randomUUID();
+    createdIds.registration_price_options.push(priceId);
+    const price = await clients.service.from("registration_price_options").insert({
+      id: priceId, club_id: CLUB_IDS.alpha, form_id: both.id,
+      label: "Free combined registration", amount_cents: 0, position: 0,
+    });
+    expect(price.error?.message).toBeUndefined();
+    await insertBothCoreFields(both);
+    const open = await clients.service.from("registration_forms")
+      .update({ status: "open" }).eq("id", both.id);
+    expect(open.error?.message).toBeUndefined();
+  });
+
+  it("rejects invalid participant modes at the database boundary", async () => {
+    const invalid = await clients.service.from("registration_forms").insert({
+      ...form(CLUB_IDS.alpha),
+      participant_mode: "sometimes",
+    });
+    expectPostgrestError(invalid.error, "23514", "invalid participant mode");
   });
 
   it("shows anonymous visitors only open definitions for live clubs", async () => {

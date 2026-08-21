@@ -13,7 +13,7 @@ describe("public registration form projection", () => {
         slug: "fall-camp",
         title: "Fall Camp",
         description: "A focused fall camp.",
-        is_minor: true,
+        participant_mode: "both",
         waiver_text: "I accept the waiver.",
       },
       fields: [{
@@ -24,6 +24,7 @@ describe("public registration form projection", () => {
         options: null,
         required: true,
         is_core: true,
+        participant_scope: "minor",
         position: 0,
       }],
       prices: [{
@@ -45,8 +46,9 @@ describe("public registration form projection", () => {
       slug: "fall-camp",
       title: "Fall Camp",
       description: "A focused fall camp.",
+      participantMode: "both",
       waiverText: "I accept the waiver.",
-      fields: [{ key: "player_name", label: "Player name", type: "name", required: true, options: undefined, isCore: true }],
+      fields: [{ key: "player_name", label: "Player name", type: "name", required: true, options: undefined, isCore: true, participantScope: "minor" }],
       prices: [{ id: "44444444-4444-4444-8444-444444444444", label: "Player", amountCents: 12500 }],
     });
     expect(JSON.stringify(form)).not.toContain("acct_private");

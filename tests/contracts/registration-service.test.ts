@@ -21,7 +21,7 @@ const closedForm = {
   slug: "academy",
   title: "Academy",
   description: "",
-  is_minor: false,
+  participant_mode: "adult_only",
   waiver_text: "I agree.",
   status: "closed",
 };

@@ -38,6 +38,7 @@
     "migration:reconcile:rose-city": "node scripts/reconcile-rose-city-export.mjs",
     "migration:reset:rose-city": "tsx scripts/import-rose-city-local.ts",
     "seed:lions-standings:local": "eval \"$(supabase status -o env 2>/dev/null)\"; NEXT_PUBLIC_SUPABASE_URL=\"$API_URL\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$ANON_KEY\" SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_ROLE_KEY\" SUPABASE_DB_URL=\"$DB_URL\" tsx scripts/seed-lions-standings-local.ts",
+    "seed:special-kickers-registration:local": "eval \"$(supabase status -o env 2>/dev/null)\"; NEXT_PUBLIC_SUPABASE_URL=\"$API_URL\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$ANON_KEY\" SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_ROLE_KEY\" tsx scripts/seed-special-kickers-registration-local.ts",
     "operator:enroll-totp": "tsx scripts/enroll-operator-totp.ts",
     "operator:verify-staging-auth": "tsx scripts/verify-operator-staging-auth.ts",
     "operator:smoke": "tsx scripts/smoke-operator-workflows.ts",

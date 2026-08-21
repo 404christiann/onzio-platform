@@ -58,7 +58,7 @@ const formId = "22222222-2222-4222-8222-222222222222";
 const priceId = "33333333-3333-4333-8333-333333333333";
 const registrationId = "44444444-4444-4444-8444-444444444444";
 
-function aggregate(amountCents: number) {
+function aggregate(amountCents: number, participantMode: "adult_only" | "both" = "adult_only") {
   return {
     form: {
       id: formId,
@@ -66,12 +66,12 @@ function aggregate(amountCents: number) {
       slug: "academy",
       title: "Academy",
       description: "",
-      is_minor: false,
+      participant_mode: participantMode,
       waiver_text: "I agree.",
     },
     fields: [
-      { id: "1", field_key: "registrant_name", label: "Name", field_type: "name", options: [], required: true, is_core: true, position: 0 },
-      { id: "2", field_key: "registrant_email", label: "Email", field_type: "email", options: [], required: true, is_core: true, position: 1 },
+      { id: "1", field_key: "registrant_name", label: "Name", field_type: "name", options: [], required: true, is_core: true, participant_scope: "adult", position: 0 },
+      { id: "2", field_key: "registrant_email", label: "Email", field_type: "email", options: [], required: true, is_core: true, participant_scope: "adult", position: 1 },
     ],
     prices: [{ id: priceId, label: "Player fee", amount_cents: amountCents, position: 0 }],
     connect: amountCents > 0 ? {
@@ -85,18 +85,20 @@ function aggregate(amountCents: number) {
   };
 }
 
-function request() {
+function request(overrides: Record<string, unknown> = {}) {
   return new Request("http://alpha.localhost/api/register", {
     method: "POST",
     headers: { host: "alpha.localhost", "content-type": "application/json" },
     body: JSON.stringify({
       formSlug: "academy",
       priceOptionId: priceId,
+      participantType: "adult",
       answers: {
         registrant_name: "Alex Player",
         registrant_email: "alex@example.test",
       },
       waiverAccepted: true,
+      ...overrides,
     }),
   });
 }
@@ -138,6 +140,47 @@ describe("public registration submission", () => {
     expect(response.status, JSON.stringify(await response.clone().json())).toBe(201);
     expect(mocks.events).toEqual(["pending", "free-paid"]);
     expect(mocks.checkoutCreate).not.toHaveBeenCalled();
+    expect(mocks.createPendingRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        participantType: "adult",
+        registrantEmail: "alex@example.test",
+      }),
+    );
+  });
+
+  it("uses the chosen minor branch and guardian email for a both-mode form", async () => {
+    const both = aggregate(0, "both");
+    both.fields = [
+      { id: "3", field_key: "player_name", label: "Player", field_type: "name", options: [], required: true, is_core: true, participant_scope: "minor", position: 0 },
+      { id: "4", field_key: "guardian_email", label: "Guardian email", field_type: "email", options: [], required: true, is_core: true, participant_scope: "minor", position: 1 },
+    ];
+    mocks.loadOpenRegistrationForm.mockResolvedValue(both);
+
+    const response = await POST(request({
+      participantType: "minor",
+      answers: {
+        player_name: "Jamie Player",
+        guardian_email: "guardian@example.test",
+      },
+    }));
+
+    expect(response.status).toBe(201);
+    expect(mocks.createPendingRegistration).toHaveBeenCalledWith(
+      expect.objectContaining({
+        participantType: "minor",
+        registrantEmail: "guardian@example.test",
+      }),
+    );
+  });
+
+  it("requires the participant choice for a both-mode form", async () => {
+    mocks.loadOpenRegistrationForm.mockResolvedValue(aggregate(0, "both"));
+    const response = await POST(request({ participantType: undefined }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: "REGISTRATION_PARTICIPANT_TYPE_REQUIRED",
+    });
+    expect(mocks.createPendingRegistration).not.toHaveBeenCalled();
   });
 
   it("records a notification failure without rolling back a completed $0 registration", async () => {

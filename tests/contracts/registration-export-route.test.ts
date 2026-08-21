@@ -26,7 +26,7 @@ describe("registration CSV export route", () => {
     };
     const registrationsQuery: any = {
       select: vi.fn(() => registrationsQuery), eq: vi.fn(() => registrationsQuery), in: vi.fn(() => registrationsQuery),
-      order: vi.fn().mockResolvedValue({ data: [{ answers: { player_name: "Ada" }, price_label: "Player", amount_cents: 17500, status: "paid", submitted_at: "2026-08-20T00:00:00.000Z" }], error: null }),
+      order: vi.fn().mockResolvedValue({ data: [{ participant_type: "minor", answers: { player_name: "Ada" }, price_label: "Player", amount_cents: 17500, status: "paid", submitted_at: "2026-08-20T00:00:00.000Z" }], error: null }),
     };
     mocks.requireAuth.mockResolvedValue({ club: { id: clubId }, supabase: { schema: vi.fn(() => ({ from: vi.fn((table: string) => table === "registration_form_fields" ? fieldsQuery : registrationsQuery) })) } });
     mocks.buildCsv.mockReturnValue("player_name\r\nAda\r\n");
@@ -38,7 +38,7 @@ describe("registration CSV export route", () => {
     expect(registrationsQuery.eq).toHaveBeenCalledWith("form_id", formId);
     expect(registrationsQuery.in).toHaveBeenCalledWith("status", ["paid", "refunded"]);
     expect(mocks.buildCsv).toHaveBeenCalledWith(
-      [expect.objectContaining({ priceLabel: "Player", amountCents: 17500, status: "paid" })],
+      [expect.objectContaining({ participantType: "minor", priceLabel: "Player", amountCents: 17500, status: "paid" })],
       ["player_name"],
     );
     expect(response.headers.get("content-type")).toContain("text/csv");

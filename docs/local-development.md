@@ -97,6 +97,42 @@ ONZIO_LOCAL_TENANT_SLUG=alpha
 Do not run authenticated CRUD, webhook, Checkout, Portal, seed, or migration
 flows against hosted projects.
 
+The Special Kickers review form is intentionally a local-only draft. After
+the Diverse City local import exists, preview its deterministic definition or
+write it to the local database with:
+
+```bash
+npm run seed:special-kickers-registration:local
+npm run seed:special-kickers-registration:local -- --execute-local --confirm-local
+```
+
+The script rejects non-loopback Supabase hosts, refuses to replace a non-draft
+or a form with registrations, never creates a Connect account, and never opens
+or links the form to the public Programs page.
+
+## Logging in locally as a club owner or admin
+
+Local login uses the same passwordless email-code flow as the product. The
+account must already exist as a confirmed local Auth user with an active
+`club_members` row for the tenant (the local import scripts seed these with
+service-role `auth.admin.createUser` + `email_confirm: true`; there is no
+self-service signup).
+
+1. Open `http://<slug>.localhost:3000/admin/login` on the tenant host.
+2. Enter the seeded email and request a code.
+3. Local Supabase delivers all Auth email to Mailpit at
+   `http://127.0.0.1:54324`; the 6-digit code is the first token of the
+   message subject.
+4. Enter the code. The session cookie is host-scoped, so log in on the
+   tenant host you intend to browse.
+
+Preview tenants (`public_access = "preview"`) are anonymous-404 by design;
+`/admin/login` still resolves through the `resolve_verified_tenant`
+fallback, which requires the tenant's verified `club_domains` row for
+`ONZIO_ENVIRONMENT` — every local seed/import creates one. After signing
+in, the member session satisfies RLS and the public preview site renders on
+the same host.
+
 ## Contract-test environment
 
 Copy `.env.test.example` to `.env.test` and use local/test-mode values only.
