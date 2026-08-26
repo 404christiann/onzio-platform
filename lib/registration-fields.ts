@@ -111,6 +111,15 @@ export const registrationFieldDefinitionsSchema = z
 
 export type RegistrationAnswers = Record<string, string | number | boolean>;
 
+const REGISTRATION_SIGNATURE_PATTERN =
+  /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/;
+
+export function isRegistrationSignatureValue(value: unknown): value is string {
+  return typeof value === "string" &&
+    value.length <= 200000 &&
+    REGISTRATION_SIGNATURE_PATTERN.test(value);
+}
+
 function parseDefinitions(
   definitions: readonly RegistrationFieldDefinition[],
 ): RegistrationFieldDefinition[] {
@@ -194,8 +203,7 @@ function normalizeValue(
       }
       if (
         definition.type === "signature" &&
-        normalized.length <= 200000 &&
-        /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(normalized)
+        isRegistrationSignatureValue(normalized)
       ) {
         return normalized;
       }

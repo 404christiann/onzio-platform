@@ -3,6 +3,7 @@ import type {
   RegistrationFieldDefinition,
   RegistrationParticipantMode,
 } from "@/lib/registration-fields";
+import { formatRegistrationUsd } from "@/lib/registration-currency";
 
 export type PublicRegistrationForm = {
   slug: string;
@@ -46,8 +47,5 @@ export function toPublicRegistrationForm(
 }
 
 export function formatRegistrationPrice(amountCents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amountCents / 100);
+  return formatRegistrationUsd(amountCents);
 }

@@ -1,6 +1,87 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-20
+Last updated: 2026-08-21
+
+## Registrations admin simplification, mobile roster, currency input, and archival — implemented locally
+
+Agent: Codex (GPT-5.6 with three GPT-5.6 Terra audits), 2026-08-21. Status:
+**implemented and verified locally on `claude/registration-forms`; intentionally
+uncommitted.**
+
+The Registrations admin now uses a responsive, Preline-inspired operational
+card layout without adding Preline's JavaScript runtime, a Tailwind plugin, or a
+Tailwind upgrade. React owns every interaction. Form cards expose only the
+stakeholder terminology: `Live`, `Not published`, and `Archived`, with
+Publish/Stop registrations, Copy link, Archive, and zero-registrant Delete
+actions. The slug is server-generated from the title with tenant-local
+collision suffixes and is no longer shown or editable. Hosted Copy link URLs
+use the verified primary domain; tenant localhost keeps its active development
+port.
+
+The public lifecycle distinction remains backend-only. A never-published form
+continues to 404. Once-published forms that are stopped, including live forms
+archived in one step, retain their URL and render a static `Registration
+closed` page with no form fields or CTA. `archived_at` is an additive,
+forward-only migration marker rather than a fourth public status, so archiving
+a never-published form does not invent publish history. Existing admin RLS
+keeps archive reads tenant-scoped. New private policy helpers make archived
+form fields/prices read-only, block authenticated deletion of archived forms,
+and permit form deletion only when no registration row exists. The lifecycle
+route independently preflights registrants and linked Programs/Tryouts and
+uses a neutral conflict for late foreign-key/RLS races. No payment, checkout,
+webhook, or Stripe implementation was changed by this work.
+
+The price editor now starts blank, displays a fixed `$` prefix, accepts natural
+dollar input, and converts with decimal-string arithmetic before any mutation.
+It deterministically handles inputs such as `130`, `130.5`, and `130.999`,
+rejects empty/malformed/out-of-range values, and stores only integer cents.
+Admin roster, public picker, and registration emails share the same USD
+formatter.
+
+At mobile widths, form actions stay on stacked cards and the roster renders
+one native `<details>` disclosure per registrant. The summary exposes name,
+formatted price, payment state, and date; expansion shows all stored answers.
+Stored PNG signature values are recognized independently of the current field
+definition and always render as `Signature captured`, never as a data URI. The
+desktop roster remains a table and CSV export is unchanged.
+
+Two deliberate deletion boundaries remain: a zero-registrant form linked from
+a Program or Tryout must be detached first because the existing composite
+foreign keys remain `ON DELETE RESTRICT`; archived forms are read-only and do
+not expose hard Delete. The literal `Delete anytime` interpretation would
+otherwise silently unlink a CTA or destroy a form after the admin chose the
+preserving Archive action. Changing either boundary needs explicit approval.
+
+Verification:
+
+- clean local `supabase db reset`: all migrations and seed applied; disposable
+  browser-QA form, registration, and session were removed afterward
+- `supabase db lint --local`: no schema errors
+- generated database types and `npm run db:types:check`: passed
+- focused registration unit/contracts: 11 files / 58 tests passed; final route,
+  UI, currency, and link rerun: 4 files / 25 tests passed
+- focused registration RLS/link database tests: 2 files / 21 tests passed
+- full database suite: 20 files / 208 tests passed
+- architecture suite: 3 files / 21 tests passed
+- `npx tsc --noEmit`: passed
+- `npm run lint`: 0 errors; only the same five unrelated hook warnings in
+  Analytics, Homepage, and Schedule
+- full contracts: 78 files / 850 tests passed; the one known unrelated
+  `editorial-home.test.ts` Capital City/Dayton fixture mismatch remains red
+- final `npm test`: 140 files / 1,437 tests passed; the same one unrelated
+  fixture remains red
+- real authenticated local browser check at 390px: no horizontal overflow,
+  no console errors or framework overlay, Live/Stop/Copy/Archive card behavior
+  rendered correctly, the dollar field showed `$0.00`, and a completed free
+  registration rendered as the expandable mobile roster card with the desktop
+  table hidden and a 77px disclosure target
+- browser QA used synthetic local addresses and local Mailpit only; no real
+  email, hosted Supabase, production, deployment, or live Stripe action
+
+Pre-existing unrelated dirty changes remain untouched in
+`app/api/stripe/connect/route.ts`,
+`tests/contracts/stripe-connect-route.test.ts`, and
+`.!39351!.env.local`.
 
 ## Local staging primary domains — fixed and verified
 

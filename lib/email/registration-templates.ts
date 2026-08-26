@@ -1,4 +1,5 @@
 import type { RegistrationNotificationData } from "@/lib/registration-service";
+import { formatRegistrationUsd } from "@/lib/registration-currency";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
@@ -8,13 +9,6 @@ function escapeHtml(value: string): string {
     "'": "&#39;",
     '"': "&quot;",
   })[character]!);
-}
-
-function amount(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100);
 }
 
 function multilineHtml(value: string): string {
@@ -36,7 +30,7 @@ export function buildRegistrantRegistrationEmail(
   data: RegistrationNotificationData,
 ): RegistrationEmail {
   const subject = `${data.clubName}: registration confirmed`;
-  const price = `${data.priceLabel} — ${amount(data.amountCents)}`;
+  const price = `${data.priceLabel} — ${formatRegistrationUsd(data.amountCents)}`;
   const descriptionText = data.formDescription
     ? `\n\nProgram details:\n${data.formDescription}`
     : "";
@@ -54,7 +48,7 @@ export function buildOwnerRegistrationEmail(
   data: RegistrationNotificationData,
 ): RegistrationEmail {
   const subject = `${data.clubName}: new paid registration`;
-  const price = `${data.priceLabel} — ${amount(data.amountCents)}`;
+  const price = `${data.priceLabel} — ${formatRegistrationUsd(data.amountCents)}`;
   const descriptionText = data.formDescription
     ? `\n\nProgram details:\n${data.formDescription}`
     : "";

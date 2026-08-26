@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCoreRegistrationFields,
+  isRegistrationSignatureValue,
   resolveRegistrationParticipantType,
   validateRegistrationAnswers,
   type RegistrationFieldDefinition,
@@ -38,6 +39,14 @@ function answers(overrides: Record<string, unknown> = {}) {
 }
 
 describe("registration field validation", () => {
+  it("recognizes stored signature payloads independently of field definitions", () => {
+    expect(
+      isRegistrationSignatureValue("data:image/png;base64,iVBORw0KGgo="),
+    ).toBe(true);
+    expect(isRegistrationSignatureValue("not-a-signature")).toBe(false);
+    expect(isRegistrationSignatureValue(true)).toBe(false);
+  });
+
   it("validates every field type and returns trimmed answers", () => {
     expect(validateRegistrationAnswers(definitions, answers())).toEqual({
       full_name: "Ada Lovelace",

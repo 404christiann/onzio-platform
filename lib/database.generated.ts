@@ -2033,6 +2033,7 @@ export type Database = {
       }
       registration_forms: {
         Row: {
+          archived_at: string | null
           closed_at: string | null
           club_id: string
           created_at: string
@@ -2046,6 +2047,7 @@ export type Database = {
           waiver_text: string
         }
         Insert: {
+          archived_at?: string | null
           closed_at?: string | null
           club_id: string
           created_at?: string
@@ -2059,6 +2061,7 @@ export type Database = {
           waiver_text?: string
         }
         Update: {
+          archived_at?: string | null
           closed_at?: string | null
           club_id?: string
           created_at?: string
