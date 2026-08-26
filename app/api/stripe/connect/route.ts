@@ -20,6 +20,31 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function errorResponse(error: unknown) {
+  if (!(error instanceof ContractError)) {
+    const details =
+      error !== null && typeof error === "object"
+        ? error as Record<string, unknown>
+        : {};
+    console.error("Stripe Connect request failed", {
+      type: typeof details.type === "string"
+        ? details.type
+        : error instanceof Error
+          ? error.name
+          : "UnknownError",
+      message: error instanceof Error
+        ? error.message
+        : typeof details.message === "string"
+          ? details.message
+          : "Unknown Stripe Connect failure",
+      code: typeof details.code === "string" ? details.code : null,
+      requestId: typeof details.requestId === "string"
+        ? details.requestId
+        : null,
+      statusCode: typeof details.statusCode === "number"
+        ? details.statusCode
+        : null,
+    });
+  }
   const code = error instanceof ContractError
     ? error.code
     : "STRIPE_CONNECT_REQUEST_FAILED";
