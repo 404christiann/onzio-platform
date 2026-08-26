@@ -600,6 +600,191 @@ describe("registration definition visibility and RLS contract", () => {
     );
   });
 
+  it("allows a tenant admin to archive once while preserving public and tenant boundaries", async () => {
+    const owner = await createRegistrationMember("owner");
+    cleanups.push(owner.cleanup);
+
+    const open = await insertOpenForm(CLUB_IDS.alpha);
+    const neverPublished = await insertDraftForm(CLUB_IDS.alpha);
+    const otherClub = await insertDraftForm(CLUB_IDS.bravo);
+    const archivedAt = new Date().toISOString();
+    const archivedField = await clients.service
+      .from("registration_form_fields")
+      .select("id,label")
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("form_id", open.id)
+      .limit(1)
+      .single();
+    const archivedPrice = await clients.service
+      .from("registration_price_options")
+      .select("id,label")
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("form_id", open.id)
+      .single();
+    expect(archivedField.error?.message).toBeUndefined();
+    expect(archivedPrice.error?.message).toBeUndefined();
+
+    const archiveOpen = await owner.client
+      .from("registration_forms")
+      .update({ archived_at: archivedAt })
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", open.id)
+      .select("id,status,closed_at,archived_at")
+      .single();
+    expect(archiveOpen.error?.message).toBeUndefined();
+    expect(archiveOpen.data).toMatchObject({
+      id: open.id,
+      status: "closed",
+    });
+    expect(archiveOpen.data?.closed_at).toBeTruthy();
+    expect(new Date(archiveOpen.data!.archived_at!).toISOString()).toBe(
+      archivedAt,
+    );
+
+    const archiveDraft = await owner.client
+      .from("registration_forms")
+      .update({ archived_at: archivedAt })
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", neverPublished.id)
+      .select("id,status,closed_at,archived_at")
+      .single();
+    expect(archiveDraft.error?.message).toBeUndefined();
+    expect(archiveDraft.data).toMatchObject({
+      id: neverPublished.id,
+      status: "draft",
+      closed_at: null,
+    });
+    expect(new Date(archiveDraft.data!.archived_at!).toISOString()).toBe(
+      archivedAt,
+    );
+
+    const anonymousRead = await clients.anon
+      .from("registration_forms")
+      .select("id")
+      .in("id", [open.id, neverPublished.id]);
+    expect(anonymousRead.error?.message).toBeUndefined();
+    expect(anonymousRead.data).toEqual([]);
+
+    const editArchived = await owner.client
+      .from("registration_forms")
+      .update({ title: "Attempted archived edit" })
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", open.id);
+    expectPostgrestError(
+      editArchived.error,
+      "23514",
+      "archived form mutation",
+    );
+
+    const insertedFieldId = randomUUID();
+    createdIds.registration_form_fields.push(insertedFieldId);
+    const insertArchivedField = await owner.client
+      .from("registration_form_fields")
+      .insert({
+        id: insertedFieldId,
+        club_id: CLUB_IDS.alpha,
+        form_id: open.id,
+        field_key: `archived_${insertedFieldId.slice(0, 8)}`,
+        label: "Attempted archived field",
+        field_type: "short_text",
+        position: 99,
+      });
+    expectPostgrestError(
+      insertArchivedField.error,
+      "42501",
+      "archived form field insert",
+    );
+
+    const updateArchivedField = await owner.client
+      .from("registration_form_fields")
+      .update({ label: "Attempted archived field update" })
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", archivedField.data!.id)
+      .select("id");
+    expect(updateArchivedField.error?.message).toBeUndefined();
+    expect(updateArchivedField.data).toEqual([]);
+
+    const deleteArchivedPrice = await owner.client
+      .from("registration_price_options")
+      .delete()
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", archivedPrice.data!.id)
+      .select("id");
+    expect(deleteArchivedPrice.error?.message).toBeUndefined();
+    expect(deleteArchivedPrice.data).toEqual([]);
+
+    const deleteArchivedForm = await owner.client
+      .from("registration_forms")
+      .delete()
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", open.id)
+      .select("id");
+    expect(deleteArchivedForm.error?.message).toBeUndefined();
+    expect(deleteArchivedForm.data).toEqual([]);
+
+    const archivedDefinition = await clients.service
+      .from("registration_form_fields")
+      .select("label")
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", archivedField.data!.id)
+      .single();
+    const archivedPriceState = await clients.service
+      .from("registration_price_options")
+      .select("label")
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", archivedPrice.data!.id)
+      .single();
+    expect(archivedDefinition.data?.label).toBe(archivedField.data!.label);
+    expect(archivedPriceState.data?.label).toBe(archivedPrice.data!.label);
+
+    const crossTenantArchive = await owner.client
+      .from("registration_forms")
+      .update({ archived_at: archivedAt })
+      .eq("club_id", CLUB_IDS.bravo)
+      .eq("id", otherClub.id)
+      .select("id");
+    expect(crossTenantArchive.error?.message).toBeUndefined();
+    expect(crossTenantArchive.data).toEqual([]);
+
+    const otherClubState = await clients.service
+      .from("registration_forms")
+      .select("archived_at")
+      .eq("club_id", CLUB_IDS.bravo)
+      .eq("id", otherClub.id)
+      .single();
+    expect(otherClubState.error?.message).toBeUndefined();
+    expect(otherClubState.data?.archived_at).toBeNull();
+  });
+
+  it("guards form deletion at RLS once a registration exists", async () => {
+    const admin = await createRegistrationMember("admin");
+    cleanups.push(admin.cleanup);
+    const open = await insertOpenForm(CLUB_IDS.alpha);
+    const registration = registrationRow(open);
+    const insertRegistration = await clients.service
+      .from("registrations")
+      .insert(registration);
+    expect(insertRegistration.error?.message).toBeUndefined();
+
+    const deletion = await admin.client
+      .from("registration_forms")
+      .delete()
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", open.id)
+      .select("id");
+    expect(deletion.error?.message).toBeUndefined();
+    expect(deletion.data).toEqual([]);
+
+    const retained = await clients.service
+      .from("registration_forms")
+      .select("id")
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("id", open.id)
+      .single();
+    expect(retained.error?.message).toBeUndefined();
+    expect(retained.data?.id).toBe(open.id);
+  });
+
   it("rejects cross-club form relationships at the database boundary", async () => {
     const bravoForm = await insertOpenForm(CLUB_IDS.bravo);
     const field = await clients.service.from("registration_form_fields").insert({
