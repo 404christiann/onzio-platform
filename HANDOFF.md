@@ -1,6 +1,153 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-08-21
+Last updated: 2026-08-26
+
+## Registration forms shipped to production via narrow cherry-pick — Diverse City FC now a paying $100/month feature
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-26. Status: **complete —
+deployed to production, live-verified, no blockers.**
+
+**What happened:** Diverse City FC's owner verbally agreed to pay
+$100/month for the native registration-forms feature. Merging and deploying
+the full `claude/registration-forms` branch would have also shipped
+~19,000 lines of unrelated, not-yet-approved MLA pathway work that had
+landed on `staging` in the meantime, so instead a narrow cherry-pick was
+used: a throwaway worktree was built at the exact commit actually live in
+production at the time — `1153849` (`11538491831a03f9029fd8f5bd9916f0fa129628`,
+the `hotfix/registration-transparent-letterbox` commit, confirmed as the
+root of the cherry-picked chain via `git log --oneline
+origin/hotfix/registration-forms-prod | tail -5`) — and exactly 5
+registration-forms-specific commits were cherry-picked onto it, plus one
+additional commit added during the process to fix a real gap the narrow
+cherry-pick exposed.
+
+**The 6 commits shipped** (new SHAs on `hotfix/registration-forms-prod`
+differ from the originals on `claude/registration-forms`, since they're
+cherry-picks onto a different base):
+
+1. `31370eb` → `350bc5b` — Add club registration forms with Stripe Connect
+   payments
+2. `30c7533` → `568d4c5` — Support minor/adult participant modes; add
+   Special Kickers draft form
+3. `1b3483f` → `9a57143` — Link programs and tryouts to native registration
+   forms
+4. `c3e5126` → `01fc91f` — Simplify registrations admin and add form
+   archival lifecycle
+5. `d20af4b` → `c66d848` — Fix local Stripe Connect onboarding and add
+   diagnostic logging
+6. `f4a08f9` — Add resend dependency required by registration email
+   notifications. **New commit, not from `claude/registration-forms`.** It
+   fixed a real bug the narrow cherry-pick exposed: `lib/email/resend-client.ts`
+   imports the `resend` npm package, but `resend` was originally added to
+   `package.json` by a different, excluded commit (the MLA pathway one,
+   `0a4534a`) — so `resend` had to be added explicitly to the deploy branch
+   as its own commit, pinned to the same `^6.20.0` range already tested on
+   `claude/registration-forms`.
+
+**Excluded on purpose:** `45d3293` ("Seed local staging primary domains") —
+confirmed to only touch `HANDOFF.md`, `supabase/seed.sql`, and
+`tests/database/schema-rls.test.ts` (local-dev seeding only, not needed in
+production). Also excluded: the entire MLA pathway feature and everything
+else that had landed on `staging` between the live production commit and
+this branch's tip.
+
+**Conflicts during cherry-pick:** `HANDOFF.md` conflicted on 3 of the 6
+picks (expected — multiple commits prepend sections near the top of the
+file) and were resolved by keeping registration-forms-relevant content and
+dropping unrelated intervening entries (pathway/MLA sections, and a "Local
+staging primary domains" entry corresponding to the excluded `45d3293`) so
+the deployed branch's `HANDOFF.md` doesn't misrepresent what shipped.
+`docs/local-development.md` also conflicted once, resolved by adding only
+the registration-forms-relevant doc lines (`STRIPE_CONNECT_WEBHOOK_SECRET`,
+`RESEND_API_KEY`, `REGISTRATION_EMAIL_FROM` — confirmed via a code grep
+that `RESEND_API_KEY` is genuinely used by `lib/email/resend-client.ts`,
+part of this feature) while skipping doc lines that depended on the
+excluded contact-form feature's env vars (`ONZIO_CONTACT_FROM`,
+`ONZIO_CONTACT_FALLBACK_TO` — confirmed via grep that no code in the
+cherry-picked tree references these).
+
+**Migration-parity gate:** `supabase link --project-ref
+ioalthwsdrlzrubomrow` + `supabase migration list --linked` confirmed
+production had everything through `20260812120200` already applied, with
+exactly 5 registration-forms migrations Local-only (matching the
+cherry-picked commits, nothing from excluded work leaked in):
+`20260820041635_registrations.sql`,
+`20260820171545_registration_admin_read_policy.sql`,
+`20260820224337_registration_participant_modes.sql`,
+`20260821002508_link_registration_forms_to_programs_tryouts.sql`,
+`20260821072452_registration_form_archiving.sql`. A dry-run (`supabase db
+push --linked --dry-run`) and manual SQL review confirmed all 5 are
+additive/nullable (new tables, nullable columns, RLS policies) — the one
+`drop column` found (`registration_forms.is_minor`) is self-contained,
+dropping a column on a table this same migration set creates fresh, not
+touching any pre-existing production table or `programs` content.
+`supabase db push --linked` was run by Christian directly (from his own
+terminal, using his real DB password — a Claude Code auto-mode classifier
+blocked the assistant from running the password-bearing command itself)
+and succeeded; `supabase migration list --linked` was re-run afterward and
+confirmed full parity, all 5 now showing matching local/remote timestamps.
+
+**Verification** (run in the cherry-pick worktree before deploy): `npx tsc
+--noEmit`, `npm run lint`, `npm run test:architecture`, `npm run
+test:contracts`, `npm run test:db`, `npm test`, `npm run build` — all
+passed cleanly except one known, pre-existing, unrelated failure
+independently documented elsewhere in this repo's own HANDOFF.md history:
+`tests/contracts/editorial-home.test.ts`'s date-dependent "Capital City
+Athletic" vs "Queen City FC" fixture mismatch (1337/1338 tests passed in
+the full suite). The first verification pass surfaced the missing `resend`
+dependency as a real failure (`tsc`/test/build all failed with "Cannot
+find module 'resend'") — this was root-caused and fixed (commit 6 above),
+then the full suite was re-run clean.
+
+**Deploy:** `vercel deploy --prod` from the cherry-pick worktree (first
+attempt hit a transient "fetch failed" network error during upload — not a
+build/code error — retried successfully). Deployment
+`dpl_xAJrBBzJ3hjEFFasjxALLhAevtA2`, aliased live, `target: production`,
+confirmed via the Vercel API before and after that no other production
+deploy happened in between (production was still on the same base commit
+as when the cherry-pick worktree was built).
+
+**Post-deploy verification** (live browser check against
+`diversecityfc.com`): Special Kickers' Register CTA confirmed unchanged —
+still links to `https://tally.so/r/Mej6NX`, page text still says "Register
+through our external registration partner," confirming the zero-code-change
+carve-out worked exactly as designed (its native draft form remains
+unlinked, `registration_form_id` null, `status: draft`, so the pre-existing
+precedence logic in `lib/queries.ts` falls back to the external CTA
+automatically). `/admin/registrations` resolves and correctly redirects
+unauthenticated visitors to login (did not exercise authenticated lifecycle
+actions against real production data). Homepage, tryouts page, and the
+Special Kickers program page all loaded clean — zero real console/network
+errors (verified by checking actual network request logs, not just console
+output, since some console entries were leftover artifacts from the
+verifier's own manual diagnostic fetches).
+
+**Business context:** Diverse City FC's owner wants Special Kickers to keep
+using its existing external Tally.so registration form indefinitely (his
+call on when to stop, no fixed date) — this deploy confirms that
+requirement is already met by existing, unmodified precedence logic, not a
+new feature. Separately, he's running new UPSL league tryouts and wants
+those on the new native registration system; Christian will build that
+tryouts form himself directly in the admin portal once the owner sends
+tryout details — building that form's actual content is explicitly not
+part of this deploy and remains outstanding.
+
+**Blockers:** none — deploy is live and verified.
+
+**Next step:** owner to send UPSL tryout details to Christian; Christian
+creates the tryout row, builds its native registration form, links it via
+the existing admin dropdown, and publishes it through the admin portal (all
+already fully supported by what's now live) — whenever the owner is ready.
+Promoting `staging`/`claude/registration-forms` to `main` is a separate,
+deferred decision, not implied by this deploy (this deploy went straight
+from a cherry-pick worktree to production, bypassing `main` entirely,
+matching this repo's established hotfix precedent). `staging` has been
+fast-forwarded to match `claude/registration-forms`'s tip (commit
+`d20af4b`) and pushed to origin, but note staging's tip does **not**
+include the extra `resend` dependency commit (that commit only exists on
+`hotfix/registration-forms-prod`) — staging doesn't need it since it
+already carries `resend` from the (unmerged-to-main) MLA pathway work
+naturally present in its full history.
 
 ## Registrations admin simplification, mobile roster, currency input, and archival — implemented locally
 
