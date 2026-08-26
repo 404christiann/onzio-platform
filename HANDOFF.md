@@ -83,6 +83,44 @@ Pre-existing unrelated dirty changes remain untouched in
 `tests/contracts/stripe-connect-route.test.ts`, and
 `.!39351!.env.local`.
 
+## Local Stripe Connect onboarding failure — diagnosed and fixed
+
+Agent: Codex (GPT-5.6 with Terra route audit), 2026-08-20. Status: **fixed and
+verified locally on `claude/registration-forms`; intentionally uncommitted.**
+
+The failing port 3000 `next-server` process was using stale/inherited Stripe
+process configuration rather than the current `.env.local` test platform.
+Before restart, the real authenticated Diverse City POST returned 500 and
+created neither a Stripe account nor a local `club_stripe_connect` projection;
+the identical account and Account Link calls succeeded directly with the
+current `.env.local` test key. Restarting `npm run dev` was the operational fix:
+the same authenticated POST then returned 303 to `connect.stripe.com`, created
+the connected account, and persisted its test projection. No Stripe Dashboard
+setting or request-parameter change was required for the current key.
+
+`app/api/stripe/connect/route.ts` now logs a sanitized server-side diagnostic
+for unexpected failures: Stripe/error type, message, code, request ID, and HTTP
+status. The client still receives only `STRIPE_CONNECT_REQUEST_FAILED`, and
+raw errors, headers, credentials, and payloads are never logged. A POST contract
+proves both behaviors.
+
+The throwaway account used while opening the hosted sandbox flow was deleted
+along with its exact local projection. A fresh unclaimed Diverse City test
+account remains ready for Christian's manual onboarding:
+`acct_1U6ksGGtUA2F5iqk`, `details_submitted=false`, charges/payouts disabled.
+The live local route currently returns 303 to hosted onboarding and status GET
+returns 200. The full Stripe identity flow was not claimed with real club
+credentials; the hosted sandbox page itself loaded successfully.
+
+Verification:
+
+- focused Connect/auth/checkout suite: 4 files / 17 tests passed
+- focused logging regression: 1 file / 2 tests passed
+- `npx tsc --noEmit`: passed
+- full contracts: 76 files / 837 tests passed; the one known unrelated
+  `editorial-home.test.ts` Capital City/Dayton fixture mismatch remains red
+- no production, deployment, live-mode Stripe, or hosted Supabase mutation
+
 ## Local staging primary domains — fixed and verified
 
 Agent: Codex (GPT-5.6 with Terra seed audit), 2026-08-20. Status: **complete
