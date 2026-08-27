@@ -1,5 +1,53 @@
 # Diverse City FC Status
 
+## 2026-08-26 - Registration live-mode deployed; owner's Stripe Connect onboarding blocked on Stripe's one-time platform profile questionnaire (pending); safeguards added
+
+**Package:** none — go-live close-out for the registration-payments
+live-mode lift, plus permanent safeguards from its root cause. Full deploy
+record and diagnosis in `HANDOFF.md` (top entry).
+
+**Status:** live-mode code and migration are deployed
+(`hotfix/registration-live-mode-prod`, lift commit `6176cd9`); Diverse City
+FC's owner's first live "Connect to Stripe" click failed because Onzio's
+Stripe platform Connect profile questionnaire (one-time, Dashboard-only,
+never enforced in test mode) was never completed. **Not a code bug — no
+redeploy needed.** Pending Christian completing it at
+dashboard.stripe.com/connect/settings/profile, then retrying. The real-money
+verification walkthrough (live onboarding → $1 charge → refund) has NOT
+happened yet.
+
+**Completed work (this session, local/additive only):** new read-only
+verify script `npm run stripe:verify-connect-config`
+(`scripts/verify-stripe-connect-config.ts`,
+`lib/stripe-connect-verification.ts`); permanent
+`docs/stripe-live-go-live-checklist.md` (with the "Platform state record"
+tracking the questionnaire's pending status) referenced from `CLAUDE.md`;
+pending-status note in `docs/onzio-platform-plan.md`; HANDOFF close-out
+entry.
+
+**Files changed:** `lib/stripe-connect-verification.ts` (new),
+`scripts/verify-stripe-connect-config.ts` (new),
+`tests/contracts/stripe-connect-verification.test.ts` (new),
+`docs/stripe-live-go-live-checklist.md` (new), `package.json`,
+`CLAUDE.md`, `docs/onzio-platform-plan.md`, `HANDOFF.md`, this file.
+
+### Verification
+
+- `npx tsc --noEmit` clean.
+- `npx eslint` on the new/changed code files: 0 errors.
+- `npx vitest run tests/contracts/stripe-connect-verification.test.ts
+  tests/contracts/stripe-portal-verification.test.ts`: 16/16 passed.
+- The new script was not run against live credentials (operator acceptance
+  step; local env has test keys only).
+
+**Blockers:** Stripe platform Connect profile questionnaire — Christian
+only, Stripe Dashboard.
+
+**Exact next step:** Christian completes the questionnaire, retries
+"Connect to Stripe", resumes the go-live plan's Phase E; then update the
+"Platform state record" in `docs/stripe-live-go-live-checklist.md` and the
+pending note in `docs/onzio-platform-plan.md`.
+
 ## 2026-08-12 - Nationality flags now render for all 74 admin-supported nationalities, not just 6
 
 **Package:** none — ad hoc bug fix from a live report on diversecityfc.com:

@@ -568,6 +568,23 @@ and Supabase Auth. Email acceptance or failure is recorded independently and
 never changes paid registration state. Enabling production Connect accounts,
 deployment, or club-specific CTA placement requires separate review and approval.
 
+That separate live-mode review happened 2026-08-26/27 and its plan was
+executed: the three deliberate test-mode-only gates were lifted, a
+backward-compatible migration re-scoped the registration RPCs to
+`test`/`production`, a live Connect webhook was registered, and the code was
+deployed via the narrow cherry-pick branch `hotfix/registration-live-mode-prod`
+(see `HANDOFF.md`). However, the first live "Connect to Stripe" click then
+failed on a prerequisite outside this repo entirely: Stripe's one-time
+**platform Connect profile questionnaire**
+(<https://dashboard.stripe.com/connect/settings/profile>), which live
+`accounts.create()` requires and test mode never enforces. As of 2026-08-26
+that questionnaire is **pending Christian's completion** — it is NOT yet
+confirmed done, and live Connect onboarding remains blocked (no code change
+needed) until it is. Track and update its status in
+`docs/stripe-live-go-live-checklist.md` ("Platform state record"), which now
+also carries the permanent first-time-live Stripe checklist this gap
+motivated.
+
 ## Secure Media Pipeline
 
 ### Storage strategy
