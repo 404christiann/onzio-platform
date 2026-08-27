@@ -64,6 +64,14 @@ gap on 2026-08-14 was that this step was skipped for a deploy that carried
 schema changes bundled in with unrelated feature work, not that the pattern
 was unknown.
 
+For any work that takes a Stripe surface live for the first time (Connect,
+Billing, or any other Stripe product), `docs/stripe-live-go-live-checklist.md`
+is the mandatory companion checklist — walk it before writing the
+feature-specific go-live plan. It exists because the 2026-08-26 Connect
+go-live failed on a one-time Stripe Dashboard prerequisite (the platform
+Connect profile questionnaire) that no code, test, or env-var check in this
+repo could surface.
+
 Before ending any implementation turn, update
 `docs/phase-11/diverse-city/STATUS.md` with:
 

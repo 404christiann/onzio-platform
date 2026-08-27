@@ -2,6 +2,104 @@
 
 Last updated: 2026-08-26
 
+## Registration live-mode gate lifted and deployed; first live Connect click blocked on Stripe's one-time platform profile questionnaire (pending Christian); permanent safeguards added
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-26. Status: **deploy complete;
+live Connect onboarding blocked on a Stripe Dashboard prerequisite outside
+this repo — pending Christian, no code change needed. Safeguards
+implemented and verified locally.**
+
+**Deploy record (the "separate review and approval" go-live for
+registration payments, per its approved plan):** the three deliberate
+test-mode-only gates were lifted — `lib/stripe-config.ts`'s
+`REGISTRATION_STRIPE_TEST_MODE_REQUIRED` throws replaced with
+environment-derived config (the `STRIPE_MODE_MISMATCH` fail-closed net
+untouched), the Connect webhook's unconditional `event.livemode` rejection
+replaced with a symmetric environment-match check, and a new
+backward-compatible migration
+(`supabase/migrations/*_registration_live_mode_environment.sql`) re-scoped
+the three registration RPCs to accept `test`/`production` with
+prefix-aware `cs_test_`/`cs_live_` session-ID validation. Full local suite
+green including the new four-quadrant webhook coverage. Christian
+registered the live Connect webhook in the Stripe Dashboard (connected
+accounts scope, `checkout.session.completed` / `charge.refunded` /
+`account.updated`), set `STRIPE_CONNECT_WEBHOOK_SECRET` in Vercel
+production, pushed the migration through the mandatory parity gate, and
+the code deployed via narrow cherry-pick branch
+`hotfix/registration-live-mode-prod` (single lift commit `6176cd9` on top
+of the previously-live `f4a08f9`). Post-deploy smoke checks passed: a
+garbage-signature POST to `/api/stripe/connect-webhook` now returns `400
+INVALID_SIGNATURE` (webhook secret correctly configured), and the admin
+"Connect to Stripe" no longer fails with `STRIPE_CONFIGURATION_MISSING`.
+
+**What then failed, and why it is not a code bug:** the club owner's first
+real "Connect to Stripe" click failed. Production runtime logs show
+`stripe.accounts.create()` returning `StripeInvalidRequestError` 400
+(req `req_dNolWBKNl4w3my`): "You must complete your platform profile to
+use Connect and create live connected accounts." This is Stripe's
+platform-account-level gate: a **one-time questionnaire** (Dashboard →
+Settings → Connect → Platform profile,
+dashboard.stripe.com/connect/settings/profile) that Stripe's own Connect
+"Before you begin" checklist lists as a prerequisite, that **test mode
+never enforces** (why every pre-live test passed), and that no code, env
+var, test, or grep in this repo could ever surface — it is Dashboard-only
+state with no public API exposing its status. It is distinct from base
+account activation (Onzio's account already live-charges billing).
+**Resolution status: PENDING** — Christian completes the questionnaire,
+then simply retries "Connect to Stripe"; no redeploy is needed. Caveat:
+depending on questionnaire answers Stripe can require review, so
+completion is confirmed only when the retry succeeds. Track status in
+`docs/stripe-live-go-live-checklist.md` ("Platform state record"). Phase
+E of the go-live plan (live onboarding, real $1 charge + refund) remains
+**not done** — it resumes at step 1 after the questionnaire.
+
+**Safeguards added this session (all local, additive, no
+production-affecting commands run):**
+
+1. `npm run stripe:verify-connect-config` →
+   `scripts/verify-stripe-connect-config.ts` +
+   `lib/stripe-connect-verification.ts`, mirroring
+   `stripe:verify-portal-config`'s read-only fault-coded pattern. Validates
+   the Connect runtime config (env presence + key-mode/environment match,
+   reusing `lib/stripe-config.ts`'s fail-closed helpers), then read-only
+   `accounts.list({limit: 1})`: any existing live connected account proves
+   the platform profile transitively (`platformProfileProven: true`); zero
+   accounts reports honest **INDETERMINATE** with Dashboard guidance, since
+   no read-only API can prove it before the first club. Best-effort webhook
+   endpoint listing for `/api/stripe/connect-webhook` (non-fatal — whether
+   Dashboard-created endpoints are API-listable is unverified without live
+   credentials; noted in code). Deliberately contains **no**
+   `accounts.create` probe: a successful live probe would strand a live
+   Standard connected account Stripe's API cannot delete — the test suite
+   enforces the script stays read-only. Tests:
+   `tests/contracts/stripe-connect-verification.test.ts` (9 tests).
+2. `docs/stripe-live-go-live-checklist.md` — permanent, feature-independent
+   first-time-live Stripe checklist (platform activation, Connect platform
+   profile, live webhooks, env vars, verify scripts, supervised real-money
+   walkthrough), including the meta-rule: walk Stripe's own
+   essential-tasks/"Before you begin" list before writing any first-time
+   live-mode plan, because such prerequisites live in Stripe's docs, not
+   this repo. Also holds the durable "Platform state record" table.
+   Referenced from `CLAUDE.md` next to the production-deploy migration
+   gate.
+3. `docs/onzio-platform-plan.md` — the "requires separate review and
+   approval" paragraph now records that the review happened 2026-08-26/27
+   and that the platform-profile questionnaire was discovered incomplete
+   and is pending.
+
+**Verification (this session):** `npx tsc --noEmit` clean; `npx eslint` on
+the three new/changed code files clean; `npx vitest run` on the new
+Connect-verification tests plus the existing portal-verification tests:
+16/16 passed. The new script was deliberately **not** run against real
+credentials (it needs the live secret key; local `.env` holds test keys
+only) — its live run is an operator acceptance step.
+
+**Exact next step:** Christian completes the platform profile
+questionnaire, retries "Connect to Stripe", then resumes go-live plan
+Phase E (live onboarding → real $1 charge → refund). On success, update
+the "Platform state record" in `docs/stripe-live-go-live-checklist.md`
+and the pending note in `docs/onzio-platform-plan.md`.
+
 ## Registration forms shipped to production via narrow cherry-pick — Diverse City FC now a paying $100/month feature
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-26. Status: **complete —
