@@ -92,8 +92,12 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "INVALID_SIGNATURE" }, { status: 400 });
   }
-  if (event.livemode) {
-    return NextResponse.json({ error: "LIVE_EVENT_REJECTED" }, { status: 400 });
+  const expectedLivemode = config.ledgerEnvironment === "production";
+  if (event.livemode !== expectedLivemode) {
+    return NextResponse.json(
+      { error: "STRIPE_EVENT_MODE_MISMATCH" },
+      { status: 400 },
+    );
   }
   if (!REQUIRED_EVENTS.has(event.type)) {
     return NextResponse.json({ received: true, ignored: true });

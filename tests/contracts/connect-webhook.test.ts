@@ -16,14 +16,15 @@ const mocks = vi.hoisted(() => ({
   sendNotifications: vi.fn(),
   recordNotificationFailure: vi.fn(),
   mapStatus: vi.fn(),
+  config: {
+    environment: "staging" as "staging" | "production",
+    ledgerEnvironment: "test" as "test" | "production",
+    webhookSecret: "whsec_connect_test",
+  },
 }));
 
 vi.mock("@/lib/stripe-config", () => ({
-  getStripeRegistrationRuntimeConfig: () => ({
-    environment: "staging",
-    ledgerEnvironment: "test",
-    webhookSecret: "whsec_connect_test",
-  }),
+  getStripeRegistrationRuntimeConfig: () => mocks.config,
 }));
 vi.mock("@/lib/stripe-client", () => ({
   getStripeClient: mocks.getStripeClient,
@@ -127,7 +128,11 @@ function prepare(eventValue = event("checkout.session.completed", { id: "cs_even
   });
 }
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  mocks.config.environment = "staging";
+  mocks.config.ledgerEnvironment = "test";
+});
 
 describe("Stripe Connect registration webhook", () => {
   it("rejects an invalid signature before reading Stripe or the ledger", async () => {
@@ -147,15 +152,120 @@ describe("Stripe Connect registration webhook", () => {
     expect(mocks.sessionRetrieve).not.toHaveBeenCalled();
   });
 
-  it("rejects a live event before connected-account access", async () => {
+  it("rejects a live event in staging before connected-account access", async () => {
     prepare({ ...event("checkout.session.completed"), livemode: true });
 
     const response = await POST(request());
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "LIVE_EVENT_REJECTED" });
+    expect(await response.json()).toEqual({ error: "STRIPE_EVENT_MODE_MISMATCH" });
     expect(mocks.eventExists).not.toHaveBeenCalled();
     expect(mocks.getConnect).not.toHaveBeenCalled();
+  });
+
+  it("rejects a test-mode event in production before connected-account access", async () => {
+    mocks.config.environment = "production";
+    mocks.config.ledgerEnvironment = "production";
+    prepare(event("checkout.session.completed"));
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "STRIPE_EVENT_MODE_MISMATCH" });
+    expect(mocks.eventExists).not.toHaveBeenCalled();
+    expect(mocks.getConnect).not.toHaveBeenCalled();
+  });
+
+  it("applies a live-mode checkout completion in production", async () => {
+    mocks.config.environment = "production";
+    mocks.config.ledgerEnvironment = "production";
+    const webhookEvent = {
+      ...event("checkout.session.completed", { id: "cs_event" }),
+      livemode: true,
+    };
+    prepare(webhookEvent);
+    mocks.getConnect.mockResolvedValue({
+      club_id: clubId,
+      stripe_account_id: accountId,
+      environment: "production",
+    });
+    mocks.sessionRetrieve.mockResolvedValue({
+      id: "cs_live_canonical",
+      metadata: {
+        registration_id: registrationId,
+        onzio_club_id: clubId,
+        registration_form_id: formId,
+        onzio_ledger_environment: "production",
+      },
+      client_reference_id: registrationId,
+      mode: "payment",
+      status: "complete",
+      payment_status: "paid",
+      currency: "usd",
+      amount_total: 17_500,
+      payment_intent: "pi_canonical",
+    });
+    mocks.getRegistration.mockResolvedValue({
+      id: registrationId,
+      club_id: clubId,
+      form_id: formId,
+      status: "pending",
+      amount_cents: 17_500,
+      stripe_checkout_session_id: "cs_live_canonical",
+      stripe_payment_intent_id: "pi_canonical",
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.applyCheckout).toHaveBeenCalledWith(expect.objectContaining({
+      eventId: webhookEvent.id,
+      clubId,
+      registrationId,
+      checkoutSessionId: "cs_live_canonical",
+      paymentIntentId: "pi_canonical",
+      amountTotal: 17_500,
+    }));
+  });
+
+  it("applies a live-mode account.updated event in production", async () => {
+    mocks.config.environment = "production";
+    mocks.config.ledgerEnvironment = "production";
+    const webhookEvent = {
+      ...event("account.updated", { id: accountId }),
+      livemode: true,
+    };
+    prepare(webhookEvent);
+    mocks.getConnect.mockResolvedValue({
+      club_id: clubId,
+      stripe_account_id: accountId,
+      environment: "production",
+    });
+    mocks.accountRetrieve.mockResolvedValue({
+      id: accountId,
+      type: "standard",
+      metadata: { onzio_club_id: clubId, onzio_deploy_environment: "production" },
+    });
+    mocks.mapStatus.mockReturnValue({
+      stripeAccountId: accountId,
+      environment: "production",
+      chargesEnabled: true,
+      detailsSubmitted: true,
+      payoutsEnabled: true,
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.accountRetrieve).toHaveBeenCalledWith(accountId);
+    expect(mocks.applyConnect).toHaveBeenCalledWith(expect.objectContaining({
+      eventId: webhookEvent.id,
+      clubId,
+      stripeAccountId: accountId,
+      chargesEnabled: true,
+      detailsSubmitted: true,
+      payoutsEnabled: true,
+    }));
   });
 
   it("accepts duplicate events without reapplying", async () => {

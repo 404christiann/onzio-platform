@@ -211,13 +211,15 @@ function registrationRow(formRow: Awaited<ReturnType<typeof insertOpenForm>>) {
   };
 }
 
-async function insertPaidPendingRegistration() {
+async function insertPaidPendingRegistration(
+  environment: "test" | "production" = "test",
+) {
   cleanups.push(await isolateClubConnect(CLUB_IDS.alpha));
   const stripeAccountId = `acct_${randomUUID().replaceAll("-", "")}`;
   const connect = await clients.service.from("club_stripe_connect").upsert({
     club_id: CLUB_IDS.alpha,
     stripe_account_id: stripeAccountId,
-    environment: "test",
+    environment,
     charges_enabled: true,
     details_submitted: true,
     payouts_enabled: true,
@@ -247,7 +249,7 @@ async function insertPaidPendingRegistration() {
   ).toBeUndefined();
 
   const registrationId = randomUUID();
-  const checkoutSessionId = `cs_test_${randomUUID().replaceAll("-", "")}`;
+  const checkoutSessionId = `${environment === "production" ? "cs_live_" : "cs_test_"}${randomUUID().replaceAll("-", "")}`;
   createdIds.registrations.push(registrationId);
   const registration = await clients.service.from("registrations").insert({
     id: registrationId,
@@ -1059,5 +1061,181 @@ describe("registration Stripe Connect projection RPC contract", () => {
     const member = await createRegistrationMember("admin");
     cleanups.push(member.cleanup);
     expect((await member.client.rpc("apply_registration_checkout_event", args)).error).not.toBeNull();
+  });
+
+  it("applies a production-environment checkout event with a cs_live_ session id", async () => {
+    const fixture = await insertPaidPendingRegistration("production");
+    const applied = await clients.service.rpc("apply_registration_checkout_event", {
+      p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+      p_event_type: "checkout.session.completed",
+      p_stripe_created_at: new Date().toISOString(),
+      p_environment: "production",
+      p_club_id: CLUB_IDS.alpha,
+      p_registration_id: fixture.registrationId,
+      p_checkout_session_id: fixture.checkoutSessionId,
+      p_payment_intent_id: `pi_${randomUUID().replaceAll("-", "")}`,
+      p_amount_total: fixture.amount,
+      p_payload_digest: "a".repeat(64),
+    });
+    expect(applied.error?.message).toBeUndefined();
+    expect(applied.data).toMatchObject({
+      action: "applied",
+      registrationId: fixture.registrationId,
+    });
+  });
+
+  it("rejects a checkout event whose session id prefix does not match its environment", async () => {
+    const productionFixture = await insertPaidPendingRegistration("production");
+    const productionWithTestId = await clients.service.rpc(
+      "apply_registration_checkout_event",
+      {
+        p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+        p_event_type: "checkout.session.completed",
+        p_stripe_created_at: new Date().toISOString(),
+        p_environment: "production",
+        p_club_id: CLUB_IDS.alpha,
+        p_registration_id: productionFixture.registrationId,
+        p_checkout_session_id: `cs_test_${randomUUID().replaceAll("-", "")}`,
+        p_payment_intent_id: `pi_${randomUUID().replaceAll("-", "")}`,
+        p_amount_total: productionFixture.amount,
+        p_payload_digest: "b".repeat(64),
+      },
+    );
+    expectPostgrestError(
+      productionWithTestId.error,
+      "22023",
+      "production environment with cs_test_ session id",
+    );
+
+    const testFixture = await insertPaidPendingRegistration("test");
+    const testWithLiveId = await clients.service.rpc(
+      "apply_registration_checkout_event",
+      {
+        p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+        p_event_type: "checkout.session.completed",
+        p_stripe_created_at: new Date().toISOString(),
+        p_environment: "test",
+        p_club_id: CLUB_IDS.alpha,
+        p_registration_id: testFixture.registrationId,
+        p_checkout_session_id: `cs_live_${randomUUID().replaceAll("-", "")}`,
+        p_payment_intent_id: `pi_${randomUUID().replaceAll("-", "")}`,
+        p_amount_total: testFixture.amount,
+        p_payload_digest: "c".repeat(64),
+      },
+    );
+    expectPostgrestError(
+      testWithLiveId.error,
+      "22023",
+      "test environment with cs_live_ session id",
+    );
+  });
+
+  it.each(["staging", "live"])(
+    "rejects an invalid environment string (%s) on every registration Stripe event RPC",
+    async (invalidEnvironment) => {
+      const fixture = await insertPaidPendingRegistration("test");
+      const checkout = await clients.service.rpc("apply_registration_checkout_event", {
+        p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+        p_event_type: "checkout.session.completed",
+        p_stripe_created_at: new Date().toISOString(),
+        p_environment: invalidEnvironment,
+        p_club_id: CLUB_IDS.alpha,
+        p_registration_id: fixture.registrationId,
+        p_checkout_session_id: fixture.checkoutSessionId,
+        p_payment_intent_id: `pi_${randomUUID().replaceAll("-", "")}`,
+        p_amount_total: fixture.amount,
+        p_payload_digest: "d".repeat(64),
+      });
+      expectPostgrestError(
+        checkout.error,
+        "22023",
+        `checkout event with environment ${invalidEnvironment}`,
+      );
+
+      const refund = await clients.service.rpc("apply_registration_refund_event", {
+        p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+        p_event_type: "charge.refunded",
+        p_stripe_created_at: new Date().toISOString(),
+        p_environment: invalidEnvironment,
+        p_club_id: CLUB_IDS.alpha,
+        p_registration_id: fixture.registrationId,
+        p_payment_intent_id: `pi_${randomUUID().replaceAll("-", "")}`,
+        p_amount_refunded: 100,
+        p_payload_digest: "e".repeat(64),
+      });
+      expectPostgrestError(
+        refund.error,
+        "22023",
+        `refund event with environment ${invalidEnvironment}`,
+      );
+
+      const connect = await clients.service.rpc("apply_registration_connect_event", {
+        p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+        p_event_type: "account.updated",
+        p_stripe_created_at: new Date().toISOString(),
+        p_environment: invalidEnvironment,
+        p_club_id: CLUB_IDS.alpha,
+        p_stripe_account_id: fixture.stripeAccountId,
+        p_charges_enabled: true,
+        p_details_submitted: true,
+        p_payouts_enabled: true,
+        p_payload_digest: "f".repeat(64),
+      });
+      expectPostgrestError(
+        connect.error,
+        "22023",
+        `connect event with environment ${invalidEnvironment}`,
+      );
+    },
+  );
+
+  it("applies production-environment refund and connect events for a production connected account", async () => {
+    const fixture = await insertPaidPendingRegistration("production");
+    const paymentIntentId = `pi_${randomUUID().replaceAll("-", "")}`;
+    const checkout = await clients.service.rpc("apply_registration_checkout_event", {
+      p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+      p_event_type: "checkout.session.completed",
+      p_stripe_created_at: new Date().toISOString(),
+      p_environment: "production",
+      p_club_id: CLUB_IDS.alpha,
+      p_registration_id: fixture.registrationId,
+      p_checkout_session_id: fixture.checkoutSessionId,
+      p_payment_intent_id: paymentIntentId,
+      p_amount_total: fixture.amount,
+      p_payload_digest: "1".repeat(64),
+    });
+    expect(checkout.data).toMatchObject({ action: "applied" });
+
+    const refund = await clients.service.rpc("apply_registration_refund_event", {
+      p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+      p_event_type: "charge.refunded",
+      p_stripe_created_at: new Date().toISOString(),
+      p_environment: "production",
+      p_club_id: CLUB_IDS.alpha,
+      p_registration_id: fixture.registrationId,
+      p_payment_intent_id: paymentIntentId,
+      p_amount_refunded: 500,
+      p_payload_digest: "2".repeat(64),
+    });
+    expect(refund.error?.message).toBeUndefined();
+    expect(refund.data).toMatchObject({
+      action: "applied",
+      registrationId: fixture.registrationId,
+    });
+
+    const connect = await clients.service.rpc("apply_registration_connect_event", {
+      p_event_id: `evt_${randomUUID().replaceAll("-", "")}`,
+      p_event_type: "account.updated",
+      p_stripe_created_at: new Date().toISOString(),
+      p_environment: "production",
+      p_club_id: CLUB_IDS.alpha,
+      p_stripe_account_id: fixture.stripeAccountId,
+      p_charges_enabled: false,
+      p_details_submitted: true,
+      p_payouts_enabled: false,
+      p_payload_digest: "3".repeat(64),
+    });
+    expect(connect.error?.message).toBeUndefined();
+    expect(connect.data).toMatchObject({ action: "applied", clubId: CLUB_IDS.alpha });
   });
 });
