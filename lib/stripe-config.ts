@@ -96,27 +96,27 @@ export function getStripeConnectRuntimeConfig() {
   } as const;
 }
 
-/** This review build is deliberately incapable of registration live-mode calls. */
+/**
+ * Registration/Connect Stripe configuration. The pre-launch review build
+ * deliberately blocked live mode here; live mode was approved for the
+ * Diverse City FC go-live (2026-08-26). Mode safety remains fail-closed in
+ * the base config: isStripeKeyForEnvironment still throws
+ * STRIPE_MODE_MISMATCH when the key mode does not match ONZIO_ENVIRONMENT.
+ */
 export function getStripeRegistrationRuntimeConfig() {
-  const config = getStripeConnectRuntimeConfig();
-  if (config.environment !== "staging" || config.ledgerEnvironment !== "test") {
-    failContract(
-      "REGISTRATION_STRIPE_TEST_MODE_REQUIRED",
-      "Registration payments are restricted to Stripe test mode in this build.",
-    );
-  }
-  return config;
+  return getStripeConnectRuntimeConfig();
 }
 
-/** $0 registrations need only the isolated local/test ledger environment. */
-export function getRegistrationLedgerEnvironment(): "test" {
-  if (process.env.ONZIO_ENVIRONMENT !== "staging") {
+/** $0 registrations need only the ledger environment, never Stripe secrets. */
+export function getRegistrationLedgerEnvironment(): "test" | "production" {
+  const environment = process.env.ONZIO_ENVIRONMENT;
+  if (environment !== "staging" && environment !== "production") {
     failContract(
-      "REGISTRATION_STRIPE_TEST_MODE_REQUIRED",
-      "Registrations are restricted to the staging/test environment in this build.",
+      "STRIPE_ENVIRONMENT_INVALID",
+      "ONZIO_ENVIRONMENT must be staging or production.",
     );
   }
-  return "test";
+  return environment === "production" ? "production" : "test";
 }
 
 export function verifiedClubOrigin(primaryDomain: string): string {

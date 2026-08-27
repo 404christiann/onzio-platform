@@ -116,16 +116,37 @@ describe("Stripe runtime configuration", () => {
     });
   });
 
-  it("fails closed if registration payments are configured for live mode", () => {
+  it("allows registration payments configured for live mode in production", () => {
     configureEnvironment("production", "sk_live_safe");
-    expect(() => getStripeRegistrationRuntimeConfig()).toThrowError(
-      expect.objectContaining({ code: "REGISTRATION_STRIPE_TEST_MODE_REQUIRED" }),
-    );
+    expect(getStripeRegistrationRuntimeConfig()).toEqual({
+      environment: "production",
+      ledgerEnvironment: "production",
+      webhookSecret: "whsec_connect_test",
+    });
   });
+
+  it.each([
+    ["production", "sk_test_wrong"],
+    ["staging", "sk_live_wrong"],
+  ] as const)(
+    "still fails closed on a real %s/key mode mismatch for registration payments",
+    (environment, key) => {
+      configureEnvironment(environment, key);
+      expect(() => getStripeRegistrationRuntimeConfig()).toThrowError(
+        expect.objectContaining({ code: "STRIPE_MODE_MISMATCH" }),
+      );
+    },
+  );
 
   it("allows $0 registration setup without Stripe secrets in staging", () => {
     vi.stubEnv("ONZIO_ENVIRONMENT", "staging");
     vi.stubEnv("STRIPE_SECRET_KEY", "");
     expect(getRegistrationLedgerEnvironment()).toBe("test");
+  });
+
+  it("allows $0 registration setup without Stripe secrets in production", () => {
+    vi.stubEnv("ONZIO_ENVIRONMENT", "production");
+    vi.stubEnv("STRIPE_SECRET_KEY", "");
+    expect(getRegistrationLedgerEnvironment()).toBe("production");
   });
 });
