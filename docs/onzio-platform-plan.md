@@ -577,12 +577,14 @@ deployed via the narrow cherry-pick branch `hotfix/registration-live-mode-prod`
 failed on a prerequisite outside this repo entirely: Stripe's one-time
 **platform Connect profile questionnaire**
 (<https://dashboard.stripe.com/connect/settings/profile>), which live
-`accounts.create()` requires and test mode never enforces. As of 2026-08-26
-that questionnaire is **pending Christian's completion** — it is NOT yet
-confirmed done, and live Connect onboarding remains blocked (no code change
-needed) until it is. Track and update its status in
-`docs/stripe-live-go-live-checklist.md` ("Platform state record"), which now
-also carries the permanent first-time-live Stripe checklist this gap
+`accounts.create()` requires and test mode never enforces. Christian
+completed it 2026-08-27 (live-mode business-model confirmation + Connect
+Platform Agreement acceptance); Diverse City FC's first live "Connect to
+Stripe" then succeeded, confirmed by a `200` on the resulting live
+`account.updated` webhook delivery. Live Connect onboarding is unblocked.
+Track its status in `docs/stripe-live-go-live-checklist.md` ("Platform state
+record"), which also carries the permanent first-time-live Stripe checklist
+this gap
 motivated.
 
 ## Secure Media Pipeline
