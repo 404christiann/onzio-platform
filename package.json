@@ -48,6 +48,7 @@
     "staging:verify:phase-7:stripe:legacy": "tsx scripts/verify-phase-7-stripe-webhook.ts",
     "staging:backfill:plat-102": "tsx scripts/backfill-plat-102-staging.ts",
     "stripe:verify-portal-config": "tsx scripts/verify-stripe-portal-config.ts",
+    "stripe:verify-connect-config": "tsx scripts/verify-stripe-connect-config.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
