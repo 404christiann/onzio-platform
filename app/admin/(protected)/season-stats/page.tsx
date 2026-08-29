@@ -247,7 +247,7 @@ export default function SeasonStatsPage() {
         <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>
       )}
 
-      {loading || seasonsLoading ? (
+      {loading || seasonsLoading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading season stats" />
         ) : (

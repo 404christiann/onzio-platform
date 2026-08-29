@@ -104,28 +104,55 @@ export async function loadAdminDashboardData(
     .order("created_at", { ascending: false });
   const paidPromise = readAllPaidRegistrations(onzio, clubId);
 
-  const activeSeasonResult = await activeSeasonPromise;
+  const [
+    activeSeasonSettled,
+    playersResult,
+    staffResult,
+    tryoutsResult,
+    formsResult,
+    paidResult,
+  ] = await Promise.allSettled([
+    activeSeasonPromise,
+    playersPromise,
+    staffPromise,
+    tryoutsPromise,
+    formsPromise,
+    paidPromise,
+  ]);
+
+  const activeSeasonResult: { data: unknown; error: { message: string } | null } =
+    activeSeasonSettled.status === "fulfilled"
+      ? {
+          data: activeSeasonSettled.value.data,
+          error: activeSeasonSettled.value.error,
+        }
+      : {
+          data: null,
+          error: {
+            message:
+              activeSeasonSettled.reason instanceof Error
+                ? activeSeasonSettled.reason.message
+                : "Failed to load active season",
+          },
+        };
   const activeSeason = activeSeasonResult.error
     ? null
     : (activeSeasonResult.data as { id: string; label: string } | null);
 
-  const [playersResult, staffResult, matchesResult, tryoutsResult, formsResult, paidResult] =
-    await Promise.allSettled([
-      playersPromise,
-      staffPromise,
-      activeSeason
-        ? onzio
-            .from("matches")
-            .select("id,date,time,opponent,home,venue")
-            .eq("club_id", clubId)
-            .eq("season_id", activeSeason.id)
-            .order("date", { ascending: true })
-            .order("time", { ascending: true })
-        : Promise.resolve({ data: [], count: 0, error: null }),
-      tryoutsPromise,
-      formsPromise,
-      paidPromise,
-    ]);
+  // Only the matches query genuinely depends on activeSeason's resolved value,
+  // so it is built and awaited after the season lookup, not before the other
+  // 5 independent queries that were already fired above in parallel.
+  const [matchesResult] = await Promise.allSettled([
+    activeSeason
+      ? onzio
+          .from("matches")
+          .select("id,date,time,opponent,home,venue")
+          .eq("club_id", clubId)
+          .eq("season_id", activeSeason.id)
+          .order("date", { ascending: true })
+          .order("time", { ascending: true })
+      : Promise.resolve({ data: [], count: 0, error: null }),
+  ]);
 
   const countSection = (
     result: PromiseSettledResult<{ count: number | null; error: { message: string } | null }>,
@@ -252,7 +279,9 @@ export async function loadAdminDashboardData(
       : seasonMatches,
     paidRegistrations,
     forms,
-    events,
+    events: activeSeasonResult.error
+      ? failed("Could not load upcoming fixtures and events.")
+      : events,
     registrationMix,
   };
 }

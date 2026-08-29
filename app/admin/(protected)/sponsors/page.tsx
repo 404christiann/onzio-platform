@@ -331,7 +331,11 @@ export default function AdminSponsorsPage() {
   }));
 
   return (
-    <AdminPage className="overflow-hidden">
+    // overflow-x-clip (not overflow-hidden): still clips the SlidingPanel's
+    // horizontal slide animation, but `clip` doesn't turn this wrapper into a
+    // scroll container, which would silently disable sticky descendants if
+    // one is ever added here.
+    <AdminPage className="overflow-x-clip">
       <AdminSaveFeedback saving={saving} saved={saved} />
       <AdminPageHeader
         title="Sponsors"
@@ -366,7 +370,7 @@ export default function AdminSponsorsPage() {
         }
       />
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading sponsors" />
         ) : (

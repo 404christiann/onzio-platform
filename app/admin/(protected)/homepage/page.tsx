@@ -615,7 +615,7 @@ export default function AdminHomepagePage() {
         }
       />
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading homepage" />
         ) : (

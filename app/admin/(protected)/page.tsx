@@ -72,15 +72,14 @@ export default function AdminDashboard() {
 
 async function AdminDashboardContent() {
   const supabase = await createClient();
-  const { userId } = await requireFreshClubSession(supabase);
+  const { userId, claims } = await requireFreshClubSession(supabase);
   const requestHeaders = await headers();
   const club = await getClubContext({
     hostname: requestHeaders.get("host") ?? "",
     userId,
   });
-  const { data: userData } = await supabase.auth.getUser();
   const isBillingAuthorized =
-    club.role === "owner" && isBillingAdminEmail(userData.user?.email);
+    club.role === "owner" && isBillingAdminEmail(claims.email as string | undefined);
   const canMutateContent =
     club.lifecycle === "onboarding" ||
     (club.lifecycle === "active" &&
@@ -115,7 +114,7 @@ async function AdminDashboardContent() {
       </section>
 
       <section aria-labelledby="quick-actions-heading">
-        <h2 id="quick-actions-heading" className="mb-3 text-sm font-semibold text-foreground">
+        <h2 id="quick-actions-heading" className="mb-3 text-sm font-semibold normal-case text-foreground">
           Quick Actions
         </h2>
         {quickActions.length ? (
@@ -279,7 +278,7 @@ function DashboardPanel({
     <AdminPanel aria-labelledby={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`}>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h2 id={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`} className="text-sm font-semibold text-foreground">
+          <h2 id={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`} className="text-sm font-semibold normal-case text-foreground">
             {title}
           </h2>
           {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}

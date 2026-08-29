@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
 
   if (isEditorialTemplate) return null;
 
-  if (loading) {
+  if (loading || showFullLoader) {
     if (showFullLoader) {
       return <AdminFullPageLoader label="Loading analytics" />;
     }

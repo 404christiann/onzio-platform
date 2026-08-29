@@ -352,7 +352,12 @@ export default function AdminStandingsPage() {
   });
 
   return (
-    <AdminPage className="max-w-7xl overflow-hidden">
+    // overflow-x-clip (not overflow-hidden): overflow-hidden on an ancestor
+    // silently disables `position: sticky` for all descendants. This page
+    // has no sticky descendant today, but overflow-x-clip still clips like
+    // overflow-hidden without that landmine, matching the convention used
+    // in homepage/page.tsx and shop/page.tsx.
+    <AdminPage className="max-w-7xl overflow-x-clip">
       <AdminSaveFeedback saving={saving} saved={saved} />
       <AdminPageHeader
         title="Standings"
@@ -390,7 +395,7 @@ export default function AdminStandingsPage() {
         </p>
       )}
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading standings" />
         ) : (
@@ -406,7 +411,7 @@ export default function AdminStandingsPage() {
         )
       ) : (
         <div className="flex min-w-0 flex-col gap-6">
-          <AdminPanel className="overflow-hidden p-0">
+          <AdminPanel className="overflow-hidden p-0 sm:p-0">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">
               <h2 className={panelTitleClass}>Table heading</h2>
               <p className="font-body text-xs text-muted-foreground">
@@ -445,7 +450,7 @@ export default function AdminStandingsPage() {
               column is a display-only lookup into `standingsRank` (built
               from sortStandingsRows above) — it never reorders `rows`
               itself, so this editable list stays in as-entered order. */}
-          <AdminPanel className="overflow-hidden p-0">
+          <AdminPanel className="overflow-hidden p-0 sm:p-0">
             <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
               <h2 className={eyebrowLabelClass}>Teams</h2>
               <p className="font-body text-xs text-muted-foreground">{teamCountText}</p>
@@ -662,7 +667,7 @@ export default function AdminStandingsPage() {
           </AdminPanel>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <AdminPanel className="overflow-hidden p-0">
+            <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="border-b border-border px-5 py-3.5">
                 <h2 className={eyebrowLabelClass}>Homepage preview</h2>
               </div>

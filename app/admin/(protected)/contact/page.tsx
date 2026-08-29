@@ -231,7 +231,7 @@ export default function AdminContactPage() {
     socialLinks: [],
   };
 
-  if (loading) {
+  if (loading || showFullLoader) {
     if (showFullLoader) {
       return <AdminFullPageLoader label="Loading contact content" />;
     }

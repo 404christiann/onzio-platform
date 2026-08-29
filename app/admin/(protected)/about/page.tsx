@@ -402,7 +402,7 @@ export default function AdminAboutPage() {
             ? "Edit the About Club and Club Logo public pages."
             : "Edit the public About page."}
         actions={
-          !loading ? (
+          !loading && !showFullLoader ? (
             <>
               {dirty && (
                 <div className="flex items-center gap-2 border-r border-border pr-3">
@@ -429,7 +429,7 @@ export default function AdminAboutPage() {
         }
       />
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading about page" />
         ) : (
