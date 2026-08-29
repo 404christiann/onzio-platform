@@ -1,13 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
+import { useClubContext } from "@/components/ClubContextProvider";
+import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+} from "@/components/ui/sidebar";
 
-const NAV_ITEMS = [
+type AdminNavItem = {
+  label: string;
+  href: string;
+  icon: ReactNode;
+};
+
+const NAV_ITEMS: AdminNavItem[] = [
   {
     label: "Dashboard",
     href: "/admin",
@@ -153,13 +174,94 @@ const NAV_ITEMS = [
   },
 ];
 
+type AdminNavGroup = {
+  key: string;
+  label: string;
+  icon: ReactNode;
+  hrefs: string[];
+};
+
+type AdminNavEntry =
+  | { type: "link"; href: string }
+  | { type: "group"; group: AdminNavGroup };
+
+// Website/Competition/Club Settings groups only list hrefs that already
+// exist on main -- Programs, Contact, Tryouts, and Team access (members)
+// are ported in a later phase and would otherwise be dead nav links.
+const NAV_STRUCTURE: AdminNavEntry[] = [
+  { type: "link", href: "/admin" },
+  {
+    type: "group",
+    group: {
+      key: "website",
+      label: "Website",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
+          <path d="M3 12h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <path d="M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        </svg>
+      ),
+      hrefs: ["/admin/homepage", "/admin/shop", "/admin/about", "/admin/sponsors"],
+    },
+  },
+  {
+    type: "group",
+    group: {
+      key: "competition",
+      label: "Competition",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      hrefs: ["/admin/seasons", "/admin/roster", "/admin/schedule", "/admin/stats", "/admin/season-stats", "/admin/standings"],
+    },
+  },
+  { type: "link", href: "/admin/analytics" },
+  {
+    type: "group",
+    group: {
+      key: "club-settings",
+      label: "Club Settings",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 01-2-2 2 2 0 012-2h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33h.08a1.65 1.65 0 001-1.51V4a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51h.08a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.08a1.65 1.65 0 001.51 1H20a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      hrefs: ["/admin/branding"],
+    },
+  },
+  { type: "link", href: "/admin/payments" },
+];
+
+function groupKeyForPathname(pathname: string): string | null {
+  for (const entry of NAV_STRUCTURE) {
+    if (entry.type !== "group") continue;
+    if (entry.group.hrefs.some((href) => pathname.startsWith(href))) {
+      return entry.group.key;
+    }
+  }
+  return null;
+}
+
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
+  const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isBillingAdmin, setIsBillingAdmin] = useState(false);
+  const [openGroupKey, setOpenGroupKey] = useState<string | null>(() =>
+    groupKeyForPathname(pathname),
+  );
+
+  useEffect(() => {
+    setOpenGroupKey(groupKeyForPathname(pathname));
+  }, [pathname]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -182,7 +284,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     };
   }, [sidebarOpen]);
 
-  const navItems = NAV_ITEMS.filter((item) => item.href !== "/admin/payments" || isBillingAdmin);
+  const navItems = NAV_ITEMS.filter(
+    (item) => item.href !== "/admin/payments" || isBillingAdmin,
+  );
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -193,119 +297,174 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
-  return (
-    <div className="min-h-screen flex" style={{ backgroundColor: "#0e0e0e" }}>
+  const visibleNavItem = (href: string) =>
+    navItems.find((item) => item.href === href);
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-20 lg:hidden"
-          style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+  const toggleGroup = (key: string) =>
+    setOpenGroupKey((previous) => (previous === key ? null : key));
 
-      {/* Sidebar */}
-      <aside
-        id="admin-sidebar"
-        className={`fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] flex-col lg:static lg:flex lg:min-h-screen lg:h-auto lg:max-h-none lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-        style={{
-          width: 280,
-          backgroundColor: "#141414",
-          borderRight: "1px solid rgba(255,255,255,0.06)",
-          transition: "transform 0.3s ease",
+  const renderNavLink = (
+    item: AdminNavItem,
+    options?: { closesGroups?: boolean },
+  ) => (
+    <SidebarMenuItem key={item.href}>
+      <SidebarMenuButton
+        render={<Link href={item.href} />}
+        onClick={() => {
+          setSidebarOpen(false);
+          if (options?.closesGroups) setOpenGroupKey(null);
         }}
+        isActive={isActive(item.href)}
+        className="h-auto gap-4 px-4 py-3 font-display font-bold uppercase tracking-widest text-muted-foreground hover:bg-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-transparent data-[active=true]:font-bold data-[active=true]:text-foreground"
+        style={{ fontSize: "1.15rem" }}
       >
+        <span className={isActive(item.href) ? "text-destructive" : "text-muted-foreground/60"}>
+          {item.icon}
+        </span>
+        {item.label}
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+
+  return (
+    <SidebarProvider
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
+      className="bg-background"
+      style={{ "--sidebar-width": "280px" } as React.CSSProperties}
+    >
+      {/* Sidebar */}
+      <Sidebar id="admin-sidebar" className="border-r border-border bg-background">
         {/* Logo */}
-        <div
-          className="flex items-center gap-3 px-5 py-5 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-        >
-          <Image
-            src={clubLogoUrl}
-            alt="Rose City FC"
-            width={36}
-            height={36}
-            className="rounded-full flex-shrink-0"
-          />
+        <SidebarHeader className="flex-row items-center gap-3 border-b border-border px-5 py-5">
+          {clubLogoUrl ? (
+            <Image
+              src={clubLogoUrl}
+              alt={club.name}
+              width={36}
+              height={36}
+              className="rounded-full flex-shrink-0"
+            />
+          ) : (
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border font-display text-xs font-black uppercase text-foreground">
+              {club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}
+            </span>
+          )}
           <div>
-            <p className="font-display font-black uppercase text-white leading-none" style={{ fontSize: "0.8rem", letterSpacing: "0.1em" }}>
-              Rose City
+            <p className="font-display font-black uppercase text-foreground leading-none" style={{ fontSize: "0.8rem", letterSpacing: "0.1em" }}>
+              {club.name}
             </p>
-            <p className="font-display text-xs uppercase mt-0.5" style={{ color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em" }}>
+            <p className="font-display text-xs uppercase mt-0.5 text-muted-foreground" style={{ letterSpacing: "0.08em" }}>
               Admin
             </p>
           </div>
-        </div>
+        </SidebarHeader>
 
         {/* Nav links */}
-        <nav
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 px-3 flex flex-col gap-1"
-          style={{ WebkitOverflowScrolling: "touch" }}
+        <SidebarContent
+          className="admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y py-4 px-3 gap-1"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            scrollbarGutter: "stable",
+          }}
           aria-label="Admin navigation"
+          tabIndex={0}
         >
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setSidebarOpen(false)}
-              className="flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-150 font-display font-bold uppercase tracking-widest"
-              style={{
-                fontSize: "1.15rem",
-                color: isActive(item.href) ? "#fff" : "rgba(255,255,255,0.35)",
-                backgroundColor: isActive(item.href) ? "rgba(220,38,38,0.15)" : "transparent",
-                borderLeft: isActive(item.href) ? "2px solid #dc2626" : "2px solid transparent",
-              }}
-            >
-              <span style={{ color: isActive(item.href) ? "#dc2626" : "rgba(255,255,255,0.25)" }}>
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+          {NAV_STRUCTURE.map((entry) => {
+            if (entry.type === "link") {
+              const item = visibleNavItem(entry.href);
+              if (!item) return null;
+              return (
+                <SidebarMenu key={item.href} className="gap-1">
+                  {renderNavLink(item, { closesGroups: true })}
+                </SidebarMenu>
+              );
+            }
+
+            const { group } = entry;
+            const children = group.hrefs
+              .map((href) => visibleNavItem(href))
+              .filter((item): item is AdminNavItem => Boolean(item));
+            if (children.length === 0) return null;
+
+            const isOpen = openGroupKey === group.key;
+            const panelId = `admin-nav-group-${group.key}`;
+            const headerId = `${panelId}-header`;
+
+            return (
+              <SidebarGroup key={group.key} className="p-0">
+                <SidebarGroupLabel
+                  render={<button type="button" />}
+                  id={headerId}
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => toggleGroup(group.key)}
+                  className="h-auto w-full gap-4 rounded-md px-4 py-3 font-display font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  style={{ fontSize: "1rem" }}
+                >
+                  <span className="text-muted-foreground/60">{group.icon}</span>
+                  <span className="whitespace-nowrap text-left">{group.label}</span>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                    className={`ml-auto transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                  >
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </SidebarGroupLabel>
+                <SidebarGroupContent
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={headerId}
+                  hidden={!isOpen}
+                >
+                  <SidebarMenu className="gap-1 pl-4">
+                    {children.map((item) => renderNavLink(item))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            );
+          })}
+        </SidebarContent>
 
         {/* User + sign out */}
-        <div
-          className="px-4 py-4 flex-shrink-0"
-          style={{
-            borderTop: "1px solid rgba(255,255,255,0.06)",
-            paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-          }}
+        <SidebarFooter
+          className="gap-3 border-t border-border px-4 py-4"
+          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          {userEmail && (
-            <p
-              className="font-body mb-3 truncate"
-              style={{ fontSize: "0.9rem", color: "rgba(255,255,255,0.25)" }}
-              title={userEmail}
-            >
-              {userEmail}
-            </p>
-          )}
+          <div className="flex items-center justify-between gap-3">
+            {userEmail && (
+              <p
+                className="font-body truncate text-sm text-muted-foreground/70"
+                title={userEmail}
+              >
+                {userEmail}
+              </p>
+            )}
+            <AdminThemeToggle className="flex-shrink-0" />
+          </div>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 font-display tracking-widest uppercase transition-opacity duration-200 opacity-40 hover:opacity-100"
-            style={{ fontSize: "0.95rem", color: "white" }}
+            className="flex items-center gap-2 font-display text-sm tracking-widest uppercase text-foreground transition-opacity duration-200 opacity-40 hover:opacity-100"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             Sign out
           </button>
-        </div>
-      </aside>
+        </SidebarFooter>
+      </Sidebar>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile top bar */}
-        <div
-          className="lg:hidden flex items-center gap-4 px-5 py-4 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", backgroundColor: "#141414" }}
-        >
+        <div className="lg:hidden flex items-center gap-4 border-b border-border bg-background px-5 py-4 flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
-            style={{ color: "rgba(255,255,255,0.6)" }}
+            className="text-muted-foreground"
             aria-label="Open admin navigation"
             aria-controls="admin-sidebar"
             aria-expanded={sidebarOpen}
@@ -314,8 +473,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </button>
-          <p className="font-display font-black uppercase text-white text-sm tracking-widest">
-            Rose City Admin
+          <p className="font-display font-black uppercase text-foreground text-sm tracking-widest">
+            {club.name} Admin
           </p>
         </div>
 
@@ -323,6 +482,6 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           {children}
         </main>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
