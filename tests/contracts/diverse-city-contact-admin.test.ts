@@ -189,7 +189,7 @@ describe("DCFC-302 protected Contact admin surface", () => {
     "utf8",
   );
   const shellSource = readFileSync(
-    resolve(process.cwd(), "components/AdminShell.tsx"),
+    resolve(process.cwd(), "lib/admin-route-manifest.ts"),
     "utf8",
   );
   const clientSource = readFileSync(

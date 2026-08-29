@@ -1,13 +1,49 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  BarChart3,
+  BookOpenText,
+  CalendarCheck2,
+  CalendarDays,
+  CalendarRange,
+  ChevronDown,
+  CircleHelp,
+  ClipboardList,
+  ClipboardPenLine,
+  CreditCard,
+  Gauge,
+  Globe2,
+  Handshake,
+  House,
+  Mail,
+  Menu,
+  Palette,
+  Settings2,
+  ShoppingBag,
+  Trophy,
+  UserCog,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase-browser";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Image from "@/components/ResilientImage";
-import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
+import {
+  AdminRouteSearch,
+  type AdminSearchRoute,
+} from "@/components/admin/AdminRouteSearch";
+import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
 import {
   Sidebar,
   SidebarContent,
@@ -21,316 +57,103 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "@/components/ui/sidebar";
+import {
+  getAdminGroupForPathname,
+  getVisibleAdminNavigation,
+  getVisibleAdminRoutes,
+  type AdminGroupIconKey,
+  type AdminRouteAccessContext,
+  type AdminRouteIconKey,
+  type AdminVisibleRoute,
+} from "@/lib/admin-route-manifest";
+import { createClient } from "@/lib/supabase-browser";
 
-type AdminNavItem = {
-  label: string;
-  href: string;
-  icon: ReactNode;
-  feature?: string;
-  ownerOnly?: boolean;
+const ROUTE_ICONS: Record<AdminRouteIconKey, LucideIcon> = {
+  dashboard: Gauge,
+  homepage: House,
+  programs: BookOpenText,
+  tryouts: CalendarCheck2,
+  shop: ShoppingBag,
+  about: CircleHelp,
+  sponsors: Handshake,
+  contact: Mail,
+  seasons: CalendarRange,
+  roster: Users,
+  schedule: CalendarDays,
+  "match-stats": BarChart3,
+  "season-stats": ClipboardList,
+  standings: Trophy,
+  registrations: ClipboardPenLine,
+  analytics: BarChart3,
+  branding: Palette,
+  "team-access": UserCog,
+  payments: CreditCard,
 };
 
-const NAV_ITEMS: AdminNavItem[] = [
-  {
-    label: "Dashboard",
-    href: "/admin",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-        <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-        <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-        <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Homepage",
-    href: "/admin/homepage",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M3 11l9-8 9 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M5 10v10h14V10" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M9 20v-6h6v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Programs",
-    href: "/admin/programs",
-    feature: "programs",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M5 4h14v16H5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Contact",
-    href: "/admin/contact",
-    feature: "contact",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M4 5h16v14H4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M4 7l8 6 8-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Tryouts",
-    href: "/admin/tryouts",
-    feature: "tryouts",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M7 3v3M17 3v3M4 8h16v12H4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M8 12h3M13 12h3M8 16h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Seasons",
-    href: "/admin/seasons",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="2"/>
-        <path d="M8 2v4M16 2v4M3 9h18M8 13h3M13 13h3M8 17h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Roster",
-    href: "/admin/roster",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-        <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Schedule",
-    href: "/admin/schedule",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="4" width="22" height="22" rx="2" stroke="currentColor" strokeWidth="2"/>
-        <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Match Stats",
-    href: "/admin/stats",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Season Stats",
-    href: "/admin/season-stats",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="2"/>
-        <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Shop",
-    href: "/admin/shop",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M6 8V6a6 6 0 0112 0v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M4 8h16l-1 13H5L4 8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "About",
-    href: "/admin/about",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-        <path d="M12 10v7M12 7h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Sponsors",
-    href: "/admin/sponsors",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M12 3l2.6 5.3 5.9.85-4.25 4.15 1 5.85L12 16.35 6.75 19.15l1-5.85L3.5 9.15l5.9-.85L12 3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Standings",
-    href: "/admin/standings",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M4 19h16M7 16V8M12 16V5M17 16v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M5 8h4M10 5h4M15 10h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Branding",
-    href: "/admin/branding",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M12 3l7 3v5c0 4.6-2.9 8.3-7 10-4.1-1.7-7-5.4-7-10V6l7-3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        <circle cx="12" cy="11" r="3" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Analytics",
-    href: "/admin/analytics",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M21 21H4.6C4.04 21 3.76 21 3.55 20.89a1 1 0 01-.44-.44C3 20.24 3 19.96 3 19.4V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M7 14l4-4 4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Registrations",
-    href: "/admin/registrations",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" strokeWidth="2"/>
-        <path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Team access",
-    href: "/admin/members",
-    ownerOnly: true,
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="2"/>
-        <path d="M3 20v-2a4 4 0 014-4h4a4 4 0 014 4v2M16 11h5M18.5 8.5v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    label: "Payments",
-    href: "/admin/payments",
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2"/>
-        <path d="M2 10h20" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    ),
-  },
-];
-
-type AdminNavGroup = {
-  key: string;
-  label: string;
-  icon: ReactNode;
-  hrefs: string[];
+const GROUP_ICONS: Record<AdminGroupIconKey, LucideIcon> = {
+  website: Globe2,
+  competition: Trophy,
+  "club-settings": Settings2,
 };
 
-type AdminNavEntry =
-  | { type: "link"; href: string }
-  | { type: "group"; group: AdminNavGroup };
-
-const NAV_STRUCTURE: AdminNavEntry[] = [
-  { type: "link", href: "/admin" },
-  {
-    type: "group",
-    group: {
-      key: "website",
-      label: "Website",
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-          <path d="M3 12h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-        </svg>
-      ),
-      hrefs: ["/admin/homepage", "/admin/programs", "/admin/tryouts", "/admin/shop", "/admin/about", "/admin/sponsors", "/admin/contact"],
-    },
-  },
-  {
-    type: "group",
-    group: {
-      key: "competition",
-      label: "Competition",
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      hrefs: ["/admin/seasons", "/admin/roster", "/admin/schedule", "/admin/stats", "/admin/season-stats", "/admin/standings"],
-    },
-  },
-  { type: "link", href: "/admin/analytics" },
-  { type: "link", href: "/admin/registrations" },
-  {
-    type: "group",
-    group: {
-      key: "club-settings",
-      label: "Club Settings",
-      icon: (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 01-2-2 2 2 0 012-2h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33h.08a1.65 1.65 0 001-1.51V4a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51h.08a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.08a1.65 1.65 0 001.51 1H20a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      hrefs: ["/admin/branding", "/admin/members"],
-    },
-  },
-  { type: "link", href: "/admin/payments" },
-];
-
-function groupKeyForPathname(pathname: string): string | null {
-  for (const entry of NAV_STRUCTURE) {
-    if (entry.type !== "group") continue;
-    if (entry.group.hrefs.some((href) => pathname.startsWith(href))) {
-      return entry.group.key;
-    }
-  }
-  return null;
+function isPathActive(pathname: string, href: string) {
+  return href === "/admin"
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router   = useRouter();
+  const router = useRouter();
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isBillingAdmin, setIsBillingAdmin] = useState(false);
-  const [openGroupKey, setOpenGroupKey] = useState<string | null>(() =>
-    groupKeyForPathname(pathname),
+  const [isBillingAuthorized, setIsBillingAuthorized] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const canMutateContent =
+    club.lifecycle === "onboarding" ||
+    (club.lifecycle === "active" &&
+      (club.kind === "demo" ||
+        club.kind === "test" ||
+        club.publicAccess === "live" ||
+        club.publicAccess === "grace"));
+
+  const accessContext = useMemo<AdminRouteAccessContext>(
+    () => ({
+      role: club.role,
+      presentationTemplateKey: club.presentationTemplateKey,
+      isBillingAuthorized,
+      canMutateContent,
+    }),
+    [canMutateContent, club.presentationTemplateKey, club.role, isBillingAuthorized],
   );
+  const navigation = useMemo(
+    () => getVisibleAdminNavigation(accessContext),
+    [accessContext],
+  );
+  const routes = useMemo(() => getVisibleAdminRoutes(accessContext), [accessContext]);
+  const activeGroup = getAdminGroupForPathname(pathname, accessContext);
+  const [openGroupKey, setOpenGroupKey] = useState(activeGroup);
 
   useEffect(() => {
-    setOpenGroupKey(groupKeyForPathname(pathname));
-  }, [pathname]);
+    setOpenGroupKey(activeGroup);
+  }, [activeGroup, pathname]);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    void supabase.auth.getUser().then(({ data }) => {
       setUserEmail(data.user?.email ?? null);
     });
-    fetch("/api/stripe/billing-admin")
-      .then((res) => res.json())
-      .then((data) => setIsBillingAdmin(Boolean(data.isBillingAdmin)))
-      .catch(() => setIsBillingAdmin(false));
+    void fetch("/api/stripe/billing-admin", { credentials: "same-origin" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setIsBillingAuthorized(Boolean(data?.isBillingAdmin)))
+      .catch(() => setIsBillingAuthorized(false));
   }, []);
 
   useEffect(() => {
     if (!sidebarOpen) return;
-
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -338,217 +161,245 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     };
   }, [sidebarOpen]);
 
-  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
-  const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/analytics", "/admin/stats", "/admin/season-stats"];
+  const closeSidebar = useCallback((restoreFocus: boolean) => {
+    setSidebarOpen(false);
+    if (restoreFocus) {
+      requestAnimationFrame(() => menuTriggerRef.current?.focus());
+    }
+  }, []);
 
-  const navItems = NAV_ITEMS.filter(
-    (item) =>
-      (!item.ownerOnly || club.role === "owner") &&
-      (item.href !== "/admin/payments" || isBillingAdmin) &&
-      (!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href)),
+  const handleSidebarOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) setSidebarOpen(true);
+      else closeSidebar(true);
+    },
+    [closeSidebar],
   );
 
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/admin/login");
+    router.refresh();
   }
 
-  const isActive = (href: string) =>
-    href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
-
-  const visibleNavItem = (href: string) =>
-    navItems.find((item) => item.href === href);
-
-  const toggleGroup = (key: string) =>
-    setOpenGroupKey((previous) => (previous === key ? null : key));
-
-  const renderNavLink = (
-    item: AdminNavItem,
-    options?: { closesGroups?: boolean },
-  ) => (
-    <SidebarMenuItem key={item.href}>
-      <SidebarMenuButton
-        render={<Link href={item.href} />}
-        onClick={() => {
-          setSidebarOpen(false);
-          if (options?.closesGroups) setOpenGroupKey(null);
-        }}
-        isActive={isActive(item.href)}
-        className="h-auto gap-4 px-4 py-3 font-display font-bold uppercase tracking-widest text-muted-foreground hover:bg-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-transparent data-[active=true]:font-bold data-[active=true]:text-foreground"
-        style={{ fontSize: "1.15rem" }}
-      >
-        <span className={isActive(item.href) ? "text-brand" : "text-muted-foreground/60"}>
-          {item.icon}
-        </span>
-        {item.label}
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+  const groupLabels = useMemo(() => {
+    const labels = new Map<string, string>();
+    for (const entry of navigation) {
+      if (entry.type === "group") labels.set(entry.id, entry.label);
+    }
+    return labels;
+  }, [navigation]);
+  const searchRoutes = useMemo<AdminSearchRoute[]>(
+    () =>
+      routes.map((route) => ({
+        href: route.href,
+        label: route.label,
+        groupLabel: route.groupId ? groupLabels.get(route.groupId) : undefined,
+        keywords: route.searchKeywords,
+      })),
+    [groupLabels, routes],
   );
+  const currentRoute = routes.find((route) => isPathActive(pathname, route.href));
+
+  const renderNavLink = (route: AdminVisibleRoute) => {
+    const Icon = ROUTE_ICONS[route.iconKey];
+    const active = isPathActive(pathname, route.href);
+    return (
+      <SidebarMenuItem key={route.href}>
+        <SidebarMenuButton
+          render={<Link href={route.href} />}
+          onClick={() => closeSidebar(false)}
+          isActive={active}
+          className="h-10 gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-accent-foreground"
+        >
+          <Icon
+            className={active ? "text-primary" : "text-sidebar-foreground/45"}
+            aria-hidden="true"
+          />
+          <span>{route.label}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <SidebarProvider
       open={sidebarOpen}
-      onOpenChange={setSidebarOpen}
-      className="bg-background"
+      onOpenChange={handleSidebarOpenChange}
+      className="admin-portal bg-background text-foreground"
       style={{ "--sidebar-width": "280px" } as React.CSSProperties}
     >
-      {/* Sidebar */}
-      <Sidebar id="admin-sidebar" className="border-r border-border bg-background">
-        {/* Logo */}
-        <SidebarHeader className="flex-row items-center gap-3 border-b border-border px-5 py-5">
+      <Sidebar id="admin-sidebar" className="border-r border-sidebar-border bg-sidebar">
+        <SidebarHeader className="flex-row items-center gap-3 border-b border-sidebar-border px-5 py-5">
           {clubLogoUrl ? (
             <Image
               src={clubLogoUrl}
-              alt={club.name}
-              width={36}
-              height={36}
-              className="rounded-full flex-shrink-0"
+              alt={`${club.name} logo`}
+              width={40}
+              height={40}
+              className="size-10 shrink-0 rounded-lg border border-sidebar-border bg-white object-contain p-1"
             />
           ) : (
-            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-border font-display text-xs font-black uppercase text-foreground">
-              {club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
+              {club.name
+                .split(/\s+/)
+                .map((part) => part[0])
+                .join("")
+                .slice(0, 3)}
             </span>
           )}
-          <div>
-            <p className="font-display font-black uppercase text-foreground leading-none" style={{ fontSize: "0.8rem", letterSpacing: "0.1em" }}>
-              {club.name}
-            </p>
-            <p className="font-display text-xs uppercase mt-0.5 text-muted-foreground" style={{ letterSpacing: "0.08em" }}>
-              Admin
-            </p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-sidebar-foreground">{club.name}</p>
+            <p className="mt-0.5 text-xs text-sidebar-foreground/50">Club administration</p>
           </div>
+          <button
+            type="button"
+            onClick={() => closeSidebar(true)}
+            className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring lg:hidden"
+            aria-label="Close admin navigation"
+          >
+            <X className="size-4" aria-hidden="true" />
+          </button>
         </SidebarHeader>
 
-        {/* Nav links */}
         <SidebarContent
-          className="admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y py-4 px-3 gap-1"
-          style={{
-            WebkitOverflowScrolling: "touch",
-            scrollbarGutter: "stable",
-          }}
+          className="admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y gap-1 px-3 py-4"
+          style={{ WebkitOverflowScrolling: "touch", scrollbarGutter: "stable" }}
           aria-label="Admin navigation"
           tabIndex={0}
         >
-          {NAV_STRUCTURE.map((entry) => {
-            if (entry.type === "link") {
-              const item = visibleNavItem(entry.href);
-              if (!item) return null;
-              return (
-                <SidebarMenu key={item.href} className="gap-1">
-                  {renderNavLink(item, { closesGroups: true })}
-                </SidebarMenu>
-              );
-            }
-
-            const { group } = entry;
-            const children = group.hrefs
-              .map((href) => visibleNavItem(href))
-              .filter((item): item is AdminNavItem => Boolean(item));
-            if (children.length === 0) return null;
-
-            const isOpen = openGroupKey === group.key;
-            const panelId = `admin-nav-group-${group.key}`;
-            const headerId = `${panelId}-header`;
-
-            return (
-              <SidebarGroup key={group.key} className="p-0">
-                <SidebarGroupLabel
-                  render={<button type="button" />}
-                  id={headerId}
-                  aria-expanded={isOpen}
-                  aria-controls={panelId}
-                  onClick={() => toggleGroup(group.key)}
-                  className="h-auto w-full gap-4 rounded-md px-4 py-3 font-display font-bold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                  style={{ fontSize: "1rem" }}
-                >
-                  <span className="text-muted-foreground/60">{group.icon}</span>
-                  <span className="whitespace-nowrap text-left">{group.label}</span>
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                    className={`ml-auto transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                  >
-                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </SidebarGroupLabel>
-                <SidebarGroupContent
-                  id={panelId}
-                  role="region"
-                  aria-labelledby={headerId}
-                  hidden={!isOpen}
-                >
-                  <SidebarMenu className="gap-1 pl-4">
-                    {children.map((item) => renderNavLink(item))}
+          <nav aria-label="Primary admin navigation">
+            {navigation.map((entry) => {
+              if (entry.type === "link") {
+                return (
+                  <SidebarMenu key={entry.route.href} className="mb-1">
+                    {renderNavLink(entry.route)}
                   </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            );
-          })}
+                );
+              }
+
+              const GroupIcon = GROUP_ICONS[entry.iconKey];
+              const isOpen = openGroupKey === entry.id;
+              const panelId = `admin-nav-group-${entry.id}`;
+              const headerId = `${panelId}-header`;
+              return (
+                <SidebarGroup key={entry.id} className="mb-1 p-0">
+                  <SidebarGroupLabel
+                    render={<button type="button" />}
+                    id={headerId}
+                    aria-expanded={isOpen}
+                    aria-controls={panelId}
+                    onClick={() =>
+                      setOpenGroupKey((previous) => (previous === entry.id ? null : entry.id))
+                    }
+                    className="h-10 w-full gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                  >
+                    <GroupIcon className="text-sidebar-foreground/45" aria-hidden="true" />
+                    <span className="whitespace-nowrap text-left">{entry.label}</span>
+                    <ChevronDown
+                      className={`ml-auto size-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      aria-hidden="true"
+                    />
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent
+                    id={panelId}
+                    role="region"
+                    aria-labelledby={headerId}
+                    hidden={!isOpen}
+                  >
+                    <SidebarMenu className="mt-1 gap-1 pl-4">
+                      {entry.routes.map(renderNavLink)}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              );
+            })}
+          </nav>
         </SidebarContent>
 
-        {/* User + sign out */}
         <SidebarFooter
-          className="border-t border-border px-4 py-4"
+          className="border-t border-sidebar-border px-5 py-4"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          {userEmail && (
-            <p
-              className="font-body mb-3 truncate text-sm text-muted-foreground/70"
-              title={userEmail}
-            >
-              {userEmail}
-            </p>
-          )}
-          <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 font-display text-sm tracking-widest uppercase text-foreground transition-opacity duration-200 opacity-40 hover:opacity-100"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Sign out
-            </button>
-            <AdminThemeToggle />
+          <div className="flex items-baseline gap-1.5 text-xs text-sidebar-foreground/45">
+            <span>Powered by</span>
+            {/* Pre-trimmed 350x92 crop (ink bbox x76-425/y196-287 of the 500x500
+                master) so the box hugs the artwork exactly — no invisible padding
+                to throw off alignment. The mark's ink bottom is its own baseline
+                (o-n-z-i-o, no descenders), so items-baseline sits it on the same
+                baseline as the 12px text; at 10px tall its letter bodies (64/92
+                of the ink — the i-dot tops it out) land just under the text's
+                cap-height, reading proportionate, not dominant. The asset
+                is white line art: brightness-0 flattens it to black for the light
+                sidebar; the data-admin-theme ancestor variant restores white in
+                dark mode (Tailwind's `dark:` variant is media-query based here,
+                not wired to the admin theme toggle). */}
+            <Image
+              src="/images/onzio/onzio-wordmark-white-trimmed.png"
+              alt="ONZIO"
+              width={350}
+              height={92}
+              className="h-2.5 w-auto shrink-0 brightness-0 [[data-admin-theme=dark]_&]:brightness-100"
+            />
           </div>
         </SidebarFooter>
       </Sidebar>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile top bar */}
-        <div className="lg:hidden flex items-center gap-4 border-b border-border bg-background px-5 py-4 flex-shrink-0">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex min-h-16 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur sm:gap-3 sm:px-6 lg:px-8">
           <button
+            ref={menuTriggerRef}
+            type="button"
             onClick={() => setSidebarOpen(true)}
-            className="text-muted-foreground"
+            className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
             aria-label="Open admin navigation"
             aria-controls="admin-sidebar"
             aria-expanded={sidebarOpen}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
+            <Menu className="size-5" aria-hidden="true" />
           </button>
-          <p className="font-display font-black uppercase text-foreground text-sm tracking-widest">
-            {club.name} Admin
-          </p>
-        </div>
+          <div className="hidden min-w-0 xl:block">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {currentRoute?.label ?? "Admin"}
+            </p>
+          </div>
+          <AdminRouteSearch routes={searchRoutes} />
+          <AdminThemeToggle />
+          <AdminAccountMenu email={userEmail} role={club.role} onSignOut={handleSignOut} />
+        </header>
 
-        <main className="flex-1 overflow-auto p-6 lg:p-8">
-          {club.kind === "customer" &&
-            (club.publicAccess === "grace" || club.publicAccess === "suspended") && (
-              <div className="mx-auto mb-6 max-w-7xl rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 font-body text-sm text-warning">
-                Billing needs attention. Content changes are paused;{" "}
-                <Link href="/admin/payments" className="font-bold underline">
-                  review payment details
-                </Link>
-                .
-              </div>
-            )}
+        <main className="min-w-0 flex-1 overflow-x-clip bg-muted/30 p-4 sm:p-6 lg:p-8">
+          {club.kind === "customer" && club.publicAccess === "grace" ? (
+            <div className="mx-auto mb-6 max-w-7xl rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+              Billing needs attention. Content editing remains available during the grace period.
+              {isBillingAuthorized ? (
+                <>
+                  {" "}
+                  <Link href="/admin/payments" className="font-semibold underline underline-offset-2">
+                    Review payment details
+                  </Link>
+                  .
+                </>
+              ) : null}
+            </div>
+          ) : null}
+          {club.kind === "customer" && club.publicAccess === "suspended" ? (
+            <div className="mx-auto mb-6 max-w-7xl rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              Content changes are paused while billing is suspended.
+              {isBillingAuthorized ? (
+                <>
+                  {" "}
+                  <Link href="/admin/payments" className="font-semibold underline underline-offset-2">
+                    Review payment details
+                  </Link>
+                  .
+                </>
+              ) : (
+                " Contact a club owner to restore access."
+              )}
+            </div>
+          ) : null}
           {children}
         </main>
       </div>

@@ -375,7 +375,7 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     "utf8",
   );
   const shellSource = readFileSync(
-    resolve(process.cwd(), "components/AdminShell.tsx"),
+    resolve(process.cwd(), "lib/admin-route-manifest.ts"),
     "utf8",
   );
   const clientSource = readFileSync(

@@ -1,6 +1,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import { PaymentStatusCard } from "@/components/admin/payments/PaymentStatusCard";
+import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { getClubContext } from "@/lib/club-context";
 import { getConfiguredStripePriceLabel } from "@/lib/stripe-price";
 import { createClient } from "@/lib/supabase-server";
@@ -9,7 +12,15 @@ import {
   type SubscriptionMirrorRow,
 } from "@/lib/stripe-subscription-state";
 
-export default async function PaymentsPage() {
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<AdminFullPageLoader label="Loading payments" />}>
+      <PaymentsPageContent />
+    </Suspense>
+  );
+}
+
+async function PaymentsPageContent() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -47,18 +58,11 @@ export default async function PaymentsPage() {
   const priceLabel = await getConfiguredStripePriceLabel(club.stripePriceId);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-8">
-        <h1
-          className="font-display font-black uppercase leading-none text-white"
-          style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
-        >
-          Payments
-        </h1>
-        <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-white/40">
-          {club.name} subscription and billing.
-        </p>
-      </div>
+    <AdminPage className="max-w-4xl">
+      <AdminPageHeader
+        title="Payments"
+        description={`${club.name} subscription and billing.`}
+      />
 
       <PaymentStatusCard
         uiState={uiState}
@@ -66,6 +70,6 @@ export default async function PaymentsPage() {
         clubName={club.name}
         clubKind={club.kind}
       />
-    </div>
+    </AdminPage>
   );
 }

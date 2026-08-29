@@ -3,13 +3,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
+  AlertCircle,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clipboard,
   Radio,
+  Search,
   Square,
   Trash2,
 } from "lucide-react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import { AdminTabs } from "@/components/admin/AdminTabs";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import {
   formatRegistrationUsd,
   formatRegistrationUsdInput,
@@ -87,9 +96,9 @@ type Draft = {
   prices: Price[];
 };
 const input =
-  "block w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-white/30 focus:border-red-500 focus:ring-2 focus:ring-red-500/25 disabled:cursor-not-allowed disabled:opacity-60";
+  "block w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
 const button =
-  "inline-flex min-h-11 items-center justify-center gap-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
 const types: RegistrationFieldType[] = [
   "short_text",
   "long_text",
@@ -143,6 +152,12 @@ export default function RegistrationsAdminPage() {
   const [forms, setForms] = useState<FormRow[]>([]);
   const [formCounts, setFormCounts] = useState<FormCounts>({});
   const [formView, setFormView] = useState<"active" | "archived">("active");
+  const [formTab, setFormTab] = useState<"build" | "registrants">("build");
+  const [rosterFilter, setRosterFilter] = useState<
+    "all" | "paid" | "refunded" | "review"
+  >("all");
+  const [rosterQuery, setRosterQuery] = useState("");
+  const [waiverExpanded, setWaiverExpanded] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(() => blank(club.name));
   const [roster, setRoster] = useState<Registration[]>([]);
@@ -153,6 +168,7 @@ export default function RegistrationsAdminPage() {
     payoutsEnabled: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const showFullLoader = useDelayedLoading(loading, 400);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const core = useMemo(
@@ -225,6 +241,9 @@ export default function RegistrationsAdminPage() {
   }, [refresh]);
   async function edit(form: FormRow): Promise<boolean> {
     setMessage(null);
+    setFormTab("build");
+    setRosterFilter("all");
+    setRosterQuery("");
     const client = createClient();
     const [fields, prices, entries] = await Promise.all([
       client
@@ -342,6 +361,9 @@ export default function RegistrationsAdminPage() {
           setDraft(blank(club.name));
           setRoster([]);
           setOriginalPriceIds([]);
+          setFormTab("build");
+          setRosterFilter("all");
+          setRosterQuery("");
         } else if (action === "archive") {
           setDraft({
             ...draft,
@@ -549,95 +571,186 @@ export default function RegistrationsAdminPage() {
       value,
     }));
   }
+  const selectedFormRow = forms.find((form) => form.id === draft.id) ?? null;
+  const recoveryCount = roster.filter(
+    (entry) => entry.payment_recovery_required,
+  ).length;
+  const paidCount = roster.filter(
+    (entry) => entry.status === "paid" && !entry.payment_recovery_required,
+  ).length;
+  const refundedCount = roster.filter(
+    (entry) => entry.status === "refunded" && !entry.payment_recovery_required,
+  ).length;
+  const collectedCents = roster
+    .filter((entry) => entry.status === "paid" && !entry.payment_recovery_required)
+    .reduce((total, entry) => total + entry.amount_cents, 0);
+  const visibleRoster = roster
+    .filter((entry) => {
+      if (rosterFilter === "paid")
+        return entry.status === "paid" && !entry.payment_recovery_required;
+      if (rosterFilter === "refunded")
+        return entry.status === "refunded" && !entry.payment_recovery_required;
+      if (rosterFilter === "review") return entry.payment_recovery_required;
+      return true;
+    })
+    .filter((entry) => {
+      const query = rosterQuery.trim().toLowerCase();
+      if (!query) return true;
+      return (
+        registrationName(entry).toLowerCase().includes(query) ||
+        entry.registrant_email.toLowerCase().includes(query)
+      );
+    });
   if (loading)
-    return <p className="text-sm text-white/50">Loading registrations…</p>;
-  return (
-    <div className="mx-auto max-w-7xl space-y-7 text-white">
-      <header className="flex flex-col justify-between gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[.2em] text-red-500">
-            Registration desk
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-black uppercase">
-            Registrations
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/55">
-            Build forms, collect required consent, and keep a paid roster for
-            each program.
-          </p>
-        </div>
-        <button
-          className={`${button} bg-red-600 hover:bg-red-500`}
-          onClick={() => {
-            setFormView("active");
-            setConfirmDeleteId(null);
-            setDraft(blank(club.name));
-            setRoster([]);
-            setOriginalPriceIds([]);
-          }}
+    return showFullLoader ? (
+      <AdminFullPageLoader label="Loading registrations" />
+    ) : (
+      <AdminPage>
+        <AdminPageHeader
+          eyebrow="Registration desk"
+          title="Registrations"
+          description="Build forms, collect required consent, and keep a paid roster for each program."
+        />
+        <div
+          className="flex flex-col gap-3"
+          role="status"
+          aria-label="Loading registrations"
         >
-          New form
-        </button>
-      </header>
+          {Array.from({ length: 3 }, (_, index) => (
+            <div
+              key={index}
+              className="flex flex-col gap-3 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center"
+            >
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <Skeleton className="h-4 w-48 max-w-full" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+              <Skeleton className="h-8 w-24 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </AdminPage>
+    );
+  return (
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="Registration desk"
+        title="Registrations"
+        description="Build forms, collect required consent, and keep a paid roster for each program."
+        actions={
+          <>
+            <div className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                Club payment account
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-bold ${connect?.chargesEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}
+              >
+                {connect?.chargesEnabled ? "Charges enabled" : "Not ready"}
+              </span>
+            </div>
+            <button
+              className={`${button} bg-primary text-primary-foreground hover:bg-primary/90`}
+              onClick={() => {
+                setFormView("active");
+                setConfirmDeleteId(null);
+                setDraft(blank(club.name));
+                setRoster([]);
+                setOriginalPriceIds([]);
+                setFormTab("build");
+                setRosterFilter("all");
+                setRosterQuery("");
+              }}
+            >
+              New form
+            </button>
+          </>
+        }
+      />
       {message && (
         <p
           role="status"
           aria-live="polite"
-          className="rounded-lg border border-white/10 bg-white/[.05] p-3 text-sm text-white/80"
+          className="rounded-lg border border-border bg-card p-3 text-sm text-card-foreground shadow-sm"
         >
           {message}
         </p>
       )}
-      <section className="rounded-2xl border border-white/10 bg-gradient-to-r from-white/[.06] to-transparent p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-display text-lg font-bold uppercase">
-              Club payment account
-            </p>
-            <p className="mt-1 text-sm text-white/55">
-              {connect?.chargesEnabled
-                ? "Charges are enabled for paid registrations."
-                : "Free forms work now. Connect Stripe before publishing a paid form."}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-bold ${connect?.chargesEnabled ? "bg-emerald-400/15 text-emerald-300" : "bg-amber-400/15 text-amber-200"}`}
-            >
-              {connect?.chargesEnabled ? "Charges enabled" : "Not ready"}
+      {!connect?.chargesEnabled && (
+        <AdminPanel className="overflow-hidden p-0">
+          <div className="flex items-center gap-3 border-b border-border p-4">
+            <span className="grid size-9 flex-none place-items-center rounded-lg bg-foreground text-xs font-bold text-background">
+              S
             </span>
+            <div>
+              <p className="font-display text-sm font-bold uppercase">
+                Club payment account
+              </p>
+              <p className="text-xs text-muted-foreground">Payments by Stripe</p>
+            </div>
+            <span className="ml-auto inline-flex items-center gap-x-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-bold text-warning">
+              Not ready
+            </span>
+          </div>
+          <div className="divide-y divide-border">
+            {[
+              { label: "Account connected", done: Boolean(connect?.connected) },
+              { label: "Charges enabled", done: Boolean(connect?.chargesEnabled) },
+              { label: "Payouts enabled", done: Boolean(connect?.payoutsEnabled) },
+            ].map((step) => (
+              <div
+                key={step.label}
+                className="flex items-center gap-3 px-4 py-2.5"
+              >
+                {step.done ? (
+                  <Check
+                    aria-hidden="true"
+                    className="size-4 flex-none rounded-full bg-success/10 p-0.5 text-success"
+                  />
+                ) : (
+                  <AlertCircle
+                    aria-hidden="true"
+                    className="size-4 flex-none rounded-full bg-warning/10 p-0.5 text-warning"
+                  />
+                )}
+                <span className="text-sm text-foreground">{step.label}</span>
+                {!step.done && (
+                  <span className="ml-auto text-xs font-semibold text-warning">
+                    Pending
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+            <p className="flex-1 text-sm text-muted-foreground">
+              Free forms work now. Connect Stripe before publishing a paid
+              form.
+            </p>
             <form action="/api/stripe/connect" method="post">
               <button
-                className={`${button} border border-white/20 hover:bg-white/10`}
+                className={`${button} bg-primary text-primary-foreground hover:bg-primary/90`}
               >
                 {connect?.connected ? "Continue onboarding" : "Connect Stripe"}
               </button>
             </form>
           </div>
-        </div>
-      </section>
-      <section className="rounded-2xl border border-white/10 bg-white/[.03] p-4 sm:p-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-display text-2xl font-black uppercase">
-              Registration forms
-            </h2>
-            <p className="mt-1 text-sm text-white/50">
-              Publish, stop, archive, or review each form from one place.
-            </p>
-          </div>
+        </AdminPanel>
+      )}
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-24">
           <div
-            className="inline-flex w-full rounded-lg border border-white/10 bg-black/20 p-1 sm:w-auto"
+            className="inline-flex w-full rounded-lg border border-border bg-muted/50 p-1"
             aria-label="Registration form views"
           >
             <button
               type="button"
               aria-pressed={formView === "active"}
               onClick={() => setFormView("active")}
-              className={`min-h-11 flex-1 rounded-md px-3 text-sm font-semibold transition sm:flex-none ${
+              className={`min-h-11 flex-1 rounded-md px-3 text-sm font-semibold transition ${
                 formView === "active"
-                  ? "bg-white/10 text-white shadow-sm"
-                  : "text-white/55 hover:text-white"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Forms · {activeFormCount}
@@ -646,532 +759,627 @@ export default function RegistrationsAdminPage() {
               type="button"
               aria-pressed={formView === "archived"}
               onClick={() => setFormView("archived")}
-              className={`min-h-11 flex-1 rounded-md px-3 text-sm font-semibold transition sm:flex-none ${
+              className={`min-h-11 flex-1 rounded-md px-3 text-sm font-semibold transition ${
                 formView === "archived"
-                  ? "bg-white/10 text-white shadow-sm"
-                  : "text-white/55 hover:text-white"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Archived · {archivedFormCount}
             </button>
           </div>
-        </div>
-        {visibleForms.length === 0 ? (
-          <div className="mt-5 rounded-xl border border-dashed border-white/15 px-5 py-8 text-center">
-            <p className="font-semibold text-white/75">
-              {formView === "archived"
-                ? "No archived forms."
-                : "No registration forms yet."}
-            </p>
-            <p className="mt-1 text-sm text-white/40">
-              {formView === "archived"
-                ? "Forms you archive will keep their registrant records here."
-                : "Create a form, add its fields and pricing, then publish it."}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {visibleForms.map((form) => {
-              const counts = formCounts[form.id] ?? { paid: 0, total: 0 };
-              const status = formStatusLabel(form);
-              const selected = draft.id === form.id;
-              return (
-                <article
-                  key={form.id}
-                  className={`min-w-0 rounded-xl border border-l-4 bg-black/20 p-4 shadow-sm transition ${
-                    selected
-                      ? "border-red-500 bg-red-600/10 ring-1 ring-red-500/30"
-                      : form.archived_at
-                        ? "border-l-white/25 border-y-white/10 border-r-white/10"
-                        : form.status === "open"
-                          ? "border-l-emerald-400 border-y-white/10 border-r-white/10"
-                          : "border-l-amber-300/70 border-y-white/10 border-r-white/10"
-                  }`}
-                >
-                  <div className="flex min-w-0 items-start justify-between gap-3">
-                    <button
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => void edit(form)}
-                      className="min-h-11 min-w-0 flex-1 rounded-md text-left focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <span className="block truncate font-semibold text-white">
-                        {form.title}
-                      </span>
-                      <span className="mt-1 block text-xs text-white/45">
-                        {counts.paid} paid {counts.paid === 1 ? "registrant" : "registrants"}
-                      </span>
-                    </button>
-                    <span
-                      className={`inline-flex shrink-0 items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
-                        status === "Live"
-                          ? "bg-emerald-400/15 text-emerald-300"
-                          : status === "Archived"
-                            ? "bg-white/10 text-white/55"
-                            : "bg-amber-300/15 text-amber-100"
-                      }`}
-                    >
+          {visibleForms.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border px-5 py-8 text-center">
+              <p className="font-semibold text-foreground">
+                {formView === "archived"
+                  ? "No archived forms."
+                  : "No registration forms yet."}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {formView === "archived"
+                  ? "Forms you archive will keep their registrant records here."
+                  : "Create a form, add its fields and pricing, then publish it."}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {visibleForms.map((form) => {
+                const counts = formCounts[form.id] ?? { paid: 0, total: 0 };
+                const status = formStatusLabel(form);
+                const selected = draft.id === form.id;
+                const canPublish = form.status !== "open";
+                const canStop = form.status === "open";
+                const canCopy = form.status !== "draft";
+                const canDelete = counts.total === 0;
+                const actionTotal =
+                  (canPublish ? 1 : 0) +
+                  (canStop ? 1 : 0) +
+                  (canCopy ? 1 : 0) +
+                  1 +
+                  (canDelete ? 1 : 0);
+                const trailingFull = actionTotal % 2 === 1;
+                return (
+                  <article
+                    key={form.id}
+                    className={`min-w-0 rounded-xl border border-l-4 bg-background p-3.5 shadow-sm transition ${
+                      selected
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                        : form.archived_at
+                          ? "border-l-muted-foreground/30 border-y-border border-r-border"
+                          : form.status === "open"
+                            ? "border-l-success border-y-border border-r-border"
+                            : "border-l-warning border-y-border border-r-border"
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => void edit(form)}
+                        className="min-h-11 min-w-0 flex-1 rounded-md text-left focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <span className="block truncate font-semibold text-foreground">
+                          {form.title}
+                        </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {counts.paid} paid {counts.paid === 1 ? "registrant" : "registrants"}
+                        </span>
+                      </button>
                       <span
-                        aria-hidden="true"
-                        className={`size-1.5 rounded-full ${
+                        className={`inline-flex shrink-0 items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
                           status === "Live"
-                            ? "bg-emerald-300"
+                              ? "bg-success/10 text-success"
                             : status === "Archived"
-                              ? "bg-white/40"
-                              : "bg-amber-200"
-                        }`}
-                      />
-                      {status}
-                    </span>
-                  </div>
-                  {!form.archived_at && (
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() =>
-                          void runFormAction(
-                            form,
-                            form.status === "open" ? "stop" : "publish",
-                          )
-                        }
-                        className={`${button} ${
-                          form.status === "open"
-                            ? "border border-amber-300/30 text-amber-100 hover:bg-amber-300/10"
-                            : "bg-emerald-600 text-white hover:bg-emerald-500"
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-warning/10 text-warning"
                         }`}
                       >
-                        {form.status === "open" ? (
-                          <Square aria-hidden="true" className="size-4" />
-                        ) : (
-                          <Radio aria-hidden="true" className="size-4" />
-                        )}
-                        {form.status === "open" ? "Stop registrations" : "Publish"}
-                      </button>
-                      {form.status !== "draft" && (
-                        <button
-                          type="button"
-                          onClick={() => void copyLink(form)}
-                          className={`${button} border border-white/15 text-white/75 hover:bg-white/[.06]`}
-                        >
-                          <Clipboard aria-hidden="true" className="size-4" />
-                          Copy link
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => void runFormAction(form, "archive")}
-                        className={`${button} border border-white/15 text-white/75 hover:bg-white/[.06]`}
-                      >
-                        <Archive aria-hidden="true" className="size-4" />
-                        Archive
-                      </button>
-                      {counts.total === 0 && (
-                        <button
-                          type="button"
-                          disabled={saving}
-                          onClick={() => setConfirmDeleteId(form.id)}
-                          className={`${button} border border-red-400/25 text-red-200 hover:bg-red-500/10`}
-                        >
-                          <Trash2 aria-hidden="true" className="size-4" />
-                          Delete
-                        </button>
-                      )}
+                        <span
+                          aria-hidden="true"
+                          className={`size-1.5 rounded-full ${
+                            status === "Live"
+                              ? "bg-success"
+                              : status === "Archived"
+                                ? "bg-muted-foreground"
+                                : "bg-warning"
+                          }`}
+                        />
+                        {status}
+                      </span>
                     </div>
-                  )}
-                  {confirmDeleteId === form.id && (
-                    <div className="mt-3 rounded-lg border border-red-400/25 bg-red-500/10 p-3">
-                      <p className="text-sm text-red-100">
-                        Permanently delete this empty form? This cannot be undone.
-                      </p>
+                    {!form.archived_at && (
                       <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDeleteId(null)}
-                          className={`${button} border border-white/15 text-white/75 hover:bg-white/[.06]`}
-                        >
-                          Cancel
-                        </button>
+                        {canPublish && (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => void runFormAction(form, "publish")}
+                            className={`${button} bg-success text-success-foreground hover:bg-success/90`}
+                          >
+                            <Radio aria-hidden="true" className="size-4" />
+                            Publish
+                          </button>
+                        )}
+                        {canStop && (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => void runFormAction(form, "stop")}
+                            className={`${button} border border-warning/40 bg-background text-warning hover:bg-warning/10`}
+                          >
+                            <Square aria-hidden="true" className="size-4" />
+                            Stop registrations
+                          </button>
+                        )}
+                        {canCopy && (
+                          <button
+                            type="button"
+                            onClick={() => void copyLink(form)}
+                            className={`${button} border border-border text-foreground hover:bg-accent`}
+                          >
+                            <Clipboard aria-hidden="true" className="size-4" />
+                            Copy link
+                          </button>
+                        )}
                         <button
                           type="button"
                           disabled={saving}
-                          onClick={() => void runFormAction(form, "delete")}
-                          className={`${button} bg-red-600 text-white hover:bg-red-500`}
+                          onClick={() => void runFormAction(form, "archive")}
+                          className={`${button} border border-border text-foreground hover:bg-accent ${!canDelete && trailingFull ? "col-span-2" : ""}`}
                         >
-                          Delete form
+                          <Archive aria-hidden="true" className="size-4" />
+                          Archive
                         </button>
+                        {canDelete && (
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => setConfirmDeleteId(form.id)}
+                            className={`${button} border border-destructive/25 text-destructive hover:bg-destructive/10 ${trailingFull ? "col-span-2" : ""}`}
+                          >
+                            <Trash2 aria-hidden="true" className="size-4" />
+                            Delete
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-      <main className="min-w-0 space-y-7">
-        <section className="rounded-2xl border border-white/10 bg-white/[.03] p-5 sm:p-7">
-            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-2xl font-black uppercase">
-                  {draft.id ? "Edit form" : "New form"}
-                </h2>
-                <p className="mt-1 text-sm text-white/45">
-                  Core fields stay required. Add only relevant details.
+                    )}
+                    {confirmDeleteId === form.id && (
+                      <div className="mt-3 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+                        <p className="text-sm text-destructive">
+                          Permanently delete this empty form? This cannot be undone.
+                        </p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                            className={`${button} border border-border text-foreground hover:bg-accent`}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() => void runFormAction(form, "delete")}
+                            className={`${button} bg-destructive text-destructive-foreground hover:bg-destructive/90`}
+                          >
+                            Delete form
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <AdminPanel className="flex flex-wrap items-center gap-4 p-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {draft.id ? "Selected form" : "Creating form"}
+              </p>
+              <p className="mt-0.5 truncate text-lg font-semibold text-foreground">
+                {draft.id ? draft.title || "Untitled form" : "New form"}
+              </p>
+            </div>
+            {draft.id && draft.archivedAt && (
+              <span className="inline-flex items-center gap-x-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+                <Archive aria-hidden="true" className="size-3.5" />
+                Archived
+              </span>
+            )}
+            {draft.id && (
+              <AdminTabs
+                items={[
+                  { id: "build", label: "Form" },
+                  { id: "registrants", label: "Registrants", badge: roster.length },
+                ]}
+                value={formTab}
+                onChange={(id) => setFormTab(id as "build" | "registrants")}
+                tabsId="registration-form"
+                label="Form sections"
+                className="ml-auto"
+              />
+            )}
+          </AdminPanel>
+
+          {draft.archivedAt && (
+            <p className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+              Archived forms are read-only. Registrant data and CSV export
+              remain available below.
+            </p>
+          )}
+          {!draft.archivedAt && draft.status === "open" && (
+            <div className="flex flex-col items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 sm:flex-row sm:items-center">
+              <span
+                aria-hidden="true"
+                className="mt-1.5 hidden size-2 flex-none rounded-full bg-warning sm:block"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-warning">
+                  This form is live, so fields and prices are locked
+                </p>
+                <p className="mt-1 text-sm text-warning/90">
+                  Stop registrations to edit the structure. Name and
+                  description stay editable.
                 </p>
               </div>
-              {draft.id && draft.archivedAt && (
-                <span className="inline-flex items-center gap-x-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-white/55">
-                  <Archive aria-hidden="true" className="size-3.5" />
-                  Archived
-                </span>
-              )}
+              <button
+                type="button"
+                disabled={saving || !selectedFormRow}
+                onClick={() =>
+                  selectedFormRow && void runFormAction(selectedFormRow, "stop")
+                }
+                className={`${button} flex-none border border-warning/40 bg-background text-warning hover:bg-warning/10`}
+              >
+                <Square aria-hidden="true" className="size-4" />
+                Stop registrations
+              </button>
             </div>
-            {draft.archivedAt && (
-              <p className="mb-5 rounded-lg border border-white/15 bg-white/[.05] p-3 text-sm text-white/70">
-                Archived forms are read-only. Registrant data and CSV export
-                remain available below.
-              </p>
-            )}
-            {!draft.archivedAt && draft.status === "open" && (
-              <p className="mb-5 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-sm text-amber-100">
-                Stop registrations from the form card before editing fields or
-                prices.
-              </p>
-            )}
-            <fieldset
-              disabled={!canEditStructure || saving}
-              className="space-y-4 disabled:opacity-60"
-            >
-              <label className="block text-sm font-medium">
-                Form name
-                <input
-                  className={`${input} mt-1`}
-                  value={draft.title}
-                  onChange={(event) =>
-                    setDraft({ ...draft, title: event.target.value })
-                  }
-                />
-              </label>
-              <label className="block text-sm font-medium">
-                Description
-                <textarea
-                  className={`${input} mt-1 min-h-24`}
-                  value={draft.description}
-                  onChange={(event) =>
-                    setDraft({ ...draft, description: event.target.value })
-                  }
-                />
-              </label>
-              <fieldset className="rounded-xl border border-white/10 p-4">
-                <legend className="px-1 text-sm font-semibold">
-                  Participant mode
-                </legend>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  {([
-                    {
-                      value: "minor_only",
-                      label: "Minor only",
-                      hint: "Player and guardian details.",
-                    },
-                    {
-                      value: "adult_only",
-                      label: "Adult only",
-                      hint: "Self-registrant details.",
-                    },
-                    {
-                      value: "both",
-                      label: "Minor or adult",
-                      hint: "Registrant chooses the branch.",
-                    },
-                  ] as const).map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex cursor-pointer gap-3 rounded-lg border border-white/10 p-3 has-[:checked]:border-red-500/70 has-[:checked]:bg-red-600/10"
-                    >
-                      <input
-                        type="radio"
-                        name="participant-mode"
-                        value={option.value}
-                        checked={draft.participantMode === option.value}
-                        onChange={() =>
-                          setDraft({
-                            ...draft,
-                            participantMode: option.value,
-                          })
-                        }
-                        className="mt-0.5 accent-red-600"
-                      />
-                      <span>
-                        <b className="block text-sm">{option.label}</b>
-                        <span className="block text-xs text-white/45">
-                          {option.hint}
+          )}
+
+          <div
+            id={draft.id ? "registration-form-panel-build" : undefined}
+            role={draft.id ? "tabpanel" : undefined}
+            aria-labelledby={draft.id ? "registration-form-tab-build" : undefined}
+            hidden={draft.id ? formTab !== "build" : false}
+            className="flex flex-col gap-4"
+          >
+            <AdminPanel className="overflow-hidden p-0">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">
+                <h3 className="font-display text-base font-bold uppercase">
+                  Basics
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Name, description, who it is for
+                </p>
+              </div>
+              <div className="flex flex-col gap-5 p-5">
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <label className="block text-sm font-medium">
+                    Form name
+                    <input
+                      disabled={saving}
+                      className={`${input} mt-1`}
+                      value={draft.title}
+                      onChange={(event) =>
+                        setDraft({ ...draft, title: event.target.value })
+                      }
+                    />
+                  </label>
+                  <div className="block text-sm font-medium">
+                    Public link
+                    {draft.id && selectedFormRow ? (
+                      <div className="mt-1 flex min-h-11 items-center gap-2 rounded-lg border border-input bg-muted/50 px-3 py-2.5">
+                        <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
+                          {registrationPublicUrl({
+                            currentOrigin: window.location.origin,
+                            primaryDomain: club.primaryDomain,
+                            formSlug: draft.slug,
+                          })}
                         </span>
-                      </span>
-                    </label>
-                  ))}
+                        <button
+                          type="button"
+                          onClick={() => void copyLink(selectedFormRow)}
+                          className="flex-none text-xs font-semibold text-primary hover:underline"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="mt-1 flex min-h-11 items-center rounded-lg border border-dashed border-border px-3 text-xs text-muted-foreground">
+                        Available after you save the form.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </fieldset>
-              <div>
                 <label className="block text-sm font-medium">
-                  Waiver and consent
+                  Description
                   <textarea
-                    aria-describedby="registration-waiver-guidance"
-                    className={`${input} mt-1 min-h-64`}
-                    value={draft.waiver}
+                    disabled={saving}
+                    className={`${input} mt-1 min-h-24`}
+                    value={draft.description}
                     onChange={(event) =>
-                      setDraft({ ...draft, waiver: event.target.value })
+                      setDraft({ ...draft, description: event.target.value })
                     }
                   />
                 </label>
-                <p
-                  id="registration-waiver-guidance"
-                  className="mt-2 rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2.5 text-sm leading-relaxed text-amber-100"
+                <fieldset
+                  disabled={!canEditStructure || saving}
+                  className="rounded-xl border border-border p-4 disabled:opacity-60"
                 >
-                  {REGISTRATION_WAIVER_LEGAL_HINT}
-                </p>
-              </div>
-              <div className="border-t border-white/10 pt-6">
-                <h3 className="font-display text-xl font-bold uppercase">
-                  Required core fields
-                </h3>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {core.map((field) => (
-                    <div
-                      key={field.field_key}
-                      className="rounded-lg border border-white/10 px-3 py-2 text-sm"
-                    >
-                      <span>{field.label}</span>
-                      <span className="float-right text-xs text-white/40">
-                        required · {field.field_type}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="border-t border-white/10 pt-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="font-display text-xl font-bold uppercase">
-                      Custom fields
-                    </h3>
-                    <p className="mt-1 text-sm text-white/45">
-                      Keys remain in the CSV export.
-                    </p>
-                  </div>
-                  <button
-                    className={`${button} border border-white/20 hover:bg-white/10`}
-                    onClick={() =>
-                      setDraft({
-                        ...draft,
-                        custom: [
-                          ...draft.custom,
-                          {
-                            field_key: "",
-                            label: "",
-                            field_type: "short_text",
-                            options: [],
-                            required: false,
-                            is_core: false,
-                            participant_scope: "all",
-                            position: draft.custom.length,
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    Add field
-                  </button>
-                </div>
-                {draft.custom.map((field, index) => (
-                  <div
-                    key={index}
-                    className="mt-3 rounded-xl border border-white/10 p-4"
-                  >
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                      <input
-                        className={input}
-                        placeholder="Label"
-                        value={field.label}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            custom: draft.custom.map((item, i) =>
-                              i === index
-                                ? { ...item, label: event.target.value }
-                                : item,
-                            ),
-                          })
-                        }
-                      />
-                      <input
-                        className={input}
-                        placeholder="field_key"
-                        value={field.field_key}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            custom: draft.custom.map((item, i) =>
-                              i === index
-                                ? {
-                                    ...item,
-                                    field_key: event.target.value
-                                      .toLowerCase()
-                                      .replace(/[^a-z0-9_]/g, ""),
-                                  }
-                                : item,
-                            ),
-                          })
-                        }
-                      />
-                      <select
-                        className={input}
-                        value={field.field_type}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            custom: draft.custom.map((item, i) =>
-                              i === index
-                                ? {
-                                    ...item,
-                                    field_type: event.target
-                                      .value as RegistrationFieldType,
-                                    options: [],
-                                  }
-                                : item,
-                            ),
-                          })
-                        }
+                  <legend className="px-1 text-sm font-semibold">
+                    Participant mode
+                  </legend>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    {([
+                      {
+                        value: "minor_only",
+                        label: "Minor only",
+                        hint: "Player and guardian details.",
+                      },
+                      {
+                        value: "adult_only",
+                        label: "Adult only",
+                        hint: "Self-registrant details.",
+                      },
+                      {
+                        value: "both",
+                        label: "Minor or adult",
+                        hint: "Registrant chooses the branch.",
+                      },
+                    ] as const).map((option) => (
+                      <label
+                        key={option.value}
+                        className="flex cursor-pointer gap-3 rounded-lg border border-border p-3 has-[:checked]:border-primary/70 has-[:checked]:bg-primary/10"
                       >
-                        {types.map((type) => (
-                          <option
-                            key={type}
-                            value={type}
-                            className="bg-zinc-900"
-                          >
-                            {type.replaceAll("_", " ")}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        className={input}
-                        aria-label="Participant branch"
-                        value={field.participant_scope}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            custom: draft.custom.map((item, i) =>
-                              i === index
-                                ? {
-                                    ...item,
-                                    participant_scope: event.target
-                                      .value as RegistrationParticipantScope,
-                                  }
-                                : item,
-                            ),
-                          })
-                        }
-                      >
-                        <option value="all" className="bg-zinc-900">
-                          Both branches
-                        </option>
-                        <option value="minor" className="bg-zinc-900">
-                          Minors only
-                        </option>
-                        <option value="adult" className="bg-zinc-900">
-                          Adults only
-                        </option>
-                      </select>
-                    </div>
-                    {field.field_type === "dropdown" && (
-                      <input
-                        className={`${input} mt-3`}
-                        placeholder="Option 1, Option 2"
-                        value={field.options.join(", ")}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            custom: draft.custom.map((item, i) =>
-                              i === index
-                                ? {
-                                    ...item,
-                                    options: event.target.value.split(","),
-                                  }
-                                : item,
-                            ),
-                          })
-                        }
-                      />
-                    )}
-                    <div className="mt-3 flex justify-between">
-                      <label className="text-sm text-white/65">
                         <input
-                          className="mr-2 accent-red-600"
-                          type="checkbox"
-                          checked={field.required}
+                          type="radio"
+                          name="participant-mode"
+                          value={option.value}
+                          checked={draft.participantMode === option.value}
+                          onChange={() =>
+                            setDraft({
+                              ...draft,
+                              participantMode: option.value,
+                            })
+                          }
+                          className="mt-0.5 accent-primary"
+                        />
+                        <span>
+                          <b className="block text-sm">{option.label}</b>
+                          <span className="block text-xs text-muted-foreground">
+                            {option.hint}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Changing this changes which core fields the public form
+                    asks for.
+                  </p>
+                </fieldset>
+              </div>
+            </AdminPanel>
+
+            <AdminPanel className="overflow-hidden p-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
+                <h3 className="font-display text-base font-bold uppercase">
+                  Questions
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {core.length} core · {draft.custom.length} of your own
+                </p>
+                <button
+                  type="button"
+                  disabled={!canEditStructure || saving}
+                  className={`${button} ml-auto border border-border hover:bg-accent`}
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      custom: [
+                        ...draft.custom,
+                        {
+                          field_key: "",
+                          label: "",
+                          field_type: "short_text",
+                          options: [],
+                          required: false,
+                          is_core: false,
+                          participant_scope: "all",
+                          position: draft.custom.length,
+                        },
+                      ],
+                    })
+                  }
+                >
+                  + Add question
+                </button>
+              </div>
+              <div className="flex flex-col gap-5 p-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Required core fields
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {core.map((field) => (
+                      <span
+                        key={field.field_key}
+                        className="inline-flex items-center gap-x-2 rounded-lg bg-muted/50 px-3 py-2 text-xs font-medium text-foreground"
+                      >
+                        {field.label}
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {field.field_key}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <fieldset
+                  disabled={!canEditStructure || saving}
+                  className="flex flex-col gap-3 border-t border-border pt-5 disabled:opacity-60"
+                >
+                  <legend className="mb-1 px-0 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Your questions
+                  </legend>
+                  {draft.custom.map((field, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-border p-4"
+                    >
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <input
+                          className={input}
+                          placeholder="Label"
+                          value={field.label}
                           onChange={(event) =>
                             setDraft({
                               ...draft,
                               custom: draft.custom.map((item, i) =>
                                 i === index
-                                  ? { ...item, required: event.target.checked }
+                                  ? { ...item, label: event.target.value }
                                   : item,
                               ),
                             })
                           }
                         />
-                        Required
-                      </label>
-                      <button
-                        className="text-sm text-red-300"
-                        onClick={() =>
-                          setDraft({
-                            ...draft,
-                            custom: draft.custom.filter((_, i) => i !== index),
-                          })
-                        }
-                      >
-                        Remove
-                      </button>
+                        <input
+                          className={input}
+                          placeholder="field_key"
+                          value={field.field_key}
+                          onChange={(event) =>
+                            setDraft({
+                              ...draft,
+                              custom: draft.custom.map((item, i) =>
+                                i === index
+                                  ? {
+                                      ...item,
+                                      field_key: event.target.value
+                                        .toLowerCase()
+                                        .replace(/[^a-z0-9_]/g, ""),
+                                    }
+                                  : item,
+                              ),
+                            })
+                          }
+                        />
+                        <select
+                          className={input}
+                          value={field.field_type}
+                          onChange={(event) =>
+                            setDraft({
+                              ...draft,
+                              custom: draft.custom.map((item, i) =>
+                                i === index
+                                  ? {
+                                      ...item,
+                                      field_type: event.target
+                                        .value as RegistrationFieldType,
+                                      options: [],
+                                    }
+                                  : item,
+                              ),
+                            })
+                          }
+                        >
+                          {types.map((type) => (
+                            <option
+                              key={type}
+                              value={type}
+                              className="bg-popover"
+                            >
+                              {type.replaceAll("_", " ")}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          className={input}
+                          aria-label="Participant branch"
+                          value={field.participant_scope}
+                          onChange={(event) =>
+                            setDraft({
+                              ...draft,
+                              custom: draft.custom.map((item, i) =>
+                                i === index
+                                  ? {
+                                      ...item,
+                                      participant_scope: event.target
+                                        .value as RegistrationParticipantScope,
+                                    }
+                                  : item,
+                              ),
+                            })
+                          }
+                        >
+                          <option value="all" className="bg-popover">
+                            Both branches
+                          </option>
+                          <option value="minor" className="bg-popover">
+                            Minors only
+                          </option>
+                          <option value="adult" className="bg-popover">
+                            Adults only
+                          </option>
+                        </select>
+                      </div>
+                      {field.field_type === "dropdown" && (
+                        <input
+                          className={`${input} mt-3`}
+                          placeholder="Option 1, Option 2"
+                          value={field.options.join(", ")}
+                          onChange={(event) =>
+                            setDraft({
+                              ...draft,
+                              custom: draft.custom.map((item, i) =>
+                                i === index
+                                  ? {
+                                      ...item,
+                                      options: event.target.value.split(","),
+                                    }
+                                  : item,
+                              ),
+                            })
+                          }
+                        />
+                      )}
+                      <div className="mt-3 flex justify-between">
+                        <label className="text-sm text-muted-foreground">
+                          <input
+                            className="mr-2 accent-primary"
+                            type="checkbox"
+                            checked={field.required}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                custom: draft.custom.map((item, i) =>
+                                  i === index
+                                    ? { ...item, required: event.target.checked }
+                                    : item,
+                                ),
+                              })
+                            }
+                          />
+                          Required
+                        </label>
+                        <button
+                          className="text-sm text-destructive"
+                          onClick={() =>
+                            setDraft({
+                              ...draft,
+                              custom: draft.custom.filter((_, i) => i !== index),
+                            })
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </fieldset>
               </div>
-              <div className="border-t border-white/10 pt-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="font-display text-xl font-bold uppercase">
-                      Price options
-                    </h3>
-                    <p className="mt-1 text-sm text-white/45">
-                      Enter dollars. Removed options stay inactive for payment
-                      history.
-                    </p>
-                  </div>
-                  <button
-                    className={`${button} border border-white/20 hover:bg-white/10`}
-                    onClick={() =>
-                      setDraft({
-                        ...draft,
-                        prices: [
-                          ...draft.prices,
-                          {
-                            label: "",
-                            amount: "",
-                            active: true,
-                            position: draft.prices.length,
-                          },
-                        ],
-                      })
-                    }
-                  >
-                    Add price
-                  </button>
-                </div>
+            </AdminPanel>
+
+            <AdminPanel className="overflow-hidden p-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
+                <h3 className="font-display text-base font-bold uppercase">
+                  Price options
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Enter dollars. Removed options stay inactive for payment
+                  history.
+                </p>
+                <button
+                  type="button"
+                  disabled={!canEditStructure || saving}
+                  className={`${button} ml-auto border border-border hover:bg-accent`}
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      prices: [
+                        ...draft.prices,
+                        {
+                          label: "",
+                          amount: "",
+                          active: true,
+                          position: draft.prices.length,
+                        },
+                      ],
+                    })
+                  }
+                >
+                  Add price
+                </button>
+              </div>
+              <fieldset
+                disabled={!canEditStructure || saving}
+                className="flex flex-col gap-3 p-5 disabled:opacity-60"
+              >
                 {draft.prices.map((price, index) => (
                   <div
-                    className="mt-3 grid min-w-0 gap-3 rounded-xl border border-white/10 p-3 sm:grid-cols-[minmax(0,1fr)_150px_auto_auto] sm:items-center sm:border-0 sm:p-0"
+                    className="grid min-w-0 gap-3 rounded-xl border border-border p-3 sm:grid-cols-[minmax(0,1fr)_150px_auto_auto] sm:items-center sm:border-0 sm:p-0"
                     key={price.id ?? index}
                   >
                     <input
@@ -1190,7 +1398,7 @@ export default function RegistrationsAdminPage() {
                       }
                     />
                     <label className="relative block">
-                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-semibold text-white/45">
+                      <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-semibold text-muted-foreground">
                         $
                       </span>
                       <input
@@ -1229,9 +1437,9 @@ export default function RegistrationsAdminPage() {
                         }}
                       />
                     </label>
-                    <label className="flex min-h-11 items-center text-sm text-white/65">
+                    <label className="flex min-h-11 items-center text-sm text-muted-foreground">
                       <input
-                        className="mr-2 accent-red-600"
+                        className="mr-2 accent-primary"
                         type="checkbox"
                         checked={price.active}
                         onChange={(event) =>
@@ -1248,7 +1456,7 @@ export default function RegistrationsAdminPage() {
                       Active
                     </label>
                     <button
-                      className={`${button} px-2 text-red-300 hover:bg-red-500/10`}
+                      className={`${button} px-2 text-destructive hover:bg-destructive/10`}
                       onClick={() =>
                         setDraft({
                           ...draft,
@@ -1260,58 +1468,201 @@ export default function RegistrationsAdminPage() {
                     </button>
                   </div>
                 ))}
+              </fieldset>
+            </AdminPanel>
+
+            <AdminPanel className="overflow-hidden p-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
+                <h3 className="font-display text-base font-bold uppercase">
+                  Waiver and consent
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Seeded from the standard template with your club name
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setWaiverExpanded((value) => !value)}
+                  aria-expanded={waiverExpanded}
+                  className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                >
+                  {waiverExpanded ? "Collapse" : "Expand"}
+                  {waiverExpanded ? (
+                    <ChevronUp aria-hidden="true" className="size-3.5" />
+                  ) : (
+                    <ChevronDown aria-hidden="true" className="size-3.5" />
+                  )}
+                </button>
               </div>
-            </fieldset>
-            <div className="mt-7 flex justify-end border-t border-white/10 pt-5">
+              {waiverExpanded && (
+                <div className="p-5">
+                  <textarea
+                    disabled={saving}
+                    aria-describedby="registration-waiver-guidance"
+                    className={`${input} min-h-64`}
+                    value={draft.waiver}
+                    onChange={(event) =>
+                      setDraft({ ...draft, waiver: event.target.value })
+                    }
+                  />
+                  <p
+                    id="registration-waiver-guidance"
+                    className="mt-2 rounded-lg border border-warning/25 bg-warning/10 px-3 py-2.5 text-sm leading-relaxed text-warning"
+                  >
+                    {REGISTRATION_WAIVER_LEGAL_HINT}
+                  </p>
+                </div>
+              )}
+            </AdminPanel>
+
+            <AdminPanel className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+              {!canEditStructure && !draft.archivedAt && (
+                <p className="text-sm text-muted-foreground">
+                  Structure changes are disabled while the form is live.
+                </p>
+              )}
               <button
                 disabled={saving || !canEditStructure}
                 onClick={saveDraft}
-                className={`${button} bg-red-600 hover:bg-red-500`}
+                className={`${button} ml-auto bg-primary text-primary-foreground hover:bg-primary/90`}
               >
                 {saving ? "Saving…" : "Save form"}
               </button>
+            </AdminPanel>
             </div>
-          </section>
         {draft.id && (
-          <section className="min-w-0 rounded-2xl border border-white/10 bg-white/[.03] p-5 sm:p-7">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="font-display text-2xl font-black uppercase">
-                  Registrants
-                </h2>
-                <p className="mt-1 text-sm text-white/45">
-                  Paid and refunded registrations only. Pending and expired
-                  attempts stay out.
+          <div
+            id="registration-form-panel-registrants"
+            role="tabpanel"
+            aria-labelledby="registration-form-tab-registrants"
+            hidden={formTab !== "registrants"}
+            className="flex flex-col gap-4"
+          >
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Paid
+                </p>
+                <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+                  {paidCount}
                 </p>
               </div>
-              <a
-                className={`${button} w-full border border-white/20 hover:bg-white/10 sm:w-auto`}
-                href={`/api/admin/registrations/export?formId=${draft.id}`}
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Collected
+                </p>
+                <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+                  {formatRegistrationUsd(collectedCents)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Refunded
+                </p>
+                <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+                  {refundedCount}
+                </p>
+              </div>
+              <div
+                className={`rounded-xl border p-4 ${
+                  recoveryCount > 0
+                    ? "border-destructive/30 bg-destructive/10"
+                    : "border-border bg-card"
+                }`}
               >
-                Export CSV
-              </a>
+                <p
+                  className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                    recoveryCount > 0
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  Needs review
+                </p>
+                <p
+                  className={`mt-1.5 text-2xl font-bold tabular-nums ${
+                    recoveryCount > 0 ? "text-destructive" : "text-foreground"
+                  }`}
+                >
+                  {recoveryCount}
+                </p>
+              </div>
             </div>
 
-            {roster.length === 0 ? (
-              <p className="mt-5 rounded-xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-white/40">
-                No paid registrations yet.
-              </p>
-            ) : (
+            <AdminPanel className="overflow-hidden p-0">
+              <div className="flex flex-wrap items-center gap-2 border-b border-border p-4">
+                <div className="relative w-full sm:w-64">
+                  <Search
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  />
+                  <input
+                    type="search"
+                    value={rosterQuery}
+                    onChange={(event) => setRosterQuery(event.target.value)}
+                    placeholder="Search name or email"
+                    aria-label="Search registrants by name or email"
+                    className={`${input} pl-9`}
+                  />
+                </div>
+                {(
+                  [
+                    { id: "all", label: "All", count: roster.length },
+                    { id: "paid", label: "Paid", count: paidCount },
+                    { id: "refunded", label: "Refunded", count: refundedCount },
+                    { id: "review", label: "Review", count: recoveryCount },
+                  ] as const
+                ).map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    aria-pressed={rosterFilter === filter.id}
+                    onClick={() => setRosterFilter(filter.id)}
+                    className={`inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-semibold transition ${
+                      rosterFilter === filter.id
+                        ? filter.id === "review"
+                          ? "border-destructive bg-destructive text-destructive-foreground"
+                          : "border-foreground bg-foreground text-background"
+                        : filter.id === "review"
+                          ? "border-destructive/30 text-destructive hover:bg-destructive/10"
+                          : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {filter.label} {filter.count}
+                  </button>
+                ))}
+                <a
+                  className={`${button} ml-auto w-full border border-border hover:bg-accent sm:w-auto`}
+                  href={`/api/admin/registrations/export?formId=${draft.id}`}
+                >
+                  Export CSV
+                </a>
+              </div>
+
+              {roster.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No paid registrations yet.
+                </p>
+              ) : visibleRoster.length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No registrants match this filter.
+                </p>
+              ) : (
               <>
+                <div className="px-4 pb-4">
                 <div className="mt-5 space-y-3 md:hidden">
-                  {roster.map((entry) => {
+                  {visibleRoster.map((entry) => {
                     const recovery = entry.payment_recovery_required;
                     return (
                       <details
                         key={entry.id}
-                        className="group min-w-0 rounded-xl border border-white/10 bg-black/20 open:border-white/20"
+                        className="group min-w-0 rounded-xl border border-border bg-background open:border-primary/30"
                       >
-                        <summary className="flex min-h-14 cursor-pointer list-none items-start justify-between gap-3 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500 [&::-webkit-details-marker]:hidden">
+                        <summary className="flex min-h-14 cursor-pointer list-none items-start justify-between gap-3 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary [&::-webkit-details-marker]:hidden">
                           <span className="min-w-0">
-                            <span className="block truncate font-semibold text-white">
+                            <span className="block truncate font-semibold text-foreground">
                               {registrationName(entry)}
                             </span>
-                            <span className="mt-1 block text-xs text-white/45">
+                            <span className="mt-1 block text-xs text-muted-foreground">
                               {formatRegistrationUsd(entry.amount_cents)} · {new Date(
                                 entry.submitted_at,
                               ).toLocaleDateString()}
@@ -1320,10 +1671,10 @@ export default function RegistrationsAdminPage() {
                           <span
                             className={`inline-flex shrink-0 items-center gap-x-1 rounded-full px-2.5 py-1 text-xs font-bold ${
                               recovery
-                                ? "bg-red-400/15 text-red-200"
+                                ? "bg-destructive/10 text-destructive"
                                 : entry.status === "paid"
-                                  ? "bg-emerald-400/15 text-emerald-300"
-                                  : "bg-amber-300/15 text-amber-100"
+                                  ? "bg-success/10 text-success"
+                                  : "bg-warning/10 text-warning"
                             }`}
                           >
                             {!recovery && entry.status === "paid" && (
@@ -1336,9 +1687,9 @@ export default function RegistrationsAdminPage() {
                                 : "Refunded"}
                           </span>
                         </summary>
-                        <div className="border-t border-white/10 px-4 py-4">
+                        <div className="border-t border-border px-4 py-4">
                           {recovery && (
-                            <p className="mb-4 rounded-lg border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-100">
+                            <p className="mb-4 rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
                               Payment completion needs manual review before this
                               record is treated as confirmed.
                             </p>
@@ -1346,10 +1697,10 @@ export default function RegistrationsAdminPage() {
                           <dl className="space-y-3">
                             {answerRows(entry).map((answer) => (
                               <div key={answer.key} className="min-w-0">
-                                <dt className="text-xs font-bold uppercase tracking-wide text-white/40">
+                                <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                                   {answer.label}
                                 </dt>
-                                <dd className="mt-1 break-words text-sm text-white/80">
+                                <dd className="mt-1 break-words text-sm text-foreground">
                                   {answer.isSignature
                                     ? "Signature captured"
                                     : answerText(answer.value)}
@@ -1357,18 +1708,18 @@ export default function RegistrationsAdminPage() {
                               </div>
                             ))}
                             <div>
-                              <dt className="text-xs font-bold uppercase tracking-wide text-white/40">
+                              <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                                 Email
                               </dt>
-                              <dd className="mt-1 break-all text-sm text-white/80">
+                              <dd className="mt-1 break-all text-sm text-foreground">
                                 {entry.registrant_email}
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-xs font-bold uppercase tracking-wide text-white/40">
+                              <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                                 Price paid
                               </dt>
-                              <dd className="mt-1 text-sm text-white/80">
+                              <dd className="mt-1 text-sm text-foreground">
                                 {entry.price_label} · {formatRegistrationUsd(
                                   entry.amount_cents,
                                 )}
@@ -1380,49 +1731,58 @@ export default function RegistrationsAdminPage() {
                     );
                   })}
                 </div>
+                </div>
 
+                <div className="px-4 pb-4">
                 <div className="mt-5 hidden md:block">
                   <table className="w-full table-fixed text-left text-sm">
-                    <thead className="border-b border-white/10 text-xs uppercase tracking-wider text-white/40">
+                    <thead className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                       <tr>
-                        <th className="w-[34%] px-3 py-3">Registrant</th>
-                        <th className="w-[30%] px-3 py-3">Price</th>
-                        <th className="w-[16%] px-3 py-3">Status</th>
+                        <th className="w-[26%] px-3 py-3">Registrant</th>
+                        <th className="w-[24%] px-3 py-3">Email</th>
+                        <th className="w-[16%] px-3 py-3">Price</th>
+                        <th className="w-[14%] px-3 py-3 text-right">Amount</th>
                         <th className="w-[20%] px-3 py-3">Submitted</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {roster.map((entry) => (
-                        <tr key={entry.id} className="border-b border-white/5">
+                      {visibleRoster.map((entry) => (
+                        <tr
+                          key={entry.id}
+                          className={`border-b border-border ${entry.payment_recovery_required ? "bg-destructive/5" : ""}`}
+                        >
                           <td className="px-3 py-3 align-top">
-                            <span className="block break-words font-medium">
-                              {registrationName(entry)}
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span
+                                className={`inline-flex flex-none items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  entry.payment_recovery_required
+                                    ? "bg-destructive/10 text-destructive"
+                                    : entry.status === "paid"
+                                      ? "bg-success/10 text-success"
+                                      : "bg-warning/10 text-warning"
+                                }`}
+                              >
+                                {entry.payment_recovery_required
+                                  ? "Review"
+                                  : entry.status === "paid"
+                                    ? "Paid"
+                                    : "Refunded"}
+                              </span>
+                              <span className="truncate font-medium">
+                                {registrationName(entry)}
+                              </span>
                             </span>
-                            <span className="mt-0.5 block break-all text-xs text-white/45">
-                              {entry.registrant_email}
-                            </span>
                           </td>
-                          <td className="break-words px-3 py-3 align-top">
-                            {entry.price_label} · {formatRegistrationUsd(
-                              entry.amount_cents,
-                            )}
+                          <td className="truncate px-3 py-3 align-top text-muted-foreground">
+                            {entry.registrant_email}
                           </td>
-                          <td
-                            className={`px-3 py-3 align-top font-semibold ${
-                              entry.payment_recovery_required
-                                ? "text-red-200"
-                                : entry.status === "paid"
-                                  ? "text-emerald-300"
-                                  : "text-amber-200"
-                            }`}
-                          >
-                            {entry.payment_recovery_required
-                              ? "Review"
-                              : entry.status === "paid"
-                                ? "Paid"
-                                : "Refunded"}
+                          <td className="truncate px-3 py-3 align-top text-muted-foreground">
+                            {entry.price_label}
                           </td>
-                          <td className="px-3 py-3 align-top text-white/55">
+                          <td className="px-3 py-3 align-top text-right font-medium tabular-nums">
+                            {formatRegistrationUsd(entry.amount_cents)}
+                          </td>
+                          <td className="px-3 py-3 align-top text-muted-foreground">
                             {new Date(entry.submitted_at).toLocaleDateString()}
                           </td>
                         </tr>
@@ -1430,11 +1790,18 @@ export default function RegistrationsAdminPage() {
                     </tbody>
                   </table>
                 </div>
+                </div>
               </>
             )}
-          </section>
+            </AdminPanel>
+            <p className="text-xs text-muted-foreground">
+              Paid and refunded registrations only. Pending and expired
+              attempts stay out.
+            </p>
+          </div>
         )}
-      </main>
+      </div>
     </div>
+    </AdminPage>
   );
 }

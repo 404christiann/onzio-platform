@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { requireFreshClubSession } from "@/lib/auth-session";
-import { ADMIN_THEME_COOKIE_NAME, resolveAdminTheme } from "@/lib/admin-theme";
+import {
+  ADMIN_THEME_COOKIE_NAME,
+  resolveAdminTheme,
+} from "@/lib/admin-theme";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
 import { createClient } from "@/lib/supabase-server";
