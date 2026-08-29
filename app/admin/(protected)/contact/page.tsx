@@ -4,7 +4,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminPageToolbar,
+  AdminPanel,
+} from "@/components/admin/AdminPage";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import ScaledContactPreview from "@/components/admin/ScaledContactPreview";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +63,7 @@ export default function AdminContactPage() {
   const heroInput = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<ContactDraft>(emptyContactDraft);
   const [loading, setLoading] = useState(true);
+  const showFullLoader = useDelayedLoading(loading, 400);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -222,17 +232,38 @@ export default function AdminContactPage() {
   };
 
   if (loading) {
+    if (showFullLoader) {
+      return <AdminFullPageLoader label="Loading contact content" />;
+    }
     return (
-      <div className="mx-auto max-w-6xl">
-        <div className="rounded-2xl border border-border bg-background p-8 font-body text-sm text-muted-foreground">
-          <AdminLoading label="Loading contact content" />
+      <AdminPage className={isAcademy ? "max-w-7xl" : "max-w-6xl"}>
+        <AdminPageHeader
+          eyebrow="Public website"
+          title="Contact"
+          description="Manage how supporters reach the club and how that information is introduced on the Contact page."
+        />
+        <div
+          className="grid gap-6 lg:grid-cols-2"
+          role="status"
+          aria-label="Loading contact content"
+        >
+          <AdminPanel className="flex flex-col gap-4 p-5 sm:p-7">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-9 w-full rounded-lg" />
+            <Skeleton className="h-9 w-full rounded-lg" />
+          </AdminPanel>
+          <AdminPanel className="flex flex-col gap-4 p-5 sm:p-7">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-9 w-full rounded-lg" />
+            <Skeleton className="h-24 w-full rounded-lg" />
+          </AdminPanel>
         </div>
-      </div>
+      </AdminPage>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <AdminPage className={isAcademy ? "max-w-7xl" : "max-w-6xl"}>
       <AdminSaveFeedback
         saving={saving || uploading}
         saved={saved}
@@ -240,24 +271,15 @@ export default function AdminContactPage() {
         successLabel="Contact content saved"
       />
 
-      <header className="mb-8">
-        <p className="font-display text-xs font-black uppercase tracking-[0.2em] text-brand">
-          Public website
-        </p>
-        <h1
-          className="mt-2 font-display font-black uppercase leading-none text-foreground"
-          style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
-        >
-          Contact
-        </h1>
-        <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-muted-foreground">
-          Manage how supporters reach the club and how that information is introduced on the Contact page.
-        </p>
-      </header>
+      <AdminPageHeader
+        eyebrow="Public website"
+        title="Contact"
+        description="Manage how supporters reach the club and how that information is introduced on the Contact page."
+      />
 
       {error && (
         <div
-          className="mb-6 flex flex-col gap-3 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
           role="alert"
         >
           <p className="font-body text-sm text-destructive">{error}</p>
@@ -273,9 +295,20 @@ export default function AdminContactPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section
-          className="rounded-2xl border border-border bg-background p-5 sm:p-7"
+      <div
+        className={
+          isAcademy
+            ? "grid items-start gap-6 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(320px,380px)]"
+            : "grid gap-6 lg:grid-cols-2"
+        }
+      >
+        {/* Top accent bar flags this panel as canonical/shared club data
+            (same signal as the "Shared club data" pill above), so the
+            higher-risk panel reads as such even at a glance. The
+            page-presentation panel intentionally stays unaccented since it
+            carries no shared-data risk. */}
+        <AdminPanel
+          className="border-t-4 border-t-primary p-5 sm:p-7"
           aria-labelledby="shared-contact-heading"
         >
           <div className="mb-6 border-b border-border pb-5">
@@ -350,7 +383,7 @@ export default function AdminContactPage() {
             </div>
           </div>
 
-          <div className="mt-6 rounded-xl border border-border bg-card p-4">
+          <div className="mt-6 rounded-xl border border-border bg-muted/50 p-4">
             <p className="font-display text-sm font-black uppercase text-foreground">
               Social links are managed in Branding
             </p>
@@ -364,14 +397,14 @@ export default function AdminContactPage() {
               Edit social links
             </Link>
           </div>
-        </section>
+        </AdminPanel>
 
-        <section
-          className="rounded-2xl border border-border bg-background p-5 sm:p-7"
+        <AdminPanel
+          className="p-5 sm:p-7"
           aria-labelledby="contact-page-heading"
         >
           <div className="mb-6 border-b border-border pb-5">
-            <span className="inline-flex rounded-full border border-sky-300/20 bg-sky-300/[0.07] px-3 py-1 font-display text-[0.65rem] font-black uppercase tracking-[0.18em] text-sky-200">
+            <span className="inline-flex rounded-full border border-primary/20 bg-primary/5 px-3 py-1 font-display text-[0.65rem] font-black uppercase tracking-[0.18em] text-primary">
               Contact page only
             </span>
             <h2
@@ -432,8 +465,13 @@ export default function AdminContactPage() {
 
             {!hidesHeroImageField && (
             <div>
-              <span className={ADMIN_LABEL_CLASS}>Hero image</span>
-              <div className="overflow-hidden rounded-xl border border-dashed border-border bg-card">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <span className={`${ADMIN_LABEL_CLASS} mb-0`}>Hero image</span>
+                <span className="inline-flex rounded-full border border-border bg-muted/50 px-2.5 py-0.5 font-display text-[0.6rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  General templates only
+                </span>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-dashed border-border bg-muted/40">
                 {draft.page.heroMediaPreviewUrl ? (
                   <div className="relative aspect-[16/7] w-full border-b border-border">
                     <ResilientImage
@@ -456,7 +494,7 @@ export default function AdminContactPage() {
                     type="button"
                     onClick={() => heroInput.current?.click()}
                     disabled={uploading || saving}
-                    className="rounded-lg border border-border bg-card px-4 py-2.5 font-display text-xs font-black uppercase tracking-[0.15em] text-muted-foreground transition hover:border-foreground/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-lg border border-border bg-background px-4 py-2.5 font-display text-xs font-black uppercase tracking-[0.15em] text-muted-foreground transition hover:border-foreground/25 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {uploading && <AdminLoadingDots className="mr-2" />}
                     {uploading ? "Uploading…" : "Upload hero image"}
@@ -486,25 +524,31 @@ export default function AdminContactPage() {
             </div>
             )}
           </div>
-        </section>
+        </AdminPanel>
+
+        {isAcademy && (
+          <AdminPanel
+            as="aside"
+            className="p-5 sm:p-7 lg:col-span-2 xl:col-span-1 xl:sticky xl:top-24"
+          >
+            <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Contact page preview
+            </p>
+            <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground xl:max-w-none">
+              The real public page, at desktop proportions and scaled to fit,
+              including the changes you have not saved yet.
+            </p>
+            <div className="mt-4 overflow-hidden rounded-xl border border-border">
+              <ScaledContactPreview content={previewContent} clubName={club.name} />
+            </div>
+            <p className="mt-3 font-body text-[0.7rem] leading-5 text-muted-foreground">
+              The preview only renders for academy@1 today — every other template edits this page blind.
+            </p>
+          </AdminPanel>
+        )}
       </div>
 
-      {isAcademy && (
-        <section className="mt-6 rounded-2xl border border-border bg-background p-5 sm:p-7">
-          <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Contact page preview
-          </p>
-          <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
-            The real public page, at desktop proportions and scaled to fit,
-            including the changes you have not saved yet.
-          </p>
-          <div className="mt-4 overflow-hidden rounded-xl border border-border">
-            <ScaledContactPreview content={previewContent} clubName={club.name} />
-          </div>
-        </section>
-      )}
-
-      <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-border bg-background p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <AdminPageToolbar className="sm:p-6">
         <p className="max-w-xl font-body text-xs leading-5 text-muted-foreground">
           Blank optional fields stay hidden on the public site. Saving does not create a contact form or collect supporter data.
         </p>
@@ -517,7 +561,7 @@ export default function AdminContactPage() {
           {saving && <AdminLoadingDots className="mr-2" />}
           {saving ? "Saving…" : "Save contact content"}
         </button>
-      </div>
-    </div>
+      </AdminPageToolbar>
+    </AdminPage>
   );
 }

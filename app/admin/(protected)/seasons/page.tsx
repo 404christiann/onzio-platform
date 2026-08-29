@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminPageToolbar,
+  AdminPanel,
+} from "@/components/admin/AdminPage";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { cn } from "@/lib/utils";
 
-type SeasonDeleteState = { deletable: boolean; reason: string };
+type SeasonDeleteState = { deletable: boolean; reason: string; matchCount: number; statRowCount: number };
 
 function rowHasNonZeroStats(row: Record<string, unknown>): boolean {
   return Object.entries(row).some(([key, value]) =>
@@ -21,7 +29,7 @@ async function getSeasonDeleteState(
   seasonId: string,
 ): Promise<SeasonDeleteState> {
   const [matchesResult, fieldResult, gkResult] = await Promise.all([
-    supabase.from("matches").select("id").eq("season_id", seasonId).limit(1),
+    supabase.from("matches").select("id", { count: "exact", head: true }).eq("season_id", seasonId),
     supabase.from("player_season_stats")
       .select("player_id, season_id, goals, assists, tackles, offsides, fouls, fouls_suffered, starts, yellow, red, mins")
       .eq("season_id", seasonId),
@@ -32,16 +40,18 @@ async function getSeasonDeleteState(
 
   const queryError = matchesResult.error ?? fieldResult.error ?? gkResult.error;
   if (queryError) throw new Error(queryError.message);
-  if ((matchesResult.data ?? []).length > 0) {
-    return { deletable: false, reason: "This season has matches and cannot be deleted." };
+  const matchCount = matchesResult.count ?? 0;
+  const statRowCount = (fieldResult.data ?? []).length + (gkResult.data ?? []).length;
+  if (matchCount > 0) {
+    return { deletable: false, reason: "This season has matches and cannot be deleted.", matchCount, statRowCount };
   }
   if (((fieldResult.data ?? []) as Record<string, unknown>[]).some(rowHasNonZeroStats)) {
-    return { deletable: false, reason: "This season has field player stats and cannot be deleted." };
+    return { deletable: false, reason: "This season has field player stats and cannot be deleted.", matchCount, statRowCount };
   }
   if (((gkResult.data ?? []) as Record<string, unknown>[]).some(rowHasNonZeroStats)) {
-    return { deletable: false, reason: "This season has goalkeeper stats and cannot be deleted." };
+    return { deletable: false, reason: "This season has goalkeeper stats and cannot be deleted.", matchCount, statRowCount };
   }
-  return { deletable: true, reason: "No matches or recorded stats. This season can be deleted." };
+  return { deletable: true, reason: "No matches or recorded stats. This season can be deleted.", matchCount, statRowCount };
 }
 
 export default function SeasonsPage() {
@@ -53,6 +63,7 @@ export default function SeasonsPage() {
   const [saved, setSaved] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showCreateConfirm, setShowCreateConfirm] = useState(false);
+  const showFullLoader = useDelayedLoading(loading, 400);
 
   async function load() {
     const supabase = createClient();
@@ -214,7 +225,7 @@ export default function SeasonsPage() {
     : "";
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <AdminPage className="max-w-4xl">
       <AdminSaveFeedback
         saving={saving}
         saved={saved}
@@ -223,7 +234,7 @@ export default function SeasonsPage() {
       />
       {showCreateConfirm && (
         <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm" style={{ zIndex: 200 }} onClick={() => setShowCreateConfirm(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="create-season-title" className="rounded-2xl p-8 max-w-sm w-full mx-4 border border-border bg-background" onClick={(event) => event.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="create-season-title" className="mx-4 w-full max-w-sm rounded-xl border border-border bg-card p-6 text-card-foreground shadow-xl" onClick={(event) => event.stopPropagation()}>
             <h2 id="create-season-title" className="font-display font-black uppercase text-foreground mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
             <p className="font-body text-sm leading-relaxed mb-1 text-muted-foreground">This will:</p>
             <ul className="font-body text-sm mb-5 space-y-1 text-muted-foreground">
@@ -233,48 +244,43 @@ export default function SeasonsPage() {
             </ul>
             <p className="font-body text-xs mb-6 text-muted-foreground">A new season remains removable until matches or recorded stats are added.</p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground text-xs bg-brand transition-opacity hover:bg-brand/90 disabled:opacity-60 disabled:cursor-not-allowed">{saving && <AdminLoadingDots className="mr-2" />}{saving ? "Creating…" : "Create Season"}</button>
+              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 rounded-lg bg-primary px-5 py-2.5 font-display text-xs font-black uppercase tracking-widest text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">{saving && <AdminLoadingDots className="mr-2" />}{saving ? "Creating…" : "Create Season"}</button>
               <button onClick={() => setShowCreateConfirm(false)} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-xs bg-secondary text-muted-foreground">Cancel</button>
             </div>
           </div>
         </div>
       )}
 
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display font-black uppercase text-foreground leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}>Seasons</h1>
-          <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>Create seasons, choose what is active, and protect historical records.</p>
-        </div>
-        <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground bg-brand transition-opacity hover:bg-brand/90 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "1.1rem" }}>+ Create Next Season</button>
-      </div>
+      <AdminPageHeader
+        title="Seasons"
+        description="Create seasons, choose what is active, and protect historical records."
+        actions={(
+          <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">Create Next Season</button>
+        )}
+      />
 
-      <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-background px-5 py-4">
-        <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{activeSeason?.label ?? "Not set"}</p></div>
-        <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{seasons.length}</p></div>
-      </div>
+      <AdminPageToolbar>
+        <div className="flex flex-row flex-wrap items-center gap-x-8 gap-y-2">
+          <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{activeSeason?.label ?? "Not set"}</p></div>
+          <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{seasons.length}</p></div>
+        </div>
+        <p className="font-body text-xs text-muted-foreground/80 sm:max-w-sm sm:text-right">The active season is what Roster, Schedule, Match Stats and Standings all read. Changing it changes every one of those pages.</p>
+      </AdminPageToolbar>
 
       {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {loading ? (
-        <div role="status" aria-label="Loading seasons" className="flex flex-col gap-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex flex-col gap-2">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-3.5 w-28" />
-              </div>
-              <div className="flex flex-shrink-0 items-center gap-3">
-                <Skeleton className="h-8 w-24 rounded-lg" />
-                <Skeleton className="h-8 w-20 rounded-lg" />
-              </div>
-            </div>
-          ))}
-        </div>
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading seasons" />
+        ) : (
+          <div className="flex flex-col gap-3" role="status" aria-label="Loading seasons">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton key={index} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        )
       ) : seasons.length === 0 ? (
-        <div className="rounded-xl border border-border bg-background px-5 py-6"><p className="font-body text-muted-foreground">No seasons exist yet. Create the first season in Supabase before using this workflow.</p></div>
+        <AdminPanel><p className="font-body text-muted-foreground">No seasons exist yet. Create the first season in Supabase before using this workflow.</p></AdminPanel>
       ) : (
         <div className="flex flex-col gap-3">
           {seasons.map((season) => {
@@ -295,8 +301,15 @@ export default function SeasonsPage() {
                     <p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
                     {season.active && <span className="font-display text-xs tracking-widest uppercase px-3 py-1 rounded-full border border-success/30 bg-success/15 text-success">Active</span>}
                   </div>
-                  <p className="font-body text-sm text-muted-foreground">{season.start_year} – {season.end_year}</p>
-                  {!season.active && deleteState && <p className="font-body text-xs mt-1 text-muted-foreground/80">{deleteState.reason}</p>}
+                  <p className="font-body text-sm text-muted-foreground">
+                    {season.start_year} – {season.end_year}
+                    {deleteState && (
+                      <span className="text-muted-foreground/60"> · {deleteState.matchCount} {deleteState.matchCount === 1 ? "match" : "matches"} · {deleteState.statRowCount} player stat {deleteState.statRowCount === 1 ? "row" : "rows"}</span>
+                    )}
+                  </p>
+                  {!season.active && deleteState && (
+                    <p className={cn("font-body text-xs mt-1", canDelete ? "text-success" : "text-muted-foreground/80")}>{deleteState.reason}</p>
+                  )}
                 </div>
 
                 {!season.active && (
@@ -321,6 +334,6 @@ export default function SeasonsPage() {
           })}
         </div>
       )}
-    </div>
+    </AdminPage>
   );
 }

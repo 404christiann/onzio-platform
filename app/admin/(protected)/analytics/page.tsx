@@ -5,10 +5,25 @@ import { useRouter } from "next/navigation";
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
-import { fetchRoster, fetchPlayerMatchTrend, PlayerMatchTrendPoint } from "@/lib/queries";
-import { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
+import {
+  fetchRoster,
+  fetchPlayerMatchTrend,
+  type PlayerMatchTrendPoint,
+} from "@/lib/queries";
+import type { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import AdminLoading from "@/components/admin/AdminLoading";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminPageToolbar,
+  AdminPanel,
+} from "@/components/admin/AdminPage";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
+import type { AdminTheme } from "@/lib/admin-theme";
 
 Chart.register(...registerables);
 
@@ -17,52 +32,122 @@ Chart.register(...registerables);
 type PositionKey = "All" | "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
 const POSITIONS: PositionKey[] = ["All", "Goalkeeper", "Defender", "Midfielder", "Forward"];
 
-// ── Chart theme ────────────────────────────────
-// Shared chart.js styling for the ComparisonBar and TrendLine charts below.
-// chart.js needs concrete CSS color/font values (it can't consume Tailwind
-// classes), so every colour here is kept in sync manually with the semantic
-// CSS variables in styles/globals.css (`.dark` block); the token each value
-// mirrors is noted inline. All DOM styling on this page uses the token
-// classes directly.
-
-// Existing chart configs set no font family (chart.js default); resolve the
-// admin portal's body font from the DOM so canvas text matches the page.
-const CHART_FONT_FAMILY =
-  typeof document !== "undefined"
-    ? getComputedStyle(document.body).fontFamily || "Arial, sans-serif"
-    : "Arial, sans-serif";
-
-const CHART_THEME = {
-  accent: "hsl(140.5 85.6% 38.2%)", // = `--brand` accent (primary series colour)
-  accentFill: "hsl(140.5 85.6% 38.2% / 0.8)", // = `--brand`; bar fill for the "player" series
-  accentSoft: "hsl(140.5 85.6% 38.2% / 0.09)", // = `--brand`; translucent area fill under the trend line
-  comparison: "hsl(0 0% 98% / 0.1)", // = --foreground @ 10%; "position average" series
-  grid: "hsl(0 0% 98% / 0.06)", // = --foreground @ 6%; horizontal grid lines
-  tick: "hsl(0 0% 98% / 0.4)", // = --foreground @ 40%; axis tick/label colour
-  font: { family: CHART_FONT_FAMILY, size: 10 },
+// Chart.js needs concrete colours rather than Tailwind classes. Resolve the
+// protected wrapper's current semantic tokens whenever the explicit admin
+// theme changes so canvas content stays in lockstep with the DOM presentation.
+type AdminChartTheme = {
+  accent: string;
+  accentFill: string;
+  accentSoft: string;
+  comparison: string;
+  grid: string;
+  tick: string;
+  font: { family: string; size: number };
   tooltip: {
-    backgroundColor: "hsl(0 0% 10%)", // = `.dark` --card
-    borderColor: "hsl(0 0% 22%)", // = `.dark` --border
-    borderWidth: 1,
-    titleColor: "hsl(0 0% 98%)", // = `.dark` --foreground
-    bodyColor: "hsl(0 0% 98% / 0.7)", // = --foreground @ 70%
-  },
+    backgroundColor: string;
+    borderColor: string;
+    borderWidth: number;
+    titleColor: string;
+    bodyColor: string;
+  };
 };
 
-// Shared axis config — charts spread these and layer chart-specific overrides
-// (e.g. tick rotation, step size) on top.
-const CHART_AXES = {
-  x: {
-    ticks: { color: CHART_THEME.tick, font: CHART_THEME.font },
-    grid: { display: false },
-    border: { display: false },
-  },
-  y: {
-    ticks: { color: CHART_THEME.tick, font: CHART_THEME.font },
-    grid: { color: CHART_THEME.grid },
-    border: { display: false },
-  },
-};
+function cssTokenColor(
+  styles: CSSStyleDeclaration,
+  token: string,
+  fallback: string,
+  alpha?: number,
+): string {
+  const value = styles.getPropertyValue(token).trim();
+  if (!value) return fallback;
+  return `hsl(${value}${alpha === undefined ? "" : ` / ${alpha}`})`;
+}
+
+function resolveChartTheme(
+  canvas: HTMLCanvasElement,
+  theme: AdminTheme,
+): AdminChartTheme {
+  const styles = getComputedStyle(canvas);
+  const dark = theme === "dark";
+  return {
+    accent: cssTokenColor(
+      styles,
+      "--primary",
+      dark ? "hsl(230 86% 70%)" : "hsl(231 74% 59%)",
+    ),
+    accentFill: cssTokenColor(
+      styles,
+      "--primary",
+      dark ? "hsl(230 86% 70% / 0.82)" : "hsl(231 74% 59% / 0.82)",
+      0.82,
+    ),
+    accentSoft: cssTokenColor(
+      styles,
+      "--primary",
+      dark ? "hsl(230 86% 70% / 0.12)" : "hsl(231 74% 59% / 0.12)",
+      0.12,
+    ),
+    comparison: cssTokenColor(
+      styles,
+      "--muted-foreground",
+      dark ? "hsl(215 16% 65% / 0.22)" : "hsl(220 9% 46% / 0.22)",
+      0.22,
+    ),
+    grid: cssTokenColor(
+      styles,
+      "--border",
+      dark ? "hsl(217 20% 23% / 0.75)" : "hsl(220 18% 88% / 0.75)",
+      0.75,
+    ),
+    tick: cssTokenColor(
+      styles,
+      "--muted-foreground",
+      dark ? "hsl(215 16% 65%)" : "hsl(220 9% 46%)",
+    ),
+    font: {
+      family: styles.fontFamily || "Arial, sans-serif",
+      size: 11,
+    },
+    tooltip: {
+      backgroundColor: cssTokenColor(
+        styles,
+        "--card",
+        dark ? "hsl(222 35% 11%)" : "hsl(0 0% 100%)",
+      ),
+      borderColor: cssTokenColor(
+        styles,
+        "--border",
+        dark ? "hsl(217 20% 23%)" : "hsl(220 18% 88%)",
+      ),
+      borderWidth: 1,
+      titleColor: cssTokenColor(
+        styles,
+        "--card-foreground",
+        dark ? "hsl(210 40% 98%)" : "hsl(222 47% 11%)",
+      ),
+      bodyColor: cssTokenColor(
+        styles,
+        "--muted-foreground",
+        dark ? "hsl(215 16% 65%)" : "hsl(220 9% 46%)",
+      ),
+    },
+  };
+}
+
+function chartAxes(theme: AdminChartTheme) {
+  return {
+    x: {
+      ticks: { color: theme.tick, font: theme.font },
+      grid: { display: false },
+      border: { display: false },
+    },
+    y: {
+      ticks: { color: theme.tick, font: theme.font },
+      grid: { color: theme.grid },
+      border: { display: false },
+    },
+  };
+}
 
 // ── Helpers ────────────────────────────────────
 
@@ -84,6 +169,24 @@ function avgRaw(nums: number[]) {
   return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
 
+// KPI delta strings aren't a typed +/- value -- they're phrases like
+// "+2 vs avg", "Avg: 4", "3 starts", "Team high", or "—". Classify the
+// phrasing itself so the color reflects the same comparison the text
+// already communicates, without changing any KPI value or copy.
+type DeltaTone = "positive" | "negative" | "neutral";
+
+function deltaTone(delta: string): DeltaTone {
+  if (delta.startsWith("+") || delta === "Team high") return "positive";
+  if (delta.startsWith("Avg:")) return "negative";
+  return "neutral";
+}
+
+const DELTA_TONE_CLASSES: Record<DeltaTone, string> = {
+  positive: "text-success",
+  negative: "text-warning",
+  neutral: "text-muted-foreground",
+};
+
 // ── Main page ──────────────────────────────────
 
 export default function AnalyticsPage() {
@@ -98,172 +201,269 @@ export default function AnalyticsPage() {
     if (isEditorialTemplate) router.replace("/admin");
   }, [isEditorialTemplate, router]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-  const [seasonLabel, setSeasonLabel] = useState("2025–26");
+  const [seasonLabel, setSeasonLabel] = useState("");
   const [loading, setLoading] = useState(true);
+  const showFullLoader = useDelayedLoading(loading, 400);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [posFilter, setPosFilter] = useState<PositionKey>("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchRoster(undefined, clubId).then(({ goalkeepers, defenders, midfielders, forwards, seasonLabel: sl }) => {
-      const all = [...goalkeepers, ...defenders, ...midfielders, ...forwards];
-      setAllPlayers(all);
-      setSeasonLabel(sl);
-      if (all.length > 0) setSelectedId(all[0].id ?? null);
-      setLoading(false);
-    });
-  }, [clubId]);
+    if (isEditorialTemplate) return;
+    let active = true;
+    setLoading(true);
+    setLoadError(null);
+    fetchRoster(undefined, clubId)
+      .then(
+        ({
+          goalkeepers,
+          defenders,
+          midfielders,
+          forwards,
+          seasonLabel: nextSeasonLabel,
+        }) => {
+          if (!active) return;
+          const all = [
+            ...goalkeepers,
+            ...defenders,
+            ...midfielders,
+            ...forwards,
+          ];
+          setAllPlayers(all);
+          setSeasonLabel(nextSeasonLabel);
+          setSelectedId(all[0]?.id ?? null);
+          setLoading(false);
+        },
+      )
+      .catch(() => {
+        if (!active) return;
+        setAllPlayers([]);
+        setSelectedId(null);
+        setLoadError("Player analytics could not be loaded.");
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [clubId, isEditorialTemplate, loadAttempt]);
 
   const filtered = useMemo(() => {
     if (posFilter === "All") return allPlayers;
     return allPlayers.filter((p) => p.position === posFilter);
   }, [allPlayers, posFilter]);
 
-  // Auto-select first player when filter changes
   useEffect(() => {
-    if (filtered.length > 0) setSelectedId(filtered[0].id ?? null);
-  }, [posFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!filtered.some((candidate) => candidate.id === selectedId)) {
+      setSelectedId(filtered[0]?.id ?? null);
+    }
+  }, [filtered, selectedId]);
 
   const player = filtered.find((p) => p.id === selectedId) ?? filtered[0] ?? null;
 
   if (isEditorialTemplate) return null;
 
   if (loading) {
+    if (showFullLoader) {
+      return <AdminFullPageLoader label="Loading analytics" />;
+    }
     return (
-      <div className="flex items-center justify-center h-64">
-        <AdminLoading label="Loading analytics" className="font-display text-sm tracking-widest uppercase" />
-      </div>
+      <AdminPage>
+        <AdminPageHeader
+          eyebrow="Performance"
+          title="Analytics"
+          description="Player performance, peer comparisons, and match trends."
+        />
+        <div
+          className="grid min-w-0 items-start gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]"
+          role="status"
+          aria-label="Loading analytics"
+        >
+          <AdminPanel as="aside" className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+          </AdminPanel>
+          <AdminPanel className="flex flex-col gap-4">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-64 w-full rounded-lg" />
+          </AdminPanel>
+        </div>
+      </AdminPage>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AdminPage>
+        <AdminPageHeader
+          eyebrow="Performance"
+          title="Analytics"
+          description="Player performance, peer comparisons, and match trends."
+        />
+        <AdminPanel className="flex min-h-64 flex-col items-center justify-center text-center">
+          <h2 className="text-base font-semibold text-foreground">
+            Analytics unavailable
+          </h2>
+          <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            {loadError} Check the connection and try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+            className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+          >
+            Try again
+          </button>
+        </AdminPanel>
+      </AdminPage>
     );
   }
 
   if (!allPlayers.length) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
-          No players found.
-        </p>
-      </div>
+      <AdminPage>
+        <AdminPageHeader
+          eyebrow="Performance"
+          title="Analytics"
+          description={
+            seasonLabel
+              ? `${seasonLabel} season · Player performance and match trends.`
+              : "Player performance and match trends."
+          }
+        />
+        <AdminPanel className="flex min-h-64 flex-col items-center justify-center text-center">
+          <h2 className="text-base font-semibold text-foreground">
+            No players found
+          </h2>
+          <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            Add active players to the roster to begin comparing season
+            performance.
+          </p>
+        </AdminPanel>
+      </AdminPage>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1
-          className="font-display font-black uppercase text-foreground leading-none"
-          style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
+    <AdminPage>
+      <AdminPageHeader
+        eyebrow="Performance"
+        title="Analytics"
+        description={`${seasonLabel} season · Compare player output, position benchmarks, and recent match trends.`}
+      />
+
+      <AdminPageToolbar>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Position group</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Narrow the roster without changing the season comparison.
+          </p>
+        </div>
+        <div
+          className="flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-muted/60 p-1"
+          role="group"
+          aria-label="Filter players by position"
         >
-          Analytics
-        </h1>
-        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          {seasonLabel} · Player performance dashboard
-        </p>
-      </div>
+          {POSITIONS.map((position) => (
+            <button
+              key={position}
+              type="button"
+              onClick={() => setPosFilter(position)}
+              aria-pressed={posFilter === position}
+              className={`min-h-9 flex-none rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none ${
+                posFilter === position
+                  ? "bg-card text-primary shadow-sm"
+                  : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
+              }`}
+            >
+              {position}
+            </button>
+          ))}
+        </div>
+      </AdminPageToolbar>
 
-      {/* Position filter tabs — old style, full names */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        {POSITIONS.map((pos) => (
-          <button
-            key={pos}
-            onClick={() => setPosFilter(pos)}
-            className={`font-display font-black uppercase tracking-widest px-5 py-2.5 rounded-lg border transition-all duration-150 ${
-              posFilter === pos
-                ? "border-brand bg-brand text-brand-foreground"
-                : "border-border bg-card text-muted-foreground"
-            }`}
-            style={{ fontSize: "0.9rem" }}
-          >
-            {pos}
-          </button>
-        ))}
-      </div>
-
-      {/* Responsive layout: stacked on mobile, sidebar+main on desktop */}
-      <div className="flex flex-col lg:flex-row gap-5" style={{ alignItems: "start" }}>
-
-        {/* Player list — horizontal scroll on mobile, vertical sidebar on desktop */}
-        <div className="w-full lg:w-52 flex-shrink-0">
-          {/* Mobile: horizontal scrollable strip */}
-          <div className="flex lg:hidden overflow-x-auto gap-2 pb-2" style={{ WebkitOverflowScrolling: "touch" }}>
-            {filtered.map((p) => {
-              const active = p.id === selectedId;
-              return (
-                <button
-                  key={p.id ?? p.name}
-                  onClick={() => p.id && setSelectedId(p.id)}
-                  className={`flex-shrink-0 flex flex-col items-center gap-1 rounded-xl border transition-all duration-150 ${
-                    active
-                      ? "border-brand/30 bg-brand/10"
-                      : "border-border bg-card"
-                  }`}
-                  style={{ padding: "10px 14px", minWidth: 72 }}
-                >
-                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-brand" : "border-transparent"}`} style={{ width: 48, height: 48 }}>
-                    {p.image ? (
-                      <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
-                    ) : (
-                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
-                        {initials(p.name)}
-                      </div>
-                    )}
-                  </div>
-                  <span
-                    className={`font-display font-black uppercase ${active ? "text-foreground" : "text-muted-foreground"}`}
-                    style={{ fontSize: "0.55rem", letterSpacing: "0.05em", whiteSpace: "nowrap" }}
-                  >
-                    #{p.number}
-                  </span>
-                </button>
-              );
-            })}
+      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
+        <AdminPanel as="aside" className="xl:sticky xl:top-24">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Players</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {filtered.length} in this view
+              </p>
+            </div>
+            <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+              {posFilter}
+            </span>
           </div>
 
-          {/* Desktop: vertical pill list */}
-          <div className="hidden lg:flex flex-col gap-1.5">
+          {filtered.length > 0 ? (
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 xl:mx-0 xl:max-h-[calc(100svh-16rem)] xl:flex-col xl:overflow-x-visible xl:overflow-y-auto xl:px-0 xl:pb-0">
             {filtered.map((p) => {
               const active = p.id === selectedId;
               return (
                 <button
                   key={p.id ?? p.name}
+                  type="button"
                   onClick={() => p.id && setSelectedId(p.id)}
-                  className={`flex items-center gap-3 w-full text-left rounded-xl border transition-all duration-150 ${
+                  aria-pressed={active}
+                  className={`flex min-h-14 w-44 flex-none items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none xl:w-full ${
                     active
-                      ? "border-brand/30 bg-brand/10"
-                      : "border-border bg-transparent"
+                      ? "border-primary/40 bg-primary/10"
+                      : "border-transparent bg-transparent hover:border-border hover:bg-accent"
                   }`}
-                  style={{ padding: "10px 12px" }}
                 >
-                  <div className={`rounded-full overflow-hidden flex-shrink-0 border-2 ${active ? "border-brand" : "border-border"}`} style={{ width: 48, height: 48 }}>
+                  <div
+                    className={`h-10 w-10 flex-none overflow-hidden rounded-full border ${
+                      active ? "border-primary" : "border-border"
+                    }`}
+                  >
                     {p.image ? (
-                      <ResilientNativeImage src={p.image} alt={p.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+                      <ResilientNativeImage
+                        src={p.image}
+                        alt={p.name}
+                        fallbackVariant="person"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          objectPosition: "top",
+                        }}
+                      />
                     ) : (
-                      <div className={`w-full h-full flex items-center justify-center font-display font-black ${active ? "bg-brand text-brand-foreground" : "bg-muted text-muted-foreground"}`} style={{ fontSize: "0.75rem" }}>
+                      <div
+                        className={`flex h-full w-full items-center justify-center text-xs font-semibold ${
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
                         {initials(p.name)}
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`font-display font-black uppercase truncate leading-none ${active ? "text-foreground" : "text-muted-foreground"}`}
-                      style={{ fontSize: "0.9rem" }}
-                    >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-foreground">
                       {p.name}
                     </p>
-                    <p
-                      className={`font-display mt-0.5 ${active ? "text-brand" : "text-muted-foreground"}`}
-                      style={{ fontSize: "0.6rem", letterSpacing: "0.06em" }}
-                    >
-                      #{p.number} · {p.position.slice(0, 3).toUpperCase()}
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                      #{p.number} · {p.position}
                     </p>
                   </div>
                 </button>
               );
             })}
           </div>
-        </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm leading-6 text-muted-foreground">
+              No {posFilter.toLowerCase()} players are available for this
+              season.
+            </p>
+          )}
+        </AdminPanel>
 
-        {/* Main dashboard */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           {player ? (
             <PlayerDashboard
               key={player.id ?? player.name}
@@ -273,16 +473,15 @@ export default function AnalyticsPage() {
               clubId={clubId}
             />
           ) : (
-            <div className="flex items-center justify-center h-64">
-              <p className="font-display text-sm tracking-widest uppercase text-muted-foreground">
-                Select a player
+            <AdminPanel className="flex min-h-64 items-center justify-center text-center">
+              <p className="text-sm leading-6 text-muted-foreground">
+                Choose a position group with players to view analytics.
               </p>
-            </div>
+            </AdminPanel>
           )}
         </div>
-
       </div>
-    </div>
+    </AdminPage>
   );
 }
 
@@ -340,7 +539,7 @@ function PlayerDashboard({
         { label: "Minutes", value: s.mins,     delta: `${Math.round((s.starts / Math.max(...allPlayers.map((p) => p.stats.starts), 1)) * 100)}% availability` },
       ];
     }
-  }, [player, allPlayers, gk, stats]);
+  }, [allPlayers, gk, stats]);
 
   // ── Radar ──────────────────────────────────────
   const radarData = useMemo(() => {
@@ -386,7 +585,7 @@ function PlayerDashboard({
         ],
       };
     }
-  }, [player, allPlayers, gk, stats]);
+  }, [allPlayers, gk, stats]);
 
   // ── Comparison bar ─────────────────────────────
   const comparisonData = useMemo(() => {
@@ -407,118 +606,139 @@ function PlayerDashboard({
         posAvg: [avg(peers.map((p) => p.goals)), avg(peers.map((p) => p.assists)), avg(peers.map((p) => p.tackles)), avg(peers.map((p) => p.starts))],
       };
     }
-  }, [player, allPlayers, gk, stats]);
+  }, [allPlayers, gk, stats]);
 
   const disciplineScore = Math.max(0, 100 - stats.yellow * 15 - stats.red * 30);
 
   return (
-    <div className="flex flex-col gap-4">
-
-      {/* Player header */}
-      <div className="flex items-center gap-4 rounded-xl border border-border bg-background px-5 py-4">
-        <div className="rounded-xl overflow-hidden flex-shrink-0 border-2 border-brand" style={{ width: 96, height: 96 }}>
+    <div className="flex min-w-0 flex-col gap-5">
+      <AdminPanel className="flex items-center gap-4 sm:gap-5">
+        <div className="h-16 w-16 flex-none overflow-hidden rounded-xl border border-primary/30 bg-primary/10 sm:h-20 sm:w-20">
           {player.image ? (
-            <ResilientNativeImage src={player.image} alt={player.name} fallbackVariant="person" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top" }} />
+            <ResilientNativeImage
+              src={player.image}
+              alt={player.name}
+              fallbackVariant="person"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "top",
+              }}
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center font-display font-black bg-brand text-brand-foreground" style={{ fontSize: "1.5rem" }}>
+            <div className="flex h-full w-full items-center justify-center bg-primary text-lg font-semibold text-primary-foreground">
               {initials(player.name)}
             </div>
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-display font-black uppercase text-foreground" style={{ fontSize: "1.6rem", lineHeight: 1.1 }}>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             {player.name}
           </p>
-          <p className="font-display tracking-widest uppercase mt-1 text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-            {player.position} · #{player.number} · {seasonLabel}
+          <p className="mt-1 text-sm text-muted-foreground">
+            {player.position} · {seasonLabel} season
           </p>
         </div>
-        <span
-          className="font-display font-black select-none flex-shrink-0 text-foreground/5"
-          style={{ fontSize: "3.5rem", lineHeight: 1 }}
-        >
-          {player.number}
+        <span className="flex-none rounded-lg border border-border bg-muted/70 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-foreground">
+          #{player.number}
         </span>
-      </div>
+      </AdminPanel>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
-          <div
-            key={k.label}
-            className="rounded-xl border border-border bg-background px-4 py-4 text-center"
-          >
-            <p className="font-display font-black text-foreground" style={{ fontSize: "2rem", lineHeight: 1 }}>
+          <AdminPanel key={k.label} className="p-4 sm:p-5">
+            <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-foreground">
               {k.value.toLocaleString()}
             </p>
-            <p className="font-display text-xs tracking-widest uppercase mt-1 text-muted-foreground">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
               {k.label}
             </p>
-            <p className="font-body text-xs mt-2 text-destructive">
+            <p className={`mt-2 text-xs leading-5 ${DELTA_TONE_CLASSES[deltaTone(k.delta)]}`}>
               {k.delta}
             </p>
-          </div>
+          </AdminPanel>
         ))}
       </div>
 
-      {/* Radar + bar chart */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <RadarCard labels={radarData.labels} playerVals={radarData.player} avgVals={radarData.posAvg} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <RadarCard
+          labels={radarData.labels}
+          playerVals={radarData.player}
+          avgVals={radarData.posAvg}
+        />
         <ComparisonBar data={comparisonData} />
       </div>
 
-      {/* Trend line */}
       <TrendLine data={trend} loading={trendLoading} gk={gk} />
 
-      {/* Discipline */}
-      <div className="rounded-xl border border-border bg-background px-5 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
-            Discipline
-          </p>
+      <AdminPanel>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Discipline</h2>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Season card record and availability score.
+            </p>
+          </div>
           <span
-            className={`font-display font-black uppercase tracking-widest rounded-full ${
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
               disciplineScore >= 85
                 ? "bg-success/15 text-success"
                 : disciplineScore >= 60
                   ? "bg-warning/15 text-warning"
                   : "bg-destructive/15 text-destructive"
             }`}
-            style={{ fontSize: "0.6rem", padding: "3px 10px" }}
           >
-            {disciplineScore >= 85 ? "Clean" : disciplineScore >= 60 ? "Caution" : "High Risk"} · {disciplineScore}/100
+            {disciplineScore >= 85
+              ? "Clean"
+              : disciplineScore >= 60
+                ? "Caution"
+                : "High risk"}{" "}
+            · {disciplineScore}/100
           </span>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="bg-warning" style={{ width: 12, height: 12, borderRadius: 2, display: "inline-block", flexShrink: 0 }} />
-            <span className="font-display font-black text-foreground" style={{ fontSize: "1.4rem", lineHeight: 1 }}>{stats.yellow}</span>
-            <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", marginLeft: 2 }}>Yellow</span>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-center">
+          <div className="flex items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
+            <span className="h-3 w-2.5 flex-none rounded-[2px] bg-warning" />
+            <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+              {stats.yellow}
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">Yellow</span>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Literal red-card swatch — a real red card, not a brand accent,
-                so this deliberately stays on `destructive` alongside the
-                yellow-card swatch above it. */}
-            <span className="bg-destructive" style={{ width: 12, height: 12, borderRadius: 2, display: "inline-block", flexShrink: 0 }} />
-            <span className="font-display font-black text-foreground" style={{ fontSize: "1.4rem", lineHeight: 1 }}>{stats.red}</span>
-            <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.08em", textTransform: "uppercase", marginLeft: 2 }}>Red</span>
+          <div className="flex items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
+            <span className="h-3 w-2.5 flex-none rounded-[2px] bg-destructive" />
+            <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+              {stats.red}
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">Red</span>
           </div>
-          <div className="flex-1">
-            <div className="bg-muted" style={{ height: 4, borderRadius: 2, overflow: "hidden" }}>
+          <div>
+            <div
+              className="h-2 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-label="Discipline score"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={disciplineScore}
+            >
               <div
                 className={
-                  disciplineScore >= 85 ? "bg-success" : disciplineScore >= 60 ? "bg-warning" : "bg-destructive"
+                  disciplineScore >= 85
+                    ? "h-full rounded-full bg-success transition-[width] duration-300 motion-reduce:transition-none"
+                    : disciplineScore >= 60
+                      ? "h-full rounded-full bg-warning transition-[width] duration-300 motion-reduce:transition-none"
+                      : "h-full rounded-full bg-destructive transition-[width] duration-300 motion-reduce:transition-none"
                 }
-                style={{
-                  width: `${disciplineScore}%`, height: "100%", borderRadius: 2,
-                  transition: "width 0.4s ease",
-                }}
+                style={{ width: `${disciplineScore}%` }}
               />
             </div>
+            <p className="mt-2 text-right text-xs text-muted-foreground">
+              {disciplineScore}% discipline score
+            </p>
           </div>
         </div>
-      </div>
-
+      </AdminPanel>
     </div>
   );
 }
@@ -544,25 +764,33 @@ function RadarCard({
     vals.map((v, i) => pt(i, Math.max(v, 2) / 100).join(",")).join(" ");
 
   return (
-    <div className="rounded-xl border border-border bg-background p-5">
-      <div className="flex items-center justify-between mb-4">
-        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
-          Player profile
-        </p>
+    <AdminPanel>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Player profile</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Relative strength across five season measures.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            <span className="bg-muted-foreground/50" style={{ width: 18, height: 1.5, display: "inline-block", borderRadius: 1 }} />
-            Pos avg
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="h-px w-4 bg-muted-foreground/50" />
+            Position avg
           </span>
-          <span className="flex items-center gap-1.5 text-brand" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            <span className="bg-brand" style={{ width: 18, height: 2, display: "inline-block", borderRadius: 1 }} />
+          <span className="flex items-center gap-1.5 text-xs text-primary">
+            <span className="h-0.5 w-4 bg-primary" />
             Player
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <svg viewBox="-10 -10 240 240" width="170" height="170" role="img" aria-label="Radar chart showing player profile vs position average">
+      <div className="flex min-w-0 flex-col gap-5">
+        <svg
+          viewBox="-10 -10 240 240"
+          role="img"
+          aria-label="Radar chart showing player profile vs position average"
+          className="mx-auto h-auto w-full max-w-60"
+        >
           {[0.25, 0.5, 0.75, 1].map((s) => (
             <polygon key={s} points={labels.map((_, i) => pt(i, s).join(",")).join(" ")} className="fill-none stroke-border" strokeWidth="0.5" />
           ))}
@@ -570,11 +798,11 @@ function RadarCard({
             const [x, y] = pt(i, 1);
             return <line key={i} x1={cx} y1={cy} x2={x} y2={y} className="stroke-border" strokeWidth="0.5" />;
           })}
-          <polygon points={poly(avgVals)} className="fill-card stroke-muted-foreground/50" strokeWidth="1.5" strokeDasharray="4,3" />
-          <polygon points={poly(playerVals)} className="fill-brand/15 stroke-brand" strokeWidth="2" />
+          <polygon points={poly(avgVals)} className="fill-muted/40 stroke-muted-foreground/50" strokeWidth="1.5" strokeDasharray="4,3" />
+          <polygon points={poly(playerVals)} className="fill-primary/15 stroke-primary" strokeWidth="2" />
           {playerVals.map((v, i) => {
             const [x, y] = pt(i, Math.max(v, 2) / 100);
-            return <circle key={i} cx={x} cy={y} r="3.5" className="fill-brand" />;
+            return <circle key={i} cx={x} cy={y} r="3.5" className="fill-primary" />;
           })}
           {labels.map((l, i) => {
             const [x, y] = pt(i, 1.36);
@@ -586,24 +814,37 @@ function RadarCard({
           })}
         </svg>
 
-        <div className="flex flex-col gap-2.5 flex-1">
+        <div className="flex min-w-0 flex-col gap-3">
           {labels.map((l, i) => (
-            <div key={l} className="flex items-center gap-2">
-              <span className="text-muted-foreground" style={{ fontSize: "0.58rem", letterSpacing: "0.08em", textTransform: "uppercase", width: 60, flexShrink: 0 }}>
+            <div
+              key={l}
+              className="flex min-w-0 items-center gap-2"
+              aria-label={`${l}: player ${playerVals[i]}, position average ${avgVals[i]}`}
+            >
+              <span className="w-20 flex-none truncate text-xs text-muted-foreground">
                 {l}
               </span>
-              <div className="bg-muted" style={{ flex: 1, height: 3, borderRadius: 2, overflow: "visible", position: "relative" }}>
-                <div className="bg-muted-foreground/50" style={{ position: "absolute", top: -1, bottom: -1, left: `${avgVals[i]}%`, width: 2, transform: "translateX(-50%)", borderRadius: 1 }} />
-                <div className="bg-brand" style={{ width: `${playerVals[i]}%`, height: "100%", borderRadius: 2 }} />
+              <div className="relative h-1.5 min-w-0 flex-1 rounded-full bg-muted">
+                <div
+                  className="absolute -bottom-0.5 -top-0.5 w-0.5 -translate-x-1/2 rounded-full bg-muted-foreground/60"
+                  style={{ left: `${avgVals[i]}%` }}
+                />
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${playerVals[i]}%` }}
+                />
               </div>
-              <span className="font-display font-black text-foreground" style={{ fontSize: "0.68rem", width: 24, textAlign: "right", flexShrink: 0 }}>
+              <span className="w-14 flex-none text-right font-mono text-xs font-semibold tabular-nums text-foreground">
                 {playerVals[i]}
+                <span className="font-normal text-muted-foreground">
+                  /{avgVals[i]}
+                </span>
               </span>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </AdminPanel>
   );
 }
 
@@ -612,53 +853,87 @@ function RadarCard({
 function ComparisonBar({ data }: { data: { labels: string[]; player: number[]; posAvg: number[] } }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef  = useRef<Chart | null>(null);
+  const { theme } = useAdminTheme();
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    if (chartRef.current) chartRef.current.destroy();
-    chartRef.current = new Chart(canvasRef.current, {
+    chartRef.current?.destroy();
+    chartRef.current = null;
+    const chartTheme = resolveChartTheme(canvasRef.current, theme);
+    const axes = chartAxes(chartTheme);
+    const chart = new Chart(canvasRef.current, {
       type: "bar",
       data: {
         labels: data.labels,
         datasets: [
-          { label: "Player",   data: data.player, backgroundColor: CHART_THEME.accentFill, borderRadius: 4, barPercentage: 0.55 },
-          { label: "Pos. avg", data: data.posAvg, backgroundColor: CHART_THEME.comparison, borderRadius: 4, barPercentage: 0.55 },
+          {
+            label: "Player",
+            data: data.player,
+            backgroundColor: chartTheme.accentFill,
+            borderRadius: 5,
+            barPercentage: 0.58,
+          },
+          {
+            label: "Pos. avg",
+            data: data.posAvg,
+            backgroundColor: chartTheme.comparison,
+            borderRadius: 5,
+            barPercentage: 0.58,
+          },
         ],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { ...CHART_THEME.tooltip } },
+        plugins: {
+          legend: { display: false },
+          tooltip: { ...chartTheme.tooltip },
+        },
         scales: {
-          x: { ...CHART_AXES.x },
-          y: { ...CHART_AXES.y },
+          x: { ...axes.x },
+          y: { ...axes.y, beginAtZero: true },
         },
       },
     });
-    return () => { chartRef.current?.destroy(); };
-  }, [data]);
+    chartRef.current = chart;
+    return () => {
+      chart.destroy();
+      if (chartRef.current === chart) chartRef.current = null;
+    };
+  }, [data, theme]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
-          vs position average
-        </p>
+    <AdminPanel>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">
+            Position comparison
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Player output against the position average.
+          </p>
+        </div>
         <div className="flex gap-3">
-          {[{ label: "Player", swatchClass: "bg-brand/80" }, { label: "Pos avg", swatchClass: "bg-muted-foreground/30" }].map((l) => (
-            <span key={l.label} className="flex items-center gap-1.5 text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              <span className={l.swatchClass} style={{ width: 8, height: 8, borderRadius: 2, display: "inline-block" }} />
-              {l.label}
+          {[
+            { label: "Player", swatchClass: "bg-primary/80" },
+            { label: "Position avg", swatchClass: "bg-muted-foreground/25" },
+          ].map((legend) => (
+            <span
+              key={legend.label}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
+              <span className={`h-2 w-2 rounded-sm ${legend.swatchClass}`} />
+              {legend.label}
             </span>
           ))}
         </div>
       </div>
-      <div style={{ position: "relative", height: 175 }}>
+      <div className="relative h-56">
         <canvas ref={canvasRef} role="img" aria-label="Bar chart comparing player stats vs position average">
           Player vs position average comparison.
         </canvas>
       </div>
-    </div>
+    </AdminPanel>
   );
 }
 
@@ -676,23 +951,27 @@ function TrendLine({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const chartRef  = useRef<Chart | null>(null);
   const metric    = gk ? "Saves" : "G+A";
+  const { theme } = useAdminTheme();
 
   useEffect(() => {
     if (loading || data.length < 2 || !canvasRef.current) return;
-    if (chartRef.current) chartRef.current.destroy();
-    chartRef.current = new Chart(canvasRef.current, {
+    chartRef.current?.destroy();
+    chartRef.current = null;
+    const chartTheme = resolveChartTheme(canvasRef.current, theme);
+    const axes = chartAxes(chartTheme);
+    const chart = new Chart(canvasRef.current, {
       type: "line",
       data: {
         labels: data.map((d) => d.opponent),
         datasets: [{
           label: metric,
           data: data.map((d) => d.value),
-          borderColor: CHART_THEME.accent,
-          backgroundColor: CHART_THEME.accentSoft,
-          pointBackgroundColor: CHART_THEME.accent,
+          borderColor: chartTheme.accent,
+          backgroundColor: chartTheme.accentSoft,
+          pointBackgroundColor: chartTheme.accent,
           pointRadius: 4,
           pointHoverRadius: 6,
-          tension: 0.4,
+          tension: 0.35,
           fill: true,
           borderWidth: 2,
         }],
@@ -703,7 +982,7 @@ function TrendLine({
         plugins: {
           legend: { display: false },
           tooltip: {
-            ...CHART_THEME.tooltip,
+            ...chartTheme.tooltip,
             callbacks: {
               title: (items) => data[items[0].dataIndex]?.opponent ?? "",
               label: (ctx)   => ` ${metric}: ${ctx.parsed.y}  ·  ${data[ctx.dataIndex]?.mins ?? 0} min`,
@@ -711,35 +990,46 @@ function TrendLine({
           },
         },
         scales: {
-          x: { ...CHART_AXES.x, ticks: { ...CHART_AXES.x.ticks, maxRotation: 30 } },
-          y: { ...CHART_AXES.y, min: 0, ticks: { ...CHART_AXES.y.ticks, stepSize: 1 } },
+          x: { ...axes.x, ticks: { ...axes.x.ticks, maxRotation: 30 } },
+          y: { ...axes.y, min: 0, ticks: { ...axes.y.ticks, stepSize: 1 } },
         },
       },
     });
-    return () => { chartRef.current?.destroy(); };
-  }, [data, loading, metric]);
+    chartRef.current = chart;
+    return () => {
+      chart.destroy();
+      if (chartRef.current === chart) chartRef.current = null;
+    };
+  }, [data, loading, metric, theme]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
-          {gk ? "Saves per match" : "Goal contributions per match"}
-        </p>
+    <AdminPanel>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">
+            {gk ? "Saves per match" : "Goal contributions per match"}
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Recent match-by-match output.
+          </p>
+        </div>
         {data.length > 0 && !loading && (
-          <span className="text-muted-foreground" style={{ fontSize: "0.6rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
             {data.length} match{data.length !== 1 ? "es" : ""}
           </span>
         )}
       </div>
-      <div style={{ position: "relative", height: 130 }}>
+      <div className="relative h-48">
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <AdminLoading className="font-display text-xs tracking-widest uppercase" />
+            <AdminLoading label="Loading match trends" className="text-xs" />
           </div>
         ) : data.length < 2 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="font-display text-xs tracking-widest uppercase text-muted-foreground">
-              {data.length === 0 ? "No match data yet" : "Need 2+ matches for trend"}
+            <p className="text-sm text-muted-foreground">
+              {data.length === 0
+                ? "No match data yet"
+                : "Two matches are needed to show a trend."}
             </p>
           </div>
         ) : (
@@ -748,6 +1038,6 @@ function TrendLine({
           </canvas>
         )}
       </div>
-    </div>
+    </AdminPanel>
   );
 }

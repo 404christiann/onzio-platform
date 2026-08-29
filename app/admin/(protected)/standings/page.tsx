@@ -4,8 +4,11 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
@@ -18,10 +21,13 @@ import { fetchLeagueStandings } from "@/lib/queries";
 import {
   DEFAULT_STANDINGS_SETTINGS,
   normalizeStandingsRows,
+  sortStandingsRows,
   teamAbbreviation,
 } from "@/lib/standings-content";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { createClient } from "@/lib/admin-client";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import { cn } from "@/lib/utils";
 
 type DraftRow = DBLeagueStandingRow & {
   isNew?: boolean;
@@ -32,6 +38,17 @@ const fieldClass =
 
 const statLabelClass =
   "font-display text-[0.62rem] font-bold uppercase tracking-widest text-muted-foreground";
+
+// Small uppercase eyebrow label used for the "Teams" / "Homepage preview"
+// panel headers — matches the tracked-caps convention used across the other
+// admin pages (roster, schedule, tryouts, ...).
+const eyebrowLabelClass =
+  "font-display text-xs font-black uppercase tracking-widest text-muted-foreground";
+
+// Sentence-case panel title used for "Table heading" / "Two rules worth
+// knowing" — distinct from the tracked-caps eyebrow above, matching the
+// mockup's own distinction between the two label styles.
+const panelTitleClass = "font-display text-sm font-bold text-foreground";
 
 function createDraftRow(index: number): DraftRow {
   return {
@@ -85,6 +102,7 @@ export default function AdminStandingsPage() {
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadIndexRef = useRef<number | null>(null);
+  const showFullLoader = useDelayedLoading(loading, 400);
 
   useEffect(() => {
     setLoading(true);
@@ -300,6 +318,24 @@ export default function AdminStandingsPage() {
     }
   }
 
+  // Display-only rank lookup: sortStandingsRows never mutates its input, and
+  // the result here is only used to look up each row's rank by id. The
+  // editable `rows` array itself keeps its as-entered order — the public
+  // standings components independently call sortStandingsRows before
+  // rendering, so the editor's row order must never drive public order.
+  const standingsRank = new Map(
+    sortStandingsRows(rows).map((row, index) => [row.id, index + 1]),
+  );
+
+  // "N teams · M new rows" panel-header copy, mirroring the mockup's
+  // "3 teams · 1 new row" text: persisted rows count as teams, rows added
+  // via "Add Team" (or not yet saved) count as new rows.
+  const persistedTeamCount = rows.filter((row) => !row.isNew).length;
+  const newRowCount = rows.length - persistedTeamCount;
+  const teamCountText = `${persistedTeamCount} team${persistedTeamCount === 1 ? "" : "s"}${
+    newRowCount > 0 ? ` · ${newRowCount} new row${newRowCount === 1 ? "" : "s"}` : ""
+  }`;
+
   // DEFAULT_STANDINGS_ROWS hardcodes "Rose City FC" (plus Ocelot, LA Sol,
   // AMSG, AYSD, Montclair) as its example table, so substituting it for a
   // club with no saved rows shows another club's teams in this club's admin.
@@ -316,192 +352,304 @@ export default function AdminStandingsPage() {
   });
 
   return (
-    <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
+    <AdminPage className="max-w-7xl overflow-hidden">
       <AdminSaveFeedback saving={saving} saved={saved} />
-      <div className="mb-4 sm:mb-6">
-        <h1
-          className="font-display font-black uppercase leading-none text-foreground"
-          style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
+      <AdminPageHeader
+        title="Standings"
+        description="Edit the homepage league table and optional team logos."
+        actions={
+          <>
+            {dirty && (
+              <span className="flex items-center gap-2 border-r border-border pr-3 font-body text-xs font-medium text-muted-foreground">
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 flex-none rounded-full bg-warning"
+                />
+                Unsaved changes
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving || uploading || !dirty}
+              className="font-display rounded-lg bg-primary px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
+              {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
+            </button>
+          </>
+        }
+      />
+
+      {error && (
+        <p
+          role="alert"
+          className="font-body rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
         >
-          Standings
-        </h1>
-        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          Edit the homepage league table and optional team logos.
+          {error}
         </p>
-      </div>
+      )}
 
       {loading ? (
-        <div
-          role="status"
-          aria-label="Loading standings"
-          className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,520px)_minmax(0,1fr)]"
-        >
-          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            <div className="grid gap-3">
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-16 w-full rounded-lg" />
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading standings" />
+        ) : (
+          <div className="flex flex-col gap-6" role="status" aria-label="Loading standings">
+            <Skeleton className="h-28 w-full rounded-xl" />
+            <div className="flex flex-col gap-3">
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
             </div>
-
-            <div className="mt-5 flex items-center justify-between gap-3">
-              <Skeleton className="h-3.5 w-14" />
-              <Skeleton className="h-8 w-24 rounded-md" />
-            </div>
-
-            <div className="mt-3 space-y-3">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="rounded-lg border border-border bg-card p-3">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-12 w-12 flex-none rounded-full" />
-                    <Skeleton className="h-9 flex-1 rounded-lg" />
-                    <Skeleton className="h-9 w-16 flex-none rounded-md" />
-                  </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border pt-3 sm:grid-cols-7">
-                    {[0, 1, 2, 3, 4, 5, 6].map((j) => (
-                      <Skeleton key={j} className="h-9 w-full rounded-lg" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Skeleton className="mt-5 h-11 w-full rounded-lg" />
-          </section>
-
-          <section className="min-w-0 overflow-hidden rounded-xl border border-border p-4 sm:p-5">
-            <Skeleton className="mb-4 h-5 w-1/3" />
-            <div className="space-y-2">
-              {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-8 w-full rounded" />
-              ))}
-            </div>
-          </section>
-        </div>
+          </div>
+        )
       ) : (
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,520px)_minmax(0,1fr)]">
-          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            <div className="grid gap-3">
-              <label className="font-body text-xs text-muted-foreground">
-                Eyebrow
+        <div className="flex min-w-0 flex-col gap-6">
+          <AdminPanel className="overflow-hidden p-0">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">
+              <h2 className={panelTitleClass}>Table heading</h2>
+              <p className="font-body text-xs text-muted-foreground">
+                Shown above the table on your homepage
+              </p>
+            </div>
+            <div className="grid gap-5 p-5 sm:grid-cols-3">
+              <label className="block">
+                <span className={ADMIN_LABEL_CLASS}>Eyebrow</span>
                 <input
                   value={settings.eyebrow}
                   onChange={(event) => updateSetting("eyebrow", event.target.value)}
-                  className={`mt-1 ${fieldClass}`}
+                  className={ADMIN_INPUT_CLASS}
                 />
               </label>
-              <label className="font-body text-xs text-muted-foreground">
-                Table Title
+              <label className="block">
+                <span className={ADMIN_LABEL_CLASS}>Table Title</span>
                 <input
                   value={settings.title}
                   onChange={(event) => updateSetting("title", event.target.value)}
-                  className={`mt-1 ${fieldClass}`}
+                  className={ADMIN_INPUT_CLASS}
                 />
               </label>
-              <label className="font-body text-xs text-muted-foreground">
-                Intro
+              <label className="block">
+                <span className={ADMIN_LABEL_CLASS}>Intro</span>
                 <Textarea
                   value={settings.intro}
                   onChange={(event) => updateSetting("intro", event.target.value)}
-                  rows={3}
-                  className="mt-1"
+                  rows={2}
                 />
               </label>
             </div>
+          </AdminPanel>
 
-            <div className="mt-5 flex items-center justify-between gap-3">
-              <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                Teams
-              </p>
+          {/* One row per team; header labels each field once. The rank
+              column is a display-only lookup into `standingsRank` (built
+              from sortStandingsRows above) — it never reorders `rows`
+              itself, so this editable list stays in as-entered order. */}
+          <AdminPanel className="overflow-hidden p-0">
+            <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-4">
+              <h2 className={eyebrowLabelClass}>Teams</h2>
+              <p className="font-body text-xs text-muted-foreground">{teamCountText}</p>
               <button
                 type="button"
                 onClick={addRow}
-                className="font-display rounded-md bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground"
+                className="font-display ml-auto rounded-md bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Add Team
               </button>
             </div>
 
-            <div className="mt-3 space-y-3">
-              {rows.map((row, index) => (
-                <div
-                  key={row.id}
-                  className="rounded-lg border border-border bg-card p-3 transition-colors hover:border-muted-foreground/40"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-12 w-12 flex-none overflow-hidden rounded-full bg-muted">
-                      {row.logo_url ? (
-                        <Image src={row.logo_url} alt="" fill sizes="48px" className="object-contain" />
-                      ) : (
-                        <span className="font-display grid h-full w-full place-items-center text-xs font-black uppercase text-muted-foreground">
-                          {row.team_abbreviation || teamAbbreviation(row.team_name)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <input
-                        value={row.team_name}
-                        onChange={(event) => updateRow(row.id, "team_name", event.target.value)}
-                        placeholder="Team name"
-                        className={fieldClass}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeRow(row.id)}
-                      className="font-display rounded-md border border-destructive/45 px-2 py-2 text-xs uppercase text-destructive transition-colors hover:bg-destructive/10"
-                    >
-                      Remove
-                    </button>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-3 gap-2 border-t border-border pt-3 sm:grid-cols-7">
-                    <label className={statLabelClass}>
+            {/* [contain:paint] is load-bearing, not decorative: this table's
+                per-column fixed-width `<th>` cells give it a genuine
+                min-content width past 900px, and at narrow viewports this
+                wrapper's `overflow-x-auto` clips it correctly on screen (and
+                its own scrollWidth/clientWidth report the clip is working)
+                but Chromium still lets the table's intrinsic width leak past
+                every flex ancestor's `min-w-0` and widen the document/layout
+                viewport itself (window.innerWidth included) rather than just
+                this box. `contain: paint` forces this box to be treated as
+                the true clipping boundary, which stops that leak; plain
+                `overflow-x-auto`/`overflow-hidden`/`overflow-x-clip` on this
+                div or `min-w-0` on it were all verified live NOT to fix it. */}
+            <div className="overflow-x-auto [contain:paint]">
+              <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+                <thead className="border-b border-border bg-muted/40">
+                  <tr>
+                    <th scope="col" className={`w-10 px-2 py-2 text-center ${statLabelClass}`}>
+                      #
+                    </th>
+                    <th scope="col" className={`w-14 px-2 py-2 ${statLabelClass}`}>
+                      Logo
+                    </th>
+                    <th scope="col" className={`min-w-[200px] px-2 py-2 ${statLabelClass}`}>
+                      Team name
+                    </th>
+                    <th scope="col" className={`w-20 px-1 py-2 text-center ${statLabelClass}`}>
                       Abbr
-                      <input
-                        value={row.team_abbreviation ?? ""}
-                        onChange={(event) => updateRow(row.id, "team_abbreviation", event.target.value)}
-                        placeholder="ABC"
-                        className={`mt-1 ${fieldClass} px-2 py-1.5 text-center font-display font-bold uppercase`}
-                      />
-                    </label>
-                    <NumberField label="GP" value={row.played} onChange={(value) => updateRow(row.id, "played", value)} />
-                    <NumberField label="W" value={row.wins} onChange={(value) => updateRow(row.id, "wins", value)} />
-                    <NumberField label="D" value={row.draws} onChange={(value) => updateRow(row.id, "draws", value)} />
-                    <NumberField label="L" value={row.losses} onChange={(value) => updateRow(row.id, "losses", value)} />
-                    <NumberField label="GD" value={row.goal_difference} onChange={(value) => updateRow(row.id, "goal_difference", value)} allowNegative />
-                    <NumberField label="Pts" value={row.points} onChange={(value) => updateRow(row.id, "points", value)} />
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <label className="font-body flex items-center gap-2 text-xs text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        checked={row.is_club}
-                        onChange={(event) => updateRow(row.id, "is_club", event.target.checked)}
-                      />
-                      Our team&rsquo;s row
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => openLogoUpload(index)}
-                      disabled={uploading || row.is_club}
-                      className="font-display rounded-md border border-border px-3 py-2 text-xs uppercase tracking-widest text-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:text-muted-foreground/40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
+                    </th>
+                    <th scope="col" className={`w-14 px-1 py-2 text-center ${statLabelClass}`}>
+                      GP
+                    </th>
+                    <th scope="col" className={`w-14 px-1 py-2 text-center ${statLabelClass}`}>
+                      W
+                    </th>
+                    <th scope="col" className={`w-14 px-1 py-2 text-center ${statLabelClass}`}>
+                      D
+                    </th>
+                    <th scope="col" className={`w-14 px-1 py-2 text-center ${statLabelClass}`}>
+                      L
+                    </th>
+                    <th scope="col" className={`w-16 px-1 py-2 text-center ${statLabelClass}`}>
+                      GD
+                    </th>
+                    <th scope="col" className={`w-16 px-1 py-2 text-center ${statLabelClass}`}>
+                      Pts
+                    </th>
+                    <th scope="col" className="w-44 px-2 py-2">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, index) => (
+                    <tr
+                      key={row.id}
+                      className={cn(
+                        "border-b border-border align-top transition-colors last:border-b-0 hover:bg-accent/30",
+                        row.is_club && "border-l-4 border-l-primary bg-primary/5",
+                      )}
                     >
-                      {row.logo_url ? "Replace Logo" : "Upload Logo"}
-                    </button>
-                    {row.logo_url && (
-                      <button
-                        type="button"
-                        onClick={() => removeLogo(index)}
-                        disabled={uploading || row.is_club}
-                        className="font-display rounded-md border border-destructive/45 px-3 py-2 text-xs uppercase tracking-widest text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/40 disabled:hover:bg-transparent"
-                      >
-                        Remove Logo
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      <td className="px-2 py-3 text-center font-display text-xs font-bold tabular-nums text-muted-foreground">
+                        {standingsRank.get(row.id) ?? "–"}
+                      </td>
+                      <td className="px-2 py-3">
+                        <div className="relative h-10 w-10 flex-none overflow-hidden rounded-full bg-muted">
+                          {row.logo_url ? (
+                            <Image src={row.logo_url} alt="" fill sizes="40px" className="object-contain" />
+                          ) : (
+                            <span className="font-display grid h-full w-full place-items-center text-[0.6rem] font-black uppercase text-muted-foreground">
+                              {row.team_abbreviation || teamAbbreviation(row.team_name)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="min-w-[200px] px-2 py-3">
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={row.team_name}
+                            onChange={(event) => updateRow(row.id, "team_name", event.target.value)}
+                            placeholder="Team name"
+                            aria-label="Team name"
+                            className={fieldClass}
+                          />
+                          {row.is_club && (
+                            <span className="flex-none rounded-full bg-primary/10 px-2.5 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-primary">
+                              Our row
+                            </span>
+                          )}
+                        </div>
+                        <label className="mt-2 flex items-center gap-1.5 font-body text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={row.is_club}
+                            onChange={(event) => updateRow(row.id, "is_club", event.target.checked)}
+                          />
+                          Our team&rsquo;s row
+                        </label>
+                      </td>
+                      <td className="px-1 py-3">
+                        <input
+                          value={row.team_abbreviation ?? ""}
+                          onChange={(event) => updateRow(row.id, "team_abbreviation", event.target.value)}
+                          placeholder="ABC"
+                          aria-label="Team abbreviation"
+                          className={`${fieldClass} px-2 py-1.5 text-center font-display font-bold uppercase`}
+                        />
+                      </td>
+                      <td className="px-1 py-3">
+                        <TableNumberField
+                          ariaLabel="Games played"
+                          value={row.played}
+                          onChange={(value) => updateRow(row.id, "played", value)}
+                        />
+                      </td>
+                      <td className="px-1 py-3">
+                        <TableNumberField
+                          ariaLabel="Wins"
+                          value={row.wins}
+                          onChange={(value) => updateRow(row.id, "wins", value)}
+                        />
+                      </td>
+                      <td className="px-1 py-3">
+                        <TableNumberField
+                          ariaLabel="Draws"
+                          value={row.draws}
+                          onChange={(value) => updateRow(row.id, "draws", value)}
+                        />
+                      </td>
+                      <td className="px-1 py-3">
+                        <TableNumberField
+                          ariaLabel="Losses"
+                          value={row.losses}
+                          onChange={(value) => updateRow(row.id, "losses", value)}
+                        />
+                      </td>
+                      <td className="px-1 py-3">
+                        <TableNumberField
+                          ariaLabel="Goal difference"
+                          value={row.goal_difference}
+                          onChange={(value) => updateRow(row.id, "goal_difference", value)}
+                          allowNegative
+                        />
+                      </td>
+                      <td className="px-1 py-3">
+                        <TableNumberField
+                          ariaLabel="Points"
+                          value={row.points}
+                          onChange={(value) => updateRow(row.id, "points", value)}
+                          emphasize
+                        />
+                      </td>
+                      <td className="px-2 py-3">
+                        <div className="flex flex-col items-end gap-1.5">
+                          {row.is_club ? (
+                            <span className="font-display rounded-md border border-border px-3 py-2 text-xs uppercase tracking-widest text-muted-foreground/50">
+                              Logo locked
+                            </span>
+                          ) : (
+                            <div className="flex flex-wrap justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openLogoUpload(index)}
+                                disabled={uploading}
+                                className="font-display rounded-md border border-border px-3 py-2 text-xs uppercase tracking-widest text-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:text-muted-foreground/40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
+                              >
+                                {row.logo_url ? "Replace Logo" : "Upload Logo"}
+                              </button>
+                              {row.logo_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeLogo(index)}
+                                  disabled={uploading}
+                                  className="font-display rounded-md border border-destructive/45 px-3 py-2 text-xs uppercase tracking-widest text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/40 disabled:hover:bg-transparent"
+                                >
+                                  Remove Logo
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeRow(row.id)}
+                            className="font-display rounded-md px-3 py-2 text-xs uppercase tracking-widest text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            Remove team
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <input
@@ -511,74 +659,82 @@ export default function AdminStandingsPage() {
               className="hidden"
               onChange={(event) => handleLogoUpload(event.target.files?.[0] ?? null)}
             />
+          </AdminPanel>
 
-            {error && (
-              <p className="font-body mt-4 text-sm text-destructive">
-                {error}
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <AdminPanel className="overflow-hidden p-0">
+              <div className="border-b border-border px-5 py-3.5">
+                <h2 className={eyebrowLabelClass}>Homepage preview</h2>
+              </div>
+              <div className="p-5">
+                {/* previewRows is only ever empty for the templates excluded
+                    from the sample fallback above (academy@1, editorial@1);
+                    templates that still get DEFAULT_STANDINGS_ROWS always
+                    take a table branch, exactly as before. */}
+                {previewRows.length === 0 ? (
+                  <p className="font-body text-sm text-muted-foreground">
+                    Add a team above to see a preview of your standings table.
+                  </p>
+                ) : isAcademy ? (
+                  <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
+                ) : (
+                  <LeagueStandingsTable settings={settings} rows={previewRows} />
+                )}
+              </div>
+            </AdminPanel>
+
+            <AdminPanel className="flex flex-col gap-2.5 p-4 sm:p-5">
+              <h2 className={panelTitleClass}>Two rules worth knowing</h2>
+              <p className="font-body text-xs leading-relaxed text-muted-foreground">
+                Your own row uses the club crest, so its logo controls are locked.
               </p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={saving || uploading || !dirty}
-              className="font-display mt-5 w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-brand-foreground transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
-            </button>
-          </section>
-
-          <section className="min-w-0 overflow-hidden rounded-xl border border-border">
-            {/* previewRows is only ever empty for the templates excluded from
-                the sample fallback above (academy@1, editorial@1); templates
-                that still get DEFAULT_STANDINGS_ROWS always take a table
-                branch, exactly as before. */}
-            {previewRows.length === 0 ? (
-              <p className="font-body p-6 text-sm text-muted-foreground">
-                Add a team below to see a preview of your standings table.
+              <p className="font-body text-xs leading-relaxed text-muted-foreground">
+                The public table ranks itself: points, then goal difference, then wins. Row
+                order here does not change it.
               </p>
-            ) : isAcademy ? (
-              <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
-            ) : (
-              <LeagueStandingsTable settings={settings} rows={previewRows} />
-            )}
-          </section>
+            </AdminPanel>
+          </div>
         </div>
       )}
-    </div>
+    </AdminPage>
   );
 }
 
 /**
- * Labeled numeric field for the standings stat grid. Deliberately separate
- * from `components/admin/StatInput.tsx` even though both are compact stat
- * inputs: this one carries its own header label, must fill its grid cell
- * (StatInput sizes its width to the digit count), and GD needs negative
- * values (StatInput clamps to >= 0). The visual treatment mirrors
- * StatInput's semantic-token styling so the two read as one family.
+ * Bare numeric input for a standings table cell. Deliberately separate from
+ * `components/admin/StatInput.tsx` even though both are compact stat inputs:
+ * GD needs negative values (StatInput clamps to >= 0), and this one carries
+ * no inline label — the table header labels each column once, and an
+ * `aria-label` keeps the field named for assistive tech. The visual
+ * treatment mirrors StatInput's semantic-token styling so the two read as
+ * one family. `emphasize` mirrors the mockup's highlighted Pts box.
  */
-function NumberField({
-  label,
+function TableNumberField({
+  ariaLabel,
   value,
   onChange,
   allowNegative = false,
+  emphasize = false,
 }: {
-  label: string;
+  ariaLabel: string;
   value: number;
   onChange: (value: number) => void;
   allowNegative?: boolean;
+  emphasize?: boolean;
 }) {
   return (
-    <label className={statLabelClass}>
-      {label}
-      <input
-        type="number"
-        min={allowNegative ? undefined : 0}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-1 w-full rounded-lg border border-input bg-background px-2 py-1.5 text-center font-display text-sm font-bold tabular-nums text-foreground outline-none transition-shadow [appearance:textfield] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-      />
-    </label>
+    <input
+      type="number"
+      aria-label={ariaLabel}
+      min={allowNegative ? undefined : 0}
+      value={value}
+      onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+        onChange(Number(event.target.value))
+      }
+      className={cn(
+        "w-full rounded-lg border border-input bg-background px-2 py-1.5 text-center font-display text-sm font-bold tabular-nums text-foreground outline-none transition-shadow [appearance:textfield] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        emphasize && "border-primary/50 ring-2 ring-primary/15",
+      )}
+    />
   );
 }

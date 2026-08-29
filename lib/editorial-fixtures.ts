@@ -21,12 +21,15 @@ export function fixtureKickoff(fixture: Fixture): Date {
   return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0);
 }
 
-export function findNextFixture(fixtures: Fixture[]): Fixture | null {
-  const now = Date.now();
+export function findNextFixture(
+  fixtures: Fixture[],
+  now: number | Date = Date.now(),
+): Fixture | null {
+  const nowTime = now instanceof Date ? now.getTime() : now;
   const upcoming = fixtures.filter((fixture) => {
     if (!fixture.date) return false;
     const kickoff = fixtureKickoff(fixture);
-    return !Number.isNaN(kickoff.getTime()) && kickoff.getTime() > now;
+    return !Number.isNaN(kickoff.getTime()) && kickoff.getTime() > nowTime;
   });
   upcoming.sort((a, b) => fixtureKickoff(a).getTime() - fixtureKickoff(b).getTime());
   return upcoming[0] ?? null;

@@ -4,12 +4,16 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import { useRouter } from "next/navigation";
 
 import { useEffect, useState } from "react";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminPage, AdminPageHeader, AdminPageToolbar } from "@/components/admin/AdminPage";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import StatInput from "@/components/admin/StatInput";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/admin-client";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { useSeasons } from "@/lib/use-seasons";
 import { cn } from "@/lib/utils";
 
@@ -94,8 +98,15 @@ export default function StatsPage() {
   const [players, setPlayers]     = useState<Player[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
   const [stats, setStats]         = useState<StatsMap>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  // Per-position-group dirty tracking, mirroring the Homepage admin page's
+  // dirtySections pattern: a Set of dirty group ids, tagged by each field
+  // change handler, with overall-dirty derived as set.size > 0. Save remains
+  // a single action for the whole match (see handleSave) — this state never
+  // splits it into per-group saves, it only drives the per-group indicator.
+  const [dirtyGroups, setDirtyGroups] = useState<Set<Player["position"]>>(new Set());
+  const hasChanges = dirtyGroups.size > 0;
   const [loading, setLoading]     = useState(false);
+  const showFullLoader = useDelayedLoading(loading, 400);
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [error, setError]         = useState<string | null>(null);
@@ -170,7 +181,7 @@ export default function StatsPage() {
     let cancelled = false;
     setLoading(true);
     setSaved(false);
-    setHasChanges(false);
+    setDirtyGroups(new Set());
     setError(null);
 
     const supabase = createClient();
@@ -230,13 +241,24 @@ export default function StatsPage() {
     return () => { cancelled = true; };
   }, [selectedMatch, players]);
 
+  // Tag a position group as having unsaved edits.
+  function markGroupDirty(position: Player["position"]) {
+    setDirtyGroups((current) => {
+      if (current.has(position)) return current;
+      const next = new Set(current);
+      next.add(position);
+      return next;
+    });
+  }
+
   // Update a single field in a player's stat row
   function updateStat(
     playerId: string,
     field: string,
     value: number | boolean
   ) {
-    setHasChanges(true);
+    const player = players.find((p) => p.id === playerId);
+    if (player) markGroupDirty(player.position);
     setStats((prev) => ({
       ...prev,
       [playerId]: { ...prev[playerId], [field]: value },
@@ -275,7 +297,7 @@ export default function StatsPage() {
     if (fe || ge) {
       setError(fe?.message ?? ge?.message ?? "Unknown error");
     } else {
-      setHasChanges(false);
+      setDirtyGroups(new Set());
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     }
@@ -288,63 +310,68 @@ export default function StatsPage() {
   if (isEditorialTemplate) return null;
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <AdminPage className="max-w-5xl">
       <AdminSaveFeedback saving={saving} saved={saved} />
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1
-          className="font-display font-black uppercase text-foreground leading-none"
-          style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
-        >
-          Match Stats
-        </h1>
-        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          Select a match to enter or update player statistics.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Match Stats"
+        description="Select a match to enter or update player statistics."
+      />
 
-      {/* Match selector */}
-      <div className="mb-8 flex flex-col gap-4">
-        <SeasonSelect
-          seasons={seasons}
-          value={selectedSeasonId}
-          onChange={setSelectedSeasonId}
-          label="Season"
-          disabled={seasonsLoading}
-          className="w-full"
-        />
-        <label
-          className="block font-display tracking-widest uppercase mb-2 text-muted-foreground"
-          style={{ fontSize: "0.9rem" }}
-        >
-          Match
-        </label>
-        <div className="max-w-[560px]">
-          <NativeSelect
-            value={selectedMatch ?? ""}
-            onChange={(e) => setSelectedMatch(e.target.value || null)}
-            disabled={seasonsLoading || !selectedSeasonId}
-          >
-            <NativeSelectOption value="">— Select a match —</NativeSelectOption>
-            {seasonMatches
-              .slice()
-              .sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime())
-              .map((m) => (
-                <NativeSelectOption key={m.id} value={m.id.toString()}>
-                  {m.date} · {m.home ? "vs" : "@"} {m.opponent}
-                </NativeSelectOption>
-              ))}
-          </NativeSelect>
+      {/* Match selector — Save All Stats + the unsaved-changes pill live in this
+          same pinned toolbar row (far right), never below the position groups. */}
+      <AdminPageToolbar className="items-stretch sm:items-end">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-end">
+          <SeasonSelect
+            seasons={seasons}
+            value={selectedSeasonId}
+            onChange={setSelectedSeasonId}
+            label="Season"
+            disabled={seasonsLoading}
+            className="w-full"
+          />
+          <label className="block min-w-0 flex-1 font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <span className="mb-2 block">Match</span>
+            <NativeSelect
+              value={selectedMatch ?? ""}
+              onChange={(e) => setSelectedMatch(e.target.value || null)}
+              disabled={seasonsLoading || !selectedSeasonId}
+            >
+              <NativeSelectOption value="">— Select a match —</NativeSelectOption>
+              {seasonMatches
+                .slice()
+                .sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime())
+                .map((m) => (
+                  <NativeSelectOption key={m.id} value={m.id.toString()}>
+                    {m.date} · {m.home ? "vs" : "@"} {m.opponent}
+                  </NativeSelectOption>
+                ))}
+            </NativeSelect>
+          </label>
         </div>
 
-        {!seasonsLoading && selectedSeasonId && seasonMatches.length === 0 && (
-          <p className="font-body text-sm text-muted-foreground">
-            No matches are assigned to this season.
-          </p>
-        )}
+        <div className="flex flex-none flex-wrap items-center justify-end gap-3">
+          {hasChanges && (
+            <span className="rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
+              Unsaved changes
+            </span>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving || !hasChanges || !selectedMatch}
+            className="whitespace-nowrap rounded-lg bg-primary px-6 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saving && <AdminLoadingDots className="mr-2" />}
+            {saving ? "Saving…" : "Save All Stats"}
+          </button>
+        </div>
+      </AdminPageToolbar>
 
-      </div>
+      {!seasonsLoading && selectedSeasonId && seasonMatches.length === 0 && (
+        <p className="font-body text-sm text-muted-foreground">
+          No matches are assigned to this season.
+        </p>
+      )}
 
       {/* Stats form */}
       {selectedMatch && !loading && (
@@ -374,6 +401,7 @@ export default function StatsPage() {
                 isGK={isGK}
                 stats={stats}
                 updateStat={updateStat}
+                dirty={dirtyGroups.has(pos)}
               />
             );
           })}
@@ -385,32 +413,33 @@ export default function StatsPage() {
               Error saving: {error}
             </p>
           )}
-
-          {/* Save button */}
-          <div className="flex items-center gap-4 mt-6">
-            <button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
-              className="px-8 py-3 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground bg-brand transition-opacity duration-200 hover:bg-brand/90 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ fontSize: "1.1rem" }}
-            >
-              {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : "Save All Stats"}
-            </button>
-
-          </div>
         </>
       )}
 
       {/* Loading state */}
       {loading && (
-        <AdminLoading label="Loading players" className="font-display text-sm tracking-widest uppercase" />
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading players" />
+        ) : (
+          <div className="flex flex-col gap-3" role="status" aria-label="Loading players">
+            <Skeleton className="h-12 w-full rounded-xl" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+          </div>
+        )
       )}
-    </div>
+    </AdminPage>
   );
 }
 
 // ── Collapsible position group ────────────────
+
+// Zero/untouched stat values render in the muted-foreground token so fields
+// the user has actually entered stand out visually. `--muted-foreground` is
+// an existing .admin-theme token (see styles/globals.css) — no new color.
+function zeroValueClass(value: number): string | undefined {
+  return value === 0 ? "text-muted-foreground" : undefined;
+}
 
 function PositionGroup({
   pos,
@@ -418,12 +447,14 @@ function PositionGroup({
   isGK,
   stats,
   updateStat,
+  dirty,
 }: {
   pos: string;
   group: Player[];
   isGK: boolean;
   stats: StatsMap;
   updateStat: (playerId: string, field: string, value: number | boolean) => void;
+  dirty: boolean;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -443,14 +474,23 @@ function PositionGroup({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between bg-card px-4 py-3 transition-colors duration-150 hover:bg-accent/60"
       >
-        <span
-          className="font-display font-black uppercase tracking-widest text-foreground/90"
-          style={{ fontSize: "1.1rem" }}
-        >
-          {pos}s &nbsp;
-          <span className="font-normal text-muted-foreground/60">
-            {group.length}
+        <span className="flex items-center gap-2">
+          <span
+            className="font-display font-black uppercase tracking-widest text-foreground/90"
+            style={{ fontSize: "1.1rem" }}
+          >
+            {pos}s &nbsp;
+            <span className="font-normal text-muted-foreground/60">
+              {group.length}
+            </span>
           </span>
+          {dirty && (
+            <span
+              aria-label="Unsaved changes"
+              title="Unsaved changes"
+              className="h-1.5 w-1.5 flex-none rounded-full bg-warning"
+            />
+          )}
         </span>
         <svg
           width="18"
@@ -535,7 +575,7 @@ function PositionGroup({
                     type="checkbox"
                     checked={row.starts}
                     onChange={(e) => updateStat(p.id, "starts", e.target.checked)}
-                    className="w-5 h-5 rounded cursor-pointer accent-brand"
+                    className="h-5 w-5 cursor-pointer rounded accent-primary"
                   />
                 </div>
 
@@ -543,26 +583,27 @@ function PositionGroup({
                 <StatInput
                   value={row.mins}
                   onChange={(v) => updateStat(p.id, "mins", v)}
+                  className={zeroValueClass(row.mins)}
                 />
 
                 {isGK && isGKRow(row) ? (
                   <>
-                    <StatInput value={row.goals_against} onChange={(v) => updateStat(p.id, "goals_against", v)} />
-                    <StatInput value={row.saves}         onChange={(v) => updateStat(p.id, "saves", v)} />
-                    <StatInput value={row.clean_sheets}  onChange={(v) => updateStat(p.id, "clean_sheets", v)} />
-                    <StatInput value={row.yellow}        onChange={(v) => updateStat(p.id, "yellow", v)} />
-                    <StatInput value={row.red}           onChange={(v) => updateStat(p.id, "red", v)} />
+                    <StatInput value={row.goals_against} onChange={(v) => updateStat(p.id, "goals_against", v)} className={zeroValueClass(row.goals_against)} />
+                    <StatInput value={row.saves}         onChange={(v) => updateStat(p.id, "saves", v)} className={zeroValueClass(row.saves)} />
+                    <StatInput value={row.clean_sheets}  onChange={(v) => updateStat(p.id, "clean_sheets", v)} className={zeroValueClass(row.clean_sheets)} />
+                    <StatInput value={row.yellow}        onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
+                    <StatInput value={row.red}           onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
                   </>
                 ) : !isGKRow(row) ? (
                   <>
-                    <StatInput value={row.goals}          onChange={(v) => updateStat(p.id, "goals", v)} />
-                    <StatInput value={row.assists}         onChange={(v) => updateStat(p.id, "assists", v)} />
-                    <StatInput value={row.tackles}         onChange={(v) => updateStat(p.id, "tackles", v)} />
-                    <StatInput value={row.offsides}        onChange={(v) => updateStat(p.id, "offsides", v)} />
-                    <StatInput value={row.fouls}           onChange={(v) => updateStat(p.id, "fouls", v)} />
-                    <StatInput value={row.fouls_suffered}  onChange={(v) => updateStat(p.id, "fouls_suffered", v)} />
-                    <StatInput value={row.yellow}          onChange={(v) => updateStat(p.id, "yellow", v)} />
-                    <StatInput value={row.red}             onChange={(v) => updateStat(p.id, "red", v)} />
+                    <StatInput value={row.goals}          onChange={(v) => updateStat(p.id, "goals", v)} className={zeroValueClass(row.goals)} />
+                    <StatInput value={row.assists}         onChange={(v) => updateStat(p.id, "assists", v)} className={zeroValueClass(row.assists)} />
+                    <StatInput value={row.tackles}         onChange={(v) => updateStat(p.id, "tackles", v)} className={zeroValueClass(row.tackles)} />
+                    <StatInput value={row.offsides}        onChange={(v) => updateStat(p.id, "offsides", v)} className={zeroValueClass(row.offsides)} />
+                    <StatInput value={row.fouls}           onChange={(v) => updateStat(p.id, "fouls", v)} className={zeroValueClass(row.fouls)} />
+                    <StatInput value={row.fouls_suffered}  onChange={(v) => updateStat(p.id, "fouls_suffered", v)} className={zeroValueClass(row.fouls_suffered)} />
+                    <StatInput value={row.yellow}          onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
+                    <StatInput value={row.red}             onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
                   </>
                 ) : null}
               </div>
