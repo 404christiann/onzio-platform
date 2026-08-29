@@ -2,11 +2,27 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DndContext } from "@dnd-kit/core";
+import { SortableContext } from "@dnd-kit/sortable";
+import { GripVertical } from "lucide-react";
 import ResilientImage from "@/components/ResilientImage";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
-import FileUpload from "@/components/admin/FileUpload";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminPageToolbar,
+  AdminPanel,
+} from "@/components/admin/AdminPage";
+import {
+  AdminSectionRail,
+  type AdminSectionRailItem,
+} from "@/components/admin/AdminSectionRail";
+import { useSortableList, useSortableRow } from "@/components/admin/useSortableList";
+import FileUpload from "@/components/admin/FileUpload";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
@@ -30,7 +46,6 @@ import {
   emptyProgramDraft,
   emptyProgramsPageDraft,
   moveHighlight,
-  moveProgram,
   moveProgramMedia,
   programDraftToContent,
   programMediaToDraft,
@@ -79,6 +94,28 @@ const PROGRAM_EDITOR_TAB_ORDER: ProgramEditorTab[] = [
   "registration",
 ];
 
+/** Matches the copy in the Layout variant <select> below, for the "This
+ * program" summary panel in the left rail. */
+const LAYOUT_VARIANT_LABELS: Record<ProgramDraft["layoutVariant"], string> = {
+  statement_band: "Statement band",
+  detail_focus: "Detail focus",
+};
+
+/** "This program" panel's hero/detail row: which of the two optional media
+ * roles are set, without inventing a new field — both booleans already live
+ * on the draft. */
+function summarizeHeroDetailMedia(draft: ProgramDraft): {
+  label: string;
+  complete: boolean;
+} {
+  const hasHero = Boolean(draft.heroMediaAssetId);
+  const hasDetail = Boolean(draft.detailMediaAssetId);
+  if (hasHero && hasDetail) return { label: "Both set", complete: true };
+  if (hasHero) return { label: "Hero only", complete: false };
+  if (hasDetail) return { label: "Detail only", complete: false };
+  return { label: "Neither set", complete: false };
+}
+
 /**
  * Which tab owns each validation error, so a failed save can reveal the field
  * it is complaining about instead of leaving "Review the highlighted fields"
@@ -104,6 +141,40 @@ const PROGRAM_FIELD_TABS: Record<
   registrationPendingLabel: "registration",
 };
 
+/**
+ * The programs-page copy editor (a per-club singleton, separate from any one
+ * program) is grouped into the same three bands the public templates render
+ * it into. Rail wiring, per-section dirty tracking, and the dynamic save
+ * label follow the pattern piloted on app/admin/(protected)/homepage/page.tsx.
+ */
+type PageCopySection = "homepageBand" | "pageHeader" | "closingBand";
+
+const PAGE_COPY_SECTION_ORDER: PageCopySection[] = [
+  "homepageBand",
+  "pageHeader",
+  "closingBand",
+];
+
+const PAGE_COPY_SECTION_LABELS: Record<PageCopySection, string> = {
+  homepageBand: "Homepage band",
+  pageHeader: "Page header",
+  closingBand: "Closing band",
+};
+
+const PAGE_COPY_FIELD_SECTIONS: Record<keyof ProgramsPageDraft, PageCopySection> = {
+  pathwayEyebrow: "homepageBand",
+  pathwayHeading: "homepageBand",
+  pathwayIntro: "homepageBand",
+  heroEyebrow: "pageHeader",
+  heroHeadlineLineOne: "pageHeader",
+  heroHeadlineLineTwo: "pageHeader",
+  heroIntro: "pageHeader",
+  closingHeadingLineOne: "closingBand",
+  closingHeadingLineTwo: "closingBand",
+  closingBody: "closingBand",
+  closingCtaLabel: "closingBand",
+};
+
 function fieldError(errors: ProgramValidationErrors, field: keyof ProgramValidationErrors) {
   const message = errors[field];
   return message ? (
@@ -115,6 +186,30 @@ function fieldError(errors: ProgramValidationErrors, field: keyof ProgramValidat
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
+}
+
+/** Lightweight placeholder shown for fast loads, before (if ever) escalating
+ * to AdminFullPageLoader. Loosely mirrors the loaded layout: a program list
+ * rail on the left and an editor panel on the right. */
+function ProgramsPageSkeleton() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]"
+      role="status"
+      aria-label="Loading programs"
+    >
+      <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-12 w-full rounded-lg" />
+        ))}
+      </div>
+      <div className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-sm">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    </div>
+  );
 }
 
 export default function AdminProgramsPage() {
@@ -182,10 +277,38 @@ export default function AdminProgramsPage() {
   );
   const [pageCopyErrors, setPageCopyErrors] =
     useState<ProgramsPageValidationErrors>({});
-  const [pageCopyDirty, setPageCopyDirty] = useState(false);
+  // Per-section dirty tracking is presentational-only: it drives the rail's
+  // dirty-dots and the save button's "which sections changed" copy. Save
+  // itself remains a single combined write (see savePageCopy) — this state
+  // never splits it into per-section saves. Matches the pattern piloted on
+  // app/admin/(protected)/homepage/page.tsx.
+  const [pageCopyDirtySections, setPageCopyDirtySections] = useState<
+    Set<PageCopySection>
+  >(new Set());
+  const pageCopyDirty = pageCopyDirtySections.size > 0;
   const [pageCopySaving, setPageCopySaving] = useState(false);
   const [pageCopySaved, setPageCopySaved] = useState(false);
   const [pageCopyError, setPageCopyError] = useState<string | null>(null);
+  const [activePageCopySection, setActivePageCopySection] =
+    useState<PageCopySection>("homepageBand");
+  const [pageCopyDirection, setPageCopyDirection] =
+    useState<SlidingPanelDirection>(1);
+  const selectPageCopySection = useCallback((next: PageCopySection) => {
+    setActivePageCopySection((current) => {
+      if (next === current) return current;
+      setPageCopyDirection(
+        PAGE_COPY_SECTION_ORDER.indexOf(next) >
+          PAGE_COPY_SECTION_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  }, []);
+  // Programs list is filterable by title/label/slug; reordering by drag is
+  // only offered while the filter is empty, since a drag within a filtered
+  // subset cannot unambiguously express a new position in the full list.
+  const [programFilter, setProgramFilter] = useState("");
 
   const loadPrograms = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
@@ -218,7 +341,7 @@ export default function AdminProgramsPage() {
         ),
       );
       setPageCopyErrors({});
-      setPageCopyDirty(false);
+      setPageCopyDirtySections(new Set());
       const next = ((data ?? []) as DBProgram[]).map(programToDraft);
       const grouped: Record<string, ProgramMediaDraft[]> = {};
       for (const row of (mediaResult.data ?? []) as DBProgramMedia[]) {
@@ -243,6 +366,11 @@ export default function AdminProgramsPage() {
   useEffect(() => {
     void loadPrograms();
   }, [club.id, loadPrograms]);
+
+  // Fast (local/typical) loads should only ever show the lightweight
+  // skeleton below; the full-page overlay is reserved for genuinely slow
+  // loads. See lib/use-delayed-loading.ts.
+  const showFullLoader = useDelayedLoading(loading, 400);
 
   function markDirty() {
     setDirty(true);
@@ -281,6 +409,35 @@ export default function AdminProgramsPage() {
     setSaved(false);
     setDirty(false);
     selectTab("content");
+  }
+
+  /**
+   * The pinned EDITING toolbar's Discard action: reverts the draft (and its
+   * gallery) back to what is currently saved, without the navigation-away
+   * confirm() dialog `selectProgram`/`startCreate` use — discarding is
+   * itself the explicit "I want to lose this" action, so a second prompt
+   * would be redundant. A never-saved draft reverts to a fresh empty one at
+   * the same list position, mirroring `startCreate`.
+   */
+  function discardDraftChanges() {
+    if (!draft) return;
+    const savedProgram = draft.id
+      ? (programs.find((program) => program.id === draft.id) ?? null)
+      : null;
+    if (savedProgram) {
+      setDraft({ ...savedProgram, highlights: [...savedProgram.highlights] });
+      setGallery(
+        savedProgram.id ? [...(galleryByProgram[savedProgram.id] ?? [])] : [],
+      );
+    } else {
+      setDraft(emptyProgramDraft(programs.length));
+      setGallery([]);
+    }
+    setRemovedGalleryIds([]);
+    setErrors({});
+    setError(null);
+    setSaved(false);
+    setDirty(false);
   }
 
   function setHighlight(index: number, value: string) {
@@ -548,7 +705,13 @@ export default function AdminProgramsPage() {
   ) {
     setPageCopy((current) => ({ ...current, [field]: value }));
     setPageCopyErrors((current) => ({ ...current, [field]: undefined }));
-    setPageCopyDirty(true);
+    setPageCopyDirtySections((current) => {
+      const section = PAGE_COPY_FIELD_SECTIONS[field];
+      if (current.has(section)) return current;
+      const next = new Set(current);
+      next.add(section);
+      return next;
+    });
     setPageCopySaved(false);
     setPageCopyError(null);
   }
@@ -557,6 +720,12 @@ export default function AdminProgramsPage() {
     const validation = validateProgramsPageDraft(pageCopy);
     if (Object.keys(validation).length > 0) {
       setPageCopyErrors(validation);
+      // Reveal the rail section holding the first complaint; a highlighted
+      // field on a hidden panel is the same as no message at all.
+      const firstField = (
+        Object.keys(validation) as Array<keyof ProgramsPageDraft>
+      ).find((field) => PAGE_COPY_FIELD_SECTIONS[field]);
+      if (firstField) selectPageCopySection(PAGE_COPY_FIELD_SECTIONS[firstField]);
       setPageCopyError("Review the highlighted fields before saving.");
       return;
     }
@@ -574,7 +743,7 @@ export default function AdminProgramsPage() {
         throw new Error(saveError?.message ?? "Unable to save the page copy");
       }
       setPageCopy(programsPageToDraft(data as DBProgramsPageContent));
-      setPageCopyDirty(false);
+      setPageCopyDirtySections(new Set());
       setPageCopyErrors({});
       setPageCopySaved(true);
     } catch (saveError) {
@@ -607,9 +776,15 @@ export default function AdminProgramsPage() {
     ) : null;
   }
 
-  async function reorderProgram(index: number, delta: -1 | 1) {
-    const next = moveProgram(programs, index, delta);
-    if (next === programs) return;
+  /**
+   * Writes a full reordered program list's `sort_order` immediately — no
+   * Save-button gating. This is the same "write immediately" contract the
+   * old Up/Down-button `reorderProgram` used (every program's `sort_order`
+   * in `next` is written, not just the moved pair), now driven by a drag
+   * handle's full new id order instead of a single-step swap. See
+   * components/admin/useSortableList.ts for the drag wrapper this feeds.
+   */
+  async function persistProgramOrder(next: ProgramDraft[]) {
     setPrograms(next);
     setSaved(false);
     setError(null);
@@ -641,33 +816,80 @@ export default function AdminProgramsPage() {
     }
   }
 
+  /** `useSortableList`'s onReorder: the full new id order after a drag ends. */
+  function handleProgramReorder(newOrderIds: string[]) {
+    const byId = new Map(programs.map((program) => [program.id, program]));
+    const next = newOrderIds
+      .map((id) => byId.get(id))
+      .filter((program): program is ProgramDraft => Boolean(program))
+      .map((program, sortOrder) => ({ ...program, sortOrder }));
+    // Guards against an id set that doesn't match the full list (should not
+    // happen since drag is disabled while filtered — see canReorderPrograms).
+    if (next.length !== programs.length) return;
+    void persistProgramOrder(next);
+  }
+
+  const trimmedProgramFilter = programFilter.trim().toLowerCase();
+  const filteredPrograms = trimmedProgramFilter
+    ? programs.filter(
+        (program) =>
+          program.displayTitle.toLowerCase().includes(trimmedProgramFilter) ||
+          program.navLabel.toLowerCase().includes(trimmedProgramFilter) ||
+          program.slug.toLowerCase().includes(trimmedProgramFilter),
+      )
+    : programs;
+  // Dragging is only offered against the full, unfiltered list: a drag
+  // within a filtered subset can't unambiguously express a new position in
+  // the full list, so the sensors are simply left off while filtered rather
+  // than risk writing a corrupted order.
+  const canReorderPrograms = trimmedProgramFilter.length === 0;
+  const sortableProgramIds = filteredPrograms
+    .map((program) => program.id)
+    .filter((id): id is string => typeof id === "string");
+  const {
+    sensors: programSensors,
+    collisionDetection: programCollisionDetection,
+    strategy: programSortingStrategy,
+    handleDragEnd: handleProgramDragEnd,
+  } = useSortableList({ ids: sortableProgramIds, onReorder: handleProgramReorder });
+
+  const pageCopySectionItems: AdminSectionRailItem[] = PAGE_COPY_SECTION_ORDER.map(
+    (section) => ({
+      id: section,
+      label: PAGE_COPY_SECTION_LABELS[section],
+      dirty: pageCopyDirtySections.has(section),
+    }),
+  );
+  const changedPageCopySectionLabels = PAGE_COPY_SECTION_ORDER.filter((section) =>
+    pageCopyDirtySections.has(section),
+  ).map((section) => PAGE_COPY_SECTION_LABELS[section]);
+  const pageCopySaveLabel =
+    changedPageCopySectionLabels.length > 0
+      ? `Save page copy (${changedPageCopySectionLabels.join(", ")})`
+      : "Save page copy";
+
   if (isEditorialTemplate) return null;
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="font-display text-xs font-bold uppercase tracking-[0.22em] text-brand/75">
-            Content
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-black uppercase leading-none text-foreground sm:text-5xl">
-            Programs
-          </h1>
-          <p className="mt-3 max-w-2xl font-body text-sm leading-6 text-muted-foreground">
-            Manage program pages, their order, media, highlights, visibility, and
-            registration destinations.
-          </p>
-        </div>
-        {!hidesProgramCreation && (
+    // overflow-x-clip (not overflow-hidden): still clips the SlidingPanel's
+    // horizontal slide animation, but `clip` doesn't turn this wrapper into a
+    // scroll container, which would silently disable the sticky rail/preview
+    // columns below.
+    <AdminPage className="overflow-x-clip">
+      <AdminPageHeader
+        eyebrow="Public website"
+        title="Programs"
+        description="Manage program pages, their order, media, highlights, visibility, and registration destinations."
+        actions={!hidesProgramCreation ? (
           <button
             type="button"
             onClick={startCreate}
-            className="rounded-lg bg-brand px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             Create program
           </button>
-        )}
-      </header>
+        ) : undefined}
+      />
 
       {error && (
         <div className="mb-5 rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
@@ -675,10 +897,17 @@ export default function AdminProgramsPage() {
         </div>
       )}
 
-      {!loading && !hidesPageCopyEditor && (
-        <section className="mb-6 rounded-2xl border border-border bg-background p-5 sm:p-7">
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+      {!loading && !showFullLoader && !hidesPageCopyEditor && (
+        <div className="grid min-w-0 gap-6 sm:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
+          <AdminSectionRail
+            className="self-start"
+            items={pageCopySectionItems}
+            value={activePageCopySection}
+            onChange={(id) => selectPageCopySection(id as PageCopySection)}
+          />
+
+          <AdminPanel className="self-start p-4 sm:p-5">
+            <div className="mb-5">
               <h2 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
                 Programs page copy
               </h2>
@@ -690,185 +919,239 @@ export default function AdminProgramsPage() {
                 placeholder.
               </p>
             </div>
-            {pageCopyDirty && (
-              <span className="self-start rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
+
+            {pageCopyError && (
+              <div className="mb-5 rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
+                {pageCopyError}
+              </div>
+            )}
+
+            <SlidingPanel activeKey={activePageCopySection} direction={pageCopyDirection}>
+              {activePageCopySection === "homepageBand" && (
+                <div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <FormField label="Eyebrow" error={pageCopyFieldError("pathwayEyebrow")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.pathwayEyebrow}
+                        onChange={(event) => updatePageCopy("pathwayEyebrow", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.pathwayEyebrow}
+                        placeholder={pageCopyDefaults.pathwayEyebrow}
+                      />
+                    </FormField>
+                    <FormField label="Heading" error={pageCopyFieldError("pathwayHeading")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.pathwayHeading}
+                        onChange={(event) => updatePageCopy("pathwayHeading", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.pathwayHeading}
+                        placeholder={pageCopyDefaults.pathwayHeading}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="mt-5">
+                    <FormField label="Intro paragraph" error={pageCopyFieldError("pathwayIntro")}>
+                      <Textarea
+                        className="min-h-24"
+                        value={pageCopy.pathwayIntro}
+                        onChange={(event) => updatePageCopy("pathwayIntro", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.pathwayIntro}
+                        placeholder={pageCopyDefaults.pathwayIntro}
+                        aria-invalid={Boolean(pageCopyFieldError("pathwayIntro"))}
+                      />
+                    </FormField>
+                  </div>
+                </div>
+              )}
+
+              {activePageCopySection === "pageHeader" && (
+                <div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <FormField label="Eyebrow" error={pageCopyFieldError("heroEyebrow")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.heroEyebrow}
+                        onChange={(event) => updatePageCopy("heroEyebrow", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.heroEyebrow}
+                        placeholder={pageCopyDefaults.heroEyebrow}
+                      />
+                    </FormField>
+                    <div className="hidden sm:block" aria-hidden="true" />
+                    <FormField label="Headline line 1" error={pageCopyFieldError("heroHeadlineLineOne")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.heroHeadlineLineOne}
+                        onChange={(event) => updatePageCopy("heroHeadlineLineOne", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineOne}
+                        placeholder={pageCopyDefaults.heroHeadlineLineOne}
+                      />
+                    </FormField>
+                    <FormField label="Headline line 2" error={pageCopyFieldError("heroHeadlineLineTwo")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.heroHeadlineLineTwo}
+                        onChange={(event) => updatePageCopy("heroHeadlineLineTwo", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineTwo}
+                        placeholder={pageCopyDefaults.heroHeadlineLineTwo}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="mt-5">
+                    <FormField label="Intro paragraph" error={pageCopyFieldError("heroIntro")}>
+                      <Textarea
+                        className="min-h-24"
+                        value={pageCopy.heroIntro}
+                        onChange={(event) => updatePageCopy("heroIntro", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.heroIntro}
+                        placeholder={pageCopyDefaults.heroIntro}
+                        aria-invalid={Boolean(pageCopyFieldError("heroIntro"))}
+                      />
+                    </FormField>
+                  </div>
+                </div>
+              )}
+
+              {activePageCopySection === "closingBand" && (
+                <div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <FormField label="Heading line 1" error={pageCopyFieldError("closingHeadingLineOne")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.closingHeadingLineOne}
+                        onChange={(event) => updatePageCopy("closingHeadingLineOne", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineOne}
+                        placeholder={pageCopyDefaults.closingHeadingLineOne}
+                      />
+                    </FormField>
+                    <FormField label="Heading line 2" error={pageCopyFieldError("closingHeadingLineTwo")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.closingHeadingLineTwo}
+                        onChange={(event) => updatePageCopy("closingHeadingLineTwo", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineTwo}
+                        placeholder={pageCopyDefaults.closingHeadingLineTwo}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="mt-5 grid gap-5">
+                    <FormField label="Paragraph" error={pageCopyFieldError("closingBody")}>
+                      <Textarea
+                        className="min-h-24"
+                        value={pageCopy.closingBody}
+                        onChange={(event) => updatePageCopy("closingBody", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.closingBody}
+                        placeholder={pageCopyDefaults.closingBody}
+                        aria-invalid={Boolean(pageCopyFieldError("closingBody"))}
+                      />
+                    </FormField>
+                    <FormField label="Button label" error={pageCopyFieldError("closingCtaLabel")}>
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={pageCopy.closingCtaLabel}
+                        onChange={(event) => updatePageCopy("closingCtaLabel", event.target.value)}
+                        maxLength={PROGRAMS_PAGE_LIMITS.closingCtaLabel}
+                        placeholder={pageCopyDefaults.closingCtaLabel}
+                      />
+                    </FormField>
+                  </div>
+                </div>
+              )}
+            </SlidingPanel>
+
+            <div className="mt-6 flex items-center gap-4 border-t border-border pt-6">
+              <button
+                type="button"
+                onClick={() => void savePageCopy()}
+                disabled={pageCopySaving || !pageCopyDirty}
+                className="rounded-lg bg-primary px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                {pageCopySaving && <AdminLoadingDots className="mr-2" />}
+                {pageCopySaving ? "Saving…" : pageCopySaveLabel}
+              </button>
+              {pageCopySaved && !pageCopyDirty && (
+                <span className="font-body text-xs text-success" role="status">
+                  Page copy saved
+                </span>
+              )}
+            </div>
+          </AdminPanel>
+        </div>
+      )}
+
+      {!loading && !showFullLoader && draft && (
+        <AdminPageToolbar className="sticky top-16 z-10 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <span className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Editing
+            </span>
+            <span className="truncate font-display text-base font-black uppercase text-foreground">
+              {draft.id ? draft.displayTitle || "Untitled program" : "New program"}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${
+                draft.status === "active"
+                  ? "bg-success/10 text-success"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`h-1.5 w-1.5 flex-none rounded-full ${
+                  draft.status === "active" ? "bg-success" : "bg-muted-foreground"
+                }`}
+              />
+              {draft.status === "active" ? "Active" : "Hidden"}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
+            {dirty && (
+              <span className="inline-flex items-center gap-1.5 font-body text-xs font-semibold text-warning">
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 flex-none rounded-full bg-warning"
+                />
                 Unsaved changes
               </span>
             )}
-          </div>
-
-          {pageCopyError && (
-            <div className="mb-5 rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
-              {pageCopyError}
-            </div>
-          )}
-
-          <p className="mb-3 font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Homepage band
-          </p>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Eyebrow" error={pageCopyFieldError("pathwayEyebrow")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.pathwayEyebrow}
-                onChange={(event) => updatePageCopy("pathwayEyebrow", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.pathwayEyebrow}
-                placeholder={pageCopyDefaults.pathwayEyebrow}
-              />
-            </FormField>
-            <FormField label="Heading" error={pageCopyFieldError("pathwayHeading")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.pathwayHeading}
-                onChange={(event) => updatePageCopy("pathwayHeading", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.pathwayHeading}
-                placeholder={pageCopyDefaults.pathwayHeading}
-              />
-            </FormField>
-          </div>
-          <div className="mt-5">
-            <FormField label="Intro paragraph" error={pageCopyFieldError("pathwayIntro")}>
-              <Textarea
-                className="min-h-24"
-                value={pageCopy.pathwayIntro}
-                onChange={(event) => updatePageCopy("pathwayIntro", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.pathwayIntro}
-                placeholder={pageCopyDefaults.pathwayIntro}
-                aria-invalid={Boolean(pageCopyFieldError("pathwayIntro"))}
-              />
-            </FormField>
-          </div>
-
-          <p className="mb-3 mt-7 border-t border-border pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Programs page header
-          </p>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Eyebrow" error={pageCopyFieldError("heroEyebrow")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.heroEyebrow}
-                onChange={(event) => updatePageCopy("heroEyebrow", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.heroEyebrow}
-                placeholder={pageCopyDefaults.heroEyebrow}
-              />
-            </FormField>
-            <div className="hidden sm:block" aria-hidden="true" />
-            <FormField label="Headline line 1" error={pageCopyFieldError("heroHeadlineLineOne")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.heroHeadlineLineOne}
-                onChange={(event) => updatePageCopy("heroHeadlineLineOne", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineOne}
-                placeholder={pageCopyDefaults.heroHeadlineLineOne}
-              />
-            </FormField>
-            <FormField label="Headline line 2" error={pageCopyFieldError("heroHeadlineLineTwo")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.heroHeadlineLineTwo}
-                onChange={(event) => updatePageCopy("heroHeadlineLineTwo", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.heroHeadlineLineTwo}
-                placeholder={pageCopyDefaults.heroHeadlineLineTwo}
-              />
-            </FormField>
-          </div>
-          <div className="mt-5">
-            <FormField label="Intro paragraph" error={pageCopyFieldError("heroIntro")}>
-              <Textarea
-                className="min-h-24"
-                value={pageCopy.heroIntro}
-                onChange={(event) => updatePageCopy("heroIntro", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.heroIntro}
-                placeholder={pageCopyDefaults.heroIntro}
-                aria-invalid={Boolean(pageCopyFieldError("heroIntro"))}
-              />
-            </FormField>
-          </div>
-
-          <p className="mb-3 mt-7 border-t border-border pt-7 font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Closing band
-          </p>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <FormField label="Heading line 1" error={pageCopyFieldError("closingHeadingLineOne")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.closingHeadingLineOne}
-                onChange={(event) => updatePageCopy("closingHeadingLineOne", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineOne}
-                placeholder={pageCopyDefaults.closingHeadingLineOne}
-              />
-            </FormField>
-            <FormField label="Heading line 2" error={pageCopyFieldError("closingHeadingLineTwo")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.closingHeadingLineTwo}
-                onChange={(event) => updatePageCopy("closingHeadingLineTwo", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.closingHeadingLineTwo}
-                placeholder={pageCopyDefaults.closingHeadingLineTwo}
-              />
-            </FormField>
-          </div>
-          <div className="mt-5 grid gap-5">
-            <FormField label="Paragraph" error={pageCopyFieldError("closingBody")}>
-              <Textarea
-                className="min-h-24"
-                value={pageCopy.closingBody}
-                onChange={(event) => updatePageCopy("closingBody", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.closingBody}
-                placeholder={pageCopyDefaults.closingBody}
-                aria-invalid={Boolean(pageCopyFieldError("closingBody"))}
-              />
-            </FormField>
-            <FormField label="Button label" error={pageCopyFieldError("closingCtaLabel")}>
-              <input
-                className={ADMIN_INPUT_CLASS}
-                value={pageCopy.closingCtaLabel}
-                onChange={(event) => updatePageCopy("closingCtaLabel", event.target.value)}
-                maxLength={PROGRAMS_PAGE_LIMITS.closingCtaLabel}
-                placeholder={pageCopyDefaults.closingCtaLabel}
-              />
-            </FormField>
-          </div>
-
-          <div className="mt-6 flex items-center gap-4 border-t border-border pt-6">
             <button
               type="button"
-              onClick={() => void savePageCopy()}
-              disabled={pageCopySaving || !pageCopyDirty}
-              className="rounded-lg bg-brand px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
+              onClick={discardDraftChanges}
+              disabled={!dirty || saving}
+              className="rounded-lg border border-border px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-35"
             >
-              {pageCopySaving && <AdminLoadingDots className="mr-2" />}
-              {pageCopySaving ? "Saving…" : "Save page copy"}
+              Discard
             </button>
-            {pageCopySaved && !pageCopyDirty && (
-              <span className="font-body text-xs text-success" role="status">
-                Page copy saved
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => void saveProgram()}
+              disabled={
+                saving || uploadingRole !== null || uploadingGallery || !dirty
+              }
+              className="rounded-lg bg-primary px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              {(saving || uploadingRole !== null || uploadingGallery) && (
+                <AdminLoadingDots className="mr-2" />
+              )}
+              Save changes
+            </button>
           </div>
-        </section>
+          <AdminSaveFeedback
+            saving={saving}
+            saved={saved}
+            savingLabel="Saving program…"
+            successLabel="Program saved"
+          />
+        </AdminPageToolbar>
       )}
 
-      {loading ? (
-        <div
-          className="max-w-sm space-y-2 rounded-2xl border border-border bg-background p-3"
-          role="status"
-          aria-label="Loading programs"
-        >
-          {[0, 1, 2, 3].map((index) => (
-            <div key={index} className="rounded-xl border border-border bg-card p-2">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="mt-2 h-3 w-1/2" />
-              <Skeleton className="mt-2 h-5 w-16 rounded-full" />
-              <div className="mt-2 grid grid-cols-2 gap-1">
-                <Skeleton className="h-7 rounded-md" />
-                <Skeleton className="h-7 rounded-md" />
-              </div>
-            </div>
-          ))}
-        </div>
+      {loading || showFullLoader ? (
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading programs" />
+        ) : (
+          <ProgramsPageSkeleton />
+        )
       ) : programs.length === 0 && !draft ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-16 text-center">
+        <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center shadow-sm">
           <h2 className="font-display text-xl font-black uppercase text-foreground">
             No programs yet
           </h2>
@@ -888,85 +1171,104 @@ export default function AdminProgramsPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]">
-          <aside className="self-start rounded-2xl border border-border bg-background p-3 lg:sticky lg:top-8">
-            <div className="px-3 pb-3 pt-2">
-              <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Program order
+        <div
+          className={`grid grid-cols-1 gap-6 ${
+            draft
+              ? "lg:grid-cols-[19rem_minmax(0,1fr)_22rem]"
+              : "lg:grid-cols-[19rem_minmax(0,1fr)]"
+          }`}
+        >
+          <aside className="min-w-0 self-start space-y-3 lg:sticky lg:top-40">
+            <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+              <div className="px-3 pb-3 pt-2">
+                <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  Program order
+                </p>
+                <input
+                  type="search"
+                  value={programFilter}
+                  onChange={(event) => setProgramFilter(event.target.value)}
+                  placeholder="Find a program"
+                  aria-label="Find a program"
+                  className={`${ADMIN_INPUT_CLASS} mt-2`}
+                />
+                {!canReorderPrograms && (
+                  <p className="mt-2 font-body text-[0.65rem] leading-4 text-muted-foreground">
+                    Clear the filter to drag and reorder.
+                  </p>
+                )}
+              </div>
+              {filteredPrograms.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center font-body text-xs text-muted-foreground">
+                  No programs match &ldquo;{programFilter.trim()}&rdquo;.
+                </p>
+              ) : (
+                <DndContext
+                  sensors={canReorderPrograms ? programSensors : []}
+                  collisionDetection={programCollisionDetection}
+                  onDragEnd={handleProgramDragEnd}
+                >
+                  <SortableContext items={sortableProgramIds} strategy={programSortingStrategy}>
+                    <div className="space-y-2">
+                      {filteredPrograms.map((program) => (
+                        <ProgramListRow
+                          key={program.id}
+                          program={program}
+                          isSelected={draft?.id === program.id}
+                          onSelect={() => selectProgram(program)}
+                          dragDisabled={!canReorderPrograms}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+              <p className="mt-3 px-1 font-body text-[0.65rem] leading-4 text-muted-foreground">
+                Order saves as soon as you drop it — it writes{" "}
+                <code className="font-mono text-[0.62rem]">sort_order</code>{" "}
+                straight away.
               </p>
             </div>
-            <div className="space-y-2">
-              {programs.map((program, index) => (
-                <div
-                  key={program.id}
-                  className={`rounded-xl border p-2 transition ${
-                    draft?.id === program.id
-                      ? "border-brand/35 bg-brand/10"
-                      : "border-border bg-card"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => selectProgram(program)}
-                    className="w-full rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-ring/60"
-                  >
-                    <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-foreground">
-                      {program.displayTitle || "Untitled program"}
-                    </span>
-                    <span className="mt-1 block truncate font-body text-xs text-muted-foreground">
-                      /programs/{program.slug}
-                    </span>
-                    <span className={`mt-2 inline-flex rounded-full px-2 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${
-                      program.status === "active"
-                        ? "bg-success/10 text-success"
-                        : "bg-card text-muted-foreground"
-                    }`}>
-                      {program.status}
-                    </span>
-                  </button>
-                  <div className="mt-1 grid grid-cols-2 gap-1">
-                    <button
-                      type="button"
-                      onClick={() => void reorderProgram(index, -1)}
-                      disabled={index === 0}
-                      className="rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-20"
-                      aria-label={`Move ${program.displayTitle} up`}
-                    >
-                      Up
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void reorderProgram(index, 1)}
-                      disabled={index === programs.length - 1}
-                      className="rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-20"
-                      aria-label={`Move ${program.displayTitle} down`}
-                    >
-                      Down
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+
+            {draft && (
+              <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  This program
+                </p>
+                <dl className="mt-3 space-y-2">
+                  <ThisProgramStat
+                    label="Layout variant"
+                    value={LAYOUT_VARIANT_LABELS[draft.layoutVariant]}
+                  />
+                  <ThisProgramStat
+                    label="Highlights"
+                    value={String(draft.highlights.length)}
+                  />
+                  <ThisProgramStat
+                    label="Registration band"
+                    value={draft.registrationEnabled ? "On" : "Off"}
+                    tone={draft.registrationEnabled ? "success" : "muted"}
+                  />
+                  <ThisProgramStat
+                    label="Gallery images"
+                    value={String(gallery.length)}
+                  />
+                  <ThisProgramStat
+                    label="Hero / detail image"
+                    value={summarizeHeroDetailMedia(draft).label}
+                    tone={
+                      summarizeHeroDetailMedia(draft).complete
+                        ? "default"
+                        : "warning"
+                    }
+                  />
+                </dl>
+              </div>
+            )}
           </aside>
 
           {draft && (
-            <section className="rounded-2xl border border-border bg-background p-5 sm:p-7">
-              <div className="mb-7 flex flex-col gap-3 border-b border-border pb-6 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                    {draft.id ? "Edit program" : "New program"}
-                  </p>
-                  <h2 className="mt-1 font-display text-2xl font-black uppercase text-foreground">
-                    {draft.displayTitle || "Untitled program"}
-                  </h2>
-                </div>
-                {dirty && (
-                  <span className="self-start rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
-                    Unsaved changes
-                  </span>
-                )}
-              </div>
-
+            <section className="min-w-0 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
               <ProgramTabs
                 value={activeTab}
                 onChange={selectTab}
@@ -980,7 +1282,7 @@ export default function AdminProgramsPage() {
                 {hidesSlugField ? (
                   <div>
                     <span className={ADMIN_LABEL_CLASS}>Page address</span>
-                    <p className="rounded-lg border border-border bg-black/20 px-3 py-2.5 font-body text-sm text-muted-foreground">
+                    <p className="rounded-lg border border-border bg-muted/50 px-3 py-2.5 font-body text-sm text-muted-foreground">
                       /programs/
                       <span className="text-foreground">
                         {draft.id
@@ -1148,293 +1450,387 @@ export default function AdminProgramsPage() {
               )}
 
               {activeTab === "registration" && (
-              <>
-              <div className="mt-6">
-                <div className="mb-4">
+              <div className="mt-6 space-y-6">
+                <AdminPanel as="div">
                   <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
-                    Registration section
+                    Registration destination
                   </h3>
                   <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
-                    The band shown partway down the public program page. Every
-                    field below starts filled in with the standard wording —
-                    edit it, or clear a field to keep it updating automatically
-                    if the standard wording ever changes. An open Onzio form
-                    takes priority when selected. A draft or closed form falls
-                    back to the existing button link; with neither available,
-                    visitors see the &ldquo;coming soon&rdquo; text.
+                    Where the registration band sends visitors. An open Onzio
+                    form takes priority when selected. A draft or closed form
+                    falls back to the button link below; with neither
+                    available, visitors see the &ldquo;coming soon&rdquo; text.
                   </p>
-                </div>
 
-                <label className="flex items-start gap-3 rounded-xl border border-border bg-black/15 p-4">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 flex-none accent-brand"
-                    checked={draft.registrationEnabled}
-                    onChange={(event) =>
-                      updateDraft("registrationEnabled", event.target.checked)
-                    }
-                  />
-                  <span>
-                    <span className="block font-display text-xs font-bold uppercase tracking-[0.16em] text-foreground">
-                      Show the registration section on this program page
+                  <label className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-muted/40 p-4">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 flex-none accent-primary"
+                      checked={draft.registrationEnabled}
+                      onChange={(event) =>
+                        updateDraft("registrationEnabled", event.target.checked)
+                      }
+                    />
+                    <span>
+                      <span className="block font-display text-xs font-bold uppercase tracking-[0.16em] text-foreground">
+                        Show the registration section on this program page
+                      </span>
+                      <span className="mt-1 block font-body text-xs text-muted-foreground">
+                        When on, this program leads with the registration band and
+                        its image gallery instead of the standard highlight band.
+                      </span>
                     </span>
-                    <span className="mt-1 block font-body text-xs text-muted-foreground">
-                      When on, this program leads with the registration band and
-                      its image gallery instead of the standard highlight band.
-                    </span>
-                  </span>
-                </label>
+                  </label>
 
-                <div className="mt-5">
-                  <FormField label="Onzio registration form">
-                    <NativeSelect value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
-                      <NativeSelectOption value="">No native form — use the button link below</NativeSelectOption>
-                      {registrationForms.map((form) => (
-                        <NativeSelectOption key={form.id} value={form.id}>{form.title} — {form.status}</NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </FormField>
-                  <p className="mt-2 font-body text-xs leading-5 text-muted-foreground">
-                    Only an open form launches the native registration modal. Draft and closed forms preserve the external-link fallback.
-                  </p>
-                </div>
-
-                {/* These fields remain the fallback whenever no linked Onzio
-                    form resolves open. */}
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                  <FormField label="Button label" error={fieldError(errors, "externalCtaLabel")}>
-                    <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
-                  </FormField>
-                  <FormField label="Button link" error={fieldError(errors, "externalCtaHref")}>
-                    <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
-                  </FormField>
-                </div>
-
-                <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                  <FormField
-                    label="Registration eyebrow"
-                    error={fieldError(errors, "registrationEyebrow")}
-                  >
-                    <input
-                      className={ADMIN_INPUT_CLASS}
-                      value={draft.registrationEyebrow}
-                      onChange={(event) =>
-                        updateDraft("registrationEyebrow", event.target.value)
-                      }
-                      maxLength={PROGRAM_REGISTRATION_LIMITS.eyebrow}
-                    />
-                  </FormField>
-                  <FormField
-                    label="Registration headline"
-                    error={fieldError(errors, "registrationHeadline")}
-                  >
-                    <input
-                      className={ADMIN_INPUT_CLASS}
-                      value={draft.registrationHeadline}
-                      onChange={(event) =>
-                        updateDraft("registrationHeadline", event.target.value)
-                      }
-                      maxLength={PROGRAM_REGISTRATION_LIMITS.headline}
-                    />
-                  </FormField>
-                </div>
-
-                <div className="mt-5 grid gap-5">
-                  <FormField
-                    label="Registration body — link published"
-                    error={fieldError(errors, "registrationBody")}
-                  >
-                    <Textarea
-                      className="min-h-24"
-                      value={draft.registrationBody}
-                      onChange={(event) =>
-                        updateDraft("registrationBody", event.target.value)
-                      }
-                      maxLength={PROGRAM_REGISTRATION_LIMITS.body}
-                      aria-invalid={Boolean(fieldError(errors, "registrationBody"))}
-                    />
-                  </FormField>
-                  <FormField
-                    label="Registration body — no link yet"
-                    error={fieldError(errors, "registrationPendingBody")}
-                  >
-                    <Textarea
-                      className="min-h-24"
-                      value={draft.registrationPendingBody}
-                      onChange={(event) =>
-                        updateDraft("registrationPendingBody", event.target.value)
-                      }
-                      maxLength={PROGRAM_REGISTRATION_LIMITS.pendingBody}
-                      aria-invalid={Boolean(fieldError(errors, "registrationPendingBody"))}
-                    />
-                  </FormField>
-                  <FormField
-                    label="Placeholder button text — no link yet"
-                    error={fieldError(errors, "registrationPendingLabel")}
-                  >
-                    <input
-                      className={ADMIN_INPUT_CLASS}
-                      value={draft.registrationPendingLabel}
-                      onChange={(event) =>
-                        updateDraft(
-                          "registrationPendingLabel",
-                          event.target.value,
-                        )
-                      }
-                      maxLength={PROGRAM_REGISTRATION_LIMITS.pendingLabel}
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              <div className="mt-7 border-t border-border pt-7">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
-                      Registration image gallery
-                    </h3>
-                    <p className="mt-1 max-w-xl font-body text-xs leading-5 text-muted-foreground">
-                      Photos beside the registration section. Two or more
-                      cross-fade as a slideshow. Up to{" "}
-                      {PROGRAM_MEDIA_LIMITS.items} images; JPEG, PNG, or WebP.
+                  <div className="mt-5">
+                    <FormField label="Onzio registration form">
+                      <NativeSelect value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
+                        <NativeSelectOption value="">No native form — use the button link below</NativeSelectOption>
+                        {registrationForms.map((form) => (
+                          <NativeSelectOption key={form.id} value={form.id}>{form.title} — {form.status}</NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </FormField>
+                    <p className="mt-2 font-body text-xs leading-5 text-muted-foreground">
+                      Only an open form launches the native registration modal. Draft and closed forms preserve the external-link fallback.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => galleryInput.current?.click()}
-                    disabled={
-                      uploadingGallery ||
-                      gallery.length >= PROGRAM_MEDIA_LIMITS.items
-                    }
-                    className="rounded-lg border border-border px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:opacity-30"
-                  >
-                    {uploadingGallery && <AdminLoadingDots className="mr-2" />}
-                    {uploadingGallery ? "Uploading…" : "Add image"}
-                  </button>
-                  <input
-                    ref={galleryInput}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="sr-only"
-                    onChange={(event) =>
-                      void uploadGalleryImage(event.target.files)
-                    }
-                  />
-                </div>
 
-                {gallery.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-border px-4 py-6 text-center font-body text-sm text-muted-foreground">
-                    No gallery images yet. Without them the registration section
-                    shows this program&rsquo;s detail or hero photo.
+                  {/* These fields remain the fallback whenever no linked Onzio
+                      form resolves open. */}
+                  <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                    <FormField label="Button label" error={fieldError(errors, "externalCtaLabel")}>
+                      <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaLabel} onChange={(event) => updateDraft("externalCtaLabel", event.target.value)} maxLength={40} placeholder="Register" />
+                    </FormField>
+                    <FormField label="Button link" error={fieldError(errors, "externalCtaHref")}>
+                      <input className={ADMIN_INPUT_CLASS} value={draft.externalCtaHref} onChange={(event) => updateDraft("externalCtaHref", event.target.value)} maxLength={2048} placeholder="https://… or /contact" />
+                    </FormField>
+                  </div>
+                </AdminPanel>
+
+                <AdminPanel as="div">
+                  <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
+                    Registration band copy
+                  </h3>
+                  <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
+                    The wording shown on the registration band itself. Every
+                    field below starts filled in with the standard wording —
+                    edit it, or clear a field to keep it updating automatically
+                    if the standard wording ever changes.
                   </p>
-                ) : (
-                  <ul className="grid gap-3 sm:grid-cols-2">
-                    {gallery.map((item, index) => (
-                      <li
-                        key={item.id ?? `new-${index}`}
-                        className="rounded-xl border border-border bg-black/15 p-3"
-                      >
-                        <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-border bg-black/25">
-                          {item.url ? (
-                            <ResilientImage
-                              src={item.url}
-                              alt={item.alt || `Gallery image ${index + 1}`}
-                              fill
-                              sizes="(max-width: 640px) 100vw, 40vw"
-                              className="object-cover"
-                            />
-                          ) : null}
-                          <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-muted-foreground">
-                            {index + 1}
-                          </span>
-                        </div>
-                        <input
-                          className={`${ADMIN_INPUT_CLASS} mt-3`}
-                          value={item.alt}
-                          onChange={(event) =>
-                            setGalleryAlt(index, event.target.value)
-                          }
-                          maxLength={PROGRAM_MEDIA_LIMITS.alt}
-                          placeholder="Describe this photo"
-                          aria-label={`Gallery image ${index + 1} description`}
-                        />
-                        <div className="mt-2 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => reorderGallery(index, -1)}
-                            disabled={index === 0}
-                            className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
-                            aria-label={`Move gallery image ${index + 1} up`}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => reorderGallery(index, 1)}
-                            disabled={index === gallery.length - 1}
-                            className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
-                            aria-label={`Move gallery image ${index + 1} down`}
-                          >
-                            ↓
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeGalleryImage(index)}
-                            className="rounded-md border border-destructive/15 px-3 py-1.5 font-display text-xs uppercase text-destructive/70"
-                            aria-label={`Remove gallery image ${index + 1}`}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+
+                  <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                    <FormField
+                      label="Registration eyebrow"
+                      error={fieldError(errors, "registrationEyebrow")}
+                    >
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={draft.registrationEyebrow}
+                        onChange={(event) =>
+                          updateDraft("registrationEyebrow", event.target.value)
+                        }
+                        maxLength={PROGRAM_REGISTRATION_LIMITS.eyebrow}
+                      />
+                    </FormField>
+                    <FormField
+                      label="Registration headline"
+                      error={fieldError(errors, "registrationHeadline")}
+                    >
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={draft.registrationHeadline}
+                        onChange={(event) =>
+                          updateDraft("registrationHeadline", event.target.value)
+                        }
+                        maxLength={PROGRAM_REGISTRATION_LIMITS.headline}
+                      />
+                    </FormField>
+                  </div>
+
+                  <div className="mt-5 grid gap-5">
+                    <FormField
+                      label="Registration body — link published"
+                      error={fieldError(errors, "registrationBody")}
+                    >
+                      <Textarea
+                        className="min-h-24"
+                        value={draft.registrationBody}
+                        onChange={(event) =>
+                          updateDraft("registrationBody", event.target.value)
+                        }
+                        maxLength={PROGRAM_REGISTRATION_LIMITS.body}
+                        aria-invalid={Boolean(fieldError(errors, "registrationBody"))}
+                      />
+                    </FormField>
+                    <FormField
+                      label="Registration body — no link yet"
+                      error={fieldError(errors, "registrationPendingBody")}
+                    >
+                      <Textarea
+                        className="min-h-24"
+                        value={draft.registrationPendingBody}
+                        onChange={(event) =>
+                          updateDraft("registrationPendingBody", event.target.value)
+                        }
+                        maxLength={PROGRAM_REGISTRATION_LIMITS.pendingBody}
+                        aria-invalid={Boolean(fieldError(errors, "registrationPendingBody"))}
+                      />
+                    </FormField>
+                    <FormField
+                      label="Placeholder button text — no link yet"
+                      error={fieldError(errors, "registrationPendingLabel")}
+                    >
+                      <input
+                        className={ADMIN_INPUT_CLASS}
+                        value={draft.registrationPendingLabel}
+                        onChange={(event) =>
+                          updateDraft(
+                            "registrationPendingLabel",
+                            event.target.value,
+                          )
+                        }
+                        maxLength={PROGRAM_REGISTRATION_LIMITS.pendingLabel}
+                      />
+                    </FormField>
+                  </div>
+                </AdminPanel>
+
+                <AdminPanel as="div">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
+                        Registration image gallery
+                      </h3>
+                      <p className="mt-1 max-w-xl font-body text-xs leading-5 text-muted-foreground">
+                        Photos beside the registration section. Two or more
+                        cross-fade as a slideshow. Up to{" "}
+                        {PROGRAM_MEDIA_LIMITS.items} images; JPEG, PNG, or WebP.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => galleryInput.current?.click()}
+                      disabled={
+                        uploadingGallery ||
+                        gallery.length >= PROGRAM_MEDIA_LIMITS.items
+                      }
+                      className="rounded-lg border border-border px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:opacity-30"
+                    >
+                      {uploadingGallery && <AdminLoadingDots className="mr-2" />}
+                      {uploadingGallery ? "Uploading…" : "Add image"}
+                    </button>
+                    <input
+                      ref={galleryInput}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(event) =>
+                        void uploadGalleryImage(event.target.files)
+                      }
+                    />
+                  </div>
+
+                  {gallery.length === 0 ? (
+                    <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-center font-body text-sm text-muted-foreground">
+                      No gallery images yet. Without them the registration section
+                      shows this program&rsquo;s detail or hero photo.
+                    </p>
+                  ) : (
+                    <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {gallery.map((item, index) => (
+                        <li
+                          key={item.id ?? `new-${index}`}
+                          className="rounded-xl border border-border bg-muted/40 p-3"
+                        >
+                          <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-border bg-muted">
+                            {item.url ? (
+                              <ResilientImage
+                                src={item.url}
+                                alt={item.alt || `Gallery image ${index + 1}`}
+                                fill
+                                sizes="(max-width: 640px) 100vw, 40vw"
+                                className="object-cover"
+                              />
+                            ) : null}
+                            <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-white">
+                              {index + 1}
+                            </span>
+                          </div>
+                          <input
+                            className={`${ADMIN_INPUT_CLASS} mt-3`}
+                            value={item.alt}
+                            onChange={(event) =>
+                              setGalleryAlt(index, event.target.value)
+                            }
+                            maxLength={PROGRAM_MEDIA_LIMITS.alt}
+                            placeholder="Describe this photo"
+                            aria-label={`Gallery image ${index + 1} description`}
+                          />
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => reorderGallery(index, -1)}
+                              disabled={index === 0}
+                              className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
+                              aria-label={`Move gallery image ${index + 1} up`}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => reorderGallery(index, 1)}
+                              disabled={index === gallery.length - 1}
+                              className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
+                              aria-label={`Move gallery image ${index + 1} down`}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeGalleryImage(index)}
+                              className="rounded-md border border-destructive/15 px-3 py-1.5 font-display text-xs uppercase text-destructive/70"
+                              aria-label={`Remove gallery image ${index + 1}`}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </AdminPanel>
               </div>
-              </>
               )}
               </SlidingPanel>
-
-              <div className="mt-8 flex flex-col-reverse gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <AdminSaveFeedback saving={saving} saved={saved} savingLabel="Saving program…" successLabel="Program saved" />
-                <button
-                  type="button"
-                  onClick={() => void saveProgram()}
-                  disabled={
-                    saving || uploadingRole !== null || uploadingGallery || !dirty
-                  }
-                  className="rounded-lg bg-brand px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
-                >
-                  {(saving || uploadingRole !== null || uploadingGallery) && (
-                    <AdminLoadingDots className="mr-2" />
-                  )}
-                  Save changes
-                </button>
-              </div>
             </section>
+          )}
+
+          {draft && (
+            <aside className="min-w-0 self-start rounded-xl border border-border bg-card p-4 shadow-sm lg:sticky lg:top-40">
+              <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                Program page preview
+              </p>
+              <p className="mt-1 font-body text-xs leading-5 text-muted-foreground">
+                The real public page, including unsaved changes. Turning the
+                Registration tab&rsquo;s toggle on shows the registration band
+                exactly where visitors would find it.
+              </p>
+              <div className="mt-4 overflow-hidden rounded-xl border border-border">
+                <ScaledProgramPreview
+                  program={previewProgram}
+                  otherPrograms={previewOtherPrograms}
+                />
+              </div>
+            </aside>
           )}
         </div>
       )}
+    </AdminPage>
+  );
+}
 
-      {!loading && draft && (
-        <section className="mt-6 rounded-2xl border border-border bg-background p-5 sm:p-7">
-          <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Program page preview
-          </p>
-          <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
-            The real public program page, at desktop proportions and scaled to
-            fit, built from the program you are editing including its unsaved
-            changes. Turning the Registration tab&rsquo;s toggle on shows the
-            registration band exactly where visitors would find it.
-          </p>
-          <div className="mt-4 overflow-hidden rounded-xl border border-border">
-            <ScaledProgramPreview
-              program={previewProgram}
-              otherPrograms={previewOtherPrograms}
+/**
+ * One row in the "Program order" list. Wraps `useSortableRow` so dragging
+ * the grip handle reorders the list; the handle's listeners are withheld
+ * while `dragDisabled` (the list is filtered), matching the DndContext's
+ * empty `sensors` array in the parent so a filtered drag cannot silently no-op
+ * — the handle simply cannot start one at all.
+ */
+/**
+ * One read-only row in the "This program" summary panel: a label/value pair
+ * drawn entirely from state already loaded for the selected draft (no new
+ * fields, no new fetches) — a compact recap of layout, highlights,
+ * registration, and media so an admin can sanity-check a program without
+ * opening every tab.
+ */
+function ThisProgramStat({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "success" | "warning" | "muted";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "text-success"
+      : tone === "warning"
+        ? "text-warning"
+        : tone === "muted"
+          ? "text-muted-foreground"
+          : "text-foreground";
+  return (
+    <div className="flex items-center justify-between gap-3 font-body text-xs">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className={`font-bold ${toneClass}`}>{value}</dd>
+    </div>
+  );
+}
+
+function ProgramListRow({
+  program,
+  isSelected,
+  onSelect,
+  dragDisabled,
+}: {
+  program: ProgramDraft;
+  isSelected: boolean;
+  onSelect: () => void;
+  dragDisabled: boolean;
+}) {
+  const { setNodeRef, style, attributes, listeners, isDragging } = useSortableRow(
+    program.id ?? "",
+  );
+  const isActive = program.status === "active";
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-xl border p-2 transition ${
+        isSelected ? "border-primary/40 bg-primary/10" : "border-border bg-background"
+      } ${isDragging ? "relative z-10 opacity-60 shadow-lg" : ""}`}
+    >
+      <div className="flex items-start gap-1">
+        <button
+          type="button"
+          {...(dragDisabled ? {} : attributes)}
+          {...(dragDisabled ? {} : listeners)}
+          disabled={dragDisabled}
+          aria-label={`Reorder ${program.displayTitle || "program"}`}
+          title={dragDisabled ? "Clear the filter to reorder" : "Drag to reorder"}
+          className="mt-1.5 flex h-8 w-6 flex-none cursor-grab items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <GripVertical className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={onSelect}
+          className="w-full min-w-0 rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-ring/60"
+        >
+          <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-foreground">
+            {program.displayTitle || "Untitled program"}
+          </span>
+          <span className="mt-1 block truncate font-body text-xs text-muted-foreground">
+            /programs/{program.slug}
+          </span>
+          <span
+            className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${
+              isActive ? "bg-success/10 text-success" : "bg-card text-muted-foreground"
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`h-1.5 w-1.5 flex-none rounded-full ${
+                isActive ? "bg-success" : "bg-muted-foreground"
+              }`}
             />
-          </div>
-        </section>
-      )}
+            {program.status}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -1460,7 +1856,7 @@ function ProgramTabs({
             disabled={disabled}
             aria-pressed={selected}
             className={`font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors disabled:cursor-not-allowed ${
-              selected ? "bg-foreground text-background" : "text-muted-foreground"
+              selected ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-background"
             }`}
           >
             {tab.label}

@@ -1,8 +1,11 @@
 "use client";
 
 import Image from "@/components/ResilientImage";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminPage, AdminPageHeader, AdminPageToolbar, AdminPanel } from "@/components/admin/AdminPage";
+import { AdminSidePanel } from "@/components/admin/AdminSidePanel";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -14,9 +17,8 @@ import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "lucide-react";
+import { ChevronDownIcon, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -25,6 +27,9 @@ import {
   PopoverPositioner,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { SlidingPanelDirection } from "@/components/ui/sliding-panel";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
 
 // ── Types ─────────────────────────────────────
 
@@ -51,6 +56,36 @@ type Match = {
 
 type FormState = Omit<Match, "id">;
 
+type ResultFilter = "all" | "home" | "away" | "missing";
+
+/** Lightweight placeholder shown for fast loads, before (if ever) escalating
+ * to AdminFullPageLoader. Loosely mirrors the loaded layout: a couple of
+ * month-group cards, each with a few match-row placeholders. */
+function ScheduleListSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" role="status" aria-label="Loading schedule">
+      {Array.from({ length: 2 }, (_, groupIndex) => (
+        <div key={groupIndex} className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="border-b border-border bg-muted/40 px-4 py-2.5">
+            <Skeleton className="h-3.5 w-24" />
+          </div>
+          <div className="divide-y divide-border">
+            {Array.from({ length: 3 }, (_, rowIndex) => (
+              <div key={rowIndex} className="flex items-center justify-between gap-4 px-4 py-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-40 max-w-full" />
+                  <Skeleton className="h-3 w-32 max-w-full" />
+                </div>
+                <Skeleton className="h-8 w-16 flex-shrink-0 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function emptyForm(seasonId = ""): FormState {
   return {
     date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "",
@@ -76,6 +111,65 @@ function formatDateInput(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+const MONTH_GROUP_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/** "2026-03-15" -> "March 2026". Parsed as UTC so the label never shifts a
+ * day relative to the plain date string stored on the match. Falls back to
+ * a literal "Undated" bucket for a match saved without a date. */
+function monthGroupKey(dateValue: string): string {
+  if (!dateValue) return "Undated";
+  const parsed = new Date(`${dateValue}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return "Undated";
+  return MONTH_GROUP_FORMATTER.format(parsed);
+}
+
+function hasResult(match: Pick<Match, "rose_city_score" | "opponent_score">): boolean {
+  return match.rose_city_score !== null && match.opponent_score !== null;
+}
+
+const WEEKDAY_SHORT_FORMATTER = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
+const DAY_FORMATTER = new Intl.DateTimeFormat("en-US", { day: "2-digit", timeZone: "UTC" });
+const MONTH_SHORT_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
+
+function parseUtcDate(dateValue: string): Date | null {
+  if (!dateValue) return null;
+  const parsed = new Date(`${dateValue}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/** "2026-03-14" -> "Sat 14". Used in the row list, where the month is
+ * already established by the group header above it. */
+function formatRowDate(dateValue: string): string {
+  const parsed = parseUtcDate(dateValue);
+  if (!parsed) return "No date";
+  return `${WEEKDAY_SHORT_FORMATTER.format(parsed)} ${DAY_FORMATTER.format(parsed)}`;
+}
+
+/** "2026-03-14" -> "Sat 14 Mar". Used in the edit panel, which has no
+ * surrounding month context of its own. */
+function formatShortDate(dateValue: string): string {
+  const parsed = parseUtcDate(dateValue);
+  if (!parsed) return "No date";
+  return `${WEEKDAY_SHORT_FORMATTER.format(parsed)} ${DAY_FORMATTER.format(parsed)} ${MONTH_SHORT_FORMATTER.format(parsed)}`;
+}
+
+/** "18:00" -> "6:00 PM" */
+function formatTime12h(timeValue: string): string {
+  if (!timeValue) return "";
+  const [hourStr, minStr] = timeValue.split(":");
+  const minutes = parseInt(minStr ?? "0", 10);
+  let hours = parseInt(hourStr ?? "", 10);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeValue;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  return `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`;
 }
 
 async function uploadPhoto(file: File, bucket: string, folder: string): Promise<string> {
@@ -128,8 +222,11 @@ export default function SchedulePage() {
   const isAcademy = club.presentationTemplateKey === "academy@1";
   const isEditorial = club.presentationTemplateKey === "editorial@1";
   const hidesMatchSponsorFields = isAcademy || isEditorial;
-  const carrySponsor = (list: Match[], seasonId: string) =>
-    hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId);
+  const carrySponsor = useCallback(
+    (list: Match[], seasonId: string) =>
+      hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId),
+    [hidesMatchSponsorFields],
+  );
   const {
     seasons,
     selectedSeasonId,
@@ -146,6 +243,18 @@ export default function SchedulePage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError]           = useState<string | null>(null);
   const [saved, setSaved]           = useState(false);
+
+  // Panel state: the side panel is open whenever `addOpen` or `editingId` is
+  // set. `panelDirection` drives the SlidingPanel content-swap animation —
+  // 1 opens/advances, -1 retargets backward — same convention as Roster's
+  // AdminSidePanel pilot.
+  const [panelDirection, setPanelDirection] = useState<SlidingPanelDirection>(1);
+
+  // Search + result filter: pure client-side derived state, same pattern as
+  // Roster's search/status filters — the season's matches are already loaded
+  // in full, so no new query is needed.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [resultFilter, setResultFilter] = useState<ResultFilter>("all");
 
   // ── Load ────────────────────────────────────
 
@@ -169,7 +278,12 @@ export default function SchedulePage() {
       ...emptyForm(selectedSeasonId),
       ...carrySponsor(matches, selectedSeasonId),
     });
-  }, [matches, selectedSeasonId]);
+  }, [carrySponsor, matches, selectedSeasonId]);
+
+  // Fast (local/typical) loads should only ever show the lightweight
+  // skeleton below; the full-page overlay is reserved for genuinely slow
+  // loads. See lib/use-delayed-loading.ts.
+  const showFullLoader = useDelayedLoading(loading || seasonsLoading, 400);
 
   function flash() {
     setSaved(true);
@@ -258,6 +372,41 @@ export default function SchedulePage() {
     });
   }
 
+  // Panel key for the currently-open row/form, in the same chronological
+  // order the rows render in (independent of the month grouping). Used only
+  // to pick a slide direction when the panel retargets from one match
+  // straight to another without closing.
+  function panelIndex(key: string | null): number {
+    if (key === null) return -1;
+    return sorted.findIndex((m) => m.id === key);
+  }
+
+  function openAddPanel() {
+    setPanelDirection(1);
+    setEditingId(null);
+    setAddForm({
+      ...emptyForm(selectedSeasonId),
+      ...carrySponsor(matches, selectedSeasonId),
+    });
+    setError(null);
+    setAddOpen(true);
+  }
+
+  function openEditPanel(m: Match) {
+    const fromIndex = addOpen ? -1 : panelIndex(editingId);
+    const toIndex = panelIndex(m.id);
+    setPanelDirection(fromIndex === -1 ? 1 : toIndex >= fromIndex ? 1 : -1);
+    setAddOpen(false);
+    setError(null);
+    startEdit(m);
+  }
+
+  function closePanel() {
+    setAddOpen(false);
+    setEditingId(null);
+    setError(null);
+  }
+
   async function handleSaveEdit() {
     if (!editingId) return;
     const validationError = validate(editForm);
@@ -316,6 +465,7 @@ export default function SchedulePage() {
     if (e) { setError(e.message); setDeletingId(null); return; }
     setMatches((prev) => prev.filter((m) => m.id !== id));
     setDeletingId(null);
+    if (editingId === id) closePanel();
   }
 
   // ── Render ───────────────────────────────────
@@ -327,25 +477,64 @@ export default function SchedulePage() {
     return keyA < keyB ? -1 : keyA > keyB ? 1 : 0;
   });
 
+  // Counts for the filter chips reflect the whole season, independent of
+  // the search box — same convention as the mockup's "All 18 / Home 9 /
+  // Away 9 / Result missing 4" chip labels.
+  const resultFilterCounts = useMemo(
+    () => ({
+      all: sorted.length,
+      home: sorted.filter((m) => m.home).length,
+      away: sorted.filter((m) => !m.home).length,
+      missing: sorted.filter((m) => !hasResult(m)).length,
+    }),
+    [sorted],
+  );
+
+  const resultFiltered = useMemo(() => {
+    if (resultFilter === "home") return sorted.filter((m) => m.home);
+    if (resultFilter === "away") return sorted.filter((m) => !m.home);
+    if (resultFilter === "missing") return sorted.filter((m) => !hasResult(m));
+    return sorted;
+  }, [sorted, resultFilter]);
+
+  // Search is pure client-side derived state — the season's matches are
+  // already loaded in full, so no new query is needed.
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return resultFiltered;
+    return resultFiltered.filter(
+      (m) => m.opponent.toLowerCase().includes(q) || m.venue.toLowerCase().includes(q),
+    );
+  }, [resultFiltered, searchQuery]);
+
+  // Group the (already chronologically sorted) list by month. Map preserves
+  // insertion order, so the groups themselves come out in date order too —
+  // matches stay sorted within each month exactly as they were in the flat
+  // list.
+  const monthGroups = useMemo(() => {
+    const groups = new Map<string, Match[]>();
+    for (const m of filtered) {
+      const key = monthGroupKey(m.date);
+      const group = groups.get(key);
+      if (group) group.push(m);
+      else groups.set(key, [m]);
+    }
+    return Array.from(groups.entries());
+  }, [filtered]);
+
+  const panelOpen = addOpen || editingId !== null;
+  const panelKey = addOpen ? "add" : (editingId ?? "closed");
+  const panelForm = editingId ? editForm : addForm;
+  const panelOnChange = editingId ? setEditForm : setAddForm;
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <AdminPage className="max-w-4xl">
       <AdminSaveFeedback saving={saving} saved={saved} />
 
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1
-            className="font-display font-black uppercase text-foreground leading-none"
-            style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
-          >
-            Schedule
-          </h1>
-          <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-            Add, edit, or remove matches.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-3">
+      <AdminPageHeader
+        title="Schedule"
+        description="Add, edit, or remove matches."
+        actions={<div className="flex flex-wrap items-end gap-3">
           <SeasonSelect
             seasons={seasons}
             value={selectedSeasonId}
@@ -354,200 +543,275 @@ export default function SchedulePage() {
             disabled={seasonsLoading || saving}
           />
           <button
-            onClick={() => {
-              setAddOpen((open) => !open);
-              setAddForm({
-                ...emptyForm(selectedSeasonId),
-                ...carrySponsor(matches, selectedSeasonId),
-              });
-              setError(null);
-            }}
+            onClick={openAddPanel}
             disabled={!selectedSeasonId}
-            className="flex-shrink-0 px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white transition-opacity hover:bg-brand/90 disabled:opacity-50"
+            className="flex-shrink-0 rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-50"
           >
-            {addOpen ? "Cancel" : "+ Add Match"}
+            + Add Match
           </button>
-        </div>
-      </div>
+        </div>}
+      />
 
       {/* Global feedback */}
-      {error && (
+      {error && !panelOpen && (
         <p className="font-body text-sm mb-4 text-destructive">
           Error: {error}
         </p>
       )}
 
-      {/* Add form */}
-      {addOpen && (
-        <div className="rounded-xl border border-brand/25 bg-card p-5 mb-6">
-          <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">
-            New Match
-          </p>
-          <MatchForm form={addForm} onChange={setAddForm} seasons={seasons} cleanupDraftUploads />
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={handleAdd}
-              disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white text-xs hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : "Save Match"}
-            </button>
-          </div>
+      {/* Search + result filter */}
+      <AdminPageToolbar className="flex-col items-stretch gap-3">
+        <div className="relative w-full sm:max-w-xs">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search opponent or venue…"
+            aria-label="Search matches by opponent or venue"
+            className={cn(ADMIN_INPUT_CLASS, "pl-9")}
+          />
         </div>
-      )}
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            role="group"
+            aria-label="Filter matches by result"
+            className="flex max-w-full flex-wrap gap-1 rounded-lg border border-border bg-muted/60 p-1"
+          >
+            {([
+              ["all", `All ${resultFilterCounts.all}`],
+              ["home", `Home ${resultFilterCounts.home}`],
+              ["away", `Away ${resultFilterCounts.away}`],
+              ["missing", `Result missing ${resultFilterCounts.missing}`],
+            ] as [ResultFilter, string][]).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setResultFilter(value)}
+                aria-pressed={resultFilter === value}
+                className={cn(
+                  "min-h-9 flex-none rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  resultFilter === value
+                    ? "bg-card text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="whitespace-nowrap font-body text-sm text-muted-foreground">
+            Sorted by date
+          </p>
+        </div>
+      </AdminPageToolbar>
 
-      {/* Match list */}
-      {loading || seasonsLoading ? (
-        <div role="status" aria-label="Loading matches" className="flex flex-col gap-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4"
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <Skeleton className="h-10 w-10 flex-shrink-0 rounded-full" />
-                <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-5 w-56" />
-                  <Skeleton className="h-3.5 w-64" />
-                </div>
+      {/* Match list, grouped by month */}
+      {loading || seasonsLoading || showFullLoader ? (
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading schedule" />
+        ) : (
+          <ScheduleListSkeleton />
+        )
+      ) : filtered.length === 0 ? (
+        <AdminPanel className="flex flex-col items-center gap-1 py-10 text-center">
+          <p className="font-body text-sm font-semibold text-foreground">
+            {sorted.length === 0
+              ? "No matches yet"
+              : resultFilter === "missing"
+                ? "No matches are missing a result"
+                : "No matches match your search and filters"}
+          </p>
+          <p className="font-body text-sm text-muted-foreground">
+            {sorted.length === 0
+              ? `Add a match for ${selectedSeason?.label ?? "the selected season"} to get started.`
+              : resultFilter === "missing"
+                ? "Every match this season already has a result."
+                : "Try a different search term or filter."}
+          </p>
+        </AdminPanel>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {monthGroups.map(([month, monthMatches]) => (
+            <div key={month} className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
+                <span className="font-display text-xs font-black uppercase tracking-widest text-foreground">
+                  {month}
+                </span>
+                <span className="font-body text-xs text-muted-foreground">
+                  {monthMatches.length} {monthMatches.length === 1 ? "match" : "matches"}
+                </span>
               </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
-                <Skeleton className="h-9 w-16 rounded-lg" />
-                <Skeleton className="h-9 w-20 rounded-lg" />
+              <div className="divide-y divide-border">
+                {monthMatches.map((m) => {
+                  const isEditing = editingId === m.id;
+                  const venueLine = [m.venue, m.city, m.state].filter(Boolean).join(", ") +
+                    (m.address ? ` · ${m.address}` : "");
+                  const subtitle = (
+                    <>
+                      {/* Competition */}
+                      {m.competition && (
+                        <p className="truncate font-body text-xs text-muted-foreground">{m.competition}</p>
+                      )}
+
+                      {!hidesMatchSponsorFields && m.sponsor_logo_url && (
+                        <p className="truncate font-body text-xs text-muted-foreground">
+                          Presented by {m.sponsor_name || "match sponsor"}
+                        </p>
+                      )}
+                    </>
+                  );
+
+                  const editButton = (
+                    <button
+                      onClick={() => openEditPanel(m)}
+                      className={cn(
+                        "flex-none rounded-lg px-3 py-1.5 font-body text-xs font-medium transition-colors",
+                        isEditing
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-border bg-card text-foreground hover:bg-accent",
+                      )}
+                    >
+                      {isEditing ? "Editing" : "Edit"}
+                    </button>
+                  );
+                  const resultLabel = hasResult(m) ? (
+                    <span className="font-display text-sm font-semibold tabular-nums text-foreground">
+                      <span aria-hidden="true">{m.rose_city_score} – {m.opponent_score}</span>
+                      <span className="sr-only">
+                        Result: {club.name} {m.rose_city_score} - {m.opponent_score} {m.opponent}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="font-body text-xs text-warning">No result yet</span>
+                  );
+
+                  return (
+                    <div
+                      key={m.id}
+                      className={cn(
+                        "transition-colors",
+                        isEditing ? "border-l-4 border-l-primary bg-primary/5" : "hover:bg-accent/40",
+                      )}
+                    >
+                      {/* Mobile: stacked card */}
+                      <div className="flex items-center gap-3 px-4 py-3 sm:hidden">
+                        <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={36} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate font-display text-sm font-black uppercase text-foreground">
+                              {m.home ? "vs" : "@"} {m.opponent}
+                            </span>
+                            <span
+                              className={cn(
+                                "flex-none rounded px-1.5 py-0.5 font-display text-[0.65rem] font-bold uppercase tracking-wider",
+                                m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
+                              )}
+                            >
+                              {m.home ? "Home" : "Away"}
+                            </span>
+                          </div>
+                          <p className="font-body text-xs text-muted-foreground">
+                            {formatRowDate(m.date)} · {formatTime12h(m.time)}
+                          </p>
+                          {subtitle}
+                          <p className="truncate font-body text-xs text-muted-foreground">{venueLine}</p>
+                          <div className="mt-1">{resultLabel}</div>
+                        </div>
+                        {editButton}
+                      </div>
+
+                      {/* Desktop: table row — date/time, crest, opponent, result, venue, actions */}
+                      <div className="hidden grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] items-center gap-4 px-4 py-3 sm:grid">
+                        <div className="flex flex-col gap-0.5">
+                          <span className={cn("font-display text-sm font-semibold", isEditing ? "text-primary" : "text-foreground")}>
+                            {formatRowDate(m.date)}
+                          </span>
+                          <span className="font-body text-xs text-muted-foreground">{formatTime12h(m.time)}</span>
+                        </div>
+                        <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={34} />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate font-display text-sm font-black uppercase text-foreground">
+                              {m.home ? "vs" : "@"} {m.opponent}
+                            </span>
+                            <span
+                              className={cn(
+                                "flex-none rounded px-1.5 py-0.5 font-display text-[0.65rem] font-bold uppercase tracking-wider",
+                                m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
+                              )}
+                            >
+                              {m.home ? "Home" : "Away"}
+                            </span>
+                          </div>
+                          {subtitle}
+                        </div>
+                        <div>{resultLabel}</div>
+                        <div className="min-w-0">
+                          <span className="block truncate font-body text-xs text-muted-foreground">{venueLine}</span>
+                        </div>
+                        <div className="flex justify-end">{editButton}</div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
         </div>
-      ) : sorted.length === 0 ? (
-        <p className="font-body text-sm text-muted-foreground">
-          No matches for {selectedSeason?.label ?? "the selected season"}. Add one above.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {sorted.map((m) => {
-            const isEditing = editingId === m.id;
-            const isDeleting = deletingId === m.id;
-
-            return (
-              <div
-                key={m.id}
-                className={cn(
-                  "rounded-xl overflow-hidden border",
-                  isEditing ? "border-brand/30" : "border-border",
-                )}
-              >
-                {isEditing ? (
-                  /* Edit mode */
-                  <div className="bg-card p-5">
-                    <MatchForm form={editForm} onChange={setEditForm} seasons={seasons} />
-                    <div className="mt-4 flex gap-3">
-                      <button
-                        onClick={handleSaveEdit}
-                        disabled={saving}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white text-xs hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {saving && <AdminLoadingDots className="mr-2" />}
-                        {saving ? "Saving…" : "Save"}
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* View mode */
-                  <div
-                    className="flex items-center justify-between gap-4 bg-card px-5 py-4 transition-colors hover:bg-accent/40"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={40} />
-                      <div className="min-w-0">
-                      {/* Date + home/away badge */}
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-display font-bold text-foreground" style={{ fontSize: "1.1rem" }}>{m.date}</span>
-                        <span className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>{m.time}</span>
-                        <span
-                          className={cn(
-                            "font-display font-black uppercase px-2 py-0.5 rounded",
-                            m.home ? "bg-success/15 text-success" : "bg-muted/70 text-muted-foreground",
-                          )}
-                          style={{
-                            fontSize: "0.75rem",
-                            letterSpacing: "0.08em",
-                          }}
-                        >
-                          {m.home ? "Home" : "Away"}
-                        </span>
-                      </div>
-
-                      {/* Opponent */}
-                      <p className="font-display font-black uppercase text-foreground" style={{ fontSize: "1.25rem" }}>
-                        {m.home ? "vs" : "@"} {m.opponent}
-                      </p>
-
-                      {(m.rose_city_score !== null && m.opponent_score !== null) && (
-                        <p
-                          className="font-display mt-1 font-black uppercase tracking-widest text-foreground/70"
-                          style={{ fontSize: "0.85rem" }}
-                        >
-                          Result: {club.name} {m.rose_city_score} - {m.opponent_score} {m.opponent}
-                        </p>
-                      )}
-
-                      {/* Competition */}
-                      {m.competition && (
-                        <p className="font-body truncate text-muted-foreground" style={{ fontSize: "0.85rem" }}>
-                          {m.competition}
-                        </p>
-                      )}
-
-                      {!hidesMatchSponsorFields && m.sponsor_logo_url && (
-                        <p className="font-body truncate text-muted-foreground/80" style={{ fontSize: "0.8rem" }}>
-                          Presented by {m.sponsor_name || "match sponsor"}
-                        </p>
-                      )}
-
-                      {/* Venue */}
-                      <p className="font-body mt-0.5 truncate text-muted-foreground" style={{ fontSize: "0.95rem" }}>
-                        {m.venue}
-                        {m.city ? `, ${m.city}` : ""}
-                        {m.state ? `, ${m.state}` : ""}
-                        {m.address ? ` · ${m.address}` : ""}
-                      </p>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => startEdit(m)}
-                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors border border-border bg-muted/40 text-foreground/60 hover:bg-accent hover:text-foreground"
-                        style={{ fontSize: "0.95rem" }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(m.id)}
-                        disabled={isDeleting}
-                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors border border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20 disabled:cursor-not-allowed disabled:text-destructive/40 disabled:hover:bg-destructive/10"
-                        style={{ fontSize: "0.95rem" }}
-                      >
-                        {isDeleting ? "…" : "Delete"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
       )}
-    </div>
+
+      <AdminSidePanel
+        open={panelOpen}
+        onClose={closePanel}
+        title={editingId ? `${editForm.home ? "vs" : "@"} ${editForm.opponent || "Opponent"}` : "New Match"}
+        description={
+          editingId
+            ? [formatShortDate(editForm.date), formatTime12h(editForm.time)].filter(Boolean).join(" · ") || "No date"
+            : "Add a match to the schedule."
+        }
+        activeKey={panelKey}
+        direction={panelDirection}
+      >
+        <MatchForm
+          form={panelForm}
+          onChange={panelOnChange}
+          seasons={seasons}
+          cleanupDraftUploads={!editingId}
+        />
+        {error && <p className="mt-4 font-body text-sm text-destructive">Error: {error}</p>}
+        <div className="mt-4 flex items-center gap-3">
+          {editingId && (
+            <button
+              onClick={() => handleDelete(editingId)}
+              disabled={deletingId === editingId}
+              className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2 font-display text-xs font-black uppercase tracking-widest text-destructive/80 hover:bg-destructive/20 disabled:cursor-not-allowed disabled:text-destructive/40 disabled:hover:bg-destructive/10"
+            >
+              {deletingId === editingId ? "Deleting…" : "Delete"}
+            </button>
+          )}
+          <div className="ml-auto flex gap-3">
+            <button
+              onClick={closePanel}
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={editingId ? handleSaveEdit : handleAdd}
+              disabled={saving}
+              className="rounded-lg bg-primary px-6 py-2 font-display text-xs font-black uppercase tracking-widest text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving && <AdminLoadingDots className="mr-2" />}
+              {saving ? "Saving…" : editingId ? "Save" : "Save Match"}
+            </button>
+          </div>
+        </div>
+      </AdminSidePanel>
+    </AdminPage>
   );
 }
 
@@ -590,6 +854,9 @@ function MatchForm({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* ── Fixture ── */}
+      <SectionHeader title="Fixture" />
+
       <Field label="Season" required>
         <NativeSelect
           value={form.season_id}
@@ -606,7 +873,7 @@ function MatchForm({
       </Field>
 
       <Field label="Date" required>
-        <div className="dark">
+        <div>
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
             <PopoverTrigger
               render={<Button variant="outline" />}
@@ -641,7 +908,20 @@ function MatchForm({
         />
       </Field>
 
-      <Field label="Opponent" required>
+      <Field label="Home / Away" required>
+        <NativeSelect
+          value={form.home ? "home" : "away"}
+          onChange={(e) => set("home", e.target.value === "home")}
+        >
+          <NativeSelectOption value="home">Home</NativeSelectOption>
+          <NativeSelectOption value="away">Away</NativeSelectOption>
+        </NativeSelect>
+      </Field>
+
+      {/* ── Opponent ── */}
+      <SectionHeader title="Opponent" />
+
+      <Field label="Opponent" required className="sm:col-span-2">
         <input
           type="text"
           placeholder="e.g. Portland FC"
@@ -654,6 +934,7 @@ function MatchForm({
       <Field
         label="Opponent Short Name (optional)"
         help="Used on the homepage Next Match card only when the full opponent name is too long to fit on one line."
+        className="sm:col-span-2"
       >
         <input
           type="text"
@@ -703,16 +984,87 @@ function MatchForm({
         />
       </Field>
 
+      {/* ── Venue ── */}
+      <SectionHeader title="Venue" />
+
+      <Field label="Venue" required className="sm:col-span-2">
+        <input
+          type="text"
+          placeholder="e.g. Delta Park"
+          value={form.venue}
+          onChange={(e) => set("venue", e.target.value)}
+          className={ADMIN_INPUT_CLASS}
+        />
+      </Field>
+
+      <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-[1fr_1fr_5rem]">
+        <Field label="Address (optional)">
+          <input
+            type="text"
+            placeholder="e.g. 1234 N Broadacre St"
+            value={form.address ?? ""}
+            onChange={(e) => set("address", e.target.value)}
+            className={ADMIN_INPUT_CLASS}
+          />
+        </Field>
+
+        <Field label="City (optional)">
+          <input
+            type="text"
+            placeholder="e.g. Irvine"
+            value={form.city ?? ""}
+            onChange={(e) => set("city", e.target.value)}
+            className={ADMIN_INPUT_CLASS}
+          />
+        </Field>
+
+        <Field label="State (optional)">
+          <input
+            type="text"
+            placeholder="e.g. CA"
+            value={form.state ?? ""}
+            onChange={(e) => set("state", e.target.value)}
+            className={ADMIN_INPUT_CLASS}
+          />
+        </Field>
+      </div>
+
+      {/* ── Result ── */}
+      <SectionHeader title="Result" help="Leave blank until the match is played" />
+
+      <Field label={`${club.name} Score (optional)`}>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          placeholder="e.g. 2"
+          value={form.rose_city_score ?? ""}
+          onChange={(e) => setScore("rose_city_score", e.target.value)}
+          className={ADMIN_INPUT_CLASS}
+        />
+      </Field>
+
+      <Field label="Opponent Score (optional)">
+        <input
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          placeholder="e.g. 1"
+          value={form.opponent_score ?? ""}
+          onChange={(e) => setScore("opponent_score", e.target.value)}
+          className={ADMIN_INPUT_CLASS}
+        />
+      </Field>
+
+      {/* ── Presented By Sponsor ── */}
       {!hidesMatchSponsorFields && (
         <>
-          <div className="mt-2 border-t border-border pt-4 sm:col-span-2">
-            <p className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
-              Presented By Sponsor
-            </p>
-            <p className="font-body mt-1 text-xs text-muted-foreground">
-              New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage.
-            </p>
-          </div>
+          <SectionHeader
+            title="Presented By Sponsor"
+            help="New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage."
+          />
 
           <Field label="Sponsor Name (optional)">
             <input
@@ -764,93 +1116,13 @@ function MatchForm({
               />
             </Field>
           </div>
+
+          <p className="rounded-lg border border-border bg-muted/40 px-3.5 py-3 font-body text-xs leading-relaxed text-muted-foreground sm:col-span-2">
+            This whole block is hidden for academy@1 and editorial@1 — neither template&rsquo;s fixture cards read
+            the sponsor columns, so their rows never show a &ldquo;Presented by&rdquo; line either.
+          </p>
         </>
       )}
-
-      <Field label="Home / Away" required>
-        <NativeSelect
-          value={form.home ? "home" : "away"}
-          onChange={(e) => set("home", e.target.value === "home")}
-        >
-          <NativeSelectOption value="home">Home</NativeSelectOption>
-          <NativeSelectOption value="away">Away</NativeSelectOption>
-        </NativeSelect>
-      </Field>
-
-      <Field label="Venue" required>
-        <input
-          type="text"
-          placeholder="e.g. Delta Park"
-          value={form.venue}
-          onChange={(e) => set("venue", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
-
-      <Field label="Address (optional)">
-        <input
-          type="text"
-          placeholder="e.g. 1234 N Broadacre St"
-          value={form.address ?? ""}
-          onChange={(e) => set("address", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
-
-      <Field label="City (optional)">
-        <input
-          type="text"
-          placeholder="e.g. Irvine"
-          value={form.city ?? ""}
-          onChange={(e) => set("city", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
-
-      <Field label="State (optional)">
-        <input
-          type="text"
-          placeholder="e.g. CA"
-          value={form.state ?? ""}
-          onChange={(e) => set("state", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
-
-      <div className="mt-2 border-t border-border pt-4 sm:col-span-2">
-        <p className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
-          Match Result
-        </p>
-        <p className="font-body mt-1 text-xs text-muted-foreground">
-          Leave both scores blank until the match is complete. The public schedule updates automatically once both scores are saved.
-        </p>
-      </div>
-
-      <Field label={`${club.name} Score (optional)`}>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          inputMode="numeric"
-          placeholder="e.g. 2"
-          value={form.rose_city_score ?? ""}
-          onChange={(e) => setScore("rose_city_score", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
-
-      <Field label="Opponent Score (optional)">
-        <input
-          type="number"
-          min="0"
-          step="1"
-          inputMode="numeric"
-          placeholder="e.g. 1"
-          value={form.opponent_score ?? ""}
-          onChange={(e) => setScore("opponent_score", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
     </div>
   );
 }
@@ -999,9 +1271,21 @@ function SponsorLogoUpload({
   );
 }
 
-function Field({ label, required, help, children }: { label: string; required?: boolean; help?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  help,
+  className,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  help?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
+    <div className={className}>
       <label className={ADMIN_LABEL_CLASS}>
         {label}
         {required && <span className="ml-1 text-destructive">*</span>}
@@ -1012,6 +1296,21 @@ function Field({ label, required, help, children }: { label: string; required?: 
           {help}
         </p>
       )}
+    </div>
+  );
+}
+
+/** Eyebrow label that groups the fields below it into a named section
+ * (Fixture, Opponent, Venue, Result, Presented By Sponsor), matching the
+ * mockup's panel grouping. Must be the first grid child of a section for
+ * the `first:` divider suppression to apply. */
+function SectionHeader({ title, help }: { title: string; help?: string }) {
+  return (
+    <div className="flex flex-col gap-1 border-t border-border pt-4 first:border-t-0 first:pt-0 sm:col-span-2">
+      <span className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
+        {title}
+      </span>
+      {help && <span className="font-body text-xs text-muted-foreground">{help}</span>}
     </div>
   );
 }

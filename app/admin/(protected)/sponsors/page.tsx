@@ -5,11 +5,17 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import Image from "@/components/ResilientImage";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { AlertTriangle } from "lucide-react";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import {
+  AdminSectionRail,
+  type AdminSectionRailItem,
+} from "@/components/admin/AdminSectionRail";
 import FileUpload from "@/components/admin/FileUpload";
 import SponsorCarousel from "@/components/SponsorCarousel";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   SlidingPanel,
   type SlidingPanelDirection,
@@ -20,13 +26,24 @@ import {
   canAddSponsorLogo,
   defaultSponsorLogosForPlacement,
   diffSponsorLogos,
+  MAX_CAROUSEL_SPONSORS,
+  MAX_FOOTER_SPONSORS,
   sponsorLimitForPlacement,
   sponsorStoragePathFromPublicUrl,
   type DraftSponsorLogo,
 } from "@/lib/sponsor-content";
 import { createClient } from "@/lib/admin-client";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const PLACEMENT_ORDER: SponsorLogoPlacement[] = ["carousel", "footer"];
+
+// Each rail row states both the placement and its upload cap directly, so the
+// cap is visible before a save ever runs — not just in the description text.
+const PLACEMENT_LABELS: Record<SponsorLogoPlacement, string> = {
+  carousel: `Carousel — up to ${MAX_CAROUSEL_SPONSORS}`,
+  footer: `Footer — up to ${MAX_FOOTER_SPONSORS}`,
+};
 
 const inputClass =
   "w-full rounded-lg border border-input bg-background px-3 py-2.5 font-body text-sm text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -88,6 +105,14 @@ export default function AdminSponsorsPage() {
   const isAcademy = club.presentationTemplateKey === "academy@1";
   const isEditorial = club.presentationTemplateKey === "editorial@1";
   const hidesSponsorFooterTab = isAcademy || isEditorial;
+  // Rail rows follow PLACEMENT_ORDER. The footer row carries `hidden` for
+  // academy@1/editorial@1 (same gate as before), which drops it out of the
+  // rail and the DOM entirely — AdminSectionRail never renders a disabled row.
+  const sectionItems: AdminSectionRailItem[] = PLACEMENT_ORDER.map((item) => ({
+    id: item,
+    label: PLACEMENT_LABELS[item],
+    hidden: item === "footer" ? hidesSponsorFooterTab : false,
+  }));
   const [placement, setPlacement] = useState<SponsorLogoPlacement>("carousel");
   const [placementDirection, setPlacementDirection] =
     useState<SlidingPanelDirection>(1);
@@ -114,6 +139,7 @@ export default function AdminSponsorsPage() {
   const [error, setError] = useState<string | null>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
   const replacingIndexRef = useRef<number | null>(null);
+  const showFullLoader = useDelayedLoading(loading, 400);
 
   useEffect(() => {
     setLoading(true);
@@ -305,85 +331,79 @@ export default function AdminSponsorsPage() {
   }));
 
   return (
-    <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
+    // overflow-x-clip (not overflow-hidden): still clips the SlidingPanel's
+    // horizontal slide animation, but `clip` doesn't turn this wrapper into a
+    // scroll container, which would silently disable sticky descendants if
+    // one is ever added here.
+    <AdminPage className="overflow-x-clip">
       <AdminSaveFeedback saving={saving} saved={saved} />
-      <div className="mb-4 sm:mb-6">
-        <h1
-          className="font-display font-black uppercase leading-none text-foreground"
-          style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
-        >
-          Sponsors
-        </h1>
-        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          {hidesSponsorFooterTab
-            ? "Manage sponsor logos for the homepage carousel."
-            : "Manage sponsor logos for the homepage carousel and footer."}
-        </p>
-      </div>
-
-      {loading ? (
-        <div
-          className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]"
-          role="status"
-          aria-label="Loading sponsors"
-        >
-          <section className="min-w-0 space-y-4 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            <Skeleton className="h-11 w-full rounded-lg" />
-            <div className="grid grid-cols-2 gap-3">
-              {[0, 1, 2, 3].map((index) => (
-                <div key={index} className="space-y-2">
-                  <Skeleton className="aspect-[16/9] w-full rounded-lg" />
-                  <Skeleton className="h-8 w-full rounded-md" />
+      <AdminPageHeader
+        title="Sponsors"
+        description={hidesSponsorFooterTab
+          ? "Manage sponsor logos for the homepage carousel."
+          : "Manage sponsor logos for the homepage carousel and footer."}
+        actions={
+          !loading ? (
+            <>
+              {dirty && (
+                <div className="flex items-center gap-2 border-r border-border pr-3">
+                  <span
+                    className="h-2 w-2 flex-none rounded-full bg-warning"
+                    aria-hidden="true"
+                  />
+                  <span className="font-body whitespace-nowrap text-sm text-muted-foreground">
+                    Unsaved changes
+                  </span>
                 </div>
-              ))}
-            </div>
-            <Skeleton className="h-12 w-full rounded-lg" />
-          </section>
-          <section className="min-w-0 space-y-3 rounded-xl border border-border bg-background p-4 sm:p-5">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-32 w-full rounded-lg" />
-          </section>
-        </div>
-      ) : (
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
-          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            {/* With the footer placement hidden for academy@1 and editorial@1,
-                a single-tab switcher would be dead UI, so the whole switcher
-                is hidden and `placement` stays at its initial "carousel"
-                value. */}
-            {!hidesSponsorFooterTab && (
-            <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1">
-              {[
-                { id: "carousel" as const, label: "Carousel" },
-                { id: "footer" as const, label: "Footer" },
-              ].map((tab) => {
-                const isSelected = placement === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    disabled={saving || uploading}
-                    onClick={() => {
-                      if (tab.id === placement) return;
-                      if (dirty && !window.confirm("Discard unsaved sponsor changes before switching placements?")) {
-                        return;
-                      }
-                      selectPlacement(tab.id);
-                      setSaved(false);
-                    }}
-                    className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
-                      isSelected
-                        ? "bg-foreground text-background"
-                        : "bg-transparent text-muted-foreground"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saveDisabled}
+                className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving && <AdminLoadingDots className="mr-2" />}
+                {saving ? "Saving…" : `Save ${placement === "carousel" ? "Carousel" : "Footer"} Logos`}
+              </button>
+            </>
+          ) : undefined
+        }
+      />
 
+      {loading || showFullLoader ? (
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading sponsors" />
+        ) : (
+          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)]" role="status" aria-label="Loading sponsors">
+            <Skeleton className="h-32 w-full rounded-xl" />
+            <Skeleton className="h-96 w-full rounded-xl" />
+          </div>
+        )
+      ) : (
+        <div className={`grid min-w-0 gap-6 ${!hidesSponsorFooterTab ? "xl:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)]" : ""}`}>
+          {!hidesSponsorFooterTab && (
+            <AdminSectionRail
+              className="self-start"
+              items={sectionItems}
+              value={placement}
+              onChange={(id) => {
+                // AdminSectionRail has no per-row disabled affordance, so a
+                // mid-save/upload switch is simply ignored here instead of
+                // rendering a visually disabled row.
+                if (saving || uploading) return;
+                const next = id as SponsorLogoPlacement;
+                if (next === placement) return;
+                if (dirty && !window.confirm("Discard unsaved sponsor changes before switching placements?")) {
+                  return;
+                }
+                selectPlacement(next);
+                setSaved(false);
+              }}
+            />
+          )}
+
+          <div className="flex min-w-0 flex-col gap-4">
+          <AdminPanel className="p-4 sm:p-5">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
@@ -400,8 +420,10 @@ export default function AdminSponsorsPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              {draftLogos.map((logo, index) => (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {draftLogos.map((logo, index) => {
+                const missingName = logo.name.trim() === "";
+                return (
                 <div key={logo.id ?? logo.logo_url} className="min-w-0">
                   <div
                     className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-background transition-colors hover:border-muted-foreground/40"
@@ -413,14 +435,23 @@ export default function AdminSponsorsPage() {
                       sizes="220px"
                       className="object-contain p-4"
                     />
+                    {missingName && (
+                      <span
+                        title="Missing sponsor name — will save as “Sponsor N”"
+                        aria-label="Missing sponsor name — will save as Sponsor N"
+                        className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-warning text-warning-foreground"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => void removeLogo(index)}
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       aria-label={`Remove sponsor logo ${index + 1}`}
                     >
                       <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-                        <path d="M1 1L9 9M9 1L1 9" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                        <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                       </svg>
                     </button>
                   </div>
@@ -428,6 +459,7 @@ export default function AdminSponsorsPage() {
                     value={logo.name}
                     onChange={(event) => setLogoName(index, event.target.value)}
                     placeholder={`Sponsor ${index + 1} name`}
+                    aria-invalid={missingName || undefined}
                     className={`mt-2 ${inputClass}`}
                   />
                   <div className="mt-1 flex gap-1">
@@ -457,10 +489,11 @@ export default function AdminSponsorsPage() {
                     </OrderButton>
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               <FileUpload
-                className="col-span-2"
+                className="col-span-2 sm:col-span-3"
                 label="Add sponsor logos"
                 accept="image/*"
                 multiple
@@ -482,19 +515,9 @@ export default function AdminSponsorsPage() {
                 {error}
               </p>
             )}
+          </AdminPanel>
 
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={saveDisabled}
-              className="font-display mt-5 w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-brand-foreground transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : `Save ${placement === "carousel" ? "Carousel" : "Footer"} Logos`}
-            </button>
-          </section>
-
-          <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-background p-4 sm:p-5">
+          <AdminPanel className="overflow-hidden p-4 sm:p-5">
             <p className="font-display mb-4 text-xs uppercase tracking-widest text-muted-foreground">
               {placement === "carousel" ? "Carousel Preview" : "Footer Preview"}
             </p>
@@ -528,10 +551,11 @@ export default function AdminSponsorsPage() {
               </div>
             )}
             </SlidingPanel>
-          </section>
+          </AdminPanel>
+          </div>
         </div>
       )}
-    </div>
+    </AdminPage>
   );
 }
 
@@ -552,7 +576,7 @@ function OrderButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-7 flex-1 items-center justify-center rounded-md bg-card text-xs text-muted-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex h-7 flex-1 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>

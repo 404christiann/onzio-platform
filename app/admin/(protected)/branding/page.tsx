@@ -3,10 +3,13 @@
 import { useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
+import Footer from "@/components/Footer";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
@@ -48,6 +51,19 @@ export default function BrandingPage() {
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialLinks, setSocialLinks] =
     useState<DBSiteSocialLink[]>(DEFAULT_SITE_SOCIAL_LINKS);
+  // Platform ids that are genuinely this club's own data: either a row
+  // already existed in site_social_links when the page loaded, or the admin
+  // has actually edited that field's input during this session. Every other
+  // platform is only showing DEFAULT_SITE_SOCIAL_LINKS as an unsaved
+  // onboarding suggestion (see lib/social-links.ts). saveSocialLinks must
+  // only persist ids in this set — otherwise saving (e.g. just to fix one
+  // platform, or just to change the tagline) would silently write the
+  // hardcoded Rose City FC sample URLs into every OTHER, untouched platform
+  // for this club, which is the same cross-tenant leak this whole fix is
+  // for, just triggered on save instead of on keystroke.
+  const [configuredSocialIds, setConfiguredSocialIds] = useState<
+    Set<SiteSocialPlatform>
+  >(new Set());
   // The club's footer tagline. Stored empty means "use the standard wording",
   // which is what the textarea shows as its placeholder.
   const [footerTagline, setFooterTagline] = useState("");
@@ -74,7 +90,16 @@ export default function BrandingPage() {
 
   useEffect(() => {
     fetchSiteSocialLinks(clubId)
-      .then(setSocialLinks)
+      // fetchSiteSocialLinks(clubId) returns raw DB rows (so the public
+      // Footer never fabricates a link for a platform that isn't
+      // configured). The admin edit UI wants the opposite: always show all
+      // known platforms, seeding defaults only for ones with no row yet,
+      // while keeping an existing row's own href — including a genuinely
+      // blank one — untouched.
+      .then((rows) => {
+        setSocialLinks(normalizeSiteSocialLinks(rows));
+        setConfiguredSocialIds(new Set(rows.map((row) => row.id)));
+      })
       .catch((loadError: unknown) => {
         setSocialError(
           loadError instanceof Error
@@ -181,6 +206,15 @@ export default function BrandingPage() {
         current.map((link) => (link.id === id ? { ...link, href } : link)),
       ),
     );
+    // The admin has now genuinely interacted with this platform, so its
+    // value (even if left equal to the suggested default, or cleared to
+    // blank) is real data to persist on save — not an unsaved suggestion.
+    setConfiguredSocialIds((current) => {
+      if (current.has(id)) return current;
+      const next = new Set(current);
+      next.add(id);
+      return next;
+    });
     setSocialSaved(false);
   }
 
@@ -200,26 +234,38 @@ export default function BrandingPage() {
     try {
       const supabase = createClient();
       const now = new Date().toISOString();
-      const rows = normalizeSiteSocialLinks(socialLinks).map((link, index) => ({
-        id: link.id,
-        label: socialLinkLabel(link.id),
-        href: link.href.trim(),
-        icon: link.icon,
-        sort_order: index,
-        updated_at: now,
-      }));
+      // Only persist platforms that are genuinely this club's own data
+      // (configuredSocialIds — see its declaration above). A platform the
+      // admin never touched is still showing DEFAULT_SITE_SOCIAL_LINKS'
+      // hardcoded Rose City FC sample URL purely as an onboarding
+      // suggestion; upserting it here would silently publish another
+      // club's real social links on this club's public footer.
+      const rows = normalizeSiteSocialLinks(socialLinks)
+        .filter((link) => configuredSocialIds.has(link.id))
+        .map((link) => ({
+          id: link.id,
+          label: socialLinkLabel(link.id),
+          href: link.href.trim(),
+          icon: link.icon,
+          sort_order: DEFAULT_SITE_SOCIAL_LINKS.findIndex(
+            (fallback) => fallback.id === link.id,
+          ),
+          updated_at: now,
+        }));
 
-      const { error: saveError } = await supabase
-        .from("site_social_links")
-        .upsert(rows);
-      if (saveError) throw new Error(saveError.message);
+      if (rows.length > 0) {
+        const { error: saveError } = await supabase
+          .from("site_social_links")
+          .upsert(rows);
+        if (saveError) throw new Error(saveError.message);
+      }
 
       const { error: taglineSaveError } = await supabase
         .from("site_branding")
         .upsert({ footer_tagline: footerTagline.trim(), updated_at: now });
       if (taglineSaveError) throw new Error(taglineSaveError.message);
 
-      setSocialLinks(rows);
+      setSocialLinks(normalizeSiteSocialLinks(rows));
       setSocialSaved(true);
     } catch (saveError) {
       setSocialError(
@@ -234,8 +280,21 @@ export default function BrandingPage() {
 
   const previewUrl = localPreviewUrl ?? clubLogoUrl;
 
+  // Drives the "Footer preview" panel below: the real Footer component,
+  // fed the in-progress (possibly unsaved) tagline and social-link draft
+  // state instead of what is currently saved in the database.
+  const footerPreviewOverrides = useMemo(
+    () => ({
+      tagline: footerTagline,
+      socialLinks: Object.fromEntries(
+        socialLinks.map((link) => [link.id, link.href]),
+      ) as Partial<Record<SiteSocialPlatform, string>>,
+    }),
+    [footerTagline, socialLinks],
+  );
+
   return (
-    <div className="mx-auto max-w-5xl">
+    <AdminPage className="max-w-5xl">
       <AdminSaveFeedback
         saving={saving || savingSocialLinks}
         saved={saved || socialSaved}
@@ -243,21 +302,14 @@ export default function BrandingPage() {
         successLabel={socialSaved ? "Footer updated" : "Club logo updated"}
       />
 
-      <div className="mb-8">
-        <h1
-          className="font-display font-black uppercase leading-none text-foreground"
-          style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
-        >
-          Branding
-        </h1>
-        <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-muted-foreground">
-          Manage the club crest used across the public website and admin portal. Clubs can also carry an inverse crest for dark presentation surfaces.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Branding"
+        description="Manage the club crest used across the public website and admin portal. Clubs can also carry an inverse crest for dark presentation surfaces."
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.8fr)]">
-        <section
-          className="rounded-xl border border-border bg-background p-5 sm:p-7"
+        <AdminPanel
+          className="p-5 sm:p-7"
           aria-labelledby="club-logo-heading"
         >
           <div className="mb-6">
@@ -272,17 +324,25 @@ export default function BrandingPage() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-dashed border-border bg-black/20 p-5 sm:p-6">
+          <div className="rounded-xl border border-dashed border-border bg-muted/50 p-5 sm:p-6">
             <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
               <div className="relative h-32 w-32 flex-none overflow-hidden rounded-full border border-border bg-card p-3">
-                <Image
-                  src={previewUrl}
-                  alt="Club logo preview"
-                  fill
-                  sizes="128px"
-                  className="object-contain p-3"
-                  unoptimized={Boolean(localPreviewUrl)}
-                />
+                {previewUrl ? (
+                  <Image
+                    src={previewUrl}
+                    alt="Club logo preview"
+                    fill
+                    sizes="128px"
+                    className="object-contain p-3"
+                    unoptimized={Boolean(localPreviewUrl)}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      No logo
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-display text-lg font-black uppercase text-foreground">
@@ -316,50 +376,69 @@ export default function BrandingPage() {
             </p>
           )}
 
+          <p className="mt-6 font-body text-xs leading-relaxed text-muted-foreground">
+            Replacing an admin-uploaded logo removes the previous file once the new one is saved.
+          </p>
+
           <button
             type="button"
             onClick={saveLogo}
             disabled={!logoFile || saving}
-            className="mt-6 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
+            className="mt-3 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-brand-foreground transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
             {saving && <AdminLoadingDots className="mr-2" />}
             {saving ? "Saving…" : "Save New Club Logo"}
           </button>
-        </section>
+        </AdminPanel>
 
         <aside className="space-y-4" aria-label="Logo previews and usage">
-          <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
             <div className="flex aspect-square items-center justify-center bg-white p-5">
               <div className="relative h-full w-full">
-                <Image src={previewUrl} alt="Logo on a light background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
+                {previewUrl ? (
+                  <Image src={previewUrl} alt="Logo on a light background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      No logo
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex aspect-square items-center justify-center bg-background p-5">
+            <div className="dark flex aspect-square items-center justify-center bg-background p-5">
               <div className="relative h-full w-full">
-                <Image src={inverseLogoUrl || previewUrl} alt="Logo on a dark background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
+                {(inverseLogoUrl || previewUrl) ? (
+                  <Image src={inverseLogoUrl || previewUrl} alt="Logo on a dark background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+                      No logo
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-background p-5">
+          <AdminPanel as="div" className="p-5">
             <h2 className="font-display text-lg font-black uppercase text-foreground">Where it updates</h2>
             <ul className="mt-4 space-y-3 font-body text-sm text-muted-foreground">
               {["Website navigation", "Website footer", "Next match card", "Admin login and menu", "Players without a photo", "Browser tab icon"].map((location) => (
                 <li key={location} className="flex items-center gap-3">
-                  <span className="h-1.5 w-1.5 flex-none rounded-full bg-destructive" aria-hidden="true" />
+                  <span className="h-1.5 w-1.5 flex-none rounded-full bg-muted-foreground" aria-hidden="true" />
                   {location}
                 </li>
               ))}
             </ul>
-          </div>
-
-          <p className="font-body text-xs leading-relaxed text-muted-foreground">
-            When you replace an admin-uploaded logo, the previous uploaded file is removed after the new logo is saved.
-          </p>
+            <p className="mt-4 rounded-lg border border-border bg-muted/50 px-3.5 py-3 font-body text-xs leading-relaxed text-muted-foreground">
+              Six surfaces from one file, which is why the contrast check sits beside the picker.
+            </p>
+          </AdminPanel>
         </aside>
 
-        <section
-          className="rounded-xl border border-border bg-background p-5 sm:p-7 lg:col-span-2"
+        <AdminPanel
+          className="p-5 sm:p-7 lg:col-span-2"
           aria-labelledby="footer-social-heading"
         >
           <div className="mb-6">
@@ -374,66 +453,87 @@ export default function BrandingPage() {
             </p>
           </div>
 
-          <div className="mb-6">
-            <label
-              htmlFor="footer-tagline"
-              className={ADMIN_LABEL_CLASS}
-            >
-              Footer tagline
-            </label>
-            <Textarea
-              id="footer-tagline"
-              value={footerTagline}
-              onChange={(event) => {
-                setFooterTagline(event.target.value);
-                setSocialSaved(false);
-                setSocialError(null);
-              }}
-              rows={2}
-              maxLength={FOOTER_TAGLINE_LIMIT}
-            />
-            <p className="mt-1 font-body text-xs text-muted-foreground">
-              Shown under the club name in the footer. Press Enter for a second
-              line. Leave empty to keep the standard wording shown here.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {socialLinks.map((link) => (
-              <div
-                key={link.id}
-                className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] items-end gap-x-3"
-              >
+          <div className="grid gap-7 lg:grid-cols-2">
+            <div className="min-w-0">
+              <div className="mb-6">
                 <label
-                  htmlFor={`social-${link.id}`}
-                  className={`col-start-2 ${ADMIN_LABEL_CLASS}`}
+                  htmlFor="footer-tagline"
+                  className={ADMIN_LABEL_CLASS}
                 >
-                  {link.label}
+                  Footer tagline
                 </label>
-                <div className="relative h-8 w-8 self-center opacity-70">
-                  <Image
-                    src={link.icon}
-                    alt=""
-                    fill
-                    sizes="32px"
-                    className="object-contain brightness-0 invert"
-                  />
-                </div>
-                <input
-                  id={`social-${link.id}`}
-                  type="url"
-                  value={link.href}
-                  onChange={(event) => setSocialHref(link.id, event.target.value)}
-                  placeholder="https://..."
-                  className={ADMIN_INPUT_CLASS}
-                  style={{ colorScheme: "dark" }}
+                <Textarea
+                  id="footer-tagline"
+                  value={footerTagline}
+                  onChange={(event) => {
+                    setFooterTagline(event.target.value);
+                    setSocialSaved(false);
+                    setSocialError(null);
+                  }}
+                  rows={2}
+                  maxLength={FOOTER_TAGLINE_LIMIT}
                 />
+                <p className="mt-1 font-body text-xs text-muted-foreground">
+                  Shown under the club name in the footer. Press Enter for a second
+                  line. Leave empty to keep the standard wording shown here.
+                </p>
               </div>
-            ))}
+
+              <div>
+                <span className={ADMIN_LABEL_CLASS}>Social links</span>
+                <div className="space-y-3">
+                  {socialLinks.map((link) => (
+                    <div
+                      key={link.id}
+                      className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] items-end gap-x-3"
+                    >
+                      <label
+                        htmlFor={`social-${link.id}`}
+                        className={`col-start-2 ${ADMIN_LABEL_CLASS}`}
+                      >
+                        {link.label}
+                      </label>
+                      <div className="relative h-8 w-8 self-center opacity-70">
+                        <Image
+                          src={link.icon}
+                          alt=""
+                          fill
+                          sizes="32px"
+                          className="object-contain opacity-70 dark:brightness-0 dark:invert"
+                        />
+                      </div>
+                      <input
+                        id={`social-${link.id}`}
+                        type="url"
+                        value={link.href}
+                        onChange={(event) => setSocialHref(link.id, event.target.value)}
+                        placeholder="https://..."
+                        className={ADMIN_INPUT_CLASS}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 font-body text-xs text-muted-foreground">
+                  Leave a platform&rsquo;s URL blank to hide its icon in the public footer.
+                </p>
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <span className={ADMIN_LABEL_CLASS}>Footer preview</span>
+              <div className="overflow-hidden rounded-xl border border-border">
+                <ScaledPagePreview>
+                  <Footer overrides={footerPreviewOverrides} />
+                </ScaledPagePreview>
+              </div>
+              <p className="mt-3 rounded-lg border border-border bg-muted/50 px-3.5 py-3 font-body text-xs leading-relaxed text-muted-foreground">
+                The tagline field arrives pre-filled with the resolved template default, so clearing it back to blank is what restores the standard wording.
+              </p>
+            </div>
           </div>
 
           {socialError && (
-            <p className="mt-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
+            <p className="mt-6 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
               {socialError}
             </p>
           )}
@@ -442,13 +542,13 @@ export default function BrandingPage() {
             type="button"
             onClick={saveSocialLinks}
             disabled={savingSocialLinks}
-            className="mt-6 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
+            className="mt-6 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-brand-foreground transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
             {savingSocialLinks && <AdminLoadingDots className="mr-2" />}
             {savingSocialLinks ? "Saving…" : "Save Footer"}
           </button>
-        </section>
+        </AdminPanel>
       </div>
-    </div>
+    </AdminPage>
   );
 }

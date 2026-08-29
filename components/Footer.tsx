@@ -2,18 +2,31 @@
 
 import Image from "@/components/ResilientImage";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PoweredByOnzio from "@/components/PoweredByOnzio";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
-import type { DBSiteSocialLink, DBSiteSponsorLogo } from "@/lib/db-types";
+import type { DBSiteSocialLink, DBSiteSponsorLogo, SiteSocialPlatform } from "@/lib/db-types";
 import {
   fetchContactProfile,
   fetchSiteSocialLinks,
   fetchSiteSponsorLogos,
   type ContactProfileContent,
 } from "@/lib/queries";
+import { DEFAULT_SITE_SOCIAL_LINKS } from "@/lib/social-links";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { imageDeliveryProps } from "@/lib/image-delivery";
+
+/**
+ * Optional draft overrides used only by the /admin/branding "Footer preview"
+ * panel, so it can show unsaved tagline/social-link edits in the real
+ * Footer markup. When omitted (every real public-site usage), Footer's
+ * behavior is unchanged: it fetches and renders live data exactly as
+ * before.
+ */
+export type FooterOverrides = {
+  tagline?: string;
+  socialLinks?: Partial<Record<SiteSocialPlatform, string>>;
+};
 
 const footerLinks = [
   { label: "Home", href: "/" },
@@ -33,10 +46,11 @@ const academyFooterLinks = [
   { label: "Tryouts", href: "/tryouts" },
 ];
 
-export default function Footer() {
+export default function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
   const club = useClubContext();
   const clubId = club.id;
-  const { clubLogoUrl, inverseLogoUrl, footerTagline } = useClubBranding();
+  const { clubLogoUrl, inverseLogoUrl, footerTagline: liveFooterTagline } = useClubBranding();
+  const footerTagline = overrides?.tagline ?? liveFooterTagline;
   const isAcademy = club.presentationTemplateKey === "academy@1";
   const [partners, setPartners] = useState<DBSiteSponsorLogo[]>([]);
   const [socialLinks, setSocialLinks] =
@@ -44,6 +58,45 @@ export default function Footer() {
   const [contactProfile, setContactProfile] =
     useState<ContactProfileContent | null>(null);
   const activeFooterLinks = isAcademy ? academyFooterLinks : footerLinks;
+
+  // When `overrides.socialLinks` is provided, layer the draft href values
+  // over the live-fetched rows (falling back to DEFAULT_SITE_SOCIAL_LINKS'
+  // icon/label for a platform that has never been saved yet), so the admin
+  // preview reflects unsaved edits. Without overrides this is exactly
+  // `socialLinks`, unchanged.
+  const displaySocialLinks = useMemo(() => {
+    const socialOverrides = overrides?.socialLinks;
+    // A blank href means "this platform is intentionally hidden" (an admin
+    // cleared the field on /admin/branding, or the platform was never
+    // configured for this club) — never render an <a>/icon for it. Without
+    // this guard a saved-but-empty href would render a bare `<a href="">`
+    // instead of actually hiding the icon as promised in the admin copy.
+    if (!socialOverrides) {
+      return socialLinks.filter((link) => link.href.trim() !== "");
+    }
+
+    const liveById = new Map(socialLinks.map((link) => [link.id, link]));
+    const defaultById = new Map(
+      DEFAULT_SITE_SOCIAL_LINKS.map((link) => [link.id, link]),
+    );
+    const ids = new Set<SiteSocialPlatform>([
+      ...socialLinks.map((link) => link.id),
+      ...(Object.keys(socialOverrides) as SiteSocialPlatform[]),
+    ]);
+
+    return Array.from(ids)
+      .map((id) => {
+        const base = liveById.get(id) ?? defaultById.get(id);
+        if (!base) return null;
+        const overrideHref = socialOverrides[id];
+        return overrideHref === undefined ? base : { ...base, href: overrideHref };
+      })
+      .filter(
+        (link): link is DBSiteSocialLink =>
+          link !== null && link.href.trim() !== "",
+      )
+      .sort((a, b) => a.sort_order - b.sort_order);
+  }, [overrides?.socialLinks, socialLinks]);
 
   useEffect(() => {
     fetchSiteSponsorLogos("footer", clubId)
@@ -115,7 +168,7 @@ export default function Footer() {
               ))}
           </ul>
           <div className="clubhouse-footer-socials">
-            {socialLinks.map((social) => (
+            {displaySocialLinks.map((social) => (
               <a
                 key={social.label}
                 href={social.href}
@@ -220,9 +273,9 @@ export default function Footer() {
                 {phone}
               </a>
             )}
-            {socialLinks.length > 0 && (
+            {displaySocialLinks.length > 0 && (
               <div className="mt-4 flex gap-4">
-                {socialLinks.map((social) => (
+                {displaySocialLinks.map((social) => (
                   <a
                     key={social.label}
                     href={social.href}
@@ -336,7 +389,7 @@ export default function Footer() {
 
         {/* Social Icons */}
         <div className="flex items-center gap-4">
-          {socialLinks.map((social) => (
+          {displaySocialLinks.map((social) => (
             <a
               key={social.label}
               href={social.href}

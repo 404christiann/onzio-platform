@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  ADMIN_ROUTE_MANIFEST,
+  getVisibleAdminQuickActions,
+  getVisibleAdminRoutes,
+  type AdminRouteAccessContext,
+} from "@/lib/admin-route-manifest";
 
 const root = process.cwd();
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
@@ -20,6 +26,7 @@ const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
 const STANDINGS_ADMIN = "app/admin/(protected)/standings/page.tsx";
 const DASHBOARD_ADMIN = "app/admin/(protected)/page.tsx";
+const ROUTE_MANIFEST = "lib/admin-route-manifest.ts";
 
 const EDITORIAL_GATE = 'presentationTemplateKey === "editorial@1"';
 const ACADEMY_GATE = 'presentationTemplateKey === "academy@1"';
@@ -36,16 +43,16 @@ const CLUBHOUSE_GATE = 'presentationTemplateKey === "clubhouse@1"';
 describe("editorial@1 admin surface hides", () => {
   describe("nav: Programs, Analytics, Match Stats, Season Stats dropped for editorial@1 only", () => {
     it("filters exactly the four dead hrefs behind the editorial template check", () => {
-      const shell = source(ADMIN_SHELL);
-      expect(shell).toContain(
-        `const isEditorialTemplate = club.${EDITORIAL_GATE};`,
+      const context: AdminRouteAccessContext = {
+        role: "owner",
+        presentationTemplateKey: "editorial@1",
+        isBillingAuthorized: true,
+        canMutateContent: true,
+      };
+      const hidden = ADMIN_ROUTE_MANIFEST.map((route) => route.id).filter(
+        (id) => !getVisibleAdminRoutes(context).some((route) => route.id === id),
       );
-      expect(shell).toContain(
-        'const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/analytics", "/admin/stats", "/admin/season-stats"];',
-      );
-      expect(shell).toContain(
-        "(!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href))",
-      );
+      expect(hidden).toEqual(["programs", "match-stats", "season-stats", "analytics"]);
     });
 
     it("keeps /admin/about in the nav — editorial@1 really does have an About page", () => {
@@ -55,16 +62,13 @@ describe("editorial@1 admin surface hides", () => {
       // the template. Nav.tsx's lionsNavLinks omits About but is dead code for
       // editorial@1 — Lions never mounts Nav.tsx — and an earlier revision
       // hid this nav item after checking that wrong component.
-      const shell = source(ADMIN_SHELL);
-      // The nav item itself is untouched; it is simply no longer in the
-      // editorial denylist, so the filter above leaves it in place.
-      expect(shell).toContain('href: "/admin/about",');
-      expect(
-        shell.slice(
-          shell.indexOf("const EDITORIAL_HIDDEN_HREFS"),
-          shell.indexOf("const navItems"),
-        ),
-      ).not.toContain("/admin/about");
+      const visible = getVisibleAdminRoutes({
+        role: "owner",
+        presentationTemplateKey: "editorial@1",
+        isBillingAuthorized: true,
+        canMutateContent: true,
+      });
+      expect(visible.map((route) => route.href)).toContain("/admin/about");
       expect(source("components/editorial/EditorialHeader.tsx")).toContain(
         '{ label: "About", href: "/club/about" }',
       );
@@ -77,11 +81,15 @@ describe("editorial@1 admin surface hides", () => {
     });
 
     it("adds no academy@1 nav filtering — DCFC's nav is untouched", () => {
-      const shell = source(ADMIN_SHELL);
-      // The nav filter must reference only the editorial template; academy@1
-      // never had nav items removed and must not gain a filter here.
-      expect(shell).not.toContain(`isAcademy`);
-      expect(count(shell, EDITORIAL_GATE)).toBe(1);
+      const visible = getVisibleAdminRoutes({
+        role: "owner",
+        presentationTemplateKey: "academy@1",
+        isBillingAuthorized: true,
+        canMutateContent: true,
+      });
+      expect(visible.map((route) => route.id)).toEqual(
+        ADMIN_ROUTE_MANIFEST.map((route) => route.id),
+      );
     });
   });
 
@@ -241,15 +249,25 @@ describe("editorial@1 admin surface hides", () => {
       expect(page).toContain("!hidesBehindTheRoseSection &&");
       expect(page).toContain("if (!hidesBehindTheRoseSection) {");
       expect(page).toContain("{!isEditorial && behindFields.visible && (");
-      expect(page).toContain('(!isEditorial || tab.id !== "behind")');
+      // The rail's "behind" item resolves `hidden` from
+      // hidesBehindTheRoseSection (== hidesLegacyHomepageSections ||
+      // isEditorial), so it never enters the rail or the DOM for editorial@1
+      // — this replaced the old pill-array `.filter()` predicate, but the
+      // same combined boolean still gates it.
+      expect(page).toContain(
+        ': tab === "behind"\n          ? hidesBehindTheRoseSection\n          : false,',
+      );
     });
 
     it("keeps academy@1's legacy-section gate and the behind upsert intact", () => {
       const page = source(HOMEPAGE_ADMIN);
       // academy@1's own gate is unchanged and stays academy-only…
       expect(page).toContain(`club.${ACADEMY_GATE}`);
+      // The rail's "slideshow" item resolves `hidden` straight from
+      // hidesLegacyHomepageSections, so academy@1 never renders it — the
+      // successor to the old pill-array `.filter()` predicate.
       expect(page).toContain(
-        '(!hidesLegacyHomepageSections ||\n                    (tab.id !== "slideshow" && tab.id !== "behind"))',
+        'tab === "slideshow"\n        ? hidesLegacyHomepageSections',
       );
       // …and the hide is not a deletion: default templates still upsert.
       expect(page).toContain('.from("behind_the_rose_section")');
@@ -401,9 +419,16 @@ describe("editorial@1 admin surface hides", () => {
       expect(page).toContain(
         "const hidesSponsorFooterTab = isAcademy || isEditorial;",
       );
-      expect(page).toContain("{!hidesSponsorFooterTab && (");
+      // The pill switcher was replaced by an AdminSectionRail whose footer
+      // row carries the same gate via the rail's `hidden` flag — dropping it
+      // out of the rail and the DOM entirely, not just disabling it.
+      expect(page).toContain(
+        'hidden: item === "footer" ? hidesSponsorFooterTab : false',
+      );
       // The carousel placement itself stays for every template.
-      expect(page).toContain('{ id: "carousel" as const, label: "Carousel" }');
+      expect(page).toContain(
+        'carousel: `Carousel — up to ${MAX_CAROUSEL_SPONSORS}`',
+      );
     });
   });
 
@@ -497,9 +522,9 @@ describe("editorial@1 admin surface hides", () => {
       // otherwise get an empty bordered box rather than guidance.
       expect(page).toContain("{previewRows.length === 0 ? (");
       expect(page).toContain(
-        "Add a team below to see a preview of your standings table.",
+        "Add a team above to see a preview of your standings table.",
       );
-      expect(count(page, "Add a team below to see a preview")).toBe(1);
+      expect(count(page, "Add a team above to see a preview")).toBe(1);
     });
 
     it("keeps the sample fallback for templates whose club is Rose City", () => {
@@ -514,44 +539,32 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
-  describe("dashboard quick actions: Enter Match Stats swapped for Manage Tryouts for editorial@1", () => {
-    it("swaps the dead /admin/stats card for a working /admin/tryouts card", () => {
-      // /admin/stats route-guards editorial@1 back to /admin, so its Quick
-      // Actions card would be dead UI for Lions. Swap it for the Tryouts
-      // card, reusing AdminShell's Tryouts nav icon for visual consistency.
-      const page = source(DASHBOARD_ADMIN);
-      expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
-      expect(page).toContain("{isEditorial ? (");
-      expect(page).toContain(
-        '<ActionCard\n              href="/admin/tryouts"\n              title="Manage Tryouts"',
-      );
-      expect(source(ADMIN_SHELL)).toContain(
-        '<path d="M7 3v3M17 3v3M4 8h16v12H4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>',
-      );
-      expect(count(page, '<path d="M7 3v3M17 3v3M4 8h16v12H4z"')).toBe(1);
+  describe("dashboard quick actions follow the approved shared capability manifest", () => {
+    it("keeps the exact four owner actions for every template", () => {
+      for (const presentationTemplateKey of ["editorial@1", "academy@1"] as const) {
+        expect(
+          getVisibleAdminQuickActions({
+            role: "owner",
+            presentationTemplateKey,
+            isBillingAuthorized: true,
+            canMutateContent: true,
+          }).map((action) => action.id),
+        ).toEqual(["registrations", "manage-roster", "manage-schedule", "payments"]);
+      }
+      expect(source(DASHBOARD_ADMIN)).toContain("getVisibleAdminQuickActions");
     });
 
-    it("keeps Enter Match Stats intact behind the else branch for academy@1 and every other template", () => {
+    it("never reintroduces dead template-specific substitutions", () => {
       const page = source(DASHBOARD_ADMIN);
-      expect(page).toContain(
-        '<ActionCard\n              href="/admin/stats"\n              title="Enter Match Stats"\n              description="Log goals, assists, saves and minutes for a completed match."',
-      );
-      expect(page).not.toContain(`club.${ACADEMY_GATE}`);
-    });
-
-    it("leaves Manage Seasons, Manage Roster, and Manage Schedule untouched for every template", () => {
-      const page = source(DASHBOARD_ADMIN);
-      expect(page).toContain('href="/admin/seasons"');
-      expect(page).toContain('href="/admin/roster"');
-      expect(page).toContain('href="/admin/schedule"');
-      expect(count(page, "isEditorial ?")).toBe(1);
+      expect(page).not.toContain("Enter Match Stats");
+      expect(page).not.toContain("Manage Tryouts");
+      expect(page).not.toContain("Manage Seasons");
     });
   });
 
   describe("no gate is tenant-scoped", () => {
     it("hides key off presentationTemplateKey, never a club id or slug", () => {
       for (const path of [
-        ADMIN_SHELL,
         PROGRAMS_ADMIN,
         ABOUT_ADMIN,
         ANALYTICS_ADMIN,
@@ -563,13 +576,17 @@ describe("editorial@1 admin surface hides", () => {
         SCHEDULE_ADMIN,
         TRYOUTS_ADMIN,
         STANDINGS_ADMIN,
-        DASHBOARD_ADMIN,
       ]) {
         const page = source(path);
         expect(page, path).toContain(EDITORIAL_GATE);
         expect(page, path).not.toMatch(/club\.(id|slug)\s*===\s*["']/);
         expect(page, path).not.toMatch(/clubId\s*===\s*["']/);
       }
+      const manifest = source(ROUTE_MANIFEST);
+      expect(manifest).toContain('const EDITORIAL_TEMPLATE = "editorial@1"');
+      expect(manifest).not.toMatch(/club\.(id|slug)\s*===\s*["']/);
+      expect(source(ADMIN_SHELL)).not.toMatch(/club\.(id|slug)\s*===\s*["']/);
+      expect(source(DASHBOARD_ADMIN)).not.toMatch(/club\.(id|slug)\s*===\s*["']/);
     });
   });
 });

@@ -5,12 +5,24 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import Image from "@/components/ResilientImage";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import {
+  AdminPage,
+  AdminPageHeader,
+  AdminPanel,
+} from "@/components/admin/AdminPage";
+import {
+  AdminSectionRail,
+  type AdminSectionRailItem,
+} from "@/components/admin/AdminSectionRail";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import FileUpload from "@/components/admin/FileUpload";
 import ScaledSlideshowPreview from "@/components/admin/ScaledSlideshowPreview";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   DBBehindTheRoseSection,
@@ -48,10 +60,18 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/admin-client";
 import { siteRouteOptionsWithFallback, type SiteRouteOption } from "@/lib/site-routes";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
 
 type AdminTab = "hero" | "slideshow" | "story" | "behind";
 
 const ADMIN_TAB_ORDER: AdminTab[] = ["hero", "slideshow", "story", "behind"];
+
+const TAB_LABELS: Record<AdminTab, string> = {
+  hero: "Hero",
+  slideshow: "Slideshow",
+  story: "Story",
+  behind: "Behind the Rose",
+};
 
 type HeroFields = {
   eyebrow: string;
@@ -209,13 +229,19 @@ export default function AdminHomepagePage() {
     {},
   );
   const [loading, setLoading] = useState(true);
+  const showFullLoader = useDelayedLoading(loading, 400);
   const [linkablePrograms, setLinkablePrograms] = useState<
     { slug: string; navLabel: string; displayTitle: string }[]
   >([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  // Per-section dirty tracking is presentational-only: it drives the rail's
+  // dirty-dots and the save button's "which sections changed" copy. Save
+  // itself remains a single combined write (see handleSave) — this state
+  // never splits it into per-section saves.
+  const [dirtySections, setDirtySections] = useState<Set<AdminTab>>(new Set());
+  const dirty = dirtySections.size > 0;
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -262,27 +288,32 @@ export default function AdminHomepagePage() {
         setSlideshowFields({ season_label: slideshowSettings.season_label });
         setHeroFields(heroContentToFields(hero));
         setBehindFields(behindSectionToFields(behindTheRose));
-        setDirty(false);
+        setDirtySections(new Set());
       })
       .catch((loadError: unknown) => {
         setError(loadError instanceof Error ? loadError.message : "Failed to load homepage content");
       })
       .finally(() => setLoading(false));
-  }, [clubId]);
+  }, [club.name, clubId]);
 
-  function markDirty() {
-    setDirty(true);
+  function markDirty(section: AdminTab) {
+    setDirtySections((current) => {
+      if (current.has(section)) return current;
+      const next = new Set(current);
+      next.add(section);
+      return next;
+    });
     setSaved(false);
   }
 
   function setBehindField(field: TextBehindField, value: string) {
     setBehindFields((current) => ({ ...current, [field]: value }));
-    markDirty();
+    markDirty("behind");
   }
 
   function setHeroField(field: keyof HeroFields, value: string) {
     setHeroFields((current) => ({ ...current, [field]: value }));
-    markDirty();
+    markDirty("hero");
   }
 
   function setStoryField(
@@ -291,12 +322,12 @@ export default function AdminHomepagePage() {
   ) {
     setStoryFields((current) => ({ ...current, [field]: value }));
     setStoryErrors((current) => ({ ...current, [field]: undefined }));
-    markDirty();
+    markDirty("story");
   }
 
   function setSlideshowField(field: keyof SlideshowFields, value: string) {
     setSlideshowFields((current) => ({ ...current, [field]: value }));
-    markDirty();
+    markDirty("slideshow");
   }
 
   function setPhotoAlt(index: number, value: string) {
@@ -305,7 +336,7 @@ export default function AdminHomepagePage() {
         photoIndex === index ? { ...photo, alt: value } : photo,
       ),
     );
-    markDirty();
+    markDirty("slideshow");
   }
 
   function movePhoto(index: number, delta: -1 | 1) {
@@ -316,13 +347,13 @@ export default function AdminHomepagePage() {
       [next[index], next[destination]] = [next[destination], next[index]];
       return next;
     });
-    markDirty();
+    markDirty("slideshow");
   }
 
   async function removePhoto(index: number) {
     const photo = draftPhotos[index];
     setDraftPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
-    markDirty();
+    markDirty("slideshow");
 
     if (photo?.id === null) {
       try {
@@ -341,7 +372,7 @@ export default function AdminHomepagePage() {
 
     setUploading(true);
     setError(null);
-    markDirty();
+    markDirty("slideshow");
     try {
       const uploaded: DraftHomepagePhoto[] = [];
       for (const file of selected) {
@@ -489,7 +520,7 @@ export default function AdminHomepagePage() {
         season_label: fresh.slideshowSettings.season_label,
       });
       setBehindFields(behindSectionToFields(fresh.behindTheRose));
-      setDirty(false);
+      setDirtySections(new Set());
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (saveError: unknown) {
@@ -502,65 +533,136 @@ export default function AdminHomepagePage() {
   const saveDisabled = saving || uploading || !dirty;
   const storyDefaults = defaultHomepageStoryContent(club.name);
 
+  // Rail items follow tabOrder (already template-filtered — see isEditorial
+  // above) so slide-direction indexing and rail ordering never diverge.
+  // slideshow/behind additionally carry `hidden` for academy@1 (and behind
+  // for editorial@1 via hidesBehindTheRoseSection), which keeps them out of
+  // the rail and the DOM entirely, matching the old tab-pill filter.
+  // count/tag surface each section's own state at a glance in the rail —
+  // slideshow shows how many of the 6 photo slots are filled, and story /
+  // behind show whether the section is currently visible on the public
+  // homepage (independent of the rail's dirty dot, which only reflects
+  // unsaved edits).
+  const sectionItems: AdminSectionRailItem[] = tabOrder.map((tab) => ({
+    id: tab,
+    label: TAB_LABELS[tab],
+    dirty: dirtySections.has(tab),
+    count:
+      tab === "slideshow"
+        ? `${draftPhotos.length}/${MAX_HOMEPAGE_SLIDESHOW_PHOTOS}`
+        : undefined,
+    tag:
+      tab === "story"
+        ? storyFields.visible
+          ? "Visible"
+          : "Hidden"
+        : tab === "behind"
+          ? behindFields.visible
+            ? "Visible"
+            : "Hidden"
+          : undefined,
+    hidden:
+      tab === "slideshow"
+        ? hidesLegacyHomepageSections
+        : tab === "behind"
+          ? hidesBehindTheRoseSection
+          : false,
+  }));
+
+  // The rail lists which sections changed; the header button stays a flat
+  // "Save Homepage" (see the "Unsaved changes in …" status beside it below)
+  // rather than folding the list into the button label.
+  const changedSectionLabels = tabOrder
+    .filter((tab) => dirtySections.has(tab))
+    .map((tab) => TAB_LABELS[tab]);
+
   return (
-    <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
+    <AdminPage className="overflow-x-clip">
       <AdminSaveFeedback saving={saving} saved={saved} />
-      <div className="mb-4 sm:mb-6">
-        <h1
-          className="font-display font-black uppercase leading-none text-foreground"
-          style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
-        >
-          Homepage
-        </h1>
-        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          {hidesLegacyHomepageSections
+      <AdminPageHeader
+        eyebrow="Public website"
+        title="Homepage"
+        description={
+          hidesLegacyHomepageSections
             ? "Manage the homepage hero and the story section beside your club video."
-            : "Manage homepage slideshow photos and the Behind the Rose video section."}
-        </p>
-      </div>
+            : "Manage homepage slideshow photos and the Behind the Rose video section."
+        }
+        actions={
+          !loading ? (
+            <>
+              {dirty && (
+                <div className="flex items-center gap-2 border-r border-border pr-3">
+                  <span
+                    className="h-2 w-2 flex-none rounded-full bg-warning"
+                    aria-hidden="true"
+                  />
+                  <span className="font-body whitespace-nowrap text-sm text-muted-foreground">
+                    Unsaved changes in {changedSectionLabels.join(", ")}
+                  </span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={saveDisabled}
+                className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving && <AdminLoadingDots className="mr-2" />}
+                {saving ? "Saving…" : "Save Homepage"}
+              </button>
+            </>
+          ) : undefined
+        }
+      />
 
-      {loading ? (
-        <AdminLoading className="font-display text-sm uppercase tracking-widest" />
-      ) : (
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
-          <section className="dark min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            <div className="mb-4 flex gap-1 rounded-lg bg-card p-1">
-              {[
-                { id: "hero" as const, label: "Hero", count: null },
-                { id: "slideshow" as const, label: "Slideshow", count: `${draftPhotos.length}/${MAX_HOMEPAGE_SLIDESHOW_PHOTOS}` },
-                { id: "story" as const, label: "Story", count: null },
-                { id: "behind" as const, label: "Behind the Rose", count: null },
-              ].filter(
-                (tab) =>
-                  (!hidesLegacyHomepageSections ||
-                    (tab.id !== "slideshow" && tab.id !== "behind")) &&
-                  (!isEditorial || tab.id !== "behind"),
-              ).map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => selectTab(tab.id)}
-                    className={`font-display flex-1 rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
-                      isActive ? "bg-foreground text-background" : "text-muted-foreground"
-                    }`}
-                  >
-                    {tab.label}
-                    {tab.count && (
-                      <span className={isActive ? "text-background/60" : "text-muted-foreground/60"}>
-                        {" "}
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+      {loading || showFullLoader ? (
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading homepage" />
+        ) : (
+          <div
+            className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,26rem)]"
+            role="status"
+            aria-label="Loading homepage"
+          >
+            <div className="flex flex-col gap-2 self-start">
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-9 w-full rounded-lg" />
             </div>
+            <div className="flex flex-col gap-3 self-start rounded-xl border border-border bg-card p-4 sm:p-5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+            </div>
+            <div className="self-start">
+              <Skeleton className="h-64 w-full rounded-xl" />
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,26rem)]">
+          <div className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-24 xl:self-start">
+            <AdminSectionRail
+              items={sectionItems}
+              value={activeTab}
+              onChange={(id) => selectTab(id as AdminTab)}
+            />
+            <p className="font-body rounded-xl border border-border bg-card px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
+              One Save Homepage button covers every section below — the dot
+              marks which one you changed.
+            </p>
+          </div>
 
+          <AdminPanel className="self-start p-4 sm:p-5">
             <SlidingPanel activeKey={activeTab} direction={tabDirection}>
             {activeTab === "hero" && (
               <div className="space-y-4">
+                <SectionHeader
+                  title="Hero"
+                  description="The band at the very top of your homepage"
+                />
                 <Field label="Eyebrow">
                   <input
                     value={heroFields.eyebrow}
@@ -568,20 +670,22 @@ export default function AdminHomepagePage() {
                     className={ADMIN_INPUT_CLASS}
                   />
                 </Field>
-                <Field label="Headline Line One">
-                  <input
-                    value={heroFields.headline_line_one}
-                    onChange={(event) => setHeroField("headline_line_one", event.target.value)}
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
-                <Field label="Headline Line Two">
-                  <input
-                    value={heroFields.headline_line_two}
-                    onChange={(event) => setHeroField("headline_line_two", event.target.value)}
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Headline Line One">
+                    <input
+                      value={heroFields.headline_line_one}
+                      onChange={(event) => setHeroField("headline_line_one", event.target.value)}
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Headline Line Two">
+                    <input
+                      value={heroFields.headline_line_two}
+                      onChange={(event) => setHeroField("headline_line_two", event.target.value)}
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                </div>
                 <Field label="Intro">
                   <Textarea
                     value={heroFields.intro}
@@ -633,24 +737,24 @@ export default function AdminHomepagePage() {
                     </NativeSelect>
                   </Field>
                 </div>
+                <p className="font-body text-xs text-muted-foreground">
+                  Both links pick from your live site routes, so a button can
+                  never point at a page that does not exist.
+                </p>
               </div>
             )}
 
             {activeTab === "slideshow" && (
               <div>
-                <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                      Homepage Slideshow
-                    </p>
-                    <p className="font-body mt-1 text-xs text-muted-foreground">
-                      Up to 6 ordered photos. Remove one before adding another.
-                    </p>
-                  </div>
-                  <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                    {draftPhotos.length}/{MAX_HOMEPAGE_SLIDESHOW_PHOTOS}
-                  </span>
-                </div>
+                <SectionHeader
+                  title="Homepage Slideshow"
+                  description="Up to 6 ordered photos. Remove one before adding another."
+                  trailing={
+                    <span className="font-display text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      {draftPhotos.length}/{MAX_HOMEPAGE_SLIDESHOW_PHOTOS}
+                    </span>
+                  }
+                />
 
                 <Field label="Slideshow Label" help="Shown in the bottom-left corner of the public slideshow.">
                   <input
@@ -660,8 +764,10 @@ export default function AdminHomepagePage() {
                   />
                 </Field>
 
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  {draftPhotos.map((photo, index) => (
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {draftPhotos.map((photo, index) => {
+                    const missingAlt = !photo.alt.trim();
+                    return (
                     <div key={photo.id ?? photo.url} className="min-w-0">
                       <div
                         className="group relative aspect-video w-full overflow-hidden rounded-lg border border-border"
@@ -673,6 +779,15 @@ export default function AdminHomepagePage() {
                           sizes="220px"
                           className="object-cover"
                         />
+                        {missingAlt && (
+                          <span
+                            title="Missing alt text"
+                            aria-label="Missing alt text"
+                            className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-warning text-warning-foreground"
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                          </span>
+                        )}
                         <button
                           type="button"
                           onClick={() => void removePhoto(index)}
@@ -688,6 +803,7 @@ export default function AdminHomepagePage() {
                         value={photo.alt}
                         onChange={(event) => setPhotoAlt(index, event.target.value)}
                         placeholder={`Slide ${index + 1} alt text`}
+                        aria-invalid={missingAlt || undefined}
                         className={`mt-2 ${ADMIN_INPUT_CLASS}`}
                       />
                       <div className="mt-1 flex gap-1">
@@ -707,10 +823,11 @@ export default function AdminHomepagePage() {
                         </OrderButton>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
 
                   <FileUpload
-                    className="col-span-2"
+                    className="col-span-2 sm:col-span-4"
                     label="Add homepage slideshow photos"
                     accept="image/*"
                     multiple
@@ -730,8 +847,11 @@ export default function AdminHomepagePage() {
 
             {activeTab === "story" && (
               <div className="space-y-4">
+                <SectionHeader
+                  title="Story"
+                  description="Beside the club video on your homepage"
+                />
                 <p className="font-body text-xs text-muted-foreground">
-                  The story section beside the club video on your homepage.
                   Every field below starts filled in with the standard wording
                   — edit it, or clear a field to keep it updating
                   automatically if the standard wording ever changes. The
@@ -754,7 +874,7 @@ export default function AdminHomepagePage() {
                         ...current,
                         visible: checked,
                       }));
-                      markDirty();
+                      markDirty("story");
                     }}
                     className="size-5"
                   />
@@ -799,6 +919,7 @@ export default function AdminHomepagePage() {
 
             {activeTab === "behind" && (
               <div className="space-y-4">
+                <SectionHeader title="Behind the Rose" description="Video feature section" />
                 <label className="flex items-center justify-between gap-4 rounded-lg bg-card p-3">
                   <span>
                     <span className="font-display block text-xs uppercase tracking-widest text-foreground">
@@ -812,26 +933,28 @@ export default function AdminHomepagePage() {
                     checked={behindFields.visible}
                     onCheckedChange={(checked) => {
                       setBehindFields((current) => ({ ...current, visible: checked }));
-                      markDirty();
+                      markDirty("behind");
                     }}
                     className="size-5"
                   />
                 </label>
 
-                <Field label="Eyebrow">
-                  <input
-                    value={behindFields.eyebrow}
-                    onChange={(event) => setBehindField("eyebrow", event.target.value)}
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
-                <Field label="Title">
-                  <input
-                    value={behindFields.title}
-                    onChange={(event) => setBehindField("title", event.target.value)}
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Eyebrow">
+                    <input
+                      value={behindFields.eyebrow}
+                      onChange={(event) => setBehindField("eyebrow", event.target.value)}
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Title">
+                    <input
+                      value={behindFields.title}
+                      onChange={(event) => setBehindField("title", event.target.value)}
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                </div>
                 <Field label="Description">
                   <Textarea
                     value={behindFields.description}
@@ -870,19 +993,9 @@ export default function AdminHomepagePage() {
                 {error}
               </p>
             )}
+          </AdminPanel>
 
-            <button
-              type="button"
-              onClick={() => void handleSave()}
-              disabled={saveDisabled}
-              className="font-display mt-5 w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : "Save Homepage"}
-            </button>
-          </section>
-
-          <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-background p-4 sm:p-5">
+          <AdminPanel className="overflow-hidden p-4 sm:p-5 xl:sticky xl:top-24 xl:self-start">
             <div className="mb-4">
               <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                 Homepage Preview
@@ -1034,9 +1147,42 @@ export default function AdminHomepagePage() {
             )}
             </>
             )}
-          </section>
+          </AdminPanel>
         </div>
       )}
+    </AdminPage>
+  );
+}
+
+/**
+ * Full-bleed title/description strip pinned to the top of a section's
+ * editor panel, matching the mockup's per-section header row (each section
+ * — Hero, Slideshow, Story, Behind the Rose — carries a short name and a
+ * one-line description of what it edits, separated from the fields below
+ * by a border). `trailing` is used by Slideshow for its "n/6" count.
+ */
+function SectionHeader({
+  title,
+  description,
+  trailing,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  trailing?: ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+      <div>
+        <p className="font-display text-xs font-semibold uppercase tracking-widest text-foreground">
+          {title}
+        </p>
+        {description && (
+          <p className="font-body mt-1 text-xs text-muted-foreground">
+            {description}
+          </p>
+        )}
+      </div>
+      {trailing}
     </div>
   );
 }

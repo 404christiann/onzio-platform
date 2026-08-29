@@ -4,10 +4,15 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useState } from "react";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import {
+  AdminSectionRail,
+  type AdminSectionRailItem,
+} from "@/components/admin/AdminSectionRail";
 import FileUpload from "@/components/admin/FileUpload";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledShopKitPreview from "@/components/admin/ScaledShopKitPreview";
@@ -56,6 +61,8 @@ import {
 } from "@/lib/shop-purchase-details";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { createClient } from "@/lib/admin-client";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type SectionFields = {
   eyebrow: string;
@@ -131,6 +138,19 @@ const KIT_VARIANTS: Array<{ id: ShopKitVariant; label: string }> = [
   { id: "third", label: "Third Kit" },
   { id: "away", label: "Away Kit" },
 ];
+
+// Editing-bar / preview-badge labels for each of the (up to) 4 kit records —
+// the home-surface kit plus the three shop-surface kit variants. Previously
+// the badge text collapsed "third" into "Away Shop Kit" (a two-way ternary
+// that never accounted for the third variant), which mislabeled Rose City's
+// and Lions's real Third kit. Kept as an explicit map, not derived from
+// KIT_VARIANTS' "<X> Kit" labels, so this wording can't silently drift if
+// KIT_VARIANTS' labels ever change.
+const SHOP_KIT_VARIANT_EDITOR_LABEL: Record<ShopKitVariant, string> = {
+  home: "Home Shop Kit",
+  third: "Third Shop Kit",
+  away: "Away Shop Kit",
+};
 
 const SURFACE_OPTIONS: Array<{ id: ShopKitSurface; label: string }> = [
   { id: "home", label: "Home Page" },
@@ -235,6 +255,12 @@ export default function AdminShopPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // Per-tab dirty tracking is presentational-only: it drives the rail's
+  // per-row dirty dots. Save itself remains the single combined write in
+  // handleSave below (unchanged) — this state never splits it up. Mirrors
+  // the same pattern already used on the Homepage admin page.
+  const [dirtyTabs, setDirtyTabs] = useState<Set<AdminTab>>(new Set());
+  const showFullLoader = useDelayedLoading(loading, 400);
 
   useEffect(() => {
     setLoading(true);
@@ -261,6 +287,7 @@ export default function AdminShopPage() {
         );
         setPurchaseDetails(fetchedPurchaseDetails);
         setDirty(false);
+        setDirtyTabs(new Set());
       })
       .catch((loadError: unknown) => {
         setError(loadError instanceof Error ? loadError.message : "Failed to load shop content");
@@ -268,14 +295,26 @@ export default function AdminShopPage() {
       .finally(() => setLoading(false));
   }, [activeKitVariant, clubId, selectedSurface]);
 
-  function markDirty() {
+  // Optional `tab` param drives the rail's per-row dirty dots only (see
+  // dirtyTabs above) — `dirty`/`setDirty` keep exactly their prior meaning
+  // and every existing caller of `dirty` (saveDisabled, the discard-changes
+  // confirms) is untouched.
+  function markDirty(tab?: AdminTab) {
     setDirty(true);
     setSaved(false);
+    if (tab) {
+      setDirtyTabs((current) => {
+        if (current.has(tab)) return current;
+        const next = new Set(current);
+        next.add(tab);
+        return next;
+      });
+    }
   }
 
   function setField(field: TextSectionField, value: string) {
     setFields((current) => ({ ...current, [field]: value }));
-    markDirty();
+    markDirty("content");
   }
 
   function setBulletPoint(index: number, value: string) {
@@ -285,12 +324,12 @@ export default function AdminShopPage() {
         pointIndex === index ? { ...point, text: value } : point,
       ),
     }));
-    markDirty();
+    markDirty("content");
   }
 
   function setPurchaseField(field: PurchaseTextField, value: string) {
     setPurchaseDetails((current) => ({ ...current, [field]: value }));
-    markDirty();
+    markDirty("purchase");
   }
 
   function setPurchaseCardField(
@@ -304,7 +343,7 @@ export default function AdminShopPage() {
         cardIndex === index ? { ...card, [field]: value } : card,
       ),
     }));
-    markDirty();
+    markDirty("purchase");
   }
 
   function addBulletPoint() {
@@ -318,7 +357,7 @@ export default function AdminShopPage() {
         ],
       };
     });
-    markDirty();
+    markDirty("content");
   }
 
   function removeBulletPoint(index: number) {
@@ -328,7 +367,7 @@ export default function AdminShopPage() {
         (_, pointIndex) => pointIndex !== index,
       ),
     }));
-    markDirty();
+    markDirty("content");
   }
 
   function moveBulletPoint(index: number, delta: -1 | 1) {
@@ -344,7 +383,7 @@ export default function AdminShopPage() {
       ];
       return { ...current, bullet_points: bulletPoints };
     });
-    markDirty();
+    markDirty("content");
   }
 
   function movePhoto(index: number, delta: -1 | 1) {
@@ -355,7 +394,7 @@ export default function AdminShopPage() {
       [next[index], next[destination]] = [next[destination], next[index]];
       return next;
     });
-    markDirty();
+    markDirty("kit");
   }
 
   function movePhotoStripPhoto(index: number, delta: -1 | 1) {
@@ -366,13 +405,13 @@ export default function AdminShopPage() {
       [next[index], next[destination]] = [next[destination], next[index]];
       return next;
     });
-    markDirty();
+    markDirty("photoStrip");
   }
 
   async function removeKitPhoto(index: number) {
     const photo = draftPhotos[index];
     setDraftPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
-    markDirty();
+    markDirty("kit");
 
     if (photo?.id === null) {
       try {
@@ -386,7 +425,7 @@ export default function AdminShopPage() {
   async function removePhotoStripPhoto(index: number) {
     const photo = draftPhotoStripPhotos[index];
     setDraftPhotoStripPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
-    markDirty();
+    markDirty("photoStrip");
 
     if (photo?.id === null) {
       try {
@@ -405,7 +444,7 @@ export default function AdminShopPage() {
 
     setUploading(true);
     setError(null);
-    markDirty();
+    markDirty("kit");
     try {
       const uploaded: DraftKitPhoto[] = [];
       for (const file of selected) {
@@ -436,7 +475,7 @@ export default function AdminShopPage() {
 
     setUploading(true);
     setError(null);
-    markDirty();
+    markDirty("photoStrip");
     try {
       const uploaded: DraftPhotoStripPhoto[] = [];
       for (const file of selected) {
@@ -601,6 +640,7 @@ export default function AdminShopPage() {
       );
       setPurchaseDetails(freshPurchaseDetails);
       setDirty(false);
+      setDirtyTabs(new Set());
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (saveError: unknown) {
@@ -653,242 +693,318 @@ export default function AdminShopPage() {
       0;
   const saveDisabled =
     saving || uploading || draftPhotos.length === 0 || !hasBulletPoint;
+  // Short summary label for the unified editing bar's blocker chip. The two
+  // authoritative save-blocker messages ("At least 1 photo is required." /
+  // "Add at least one product bullet point before saving.") are untouched —
+  // they still fire inline on their own tab (Kit Photos / Content
+  // respectively) and from handleSave's own guard. This is a separate,
+  // always-visible summary, not a third copy of either message.
+  const saveBlockers: string[] = [];
+  if (draftPhotos.length === 0) saveBlockers.push("Kit Photos needed before saving");
+  if (!hasBulletPoint) saveBlockers.push("Bullet points needed before saving");
+  const saveBlockerMessage =
+    saveBlockers.length === 0
+      ? null
+      : saveBlockers.length === 1
+        ? saveBlockers[0]
+        : `${saveBlockers.length} sections need attention before saving`;
   const activeEditorLabel =
     selectedSurface === "home"
       ? "Home Page Kit"
-      : `${activeKitVariant === "home" ? "Home" : "Away"} Shop Kit`;
+      : SHOP_KIT_VARIANT_EDITOR_LABEL[activeKitVariant];
   const previewLabel =
     activeTab === "purchase" ? "Purchase Details" : activeEditorLabel;
+  // Surface/kit labels for the Content tab's "Product" card subtitle (e.g.
+  // "Home kit on the Shop Page") — the surface+kit switcher itself is now
+  // the "what am I editing" readout (see the editing bar below), so these
+  // feed that one card subtitle rather than a separate standalone badge.
+  const editingSurfaceLabel = selectedSurface === "home" ? "Home Page" : "Shop Page";
+  const productCardKitLabel = `${activeKitVariant.charAt(0).toUpperCase()}${activeKitVariant.slice(1)} kit`;
+
+  // Rail items for the 4 content tabs. The `.filter(...)` clause below is
+  // byte-for-byte the same predicate the old tab-pill row used (see
+  // tests/contracts/editorial-admin-surface.test.ts: "hides the rendered
+  // tabs and the photo-row editor for editorial@1") — Photo Row and
+  // Purchase are excluded from the array entirely (not just visually
+  // hidden) unless the surface is "shop" and the template allows them, so
+  // AdminSectionRail's own `hidden` filtering never has to run for them.
+  const sectionItems: AdminSectionRailItem[] = [
+    {
+      id: "content" as const,
+      label: "Content",
+      count: "Title, description, bullets",
+    },
+    {
+      id: "kit" as const,
+      label: "Kit Photos",
+      count:
+        draftPhotos.length === 0
+          ? `${draftPhotos.length}/${MAX_KIT_PHOTOS} · at least one required`
+          : `${draftPhotos.length}/${MAX_KIT_PHOTOS}`,
+    },
+    {
+      id: "photoStrip" as const,
+      label: "Photo Row",
+      count: `${draftPhotoStripPhotos.length}/${MAX_PHOTO_STRIP_PHOTOS} photos`,
+    },
+    {
+      id: "purchase" as const,
+      label: "Purchase",
+      count: "Heading, 3 cards, footer",
+    },
+  ]
+    .filter(
+      (tab) =>
+        (tab.id !== "photoStrip" && tab.id !== "purchase") ||
+        (selectedSurface === "shop" &&
+                      !hidesClubhouseShopSections &&
+                      !isEditorial),
+    )
+    .map((tab) => ({
+      id: tab.id,
+      label: tab.label,
+      count: tab.count ?? undefined,
+      dirty: dirtyTabs.has(tab.id),
+      invalid:
+        (tab.id === "content" && !hasBulletPoint) ||
+        (tab.id === "kit" && draftPhotos.length === 0),
+    }));
 
   return (
-    <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
+    // overflow-x-clip (not overflow-hidden): still clips the SlidingPanel's
+    // horizontal slide animation, but `clip` doesn't turn this wrapper into a
+    // scroll container, which would silently disable the sticky rail/preview
+    // columns below.
+    <AdminPage className="overflow-x-clip">
       <AdminSaveFeedback saving={saving} saved={saved} />
-      <div className="mb-4 sm:mb-6">
-        <h1
-          className="font-display font-black uppercase leading-none text-foreground"
-          style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
-        >
-          Shop
-        </h1>
-        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          Manage independent kit content and photos for each public page.
-        </p>
-      </div>
+      <AdminPageHeader
+        eyebrow="Public website"
+        title="Shop"
+        description="Manage independent kit content and photos for each public page."
+      />
 
-      {loading ? (
-        <div
-          className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]"
-          role="status"
-          aria-label="Loading shop content"
-        >
-          <section className="min-w-0 space-y-4 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            <Skeleton className="h-11 w-full rounded-lg" />
-            <Skeleton className="h-11 w-full rounded-lg" />
-            <div className="space-y-3">
-              <Skeleton className="h-16 w-full rounded-lg" />
-              <Skeleton className="h-24 w-full rounded-lg" />
-              <Skeleton className="h-24 w-full rounded-lg" />
+      {loading || showFullLoader ? (
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading shop" />
+        ) : (
+          <div className="flex flex-col gap-6" role="status" aria-label="Loading shop">
+            <Skeleton className="h-12 w-full rounded-xl" />
+            <div className="grid gap-6 sm:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)]">
+              <Skeleton className="h-64 w-full rounded-xl" />
+              <Skeleton className="h-96 w-full rounded-xl" />
             </div>
-            <Skeleton className="h-12 w-full rounded-lg" />
-          </section>
-          <section className="min-w-0 space-y-3">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="aspect-video w-full rounded-lg" />
-          </section>
-        </div>
+          </div>
+        )
       ) : (
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,420px)_minmax(0,1fr)]">
-          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
-            {/* With only "shop" left in surfaceOptions for the templates in
-                hidesHomeShopSurface (clubhouse@1, editorial@1), a single-tab
-                switcher would be dead UI, so it's hidden entirely — same
-                pattern as the kit-variant switcher just below. */}
-            {surfaceOptions.length > 1 && (
-            <div
-              className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1"
-              aria-label="Kit placement"
-            >
-              {surfaceOptions.map((surface) => {
-                const isSelected = selectedSurface === surface.id;
-                return (
-                  <button
-                    key={surface.id}
-                    type="button"
-                    disabled={saving || uploading}
-                    aria-pressed={isSelected}
-                    onClick={() => {
-                      if (surface.id === selectedSurface) return;
-                      if (
-                        dirty &&
-                        !window.confirm("Discard unsaved changes before switching pages?")
-                      ) {
-                        return;
-                      }
-                      setSelectedSurface(surface.id);
-                      if (surface.id === "home") {
-                        setSelectedKitVariant("home");
-                      }
-                      if (
-                        surface.id === "home" &&
-                        (activeTab === "photoStrip" || activeTab === "purchase")
-                      ) {
-                        selectTab("content");
-                      }
-                      setSaved(false);
-                    }}
-                    className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
-                      isSelected ? "bg-foreground text-background" : "text-muted-foreground"
-                    }`}
-                  >
-                    {surface.label}
-                  </button>
-                );
-              })}
-            </div>
-            )}
+        <div className="flex min-w-0 flex-col gap-6">
+          {/* Unified "what am I editing" bar: the surface and kit-variant
+              switchers are the "what am I editing" readout themselves (their
+              active pill already names the current selection) rather than a
+              separate static badge duplicating that state above them. The
+              independent-save note, save-blocker chip, and Save button all
+              live in this one row, matching the real mockup. */}
+          <AdminPanel className="flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-center sm:p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-display text-[0.65rem] uppercase tracking-widest text-muted-foreground">
+                Editing
+              </span>
 
-            {/* With only "home" left in kitVariants for academy@1, a
-                single-tab switcher would be dead UI, so it's hidden entirely —
-                same pattern as the Sponsors and About Club Logo tab hides. */}
-            {selectedSurface === "shop" && kitVariants.length > 1 && (
+              {/* With only "shop" left in surfaceOptions for the templates in
+                  hidesHomeShopSurface (clubhouse@1, editorial@1), a single-tab
+                  switcher would be dead UI, so it's hidden entirely — same
+                  pattern as the kit-variant switcher just below. */}
+              {surfaceOptions.length > 1 && (
               <div
-                className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1"
-                aria-label="Kit type"
+                className="inline-flex gap-[3px] rounded-lg bg-muted/60 p-[3px]"
+                aria-label="Kit placement"
               >
-                {kitVariants.map((variant) => {
-                  const isSelected = selectedKitVariant === variant.id;
+                {surfaceOptions.map((surface) => {
+                  const isSelected = selectedSurface === surface.id;
                   return (
                     <button
-                      key={variant.id}
+                      key={surface.id}
                       type="button"
                       disabled={saving || uploading}
                       aria-pressed={isSelected}
                       onClick={() => {
-                        if (variant.id === selectedKitVariant) return;
+                        if (surface.id === selectedSurface) return;
                         if (
                           dirty &&
-                          !window.confirm("Discard unsaved changes before switching kits?")
+                          !window.confirm("Discard unsaved changes before switching pages?")
                         ) {
                           return;
                         }
-                        setSelectedKitVariant(variant.id);
+                        setSelectedSurface(surface.id);
+                        if (surface.id === "home") {
+                          setSelectedKitVariant("home");
+                        }
+                        if (
+                          surface.id === "home" &&
+                          (activeTab === "photoStrip" || activeTab === "purchase")
+                        ) {
+                          selectTab("content");
+                        }
                         setSaved(false);
                       }}
-                      className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
-                        isSelected ? "bg-foreground text-background" : "text-muted-foreground"
+                      className={`font-display rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-widest transition-colors ${
+                        isSelected ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-background"
                       }`}
                     >
-                      {variant.label}
+                      {surface.label}
                     </button>
                   );
                 })}
               </div>
-            )}
+              )}
 
-            <p className="font-body mb-4 text-xs leading-relaxed text-muted-foreground">
-              Editing the {selectedSurface === "home" ? "home page kit" : `${activeKitVariant} shop kit`}.
-              {hidesClubhouseShopSections || isEditorial
-                ? " Content and Kit Photos are saved independently."
-                : " Content, Kit Photos, and Shop Page Photo Row are saved independently."}
-            </p>
+              {surfaceOptions.length > 1 &&
+                selectedSurface === "shop" &&
+                kitVariants.length > 1 && (
+                  <span aria-hidden="true" className="text-sm text-border">
+                    /
+                  </span>
+                )}
 
-            <div className="mb-4 flex gap-1 rounded-lg bg-card p-1">
-              {(
-                [
-                  { id: "content" as const, label: "Content", count: null },
-                  {
-                    id: "kit" as const,
-                    label: "Kit Photos",
-                    count: `${draftPhotos.length}/${MAX_KIT_PHOTOS}`,
-                  },
-                  {
-                    id: "photoStrip" as const,
-                    label: "Photo Row",
-                    count: `${draftPhotoStripPhotos.length}/${MAX_PHOTO_STRIP_PHOTOS}`,
-                  },
-                  {
-                    id: "purchase" as const,
-                    label: "Purchase",
-                    count: null,
-                  },
-                ].filter(
-                  (tab) =>
-                    (tab.id !== "photoStrip" && tab.id !== "purchase") ||
-                    (selectedSurface === "shop" &&
-                      !hidesClubhouseShopSections &&
-                      !isEditorial),
-                )
-              ).map((tab) => {
-                const hasIssue =
-                  (tab.id === "content" && !hasBulletPoint) ||
-                  (tab.id === "kit" && draftPhotos.length === 0);
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => selectTab(tab.id)}
-                    className={`font-display flex-1 rounded-md px-2 py-2.5 text-[0.65rem] uppercase tracking-widest transition-colors sm:text-xs ${
-                      isActive ? "bg-foreground text-background" : "text-muted-foreground"
-                    }`}
-                  >
-                    {tab.label}
-                    {tab.count && (
-                      <span className="opacity-75"> {tab.count}</span>
-                    )}
-                    {hasIssue && (
-                      <span
-                        aria-hidden="true"
-                        className="text-destructive"
+              {/* With only "home" left in kitVariants for academy@1, a
+                  single-tab switcher would be dead UI, so it's hidden entirely —
+                  same pattern as the Sponsors and About Club Logo tab hides. */}
+              {selectedSurface === "shop" && kitVariants.length > 1 && (
+                <div
+                  className="inline-flex gap-[3px] rounded-lg bg-muted/60 p-[3px]"
+                  aria-label="Kit type"
+                >
+                  {kitVariants.map((variant) => {
+                    const isSelected = selectedKitVariant === variant.id;
+                    return (
+                      <button
+                        key={variant.id}
+                        type="button"
+                        disabled={saving || uploading}
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                          if (variant.id === selectedKitVariant) return;
+                          if (
+                            dirty &&
+                            !window.confirm("Discard unsaved changes before switching kits?")
+                          ) {
+                            return;
+                          }
+                          setSelectedKitVariant(variant.id);
+                          setSaved(false);
+                        }}
+                        className={`font-display rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-widest transition-colors ${
+                          isSelected ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/60"
+                        }`}
                       >
-                        {" "}
-                        •
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                        {variant.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
+            <p className="font-body text-xs leading-relaxed text-muted-foreground sm:flex-1">
+              {hidesClubhouseShopSections || isEditorial
+                ? "Content and Kit Photos are saved independently."
+                : "Content, Kit Photos, and Shop Page Photo Row are saved independently."}
+            </p>
+
+            <div className="flex flex-none flex-wrap items-center gap-3 sm:ml-auto">
+              {saveBlockerMessage && !saving && !uploading && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-destructive/10 px-3 py-1.5">
+                  <span className="h-1.5 w-1.5 flex-none rounded-full bg-destructive" />
+                  <span className="font-body text-xs font-medium text-destructive">
+                    {saveBlockerMessage}
+                  </span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saveDisabled}
+                className="font-display rounded-lg bg-primary px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
+                {saving ? "Saving…" : uploading ? "Uploading…" : "Save"}
+              </button>
+            </div>
+          </AdminPanel>
+
+          {error && (
+            <p className="font-body text-sm text-destructive" role="alert">
+              Error: {error}
+            </p>
+          )}
+
+          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(11rem,14rem)_minmax(320px,420px)_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col gap-2 self-start xl:sticky xl:top-24">
+            <span className="font-display px-1 text-[0.65rem] uppercase tracking-widest text-muted-foreground">
+              This kit
+            </span>
+            <AdminSectionRail
+              items={sectionItems}
+              value={activeTab}
+              onChange={(id) => selectTab(id as AdminTab)}
+            />
+            {surfaceOptions.length > 1 &&
+              !hidesClubhouseShopSections &&
+              !isEditorial && (
+                <p className="font-body rounded-xl border border-border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
+                  Photo Row and Purchase belong to the Shop Page surface only.
+                </p>
+              )}
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-3.5 self-start">
             <SlidingPanel activeKey={activeTab} direction={tabDirection}>
             {activeTab === "content" && (
-            <div className="space-y-3">
-              <Field
-                label="Small Heading Above the Title"
-                help='Example: "2026 Kit · Available Now"'
+            <div className="flex flex-col gap-3.5">
+              <SectionCard
+                title="Product"
+                subtitle={`${productCardKitLabel} on the ${editingSurfaceLabel}`}
               >
-                <input
-                  type="text"
-                  placeholder="2026 Kit · Available Now"
-                  value={fields.eyebrow}
-                  onChange={(event) => setField("eyebrow", event.target.value)}
-                  className={ADMIN_INPUT_CLASS}
-                />
-              </Field>
+                <div className="space-y-4">
+                  <Field
+                    label="Small Heading Above the Title"
+                    help='Example: "2026 Kit · Available Now"'
+                  >
+                    <input
+                      type="text"
+                      placeholder="2026 Kit · Available Now"
+                      value={fields.eyebrow}
+                      onChange={(event) => setField("eyebrow", event.target.value)}
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
 
-              <Field
-                label="Main Product Title"
-                help="Press Enter where you want the title to start a new line."
-              >
-                <Textarea
-                  placeholder={"Thorn\nEdition\n2026"}
-                  value={fields.title}
-                  onChange={(event) => setField("title", event.target.value)}
-                  rows={3}
-                />
-              </Field>
+                  <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                    <Field
+                      label="Main Product Title"
+                      help="Press Enter where you want the title to start a new line."
+                    >
+                      <Textarea
+                        placeholder={"Thorn\nEdition\n2026"}
+                        value={fields.title}
+                        onChange={(event) => setField("title", event.target.value)}
+                        rows={3}
+                      />
+                    </Field>
 
-              <Field
-                label="Product Description"
-                help="A short description shown below the main title."
-              >
-                <Textarea
-                  placeholder="Describe the jersey, its design, and what makes it special."
-                  value={fields.description}
-                  onChange={(event) => setField("description", event.target.value)}
-                  rows={3}
-                />
-              </Field>
+                    <Field
+                      label="Product Description"
+                      help="A short description shown below the main title."
+                    >
+                      <Textarea
+                        placeholder="Describe the jersey, its design, and what makes it special."
+                        value={fields.description}
+                        onChange={(event) => setField("description", event.target.value)}
+                        rows={3}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </SectionCard>
 
               {/* editorial@1 (Lions) never renders bullet points on its public
                   shop page (EditorialShopPage.tsx reads a fixed layout, not
@@ -896,9 +1012,9 @@ export default function AdminShopPage() {
                   hasBulletPoint is forced true for isEditorial above, so
                   hiding this never blocks Save. */}
               {!isEditorial && (
-              <Field
-                label="Product Bullet Points"
-                help={`Short lines shown next to the red dots. Add up to ${MAX_KIT_BULLET_POINTS}.`}
+              <SectionCard
+                title="Product Bullet Points"
+                subtitle={`Short lines shown next to the red dots. Add up to ${MAX_KIT_BULLET_POINTS}.`}
               >
                 <div className="space-y-2">
                   {fields.bullet_points.map((point, index) => (
@@ -961,84 +1077,90 @@ export default function AdminShopPage() {
                     Add at least one bullet point.
                   </p>
                 )}
-              </Field>
+              </SectionCard>
               )}
 
-              {/* editorial@1 (Lions) never renders store_note on its public
-                  shop page (EditorialShopPage.tsx does not reference this
-                  field at all), so this input is pointless there. There is
-                  no save-blocking validation on store_note, so hiding this
-                  never blocks Save. */}
-              {!isEditorial && (
-              <Field
-                label="Store Information"
-                help="Use Enter to place the store name and address on separate lines."
-              >
-                <Textarea
-                  placeholder={DEFAULT_KIT_STORE_NOTE}
-                  value={fields.store_note}
-                  maxLength={180}
-                  onChange={(event) =>
-                    setField("store_note", event.target.value)
-                  }
-                  rows={2}
-                />
-              </Field>
-              )}
+              <SectionCard title="Store and purchase">
+                <div className="space-y-4">
+                  {/* editorial@1 (Lions) never renders store_note on its public
+                      shop page (EditorialShopPage.tsx does not reference this
+                      field at all), so this input is pointless there. There is
+                      no save-blocking validation on store_note, so hiding this
+                      never blocks Save. */}
+                  {!isEditorial && (
+                  <Field
+                    label="Store Information"
+                    help="Use Enter to place the store name and address on separate lines."
+                  >
+                    <Textarea
+                      placeholder={DEFAULT_KIT_STORE_NOTE}
+                      value={fields.store_note}
+                      maxLength={180}
+                      onChange={(event) =>
+                        setField("store_note", event.target.value)
+                      }
+                      rows={2}
+                    />
+                  </Field>
+                  )}
 
-              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                {/* editorial@1 (Lions) always shows a hardcoded CTA label
-                    ("Shop with our vendor") on its public shop page — see
-                    EditorialShopPage.tsx — and ignores fields.cta_label, so
-                    this input is pointless there. */}
-                {!isEditorial && (
-                <Field
-                  label="Purchase Button Text"
-                  help='Example: "Buy Now →"'
-                >
-                  <input
-                    type="text"
-                    placeholder="Buy Now →"
-                    value={fields.cta_label}
-                    onChange={(event) => setField("cta_label", event.target.value)}
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
-                )}
-                <Field
-                  label="Purchase Page Link"
-                  help={
-                    selectedSurface === "home"
-                      ? "Not used here — the homepage button always sends fans to the Team Store page. Set the real purchase link on the Shop Page surface instead."
-                      : "Paste the full web address where supporters can buy the kit."
-                  }
-                >
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={fields.cta_link}
-                    onChange={(event) => setField("cta_link", event.target.value)}
-                    disabled={selectedSurface === "home"}
-                    className={`${ADMIN_INPUT_CLASS} disabled:cursor-not-allowed disabled:opacity-40`}
-                  />
-                </Field>
-              </div>
+                  <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                    {/* editorial@1 (Lions) always shows a hardcoded CTA label
+                        ("Shop with our vendor") on its public shop page — see
+                        EditorialShopPage.tsx — and ignores fields.cta_label, so
+                        this input is pointless there. */}
+                    {!isEditorial && (
+                    <Field
+                      label="Purchase Button Text"
+                      help='Example: "Buy Now →"'
+                    >
+                      <input
+                        type="text"
+                        placeholder="Buy Now →"
+                        value={fields.cta_label}
+                        onChange={(event) => setField("cta_label", event.target.value)}
+                        className={ADMIN_INPUT_CLASS}
+                      />
+                    </Field>
+                    )}
+                    <Field
+                      label="Purchase Page Link"
+                      help={
+                        selectedSurface === "home"
+                          ? "Not used here — the homepage button always sends fans to the Team Store page. Set the real purchase link on the Shop Page surface instead."
+                          : "Paste the full web address where supporters can buy the kit."
+                      }
+                    >
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={fields.cta_link}
+                        onChange={(event) => setField("cta_link", event.target.value)}
+                        disabled={selectedSurface === "home"}
+                        className={`${ADMIN_INPUT_CLASS} disabled:cursor-not-allowed disabled:opacity-40`}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </SectionCard>
             </div>
             )}
 
             {activeTab === "purchase" && selectedSurface === "shop" && (
-            <div className="space-y-4">
-              <Field
-                label="Purchase Section Heading"
-                help='Example: "Purchase Details"'
-              >
-                <input
-                  type="text"
-                  value={previewPurchaseDetails.heading}
-                  onChange={(event) => setPurchaseField("heading", event.target.value)}
-                  className={ADMIN_INPUT_CLASS}
-                />
-              </Field>
+            <div className="flex flex-col gap-3.5">
+              <SectionCard title="Purchase Details">
+                <Field
+                  label="Purchase Section Heading"
+                  help='Example: "Purchase Details"'
+                >
+                  <input
+                    type="text"
+                    value={previewPurchaseDetails.heading}
+                    onChange={(event) => setPurchaseField("heading", event.target.value)}
+                    className={ADMIN_INPUT_CLASS}
+                  />
+                </Field>
+              </SectionCard>
 
               <div className="space-y-3">
                 {previewPurchaseDetails.cards
@@ -1086,65 +1208,70 @@ export default function AdminShopPage() {
                   ))}
               </div>
 
-              <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <Field label="Footer Label">
-                  <input
-                    type="text"
-                    value={previewPurchaseDetails.cta_eyebrow}
-                    onChange={(event) =>
-                      setPurchaseField("cta_eyebrow", event.target.value)
-                    }
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
-                <Field label="Footer Text">
-                  <Textarea
-                    value={previewPurchaseDetails.cta_text}
-                    onChange={(event) =>
-                      setPurchaseField("cta_text", event.target.value)
-                    }
-                    rows={2}
-                  />
-                </Field>
-                <Field label="Button Text">
-                  <input
-                    type="text"
-                    value={previewPurchaseDetails.cta_label}
-                    onChange={(event) =>
-                      setPurchaseField("cta_label", event.target.value)
-                    }
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
-                <Field label="Button Link">
-                  <input
-                    type="url"
-                    value={previewPurchaseDetails.cta_link}
-                    onChange={(event) =>
-                      setPurchaseField("cta_link", event.target.value)
-                    }
-                    className={ADMIN_INPUT_CLASS}
-                  />
-                </Field>
-              </div>
+              <SectionCard title="Footer">
+                <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                  <Field label="Footer Label">
+                    <input
+                      type="text"
+                      value={previewPurchaseDetails.cta_eyebrow}
+                      onChange={(event) =>
+                        setPurchaseField("cta_eyebrow", event.target.value)
+                      }
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Button Text">
+                    <input
+                      type="text"
+                      value={previewPurchaseDetails.cta_label}
+                      onChange={(event) =>
+                        setPurchaseField("cta_label", event.target.value)
+                      }
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                  <Field label="Footer Text">
+                    <Textarea
+                      value={previewPurchaseDetails.cta_text}
+                      onChange={(event) =>
+                        setPurchaseField("cta_text", event.target.value)
+                      }
+                      rows={2}
+                    />
+                  </Field>
+                  <Field label="Button Link">
+                    <input
+                      type="url"
+                      value={previewPurchaseDetails.cta_link}
+                      onChange={(event) =>
+                        setPurchaseField("cta_link", event.target.value)
+                      }
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                </div>
+              </SectionCard>
             </div>
             )}
 
             {activeTab === "kit" && (
-            <div>
-            <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                  Kit Photos
-                </p>
-                <p className="font-body mt-1 text-xs text-muted-foreground">
-                  Drag-free ordering with arrow controls.
+            <SectionCard
+              title="Kit Photos"
+              subtitle="Drag-free ordering with arrow controls."
+              action={
+                <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+                  {draftPhotos.length}/{MAX_KIT_PHOTOS}
+                </span>
+              }
+            >
+            {draftPhotos.length === 0 && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+                <span className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-destructive" />
+                <p className="font-body text-xs font-medium leading-relaxed text-destructive">
+                  This kit cannot be saved until it has at least one photo.
                 </p>
               </div>
-              <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                {draftPhotos.length}/{MAX_KIT_PHOTOS}
-              </span>
-            </div>
+            )}
 
             <div className="grid grid-cols-3 gap-2 min-[420px]:flex min-[420px]:flex-wrap">
               {draftPhotos.map((photo, index) => (
@@ -1210,24 +1337,21 @@ export default function AdminShopPage() {
                 At least 1 photo is required.
               </p>
             )}
-            </div>
+            </SectionCard>
             )}
 
             {activeTab === "photoStrip" && (
-            <div>
-            <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                  {activeKitVariant === "home" ? "Home Kit" : "Away Kit"} Photo Row
-                </p>
-                <p className="font-body mt-1 text-xs text-muted-foreground">
-                  Static photo row shown below the selected shop kit. Leave empty to hide it.
-                </p>
-              </div>
-              <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                {draftPhotoStripPhotos.length}/{MAX_PHOTO_STRIP_PHOTOS}
-              </span>
-            </div>
+            <SectionCard
+              title="Shop Page Photo Row"
+              action={
+                <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+                  {draftPhotoStripPhotos.length}/{MAX_PHOTO_STRIP_PHOTOS}
+                </span>
+              }
+            >
+            <p className="font-body mb-3 text-xs text-muted-foreground">
+              Static photo row shown below the selected shop kit. Leave empty to hide it.
+            </p>
 
             <div className="grid grid-cols-3 gap-2 min-[420px]:flex min-[420px]:flex-wrap">
               {draftPhotoStripPhotos.map((photo, index) => (
@@ -1288,50 +1412,18 @@ export default function AdminShopPage() {
                 {MAX_PHOTO_STRIP_PHOTOS} photo max.
               </p>
             )}
-            </div>
+            </SectionCard>
             )}
             </SlidingPanel>
+          </div>
 
-            <div className="mt-4 border-t border-border pt-4">
-              {error && (
-                <p className="font-body mb-3 text-sm text-destructive">
-                  Error: {error}
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saveDisabled}
-                className="font-display w-full rounded-lg bg-brand px-6 py-3 font-black uppercase tracking-widest text-white transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ fontSize: "1rem" }}
-              >
-                {(saving || uploading) && (
-                  <AdminLoadingDots className="mr-2" />
-                )}
-                {saving
-                  ? "Saving…"
-                  : uploading
-                    ? "Uploading…"
-                    : `Save ${activeEditorLabel}`}
-              </button>
-            </div>
-          </section>
-
-          <section className="min-w-0">
-            <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p
-                  className="font-display font-bold uppercase tracking-widest text-foreground"
-                  style={{ fontSize: "0.9rem" }}
-                >
-                  {previewLabel} Preview
-                </p>
-                <p className="font-body mt-1 text-xs text-muted-foreground">
-                  Desktop website view, scaled to fit.
-                </p>
-              </div>
-              <span className="font-display rounded-full bg-card px-3 py-1 text-xs uppercase tracking-widest text-muted-foreground">
-                Draft
+          <section className="min-w-0 xl:sticky xl:top-24 xl:self-start">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="font-display text-[0.65rem] uppercase tracking-widest text-muted-foreground">
+                Preview
+              </span>
+              <span className="font-display inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-widest text-muted-foreground">
+                {previewLabel}
               </span>
             </div>
 
@@ -1351,6 +1443,12 @@ export default function AdminShopPage() {
                 </div>
               )}
             </div>
+
+            {activeTab !== "purchase" && previewPhotos.length === 0 && (
+              <p className="font-body mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs leading-relaxed text-destructive">
+                The public page has no kit photo to show. Saving is blocked until one is added.
+              </p>
+            )}
 
             {selectedSurface === "shop" &&
               activeTab !== "purchase" &&
@@ -1385,9 +1483,49 @@ export default function AdminShopPage() {
             </>
             )}
           </section>
+          </div>
         </div>
       )}
-    </div>
+    </AdminPage>
+  );
+}
+
+// Page-local card wrapper matching the mockup's per-section grouping (e.g.
+// "Product", "Product Bullet Points", "Store and purchase" as three
+// separate bordered cards within the Content tab, rather than one flat list
+// of fields). Built on the shared AdminPanel primitive, not a new one.
+function SectionCard({
+  title,
+  subtitle,
+  action,
+  children,
+}: {
+  title?: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <AdminPanel as="div" className="p-0 sm:p-0">
+      {(title || action) && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
+          <div className="min-w-0">
+            {title && (
+              <p className="font-display text-sm font-semibold text-foreground">
+                {title}
+              </p>
+            )}
+            {subtitle && (
+              <p className="font-body mt-0.5 text-xs text-muted-foreground">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {action && <div className="ml-auto flex-none">{action}</div>}
+        </div>
+      )}
+      <div className="p-4 sm:p-5">{children}</div>
+    </AdminPanel>
   );
 }
 

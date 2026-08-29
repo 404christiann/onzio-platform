@@ -1,250 +1,327 @@
-"use client";
-
-import { useClubContext, useClubId } from "@/components/ClubContextProvider";
-
-import { useEffect, useState } from "react";
+import {
+  CalendarDays,
+  ClipboardPenLine,
+  CreditCard,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
-import { fetchActiveSeason } from "@/lib/queries";
-import { createClient } from "@/lib/admin-client";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Suspense } from "react";
+import { headers } from "next/headers";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminRegistrationMixChart } from "@/components/admin/AdminRegistrationMixChart";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import {
+  loadAdminDashboardData,
+  type DashboardEvent,
+  type DashboardSection,
+} from "@/lib/admin-dashboard-data";
+import { REGISTRATION_MIX_COLORS } from "@/lib/admin-dashboard-mix";
+import { requireFreshClubSession } from "@/lib/auth-session";
+import { isBillingAdminEmail } from "@/lib/billing-admin";
+import { getClubContext } from "@/lib/club-context";
+import {
+  getVisibleAdminQuickActions,
+  type AdminQuickActionId,
+} from "@/lib/admin-route-manifest";
+import { createClient } from "@/lib/supabase-server";
 
-function formatDate(dateStr: string): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
-    month: "long", day: "numeric", year: "numeric",
-  });
-}
-
-type Stats = {
-  players: number;
-  staff: number;
-  matches: number;
-  nextMatch: { date: string; opponent: string; home: boolean } | null;
-  seasonLabel: string;
+const ACTION_ICONS: Record<AdminQuickActionId, LucideIcon> = {
+  registrations: ClipboardPenLine,
+  "manage-roster": Users,
+  "manage-schedule": CalendarDays,
+  payments: CreditCard,
 };
 
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${date}T12:00:00`));
+}
+
+function formatTime(time: string | null) {
+  if (!time) return null;
+  const [hours, minutes] = time.split(":").map(Number);
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(2026, 0, 1, hours, minutes));
+}
+
+/**
+ * Route entry for `/admin`. Wraps the actual dashboard (which does its data
+ * loading as an async Server Component) in a Suspense boundary so
+ * `AdminFullPageLoader` shows for the initial load, instead of a blank page,
+ * while `AdminDashboardContent` awaits the session/club/data lookups below.
+ *
+ * A shared `loading.tsx` file at `app/admin/(protected)/` was deliberately
+ * not used for this: that folder is the parent route segment for every
+ * protected admin page (tryouts, programs, standings, ...), so a loading
+ * file there would show on navigation to all of them, not just the
+ * Dashboard. This inline Suspense keeps the loader scoped to this one route.
+ */
 export default function AdminDashboard() {
-  const club = useClubContext();
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const clubId = useClubId();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
+  return (
+    <Suspense fallback={<AdminFullPageLoader label="Loading dashboard" />}>
+      <AdminDashboardContent />
+    </Suspense>
+  );
+}
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-
-      const [
-        { count: players },
-        { count: staff },
-        activeSeason,
-      ] = await Promise.all([
-        supabase.from("players").select("*", { count: "exact", head: true }).eq("active", true),
-        supabase.from("staff").select("*", { count: "exact", head: true }).eq("active", true),
-        fetchActiveSeason(clubId),
-      ]);
-
-      const { data: matches } = activeSeason
-        ? await supabase
-            .from("matches")
-            .select("date, opponent, home, time")
-            .eq("season_id", activeSeason.id)
-        : { data: [] };
-
-      // Find next upcoming match
-      const now = new Date();
-      const upcoming = (matches ?? [])
-        .filter((m: { date: string; time?: string | null }) => new Date(`${m.date}T${m.time ?? "00:00"}`) >= now)
-        .sort((a: { date: string; time?: string | null }, b: { date: string; time?: string | null }) => `${a.date}T${a.time ?? "00:00"}` < `${b.date}T${b.time ?? "00:00"}` ? -1 : 1);
-
-      setStats({
-        players: players ?? 0,
-        staff: staff ?? 0,
-        matches: matches?.length ?? 0,
-        nextMatch: upcoming[0] ?? null,
-        seasonLabel: activeSeason?.label ?? "No active season",
-      });
-      setLoading(false);
-    }
-    load();
-  }, [clubId]);
+async function AdminDashboardContent() {
+  const supabase = await createClient();
+  const { userId, claims } = await requireFreshClubSession(supabase);
+  const requestHeaders = await headers();
+  const club = await getClubContext({
+    hostname: requestHeaders.get("host") ?? "",
+    userId,
+  });
+  const isBillingAuthorized =
+    club.role === "owner" && isBillingAdminEmail(claims.email as string | undefined);
+  const canMutateContent =
+    club.lifecycle === "onboarding" ||
+    (club.lifecycle === "active" &&
+      (club.kind === "demo" ||
+        club.kind === "test" ||
+        club.publicAccess === "live" ||
+        club.publicAccess === "grace"));
+  const quickActions = getVisibleAdminQuickActions({
+    role: club.role,
+    presentationTemplateKey: club.presentationTemplateKey,
+    isBillingAuthorized,
+    canMutateContent,
+  });
+  const data = await loadAdminDashboardData(supabase, club.id);
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h1
-          className="font-display font-black uppercase text-foreground leading-none"
-          style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
-        >
-          Dashboard
-        </h1>
-        <p className="font-body text-sm mt-1 text-muted-foreground">
-          {loading ? "Loading season…" : `${stats?.seasonLabel ?? "No active season"}${stats?.seasonLabel === "No active season" ? "" : " Season"}`}
-        </p>
-      </div>
+    <AdminPage>
+      <AdminPageHeader
+        title="Dashboard"
+        description={
+          data.activeSeasonLabel
+            ? `${data.activeSeasonLabel} season overview`
+            : "Club operations overview"
+        }
+      />
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <StatCard label="Players" value={String(stats?.players ?? 0)} loading={loading} />
-        <StatCard label="Staff"   value={String(stats?.staff ?? 0)} loading={loading} />
-        <StatCard label="Matches" value={String(stats?.matches ?? 0)} loading={loading} />
-        <StatCard
-          label="Next Match"
-          value={stats?.nextMatch ? formatDate(stats.nextMatch.date) : "TBD"}
-          sub={stats?.nextMatch ? `vs ${stats.nextMatch.opponent}` : undefined}
-          loading={loading}
-          accent
-        />
-      </div>
+      <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <MetricCard label="Active Players" section={data.players} />
+        <MetricCard label="Active Staff" section={data.staff} />
+        <MetricCard label="Season Matches" section={data.seasonMatches} />
+        <MetricCard label="Paid Registrations" section={data.paidRegistrations} />
+      </section>
 
-      {/* Quick actions */}
-      <div className="mb-4">
-        <h2
-          className="font-display font-bold uppercase tracking-widest mb-4 text-muted-foreground"
-          style={{ fontSize: "1rem" }}
-        >
+      <section aria-labelledby="quick-actions-heading">
+        <h2 id="quick-actions-heading" className="mb-3 text-sm font-semibold normal-case text-foreground">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-          {isEditorial ? (
-            <ActionCard
-              href="/admin/tryouts"
-              title="Manage Tryouts"
-              description="Add tryout sessions, manage registration links, and update status."
-              icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M7 3v3M17 3v3M4 8h16v12H4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M8 12h3M13 12h3M8 16h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              }
-            />
+        {quickActions.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {quickActions.map((action) => {
+              const Icon = ACTION_ICONS[action.id];
+              return (
+                <Link
+                  key={action.id}
+                  href={action.href}
+                  title={action.description}
+                  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="size-4" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-card-foreground">
+                      {action.label}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {action.description}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState message="Quick actions are unavailable while content changes are paused." />
+        )}
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <DashboardPanel title="Registration Forms" actionHref="/admin/registrations" actionLabel="View all">
+          {data.forms.status === "error" ? (
+            <SectionError message={data.forms.message} />
+          ) : data.forms.data.length ? (
+            <ul className="divide-y divide-border">
+              {data.forms.data.slice(0, 6).map((form) => (
+                <li key={form.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-card-foreground" title={form.title}>
+                      {form.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Created {formatDate(form.createdAt.slice(0, 10))}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
+                      form.status === "open"
+                        ? "bg-success/10 text-success"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {form.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
           ) : (
-            <ActionCard
-              href="/admin/stats"
-              title="Enter Match Stats"
-              description="Log goals, assists, saves and minutes for a completed match."
-              icon={
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 20V10M12 20V4M6 20v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              }
-            />
+            <EmptyState message="No current registration forms." />
           )}
-          <ActionCard
-            href="/admin/seasons"
-            title="Manage Seasons"
-            description="Create the next season or change which season is active."
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="4" width="18" height="17" rx="2" stroke="currentColor" strokeWidth="2"/>
-                <path d="M8 2v4M16 2v4M3 9h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            }
-          />
-          <ActionCard
-            href="/admin/roster"
-            title="Manage Roster"
-            description="Add, edit, or deactivate players and staff members."
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-                <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            }
-          />
-          <ActionCard
-            href="/admin/schedule"
-            title="Manage Schedule"
-            description="Add upcoming fixtures or update match details."
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/>
-                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                <path d="M12 14v4M10 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            }
-          />
-        </div>
+        </DashboardPanel>
+
+        <DashboardPanel title="Upcoming Fixtures & Events" actionHref="/admin/schedule" actionLabel="View schedule">
+          {data.events.status === "error" ? (
+            <SectionError message={data.events.message} />
+          ) : data.events.data.length ? (
+            <ul className="divide-y divide-border">
+              {data.events.data.map((event) => (
+                <EventRow key={event.id} event={event} />
+              ))}
+            </ul>
+          ) : (
+            <EmptyState message="No upcoming fixtures or events." />
+          )}
+        </DashboardPanel>
       </div>
-    </div>
+
+      <DashboardPanel title="Registration Mix" description="Paid registrations across current forms">
+        {data.registrationMix.status === "error" ? (
+          <SectionError message={data.registrationMix.message} />
+        ) : data.registrationMix.data.length ? (
+          <div className="grid items-center gap-8 lg:grid-cols-[minmax(240px,360px)_1fr]">
+            <div className="mx-auto h-72 w-full max-w-sm">
+              <AdminRegistrationMixChart items={data.registrationMix.data} />
+            </div>
+            <div className="min-w-0 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <caption className="sr-only">Paid registrations by current registration form</caption>
+                <thead>
+                  <tr className="border-b border-border text-xs text-muted-foreground">
+                    <th scope="col" className="pb-2 pr-4 font-medium">Form</th>
+                    <th scope="col" className="pb-2 pr-4 text-right font-medium">Paid</th>
+                    <th scope="col" className="pb-2 text-right font-medium">Share</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {data.registrationMix.data.map((item, index) => (
+                    <tr key={item.id}>
+                      <th scope="row" className="max-w-0 py-3 pr-4 font-medium text-card-foreground">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="size-2.5 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor:
+                                REGISTRATION_MIX_COLORS[index % REGISTRATION_MIX_COLORS.length],
+                            }}
+                            aria-hidden="true"
+                          />
+                          <span className="truncate" title={item.label}>{item.label}</span>
+                        </span>
+                      </th>
+                      <td className="py-3 pr-4 text-right tabular-nums text-muted-foreground">{item.count}</td>
+                      <td className="py-3 text-right font-medium tabular-nums text-card-foreground">{item.percentage}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <EmptyState message="Paid registrations will appear here once a current form receives payment." />
+        )}
+      </DashboardPanel>
+    </AdminPage>
   );
 }
 
-function StatCard({
-  label,
-  value,
-  sub,
-  accent,
-  loading,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: boolean;
-  loading?: boolean;
-}) {
+function MetricCard({ label, section }: { label: string; section: DashboardSection<number> }) {
   return (
-    <div
-      className={`rounded-xl border p-5 ${accent ? "border-success/40 bg-success/10" : "border-border bg-card"}`}
-    >
-      <p
-        className={`font-display tracking-widest uppercase mb-2 ${accent ? "text-success" : "text-muted-foreground"}`}
-        style={{ fontSize: "0.985rem" }}
-      >
-        {label}
-      </p>
-      {loading ? (
-        <Skeleton className="h-[clamp(1.8rem,3vw,2.5rem)] w-16" />
-      ) : (
-        <p
-          className="font-display font-black text-foreground leading-none break-words"
-          style={{
-            fontSize: accent
-              ? "clamp(1.15rem, 2.4vw, 1.75rem)"
-              : "clamp(1.8rem, 3vw, 2.5rem)",
-          }}
-        >
-          {value}
+    <AdminPanel className="p-4 sm:p-5">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      {section.status === "ready" ? (
+        <p className="mt-3 text-[32px] font-bold leading-none tracking-tight tabular-nums text-card-foreground">
+          {section.data.toLocaleString()}
         </p>
-      )}
-      {loading && accent ? (
-        <Skeleton className="mt-2 h-3 w-24" />
       ) : (
-        sub && (
-          <p className="font-body mt-1 truncate text-muted-foreground" style={{ fontSize: "0.95rem" }}>
-            {sub}
-          </p>
-        )
+        <p className="mt-3 text-sm font-medium text-destructive" role="status">Unavailable</p>
       )}
-    </div>
+    </AdminPanel>
   );
 }
 
-function ActionCard({
-  href,
+function DashboardPanel({
   title,
   description,
-  icon,
+  actionHref,
+  actionLabel,
+  children,
 }: {
-  href: string;
   title: string;
-  description: string;
-  icon: React.ReactNode;
+  description?: string;
+  actionHref?: string;
+  actionLabel?: string;
+  children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className="group block rounded-xl border border-border bg-card p-5 transition-all duration-200 hover:border-brand/30 hover:bg-accent"
-    >
-      <div className="mb-3 text-brand">{icon}</div>
-      <h3 className="font-display font-black uppercase text-foreground mb-1" style={{ fontSize: "1.5rem" }}>
-        {title}
-      </h3>
-      <p className="font-body leading-relaxed text-muted-foreground" style={{ fontSize: "1.15rem" }}>
-        {description}
-      </p>
-    </Link>
+    <AdminPanel aria-labelledby={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`}>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h2 id={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`} className="text-sm font-semibold normal-case text-foreground">
+            {title}
+          </h2>
+          {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+        </div>
+        {actionHref && actionLabel ? (
+          <Link href={actionHref} className="shrink-0 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            {actionLabel}
+          </Link>
+        ) : null}
+      </div>
+      {children}
+    </AdminPanel>
   );
+}
+
+function EventRow({ event }: { event: DashboardEvent }) {
+  return (
+    <li className="flex gap-4 py-3 first:pt-0 last:pb-0">
+      <div className="w-16 shrink-0 rounded-lg bg-muted px-2 py-2 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {new Intl.DateTimeFormat("en-US", { month: "short" }).format(new Date(`${event.date}T12:00:00`))}
+        </p>
+        <p className="text-lg font-semibold leading-5 text-card-foreground">{Number(event.date.slice(-2))}</p>
+      </div>
+      <div className="min-w-0 flex-1 py-0.5">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-medium text-card-foreground" title={event.title}>{event.title}</p>
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-primary">
+            {event.kind}
+          </span>
+        </div>
+        <p className="mt-1 truncate text-xs text-muted-foreground">
+          {[formatTime(event.time), event.detail].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return <p className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">{message}</p>;
+}
+
+function SectionError({ message }: { message: string }) {
+  return <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">{message}</p>;
 }

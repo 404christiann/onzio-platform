@@ -36,90 +36,106 @@
   --font-din-condensed: var(--font-geist-sans), Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Admin UI design tokens (basecn/shadcn-style primitive layer). These
-     names are new and don't collide with the brand tokens above, which
-     stay authoritative for every public club site/template. Scoped to
-     admin surfaces only by usage: only components/ui/* and app/admin/**
-     reference these classes. */
-  --background: 0 0% 100%;
-  --foreground: 240 10% 12%;
-  --card: 0 0% 100%;
-  --card-foreground: 240 10% 12%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 12%;
-  --primary: 240 10% 12%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 240 5% 96%;
-  --secondary-foreground: 240 10% 12%;
-  --muted: 240 5% 96%;
-  --muted-foreground: 240 4% 46%;
-  --accent: 240 5% 96%;
-  --accent-foreground: 240 10% 12%;
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 98%;
-  /* Onzio brand accent (#0eb547). Carries every non-destructive brand-accent
-     use in the admin portal that previously borrowed `--destructive`: save /
-     primary-action buttons, the active sidebar nav item, the login page's
-     sign-in actions, and the logo accent. `--destructive` stays red and is
-     reserved for genuinely destructive or error states. The HSL triple is
-     carried to one decimal place because that is what round-trips back to
-     exactly #0eb547; rounding to whole numbers lands on #0eb445 instead. */
-  --brand: 140.5 85.6% 38.2%;
-  --brand-foreground: 0 0% 100%;
-  --success: 160 84% 30%;
-  --success-foreground: 0 0% 98%;
-  --warning: 32 95% 38%;
-  --warning-foreground: 0 0% 98%;
-  --border: 240 6% 90%;
-  --input: 240 6% 90%;
-  --ring: 240 5% 65%;
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 240 10% 12%;
-  --sidebar-border: 240 6% 90%;
-  --sidebar-accent: 240 5% 96%;
-  --sidebar-accent-foreground: 240 10% 12%;
-  --sidebar-ring: 240 5% 65%;
 }
 
-/* Dark-mode overrides for the same admin token layer, scoped to `.dark`.
-   Several admin pages (e.g. the homepage editor) use inline dark panel
-   styling (`#141414` backgrounds); wrap those panels in className="dark"
-   so any components/ui/* primitive rendered inside resolves to
-   dark-appropriate colors instead of the light defaults above. */
-.dark {
-  --background: 0 0% 8%;
-  --foreground: 0 0% 98%;
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 98%;
-  --popover: 0 0% 10%;
-  --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 10% 12%;
-  --secondary: 0 0% 16%;
-  --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 16%;
-  --muted-foreground: 0 0% 65%;
-  --accent: 0 0% 16%;
-  --accent-foreground: 0 0% 98%;
+/* Protected admin UI design tokens (basecn/shadcn-style primitive layer).
+   The tokens live on the protected layout's `.admin-theme` wrapper instead
+   of `:root`, so switching the portal can never repaint a public template or
+   the unprotected login route. The direct-child `.dark` selector temporarily
+   neutralizes AdminShell's legacy forced-dark class; deliberate nested dark
+   preview panels continue to opt into the dark token set below. */
+.admin-theme[data-admin-theme="light"],
+.admin-theme[data-admin-theme="light"] > .dark {
+  --background: 220 33% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 231 74% 59%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 23% 96%;
+  --secondary-foreground: 222 39% 17%;
+  --muted: 220 23% 96%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 220 18% 94%;
+  --accent-foreground: 222 39% 17%;
   --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 98%;
-  /* Brand accent is a fixed brand color, so it does not shift between the
-     light and dark token layers — same treatment `--destructive` gets. */
-  --brand: 140.5 85.6% 38.2%;
+  --destructive-foreground: 0 0% 100%;
+  --brand: 231 74% 59%;
   --brand-foreground: 0 0% 100%;
-  --success: 158 64% 52%;
-  --success-foreground: 240 10% 12%;
-  --warning: 43 96% 56%;
-  --warning-foreground: 240 10% 12%;
-  --border: 0 0% 22%;
-  --input: 0 0% 22%;
-  --ring: 0 0% 40%;
-  --sidebar: 0 0% 8%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 22%;
-  --sidebar-accent: 0 0% 16%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 0 0% 40%;
+  --success: 158 64% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 35 92% 44%;
+  --warning-foreground: 0 0% 100%;
+  --border: 220 18% 88%;
+  --input: 220 18% 88%;
+  --ring: 231 74% 59%;
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 222 47% 11%;
+  --sidebar-border: 220 18% 88%;
+  --sidebar-accent: 220 23% 95%;
+  --sidebar-accent-foreground: 222 39% 17%;
+  --sidebar-ring: 231 74% 59%;
+  color-scheme: light;
+}
+
+/* `main.dark` preserves the current login presentation without making the
+   protected theme provider part of the auth surface. `.admin-theme .dark`
+   remains an explicit escape hatch for simulated dark preview panels. */
+.admin-theme[data-admin-theme="dark"],
+.admin-theme[data-admin-theme="dark"] > .dark,
+.admin-theme .dark,
+main.dark {
+  --background: 222 47% 7%;
+  --foreground: 210 40% 98%;
+  --card: 222 35% 11%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 35% 11%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 230 86% 70%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 24% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 24% 17%;
+  --muted-foreground: 215 16% 65%;
+  --accent: 217 24% 19%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 72% 57%;
+  --destructive-foreground: 0 0% 100%;
+  --brand: 230 86% 70%;
+  --brand-foreground: 222 47% 11%;
+  --success: 158 64% 48%;
+  --success-foreground: 222 47% 11%;
+  --warning: 41 96% 58%;
+  --warning-foreground: 222 47% 11%;
+  --border: 217 20% 23%;
+  --input: 217 20% 23%;
+  --ring: 230 86% 70%;
+  --sidebar: 222 47% 8%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-border: 217 20% 23%;
+  --sidebar-accent: 217 24% 18%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-ring: 230 86% 70%;
+  color-scheme: dark;
+}
+
+.admin-theme {
+  min-height: 100svh;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* NativeSelect's legacy `.dark` ancestor utility sees AdminShell's temporary
+   forced-dark class. Keep browser form chrome aligned with the saved light
+   theme until the shell consumes AdminThemeToggle and drops that class. */
+.admin-theme[data-admin-theme="light"] > .dark [data-slot="native-select"] {
+  color-scheme: light;
+}
+
+.admin-theme[data-admin-theme="light"] > .dark .dark [data-slot="native-select"] {
+  color-scheme: dark;
 }
 
 /* DCFC-D110: the `academy@1` template's registered "montserrat-inter-dmsans"
@@ -461,6 +477,23 @@ body:has([data-font-pack="academy"]) {
   100% {
     opacity: 0;
     transform: translateY(4px) scale(0.99);
+  }
+}
+
+/* Keyframe for the full-page admin loading overlay
+   (components/admin/AdminFullPageLoader.tsx), referenced there through
+   arbitrary `animate-[...]` utilities on each SVG path, one per path with a
+   staggered negative delay so the mark ripples in sequence. Named distinctly
+   from Tailwind's built-in `animate-pulse` utility and from the unrelated
+   `spinner-ellipsis` keyframe above (a bounce, not an opacity ramp). Kept
+   outside @layer so Tailwind never tree-shakes it. */
+@keyframes admin-mark-pulse {
+  0%,
+  100% {
+    opacity: 0.1;
+  }
+  30% {
+    opacity: 0.8;
   }
 }
 

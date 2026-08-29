@@ -41,8 +41,8 @@ const stripComments = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 // Transcribed in the same shape as the real seeded first-team fixtures (see
-// supabase/seed.sql), evaluated against the real system clock -- this suite
-// runs in 2026, so the next fixture genuinely resolves to Capital City
+// supabase/seed.sql), evaluated against a fixed date so this contract remains
+// deterministic after the seeded season ends. The next fixture resolves to Capital City
 // Athletic on 2026-08-15 and the latest played result to the 2026-07-11 win
 // over Scioto Valley FC.
 const LIONS_FIXTURES: Fixture[] = [
@@ -315,7 +315,7 @@ describe("editorial hero", () => {
 describe("editorial next match", () => {
   it("resolves the real next upcoming fixture", async () => {
     const { findNextFixture } = await import("@/lib/editorial-fixtures");
-    const next = findNextFixture(LIONS_FIXTURES);
+    const next = findNextFixture(LIONS_FIXTURES, new Date(2026, 7, 1));
     expect(next?.opponent).toBe("Capital City Athletic");
     expect(next?.venue).toBe("Scioto Field");
     expect(next?.home).toBe(false);
@@ -324,11 +324,11 @@ describe("editorial next match", () => {
 
   it("returns null when there are no fixtures or none upcoming", async () => {
     const { findNextFixture } = await import("@/lib/editorial-fixtures");
-    expect(findNextFixture([])).toBeNull();
+    expect(findNextFixture([], new Date(2026, 7, 1))).toBeNull();
     const onlyPast: Fixture[] = [
       { date: "2026-01-01", time: "12:00", opponent: "Past FC", home: true, venue: "TBD" },
     ];
-    expect(findNextFixture(onlyPast)).toBeNull();
+    expect(findNextFixture(onlyPast, new Date(2026, 7, 1))).toBeNull();
   });
 
   it("falls back to a text monogram for opponents without a crest asset", async () => {

@@ -5,7 +5,15 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import {
+  AdminSectionRail,
+  type AdminSectionRailItem,
+} from "@/components/admin/AdminSectionRail";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledAboutPreview from "@/components/admin/ScaledAboutPreview";
@@ -32,13 +40,26 @@ import { fetchAboutClubContent } from "@/lib/queries";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { createClient } from "@/lib/admin-client";
 
-type AdminTab = "about" | "logo";
-type AboutPanel = "story" | "values" | "closing";
-type LogoPanel = "images" | "features" | "colors";
+// The editor used to be two top-level tabs (About / Club Logo), each with
+// three sub-panels. AdminSectionRail flattens that into one rail of six
+// entries, visually grouped into two clusters ("About Club" / "Club Logo")
+// — see the rail rendering below. SectionId carries both former panel-id
+// namespaces in one flat union so a single SlidingPanel + AdminSectionRail
+// pair can drive all six.
+type SectionId = "story" | "values" | "closing" | "images" | "features" | "colors";
 
-const ADMIN_TAB_ORDER: AdminTab[] = ["about", "logo"];
-const ABOUT_PANEL_ORDER: AboutPanel[] = ["story", "values", "closing"];
-const LOGO_PANEL_ORDER: LogoPanel[] = ["images", "features", "colors"];
+const ABOUT_SECTIONS: SectionId[] = ["story", "values", "closing"];
+const LOGO_SECTIONS: SectionId[] = ["images", "features", "colors"];
+const SECTION_ORDER: SectionId[] = [...ABOUT_SECTIONS, ...LOGO_SECTIONS];
+const SECTION_LABELS: Record<SectionId, string> = {
+  story: "Story",
+  values: "Values",
+  closing: "Closing",
+  images: "Images",
+  features: "Features",
+  colors: "Colors",
+};
+
 type UploadTarget =
   | { kind: "aboutFeature" }
   | { kind: "logoAnnotated" }
@@ -114,41 +135,14 @@ export default function AdminAboutPage() {
   // and nothing on the editorial site links /club/logo, so its content row is
   // never read -- exactly the academy@1 situation this gate already covered.
   const hasClubLogoPage = !isAcademy && !isEditorial;
-  const [activeTab, setActiveTab] = useState<AdminTab>("about");
-  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
-  const [aboutPanel, setAboutPanel] = useState<AboutPanel>("story");
-  const [aboutPanelDirection, setAboutPanelDirection] =
+  const [activeSection, setActiveSection] = useState<SectionId>("story");
+  const [sectionDirection, setSectionDirection] =
     useState<SlidingPanelDirection>(1);
-  const [logoPanel, setLogoPanel] = useState<LogoPanel>("images");
-  const [logoPanelDirection, setLogoPanelDirection] =
-    useState<SlidingPanelDirection>(1);
-  const selectTab = (next: AdminTab) => {
-    setActiveTab((current) => {
+  const selectSection = (next: SectionId) => {
+    setActiveSection((current) => {
       if (next === current) return current;
-      setTabDirection(
-        ADMIN_TAB_ORDER.indexOf(next) > ADMIN_TAB_ORDER.indexOf(current) ? 1 : -1,
-      );
-      return next;
-    });
-  };
-  const selectAboutPanel = (next: AboutPanel) => {
-    setAboutPanel((current) => {
-      if (next === current) return current;
-      setAboutPanelDirection(
-        ABOUT_PANEL_ORDER.indexOf(next) > ABOUT_PANEL_ORDER.indexOf(current)
-          ? 1
-          : -1,
-      );
-      return next;
-    });
-  };
-  const selectLogoPanel = (next: LogoPanel) => {
-    setLogoPanel((current) => {
-      if (next === current) return current;
-      setLogoPanelDirection(
-        LOGO_PANEL_ORDER.indexOf(next) > LOGO_PANEL_ORDER.indexOf(current)
-          ? 1
-          : -1,
+      setSectionDirection(
+        SECTION_ORDER.indexOf(next) > SECTION_ORDER.indexOf(current) ? 1 : -1,
       );
       return next;
     });
@@ -162,10 +156,18 @@ export default function AdminAboutPage() {
   );
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const showFullLoader = useDelayedLoading(loading, 400);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  // Per-section dirty tracking is presentational-only: it drives the rail's
+  // dirty-dots. Save itself remains a single combined write (see
+  // handleSave) — this state never splits it into per-section saves. Same
+  // pattern as app/admin/(protected)/homepage/page.tsx.
+  const [dirtySections, setDirtySections] = useState<Set<SectionId>>(
+    new Set(),
+  );
+  const dirty = dirtySections.size > 0;
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTargetRef = useRef<UploadTarget | null>(null);
@@ -180,7 +182,7 @@ export default function AdminAboutPage() {
         setAboutDraft(nextAbout);
         setLogoDraft(nextLogo);
         setPendingDeleteUrls([]);
-        setDirty(false);
+        setDirtySections(new Set());
       })
       .catch((loadError: unknown) => {
         setError(loadError instanceof Error ? loadError.message : "Failed to load about content");
@@ -188,8 +190,13 @@ export default function AdminAboutPage() {
       .finally(() => setLoading(false));
   }, [clubId]);
 
-  function markDirty() {
-    setDirty(true);
+  function markDirty(section: SectionId) {
+    setDirtySections((current) => {
+      if (current.has(section)) return current;
+      const next = new Set(current);
+      next.add(section);
+      return next;
+    });
     setSaved(false);
   }
 
@@ -218,17 +225,21 @@ export default function AdminAboutPage() {
         stableColorPath,
         target.kind === "aboutFeature" ? "photo" : "graphic",
       );
+      let dirtySection: SectionId = "story";
       if (target.kind === "aboutFeature") {
         queueReplacedUrl(aboutDraft.feature_image_url);
         setAboutDraft((current) => ({ ...current, feature_image_url: nextUrl }));
+        dirtySection = "story";
       }
       if (target.kind === "logoAnnotated") {
         queueReplacedUrl(logoDraft.annotated_image_url);
         setLogoDraft((current) => ({ ...current, annotated_image_url: nextUrl }));
+        dirtySection = "images";
       }
       if (target.kind === "logoMap") {
         queueReplacedUrl(logoDraft.map_image_url);
         setLogoDraft((current) => ({ ...current, map_image_url: nextUrl }));
+        dirtySection = "images";
       }
       if (target.kind === "logoColorCard") {
         const replacedUrl = logoDraft.color_cards[target.index]?.image_url;
@@ -241,6 +252,7 @@ export default function AdminAboutPage() {
             index === target.index ? { ...card, image_url: nextUrl } : card,
           ),
         }));
+        dirtySection = "colors";
       }
       if (target.kind === "logoFeaturePatch") {
         const replacedUrl = logoDraft.features[target.index]?.patch_url;
@@ -251,6 +263,7 @@ export default function AdminAboutPage() {
             index === target.index ? { ...feature, patch_url: nextUrl } : feature,
           ),
         }));
+        dirtySection = "features";
       }
       if (target.kind === "logoFeatureIcon") {
         const replacedUrl = logoDraft.features[target.index]?.icon_url;
@@ -261,8 +274,9 @@ export default function AdminAboutPage() {
             index === target.index ? { ...feature, icon_url: nextUrl } : feature,
           ),
         }));
+        dirtySection = "features";
       }
-      markDirty();
+      markDirty(dirtySection);
     } catch (uploadError: unknown) {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
@@ -272,9 +286,9 @@ export default function AdminAboutPage() {
     }
   }
 
-  function setAboutField(field: keyof DBAboutPageContent, value: string) {
+  function setAboutField(field: keyof DBAboutPageContent, value: string, section: SectionId) {
     setAboutDraft((current) => ({ ...current, [field]: value }));
-    markDirty();
+    markDirty(section);
   }
 
   function setStoryText(value: string) {
@@ -282,7 +296,7 @@ export default function AdminAboutPage() {
       ...current,
       story_paragraphs: value.split("\n").map((line) => line.trim()).filter(Boolean),
     }));
-    markDirty();
+    markDirty("story");
   }
 
   function setValue(index: number, field: keyof AboutValue, value: string) {
@@ -292,7 +306,7 @@ export default function AdminAboutPage() {
         valueIndex === index ? { ...item, [field]: value } : item,
       ),
     }));
-    markDirty();
+    markDirty("values");
   }
 
   function setLogoFeature(index: number, field: keyof ClubLogoFeature, value: string | number) {
@@ -302,7 +316,7 @@ export default function AdminAboutPage() {
         featureIndex === index ? { ...feature, [field]: value } : feature,
       ),
     }));
-    markDirty();
+    markDirty("features");
   }
 
   async function handleSave() {
@@ -348,7 +362,7 @@ export default function AdminAboutPage() {
       setAboutDraft(aboutPayload);
       setLogoDraft(logoPayload);
       setPendingDeleteUrls([]);
-      setDirty(false);
+      setDirtySections(new Set());
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (saveError: unknown) {
@@ -359,378 +373,389 @@ export default function AdminAboutPage() {
   }
 
   const saveDisabled = saving || uploading || !dirty;
+  const isLogoSection = LOGO_SECTIONS.includes(activeSection);
+
+  // Rail items are grouped into two visually-labeled clusters ("About Club"
+  // / "Club Logo") but share one flat activeSection/SlidingPanel pair — see
+  // the SectionId comment above. The Club Logo cluster (heading + rail) is
+  // wrapped in {hasClubLogoPage && (...)}, and its three items additionally
+  // carry `hidden` for defensiveness/consistency with AdminSectionRail's
+  // "never let hidden rows leak" contract, matching homepage's pattern.
+  const aboutClubItems: AdminSectionRailItem[] = ABOUT_SECTIONS.map((id) => ({
+    id,
+    label: SECTION_LABELS[id],
+    dirty: dirtySections.has(id),
+  }));
+  const clubLogoItems: AdminSectionRailItem[] = LOGO_SECTIONS.map((id) => ({
+    id,
+    label: SECTION_LABELS[id],
+    dirty: dirtySections.has(id),
+    hidden: !hasClubLogoPage,
+  }));
 
   return (
-    <div className="mx-auto min-w-0 max-w-7xl overflow-hidden">
+    <AdminPage className="overflow-x-clip">
       <AdminSaveFeedback saving={saving} saved={saved} />
-      <div className="mb-4 sm:mb-6">
-        <h1
-          className="font-display font-black uppercase leading-none text-foreground"
-          style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
-        >
-          About
-        </h1>
-        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
-          {hasClubLogoPage
+      <AdminPageHeader
+        title="About"
+        description={hasClubLogoPage
             ? "Edit the About Club and Club Logo public pages."
             : "Edit the public About page."}
-        </p>
-      </div>
-
-      {loading ? (
-        <AdminLoading className="font-display text-sm uppercase tracking-widest" />
-      ) : (
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(420px,560px)_minmax(0,1fr)]">
-          <section
-            className="flex min-w-0 max-h-[calc(100vh-9rem)] flex-col self-start overflow-hidden rounded-xl border border-border bg-background p-4 sm:p-5"
-          >
-            {/* academy@1 and editorial@1 have no reachable /club/logo route
-                (templateRegistry lists no club-logo in defaultRoutes/
-                supportedRoutes for either), so the Club Logo editor is
-                unreachable content for both templates — same shape as
-                DCFC-D130's sponsors decision. With one tab left the switcher
-                itself is hidden; every other template keeps both tabs
-                untouched. */}
-            {hasClubLogoPage && (
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-card p-1">
-              {[
-                { id: "about" as const, label: "About" },
-                { id: "logo" as const, label: "Club Logo" },
-              ].map((tab) => {
-                const selected = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => {
-                      selectTab(tab.id);
-                      if (tab.id === "about") {
-                        setAboutPanel("story");
-                        setAboutPanelDirection(1);
-                      }
-                      if (tab.id === "logo") {
-                        setLogoPanel("images");
-                        setLogoPanelDirection(1);
-                      }
-                    }}
-                    disabled={saving || uploading}
-                    className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
-                      selected ? "bg-foreground text-background" : "text-muted-foreground"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-            )}
-
-            {activeTab === "about" ? (
-              <SectionNav
-                tabs={[
-                  { id: "story", label: "Story" },
-                  { id: "values", label: "Values" },
-                  { id: "closing", label: "Closing" },
-                ]}
-                value={aboutPanel}
-                onChange={selectAboutPanel}
-                disabled={saving || uploading}
-              />
-            ) : (
-              <SectionNav
-                tabs={[
-                  { id: "images", label: "Images" },
-                  { id: "features", label: "Features" },
-                  { id: "colors", label: "Colors" },
-                ]}
-                value={logoPanel}
-                onChange={selectLogoPanel}
-                disabled={saving || uploading}
-              />
-            )}
-
-            <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-              <SlidingPanel activeKey={activeTab} direction={tabDirection}>
-              {activeTab === "about" ? (
-                <SlidingPanel activeKey={aboutPanel} direction={aboutPanelDirection}>
-                  {aboutPanel === "story" && (
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]">
-                      <div className="space-y-3">
-                        <Field label="Page Title">
-                          <input
-                            value={aboutDraft.hero_title}
-                            onChange={(event) => setAboutField("hero_title", event.target.value)}
-                            className={ADMIN_INPUT_CLASS}
-                          />
-                        </Field>
-                        <Field label="Story Paragraphs" help="Each line becomes one paragraph.">
-                          <Textarea
-                            value={aboutDraft.story_paragraphs.join("\n")}
-                            onChange={(event) => setStoryText(event.target.value)}
-                            rows={9}
-                          />
-                        </Field>
-                      </div>
-                      <ImageControl
-                        label="Feature Image"
-                        url={aboutDraft.feature_image_url}
-                        onReplace={() => openUploader({ kind: "aboutFeature" })}
-                        disabled={uploading || saving}
-                        compact
-                      />
-                    </div>
-                  )}
-
-                  {aboutPanel === "values" && (
-                    <div className="space-y-3">
-                      <Field label="Values Heading">
-                        <input
-                          value={aboutDraft.values_heading}
-                          onChange={(event) => setAboutField("values_heading", event.target.value)}
-                          className={ADMIN_INPUT_CLASS}
-                        />
-                      </Field>
-                      <div className="grid gap-3 lg:grid-cols-3">
-                        {aboutDraft.values.map((value, index) => (
-                          <div key={index} className="rounded-lg border border-border p-3">
-                            <Field label={`Value ${index + 1} Title`}>
-                              <input
-                                value={value.title}
-                                onChange={(event) => setValue(index, "title", event.target.value)}
-                                className={ADMIN_INPUT_CLASS}
-                              />
-                            </Field>
-                            <Field label={`Value ${index + 1} Description`}>
-                              <Textarea
-                                value={value.description}
-                                onChange={(event) => setValue(index, "description", event.target.value)}
-                                rows={5}
-                              />
-                            </Field>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {aboutPanel === "closing" && (
-                    <div className="grid gap-3 lg:grid-cols-2">
-                      <Field label="Closing Text">
-                        <Textarea
-                          value={aboutDraft.closing_text}
-                          onChange={(event) => setAboutField("closing_text", event.target.value)}
-                          rows={5}
-                        />
-                      </Field>
-                      <div className="grid gap-3">
-                        <Field label="Button Text" flush>
-                          <input
-                            value={aboutDraft.closing_cta_label}
-                            onChange={(event) => setAboutField("closing_cta_label", event.target.value)}
-                            className={ADMIN_INPUT_CLASS}
-                          />
-                        </Field>
-                        {isAcademy ? (
-                          <Field label="Button Goes To" flush>
-                            <p className="font-body text-sm text-muted-foreground">
-                              {ACADEMY_ABOUT_CLOSING_CTA_HREF} — the Schedule page.
-                              Contact Onzio to change where this button goes.
-                            </p>
-                          </Field>
-                        ) : (
-                          <Field label="Button Link" flush>
-                            <input
-                              value={aboutDraft.closing_cta_href}
-                              onChange={(event) => setAboutField("closing_cta_href", event.target.value)}
-                              className={ADMIN_INPUT_CLASS}
-                            />
-                          </Field>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </SlidingPanel>
-              ) : (
-                <SlidingPanel activeKey={logoPanel} direction={logoPanelDirection}>
-                  {logoPanel === "images" && (
-                    <div className="grid gap-3 lg:grid-cols-2">
-                      <ImageControl
-                        label="Annotated Crest Image"
-                        url={logoDraft.annotated_image_url}
-                        onReplace={() => openUploader({ kind: "logoAnnotated" })}
-                        disabled={uploading || saving}
-                        compact
-                      />
-                      <ImageControl
-                        label="Map Image"
-                        url={logoDraft.map_image_url}
-                        onReplace={() => openUploader({ kind: "logoMap" })}
-                        disabled={uploading || saving}
-                        compact
-                      />
-                    </div>
-                  )}
-
-                  {logoPanel === "features" && (
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                        {logoDraft.features.map((feature, index) => {
-                          const selected = selectedLogoFeature === index;
-                          return (
-                            <button
-                              key={feature.title}
-                              type="button"
-                              onClick={() => setSelectedLogoFeature(index)}
-                              disabled={saving || uploading}
-                              className={`font-display rounded-md border px-2 py-2 text-[0.65rem] uppercase tracking-widest transition-colors ${
-                                selected
-                                  ? "border-foreground bg-foreground text-background"
-                                  : "border-border bg-card text-muted-foreground"
-                              }`}
-                            >
-                              {feature.title.replace("The ", "")}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {logoDraft.features[selectedLogoFeature] && (
-                        <div className="rounded-lg border border-border p-3">
-                          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_210px]">
-                            <div className="space-y-3">
-                              <Field label={`Feature ${selectedLogoFeature + 1} Title`}>
-                                <input
-                                  value={logoDraft.features[selectedLogoFeature].title}
-                                  onChange={(event) => setLogoFeature(selectedLogoFeature, "title", event.target.value)}
-                                  className={ADMIN_INPUT_CLASS}
-                                />
-                              </Field>
-                              <Field label={`Feature ${selectedLogoFeature + 1} Description`}>
-                                <Textarea
-                                  value={logoDraft.features[selectedLogoFeature].description}
-                                  onChange={(event) => setLogoFeature(selectedLogoFeature, "description", event.target.value)}
-                                  rows={8}
-                                />
-                              </Field>
-                            </div>
-                            <div className="grid gap-3">
-                              <ImageControl
-                                label="Patch"
-                                url={logoDraft.features[selectedLogoFeature].patch_url}
-                                onReplace={() => openUploader({ kind: "logoFeaturePatch", index: selectedLogoFeature })}
-                                disabled={uploading || saving}
-                                compact
-                              />
-                              <ImageControl
-                                label="Icon"
-                                url={logoDraft.features[selectedLogoFeature].icon_url}
-                                onReplace={() => openUploader({ kind: "logoFeatureIcon", index: selectedLogoFeature })}
-                                disabled={uploading || saving}
-                                compact
-                              />
-                              <div className="grid grid-cols-2 gap-3">
-                                <Field label="Icon Size" flush>
-                                  <input
-                                    type="number"
-                                    min={24}
-                                    max={140}
-                                    value={logoDraft.features[selectedLogoFeature].icon_size}
-                                    onChange={(event) => setLogoFeature(selectedLogoFeature, "icon_size", Number(event.target.value))}
-                                    className={ADMIN_INPUT_CLASS}
-                                  />
-                                </Field>
-                                <Field label="Icon Scale" flush>
-                                  <input
-                                    type="number"
-                                    min={0.5}
-                                    max={4}
-                                    step={0.05}
-                                    value={logoDraft.features[selectedLogoFeature].icon_scale}
-                                    onChange={(event) => setLogoFeature(selectedLogoFeature, "icon_scale", Number(event.target.value))}
-                                    className={ADMIN_INPUT_CLASS}
-                                  />
-                                </Field>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {logoPanel === "colors" && (
-                    <div className="rounded-lg border border-border p-3">
-                      <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
-                        Brand Color Cards
-                      </p>
-                      <p className="font-body mb-3 text-xs text-muted-foreground">
-                        Six fixed slots render below the Pasadena map.
-                      </p>
-                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                        {logoDraft.color_cards.map((card, index) => (
-                          <ImageControl
-                            key={card.label}
-                            label={card.label}
-                            url={card.image_url}
-                            onReplace={() => openUploader({ kind: "logoColorCard", index })}
-                            disabled={uploading || saving}
-                            compact
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </SlidingPanel>
+        actions={
+          !loading && !showFullLoader ? (
+            <>
+              {dirty && (
+                <div className="flex items-center gap-2 border-r border-border pr-3">
+                  <span
+                    className="h-2 w-2 flex-none rounded-full bg-warning"
+                    aria-hidden="true"
+                  />
+                  <span className="font-body whitespace-nowrap text-sm text-muted-foreground">
+                    Unsaved changes
+                  </span>
+                </div>
               )}
-              </SlidingPanel>
-            </div>
-
-            <div className="mt-4 border-t border-border pt-4">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(event) => handleImageUpload(event.target.files?.[0] ?? null)}
-              />
-
-              {error && (
-                <p className="font-body mb-3 text-sm text-destructive">
-                  Error: {error}
-                </p>
-              )}
-
               <button
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saveDisabled}
-                className="font-display w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
                 {saving ? "Saving..." : uploading ? "Uploading..." : "Save About Pages"}
               </button>
-            </div>
-          </section>
+            </>
+          ) : undefined
+        }
+      />
 
-          <section className="min-w-0">
+      {loading || showFullLoader ? (
+        showFullLoader ? (
+          <AdminFullPageLoader label="Loading about page" />
+        ) : (
+          <div
+            className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,1fr)]"
+            role="status"
+            aria-label="Loading about page"
+          >
+            <div className="flex flex-col gap-2 self-start">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+            </div>
+            <div className="flex flex-col gap-3 self-start rounded-xl border border-border bg-card p-4 sm:p-5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-9 w-full rounded-lg" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-32 w-full rounded-lg" />
+            </div>
+            <div className="self-start">
+              <Skeleton className="h-64 w-full rounded-xl" />
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,1fr)]">
+          <div className="flex min-w-0 flex-col gap-4 self-start">
+            <div>
+              <p className={`${ADMIN_LABEL_CLASS} px-1`}>About Club</p>
+              <AdminSectionRail
+                items={aboutClubItems}
+                value={activeSection}
+                onChange={(id) => selectSection(id as SectionId)}
+              />
+            </div>
+
+            {/* academy@1 and editorial@1 have no reachable /club/logo route
+                (templateRegistry lists no club-logo in defaultRoutes/
+                supportedRoutes for either), so the Club Logo editor is
+                unreachable content for both templates — same shape as
+                DCFC-D130's sponsors decision. With no items left the whole
+                cluster is hidden; every other template keeps both clusters
+                untouched. */}
+            {hasClubLogoPage && (
+            <div>
+              <p className={`${ADMIN_LABEL_CLASS} px-1`}>Club Logo</p>
+              <AdminSectionRail
+                items={clubLogoItems}
+                value={activeSection}
+                onChange={(id) => selectSection(id as SectionId)}
+              />
+            </div>
+            )}
+
+            {hasClubLogoPage && (
+            <p className="font-body rounded-xl border border-border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
+              One Save changes covers both pages. Club Logo is hidden for
+              templates with no /club/logo route.
+            </p>
+            )}
+          </div>
+
+          <AdminPanel className="flex flex-col self-start p-4 sm:p-5">
+            <SlidingPanel activeKey={activeSection} direction={sectionDirection}>
+              {activeSection === "story" && (
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]">
+                  <div className="space-y-3">
+                    <Field label="Page Title">
+                      <input
+                        value={aboutDraft.hero_title}
+                        onChange={(event) => setAboutField("hero_title", event.target.value, "story")}
+                        className={ADMIN_INPUT_CLASS}
+                      />
+                    </Field>
+                    <Field label="Story Paragraphs" help="Each line becomes one paragraph.">
+                      <Textarea
+                        value={aboutDraft.story_paragraphs.join("\n")}
+                        onChange={(event) => setStoryText(event.target.value)}
+                        rows={9}
+                      />
+                    </Field>
+                  </div>
+                  <ImageControl
+                    label="Feature Image"
+                    url={aboutDraft.feature_image_url}
+                    onReplace={() => openUploader({ kind: "aboutFeature" })}
+                    disabled={uploading || saving}
+                    compact
+                  />
+                </div>
+              )}
+
+              {activeSection === "values" && (
+                <div className="space-y-3">
+                  <Field label="Values Heading">
+                    <input
+                      value={aboutDraft.values_heading}
+                      onChange={(event) => setAboutField("values_heading", event.target.value, "values")}
+                      className={ADMIN_INPUT_CLASS}
+                    />
+                  </Field>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {aboutDraft.values.map((value, index) => (
+                      <div key={index} className="rounded-lg border border-border p-3">
+                        <Field label={`Value ${index + 1} Title`}>
+                          <input
+                            value={value.title}
+                            onChange={(event) => setValue(index, "title", event.target.value)}
+                            className={ADMIN_INPUT_CLASS}
+                          />
+                        </Field>
+                        <Field label={`Value ${index + 1} Description`}>
+                          <Textarea
+                            value={value.description}
+                            onChange={(event) => setValue(index, "description", event.target.value)}
+                            rows={5}
+                          />
+                        </Field>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeSection === "closing" && (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <Field label="Closing Text">
+                    <Textarea
+                      value={aboutDraft.closing_text}
+                      onChange={(event) => setAboutField("closing_text", event.target.value, "closing")}
+                      rows={5}
+                    />
+                  </Field>
+                  <div className="grid gap-3">
+                    <Field label="Button Text" flush>
+                      <input
+                        value={aboutDraft.closing_cta_label}
+                        onChange={(event) => setAboutField("closing_cta_label", event.target.value, "closing")}
+                        className={ADMIN_INPUT_CLASS}
+                      />
+                    </Field>
+                    {isAcademy ? (
+                      <Field label="Button Goes To" flush>
+                        <p className="font-body text-sm text-muted-foreground">
+                          {ACADEMY_ABOUT_CLOSING_CTA_HREF} — the Schedule page.
+                          Contact Onzio to change where this button goes.
+                        </p>
+                      </Field>
+                    ) : (
+                      <Field label="Button Link" flush>
+                        <input
+                          value={aboutDraft.closing_cta_href}
+                          onChange={(event) => setAboutField("closing_cta_href", event.target.value, "closing")}
+                          className={ADMIN_INPUT_CLASS}
+                        />
+                      </Field>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeSection === "images" && (
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <ImageControl
+                    label="Annotated Crest Image"
+                    url={logoDraft.annotated_image_url}
+                    onReplace={() => openUploader({ kind: "logoAnnotated" })}
+                    disabled={uploading || saving}
+                    compact
+                  />
+                  <ImageControl
+                    label="Map Image"
+                    url={logoDraft.map_image_url}
+                    onReplace={() => openUploader({ kind: "logoMap" })}
+                    disabled={uploading || saving}
+                    compact
+                  />
+                </div>
+              )}
+
+              {activeSection === "features" && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                    {logoDraft.features.map((feature, index) => {
+                      const selected = selectedLogoFeature === index;
+                      return (
+                        <button
+                          key={feature.title}
+                          type="button"
+                          onClick={() => setSelectedLogoFeature(index)}
+                          disabled={saving || uploading}
+                          className={`font-display rounded-md border px-2 py-2 text-[0.65rem] uppercase tracking-widest transition-colors ${
+                            selected
+                              ? "border-foreground bg-foreground text-background"
+                              : "border-border bg-card text-muted-foreground"
+                          }`}
+                        >
+                          {feature.title.replace("The ", "")}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {logoDraft.features[selectedLogoFeature] && (
+                    <div className="rounded-lg border border-border p-3">
+                      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_210px]">
+                        <div className="space-y-3">
+                          <Field label={`Feature ${selectedLogoFeature + 1} Title`}>
+                            <input
+                              value={logoDraft.features[selectedLogoFeature].title}
+                              onChange={(event) => setLogoFeature(selectedLogoFeature, "title", event.target.value)}
+                              className={ADMIN_INPUT_CLASS}
+                            />
+                          </Field>
+                          <Field label={`Feature ${selectedLogoFeature + 1} Description`}>
+                            <Textarea
+                              value={logoDraft.features[selectedLogoFeature].description}
+                              onChange={(event) => setLogoFeature(selectedLogoFeature, "description", event.target.value)}
+                              rows={8}
+                            />
+                          </Field>
+                        </div>
+                        <div className="grid gap-3">
+                          <ImageControl
+                            label="Patch"
+                            url={logoDraft.features[selectedLogoFeature].patch_url}
+                            onReplace={() => openUploader({ kind: "logoFeaturePatch", index: selectedLogoFeature })}
+                            disabled={uploading || saving}
+                            compact
+                          />
+                          <ImageControl
+                            label="Icon"
+                            url={logoDraft.features[selectedLogoFeature].icon_url}
+                            onReplace={() => openUploader({ kind: "logoFeatureIcon", index: selectedLogoFeature })}
+                            disabled={uploading || saving}
+                            compact
+                          />
+                          <div className="grid grid-cols-2 gap-3">
+                            <Field label="Icon Size" flush>
+                              <input
+                                type="number"
+                                min={24}
+                                max={140}
+                                value={logoDraft.features[selectedLogoFeature].icon_size}
+                                onChange={(event) => setLogoFeature(selectedLogoFeature, "icon_size", Number(event.target.value))}
+                                className={ADMIN_INPUT_CLASS}
+                              />
+                            </Field>
+                            <Field label="Icon Scale" flush>
+                              <input
+                                type="number"
+                                min={0.5}
+                                max={4}
+                                step={0.05}
+                                value={logoDraft.features[selectedLogoFeature].icon_scale}
+                                onChange={(event) => setLogoFeature(selectedLogoFeature, "icon_scale", Number(event.target.value))}
+                                className={ADMIN_INPUT_CLASS}
+                              />
+                            </Field>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeSection === "colors" && (
+                <div className="rounded-lg border border-border p-3">
+                  <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+                    Brand Color Cards
+                  </p>
+                  <p className="font-body mb-3 text-xs text-muted-foreground">
+                    Six fixed slots render below the Pasadena map.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {logoDraft.color_cards.map((card, index) => (
+                      <ImageControl
+                        key={card.label}
+                        label={card.label}
+                        url={card.image_url}
+                        onReplace={() => openUploader({ kind: "logoColorCard", index })}
+                        disabled={uploading || saving}
+                        compact
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </SlidingPanel>
+
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => handleImageUpload(event.target.files?.[0] ?? null)}
+            />
+
+            {error && (
+              <p className="font-body mt-4 border-t border-border pt-4 text-sm text-destructive">
+                Error: {error}
+              </p>
+            )}
+          </AdminPanel>
+
+          <AdminPanel className="overflow-hidden p-4 sm:p-5 xl:sticky xl:top-24 xl:self-start">
             <p className="font-display mb-3 text-xs uppercase tracking-widest text-muted-foreground">
-              {activeTab === "about" ? "About Preview" : "Club Logo Preview"}
+              {isLogoSection ? "Club Logo Preview" : "About Preview"}
             </p>
             <p className="font-body mb-3 text-xs text-muted-foreground">
               Desktop website view, scaled to fit. The layout stays in the
               proportions visitors see instead of re-flowing to this panel.
             </p>
-            <div className="h-[760px] overflow-auto rounded-lg border border-border bg-white">
-              {activeTab === "about" ? (
-                <ScaledAboutPreview variant="about" content={aboutDraft} />
-              ) : (
+            <div className="overflow-hidden rounded-lg border border-border bg-white">
+              {isLogoSection ? (
                 <ScaledAboutPreview variant="logo" content={logoDraft} />
+              ) : (
+                <ScaledAboutPreview variant="about" content={aboutDraft} />
               )}
             </div>
-          </section>
+          </AdminPanel>
         </div>
       )}
-    </div>
+    </AdminPage>
   );
 }
 
@@ -756,39 +781,6 @@ function Field({
           {help}
         </p>
       )}
-    </div>
-  );
-}
-
-function SectionNav<T extends string>({
-  tabs,
-  value,
-  onChange,
-  disabled,
-}: {
-  tabs: Array<{ id: T; label: string }>;
-  value: T;
-  onChange: (value: T) => void;
-  disabled: boolean;
-}) {
-  return (
-    <div className="mt-3 grid gap-1 rounded-lg bg-card p-1 sm:grid-cols-3">
-      {tabs.map((tab) => {
-        const selected = tab.id === value;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            disabled={disabled}
-            className={`font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors disabled:cursor-not-allowed ${
-              selected ? "bg-foreground text-background" : "text-muted-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        );
-      })}
     </div>
   );
 }
@@ -819,7 +811,15 @@ function ImageControl({
           ? "relative h-24 min-w-0 overflow-hidden rounded-md bg-black"
           : "relative h-14 min-w-0 overflow-hidden rounded-md bg-black sm:h-16"
         }>
-          <Image src={url} alt={label} fill sizes={compact ? "210px" : "84px"} className="object-contain" />
+          {url ? (
+            <Image src={url} alt={label} fill sizes={compact ? "210px" : "84px"} className="object-contain" />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+              <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+                No image
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex min-w-0 flex-col">
           <p
