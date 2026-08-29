@@ -2,6 +2,18 @@
 
 Last updated: 2026-08-29
 
+## `staging` → `main` promotion, Phase 1 merged to `main` — production now carries the shared UI component system, nothing wired up yet, Phase 2 still needs Christian's explicit go-ahead
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-29. Status: **[PR #2](https://github.com/404christiann/onzio-platform/pull/2) merged to `main` via a standard merge commit (`4019949`). `main` now contains everything described in the Phase 1 entry directly below this one.**
+
+Christian reviewed the diff via the PR, then separately logged in on the actual `staging` build (after I caught and fixed a stale worktree checkout that had been silently 16 commits behind `origin/staging` — see the `staging` verification note below) and clicked through Dashboard, Homepage, Registrations, and Analytics, confirming the redesign target state looks right. He then asked to merge PR #2 directly, which required his explicit go-ahead twice (the CLI merge was blocked by this environment's auto-mode classifier on the first attempt since the PR was still in draft; he marked it ready for review himself, and the retry succeeded).
+
+**`staging` verification note, worth keeping.** The `/Users/christianalcala/Downloads/onzio-platform-diverse-city` worktree used for the `staging` comparison had a stale local `staging` branch checkout, 16 commits behind `origin/staging` — missing the entire admin-portal-redesign work and everything after it (registrations, Stripe Connect, PLAT-101 passwordless auth). It was fast-forwarded to `origin/staging` (`d4d7df5`) mid-session, `npm install` re-run, and `supabase db reset` re-applied all migrations including the new registration tables. Anyone using that worktree for future phase verification should confirm it's still current before trusting what it renders — it's easy for a long-lived worktree to drift silently behind `origin/staging` again.
+
+**Working tree.** `main` locally in `/Users/christianalcala/Downloads/onzio-platform` (a separate worktree from `/Users/christianalcala/Downloads/onzio-platform-admin-portal`, where the promotion branch work happened) was fast-forwarded from `a5ad8a0` to `4019949` to pick up the merge. The `staging-to-main-promotion` branch was not deleted after merging (`--delete-branch=false`), so it still exists on `origin` if needed for reference.
+
+**Exact next step, unchanged:** do not start Phase 2 (`AdminShell.tsx`) without Christian's explicit go-ahead. Also still open: Phase 0's Supabase backup/PITR checkpoint was never confirmed (still needs Christian's Dashboard access), and `supabase migration list --linked` should be re-checked before any future production-affecting step even though it was clean at last check.
+
 ## `staging` → `main` promotion, Phase 1 complete (shared UI component system ported, additive-only, zero regression risk) — resume on branch `staging-to-main-promotion`, not `codex/admin-portal-redesign`
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-29. Status: **Phase 1 of the approved 6-phase promotion plan is committed on a new integration branch cut from `origin/main`. Nothing has been pushed or merged. `main` itself is untouched.**
