@@ -2,6 +2,28 @@
 
 Last updated: 2026-08-29
 
+## Handoff to a fresh session: `staging` → `main` promotion is planned and approved (6 phases), Phase 0 confirmed clean, Phase 1 not yet started — this session is ending due to context-window limits, pick up exactly here
+
+**Read this entire entry before doing anything.** The prior Claude Code session investigating and planning this promotion is being closed out (context window limit), not because the work is blocked or paused for a reason — it's a clean handoff. Everything needed to continue is below and in the approved plan file.
+
+**The approved plan lives at `/Users/christianalcala/.claude/plans/snoopy-squishing-rose.md`** — read it in full before doing anything else. It has the complete context (why `main` and `staging` diverged, what 6 research agents found, why the gap is more tractable than "628 files diverged" first suggested) and the exact 6-phase approach Christian already approved. Do not re-derive or second-guess that plan without good reason — it reflects real investigation, not a guess.
+
+**Current state, exactly:**
+- Working directory: `/Users/christianalcala/Downloads/onzio-platform-admin-portal`, currently checked out on `codex/admin-portal-redesign` at `f62e281` (identical commit to `origin/staging`'s tip — they were fast-forwarded together earlier this session).
+- `origin/staging` has the full admin-portal-redesign work merged and live (PR #1), migration-clean.
+- `origin/main` (production) has NOT been touched by any of this — still exactly as diverged as described in the plan file and the entry below this one.
+- **Phase 0 (safety net) is partially done**: migration parity was reconfirmed clean immediately before this handoff (`supabase migration list --linked` → 40 total, 0 mismatches). **Not yet done**: taking an explicit Supabase backup/PITR checkpoint, and cutting the actual integration branch off `origin/main`. Do both before starting Phase 1's file changes.
+- **Phase 1 (port the shared UI component system) has not been started at all.** This is the exact next step.
+
+**Important operational notes carried over from this session, still true:**
+- `supabase link --project-ref ioalthwsdrlzrubomrow` is already linked in this shell environment and works for read-only checks (`migration list`) via the Management API. Actually pushing migrations (`supabase db push`) needs `SUPABASE_DB_PASSWORD` set, which this agent does not have and should not seek out — if a future phase needs an actual `db push`, ask Christian to run it himself in his own terminal (he did this once already this session, successfully) rather than trying to obtain or search for the password.
+- `origin/staging` is checked out in a **different worktree** (`/Users/christianalcala/Downloads/onzio-platform-diverse-city`) — you cannot `git checkout staging` from this worktree. To update `staging` (should not be needed for this promotion, which targets `main`), push directly to the ref: `git push origin HEAD:staging`.
+- The dev server for this worktree runs on port 3022 (`ONZIO_LOCAL_TENANT_SLUG=alpha npm run dev -- --port 3022`, login `owner-aal2@alpha.local` via Mailpit at `http://127.0.0.1:54324`) — this is for local UI verification only and is unrelated to the `main`/production promotion work itself, which is pure git/database work plus eventual live verification once code actually lands on a branch worth previewing.
+- This repo's `CLAUDE.md` mandatory pre-production-deploy gate (`supabase migration list --linked`, confirm parity) applies again before Phase 6's actual merge to `main` — don't skip it just because it was checked today; re-check immediately before that final step too.
+- Never enter, request, or search for production credentials (database password, service-role key) directly — this session's boundary throughout has been: explain what's needed and why, give Christian the exact command, let him run it himself. Keep that boundary.
+
+**Exact next step for the new session:** read the plan file in full, then begin Phase 1 — cut the integration branch off `origin/main`, port `lib/utils.ts` + all 10 `components/ui/*` files + the 8 npm packages + the `tailwind.config.ts` additions + the `.admin-theme`-scoped CSS block from `styles/globals.css`, all sourced from `origin/staging`. Verify with `tsc`/`build`/`lint` and confirm zero visual change to any existing page before considering Phase 1 done. Do not proceed into Phase 2 (`AdminShell.tsx`) without explicit confirmation from Christian first — the plan itself flags Phase 2 onward as needing dedicated attention rather than being rushed through in the same sitting as Phase 1.
+
 ## Production database is now at zero migration drift — investigated getting the admin portal redesign into `main`, found the two branches have genuinely diverged (not just a stale git history), applied the one real pending production migration, full promotion deferred as its own effort
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-29. Status: **one production Supabase migration applied (`20260815140402_pathway_presentation_template.sql`); `supabase migration list --linked` now shows 40/40 migrations in parity between local and production, zero mismatches. No admin-portal-redesign code was merged to `main` — that remains a deliberately deferred, separate effort.**
