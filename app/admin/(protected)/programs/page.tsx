@@ -897,7 +897,7 @@ export default function AdminProgramsPage() {
         </div>
       )}
 
-      {!loading && !hidesPageCopyEditor && (
+      {!loading && !showFullLoader && !hidesPageCopyEditor && (
         <div className="grid min-w-0 gap-6 sm:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
           <AdminSectionRail
             className="self-start"
@@ -1078,7 +1078,7 @@ export default function AdminProgramsPage() {
         </div>
       )}
 
-      {!loading && draft && (
+      {!loading && !showFullLoader && draft && (
         <AdminPageToolbar className="sticky top-16 z-10 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <span className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
@@ -1144,7 +1144,7 @@ export default function AdminProgramsPage() {
         </AdminPageToolbar>
       )}
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading programs" />
         ) : (

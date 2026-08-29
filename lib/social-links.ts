@@ -47,13 +47,22 @@ export function normalizeSiteSocialLinks(rows: DBSiteSocialLink[]): DBSiteSocial
   const rowById = new Map(rows.map((row) => [row.id, row]));
   return DEFAULT_SITE_SOCIAL_LINKS.map((fallback) => {
     const row = rowById.get(fallback.id);
+    // DEFAULT_SITE_SOCIAL_LINKS is seed/placeholder content for a platform
+    // that has never been configured at all — i.e. no row exists yet for
+    // this club/id. Once a row exists, its own (possibly empty) href is
+    // authoritative: an admin who explicitly clears the field must get a
+    // genuinely blank, hidden link back, not silently reset to the
+    // hardcoded template default. See lib/social-links.ts history /
+    // app/admin/(protected)/branding/page.tsx for the cross-tenant leak
+    // this previously caused (`"".trim() || fallback.href` always won).
+    if (!row) return fallback;
     return {
       ...fallback,
       ...row,
       id: fallback.id,
-      label: row?.label?.trim() || fallback.label,
-      href: row?.href?.trim() || fallback.href,
-      icon: row?.icon?.trim() || fallback.icon,
+      label: row.label?.trim() || fallback.label,
+      href: row.href?.trim() ?? "",
+      icon: row.icon?.trim() || fallback.icon,
     };
   });
 }

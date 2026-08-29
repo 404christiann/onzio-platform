@@ -575,7 +575,7 @@ export default function AdminTryoutsPage() {
         </AdminPageToolbar>
       )}
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading tryout events" />
         ) : (

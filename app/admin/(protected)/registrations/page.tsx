@@ -601,7 +601,7 @@ export default function RegistrationsAdminPage() {
         entry.registrant_email.toLowerCase().includes(query)
       );
     });
-  if (loading)
+  if (loading || showFullLoader)
     return showFullLoader ? (
       <AdminFullPageLoader label="Loading registrations" />
     ) : (
@@ -677,7 +677,7 @@ export default function RegistrationsAdminPage() {
         </p>
       )}
       {!connect?.chargesEnabled && (
-        <AdminPanel className="overflow-hidden p-0">
+        <AdminPanel className="overflow-hidden p-0 sm:p-0">
           <div className="flex items-center gap-3 border-b border-border p-4">
             <span className="grid size-9 flex-none place-items-center rounded-lg bg-foreground text-xs font-bold text-background">
               S
@@ -1007,7 +1007,7 @@ export default function RegistrationsAdminPage() {
             hidden={draft.id ? formTab !== "build" : false}
             className="flex flex-col gap-4"
           >
-            <AdminPanel className="overflow-hidden p-0">
+            <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">
                 <h3 className="font-display text-base font-bold uppercase">
                   Basics
@@ -1125,7 +1125,7 @@ export default function RegistrationsAdminPage() {
               </div>
             </AdminPanel>
 
-            <AdminPanel className="overflow-hidden p-0">
+            <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
                 <h3 className="font-display text-base font-bold uppercase">
                   Questions
@@ -1342,7 +1342,7 @@ export default function RegistrationsAdminPage() {
               </div>
             </AdminPanel>
 
-            <AdminPanel className="overflow-hidden p-0">
+            <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
                 <h3 className="font-display text-base font-bold uppercase">
                   Price options
@@ -1471,7 +1471,7 @@ export default function RegistrationsAdminPage() {
               </fieldset>
             </AdminPanel>
 
-            <AdminPanel className="overflow-hidden p-0">
+            <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
                 <h3 className="font-display text-base font-bold uppercase">
                   Waiver and consent
@@ -1588,7 +1588,7 @@ export default function RegistrationsAdminPage() {
               </div>
             </div>
 
-            <AdminPanel className="overflow-hidden p-0">
+            <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-center gap-2 border-b border-border p-4">
                 <div className="relative w-full sm:w-64">
                   <Search

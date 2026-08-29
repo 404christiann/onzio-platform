@@ -269,7 +269,7 @@ export default function SeasonsPage() {
 
       {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading seasons" />
         ) : (

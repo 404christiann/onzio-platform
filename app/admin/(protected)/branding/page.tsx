@@ -51,6 +51,19 @@ export default function BrandingPage() {
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialLinks, setSocialLinks] =
     useState<DBSiteSocialLink[]>(DEFAULT_SITE_SOCIAL_LINKS);
+  // Platform ids that are genuinely this club's own data: either a row
+  // already existed in site_social_links when the page loaded, or the admin
+  // has actually edited that field's input during this session. Every other
+  // platform is only showing DEFAULT_SITE_SOCIAL_LINKS as an unsaved
+  // onboarding suggestion (see lib/social-links.ts). saveSocialLinks must
+  // only persist ids in this set — otherwise saving (e.g. just to fix one
+  // platform, or just to change the tagline) would silently write the
+  // hardcoded Rose City FC sample URLs into every OTHER, untouched platform
+  // for this club, which is the same cross-tenant leak this whole fix is
+  // for, just triggered on save instead of on keystroke.
+  const [configuredSocialIds, setConfiguredSocialIds] = useState<
+    Set<SiteSocialPlatform>
+  >(new Set());
   // The club's footer tagline. Stored empty means "use the standard wording",
   // which is what the textarea shows as its placeholder.
   const [footerTagline, setFooterTagline] = useState("");
@@ -77,7 +90,16 @@ export default function BrandingPage() {
 
   useEffect(() => {
     fetchSiteSocialLinks(clubId)
-      .then(setSocialLinks)
+      // fetchSiteSocialLinks(clubId) returns raw DB rows (so the public
+      // Footer never fabricates a link for a platform that isn't
+      // configured). The admin edit UI wants the opposite: always show all
+      // known platforms, seeding defaults only for ones with no row yet,
+      // while keeping an existing row's own href — including a genuinely
+      // blank one — untouched.
+      .then((rows) => {
+        setSocialLinks(normalizeSiteSocialLinks(rows));
+        setConfiguredSocialIds(new Set(rows.map((row) => row.id)));
+      })
       .catch((loadError: unknown) => {
         setSocialError(
           loadError instanceof Error
@@ -184,6 +206,15 @@ export default function BrandingPage() {
         current.map((link) => (link.id === id ? { ...link, href } : link)),
       ),
     );
+    // The admin has now genuinely interacted with this platform, so its
+    // value (even if left equal to the suggested default, or cleared to
+    // blank) is real data to persist on save — not an unsaved suggestion.
+    setConfiguredSocialIds((current) => {
+      if (current.has(id)) return current;
+      const next = new Set(current);
+      next.add(id);
+      return next;
+    });
     setSocialSaved(false);
   }
 
@@ -203,26 +234,38 @@ export default function BrandingPage() {
     try {
       const supabase = createClient();
       const now = new Date().toISOString();
-      const rows = normalizeSiteSocialLinks(socialLinks).map((link, index) => ({
-        id: link.id,
-        label: socialLinkLabel(link.id),
-        href: link.href.trim(),
-        icon: link.icon,
-        sort_order: index,
-        updated_at: now,
-      }));
+      // Only persist platforms that are genuinely this club's own data
+      // (configuredSocialIds — see its declaration above). A platform the
+      // admin never touched is still showing DEFAULT_SITE_SOCIAL_LINKS'
+      // hardcoded Rose City FC sample URL purely as an onboarding
+      // suggestion; upserting it here would silently publish another
+      // club's real social links on this club's public footer.
+      const rows = normalizeSiteSocialLinks(socialLinks)
+        .filter((link) => configuredSocialIds.has(link.id))
+        .map((link) => ({
+          id: link.id,
+          label: socialLinkLabel(link.id),
+          href: link.href.trim(),
+          icon: link.icon,
+          sort_order: DEFAULT_SITE_SOCIAL_LINKS.findIndex(
+            (fallback) => fallback.id === link.id,
+          ),
+          updated_at: now,
+        }));
 
-      const { error: saveError } = await supabase
-        .from("site_social_links")
-        .upsert(rows);
-      if (saveError) throw new Error(saveError.message);
+      if (rows.length > 0) {
+        const { error: saveError } = await supabase
+          .from("site_social_links")
+          .upsert(rows);
+        if (saveError) throw new Error(saveError.message);
+      }
 
       const { error: taglineSaveError } = await supabase
         .from("site_branding")
         .upsert({ footer_tagline: footerTagline.trim(), updated_at: now });
       if (taglineSaveError) throw new Error(taglineSaveError.message);
 
-      setSocialLinks(rows);
+      setSocialLinks(normalizeSiteSocialLinks(rows));
       setSocialSaved(true);
     } catch (saveError) {
       setSocialError(

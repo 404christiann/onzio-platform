@@ -417,7 +417,7 @@ export default function StatsPage() {
       )}
 
       {/* Loading state */}
-      {loading && (
+      {(loading || showFullLoader) && (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading players" />
         ) : (

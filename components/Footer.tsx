@@ -66,7 +66,14 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
   // `socialLinks`, unchanged.
   const displaySocialLinks = useMemo(() => {
     const socialOverrides = overrides?.socialLinks;
-    if (!socialOverrides) return socialLinks;
+    // A blank href means "this platform is intentionally hidden" (an admin
+    // cleared the field on /admin/branding, or the platform was never
+    // configured for this club) — never render an <a>/icon for it. Without
+    // this guard a saved-but-empty href would render a bare `<a href="">`
+    // instead of actually hiding the icon as promised in the admin copy.
+    if (!socialOverrides) {
+      return socialLinks.filter((link) => link.href.trim() !== "");
+    }
 
     const liveById = new Map(socialLinks.map((link) => [link.id, link]));
     const defaultById = new Map(
@@ -84,7 +91,10 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
         const overrideHref = socialOverrides[id];
         return overrideHref === undefined ? base : { ...base, href: overrideHref };
       })
-      .filter((link): link is DBSiteSocialLink => link !== null)
+      .filter(
+        (link): link is DBSiteSocialLink =>
+          link !== null && link.href.trim() !== "",
+      )
       .sort((a, b) => a.sort_order - b.sort_order);
   }, [overrides?.socialLinks, socialLinks]);
 

@@ -610,7 +610,7 @@ export default function SchedulePage() {
       </AdminPageToolbar>
 
       {/* Match list, grouped by month */}
-      {loading || seasonsLoading ? (
+      {loading || seasonsLoading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading schedule" />
         ) : (

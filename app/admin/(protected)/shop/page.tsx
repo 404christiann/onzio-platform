@@ -783,7 +783,7 @@ export default function AdminShopPage() {
         description="Manage independent kit content and photos for each public page."
       />
 
-      {loading ? (
+      {loading || showFullLoader ? (
         showFullLoader ? (
           <AdminFullPageLoader label="Loading shop" />
         ) : (
@@ -1506,7 +1506,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <AdminPanel as="div" className="p-0">
+    <AdminPanel as="div" className="p-0 sm:p-0">
       {(title || action) && (
         <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 sm:px-5">
           <div className="min-w-0">

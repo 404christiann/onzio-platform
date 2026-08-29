@@ -31,8 +31,15 @@ export default function EditorialFooter({
   socialLinks: DBSiteSocialLink[];
   storeEnabled: boolean;
 }) {
-  const instagram = socialLinks.find((link) => link.id === "instagram");
-  const youtube = socialLinks.find((link) => link.id === "youtube");
+  // A row with a blank href means the platform is intentionally hidden (see
+  // lib/social-links.ts normalizeSiteSocialLinks) — treat it the same as
+  // "not configured" rather than rendering a dead `<a href="">`.
+  const instagram = socialLinks.find(
+    (link) => link.id === "instagram" && link.href.trim() !== "",
+  );
+  const youtube = socialLinks.find(
+    (link) => link.id === "youtube" && link.href.trim() !== "",
+  );
   const footerTagline =
     [identity?.identityHeadingTop, identity?.identityHeadingEm]
       .filter((part): part is string => Boolean(part?.trim()))
