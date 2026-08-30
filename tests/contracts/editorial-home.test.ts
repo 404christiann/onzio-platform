@@ -41,22 +41,34 @@ const stripComments = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 // Transcribed in the same shape as the real seeded first-team fixtures (see
-// supabase/seed.sql), evaluated against the real system clock -- this suite
-// runs in 2026, so the next fixture genuinely resolves to Capital City
-// Athletic on 2026-08-15 and the latest played result to the 2026-07-11 win
-// over Scioto Valley FC.
+// supabase/seed.sql), evaluated against the real system clock. The dates are
+// computed relative to whenever this suite actually runs (`daysFromNow`)
+// rather than hardcoded absolute calendar dates, so the "past played" /
+// "upcoming" split below can never rot the way a fixed date would once the
+// wall clock passes it -- the gaps between fixtures mirror the original
+// seeded spacing (weekly/biweekly, with a longer preseason-to-season-opener
+// gap before the first upcoming fixture), just anchored to "now" instead of
+// a specific day. The next fixture always resolves to Capital City Athletic
+// (first fixture in the future) and the latest played result to the
+// Scioto Valley FC win (last fixture in the past).
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysFromNow = (offsetDays: number): string => {
+  const d = new Date(Date.now() + offsetDays * DAY_MS);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 const LIONS_FIXTURES: Fixture[] = [
-  { date: "2026-05-09", time: "19:00", opponent: "Dayton Rovers SC", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 2, opponentScore: 0 },
-  { date: "2026-05-16", time: "18:00", opponent: "Queen City FC", competition: "League", home: false, venue: "Scioto Field", roseCityScore: 1, opponentScore: 1 },
-  { date: "2026-05-30", time: "19:30", opponent: "Lake Erie Athletic", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 3, opponentScore: 1 },
-  { date: "2026-06-06", time: "18:00", opponent: "Toledo Harbor FC", competition: "League", home: false, venue: "Scioto Field", roseCityScore: 0, opponentScore: 1 },
-  { date: "2026-06-20", time: "19:00", opponent: "Akron Union", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 2, opponentScore: 2 },
-  { date: "2026-06-27", time: "19:00", opponent: "Franklinton 1909", competition: "League", home: false, venue: "Scioto Field", roseCityScore: 4, opponentScore: 1 },
-  { date: "2026-07-11", time: "19:00", opponent: "Scioto Valley FC", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 2, opponentScore: 1 },
-  { date: "2026-08-15", time: "19:00", opponent: "Capital City Athletic", competition: "Midwest Premier League", home: false, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
-  { date: "2026-08-22", time: "18:00", opponent: "Dayton Rovers SC", competition: "Midwest Premier League", home: true, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
-  { date: "2026-09-05", time: "19:00", opponent: "Queen City FC", competition: "Midwest Premier League", home: false, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
-  { date: "2026-09-12", time: "18:30", opponent: "Toledo Harbor FC", competition: "Midwest Premier League", home: true, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
+  { date: daysFromNow(-77), time: "19:00", opponent: "Dayton Rovers SC", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 2, opponentScore: 0 },
+  { date: daysFromNow(-70), time: "18:00", opponent: "Queen City FC", competition: "League", home: false, venue: "Scioto Field", roseCityScore: 1, opponentScore: 1 },
+  { date: daysFromNow(-56), time: "19:30", opponent: "Lake Erie Athletic", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 3, opponentScore: 1 },
+  { date: daysFromNow(-49), time: "18:00", opponent: "Toledo Harbor FC", competition: "League", home: false, venue: "Scioto Field", roseCityScore: 0, opponentScore: 1 },
+  { date: daysFromNow(-35), time: "19:00", opponent: "Akron Union", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 2, opponentScore: 2 },
+  { date: daysFromNow(-28), time: "19:00", opponent: "Franklinton 1909", competition: "League", home: false, venue: "Scioto Field", roseCityScore: 4, opponentScore: 1 },
+  { date: daysFromNow(-14), time: "19:00", opponent: "Scioto Valley FC", competition: "League", home: true, venue: "Scioto Field", roseCityScore: 2, opponentScore: 1 },
+  { date: daysFromNow(21), time: "19:00", opponent: "Capital City Athletic", competition: "Midwest Premier League", home: false, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
+  { date: daysFromNow(28), time: "18:00", opponent: "Dayton Rovers SC", competition: "Midwest Premier League", home: true, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
+  { date: daysFromNow(42), time: "19:00", opponent: "Queen City FC", competition: "Midwest Premier League", home: false, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
+  { date: daysFromNow(49), time: "18:30", opponent: "Toledo Harbor FC", competition: "Midwest Premier League", home: true, venue: "Scioto Field", roseCityScore: null, opponentScore: null },
 ];
 
 describe("editorial home: section composition", () => {
