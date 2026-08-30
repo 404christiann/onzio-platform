@@ -2,6 +2,24 @@
 
 Last updated: 2026-08-30
 
+## Grace-period middleware lockout fixed: grace keeps full admin access; suspension is the only lockdown
+
+Agent: Claude Fable 5 (Claude Code), 2026-08-30. Status: **Done, verified (test suites + live browser, all three access states), pushed to `origin/main`.**
+
+This closes the grace-period/middleware lockout contradiction the previous entry left **Open for a human**. The decision: middleware now matches the design the rest of the stack already implements — PLAT-D024 (`supabase/migrations/20260804061257_plat_102_grace_content_edits.sql`) states customer clubs retain full content editing during grace and "Suspension remains the single enforcement boundary after grace expires"; the DB's `onzio_private.can_mutate_content` allows `live` and `grace`; and `AdminShell` messages grace as still editable. Middleware was the one layer still treating grace and suspended identically, redirecting every `/admin/*` request to `/admin/payments` for both.
+
+**The fix (`middleware.ts`, one condition):** the admin lockdown redirect now fires only for `runtimeAccess === "suspended"` — `"grace"` removed from the condition, with a PLAT-D024 comment explaining why. Nothing else restructured. The separate earlier block that 404s the PUBLIC site while suspended is deliberately untouched (different concern, already correct — grace never blocked the public site).
+
+**New contract test:** `tests/contracts/admin-billing-lockdown.test.ts` (modeled on `tenant-robots.test.ts`'s middleware mocking) pins the corrected boundary: grace + `/admin/roster` → no redirect; suspended + `/admin/roster` → 303 to `/admin/payments`; suspended still allows `/admin/payments`, `/admin/login`, `/admin/auth/callback`; live → no redirect. No existing test had pinned the old behavior — this surface was previously untested.
+
+**Verification:** `npx tsc --noEmit` clean; `npm run lint` clean; `npm run build` clean; full suite with `.env.test` exported: **1393/1393 passing** (up from 1387 — the six new lockdown contract tests). Live browser pass on the local Alpha stack (`onzio-platform-alpha-preview`, port 3008, `owner-aal2@alpha.local` OTP login), flipping `onzio.clubs.public_access` directly (the current `subscription_public_access` projects it verbatim for active clubs):
+
+- **grace** (with `kind` temporarily set to `customer` so the banner gate applies — banners require `kind === "customer"`, and Alpha is a `test` club): `/admin/roster` loads directly with no redirect, the amber "Billing needs attention. Content editing remains available during the grace period." banner shows, and the page is genuinely usable — added player #99 "Grace Verification Player" through the New Player panel, got "Saved successfully", and the player appeared in the roster (i.e. the RLS `can_mutate_content` write path really is open during grace, matching PLAT-D024). Test player deleted afterward.
+- **suspended:** navigating to `/admin/roster` lands on `/admin/payments` (middleware 303), the red "Content changes are paused while billing is suspended." banner shows, and the Payments page itself renders normally.
+- **live** (restored): `/admin/roster` loads with no banner and no redirect; public site renders normally.
+
+Alpha's row was restored to its exact original state (`public_access='live'`, `kind='test'`, verified by query) and the temporary test player removed. One pre-existing quirk noticed in passing, NOT introduced or changed here: on the localhost dev path, an unauthenticated request to a suspended club 404s everywhere (including `/admin/login`) because anonymous RLS can't resolve the club via the plain `clubs` query; production hosts use the `resolve_verified_tenant` RPC fallback for admin/billing requests, so this is a localhost-dev-only artifact.
+
 ## Nine post-merge code-review fixes for the admin-portal redesign
 
 Agent: Claude Fable 5 (Claude Code), 2026-08-30. Status: **Done, verified (test suites + live browser), pushed to `origin/main`.**

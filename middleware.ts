@@ -218,9 +218,13 @@ export async function middleware(request: NextRequest) {
   ) {
     return applyTenantRobotsPolicy(notFound());
   }
+  // PLAT-D024: grace keeps full admin access (content editing stays open —
+  // the DB's `can_mutate_content` allows `live` and `grace`; AdminShell shows
+  // the grace banner). Suspension is the single enforcement boundary: only
+  // then is the admin portal locked down to the payments/billing surface.
   if (
     isAdminRequest &&
-    (runtimeAccess === "grace" || runtimeAccess === "suspended") &&
+    runtimeAccess === "suspended" &&
     !isBillingRequest &&
     request.nextUrl.pathname !== "/admin/login" &&
     request.nextUrl.pathname !== "/admin/auth/callback"
