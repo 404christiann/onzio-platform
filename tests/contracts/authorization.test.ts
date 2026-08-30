@@ -12,7 +12,7 @@ type AuthorizeAdminAccess = (input: {
   userId: string;
   memberships: readonly Record<string, unknown>[];
   aal: "aal1" | "aal2";
-  capability: "content" | "billing";
+  capability: "content" | "billing" | "membership";
 }) => Promise<{ allowed: true; role: "owner" | "admin" }>;
 type AuthorizeMutation = (input: {
   club: Record<string, unknown>;
@@ -32,12 +32,12 @@ type ClubHasFeature = (
 ) => boolean;
 
 describe("admin authentication and role contract", () => {
-  it("allows an AAL2 owner to manage content and billing", async () => {
+  it("allows an AAL2 owner to manage content, billing, and membership", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
     );
-    for (const capability of ["content", "billing"] as const) {
+    for (const capability of ["content", "billing", "membership"] as const) {
       await expect(
         authorizeAdminAccess({
           club: clubs.alpha,
@@ -95,6 +95,24 @@ describe("admin authentication and role contract", () => {
           memberships,
           aal: "aal2",
           capability: "billing",
+        }),
+      "OWNER_REQUIRED",
+    );
+  });
+
+  it("rejects an admin attempting to manage team membership", async () => {
+    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
+      "@/lib/authorization",
+      "authorizeAdminAccess",
+    );
+    await expectContractError(
+      () =>
+        authorizeAdminAccess({
+          club: clubs.alpha,
+          userId: USER_IDS.adminAal2,
+          memberships,
+          aal: "aal2",
+          capability: "membership",
         }),
       "OWNER_REQUIRED",
     );
