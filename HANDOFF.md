@@ -2,6 +2,40 @@
 
 Last updated: 2026-08-29
 
+## Admin portal redesign merged from `staging` onto `main` (cherry-picks), including the cross-tenant social-link leak fix
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-29. Status: **Done, verified (test suites + live browser), pushed to `origin/main`.**
+
+Cherry-picked the admin-portal visual redesign off `origin/staging` onto `main` — commits `d9a8477` ("Redesign the protected admin portal to match Design mockups") and `c550c7e` ("Fix pre-merge code review findings in the admin portal redesign"), in that order. Deliberately **not** a full merge of `staging` (that would drag in unrelated staging-only history: MLA pathway, registration-forms/Stripe Connect, staging's own HANDOFF log); these two commits are the clean unit of value. A prior read-only scoping pass had established this was tractable and ~95% non-redundant with main.
+
+**What it brings in, at a high level:**
+- Full visual redesign of the protected admin portal: new `AdminShell` (header with route search, account menu, theme toggle; section rail; side panel), a shared `AdminPage` scaffold, `AdminTabs`, dashboard rebuilt around real data (`lib/admin-dashboard-data.ts`, registration-mix chart), a central route manifest (`lib/admin-route-manifest.ts`), and a new indigo/cool-gray token palette in `styles/globals.css`. All twenty protected pages restyled.
+- Drag-to-reorder on the Programs page via new dependencies `@dnd-kit/core`/`@dnd-kit/sortable`.
+- **Critical bug fix:** the live cross-tenant social-link data leak. Pre-fix, `normalizeSiteSocialLinks` did `"".trim() || fallback.href`, so an admin who explicitly cleared a social URL got it silently replaced with the hardcoded Rose City default from `DEFAULT_SITE_SOCIAL_LINKS` — another club's URL — on their public footer. Post-fix (`lib/social-links.ts`), an existing row's `href` is authoritative even when empty; defaults only apply when no row exists at all.
+- Assorted UX fixes: sticky page headers, mobile-width overflow fixes on table-heavy pages (tables scroll in their own container), sr-only status span on the theme toggle, six new contract test files.
+
+**Cherry-pick conflicts and resolutions** (5, all on the first commit; `c550c7e` applied clean):
+- `components/AdminShell.tsx` — took the redesign's version wholesale (full rewrite; already includes main's theme-toggle wiring in its new header).
+- `components/admin/AdminThemeToggle.tsx` — took the redesign's version (superset of main's: adds an `sr-only` status span).
+- `app/admin/(protected)/layout.tsx` — took the redesign's version (both sides made the same theme-cookie change, formatting-only difference).
+- `tests/contracts/editorial-home.test.ts` — kept **main's** version (the durable `daysFromNow` relative-date fix from `f4833e7`, see previous entry), not the redesign's date approach. The redesign's `lib/editorial-fixtures.ts` (injectable-`now` param, backward-compatible) auto-merged in alongside it; the test passes against it.
+- `HANDOFF.md` — kept main's version (staging's log is a different history); this entry documents the merge instead.
+
+**Trap 1 — duplicate `.admin-theme` token blocks in `styles/globals.css` (fixed in follow-up commit `37ae818`).** After the cherry-picks the file contained TWO `.admin-theme[data-admin-theme="light"|"dark"]` token layers: the redesign's new indigo/cool-gray one near the top, and main's own older near-black/Onzio-green one (from the theme-toggle wiring entry below) later in the file. CSS cascade means the later block wins, so the redesign's actual palette would have been silently defeated. Deleted main's leftover blocks (including its duplicate `.admin-theme` base rule and stale native-select comment block); the final file's admin-token region is byte-identical to staging's reviewed version — exactly one light and one dark token definition. Live-verified: `.admin-theme` computes `--primary: 231 74% 59%` (indigo) / `--background: 220 33% 98%`, not the old palette.
+
+**Trap 2 — `/admin/login` styling (checked, NOT broken, no fix needed).** The concern was that the redesign removes the `:root`/`.dark` admin token layer the login page's `dark bg-background bg-card border-border` classes depend on, with no `.admin-theme` ancestor on that route. In practice the redesign's dark token block deliberately includes a `main.dark` selector ("preserves the current login presentation without making the protected theme provider part of the auth surface"), which is exactly the login page's root element. Live-verified: all tokens resolve on `main.dark` (`--background: 222 47% 7%`, `--card: 222 35% 11%`, etc.) and the page renders correctly.
+
+**Verification (all against the merged result):**
+- `npx tsc --noEmit` clean; `npm run lint` clean; `npm run build` clean.
+- Full suite (with `.env.test` exported): **1387/1387 passing** (up from 1350 — the redesign's new test files included). `npm run test:architecture`: 21/21.
+- `npm install` left `package-lock.json` unchanged (auto-merge was consistent); `@dnd-kit/core` and `@dnd-kit/sortable` present.
+- Live browser pass on the local Alpha stack (`onzio-platform-alpha-preview`, port 3008, `owner-aal2@alpha.local` OTP login): login page renders correctly; dashboard shows the redesign's indigo/cool-gray palette; sticky header stays pinned while scrolling on Branding; Standings and Tryouts at 375px mobile width have zero page-level horizontal overflow (tables scroll internally).
+- **Social-link fix verified end to end:** on the Alpha tenant's Branding page, cleared the Instagram URL and saved; after a full reload the field stayed empty, and a direct local-DB query confirmed the row persisted with `href: ""` — not repopulated with the Rose City default (the exact pre-fix failure mode). The original value was then restored through the UI.
+
+**Flag for a human (deliberate, NOT changed here):** the redesign's route manifest marks the Payments page `ownerOnly: true, billingRequired: true` — stricter than what was previously live on main. This was the original reviewed design intent from staging; left as-is per instruction, but be aware admin non-owners and non-billing clubs lose access to `/admin/payments` when this ships.
+
+**Working tree.** Four commits on `main` pushed to `origin/main`: the two cherry-picks, the globals.css dedup (`37ae818`), and this HANDOFF entry. Production remains disconnected from this repo's Git integration (see the incident entry below), so this push carries no deploy risk. Any future production deploy is a deliberate manual `vercel --prod`, gated by this file's migration-parity check.
+
 ## Admin theme toggle wired in (resolving the reconciliation merge's open item); date-fragile editorial-home test fixed
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-29. Status: **Done, verified, pushed to `origin/main`.**
