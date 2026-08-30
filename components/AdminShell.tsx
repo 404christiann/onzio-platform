@@ -28,7 +28,7 @@ type AdminNavItem = {
   icon: ReactNode;
 };
 
-const NAV_ITEMS: AdminNavItem[] = [
+const NAV_ITEMS = [
   {
     label: "Dashboard",
     href: "/admin",
@@ -172,17 +172,22 @@ const NAV_ITEMS: AdminNavItem[] = [
       </svg>
     ),
   },
-];
+] as const satisfies readonly AdminNavItem[];
+
+// Derived from NAV_ITEMS's actual hrefs so a typo'd href in a group's
+// `hrefs` list below is a compile error instead of a nav item that silently
+// never renders.
+type AdminNavHref = (typeof NAV_ITEMS)[number]["href"];
 
 type AdminNavGroup = {
   key: string;
   label: string;
   icon: ReactNode;
-  hrefs: string[];
+  hrefs: AdminNavHref[];
 };
 
 type AdminNavEntry =
-  | { type: "link"; href: string }
+  | { type: "link"; href: AdminNavHref }
   | { type: "group"; group: AdminNavGroup };
 
 // Website/Competition/Club Settings groups only list hrefs that already
@@ -297,7 +302,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
-  const visibleNavItem = (href: string) =>
+  const visibleNavItem = (href: string): AdminNavItem | undefined =>
     navItems.find((item) => item.href === href);
 
   const toggleGroup = (key: string) =>

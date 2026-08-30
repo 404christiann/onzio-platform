@@ -400,8 +400,11 @@ main.dark {
 }
 
 @layer utilities {
+  /* hsl(var(--foreground) / alpha) instead of a literal white so the thumb
+     and focus outline stay visible in both the light and dark admin theme
+     -- --foreground resolves near-white in dark and near-black in light. */
   .admin-nav-scrollbar {
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: hsl(var(--foreground) / 0.2) transparent;
     scrollbar-width: thin;
   }
 
@@ -415,17 +418,17 @@ main.dark {
   }
 
   .admin-nav-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: hsl(var(--foreground) / 0.2);
     border-radius: 999px;
   }
 
   .admin-nav-scrollbar:hover::-webkit-scrollbar-thumb,
   .admin-nav-scrollbar:focus-visible::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.36);
+    background: hsl(var(--foreground) / 0.36);
   }
 
   .admin-nav-scrollbar:focus-visible {
-    outline: 1px solid rgba(255, 255, 255, 0.16);
+    outline: 1px solid hsl(var(--foreground) / 0.16);
     outline-offset: -1px;
   }
 }

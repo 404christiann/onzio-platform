@@ -35,10 +35,10 @@ describe("admin mobile navigation", () => {
     expect(source).toContain('WebkitOverflowScrolling: "touch"');
   });
 
-  it("uses a slim translucent scrollbar that belongs to the dark sidebar", () => {
+  it("uses a slim translucent scrollbar that adapts to both admin themes", () => {
     expect(source).toContain("admin-nav-scrollbar");
     expect(globalStyles).toContain(".admin-nav-scrollbar");
-    expect(globalStyles).toContain("scrollbar-color: rgba(255, 255, 255, 0.2) transparent");
+    expect(globalStyles).toContain("scrollbar-color: hsl(var(--foreground) / 0.2) transparent");
     expect(globalStyles).toContain(".admin-nav-scrollbar::-webkit-scrollbar-track");
     expect(globalStyles).toContain("background: transparent");
     expect(globalStyles).toContain("width: 6px");

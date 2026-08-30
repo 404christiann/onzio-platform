@@ -2,7 +2,6 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
-import { ClubContextProvider } from "@/components/ClubContextProvider";
 import {
   ADMIN_THEME_COOKIE_NAME,
   resolveAdminTheme,
@@ -27,6 +26,11 @@ export default async function ProtectedLayout({
     redirect("/admin/login?error=mfa_required");
   }
 
+  // Only used for this layout's own role/lifecycle gate below -- the
+  // ancestor app/admin/layout.tsx already resolves club context and mounts
+  // ClubContextProvider/ClubBrandingProvider for AdminShell to consume, so
+  // this result isn't re-provided here (that would create a second,
+  // independent tenant-data source for the same request).
   const requestHeaders = await headers();
   const club = await getClubContext({
     hostname: requestHeaders.get("host") ?? "",
@@ -47,9 +51,7 @@ export default async function ProtectedLayout({
 
   return (
     <AdminThemeProvider initialTheme={initialTheme}>
-      <ClubContextProvider club={club}>
-        <AdminShell>{children}</AdminShell>
-      </ClubContextProvider>
+      <AdminShell>{children}</AdminShell>
     </AdminThemeProvider>
   );
 }

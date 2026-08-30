@@ -25,9 +25,6 @@ export function AdminThemeToggle({ className }: { className?: string }) {
       ) : (
         <Moon className="size-4" aria-hidden="true" />
       )}
-      <span className="sr-only">
-        {isDark ? "Dark theme enabled" : "Light theme enabled"}
-      </span>
     </button>
   );
 }
