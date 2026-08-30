@@ -12,7 +12,7 @@ type AuthorizeAdminAccess = (input: {
   userId: string;
   memberships: readonly Record<string, unknown>[];
   aal: "aal1" | "aal2";
-  capability: "content" | "billing" | "membership";
+  capability: "content" | "billing";
 }) => Promise<{ allowed: true; role: "owner" | "admin" }>;
 type AuthorizeMutation = (input: {
   club: Record<string, unknown>;
@@ -32,12 +32,12 @@ type ClubHasFeature = (
 ) => boolean;
 
 describe("admin authentication and role contract", () => {
-  it("allows an AAL2 owner to manage content, billing, and membership", async () => {
+  it("allows an AAL2 owner to manage content and billing", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
     );
-    for (const capability of ["content", "billing", "membership"] as const) {
+    for (const capability of ["content", "billing"] as const) {
       await expect(
         authorizeAdminAccess({
           club: clubs.alpha,
@@ -100,24 +100,6 @@ describe("admin authentication and role contract", () => {
     );
   });
 
-  it("rejects an admin attempting to manage team membership", async () => {
-    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
-      "@/lib/authorization",
-      "authorizeAdminAccess",
-    );
-    await expectContractError(
-      () =>
-        authorizeAdminAccess({
-          club: clubs.alpha,
-          userId: USER_IDS.adminAal2,
-          memberships,
-          aal: "aal2",
-          capability: "membership",
-        }),
-      "OWNER_REQUIRED",
-    );
-  });
-
   it("rejects an owner whose session has not reached AAL2", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
@@ -170,45 +152,6 @@ describe("admin authentication and role contract", () => {
           memberships,
           aal: "aal2",
           capability: "content",
-        }),
-      "CLUB_ARCHIVED",
-    );
-  });
-
-  it.each([
-    [USER_IDS.removed, "MEMBERSHIP_INACTIVE"],
-    [USER_IDS.unaffiliated, "MEMBERSHIP_REQUIRED"],
-  ])("rejects member state for %s managing team membership", async (userId, code) => {
-    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
-      "@/lib/authorization",
-      "authorizeAdminAccess",
-    );
-    await expectContractError(
-      () =>
-        authorizeAdminAccess({
-          club: clubs.alpha,
-          userId,
-          memberships,
-          aal: "aal2",
-          capability: "membership",
-        }),
-      code,
-    );
-  });
-
-  it("rejects team membership changes for an archived club even as its owner", async () => {
-    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
-      "@/lib/authorization",
-      "authorizeAdminAccess",
-    );
-    await expectContractError(
-      () =>
-        authorizeAdminAccess({
-          club: { ...clubs.alpha, lifecycle: "archived" },
-          userId: USER_IDS.ownerAal2,
-          memberships,
-          aal: "aal2",
-          capability: "membership",
         }),
       "CLUB_ARCHIVED",
     );

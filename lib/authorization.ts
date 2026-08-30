@@ -21,7 +21,7 @@ type AuthorizationInput = {
   userId: string;
   memberships: readonly Membership[];
   aal: "aal1" | "aal2";
-  capability: "content" | "billing" | "membership";
+  capability: "content" | "billing";
 };
 
 function membershipForClub(
@@ -55,10 +55,7 @@ export async function authorizeAdminAccess(input: AuthorizationInput): Promise<{
   if (role !== "owner" && role !== "admin") {
     failContract("MEMBERSHIP_REQUIRED");
   }
-  if (
-    (input.capability === "billing" || input.capability === "membership") &&
-    role !== "owner"
-  ) {
+  if (input.capability === "billing" && role !== "owner") {
     failContract("OWNER_REQUIRED");
   }
 
