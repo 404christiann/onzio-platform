@@ -2,6 +2,25 @@
 
 Last updated: 2026-08-29
 
+## Admin theme toggle wired in (resolving the reconciliation merge's open item); date-fragile editorial-home test fixed
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-29. Status: **Done, verified, pushed to `origin/main`.**
+
+Two independent tasks, both approved and out-of-band from the reconciliation merge itself (see the entry immediately below).
+
+**1. Wired up the orphaned admin theme toggle.** The reconciliation merge left `components/admin/AdminThemeProvider.tsx` / `AdminThemeToggle.tsx` / `lib/admin-theme.ts` in the tree but unreferenced, and the popover `.admin-theme`-portal fix was consequently a no-op (see prior entry's caveat). Fixed:
+- `app/admin/(protected)/layout.tsx` now resolves the theme from the `onzio-admin-theme` cookie server-side (`resolveAdminTheme`) and wraps `<AdminShell>` in `<AdminThemeProvider initialTheme={...}>`, after the existing `requireFreshClubSession`/club-context/role checks — auth flow untouched.
+- `components/AdminShell.tsx` drops the `dark` class it was hardcoding on its root `SidebarProvider` (the "legacy forced-dark class" the original CSS comment was written against) and renders `<AdminThemeToggle />` in the sidebar footer next to "Sign out" — the one existing cluster of account/utility controls in the current shell (there is no header search box or user menu in the current design).
+- **Found in verification, not assumed:** the `.admin-theme[data-admin-theme="light"|"dark"]` CSS variable block was *not* actually intact after the merge, despite not being flagged as a conflict — `git diff` between the merge's two parents showed hotfix's `styles/globals.css` simply doesn't have it (hotfix independently built its own global `:root`/`.dark` admin-token layer, which is what's live today). Re-adding the orphaned branch's original block verbatim would have silently repainted the live admin portal's colors (e.g. its indigo `--primary`/`--brand` vs. today's near-black/Onzio-green). Instead, re-declared the same token block scoped to `.admin-theme[data-admin-theme="light"|"dark"]` using **today's actual `:root`/`.dark` values**, so toggling reproduces exactly the current look, just theme-scoped instead of hardcoded. `:root`/`.dark` themselves are untouched (still used by the unprotected `/admin/login` route, which stays outside `.admin-theme` and forced dark, unchanged).
+- Confirmed `useDefaultPopoverPortalContainer` (`components/ui/popover.tsx`) now finds a real container: verified live that a popover's `data-slot="popover-positioner"` renders inside `.admin-theme` (not `document.body`) and its background resolves to the correct themed value.
+- Live-verified end to end against the local Supabase stack (`owner-aal2@alpha.local` OTP login, `onzio-platform-alpha-preview`, port 3008): toggle switches the whole portal light/dark, persists via cookie across a full server-rendered navigation, and the schedule page's date-picker popover re-themes correctly in both modes.
+
+**2. Fixed date-fragile `tests/contracts/editorial-home.test.ts`.** `LIONS_FIXTURES`' dates were hardcoded absolute calendar dates (last upcoming fixture `2026-08-15`) evaluated against `findNextFixture`'s real `Date.now()` — once today passed `2026-08-15`/`2026-08-22`, the "resolves the real next upcoming fixture" test started failing for reasons unrelated to any code change. Replaced the hardcoded dates with a `daysFromNow(offsetDays)` helper computed off `Date.now()` at test-run time, preserving the original weekly/biweekly gap structure between fixtures (and the longer preseason-to-opener gap before the first upcoming one) — durable going forward, not just a bumped date. `tests/contracts/editorial-schedule.test.ts`'s own separate `LIONS_FIXTURES` copy was checked too; its "upcoming" logic (`firstUpcomingFixtureId`) is score-based, not clock-based, so it was never actually fragile and didn't need changing.
+
+**Verification:** `npx tsc --noEmit` clean. `npm run lint` clean (only the same three pre-existing `react-hooks/exhaustive-deps` warnings). `npm run build` clean. Full suite after exporting `.env.test`: **1350/1350 passing** (up from 1349/1350 — the previously-failing `editorial-home` test now passes, nothing else regressed).
+
+**Working tree.** Two commits on `main`, pushed to `origin/main`. Production is still deliberately disconnected from this repo's Git integration (per the entry below), so this push carries no deploy risk.
+
 ## Production incident: `main` had silently drifted behind what was actually deployed; `staging`→`main` promotion push downgraded production; reconciled by merging `main` with the real production branch
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-29. Status: **Resolved. Production has been redeployed to the correct, real code and is now fully disconnected from this repository's Vercel Git integration. This repository's `main` branch has been reconciled to match production via a real `git merge` of `origin/hotfix/registration-live-mode-prod` (`6176cd9`) into `main`, preserving full history on both sides.**

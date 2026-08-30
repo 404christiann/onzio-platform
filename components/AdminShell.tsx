@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
+import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
 import {
@@ -389,7 +390,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <SidebarProvider
       open={sidebarOpen}
       onOpenChange={setSidebarOpen}
-      className="dark bg-background"
+      className="bg-background"
       style={{ "--sidebar-width": "280px" } as React.CSSProperties}
     >
       {/* Sidebar */}
@@ -502,15 +503,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               {userEmail}
             </p>
           )}
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 font-display text-sm tracking-widest uppercase text-foreground transition-opacity duration-200 opacity-40 hover:opacity-100"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            Sign out
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 font-display text-sm tracking-widest uppercase text-foreground transition-opacity duration-200 opacity-40 hover:opacity-100"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Sign out
+            </button>
+            <AdminThemeToggle />
+          </div>
         </SidebarFooter>
       </Sidebar>
 
