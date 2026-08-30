@@ -66,6 +66,17 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
+      // Escape must only close the topmost overlay — this search dialog.
+      // Otherwise the same keydown also reaches the document-level Escape
+      // listener in AdminSidePanel, so pressing Escape with ⌘K search open
+      // over an edit side panel would close both and silently drop the
+      // panel's unsaved form state. stopPropagation alone is not enough:
+      // React delegates events on `document` in the App Router — the same
+      // node AdminSidePanel listens on — and stopPropagation never stops
+      // other listeners on the same node, so the native event needs
+      // stopImmediatePropagation too.
+      event.stopPropagation();
+      event.nativeEvent.stopImmediatePropagation();
       close();
       return;
     }
