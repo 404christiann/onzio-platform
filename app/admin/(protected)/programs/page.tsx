@@ -243,6 +243,12 @@ export default function AdminProgramsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // True while a drag-reorder's writes are still in flight (see
+  // persistProgramOrder): disables further drags so two reorders can't
+  // interleave their per-row writes. The ref mirrors the state
+  // synchronously for persistProgramOrder's entry guard.
+  const [reorderSaving, setReorderSaving] = useState(false);
+  const reorderInFlightRef = useRef(false);
   const [uploadingRole, setUploadingRole] = useState<MediaRole | null>(null);
   const [errors, setErrors] = useState<ProgramValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
@@ -785,6 +791,15 @@ export default function AdminProgramsPage() {
    * components/admin/useSortableList.ts for the drag wrapper this feeds.
    */
   async function persistProgramOrder(next: ProgramDraft[]) {
+    // In-flight guard: the per-program writes below are not transactional,
+    // so a second drag firing before the first finishes would interleave
+    // its updates with the first drag's and could leave the table with a
+    // mixed order (duplicate sort_order values). The ref (not just state)
+    // makes the guard immune to a not-yet-rendered state update; the
+    // reorderSaving state additionally disables the drag sensors below.
+    if (reorderInFlightRef.current) return;
+    reorderInFlightRef.current = true;
+    setReorderSaving(true);
     setPrograms(next);
     setSaved(false);
     setError(null);
@@ -811,8 +826,22 @@ export default function AdminProgramsPage() {
       });
       setSaved(true);
     } catch (reorderError) {
-      setError(errorMessage(reorderError, "Unable to reorder programs"));
-      await loadPrograms(draft?.id);
+      if (dirty) {
+        // loadPrograms() rebuilds draft/gallery/page-copy state from the
+        // database, which would silently discard the admin's unsaved editor
+        // changes. When a reorder fails while edits are open, keep the local
+        // state (the list order shown may not match what was persisted) and
+        // tell the admin instead of destroying their work.
+        setError(
+          `${errorMessage(reorderError, "Unable to reorder programs")} The shown order may not be saved — your unsaved program edits were kept; save them, then reload to see the saved order.`,
+        );
+      } else {
+        setError(errorMessage(reorderError, "Unable to reorder programs"));
+        await loadPrograms(draft?.id);
+      }
+    } finally {
+      reorderInFlightRef.current = false;
+      setReorderSaving(false);
     }
   }
 
@@ -843,6 +872,10 @@ export default function AdminProgramsPage() {
   // the full list, so the sensors are simply left off while filtered rather
   // than risk writing a corrupted order.
   const canReorderPrograms = trimmedProgramFilter.length === 0;
+  // Dragging also pauses while a previous reorder is still persisting —
+  // kept separate from canReorderPrograms so the "clear the filter" hint
+  // below doesn't flash during the brief in-flight window.
+  const programDragEnabled = canReorderPrograms && !reorderSaving;
   const sortableProgramIds = filteredPrograms
     .map((program) => program.id)
     .filter((id): id is string => typeof id === "string");
@@ -1204,7 +1237,7 @@ export default function AdminProgramsPage() {
                 </p>
               ) : (
                 <DndContext
-                  sensors={canReorderPrograms ? programSensors : []}
+                  sensors={programDragEnabled ? programSensors : []}
                   collisionDetection={programCollisionDetection}
                   onDragEnd={handleProgramDragEnd}
                 >
@@ -1216,7 +1249,7 @@ export default function AdminProgramsPage() {
                           program={program}
                           isSelected={draft?.id === program.id}
                           onSelect={() => selectProgram(program)}
-                          dragDisabled={!canReorderPrograms}
+                          dragDisabled={!programDragEnabled}
                         />
                       ))}
                     </div>
