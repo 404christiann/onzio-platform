@@ -4,16 +4,10 @@ import {
   resolveSubscriptionAccess,
   STRIPE_GRACE_PERIOD_MS,
 } from "@/lib/subscription-state";
-import {
-  priceIdForTier,
-  tierForPriceId,
-  type StripeTier,
-  type StripeTierConfig,
-} from "@/lib/stripe-tiers";
 
 type UnknownRecord = Record<string, unknown>;
 
-type StripeRoutingConfig = StripeTierConfig & {
+type StripeRoutingConfig = {
   environment?: unknown;
   simulateRuntimeStateWriteFailure?: unknown;
 };
@@ -43,9 +37,18 @@ function eventEnvironment(config: StripeRoutingConfig): "test" | "production" {
   failContract("STRIPE_ENVIRONMENT_INVALID");
 }
 
+function clubPriceId(club: UnknownRecord): string {
+  const value = club.stripePriceId ?? club.stripe_price_id;
+  if (typeof value !== "string" || !/^price_[A-Za-z0-9_]+$/.test(value)) {
+    failContract("STRIPE_PRICE_REQUIRED");
+  }
+  return value;
+}
+
 export function buildCheckoutDecision(input: {
   club?: unknown;
   requestedTier?: unknown;
+  requestedPriceId?: unknown;
   currentSubscription?: unknown;
   config?: unknown;
 }): {
@@ -57,14 +60,15 @@ export function buildCheckoutDecision(input: {
   const config = record(input.config) as StripeRoutingConfig;
   const clubId = requiredString(club.id, "INVALID_CLUB");
 
-  if (input.currentSubscription) return { destination: "portal" };
-  if (input.requestedTier !== "starter" && input.requestedTier !== "pro") {
-    failContract("UNKNOWN_TIER");
+  if (input.requestedTier !== undefined || input.requestedPriceId !== undefined) {
+    failContract("UNTRUSTED_BILLING_INPUT");
   }
+  if (input.currentSubscription) return { destination: "portal" };
+  if (club.kind !== "customer") failContract("BILLING_NOT_REQUIRED");
 
   return {
     destination: "checkout",
-    priceId: priceIdForTier(input.requestedTier, config),
+    priceId: clubPriceId(club),
     metadata: {
       onzio_club_id: clubId,
       onzio_environment: requiredString(
@@ -102,6 +106,10 @@ export async function resolveStripeEvent(
   const eventId = requiredString(event.id);
   const eventType = requiredString(event.type);
   const eventCreated = event.created;
+  const subscription = record(record(event.data).object);
+  const metadata = record(subscription.metadata);
+  const clubIdFromMetadata = requiredString(metadata.onzio_club_id);
+  const currentCustomerId = objectId(subscription.customer);
   if (typeof eventCreated !== "number" || !Number.isSafeInteger(eventCreated)) {
     failContract("INVALID_STRIPE_EVENT");
   }
@@ -111,11 +119,19 @@ export async function resolveStripeEvent(
     typeof current?.lastEventCreated === "number" &&
     eventCreated <= current.lastEventCreated
   ) {
+    if (eventType.startsWith("invoice.")) {
+      return {
+        action: "ignored",
+        eventId,
+        eventType,
+        eventCreated,
+        clubId: clubIdFromMetadata,
+        customerId: currentCustomerId,
+      };
+    }
     failContract("STALE_EVENT");
   }
 
-  const subscription = record(record(event.data).object);
-  const metadata = record(subscription.metadata);
   const configuredEnvironment = eventEnvironment(config);
   const metadataEnvironment = requiredString(metadata.onzio_environment);
   const expectedMetadataEnvironment =
@@ -128,19 +144,16 @@ export async function resolveStripeEvent(
     failContract("FOREIGN_ENVIRONMENT");
   }
 
-  const clubId = requiredString(metadata.onzio_club_id);
+  const clubId = clubIdFromMetadata;
   if (current && current.clubId !== clubId) failContract("CLUB_MISMATCH");
 
-  const customerId = objectId(subscription.customer);
+  const customerId = currentCustomerId;
   if (current?.customerId && current.customerId !== customerId) {
     failContract("CUSTOMER_MISMATCH");
   }
 
   const subscriptionId = requiredString(subscription.id);
-  if (
-    current?.subscriptionId &&
-    current.subscriptionId !== subscriptionId
-  ) {
+  if (current?.subscriptionId && current.subscriptionId !== subscriptionId) {
     if (eventType === "customer.subscription.deleted") {
       failContract("OBSOLETE_SUBSCRIPTION");
     }
@@ -153,8 +166,9 @@ export async function resolveStripeEvent(
   }
   const subscriptionItem = record(items[0]);
   const priceId = requiredString(record(subscriptionItem.price).id);
-  const tier = tierForPriceId(priceId, config);
+  if (!priceId.startsWith("price_")) failContract("INVALID_PRICE_ID");
   const status = requiredString(subscription.status);
+  if (status === "trialing") failContract("TRIALING_NOT_SUPPORTED");
   const periodEnd =
     typeof subscriptionItem.current_period_end === "number"
       ? subscriptionItem.current_period_end
@@ -163,12 +177,18 @@ export async function resolveStripeEvent(
         : null;
   const paidThrough =
     periodEnd === null ? null : new Date(periodEnd * 1000).toISOString();
+  const priorGraceEndsAt =
+    typeof current?.graceEndsAt === "string" ? current.graceEndsAt : null;
+  const startsGrace = status === "past_due";
   const terminalStatus =
-    status === "canceled" ||
-    status === "unpaid" ||
-    status === "incomplete_expired";
+    status === "canceled" || status === "unpaid" || status === "incomplete_expired";
+  const graceEndsAt =
+    (startsGrace || terminalStatus) && periodEnd !== null
+      ? priorGraceEndsAt ??
+        new Date(periodEnd * 1000 + STRIPE_GRACE_PERIOD_MS).toISOString()
+      : null;
   const access = resolveSubscriptionAccess(
-    { status, paidThrough },
+    { status, paidThrough, graceEndsAt },
     new Date(eventCreated * 1000),
   );
 
@@ -185,16 +205,12 @@ export async function resolveStripeEvent(
     customerId,
     subscriptionId,
     priceId,
-    tier: tier as StripeTier,
     status,
     cancelAtPeriodEnd:
       subscription.cancel_at_period_end === true ||
       typeof subscription.cancel_at === "number",
     paidThrough,
-    graceEndsAt:
-      terminalStatus && periodEnd !== null
-        ? new Date(periodEnd * 1000 + STRIPE_GRACE_PERIOD_MS).toISOString()
-        : null,
+    graceEndsAt,
     publicAccess: access.publicAccess,
   };
 }

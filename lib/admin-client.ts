@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient as createAuthClient } from "@/lib/supabase-browser";
+import { withoutClientTenantIdentity } from "@/lib/admin-payload";
 
 type Filter = {
   kind: "eq" | "neq" | "gt" | "in";
@@ -48,6 +49,7 @@ const MEDIA_REFERENCE_FIELDS: Record<
     { source: "sponsor_logo_url", asset: "sponsor_logo_asset_id" },
   ],
   player_photos: [{ source: "url", asset: "media_asset_id" }],
+  program_media: [{ source: "url", asset: "media_asset_id" }],
   players: [{ source: "photo_url", asset: "photo_asset_id" }],
   shop_carousel_photos: [{ source: "url", asset: "media_asset_id" }],
   shop_kit_photos: [{ source: "url", asset: "media_asset_id" }],
@@ -69,10 +71,26 @@ function attachMediaReferences(
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return value;
     }
-    const row = { ...(value as Record<string, unknown>) };
+    const row = withoutClientTenantIdentity(
+      value as Record<string, unknown>,
+    );
+    // Select responses include the server-resolved tenant key. Never echo it
+    // back from a browser mutation; the admin route injects the verified club.
     for (const { source, asset } of fields) {
+      // Only act when the mutation actually touches this field. A save that
+      // never includes it (e.g. editing an unrelated field) must not disturb
+      // whatever asset reference is already stored.
+      if (!Object.prototype.hasOwnProperty.call(row, source)) continue;
       const sourceValue = row[source];
-      if (typeof sourceValue !== "string") continue;
+      if (typeof sourceValue !== "string" || sourceValue.trim() === "") {
+        // The url was explicitly cleared (an admin removing an image, not
+        // replacing it). Without this, the asset reference survived a removal
+        // and resolveMediaReferences kept re-deriving the old url from it on
+        // every public read -- the admin looked correct because it only shows
+        // local draft state, never re-resolving from the database.
+        row[asset] = null;
+        continue;
+      }
       const media = publishedMedia.get(sourceValue);
       if (media) row[asset] = media.assetId;
     }
@@ -216,17 +234,20 @@ const MEDIA_BUCKETS: Record<
 > = {
   "about-page": { surface: "about", kind: "photo" },
   Aboutassets: { surface: "about", kind: "graphic" },
+  contact: { surface: "contact", kind: "photo" },
   flags: { surface: "roster", kind: "graphic" },
   homepage: { surface: "homepage", kind: "photo" },
   logos: { surface: "branding", kind: "graphic" },
   logos_v2: { surface: "branding", kind: "graphic" },
   "opponent-logos": { surface: "schedule", kind: "graphic" },
   "player-action-photos": { surface: "roster", kind: "photo" },
+  programs: { surface: "programs", kind: "photo" },
   "roster-images": { surface: "roster", kind: "photo" },
   shop: { surface: "shop", kind: "photo" },
   sponsors: { surface: "branding", kind: "graphic" },
   "staff-images": { surface: "roster", kind: "photo" },
   standings: { surface: "standings", kind: "graphic" },
+  tryouts: { surface: "tryouts", kind: "photo" },
 };
 
 function mediaError(code: string, message = code) {
@@ -297,11 +318,27 @@ export function createClient() {
             );
             const authorizeResult = await parseJson(authorizeResponse);
             if (!authorizeResponse.ok) {
+              // A missing `error` key means the response did not come from the
+              // authorize route at all — a platform error page, a tenant 404
+              // from middleware, or a gateway timeout. Reporting a bare
+              // "MEDIA_AUTHORIZATION_FAILED" for that hid which of the two it
+              // was; the HTTP status is what distinguishes them.
+              const fallback = mediaError(
+                "MEDIA_AUTHORIZATION_UNAVAILABLE",
+                `The upload could not be authorized: the server responded ${authorizeResponse.status} ${authorizeResponse.statusText || ""}`.trim() +
+                  ". This is not a permissions error — the request did not reach the upload service.",
+              );
+              const reported = authorizeResult.error as
+                | { code?: string; message?: string }
+                | undefined;
               return {
                 data: null,
-                error:
-                  authorizeResult.error ??
-                  mediaError("MEDIA_AUTHORIZATION_FAILED"),
+                error: reported?.code
+                  ? mediaError(
+                      reported.code,
+                      reported.message ?? reported.code,
+                    )
+                  : fallback,
               };
             }
             const authorization =

@@ -12,15 +12,12 @@ type SubscriptionInput = {
   paid_through?: unknown;
   currentPeriodEnd?: unknown;
   current_period_end?: unknown;
+  graceEndsAt?: unknown;
+  grace_ends_at?: unknown;
 };
 
-const LIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
-const TERMINAL_STATUSES = new Set([
-  "canceled",
-  "unpaid",
-  "incomplete_expired",
-]);
-export const STRIPE_GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
+const TERMINAL_STATUSES = new Set(["canceled", "unpaid", "incomplete_expired"]);
+export const STRIPE_GRACE_PERIOD_MS = 20 * 24 * 60 * 60 * 1000;
 
 function timestamp(value: unknown): number | null {
   if (typeof value !== "string") return null;
@@ -37,34 +34,23 @@ export function resolveSubscriptionAccess(
   graceEndsAt: string | null;
 } {
   if (subscription?.lifecycle === "archived") {
-    return {
-      publicAccess: "suspended",
-      adminAccess: "billing_only",
-      graceEndsAt: null,
-    };
+    return { publicAccess: "suspended", adminAccess: "billing_only", graceEndsAt: null };
   }
-
   if (!subscription) {
-    return {
-      publicAccess: "preview",
-      adminAccess: "billing_only",
-      graceEndsAt: null,
-    };
+    return { publicAccess: "preview", adminAccess: "billing_only", graceEndsAt: null };
   }
 
-  const fixture =
-    typeof subscription.fixture === "string" ? subscription.fixture : null;
-  if (fixture === "canceled-after-grace") {
-    return {
-      publicAccess: "suspended",
-      adminAccess: "billing_only",
-      graceEndsAt: null,
-    };
-  }
+  const fixture = typeof subscription.fixture === "string" ? subscription.fixture : null;
   const status =
-    fixture === "canceled-before-grace" ? "canceled" : fixture ?? subscription.status;
-
-  if (typeof status === "string" && LIVE_STATUSES.has(status)) {
+    fixture === "canceled-before-grace"
+      ? "canceled"
+      : fixture === "canceled-after-grace"
+        ? "canceled"
+        : fixture ?? subscription.status;
+  if (status === "trialing") {
+    return { publicAccess: "preview", adminAccess: "billing_only", graceEndsAt: null };
+  }
+  if (status === "active") {
     return { publicAccess: "live", adminAccess: "full", graceEndsAt: null };
   }
 
@@ -74,27 +60,25 @@ export function resolveSubscriptionAccess(
       subscription.currentPeriodEnd ??
       subscription.current_period_end,
   );
+  const storedGrace = timestamp(subscription.graceEndsAt ?? subscription.grace_ends_at);
+  const computedGrace =
+    paidThrough === null ? null : paidThrough + STRIPE_GRACE_PERIOD_MS;
+  const graceTime = storedGrace ?? computedGrace;
+  const graceIso = graceTime === null ? null : new Date(graceTime).toISOString();
 
-  if (typeof status === "string" && TERMINAL_STATUSES.has(status)) {
+  if (status === "past_due" || (typeof status === "string" && TERMINAL_STATUSES.has(status))) {
     if (paidThrough !== null && now.getTime() <= paidThrough) {
-      return { publicAccess: "live", adminAccess: "full", graceEndsAt: null };
+      return { publicAccess: "live", adminAccess: "full", graceEndsAt: graceIso };
     }
-
-    const graceEndsAt =
-      paidThrough === null ? null : new Date(paidThrough + STRIPE_GRACE_PERIOD_MS);
-    const withinGrace =
-      graceEndsAt !== null && now.getTime() <= graceEndsAt.getTime();
-
-    return {
-      publicAccess: withinGrace ? "grace" : "suspended",
-      adminAccess: "billing_only",
-      graceEndsAt: graceEndsAt?.toISOString() ?? null,
-    };
+    if (
+      fixture !== "canceled-after-grace" &&
+      graceTime !== null &&
+      now.getTime() <= graceTime
+    ) {
+      return { publicAccess: "grace", adminAccess: "billing_only", graceEndsAt: graceIso };
+    }
+    return { publicAccess: "suspended", adminAccess: "billing_only", graceEndsAt: graceIso };
   }
 
-  return {
-    publicAccess: "preview",
-    adminAccess: "billing_only",
-    graceEndsAt: null,
-  };
+  return { publicAccess: "preview", adminAccess: "billing_only", graceEndsAt: null };
 }

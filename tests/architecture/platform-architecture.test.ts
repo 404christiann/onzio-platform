@@ -5,6 +5,22 @@ import { describe, expect, it } from "vitest";
 const ROOT = process.cwd();
 const IMPLEMENTATION_ROOTS = ["app", "lib", "components"];
 
+// Supabase projects that have been permanently deleted. Nothing that runs may
+// reference them: the hostnames no longer resolve, so a reference is a request
+// that can only ever fail. Add an entry here whenever a project is
+// decommissioned — deleting the infrastructure is not the same as removing the
+// code that asks for it, and only this contract checks the second half.
+const DECOMMISSIONED_SUPABASE_HOSTS = [
+  // Legacy "Rose City Website" project, deleted during the Phase 8 closeout.
+  "nsgtkwqkbyxkiwrhzsje.supabase.co",
+];
+
+// Files that record a decommissioned host as historical provenance rather than
+// fetching from it. These document where already-migrated data came from.
+const DECOMMISSIONED_HOST_PROVENANCE_ALLOWLIST = new Set([
+  "lib/migration/rose-city-plan.ts",
+]);
+
 async function requireFile(path: string): Promise<string> {
   const absolute = resolve(ROOT, path);
   try {
@@ -32,6 +48,20 @@ async function sourceFiles(root: string): Promise<string[]> {
   } catch {
     throw new Error(`[RED CONTRACT] Missing planned source root: ${root}`);
   }
+}
+
+function createFunctionStatements(sql: string): string[] {
+  return [
+    ...sql.matchAll(
+      /create\s+(?:or\s+replace\s+)?function\b[\s\S]*?\bas\s+(\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$)[\s\S]*?\1\s*[^;]*;/gi,
+    ),
+  ].map((match) => match[0]);
+}
+
+function unhardenedSecurityDefinerStatements(sql: string): string[] {
+  return createFunctionStatements(sql)
+    .filter((statement) => /security\s+definer/i.test(statement))
+    .filter((statement) => !/set\s+search_path\s*=\s*''/i.test(statement));
 }
 
 describe("Next image architecture contract", () => {
@@ -77,6 +107,28 @@ describe("Next image architecture contract", () => {
       const contents = await readFile(resolve(ROOT, path), "utf8");
       if (contents.includes("/storage/v1/render/image/")) {
         violations.push(relative(ROOT, resolve(ROOT, path)));
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
+  it("references no permanently deleted Supabase project", async () => {
+    const files = (
+      await Promise.all(
+        IMPLEMENTATION_ROOTS.map((root) => sourceFiles(root)),
+      )
+    ).flat();
+    files.push("next.config.mjs");
+
+    const violations: string[] = [];
+    for (const path of files) {
+      const relativePath = relative(ROOT, resolve(ROOT, path));
+      if (DECOMMISSIONED_HOST_PROVENANCE_ALLOWLIST.has(relativePath)) continue;
+      const contents = await readFile(resolve(ROOT, path), "utf8");
+      for (const host of DECOMMISSIONED_SUPABASE_HOSTS) {
+        if (contents.includes(host)) {
+          violations.push(`${relativePath} references ${host}`);
+        }
       }
     }
     expect(violations).toEqual([]);
@@ -150,8 +202,14 @@ describe("tenant and privileged-boundary architecture contract", () => {
       "lib/club-context.ts",
       "lib/authorization.ts",
       "lib/club-access.ts",
-      "lib/club-features.ts",
+      "lib/registration-route-auth.ts",
+      "lib/registration-service.ts",
+      "lib/registration-fields.ts",
+      "lib/stripe-connect.ts",
       "lib/stripe-event-routing.ts",
+      "lib/stripe-portal.ts",
+      "lib/billing-lifecycle.ts",
+      "lib/resend-webhook.ts",
       "lib/media-cleanup.ts",
       "lib/media-processing.ts",
     ];
@@ -168,10 +226,18 @@ describe("tenant and privileged-boundary architecture contract", () => {
     ).flat();
     const approved = [
       /^app\/api\/stripe\/webhook\//,
+      /^app\/api\/webhooks\/resend\//,
       /^lib\/operator\//,
+      /^lib\/owner-admin-membership\.ts$/,
       /^lib\/migration\//,
       /^lib\/media-cleanup\.ts$/,
+      // Sharp-free token boundary split out of media-processing.ts; it reads
+      // SUPABASE_SERVICE_ROLE_KEY only as the HMAC signing secret and never
+      // constructs a service-role client.
+      /^lib\/media-authorization-token\.ts$/,
       /^lib\/media-processing\.ts$/,
+      /^lib\/billing-lifecycle\.ts$/,
+      /^lib\/registration-service\.ts$/,
       /^lib\/supabase-service-role\.ts$/,
     ];
     const violations: string[] = [];
@@ -230,13 +296,64 @@ describe("migration SQL security contract", () => {
       )
     ).join("\n");
 
-    const definerCount = (sql.match(/security definer/gi) ?? []).length;
-    const emptySearchPathCount = (
-      sql.match(/set\s+search_path\s*=\s*''/gi) ?? []
-    ).length;
-    expect(definerCount).toBeGreaterThan(0);
-    expect(emptySearchPathCount).toBe(definerCount);
+    const declarations = [
+      ...sql.matchAll(
+        /create\s+(?:or\s+replace\s+)?function\s+([^\s(]+)/gi,
+      ),
+    ];
+    const definerFunctions: string[] = [];
+    const missingEmptySearchPath: string[] = [];
+
+    for (const [index, declaration] of declarations.entries()) {
+      const start = declaration.index ?? 0;
+      const end = declarations[index + 1]?.index ?? sql.length;
+      const functionSql = sql.slice(start, end);
+      const bodyStart = functionSql.search(/\bas\s+\$[a-z0-9_]*\$/i);
+      const header =
+        bodyStart === -1 ? functionSql.split(";")[0] : functionSql.slice(0, bodyStart);
+
+      if (!/security\s+definer/i.test(header)) continue;
+
+      const functionName = declaration[1];
+      definerFunctions.push(functionName);
+      if (!/set\s+search_path\s*(?:=|to)\s*''/i.test(header)) {
+        missingEmptySearchPath.push(functionName);
+      }
+    }
+
+    expect(definerFunctions.length).toBeGreaterThan(0);
+    expect(missingEmptySearchPath).toEqual([]);
+
+    // Independently parse complete dollar-quoted function statements so
+    // tagged bodies and SECURITY DEFINER clauses after the body cannot evade
+    // the header-oriented check above.
+    const definers = createFunctionStatements(sql).filter((statement) =>
+      /security\s+definer/i.test(statement),
+    );
+    const unhardened = unhardenedSecurityDefinerStatements(sql);
+    expect(definers.length).toBeGreaterThan(0);
+    expect(unhardened).toEqual([]);
     expect(sql).toMatch(/revoke execute on function .* from public/i);
+  });
+
+  it("detects trailing security-definer clauses after tagged dollar-quoted bodies", () => {
+    const hardened = `
+      create function onzio_private.trailing_hardened()
+      returns void
+      as $registration$
+      begin
+        perform 1;
+      end;
+      $registration$
+      language plpgsql
+      security definer
+      set search_path = '';
+    `;
+    const unhardened = hardened.replace("set search_path = '';", ";");
+
+    expect(createFunctionStatements(hardened)).toHaveLength(1);
+    expect(unhardenedSecurityDefinerStatements(hardened)).toEqual([]);
+    expect(unhardenedSecurityDefinerStatements(unhardened)).toHaveLength(1);
   });
 });
 

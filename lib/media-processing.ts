@@ -1,14 +1,9 @@
-import {
-  createHash,
-  createHmac,
-  randomUUID,
-  timingSafeEqual,
-} from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import sharp from "sharp";
-import { clubHasFeature, type ClubTier } from "@/lib/club-features";
 import { failContract } from "@/lib/contract-error";
+import type { MediaAuthorization } from "@/lib/media-authorization-token";
 import { queueMediaCleanup } from "@/lib/media-cleanup";
-import { validateMediaUpload, type MediaKind } from "@/lib/media-validation";
+import { validateMediaUpload } from "@/lib/media-validation";
 import {
   buildStoragePath,
   parseStoragePath,
@@ -152,7 +147,7 @@ export type FinalizeMediaInput = {
   actorId?: string;
   membership?: "active" | "removed" | null;
   membershipClubId?: string;
-  tier?: ClubTier;
+  tier?: "starter" | "pro";
   lifecycle?: "onboarding" | "active" | "archived";
   surface?: MediaSurface | string;
   validated?: boolean;
@@ -167,97 +162,10 @@ export type FinalizeMediaInput = {
 
 const completedUploads = new Map<string, Record<string, unknown>>();
 
-export type MediaAuthorization = {
-  version: 1;
-  uploadId: string;
-  clubId: string;
-  actorId: string;
-  surface: MediaSurface;
-  kind: MediaKind;
-  fileName: string;
-  mimeType: string;
-  claimedSize: number;
-  stagingPath: string;
-  expiresAt: number;
-};
-
-function mediaSigningSecret(): string {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!secret || secret.length < 32) {
-    throw new Error("Media signing secret is not configured");
-  }
-  return secret;
-}
-
-function signEncodedPayload(encodedPayload: string): string {
-  return createHmac("sha256", mediaSigningSecret())
-    .update(encodedPayload)
-    .digest("base64url");
-}
-
-export function createMediaAuthorizationToken(
-  authorization: MediaAuthorization,
-): string {
-  const encodedPayload = Buffer.from(
-    JSON.stringify(authorization),
-    "utf8",
-  ).toString("base64url");
-  return `${encodedPayload}.${signEncodedPayload(encodedPayload)}`;
-}
-
-export function verifyMediaAuthorizationToken(
-  token: string,
-): MediaAuthorization {
-  const [encodedPayload, suppliedSignature, extra] = token.split(".");
-  if (!encodedPayload || !suppliedSignature || extra) {
-    failContract("INVALID_UPLOAD_AUTHORIZATION");
-  }
-  const expectedSignature = signEncodedPayload(encodedPayload);
-  const supplied = Buffer.from(suppliedSignature, "base64url");
-  const expected = Buffer.from(expectedSignature, "base64url");
-  if (
-    supplied.length !== expected.length ||
-    !timingSafeEqual(supplied, expected)
-  ) {
-    failContract("INVALID_UPLOAD_AUTHORIZATION");
-  }
-
-  let value: unknown;
-  try {
-    value = JSON.parse(
-      Buffer.from(encodedPayload, "base64url").toString("utf8"),
-    );
-  } catch {
-    failContract("INVALID_UPLOAD_AUTHORIZATION");
-  }
-  if (!value || typeof value !== "object") {
-    failContract("INVALID_UPLOAD_AUTHORIZATION");
-  }
-  const authorization = value as MediaAuthorization;
-  if (
-    authorization.version !== 1 ||
-    typeof authorization.uploadId !== "string" ||
-    typeof authorization.clubId !== "string" ||
-    typeof authorization.actorId !== "string" ||
-    typeof authorization.stagingPath !== "string" ||
-    typeof authorization.expiresAt !== "number"
-  ) {
-    failContract("INVALID_UPLOAD_AUTHORIZATION");
-  }
-  if (authorization.expiresAt <= Date.now()) {
-    failContract("UPLOAD_AUTHORIZATION_EXPIRED");
-  }
-
-  const parsedPath = parseStoragePath(authorization.stagingPath);
-  if (
-    parsedPath.clubId !== authorization.clubId ||
-    parsedPath.assetId !== authorization.uploadId ||
-    parsedPath.surface !== authorization.surface
-  ) {
-    failContract("CROSS_CLUB_MEDIA");
-  }
-  return authorization;
-}
+// MediaAuthorization and the HMAC token signer/verifier live in
+// `lib/media-authorization-token.ts`, a sharp-free boundary module, so the
+// authorize route can never fail because of a sharp/libvips load problem.
+export type { MediaAuthorization } from "@/lib/media-authorization-token";
 
 export type PublishedMediaResult = {
   assetId: string;
@@ -546,13 +454,6 @@ function assertFinalizationAuthorized(input: FinalizeMediaInput): void {
     input.membershipClubId ?? localFixtureMembershipClubId;
   if (membershipClubId && membershipClubId !== input.clubId) {
     failContract("CROSS_CLUB_MEDIA");
-  }
-  if (
-    input.tier &&
-    input.surface &&
-    !clubHasFeature(input.tier, input.surface)
-  ) {
-    failContract("FEATURE_NOT_INCLUDED");
   }
   if (input.simulateDatabaseFailure) {
     failContract("FINALIZATION_ROLLED_BACK");

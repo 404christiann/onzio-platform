@@ -8,11 +8,15 @@ const source = readFileSync(
 );
 
 describe("homepage slideshow media resilience", () => {
-  it("initializes the reveal after asynchronous valid slides mount", () => {
+  it("keeps legacy reveal scoped away from prospect slideshows", () => {
+    expect(source).toContain("if (!usesLegacyRoseCitySlideshow) return;");
     expect(source).toContain(
       "if (visibleSlides.length === 0 || !section) return;",
     );
-    expect(source).toContain("}, [visibleSlides.length]);");
+    expect(source).toContain(
+      "}, [usesLegacyRoseCitySlideshow, visibleSlides.length]);",
+    );
+    expect(source).toContain("opacity: 1,");
   });
 
   it("bypasses the unavailable optimizer and removes failed assets", () => {

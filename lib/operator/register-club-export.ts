@@ -4,6 +4,7 @@ import {
   assertDirectOperatorInvocation,
   assertOperator,
   getOperatorClient,
+  operatorAccessTokenSchema,
   parseOperatorInput,
   type OperatorDependencies,
   uuidSchema,
@@ -12,7 +13,7 @@ import {
 const exportSchema = z.object({
   exportId: z.string().trim().min(1).max(200),
   clubId: uuidSchema,
-  actorId: uuidSchema,
+  operatorAccessToken: operatorAccessTokenSchema,
   checksumSha256: z.string().regex(/^[0-9a-f]{64}$/),
   objectCount: z.number().int().nonnegative(),
   rowCount: z.number().int().nonnegative(),
@@ -28,7 +29,10 @@ export async function registerClubExport(
   const dependencies = rawInput.dependencies;
   const input = parseOperatorInput(exportSchema, rawInput);
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
-  assertOperator(input.actorId);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
   const client = getOperatorClient(dependencies);
 
   const { data: club, error: clubError } = await client
@@ -49,7 +53,7 @@ export async function registerClubExport(
     object_count: input.objectCount,
     row_count: input.rowCount,
     storage_reference: input.storageReference,
-    created_by: input.actorId,
+    created_by: actorId,
   });
   if (error) failContract("EXPORT_REGISTRATION_FAILED", error.message);
 

@@ -4,18 +4,54 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { gsap } from "gsap";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubBranding } from "@/components/ClubBrandingProvider";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
+import ResilientBunnyVideo from "@/components/ResilientBunnyVideo";
+import { DIVERSE_CITY_HERO_VIDEO } from "@/lib/bunny-video";
+import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
+import { fetchHomepageContent } from "@/lib/queries";
+import type { DBHomepageHeroContent } from "@/lib/db-types";
 
-export default function Hero() {
+export default function Hero({
+  initialContent,
+}: {
+  /**
+   * The tenant's hero content, resolved server-side before any HTML is sent
+   * (see app/%5Fclubs/[slug]/page.tsx). Required so no consumer can silently
+   * fall back to first-painting another club's branding — the Diverse City
+   * "Rose City FC" flash. Pass null only when no server value exists (legacy
+   * unscoped route, or the server fetch failed); Hero then client-fetches,
+   * starting from the tenant-neutral empty state.
+   */
+  initialContent: DBHomepageHeroContent | null;
+}) {
   const club = useClubContext();
+  const branding = useClubBranding();
   const usesLegacyRoseCityHero = club.slug === "rose-city";
   const ctaRef   = useRef<HTMLDivElement>(null);
-  const videoRef  = useRef<HTMLVideoElement>(null);
   const hasAnimated = useRef(false);
-  const [videoMounted, setVideoMounted] = useState(false);
+  const hasServerContent = initialContent !== null;
+  const [heroContent, setHeroContent] = useState<DBHomepageHeroContent>(
+    initialContent ?? EMPTY_HOMEPAGE_HERO_CONTENT,
+  );
 
-  // Render video only client-side — iOS Safari ignores autoplay on SSR-rendered video elements
-  useEffect(() => { setVideoMounted(true); }, []);
+  useEffect(() => {
+    if (hasServerContent) return;
+    let cancelled = false;
+    fetchHomepageContent(club.id)
+      .then((content) => {
+        if (!cancelled) setHeroContent(content.hero);
+      })
+      .catch((error: unknown) => {
+        console.error(
+          "Hero:",
+          error instanceof Error ? error.message : "Failed to load homepage hero content",
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [club.id, hasServerContent]);
 
   useEffect(() => {
     if (hasAnimated.current) return;
@@ -28,62 +64,201 @@ export default function Hero() {
     );
   }, []);
 
-  // iOS Safari autoplay: muted + playsInline is not enough on a cold page load
-  // because the browser hasn't seen a user gesture yet. Strategy:
-  //   1. Try .play() immediately — works on client-side navigation & most browsers.
-  //   2. If rejected, register a one-shot touchstart listener so the video
-  //      starts the instant the user first touches the screen (scroll, tap, anything).
-  //   3. Also retry on canplay/loadeddata for slow connections.
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+  if (club.presentationTemplateKey === "clubhouse@1") {
+    const headlineOne = heroContent.headline_line_one.trim() || club.name;
+    const headlineTwo = heroContent.headline_line_two.trim();
+    const intro = heroContent.intro.trim();
+    const primaryHref = heroContent.primary_cta_href.trim() || "/schedule";
+    const secondaryHref = heroContent.secondary_cta_href.trim() || "/roster";
 
-    video.muted = true;
+    return (
+      <section className="clubhouse-hero">
+        <div className="clubhouse-hero-content">
+          <div className="clubhouse-hero-copy">
+            <h1>
+              <span>{headlineOne}</span>
+              {headlineTwo && <em>{headlineTwo}</em>}
+            </h1>
+            {intro && <p className="clubhouse-hero-intro">{intro}</p>}
+            <div ref={ctaRef} className="clubhouse-hero-cta" style={{ opacity: 0 }}>
+              <Link href={primaryHref}>
+                {heroContent.primary_cta_label.trim() || "Next match"}
+              </Link>
+              <Link href={secondaryHref}>
+                {heroContent.secondary_cta_label.trim() || "Meet the squad"}
+              </Link>
+            </div>
+          </div>
+          <div className="clubhouse-hero-media" aria-label={`${club.name} crest`}>
+            {branding.clubLogoUrl && (
+              <ResilientNativeImage
+                src={branding.clubLogoUrl}
+                alt={`${club.name} crest`}
+                className="clubhouse-hero-crest"
+              />
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-    let unlocked = false;
+  if (club.presentationTemplateKey === "academy@1") {
+    const headlineOne = heroContent.headline_line_one.trim() || club.name;
+    const headlineTwo = heroContent.headline_line_two.trim();
+    const intro = heroContent.intro.trim();
+    const primaryHref = heroContent.primary_cta_href.trim() || "/schedule";
+    const secondaryHref = heroContent.secondary_cta_href.trim() || "/roster";
 
-    const playVideo = () => {
-      if (!video.paused) return;
-      video.play().catch(() => {});
-    };
+    // Mockup-parity hero (DCFC-D132 pass): section frame, gradient, headline
+    // scale/colors, and CTA treatment copied from the sales mockup's
+    // Hero.tsx (onzioProspects/diverse-city-fc/site) — second headline line
+    // renders in the sky accent, primary CTA is the sharp-cornered red
+    // button with the darken-on-hover state. Content stays admin-editable.
+    return (
+      <section className="relative h-[100svh] min-h-[600px] max-h-[720px] overflow-hidden bg-[#1E3653] text-white md:h-[82svh] md:max-h-[760px]">
+        <div className="absolute inset-0">
+          <ResilientBunnyVideo
+            guid={DIVERSE_CITY_HERO_VIDEO.guid}
+            posterSrc={DIVERSE_CITY_HERO_VIDEO.posterSrc}
+            alt={`${club.name} hero video`}
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#14283F] via-[#14283F]/45 to-[#14283F]/30" />
+        <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-6 pb-12 pt-36 md:pb-8 lg:px-10">
+          <div className="w-full min-w-0 max-w-5xl">
+            {heroContent.eyebrow.trim() && (
+              <p className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/70">
+                {heroContent.eyebrow}
+              </p>
+            )}
+            <h1 className="max-w-5xl font-display font-black uppercase italic leading-[.88]">
+              <span className="block text-[1.9rem] text-[#F9FAFD] sm:text-[2.7rem] md:text-[3.4rem]">
+                {headlineOne}
+              </span>
+              {headlineTwo && (
+                <span className="mt-1 block whitespace-nowrap text-[clamp(2rem,8.6vw,2.25rem)] text-[#B9E3F6] sm:text-[3.7rem] md:text-[4.4rem]">
+                  {headlineTwo}
+                </span>
+              )}
+            </h1>
+            {intro && (
+              <p className="mt-7 max-w-2xl font-body text-base leading-7 text-white/80 md:text-lg">
+                {intro}
+              </p>
+            )}
+            <div
+              ref={ctaRef}
+              className="mt-8 flex flex-col gap-3 sm:flex-row"
+              style={{ opacity: 0 }}
+            >
+              <Link
+                href={primaryHref}
+                className="bg-[#FF1616] px-7 py-4 text-center font-display text-sm font-bold uppercase text-[#F9FAFD] transition-colors hover:bg-[#D70000]"
+              >
+                {heroContent.primary_cta_label.trim() || "Next match"}
+              </Link>
+              <Link
+                href={secondaryHref}
+                className="border border-white/50 px-7 py-4 text-center font-display text-sm font-bold uppercase text-white transition-colors hover:border-white hover:bg-white/10"
+              >
+                {heroContent.secondary_cta_label.trim() || "Meet the squad"}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-    const onFirstTouch = () => {
-      if (unlocked) return;
-      unlocked = true;
-      playVideo();
-      document.removeEventListener("touchstart", onFirstTouch);
-    };
+  if (!usesLegacyRoseCityHero) {
+    const primaryColor = club.primaryColor ?? "#1B2958";
+    const secondaryColor = club.secondaryColor ?? "#AD3234";
+    const headlineOne = heroContent.headline_line_one.trim() || club.name;
+    const headlineTwo = heroContent.headline_line_two.trim();
+    const intro = heroContent.intro.trim();
+    const primaryHref = heroContent.primary_cta_href.trim() || "/schedule";
+    const secondaryHref = heroContent.secondary_cta_href.trim() || "/roster";
 
-    const tryPlay = () => {
-      video.play().catch(() => {
-        // Autoplay blocked — wait for first user touch
-        document.addEventListener("touchstart", onFirstTouch, { once: true });
-      });
-    };
-
-    video.load();
-    tryPlay();
-    video.addEventListener("canplay", playVideo);
-    video.addEventListener("loadeddata", playVideo);
-
-    const onVisibility = () => { if (!document.hidden) playVideo(); };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      video.removeEventListener("canplay", playVideo);
-      video.removeEventListener("loadeddata", playVideo);
-      document.removeEventListener("visibilitychange", onVisibility);
-      document.removeEventListener("touchstart", onFirstTouch);
-    };
-  }, [videoMounted]);
+    return (
+      <section
+        className="relative flex min-h-[92svh] w-full items-center overflow-hidden text-white"
+        style={{
+          background:
+            `linear-gradient(132deg, ${primaryColor} 0%, ${primaryColor} 48%, ${secondaryColor} 142%)`,
+        }}
+      >
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] skew-x-[-12deg] opacity-20 lg:block"
+          style={{ backgroundColor: secondaryColor }}
+        />
+        <div className="relative z-10 mx-auto grid w-full max-w-[1500px] grid-cols-1 items-center gap-2 px-5 pb-8 pt-24 sm:gap-6 sm:px-8 md:pt-32 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:gap-10 lg:px-12">
+          <div className="order-2 pb-6 lg:order-1 lg:pb-0">
+            {heroContent.eyebrow.trim() && (
+              <p className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/60">
+                {heroContent.eyebrow}
+              </p>
+            )}
+            <h1 className="font-display text-4xl font-black not-italic uppercase leading-[0.92] text-white sm:text-6xl lg:text-8xl">
+              <span className="block lg:whitespace-nowrap">{headlineOne}</span>
+              {headlineTwo && (
+                <span className="block lg:whitespace-nowrap" style={{ color: "#F0F0F0" }}>
+                  {headlineTwo}
+                </span>
+              )}
+            </h1>
+            {intro && (
+              <p className="font-body mt-7 max-w-xl text-base leading-7 text-white/74">
+                {intro}
+              </p>
+            )}
+            <div
+              ref={ctaRef}
+              className="mt-8 flex flex-col gap-3 sm:flex-row"
+              style={{ opacity: 0 }}
+            >
+              <Link
+                href={primaryHref}
+                className="font-display inline-flex min-h-12 items-center justify-center rounded-md bg-white px-7 py-3 text-xs font-bold uppercase tracking-widest transition-transform duration-200 hover:-translate-y-0.5"
+                style={{ color: primaryColor }}
+              >
+                {heroContent.primary_cta_label.trim() || "Next match"}
+              </Link>
+              <Link
+                href={secondaryHref}
+                className="font-display inline-flex min-h-12 items-center justify-center rounded-md border border-white/30 px-7 py-3 text-xs font-bold uppercase tracking-widest text-white transition-transform duration-200 hover:-translate-y-0.5"
+                style={{ backgroundColor: "rgba(255,255,255,0.08)" }}
+              >
+                {heroContent.secondary_cta_label.trim() || "Meet the squad"}
+              </Link>
+            </div>
+          </div>
+          <div
+            className="order-1 grid min-h-[30svh] place-items-center sm:min-h-[38svh] lg:order-2 lg:min-h-[560px]"
+            aria-label={`${club.name} crest`}
+          >
+            {branding.clubLogoUrl && (
+              <ResilientNativeImage
+                src={branding.clubLogoUrl}
+                alt={`${club.name} crest`}
+                className="h-auto w-[min(68vw,320px)] object-contain drop-shadow-[0_34px_46px_rgba(0,0,0,0.28)] sm:w-[min(78vw,430px)] lg:w-[min(100%,700px)]"
+              />
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative h-screen min-h-[600px] w-full overflow-hidden md:h-[50vh] md:min-h-[380px]">
-      {/* Background video — rendered client-side only so iOS Safari treats it as a
-          fresh element and respects the muted autoplay policy */}
+      {/* Static hero background. The legacy hardcoded video source lived on a
+          Supabase project that was permanently deleted in the Phase 8 closeout,
+          so the poster is now the hero image rather than a placeholder for a
+          clip that can never load. See PF-005 in docs/platform-findings.md. */}
       <div className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
-        {/* Poster shown until the video element is created client-side */}
-        {!videoMounted && (
+        {usesLegacyRoseCityHero && (
           <ResilientNativeImage
             src="/images/hero-poster.jpg"
             alt=""
@@ -98,31 +273,6 @@ export default function Hero() {
               minHeight: "100%",
               transform: "translate(-50%, -50%)",
               objectFit: "cover",
-            }}
-          />
-        )}
-        {videoMounted && usesLegacyRoseCityHero && (
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            poster="/images/hero-poster.jpg"
-            src="https://nsgtkwqkbyxkiwrhzsje.supabase.co/storage/v1/object/public/videos/Pan_Bench_Land_ready.mp4"
-            onCanPlay={() => { videoRef.current?.play().catch(() => {}); }}
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              width: "177.78vh",
-              height: "56.25vw",
-              minWidth: "100%",
-              minHeight: "100%",
-              transform: "translate(-50%, -50%)",
-              objectFit: "cover",
-              pointerEvents: "none",
             }}
           />
         )}

@@ -1,10 +1,8 @@
-import { clubHasFeature, type ClubTier } from "@/lib/club-features";
 import { failContract } from "@/lib/contract-error";
 
 type Club = {
   id?: unknown;
   lifecycle?: unknown;
-  tier?: unknown;
 };
 
 type Membership = {
@@ -39,13 +37,14 @@ export async function authorizeAdminAccess(input: AuthorizationInput): Promise<{
   role: "owner" | "admin";
 }> {
   if (input.club.lifecycle === "archived") failContract("CLUB_ARCHIVED");
-  if (
-    input.club.lifecycle !== "active" &&
-    !(input.capability === "billing" && input.club.lifecycle === "onboarding")
-  ) {
+
+  const lifecycleAllowsCapability =
+    input.club.lifecycle === "active" ||
+    input.club.lifecycle === "onboarding";
+
+  if (!lifecycleAllowsCapability) {
     failContract("CLUB_INACTIVE");
   }
-  if (input.aal !== "aal2") failContract("MFA_REQUIRED");
 
   const membership = membershipForClub(input);
   if (!membership) failContract("MEMBERSHIP_REQUIRED");
@@ -78,13 +77,6 @@ export async function authorizeMutation(input: {
   }
 
   await authorizeAdminAccess({ ...input, capability: "content" });
-
-  if (
-    (input.club.tier !== "starter" && input.club.tier !== "pro") ||
-    !clubHasFeature(input.club.tier as ClubTier, input.feature)
-  ) {
-    failContract("FEATURE_NOT_INCLUDED");
-  }
 
   if (typeof input.club.id !== "string") failContract("INVALID_CLUB");
   return { clubId: input.club.id, actorId: input.userId };

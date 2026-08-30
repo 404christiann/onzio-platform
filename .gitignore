@@ -6,6 +6,7 @@ test-results/
 .env
 .env.local
 .env.test
+.env.*.local
 .DS_Store
 **/.DS_Store
 tsconfig.tsbuildinfo
@@ -15,3 +16,4 @@ tmp/
 supabase/.temp/
 supabase/.branches/
 .vercel
+.codex-work/

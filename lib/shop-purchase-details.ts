@@ -5,6 +5,17 @@ import type {
 
 export const MAX_PURCHASE_DETAIL_CARDS = 4;
 
+export const EMPTY_SHOP_PURCHASE_DETAILS: DBShopPurchaseDetails = {
+  id: 0,
+  heading: "",
+  cards: [],
+  cta_eyebrow: "",
+  cta_text: "",
+  cta_label: "",
+  cta_link: "",
+  updated_at: "",
+};
+
 export const DEFAULT_SHOP_PURCHASE_DETAILS: DBShopPurchaseDetails = {
   id: 1,
   heading: "Purchase Details",
@@ -59,7 +70,11 @@ export function normalizePurchaseDetailCards(value: unknown): ShopPurchaseDetail
 
 export function normalizeShopPurchaseDetails(
   value: DBShopPurchaseDetails | null,
+  options: { legacyFallback?: boolean } = {},
 ): DBShopPurchaseDetails {
+  if (!value && options.legacyFallback === false) {
+    return EMPTY_SHOP_PURCHASE_DETAILS;
+  }
   if (!value) return DEFAULT_SHOP_PURCHASE_DETAILS;
   return {
     ...DEFAULT_SHOP_PURCHASE_DETAILS,
@@ -71,4 +86,14 @@ export function normalizeShopPurchaseDetails(
     cta_label: value.cta_label || DEFAULT_SHOP_PURCHASE_DETAILS.cta_label,
     cta_link: value.cta_link || DEFAULT_SHOP_PURCHASE_DETAILS.cta_link,
   };
+}
+
+export function hasShopPurchaseDetails(value: DBShopPurchaseDetails): boolean {
+  return Boolean(
+    value.heading.trim() ||
+      value.cards.length > 0 ||
+      value.cta_text.trim() ||
+      value.cta_label.trim() ||
+      value.cta_link.trim(),
+  );
 }

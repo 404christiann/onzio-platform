@@ -1,12 +1,19 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import FileUpload from "@/components/admin/FileUpload";
 import SponsorCarousel from "@/components/SponsorCarousel";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
 import { fetchSiteSponsorLogos } from "@/lib/queries";
 import {
@@ -19,16 +26,10 @@ import {
 } from "@/lib/sponsor-content";
 import { createClient } from "@/lib/admin-client";
 
-const inputStyle: CSSProperties = {
-  width: "100%",
-  backgroundColor: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "0.5rem",
-  color: "white",
-  padding: "0.65rem 0.75rem",
-  fontSize: "0.88rem",
-  outline: "none",
-};
+const PLACEMENT_ORDER: SponsorLogoPlacement[] = ["carousel", "footer"];
+
+const inputClass =
+  "w-full rounded-lg border border-input bg-background px-3 py-2.5 font-body text-sm text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 async function uploadSponsorLogo(file: File, placement: SponsorLogoPlacement): Promise<string> {
   const supabase = createClient();
@@ -76,8 +77,29 @@ function toDraft(logos: DBSiteSponsorLogo[]): DraftSponsorLogo[] {
 }
 
 export default function AdminSponsorsPage() {
-  const clubId = useClubId();
+  const club = useClubContext();
+  const clubId = club.id;
+  // academy@1's footer deliberately renders no sponsor strip (DCFC-D132 — it
+  // would duplicate the homepage SponsorCarousel), so footer-placement logos
+  // are never displayed on an academy@1 site. Hide that placement tab and pin
+  // the editor to the carousel; every other template keeps both placements.
+  // editorial@1's EditorialFooter also renders no sponsor strip, so the same
+  // applies there.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const hidesSponsorFooterTab = isAcademy || isEditorial;
   const [placement, setPlacement] = useState<SponsorLogoPlacement>("carousel");
+  const [placementDirection, setPlacementDirection] =
+    useState<SlidingPanelDirection>(1);
+  const selectPlacement = (next: SponsorLogoPlacement) => {
+    setPlacement((current) => {
+      if (next === current) return current;
+      setPlacementDirection(
+        PLACEMENT_ORDER.indexOf(next) > PLACEMENT_ORDER.indexOf(current) ? 1 : -1,
+      );
+      return next;
+    });
+  };
   const [originalLogos, setOriginalLogos] = useState<DBSiteSponsorLogo[]>(
     defaultSponsorLogosForPlacement("carousel"),
   );
@@ -90,7 +112,6 @@ export default function AdminSponsorsPage() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
   const replacingIndexRef = useRef<number | null>(null);
 
@@ -171,7 +192,6 @@ export default function AdminSponsorsPage() {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -289,36 +309,50 @@ export default function AdminSponsorsPage() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       <div className="mb-4 sm:mb-6">
         <h1
-          className="font-display font-black uppercase leading-none text-white"
+          className="font-display font-black uppercase leading-none text-foreground"
           style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
         >
           Sponsors
         </h1>
-        <p
-          className="font-body mt-1"
-          style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}
-        >
-          Manage sponsor logos for the homepage carousel and footer.
+        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
+          {hidesSponsorFooterTab
+            ? "Manage sponsor logos for the homepage carousel."
+            : "Manage sponsor logos for the homepage carousel and footer."}
         </p>
       </div>
 
       {loading ? (
-        <p
-          className="font-display text-sm uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.3)" }}
+        <div
+          className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]"
+          role="status"
+          aria-label="Loading sponsors"
         >
-          Loading…
-        </p>
+          <section className="min-w-0 space-y-4 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
+            <Skeleton className="h-11 w-full rounded-lg" />
+            <div className="grid grid-cols-2 gap-3">
+              {[0, 1, 2, 3].map((index) => (
+                <div key={index} className="space-y-2">
+                  <Skeleton className="aspect-[16/9] w-full rounded-lg" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </section>
+          <section className="min-w-0 space-y-3 rounded-xl border border-border bg-background p-4 sm:p-5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </section>
+        </div>
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(320px,430px)_minmax(0,1fr)]">
-          <section
-            className="min-w-0 self-start rounded-xl p-4 sm:p-5"
-            style={{
-              backgroundColor: "#141414",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
-            <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+          <section className="min-w-0 self-start rounded-xl border border-border bg-background p-4 sm:p-5">
+            {/* With the footer placement hidden for academy@1 and editorial@1,
+                a single-tab switcher would be dead UI, so the whole switcher
+                is hidden and `placement` stays at its initial "carousel"
+                value. */}
+            {!hidesSponsorFooterTab && (
+            <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-card p-1">
               {[
                 { id: "carousel" as const, label: "Carousel" },
                 { id: "footer" as const, label: "Footer" },
@@ -334,42 +368,34 @@ export default function AdminSponsorsPage() {
                       if (dirty && !window.confirm("Discard unsaved sponsor changes before switching placements?")) {
                         return;
                       }
-                      setPlacement(tab.id);
+                      selectPlacement(tab.id);
                       setSaved(false);
                     }}
-                    className="font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors"
-                    style={{
-                      backgroundColor: isSelected ? "#FFFFFF" : "transparent",
-                      color: isSelected ? "#141414" : "rgba(255,255,255,0.5)",
-                    }}
+                    className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
+                      isSelected
+                        ? "bg-foreground text-background"
+                        : "bg-transparent text-muted-foreground"
+                    }`}
                   >
                     {tab.label}
                   </button>
                 );
               })}
             </div>
+            )}
 
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p
-                  className="font-display text-xs uppercase tracking-widest"
-                  style={{ color: "rgba(255,255,255,0.35)" }}
-                >
+                <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                   {placement === "carousel" ? "Homepage Carousel Logos" : "Footer Logos"}
                 </p>
-                <p
-                  className="font-body mt-1 text-xs"
-                  style={{ color: "rgba(255,255,255,0.22)" }}
-                >
+                <p className="font-body mt-1 text-xs text-muted-foreground">
                   {placement === "carousel"
                     ? "Scrolling sponsor logos shown after the homepage slideshow."
                     : "Static sponsor logos shown in the website footer."}
                 </p>
               </div>
-              <span
-                className="font-display text-xs uppercase tracking-widest"
-                style={{ color: "rgba(255,255,255,0.25)" }}
-              >
+              <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                 {draftLogos.length}/{limit}
               </span>
             </div>
@@ -378,8 +404,7 @@ export default function AdminSponsorsPage() {
               {draftLogos.map((logo, index) => (
                 <div key={logo.id ?? logo.logo_url} className="min-w-0">
                   <div
-                    className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg"
-                    style={{ border: "1px solid rgba(255,255,255,0.08)", backgroundColor: "#0D0D0D" }}
+                    className="group relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-border bg-background transition-colors hover:border-muted-foreground/40"
                   >
                     <Image
                       src={logo.logo_url}
@@ -391,8 +416,7 @@ export default function AdminSponsorsPage() {
                     <button
                       type="button"
                       onClick={() => void removeLogo(index)}
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
-                      style={{ backgroundColor: "#E7001B" }}
+                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       aria-label={`Remove sponsor logo ${index + 1}`}
                     >
                       <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
@@ -404,8 +428,7 @@ export default function AdminSponsorsPage() {
                     value={logo.name}
                     onChange={(event) => setLogoName(index, event.target.value)}
                     placeholder={`Sponsor ${index + 1} name`}
-                    className="mt-2"
-                    style={inputStyle}
+                    className={`mt-2 ${inputClass}`}
                   />
                   <div className="mt-1 flex gap-1">
                     <OrderButton
@@ -436,40 +459,14 @@ export default function AdminSponsorsPage() {
                 </div>
               ))}
 
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading || !canAddSponsorLogo(placement, draftLogos.length)}
-                className="flex aspect-[16/9] w-full flex-col items-center justify-center rounded-lg transition-colors"
-                style={{
-                  border: "1px dashed rgba(255,255,255,0.15)",
-                  backgroundColor: uploading ? "rgba(255,255,255,0.03)" : "transparent",
-                  color: "rgba(255,255,255,0.3)",
-                  cursor:
-                    uploading || !canAddSponsorLogo(placement, draftLogos.length)
-                      ? "not-allowed"
-                      : "pointer",
-                  opacity: canAddSponsorLogo(placement, draftLogos.length) ? 1 : 0.4,
-                }}
-                aria-label="Add sponsor logos"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                <span
-                  className="font-display mt-1 uppercase"
-                  style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}
-                >
-                  {uploading ? "Uploading" : "Add"}
-                </span>
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
+              <FileUpload
+                className="col-span-2"
+                label="Add sponsor logos"
                 accept="image/*"
                 multiple
-                className="hidden"
-                onChange={(event) => handleUpload(event.target.files)}
+                onUpload={(files) => void handleUpload(files)}
+                uploading={uploading}
+                disabled={!canAddSponsorLogo(placement, draftLogos.length)}
               />
               <input
                 ref={replaceFileRef}
@@ -481,7 +478,7 @@ export default function AdminSponsorsPage() {
             </div>
 
             {error && (
-              <p className="font-body mt-4 text-sm" style={{ color: "#E7001B" }}>
+              <p className="font-body mt-4 text-sm text-destructive">
                 {error}
               </p>
             )}
@@ -490,37 +487,24 @@ export default function AdminSponsorsPage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={saveDisabled}
-              className="font-display mt-5 w-full rounded-lg py-3 text-sm font-bold uppercase tracking-widest transition-opacity"
-              style={{
-                backgroundColor: "#E7001B",
-                color: "white",
-                opacity: saveDisabled ? 0.5 : 1,
-                cursor: saveDisabled ? "not-allowed" : "pointer",
-              }}
+              className="font-display mt-5 w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-brand-foreground transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : `Save ${placement === "carousel" ? "Carousel" : "Footer"} Logos`}
             </button>
           </section>
 
-          <section
-            className="min-w-0 overflow-hidden rounded-xl p-4 sm:p-5"
-            style={{
-              backgroundColor: "#141414",
-              border: "1px solid rgba(255,255,255,0.07)",
-            }}
-          >
-            <p
-              className="font-display mb-4 text-xs uppercase tracking-widest"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
+          <section className="min-w-0 overflow-hidden rounded-xl border border-border bg-background p-4 sm:p-5">
+            <p className="font-display mb-4 text-xs uppercase tracking-widest text-muted-foreground">
               {placement === "carousel" ? "Carousel Preview" : "Footer Preview"}
             </p>
 
+            <SlidingPanel activeKey={placement} direction={placementDirection}>
             {placement === "carousel" ? (
               <SponsorCarousel sponsors={previewLogos} compact />
             ) : (
               <div
-                className="rounded-xl border border-white/10 px-5 py-8"
+                className="rounded-xl border border-border px-5 py-8"
                 style={{ backgroundColor: "var(--color-black)" }}
               >
                 <p
@@ -543,6 +527,7 @@ export default function AdminSponsorsPage() {
                 </div>
               </div>
             )}
+            </SlidingPanel>
           </section>
         </div>
       )}
@@ -567,13 +552,7 @@ function OrderButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-7 flex-1 items-center justify-center rounded-md text-xs transition-opacity"
-      style={{
-        backgroundColor: "rgba(255,255,255,0.05)",
-        color: "rgba(255,255,255,0.45)",
-        opacity: disabled ? 0.35 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-      }}
+      className="flex h-7 flex-1 items-center justify-center rounded-md bg-card text-xs text-muted-foreground transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>

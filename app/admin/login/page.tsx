@@ -1,255 +1,330 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createAuthEmailCallbackUrl } from "@/lib/auth-email-callback";
 import { createClient } from "@/lib/supabase-browser";
-import ResilientNativeImage from "@/components/ResilientNativeImage";
+import Image from "@/components/ResilientImage";
+import { Button } from "@/components/ui/button";
+import AdminLoading from "@/components/admin/AdminLoading";
 
-type MfaStep = {
-  factorId: string;
-  qrCode?: string;
-};
+type LoginStep = "email" | "code" | "unknown";
+
+const UNKNOWN_ADDRESS_ERROR = "Signups not allowed for otp";
+const UNKNOWN_ADDRESS_INTRO = "We couldn't find an Onzio account for";
+const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
+// The configured otp_length is 6 (supabase/config.toml), but production has
+// drifted from that before and currently issues 8-digit codes — silently
+// rejecting a correct code is worse than accepting whatever length the
+// server actually issues. The client therefore accepts 4-10 digits and
+// never hard-codes an exact count anywhere in submit gating. DEFAULT_BOX_COUNT
+// only controls how many boxes render before typing; it's set to production's
+// current actual length (8), not the stale config value, so pasting a real
+// code doesn't visibly grow the grid. The grid still grows to fit longer
+// codes if the length drifts again.
+const DEFAULT_BOX_COUNT = 8;
+// Floor on how long the post-submit loading state stays up. `verifyOtp` can
+// resolve in a few dozen milliseconds locally and on fast hosted connections,
+// which makes the code-card → AdminLoading crossfade imperceptible — it reads
+// as a jump-cut straight to /admin rather than as a deliberate transition.
+// Racing the request against this timer guarantees the spinner is actually
+// seen, on both the success and the invalid-code path. This is the only
+// artificial delay in the file; the email-send step is deliberately not
+// floored, and the crossfade's own duration-300 timing is unrelated to it.
+const MIN_VERIFY_LOADING_MS = 900;
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
-  const [mfa, setMfa] = useState<MfaStep | null>(null);
-  const [recoveryMode, setRecoveryMode] = useState(false);
-  const [recoverySent, setRecoverySent] = useState(false);
+  const [codeFocused, setCodeFocused] = useState(false);
+  const [step, setStep] = useState<LoginStep>("email");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastSubmittedCode = useRef<string | null>(null);
+
+  const boxCount = Math.max(DEFAULT_BOX_COUNT, code.length);
+  const activeBoxIndex = Math.min(code.length, boxCount - 1);
 
   useEffect(() => {
     const reason = searchParams.get("error");
-    if (reason === "mfa_required") {
-      setError("Enter your password, then complete MFA to continue.");
+    if (reason === "session_expired") {
+      setError("Your Onzio session expired. Request a new code to continue.");
     } else if (reason === "not_authorized") {
       setError("This account is not an active administrator for this club.");
     } else if (reason === "invalid_auth_link") {
-      setError(
-        "This invitation or recovery link is invalid or expired. Request a new link.",
-      );
+      setError("That sign-in link is invalid or expired. Request a new code.");
     }
   }, [searchParams]);
 
-  async function beginMfa() {
-    const supabase = createClient();
-    const { data: assurance } =
-      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (assurance?.currentLevel === "aal2") {
+  async function requestCode(event: FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const { error: requestError } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: { shouldCreateUser: false },
+      });
+      if (requestError) {
+        if (requestError.message.includes(UNKNOWN_ADDRESS_ERROR)) {
+          setStep("unknown");
+          return;
+        }
+        if (requestError.code === EMAIL_COOLDOWN_ERROR) {
+          setCode("");
+          lastSubmittedCode.current = null;
+          setStep("code");
+          setError(
+            "A sign-in code was sent recently. Enter the code from your email—there's no need to request another.",
+          );
+          return;
+        }
+        throw requestError;
+      }
+      setCode("");
+      lastSubmittedCode.current = null;
+      setStep("code");
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to send a sign-in code",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function verifyCode(candidate: string) {
+    if (candidate.length < 4 || loading) return;
+    if (lastSubmittedCode.current === candidate) return;
+    lastSubmittedCode.current = candidate;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const [{ error: verificationError }] = await Promise.all([
+        supabase.auth.verifyOtp({
+          email: email.trim().toLowerCase(),
+          token: candidate,
+          type: "email",
+        }),
+        new Promise((resolve) => setTimeout(resolve, MIN_VERIFY_LOADING_MS)),
+      ]);
+      if (verificationError) throw verificationError;
+      // Deliberately leave `loading` true on success: the spinner should
+      // stay up through the /admin navigation instead of the form fading
+      // back in for the remainder of it. This unmounts with the page, or
+      // clears in the catch block below if verification actually failed.
       router.replace("/admin");
       router.refresh();
+    } catch {
+      lastSubmittedCode.current = null;
+      setError("That code is invalid or expired. Request a new code and try again.");
+      setLoading(false);
+    }
+  }
+
+  function submitCode(event: FormEvent) {
+    event.preventDefault();
+    void verifyCode(code);
+  }
+
+  function startOver() {
+    setStep("email");
+    setCode("");
+    setError(null);
+    lastSubmittedCode.current = null;
+  }
+
+  function useExistingCode() {
+    if (!email.trim() || !email.includes("@")) {
+      setError("Enter the email address that received the code.");
       return;
     }
-
-    const { data: factors, error: factorsError } =
-      await supabase.auth.mfa.listFactors();
-    if (factorsError) throw factorsError;
-    const verified = factors.totp.find(
-      (factor) => factor.status === "verified",
-    );
-    if (verified) {
-      setMfa({ factorId: verified.id });
-      return;
-    }
-
-    const { data: enrollment, error: enrollmentError } =
-      await supabase.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "Onzio Admin",
-      });
-    if (enrollmentError) throw enrollmentError;
-    setMfa({
-      factorId: enrollment.id,
-      qrCode: enrollment.totp.qr_code,
-    });
-  }
-
-  async function handleLogin(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
+    setCode("");
     setError(null);
-    try {
-      const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInError) throw signInError;
-      await beginMfa();
-    } catch (loginError) {
-      setError(
-        loginError instanceof Error ? loginError.message : "Unable to sign in",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRecovery(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const redirectTo = createAuthEmailCallbackUrl(window.location.origin);
-      const { error: recoveryError } =
-        await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-      if (recoveryError) throw recoveryError;
-      setRecoverySent(true);
-    } catch (recoveryError) {
-      setError(
-        recoveryError instanceof Error
-          ? recoveryError.message
-          : "Unable to send a password recovery email",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleMfa(event: FormEvent) {
-    event.preventDefault();
-    if (!mfa) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createClient();
-      const { data: challenge, error: challengeError } =
-        await supabase.auth.mfa.challenge({ factorId: mfa.factorId });
-      if (challengeError) throw challengeError;
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId: mfa.factorId,
-        challengeId: challenge.id,
-        code,
-      });
-      if (verifyError) throw verifyError;
-      router.replace("/admin");
-      router.refresh();
-    } catch (mfaError) {
-      setError(
-        mfaError instanceof Error ? mfaError.message : "MFA verification failed",
-      );
-    } finally {
-      setLoading(false);
-    }
+    lastSubmittedCode.current = null;
+    setStep("code");
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0e0e0e] px-6">
-      <section className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a1a] p-8 text-white">
-        <p className="font-display text-sm font-bold uppercase tracking-[0.25em] text-red-500">
-          Onzio
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-black uppercase">
-          Admin Portal
-        </h1>
-        <p className="mt-3 text-sm text-white/50">
-          Password authentication and MFA are required for every administrator.
-        </p>
+    <main className="dark flex min-h-screen items-center justify-center bg-background px-6 py-10">
+      <section className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-foreground shadow-2xl shadow-black/30">
+        {/* The real Onzio wordmark replaces the styled text lockup that used
+            to stand in for it. The source PNG is a 500x500 square whose
+            artwork only occupies x 76-425 / y 196-286, so the negative
+            margins below crop the surrounding transparent padding back off
+            and leave the wordmark optically flush with the heading beneath
+            it. Rendered at 132px the visible mark is ~92x24. This is the
+            Onzio platform's own mark and is unrelated to the per-club logo
+            in the admin sidebar, which stays tenant-driven. */}
+        <Image
+          src="/images/onzio/onzio-wordmark-white.png"
+          alt="Onzio"
+          width={132}
+          height={132}
+          priority
+          className="-ml-[20px] -mt-[52px] -mb-[56px] max-w-none"
+        />
+        {/* The email and unknown-address steps deliberately have no heading —
+            the wordmark above is the only title the email step needs, and the
+            unknown-address step's own intro paragraph ("We couldn't find an
+            Onzio account for...") already states the same thing the removed
+            heading did, so nothing is lost. Rendering nothing (rather than an
+            empty h1) also removes the heading's own 36px box and its mt-2, so
+            no dead space is left behind; the logo's negative bottom margin
+            already lands the flow cursor at the wordmark's visible baseline,
+            so the following element's own top margin becomes the whole
+            visible gap — both steps use mt-8 for that reason, matching each
+            other. Only the code step keeps a heading. */}
+        {step === "code" && (
+          <h1 className="mt-2 font-display text-3xl font-black uppercase">
+            Enter your code
+          </h1>
+        )}
 
-        {mfa ? (
-          <form onSubmit={handleMfa} className="mt-8 space-y-4">
-            {mfa.qrCode && (
-              <div className="rounded-xl bg-white p-4 text-center">
-                {/* Supabase returns a local data URI for this enrollment QR. */}
-                <ResilientNativeImage
-                  src={mfa.qrCode}
-                  alt="Scan this MFA enrollment code"
-                  className="mx-auto h-48 w-48"
-                  fallbackVariant="logo"
-                />
-                <p className="mt-3 text-xs text-black/70">
-                  Scan once with your authenticator app, then enter its code.
-                </p>
-              </div>
-            )}
-            <label className="block text-sm font-semibold" htmlFor="mfa-code">
-              Authenticator code
-            </label>
-            <input
-              id="mfa-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              pattern="[0-9]{6}"
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
-            />
+        {step === "unknown" ? (
+          <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
+            <p>
+              {UNKNOWN_ADDRESS_INTRO}{" "}
+              <strong className="break-all text-foreground">{email.trim()}</strong>.
+            </p>
+            <p>
+              Onzio accounts are set up by us — there&apos;s no signup. If your
+              club is new, or you&apos;re using a different address than the one
+              we set up for you, that&apos;s usually the reason.
+            </p>
+            <p>
+              Double-check the address, or email us at{" "}
+              <a
+                href="mailto:onziofutbol@gmail.com"
+                className="font-semibold text-brand underline decoration-brand/40 underline-offset-4 hover:text-foreground"
+              >
+                onziofutbol@gmail.com
+              </a>{" "}
+              and we&apos;ll sort it out.
+            </p>
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-red-600 py-3 font-display font-black uppercase tracking-widest disabled:opacity-50"
+              type="button"
+              onClick={startOver}
+              className="mt-2 w-full rounded-lg border border-border py-3 font-display text-sm font-bold uppercase tracking-widest hover:border-foreground/30"
             >
-              {loading ? "Verifying…" : "Verify MFA"}
+              Try another address
             </button>
-          </form>
-        ) : recoveryMode ? (
-          recoverySent ? (
-            <div className="mt-8 space-y-5">
-              <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
-                Check your email for a recovery code, then enter it on the
-                secure recovery page.
+          </div>
+        ) : step === "code" ? (
+          /* Submitting swaps the whole code-entry card for a loading state
+             rather than only relabelling the button. Both children stay
+             mounted in the same box so the swap is a real crossfade instead
+             of a jump-cut, and the form is made inert (opacity 0,
+             pointer-events off, aria-hidden) so it is genuinely replaced
+             rather than covered by an overlay. None of the flexible-length
+             OTP logic below is touched by this — only what renders while a
+             verification is in flight. */
+          <div className="relative mt-8">
+            <form
+              onSubmit={submitCode}
+              aria-hidden={loading}
+              className={`space-y-5 transition-opacity duration-300 ${
+                loading ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
+              <p className="text-sm leading-6 text-muted-foreground">
+                We sent a sign-in code to{" "}
+                <strong className="break-all text-foreground">{email.trim()}</strong>.
               </p>
-              <Link
-                href="/admin/recover"
-                className="block w-full rounded-lg bg-red-600 py-3 text-center font-display text-sm font-black uppercase tracking-widest"
-              >
-                Enter recovery code
-              </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  setRecoveryMode(false);
-                  setRecoverySent(false);
-                  setError(null);
-                }}
-                className="w-full rounded-lg border border-white/15 py-3 font-display text-sm font-bold uppercase tracking-widest"
-              >
-                Back to sign in
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleRecovery} className="mt-8 space-y-4">
-              <label className="block text-sm font-semibold" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="username"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
-              />
-              <button
+              <div>
+                <label
+                  className="block text-sm font-semibold"
+                  htmlFor="sign-in-code"
+                >
+                  Sign-in code
+                </label>
+                {/* One real input holds the whole code; the boxes are a purely
+                    visual layer, so autofill, paste, and non-6-digit codes all
+                    work without per-box juggling. The grid renders six boxes by
+                    default and grows to match however many digits the server's
+                    code actually has. */}
+                <div className="relative mt-2.5">
+                  <div aria-hidden="true" className="flex items-center gap-1.5 sm:gap-2">
+                    {Array.from({ length: boxCount }, (_, index) => (
+                      <Fragment key={index}>
+                        {boxCount % 2 === 0 && index === boxCount / 2 && (
+                          <span
+                            data-slot="otp-separator"
+                            className="h-0.5 w-3 shrink-0 rounded-full bg-muted-foreground/60"
+                          />
+                        )}
+                        <span
+                          data-slot="otp-digit"
+                          className={`flex h-11 min-w-0 max-w-12 flex-1 items-center justify-center rounded-lg border bg-background text-center font-mono text-xl text-foreground transition-shadow sm:h-12 ${
+                            codeFocused && index === activeBoxIndex
+                              ? "border-ring ring-[3px] ring-ring/50"
+                              : "border-input"
+                          }`}
+                        >
+                          {code[index] ?? ""}
+                        </span>
+                      </Fragment>
+                    ))}
+                  </div>
+                  <input
+                    id="sign-in-code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    required
+                    pattern="[0-9]{4,10}"
+                    minLength={4}
+                    maxLength={10}
+                    value={code}
+                    onChange={(event) =>
+                      setCode(event.target.value.replace(/\D/g, "").slice(0, 10))
+                    }
+                    onFocus={() => setCodeFocused(true)}
+                    onBlur={() => setCodeFocused(false)}
+                    className="absolute inset-0 h-full w-full cursor-text opacity-0"
+                  />
+                </div>
+              </div>
+              <Button
                 type="submit"
-                disabled={loading}
-                className="w-full rounded-lg bg-red-600 py-3 font-display font-black uppercase tracking-widest disabled:opacity-50"
+                variant="brand"
+                disabled={loading || code.length < 4}
+                className="h-auto w-full rounded-lg py-3 font-display font-black uppercase tracking-widest"
               >
-                {loading ? "Sending…" : "Send reset link"}
-              </button>
+                {loading ? "Verifying…" : "Sign in"}
+              </Button>
               <button
                 type="button"
-                onClick={() => {
-                  setRecoveryMode(false);
-                  setError(null);
-                }}
-                className="w-full py-2 text-sm text-white/60 hover:text-white"
+                onClick={startOver}
+                className="w-full py-2 text-sm text-muted-foreground hover:text-foreground"
               >
-                Back to sign in
+                Use a different address
               </button>
             </form>
-          )
+
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center animate-in fade-in duration-300">
+                <AdminLoading
+                  tone="brand"
+                  className="font-display text-sm font-bold uppercase tracking-[0.25em]"
+                />
+              </div>
+            )}
+          </div>
         ) : (
-          <form onSubmit={handleLogin} className="mt-8 space-y-4">
+          <form onSubmit={requestCode} className="mt-8 space-y-4">
+            <p className="text-sm leading-6 text-muted-foreground">
+              Enter the email address Onzio set up for your club. We&apos;ll send
+              a one-time code—no password required.
+            </p>
             <label className="block text-sm font-semibold" htmlFor="email">
               Email
             </label>
@@ -257,45 +332,31 @@ export default function LoginPage() {
               id="email"
               type="email"
               autoComplete="username"
+              autoFocus
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
-            />
-            <label className="block text-sm font-semibold" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-red-500"
+              className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground outline-none focus:border-ring"
             />
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-red-600 py-3 font-display font-black uppercase tracking-widest disabled:opacity-50"
+              className="w-full rounded-lg bg-brand py-3 font-display font-black uppercase tracking-widest text-brand-foreground disabled:opacity-50"
             >
-              {loading ? "Signing in…" : "Continue"}
+              {loading ? "Sending…" : "Send sign-in code"}
             </button>
             <button
               type="button"
-              onClick={() => {
-                setRecoveryMode(true);
-                setError(null);
-              }}
-              className="w-full py-2 text-sm text-white/60 hover:text-white"
+              onClick={useExistingCode}
+              className="w-full py-2 text-sm text-muted-foreground hover:text-foreground"
             >
-              Forgot your password?
+              I already have a code
             </button>
           </form>
         )}
 
         {error && (
-          <p role="alert" className="mt-5 text-sm text-red-400">
+          <p role="alert" className="mt-5 text-sm text-destructive">
             {error}
           </p>
         )}

@@ -89,4 +89,17 @@ describe("diffHomepageSlideshowPhotos", () => {
       toUpdate: [{ id: "b", alt: "B updated", sort_order: 0 }],
     });
   });
+
+  it("falls back to a tenant-neutral alt for blank alt text", () => {
+    // Written straight into any club's homepage_slideshow_photos.alt column,
+    // so the fallback must not carry Rose City (or any club's) branding.
+    expect(diffHomepageSlideshowPhotos(original, [
+      { id: "a", url: "a.jpg", alt: "   " },
+      { id: null, url: "c.jpg", alt: "" },
+    ])).toEqual({
+      toDelete: [original[1]],
+      toInsert: [{ url: "c.jpg", alt: "Homepage slide 2", sort_order: 1 }],
+      toUpdate: [{ id: "a", alt: "Homepage slide 1", sort_order: 0 }],
+    });
+  });
 });

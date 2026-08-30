@@ -1,6 +1,7 @@
 export const CLUB_IDS = {
   alpha: "11111111-1111-4111-8111-111111111111",
   bravo: "22222222-2222-4222-8222-222222222222",
+  charlie: "33333333-3333-4333-8333-333333333333",
 } as const;
 
 export const USER_IDS = {
@@ -29,6 +30,17 @@ export const clubs = {
     primaryDomain: "bravo-onzio.vercel.app",
     lifecycle: "onboarding",
     publicAccess: "preview",
+    tier: "starter",
+  },
+  // A second active, publicly live club used to prove that tenant access is
+  // independent of the dormant legacy tier column.
+  charlie: {
+    id: CLUB_IDS.charlie,
+    slug: "charlie",
+    name: "Charlie Athletic",
+    primaryDomain: "charlie-onzio.vercel.app",
+    lifecycle: "active",
+    publicAccess: "live",
     tier: "starter",
   },
 } as const;

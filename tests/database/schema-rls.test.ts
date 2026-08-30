@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CLUB_IDS } from "../fixtures/entities";
+import { expectPostgrestError } from "../helpers/database-security";
 import {
   createLocalClients,
   requirePlannedDatabase,
@@ -8,13 +9,6 @@ import {
 } from "../helpers/supabase";
 
 let clients: LocalClients;
-
-async function expectDenied(
-  operation: PromiseLike<{ error: { code?: string; message: string } | null }>,
-) {
-  const { error } = await operation;
-  expect(error, "operation unexpectedly bypassed RLS").not.toBeNull();
-}
 
 async function expectAllowed(
   operation: PromiseLike<{ error: { message: string } | null }>,
@@ -46,7 +40,14 @@ describe("planned schema contract", () => {
     "media_assets",
     "audit_events",
     "club_exports",
+    "club_stripe_connect",
+    "registration_forms",
+    "registration_form_fields",
+    "registration_price_options",
+    "registrations",
     "site_branding",
+    "homepage_hero_content",
+    "club_identity",
     "players",
     "matches",
     "seasons",
@@ -66,11 +67,14 @@ describe("planned schema contract", () => {
   });
 
   it("rejects duplicate singleton rows within one club", async () => {
-    await expectDenied(
-      clients.service.from("site_branding").insert([
-        { club_id: CLUB_IDS.alpha, club_logo_path: "alpha/one.png" },
-        { club_id: CLUB_IDS.alpha, club_logo_path: "alpha/two.png" },
-      ]),
+    const { error } = await clients.service.from("site_branding").insert([
+      { club_id: CLUB_IDS.alpha, club_logo_path: "alpha/one.png" },
+      { club_id: CLUB_IDS.alpha, club_logo_path: "alpha/two.png" },
+    ]);
+    expectPostgrestError(
+      error,
+      "23505",
+      "duplicate site-branding singleton rows",
     );
   });
 
@@ -93,20 +97,29 @@ describe("planned schema contract", () => {
       }),
     );
 
-    await expectDenied(
-      clients.service.from("player_photos").insert({
-        id: "77777777-7777-4777-8777-777777777777",
-        club_id: CLUB_IDS.alpha,
-        player_id: bravoPlayerId,
-        url: "https://example.invalid/cross-club.webp",
-        sort_order: 0,
-      }),
+    const { error } = await clients.service.from("player_photos").insert({
+      id: "77777777-7777-4777-8777-777777777777",
+      club_id: CLUB_IDS.alpha,
+      player_id: bravoPlayerId,
+      url: "https://example.invalid/cross-club.webp",
+      sort_order: 0,
+    });
+    expectPostgrestError(
+      error,
+      "23503",
+      "cross-club player-photo relationship",
     );
   });
 
   it("restricts direct club deletion", async () => {
-    await expectDenied(
-      clients.anon.from("clubs").delete().eq("id", CLUB_IDS.alpha),
+    const { error } = await clients.anon
+      .from("clubs")
+      .delete()
+      .eq("id", CLUB_IDS.alpha);
+    expectPostgrestError(
+      error,
+      "42501",
+      "anonymous direct club deletion",
     );
   });
 });
@@ -140,6 +153,73 @@ describe("anonymous RLS contract", () => {
         .select("*")
         .eq("club_id", CLUB_IDS.alpha),
     );
+    await expectAllowed(
+      clients.anon
+        .from("homepage_hero_content")
+        .select("*")
+        .eq("club_id", CLUB_IDS.alpha),
+    );
+  });
+
+  it("keeps club_identity content isolated per tenant", async () => {
+    const seeded = await clients.service.from("club_identity").upsert([
+      {
+        club_id: CLUB_IDS.alpha,
+        short_name: "Alpha",
+        initials: "AFC",
+        founded_year: 2015,
+      },
+      {
+        club_id: CLUB_IDS.bravo,
+        short_name: "Bravo",
+        initials: "BU",
+        founded_year: 2019,
+      },
+    ]);
+    expect(seeded.error?.message).toBeUndefined();
+
+    const alphaRead = await clients.anon
+      .from("club_identity")
+      .select("club_id, short_name")
+      .eq("club_id", CLUB_IDS.alpha);
+    expect(alphaRead.error?.message).toBeUndefined();
+    expect(alphaRead.data).toEqual([
+      { club_id: CLUB_IDS.alpha, short_name: "Alpha" },
+    ]);
+
+    // Bravo is onboarding/preview, not publicly accessible, so anon sees no
+    // rows for it even though the row exists.
+    const bravoRead = await clients.anon
+      .from("club_identity")
+      .select("club_id")
+      .eq("club_id", CLUB_IDS.bravo);
+    expect(bravoRead.error?.message).toBeUndefined();
+    expect(bravoRead.data).toEqual([]);
+
+    await clients.service
+      .from("club_identity")
+      .delete()
+      .in("club_id", [CLUB_IDS.alpha, CLUB_IDS.bravo]);
+  });
+
+  it("allows anon to read store_enabled through the existing clubs select policy", async () => {
+    const update = await clients.service
+      .from("clubs")
+      .update({ store_enabled: true })
+      .eq("id", CLUB_IDS.alpha);
+    expect(update.error?.message).toBeUndefined();
+
+    const { data, error } = await clients.anon
+      .from("clubs")
+      .select("id, store_enabled")
+      .eq("id", CLUB_IDS.alpha);
+    expect(error?.message).toBeUndefined();
+    expect(data).toEqual([{ id: CLUB_IDS.alpha, store_enabled: true }]);
+
+    await clients.service
+      .from("clubs")
+      .update({ store_enabled: false })
+      .eq("id", CLUB_IDS.alpha);
   });
 
   it.each([
@@ -149,26 +229,33 @@ describe("anonymous RLS contract", () => {
     "audit_events",
   ])("cannot read private %s records", async (table) => {
     const { data, error } = await clients.anon.from(table).select("*");
-    expect(error === null ? data : null).toEqual([]);
+    expect(error?.message).toBeUndefined();
+    expect(data).toEqual([]);
   });
 
   it("cannot write public content", async () => {
-    await expectDenied(
-      clients.anon.from("site_branding").insert({
-        club_id: CLUB_IDS.alpha,
-        club_logo_path: "attacker/logo.png",
-      }),
+    const { error } = await clients.anon.from("site_branding").insert({
+      club_id: CLUB_IDS.alpha,
+      club_logo_path: "attacker/logo.png",
+    });
+    expectPostgrestError(
+      error,
+      "42501",
+      "anonymous public-content insert",
     );
   });
 
   it("cannot write membership records", async () => {
-    await expectDenied(
-      clients.anon.from("club_members").insert({
-        club_id: CLUB_IDS.alpha,
-        user_id: "88888888-8888-4888-8888-888888888888",
-        role: "owner",
-        status: "active",
-      }),
+    const { error } = await clients.anon.from("club_members").insert({
+      club_id: CLUB_IDS.alpha,
+      user_id: "88888888-8888-4888-8888-888888888888",
+      role: "owner",
+      status: "active",
+    });
+    expectPostgrestError(
+      error,
+      "42501",
+      "anonymous membership insert",
     );
   });
 });

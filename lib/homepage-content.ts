@@ -1,11 +1,53 @@
 import type {
   DBBehindTheRoseSection,
+  DBHomepageHeroContent,
   DBHomepageSlideshowSettings,
   DBHomepageSlideshowPhoto,
+  DBHomepageStorySection,
 } from "@/lib/db-types";
+import {
+  HOMEPAGE_STORY_LIMITS,
+  resolveHomepageStorySection,
+} from "@/lib/homepage-story-content";
 import { onzioMediaStoragePathFromPublicUrl } from "@/lib/media-url";
 
 export const MAX_HOMEPAGE_SLIDESHOW_PHOTOS = 6;
+
+export const DEFAULT_HOMEPAGE_HERO_CONTENT: DBHomepageHeroContent = {
+  id: 1,
+  eyebrow: "",
+  headline_line_one: "Rose City FC",
+  headline_line_two: "",
+  intro: "",
+  primary_cta_label: "Team Store",
+  primary_cta_href: "/shop",
+  secondary_cta_label: "Meet the Squad",
+  secondary_cta_href: "/roster",
+  updated_at: "",
+};
+
+/**
+ * Tenant-neutral hero used wherever no club-specific hero row is available
+ * yet: the pre-hydration initial state in components/Hero.tsx and the
+ * tenant-scoped fallback in lib/queries.ts. Every field is blank so the hero
+ * templates fall through to club.name and their generic CTA labels instead of
+ * ever painting another club's branding (the Diverse City "Rose City FC"
+ * first-paint flash; same class as DCFC-602).
+ * DEFAULT_HOMEPAGE_HERO_CONTENT above stays reserved for the legacy unscoped
+ * Rose City path only.
+ */
+export const EMPTY_HOMEPAGE_HERO_CONTENT: DBHomepageHeroContent = {
+  id: 1,
+  eyebrow: "",
+  headline_line_one: "",
+  headline_line_two: "",
+  intro: "",
+  primary_cta_label: "",
+  primary_cta_href: "",
+  secondary_cta_label: "",
+  secondary_cta_href: "",
+  updated_at: "",
+};
 
 export const DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS: DBHomepageSlideshowSettings = {
   id: 1,
@@ -49,6 +91,92 @@ export const DEFAULT_BEHIND_THE_ROSE_SECTION: DBBehindTheRoseSection = {
   caption: "Rose City FC · 2024 UPSL Final",
   updated_at: "",
 };
+
+/**
+ * The homepage story band as edited in /admin/homepage.
+ *
+ * Shows the resolved template default as a real, editable value rather than
+ * a placeholder hint (Christian found the placeholder-only pattern confusing,
+ * 2026-08-09). This is a display/editing convenience only: a club that clears
+ * a field back to empty and saves still gets the "use the live template
+ * default" blank state on the public page, since resolveHomepageStorySection
+ * treats blank exactly as it always has.
+ */
+export type HomepageStoryDraft = {
+  visible: boolean;
+  heading: string;
+  bodyPrimary: string;
+  bodySecondary: string;
+  ctaLabel: string;
+};
+
+export type HomepageStoryValidationErrors = Partial<
+  Record<"heading" | "bodyPrimary" | "bodySecondary" | "ctaLabel", string>
+>;
+
+export function emptyHomepageStoryDraft(clubName: string): HomepageStoryDraft {
+  const defaults = resolveHomepageStorySection(null, clubName);
+  return {
+    visible: true,
+    heading: defaults.heading,
+    bodyPrimary: defaults.bodyPrimary,
+    bodySecondary: defaults.bodySecondary,
+    ctaLabel: defaults.ctaLabel,
+  };
+}
+
+export function homepageStoryToDraft(
+  row: Partial<DBHomepageStorySection> | null | undefined,
+  clubName: string,
+): HomepageStoryDraft {
+  const resolved = resolveHomepageStorySection(row, clubName);
+  return {
+    visible: row ? row.visible !== false : true,
+    heading: resolved.heading,
+    bodyPrimary: resolved.bodyPrimary,
+    bodySecondary: resolved.bodySecondary,
+    ctaLabel: resolved.ctaLabel,
+  };
+}
+
+export function validateHomepageStoryDraft(
+  draft: HomepageStoryDraft,
+): HomepageStoryValidationErrors {
+  const errors: HomepageStoryValidationErrors = {};
+  for (const [field, value, maximum, label] of [
+    ["heading", draft.heading, HOMEPAGE_STORY_LIMITS.heading, "Heading"],
+    [
+      "bodyPrimary",
+      draft.bodyPrimary,
+      HOMEPAGE_STORY_LIMITS.bodyPrimary,
+      "First paragraph",
+    ],
+    [
+      "bodySecondary",
+      draft.bodySecondary,
+      HOMEPAGE_STORY_LIMITS.bodySecondary,
+      "Second paragraph",
+    ],
+    ["ctaLabel", draft.ctaLabel, HOMEPAGE_STORY_LIMITS.ctaLabel, "Button label"],
+  ] as const) {
+    if (value.length > maximum) {
+      errors[field] = `${label} must be ${maximum} characters or fewer.`;
+    }
+  }
+  return errors;
+}
+
+export function buildHomepageStoryMutationPayload(
+  draft: HomepageStoryDraft,
+): Record<string, unknown> {
+  return {
+    visible: draft.visible,
+    heading: draft.heading.trim(),
+    body_primary: draft.bodyPrimary.trim(),
+    body_secondary: draft.bodySecondary.trim(),
+    cta_label: draft.ctaLabel.trim(),
+  };
+}
 
 export type DraftHomepagePhoto = {
   id: string | null;
@@ -106,7 +234,7 @@ export function diffHomepageSlideshowPhotos(
   const toUpdate: HomepagePhotoDiff["toUpdate"] = [];
 
   draft.forEach((photo, index) => {
-    const alt = photo.alt.trim() || `Rose City FC homepage slide ${index + 1}`;
+    const alt = photo.alt.trim() || `Homepage slide ${index + 1}`;
 
     if (photo.id === null) {
       toInsert.push({ url: photo.url, alt, sort_order: index });

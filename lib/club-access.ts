@@ -9,7 +9,7 @@ type AccessInput = {
   paid_through?: unknown;
 };
 
-const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
+const GRACE_PERIOD_MS = 20 * 24 * 60 * 60 * 1000;
 
 function parseTime(value: unknown): number | null {
   if (typeof value !== "string") return null;
@@ -34,7 +34,8 @@ export function resolvePublicAccess(
     return explicitAccess;
   }
 
-  if (input.status === "active" || input.status === "trialing") {
+  if (input.status === "trialing") return "suspended";
+  if (input.status === "active") {
     return "live";
   }
 

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { archiveClub } from "@/lib/operator/archive-club";
 import { reactivateClub } from "@/lib/operator/reactivate-club";
+import { acquireOperatorAccessToken } from "@/scripts/operator-session";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
 const EXPECTED_PROJECT_REF = "fxefqnoqxbezeccjvrsw";
@@ -56,6 +57,7 @@ async function hostedStatus(pathname: string): Promise<number> {
 
 async function main() {
   assertStagingTarget();
+  const operatorAccessToken = await acquireOperatorAccessToken();
   const service = createServiceRoleClient();
   const onzio = service.schema("onzio");
   const { data: clubs, error: clubsError } = await onzio
@@ -95,7 +97,6 @@ async function main() {
     throw alphaSubscriptionError ?? new Error("Alpha subscription is required");
   }
 
-  const operatorId = required("ONZIO_OPERATOR_USER_IDS");
   const customerId = `cus_phase7_${randomUUID().replaceAll("-", "")}`;
   const subscriptionId = `sub_phase7_${randomUUID().replaceAll("-", "")}`;
   let sequence = 0;
@@ -258,7 +259,7 @@ async function main() {
 
     const archived = await archiveClub({
       clubId: bravo.id,
-      actorId: operatorId,
+      operatorAccessToken,
       reason: "Phase 7 hosted lifecycle acceptance",
     });
     if (
@@ -271,7 +272,7 @@ async function main() {
 
     const reactivated = await reactivateClub({
       clubId: bravo.id,
-      actorId: operatorId,
+      operatorAccessToken,
     });
     if (
       reactivated.lifecycle !== "onboarding" ||
@@ -311,7 +312,7 @@ async function main() {
       .eq("id", bravo.id)
       .single();
     if (currentBravo?.lifecycle === "archived") {
-      await reactivateClub({ clubId: bravo.id, actorId: operatorId });
+      await reactivateClub({ clubId: bravo.id, operatorAccessToken });
     }
     await onzio
       .from("clubs")

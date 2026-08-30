@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { ContractError } from "@/lib/contract-error";
 import { getStripeClient } from "@/lib/stripe-client";
-import { getStripeRuntimeConfig } from "@/lib/stripe-config";
+import {
+  getStripeRuntimeConfig,
+  stripeConfigurationErrorCode,
+} from "@/lib/stripe-config";
 import {
   resolveStripeEvent,
   verifyWebhookEvent,
@@ -91,8 +94,8 @@ function currentState(row: {
   stripe_subscription_id: string | null;
   last_applied_stripe_event_id: string | null;
   last_applied_stripe_event_created_at: string | null;
-  tier: string | null;
   status: string | null;
+  grace_ends_at: string | null;
 } | null) {
   if (!row) return null;
   return {
@@ -103,8 +106,8 @@ function currentState(row: {
     lastEventCreated: row.last_applied_stripe_event_created_at
       ? Math.floor(Date.parse(row.last_applied_stripe_event_created_at) / 1000)
       : null,
-    tier: row.tier,
     status: row.status,
+    graceEndsAt: row.grace_ends_at,
   };
 }
 
@@ -112,11 +115,14 @@ export async function POST(request: Request) {
   let config: ReturnType<typeof getStripeRuntimeConfig>;
   try {
     config = getStripeRuntimeConfig();
-  } catch {
-    return NextResponse.json(
-      { error: "WEBHOOK_CONFIGURATION_INVALID" },
-      { status: 500 },
-    );
+  } catch (error) {
+    // Surface the specific configuration fault. Stripe retains the response
+    // body per delivery attempt, so this is the only durable diagnostic
+    // channel; Vercel runtime logs expire well before a stale projection is
+    // noticed. Status stays 500 so Stripe keeps retrying.
+    const code = stripeConfigurationErrorCode(error);
+    console.error(`stripe webhook configuration rejected: ${code}`);
+    return NextResponse.json({ error: code }, { status: 500 });
   }
 
   const payload = await request.text();
@@ -173,7 +179,7 @@ export async function POST(request: Request) {
     ? await service
         .from("club_subscriptions")
         .select(
-          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,tier,status",
+          "club_id,stripe_customer_id,stripe_subscription_id,last_applied_stripe_event_id,last_applied_stripe_event_created_at,status,grace_ends_at",
         )
         .eq("club_id", clubId)
         .maybeSingle()
@@ -227,10 +233,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, rejected: code });
   }
 
+  if (projection.action === "ignored") {
+    const eventCreated = projection.eventCreated as number;
+    const eventType = projection.eventType as string;
+    const { error: ignoreError } = await service
+      .from("stripe_events")
+      .insert({
+        id: projection.eventId as string,
+        club_id: projection.clubId as string,
+        environment: config.ledgerEnvironment,
+        event_type: eventType,
+        stripe_created_at: new Date(eventCreated * 1000).toISOString(),
+        outcome: "ignored",
+        payload_digest: digest,
+      })
+      .select("id")
+      .single();
+    if (ignoreError && ignoreError.code !== "23505") {
+      return NextResponse.json(
+        { error: "IGNORED_EVENT_LEDGER_FAILED" },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ received: true, ignored: "STALE_EVENT" });
+  }
+
   const runtimeAccess = resolveSubscriptionAccess(
     {
       status: projection.status,
       paidThrough: projection.paidThrough,
+      graceEndsAt: projection.graceEndsAt,
     },
     new Date(),
   );
@@ -253,7 +285,6 @@ export async function POST(request: Request) {
       p_customer_id: projection.customerId as string,
       p_subscription_id: projection.subscriptionId as string,
       p_price_id: projection.priceId as string,
-      p_tier: projection.tier as string,
       p_status: projection.status as string,
       p_cancel_at_period_end: projection.cancelAtPeriodEnd as boolean,
       p_paid_through: (projection.paidThrough as string | null) ?? null,

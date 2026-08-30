@@ -47,6 +47,16 @@ export default function ShopKitSection({
   const bulletPoints = normalizeKitBulletPoints(section.bullet_points);
   const storeNote = normalizeKitStoreNote(section.store_note).trim();
 
+  // Used both as this page's own H1 hero (already in view on mount, nothing
+  // to scroll past) and as a below-the-fold H2 embed elsewhere. A
+  // ScrollTrigger-gated fade only makes sense for the latter: when this is
+  // the hero, its trigger point has already been "passed" before any scroll
+  // occurs, and GSAP only recalculates trigger positions on scroll/resize —
+  // so with async-loaded photos still shifting page height at mount time,
+  // the hero content could stay stuck at its initial opacity:0 until the
+  // visitor scrolls, i.e. never, for someone who lands on a blank page.
+  const isHero = headingTag === "h1";
+
   useEffect(() => {
     if (!animate) return;
 
@@ -59,7 +69,9 @@ export default function ShopKitSection({
           y: 0,
           duration: 1,
           ease: "power3.out",
-          scrollTrigger: { trigger: sectionRef.current, start: "top 80%" },
+          ...(isHero
+            ? { delay: 0.1 }
+            : { scrollTrigger: { trigger: sectionRef.current, start: "top 80%" } }),
         },
       );
       gsap.fromTo(
@@ -70,13 +82,15 @@ export default function ShopKitSection({
           y: 0,
           duration: 1,
           ease: "power3.out",
-          delay: 0.2,
-          scrollTrigger: { trigger: sectionRef.current, start: "top 80%" },
+          delay: isHero ? 0.3 : 0.2,
+          ...(isHero
+            ? {}
+            : { scrollTrigger: { trigger: sectionRef.current, start: "top 80%" } }),
         },
       );
     }, sectionRef);
     return () => ctx.revert();
-  }, [animate]);
+  }, [animate, isHero]);
 
   return (
     <section

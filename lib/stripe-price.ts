@@ -48,8 +48,15 @@ export function formatStripePriceLabel(price: StripePriceForDisplay) {
   return `${amount} every ${intervalCount} ${pluralizeInterval(interval)}`;
 }
 
-export async function getConfiguredStripePriceLabel() {
-  const priceId = process.env.STRIPE_PRICE_ID;
+/**
+ * Formats a specific club's own Stripe price for display — e.g. Diverse
+ * City FC's bespoke $85/mo price (DCFC-D129), not a shared platform price.
+ * `priceId` must come from `clubs.stripe_price_id`; there is no global
+ * fallback, since a club with no price configured has nothing to show.
+ */
+export async function getConfiguredStripePriceLabel(
+  priceId: string | null | undefined,
+) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
   if (!priceId || !secretKey) {

@@ -1,26 +1,20 @@
 import { authorizeAdminAccess } from "@/lib/authorization";
+import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
-import { ContractError } from "@/lib/contract-error";
+import { failContract } from "@/lib/contract-error";
 import { createClient } from "@/lib/supabase-server";
 
 export async function requireBillingRouteAuthorization(request: Request) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new ContractError("AUTHENTICATION_REQUIRED");
-
-  const { data: assurance } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  const aal = assurance?.currentLevel === "aal2" ? "aal2" : "aal1";
+  const { userId, claims } = await requireFreshClubSession(supabase);
   const club = await getClubContext({
     hostname: request.headers.get("host") ?? "",
-    userId: user.id,
+    userId,
   });
   const memberships = club.role
     ? [
         {
-          userId: user.id,
+          userId,
           clubId: club.id,
           role: club.role,
           status: "active",
@@ -30,12 +24,23 @@ export async function requireBillingRouteAuthorization(request: Request) {
 
   await authorizeAdminAccess({
     club,
-    userId: user.id,
+    userId,
     memberships,
-    aal,
+    aal: "aal1",
     capability: "billing",
   });
 
-  return { supabase, user, club };
-}
+  if (typeof claims.session_id !== "string") {
+    failContract("AUTHENTICATION_REQUIRED");
+  }
 
+  return {
+    supabase,
+    user: {
+      id: userId,
+      email: typeof claims.email === "string" ? claims.email : undefined,
+      sessionId: claims.session_id,
+    },
+    club,
+  };
+}

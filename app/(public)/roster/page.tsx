@@ -9,7 +9,9 @@ import PlayerCard from "@/components/PlayerCard";
 import StaffCard from "@/components/StaffCard";
 import { fetchRoster, fetchStaff } from "@/lib/queries";
 import { Player, Staff } from "@/lib/data";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
+import EditorialRoster from "@/components/editorial/EditorialRoster";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -22,6 +24,8 @@ type RosterData = {
 };
 
 function RosterGroup({ label, players, seasonLabel }: { label: string; players: Player[]; seasonLabel: string }) {
+  const club = useClubContext();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const groupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,10 +51,13 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
         >
           {label}
         </h2>
-        <div className="flex-1 h-px" style={{ backgroundColor: "#e5e5e5" }} />
+        <div
+          className="flex-1 h-px"
+          style={{ backgroundColor: isAcademy ? "#B9E3F6" : "#e5e5e5" }}
+        />
         <span
-          className="font-display text-sm font-semibold tracking-widest uppercase"
-          style={{ color: "var(--color-gray-mid)" }}
+          className={`font-display text-sm font-semibold uppercase ${isAcademy ? "" : "tracking-widest"}`}
+          style={{ color: isAcademy ? "#51667E" : "var(--color-gray-mid)" }}
         >
           {players.length}
         </span>
@@ -66,6 +73,15 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
 }
 
 export default function RosterPage() {
+  const club = useClubContext();
+  if (club.presentationTemplateKey === "editorial@1") return <EditorialRoster />;
+  if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseRosterPage />;
+  return <LegacyRosterPage />;
+}
+
+function LegacyRosterPage() {
+  const club = useClubContext();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const clubId = useClubId();
   const heroRef  = useRef<HTMLDivElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
@@ -116,6 +132,7 @@ export default function RosterPage() {
     : [];
 
   const seasonLabel = roster?.seasonLabel ?? "";
+  const hasRosterContent = groups.some((group) => group.players.length > 0) || staffList.length > 0;
 
   return (
     <div style={{ backgroundColor: "var(--color-white)" }}>
@@ -154,7 +171,7 @@ export default function RosterPage() {
             style={{ opacity: 0 }}
           >
             <p
-              className="font-display font-bold tracking-widest uppercase mb-3"
+              className={`font-display font-bold uppercase mb-3 ${isAcademy ? "" : "tracking-widest"}`}
               style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
             >
               {seasonLabel} Season
@@ -170,13 +187,22 @@ export default function RosterPage() {
 
           {/* Player groups */}
           <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-10">
-            {groups.map((g) => (
+            {!hasRosterContent ? (
+              <div className="border-y border-black/10 py-14 text-center">
+                <h2 className="font-display text-2xl font-black uppercase text-[var(--color-black)]">
+                  Roster coming soon
+                </h2>
+                <p className="mx-auto mt-3 max-w-xl font-body text-[var(--color-gray-mid)]">
+                  Official player and staff details have not been published yet.
+                </p>
+              </div>
+            ) : groups.map((g) => (
               <RosterGroup key={g.label} label={g.label} players={g.players} seasonLabel={seasonLabel} />
             ))}
           </div>
 
           {/* Technical Staff */}
-          <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-24">
+          {hasRosterContent && <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-24">
             <div ref={staffRef} style={{ opacity: 0 }}>
               <div className="flex items-center gap-4 mb-8">
                 <h2
@@ -185,10 +211,10 @@ export default function RosterPage() {
                 >
                   Technical Staff
                 </h2>
-                <div className="flex-1 h-px" style={{ backgroundColor: "#e5e5e5" }} />
+                <div className="flex-1 h-px" style={{ backgroundColor: isAcademy ? "#B9E3F6" : "#e5e5e5" }} />
                 <span
-                  className="font-display text-sm font-semibold tracking-widest uppercase"
-                  style={{ color: "var(--color-gray-mid)" }}
+                  className={`font-display text-sm font-semibold uppercase ${isAcademy ? "" : "tracking-widest"}`}
+                  style={{ color: isAcademy ? "#51667E" : "var(--color-gray-mid)" }}
                 >
                   {staffList.length}
                 </span>
@@ -200,7 +226,7 @@ export default function RosterPage() {
                 ))}
               </div>
             </div>
-          </div>
+          </div>}
         </>
       )}
     </div>

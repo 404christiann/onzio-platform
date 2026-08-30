@@ -1,101 +1,29 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import { useEffect, useState, useRef } from "react";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import FileUpload from "@/components/admin/FileUpload";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { fetchActiveSeason } from "@/lib/queries";
 import { getPlayerSeasonSeed } from "@/lib/player-season";
 import { createClient } from "@/lib/admin-client";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } from "@/lib/roster-images";
+import { cn } from "@/lib/utils";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { NATIONALITIES } from "@/lib/nationalities";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
-// ── Nationalities ─────────────────────────────
-
-const NATIONALITIES = [
-  // Americas
-  { flag: "🇺🇸", label: "American" },
-  { flag: "🇦🇷", label: "Argentine" },
-  { flag: "🇧🇿", label: "Belizean" },
-  { flag: "🇧🇴", label: "Bolivian" },
-  { flag: "🇧🇷", label: "Brazilian" },
-  { flag: "🇨🇦", label: "Canadian" },
-  { flag: "🇨🇱", label: "Chilean" },
-  { flag: "🇨🇴", label: "Colombian" },
-  { flag: "🇨🇷", label: "Costa Rican" },
-  { flag: "🇨🇺", label: "Cuban" },
-  { flag: "🇩🇴", label: "Dominican" },
-  { flag: "🇪🇨", label: "Ecuadorian" },
-  { flag: "🇬🇹", label: "Guatemalan" },
-  { flag: "🇭🇹", label: "Haitian" },
-  { flag: "🇭🇳", label: "Honduran" },
-  { flag: "🇯🇲", label: "Jamaican" },
-  { flag: "🇲🇽", label: "Mexican" },
-  { flag: "🇳🇮", label: "Nicaraguan" },
-  { flag: "🇵🇦", label: "Panamanian" },
-  { flag: "🇵🇾", label: "Paraguayan" },
-  { flag: "🇵🇪", label: "Peruvian" },
-  { flag: "🇵🇷", label: "Puerto Rican" },
-  { flag: "🇸🇻", label: "Salvadoran" },
-  { flag: "🇹🇹", label: "Trinidadian" },
-  { flag: "🇺🇾", label: "Uruguayan" },
-  { flag: "🇻🇪", label: "Venezuelan" },
-  // Africa
-  { flag: "🇩🇿", label: "Algerian" },
-  { flag: "🇦🇴", label: "Angolan" },
-  { flag: "🇨🇲", label: "Cameroonian" },
-  { flag: "🇨🇩", label: "Congolese" },
-  { flag: "🇪🇬", label: "Egyptian" },
-  { flag: "🇪🇹", label: "Ethiopian" },
-  { flag: "🇬🇭", label: "Ghanaian" },
-  { flag: "🇬🇳", label: "Guinean" },
-  { flag: "🇨🇮", label: "Ivorian" },
-  { flag: "🇰🇪", label: "Kenyan" },
-  { flag: "🇱🇷", label: "Liberian" },
-  { flag: "🇲🇱", label: "Malian" },
-  { flag: "🇲🇦", label: "Moroccan" },
-  { flag: "🇳🇬", label: "Nigerian" },
-  { flag: "🇷🇼", label: "Rwandan" },
-  { flag: "🇸🇳", label: "Senegalese" },
-  { flag: "🇸🇱", label: "Sierra Leonean" },
-  { flag: "🇿🇦", label: "South African" },
-  { flag: "🇹🇿", label: "Tanzanian" },
-  { flag: "🇹🇬", label: "Togolese" },
-  { flag: "🇺🇬", label: "Ugandan" },
-  { flag: "🇿🇼", label: "Zimbabwean" },
-  // Europe
-  { flag: "🇦🇹", label: "Austrian" },
-  { flag: "🇧🇪", label: "Belgian" },
-  { flag: "🇬🇧", label: "British" },
-  { flag: "🇭🇷", label: "Croatian" },
-  { flag: "🇩🇰", label: "Danish" },
-  { flag: "🇳🇱", label: "Dutch" },
-  { flag: "🇫🇷", label: "French" },
-  { flag: "🇩🇪", label: "German" },
-  { flag: "🇬🇷", label: "Greek" },
-  { flag: "🇮🇪", label: "Irish" },
-  { flag: "🇮🇹", label: "Italian" },
-  { flag: "🇳🇴", label: "Norwegian" },
-  { flag: "🇵🇱", label: "Polish" },
-  { flag: "🇵🇹", label: "Portuguese" },
-  { flag: "🇷🇴", label: "Romanian" },
-  { flag: "🇷🇸", label: "Serbian" },
-  { flag: "🇪🇸", label: "Spanish" },
-  { flag: "🇸🇪", label: "Swedish" },
-  { flag: "🇨🇭", label: "Swiss" },
-  { flag: "🇹🇷", label: "Turkish" },
-  { flag: "🇺🇦", label: "Ukrainian" },
-  // Asia / Pacific
-  { flag: "🇦🇺", label: "Australian" },
-  { flag: "🇨🇳", label: "Chinese" },
-  { flag: "🇵🇭", label: "Filipino" },
-  { flag: "🇮🇳", label: "Indian" },
-  { flag: "🇮🇩", label: "Indonesian" },
-  { flag: "🇯🇵", label: "Japanese" },
-  { flag: "🇰🇷", label: "South Korean" },
-].sort((a, b) => a.label.localeCompare(b.label));
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 
 // ── Types ─────────────────────────────────────
 
@@ -173,44 +101,59 @@ async function uploadPhoto(file: File, bucket: string, folder: string): Promise<
 
 // ── Main component ────────────────────────────
 
+type RosterTab = "players" | "staff";
+
+const ROSTER_TAB_ORDER: RosterTab[] = ["players", "staff"];
+
 export default function RosterPage() {
-  const [tab, setTab] = useState<"players" | "staff">("players");
+  const [tab, setTab] = useState<RosterTab>("players");
+  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
+  const selectTab = (next: RosterTab) => {
+    setTab((current) => {
+      if (next === current) return current;
+      setTabDirection(
+        ROSTER_TAB_ORDER.indexOf(next) > ROSTER_TAB_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1
-          className="font-display font-black uppercase text-white leading-none"
+          className="font-display font-black uppercase text-foreground leading-none"
           style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
         >
           Roster
         </h1>
-        <p className="font-body text-sm mt-1" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body text-sm mt-1 text-muted-foreground">
           Manage players and staff.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8">
-        {(["players", "staff"] as const).map((t) => (
+      <div className="mb-8 flex gap-1 rounded-lg bg-card p-1">
+        {ROSTER_TAB_ORDER.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest transition-all"
-            style={{
-              fontSize: "1.1rem",
-              backgroundColor: tab === t ? "#dc2626" : "#1a1a1a",
-              color: tab === t ? "white" : "rgba(255,255,255,0.4)",
-              border: `1px solid ${tab === t ? "#dc2626" : "rgba(255,255,255,0.07)"}`,
-            }}
+            type="button"
+            onClick={() => selectTab(t)}
+            className={`font-display flex-1 rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
+              tab === t ? "bg-foreground text-background" : "text-muted-foreground"
+            }`}
           >
             {t}
           </button>
         ))}
       </div>
 
-      {tab === "players" ? <PlayersTab /> : <StaffTab />}
+      <SlidingPanel activeKey={tab} direction={tabDirection}>
+        {tab === "players" ? <PlayersTab /> : <StaffTab />}
+      </SlidingPanel>
     </div>
   );
 }
@@ -413,29 +356,29 @@ function PlayersTab() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6">
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           {players.filter(p => p.active).length} active · {players.filter(p => !p.active).length} inactive
         </p>
         <button
           onClick={() => { setAddOpen(o => !o); setAddForm(emptyPlayer()); setAddPhoto(null); setError(null); }}
-          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white"
-          style={{ backgroundColor: "#dc2626", fontSize: "1.1rem" }}
+          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground hover:bg-brand/90"
+          style={{ fontSize: "1.1rem" }}
         >
           {addOpen ? "Cancel" : "+ Add Player"}
         </button>
       </div>
 
-      {error  && <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>Error: {error}</p>}
+      {error  && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {/* Add form */}
       {addOpen && (
-        <div className="rounded-xl p-5 mb-6" style={{ backgroundColor: "#161616", border: "1px solid rgba(220,38,38,0.25)" }}>
-          <p className="font-display font-black uppercase text-xs tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>New Player</p>
+        <div className="rounded-xl border border-brand/25 bg-card p-5 mb-6">
+          <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">New Player</p>
           <PlayerFormFields form={addForm} onChange={setAddForm} photoFile={addPhoto} onPhotoChange={setAddPhoto} />
           <div className="mt-4">
             <button onClick={handleAdd} disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Player"}
             </button>
           </div>
@@ -444,7 +387,7 @@ function PlayersTab() {
 
       {/* Player list grouped by position */}
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <RosterListSkeleton label="Loading players" />
       ) : (
         <div className="flex flex-col gap-3">
           {POSITIONS.map((pos) => {
@@ -497,19 +440,19 @@ function PlayerPositionGroup({
   const { clubLogoUrl } = useClubBranding();
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+    <div className="rounded-xl overflow-hidden border border-border">
       {/* Position header */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3"
-        style={{ backgroundColor: "#161616" }}
+        className="w-full flex items-center justify-between bg-card px-4 py-3 transition-colors hover:bg-accent/60"
       >
-        <span className="font-display font-black uppercase tracking-widest" style={{ fontSize: "1.15rem", color: "rgba(255,255,255,0.9)" }}>
+        <span className="font-display font-black uppercase tracking-widest text-foreground/90" style={{ fontSize: "1.15rem" }}>
           {pos}s{" "}
-          <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400 }}>{group.length}</span>
+          <span className="font-normal text-muted-foreground/60">{group.length}</span>
         </span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-          style={{ color: "rgba(255,255,255,0.3)", transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}>
+          className="text-muted-foreground/60"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}>
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
@@ -522,30 +465,31 @@ function PlayerPositionGroup({
               const isEditing = editingId === p.id;
               return (
                 <div key={p.id}
-                  style={{ borderTop: "1px solid rgba(255,255,255,0.04)", ...(isEditing ? { border: "1px solid rgba(220,38,38,0.3)" } : {}) }}>
+                  className={cn("border-t border-border/40", isEditing && "border border-brand/30")}>
                   {isEditing ? (
-                    <div className="p-5" style={{ backgroundColor: "#161616" }}>
+                    <div className="bg-card p-5">
                       <PlayerFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} playerId={p.id} />
                       <div className="mt-4 flex gap-3">
                         <button onClick={handleSaveEdit} disabled={saving}
-                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-                          style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+                          {saving && <AdminLoadingDots className="mr-2" />}
                           {saving ? "Saving…" : "Save"}
                         </button>
                         <button onClick={cancelEdit}
-                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                          style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}>
+                          className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent">
                           Cancel
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4"
-                      style={{ backgroundColor: p.active ? "#111111" : "#0d0d0d", opacity: p.active ? 1 : 0.5 }}>
+                    <div
+                      className={cn(
+                        "flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 transition-colors",
+                        p.active ? "bg-card hover:bg-accent/40" : "bg-background opacity-50 hover:opacity-75",
+                      )}>
                       {/* Photo + Info */}
                       <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0"
-                          style={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <div className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0 bg-muted">
                           <ResilientNativeImage
                             src={getRosterImageSrc(p.photo_url, clubLogoUrl)}
                             alt={p.name}
@@ -555,15 +499,15 @@ function PlayerPositionGroup({
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>#{p.number} {p.name}</span>
+                            <span className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>#{p.number} {p.name}</span>
                             {!p.active && (
-                              <span className="font-display uppercase px-2 py-0.5 rounded"
-                                style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", fontSize: "0.65rem", letterSpacing: "0.08em" }}>
+                              <span className="font-display uppercase px-2 py-0.5 rounded bg-muted/60 text-muted-foreground"
+                                style={{ fontSize: "0.65rem", letterSpacing: "0.08em" }}>
                                 Inactive
                               </span>
                             )}
                           </div>
-                          <p className="font-body" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.3)" }}>
+                          <p className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>
                             {p.nationality}
                           </p>
                         </div>
@@ -571,18 +515,18 @@ function PlayerPositionGroup({
                       {/* Actions */}
                       <div className="flex gap-2 flex-shrink-0">
                         <button onClick={() => startEdit(p)}
-                          className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                          style={{ fontSize: "0.95rem", backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>
+                          className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border border-border bg-muted/40 text-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
+                          style={{ fontSize: "0.95rem" }}>
                           Edit
                         </button>
                         <button onClick={() => toggleActive(p)} disabled={saving}
-                          className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                          style={{
-                            fontSize: "0.95rem",
-                            backgroundColor: p.active ? "rgba(220,38,38,0.1)" : "rgba(34,197,94,0.1)",
-                            border: `1px solid ${p.active ? "rgba(220,38,38,0.2)" : "rgba(34,197,94,0.2)"}`,
-                            color: p.active ? "rgba(220,38,38,0.8)" : "rgba(34,197,94,0.8)",
-                          }}>
+                          className={cn(
+                            "flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border transition-colors",
+                            p.active
+                              ? "border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20"
+                              : "border-success/20 bg-success/10 text-success/80 hover:bg-success/20",
+                          )}
+                          style={{ fontSize: "0.95rem" }}>
                           {p.active ? "Deactivate" : "Activate"}
                         </button>
                       </div>
@@ -601,6 +545,7 @@ function PlayerPositionGroup({
 // ── Staff tab ─────────────────────────────────
 
 function StaffTab() {
+  const { clubLogoUrl } = useClubBranding();
   const [staff, setStaff]         = useState<Staff[]>([]);
   const [loading, setLoading]     = useState(true);
   const [addOpen, setAddOpen]     = useState(false);
@@ -643,7 +588,7 @@ function StaffTab() {
     setSaving(true); setError(null);
     try {
       const supabase = createClient();
-      let photoUrl = addForm.photo_url;
+      let photoUrl = rosterImageForStorage(addForm.photo_url);
       if (addPhoto) photoUrl = await uploadPhoto(addPhoto, "staff-images", "staff");
 
       const { error: e } = await supabase.from("staff").insert([{ ...addForm, photo_url: photoUrl, active: true }]);
@@ -669,7 +614,7 @@ function StaffTab() {
     setSaving(true); setError(null);
     try {
       const supabase = createClient();
-      let photoUrl = editForm.photo_url;
+      let photoUrl = rosterImageForStorage(editForm.photo_url);
       const originalStaff = staff.find((staffMember) => staffMember.id === editingId);
       if (editPhoto) photoUrl = await uploadPhoto(editPhoto, "staff-images", "staff");
 
@@ -709,28 +654,28 @@ function StaffTab() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6">
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           {staff.filter(s => s.active).length} active · {staff.filter(s => !s.active).length} inactive
         </p>
         <button
           onClick={() => { setAddOpen(o => !o); setAddForm(emptyStaff()); setAddPhoto(null); setError(null); }}
-          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white"
-          style={{ backgroundColor: "#dc2626", fontSize: "1.1rem" }}>
+          className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground hover:bg-brand/90"
+          style={{ fontSize: "1.1rem" }}>
           {addOpen ? "Cancel" : "+ Add Staff"}
         </button>
       </div>
 
-      {error && <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>Error: {error}</p>}
+      {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {/* Add form */}
       {addOpen && (
-        <div className="rounded-xl p-5 mb-6" style={{ backgroundColor: "#161616", border: "1px solid rgba(220,38,38,0.25)" }}>
-          <p className="font-display font-black uppercase text-xs tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>New Staff Member</p>
+        <div className="rounded-xl border border-brand/25 bg-card p-5 mb-6">
+          <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">New Staff Member</p>
           <StaffFormFields form={addForm} onChange={setAddForm} photoFile={addPhoto} onPhotoChange={setAddPhoto} />
           <div className="mt-4">
             <button onClick={handleAdd} disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Staff Member"}
             </button>
           </div>
@@ -739,70 +684,73 @@ function StaffTab() {
 
       {/* Staff list */}
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <RosterListSkeleton label="Loading staff" rows={3} />
       ) : (
         <div className="flex flex-col gap-3">
           {staff.map((s) => {
             const isEditing = editingId === s.id;
             return (
-              <div key={s.id} className="rounded-xl overflow-hidden"
-                style={{ border: `1px solid ${isEditing ? "rgba(220,38,38,0.3)" : "rgba(255,255,255,0.07)"}` }}>
+              <div key={s.id}
+                className={cn("rounded-xl overflow-hidden border", isEditing ? "border-brand/30" : "border-border")}>
                 {isEditing ? (
-                  <div className="p-5" style={{ backgroundColor: "#161616" }}>
+                  <div className="bg-card p-5">
                     <StaffFormFields form={editForm} onChange={setEditForm} photoFile={editPhoto} onPhotoChange={setEditPhoto} />
                     <div className="mt-4 flex gap-3">
                       <button onClick={handleSaveEdit} disabled={saving}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-                        style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60">
+                        {saving && <AdminLoadingDots className="mr-2" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button onClick={() => { setEditingId(null); setError(null); }}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                        style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}>
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent">
                         Cancel
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4"
-                    style={{ backgroundColor: s.active ? "#111111" : "#0d0d0d", opacity: s.active ? 1 : 0.5 }}>
+                  <div
+                    className={cn(
+                      "flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 transition-colors",
+                      s.active ? "bg-card hover:bg-accent/40" : "bg-background opacity-50 hover:opacity-75",
+                    )}>
                     {/* Photo + Info */}
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-                        style={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        {s.photo_url
-                          ? <ResilientNativeImage src={s.photo_url} alt={s.name} fallbackVariant="person" className="w-full h-full object-cover" />
-                          : <span className="font-display font-black text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>{s.initials}</span>
-                        }
+                      <div className="relative w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center bg-muted">
+                        <ResilientNativeImage
+                          src={getRosterImageSrc(s.photo_url, clubLogoUrl)}
+                          alt={s.name}
+                          fallbackVariant="person"
+                          className={`w-full h-full ${isRosterPlaceholderLogo(s.photo_url) ? "object-contain" : "object-cover"}`}
+                        />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{s.name}</span>
+                          <span className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{s.name}</span>
                           {!s.active && (
-                            <span className="font-display uppercase px-2 py-0.5 rounded"
-                              style={{ backgroundColor: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", fontSize: "0.65rem", letterSpacing: "0.08em" }}>
+                            <span className="font-display uppercase px-2 py-0.5 rounded bg-muted/60 text-muted-foreground"
+                              style={{ fontSize: "0.65rem", letterSpacing: "0.08em" }}>
                               Inactive
                             </span>
                           )}
                         </div>
-                        <p className="font-body" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.3)" }}>{s.role}</p>
+                        <p className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>{s.role}</p>
                       </div>
                     </div>
                     {/* Actions */}
                     <div className="flex gap-2 flex-shrink-0">
                       <button onClick={() => { startEdit(s); setError(null); }}
-                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                        style={{ fontSize: "0.95rem", backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border border-border bg-muted/40 text-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
+                        style={{ fontSize: "0.95rem" }}>
                         Edit
                       </button>
                       <button onClick={() => toggleActive(s)} disabled={saving}
-                        className="flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest"
-                        style={{
-                          fontSize: "0.95rem",
-                          backgroundColor: s.active ? "rgba(220,38,38,0.1)" : "rgba(34,197,94,0.1)",
-                          border: `1px solid ${s.active ? "rgba(220,38,38,0.2)" : "rgba(34,197,94,0.2)"}`,
-                          color: s.active ? "rgba(220,38,38,0.8)" : "rgba(34,197,94,0.8)",
-                        }}>
+                        className={cn(
+                          "flex-1 sm:flex-none px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border transition-colors",
+                          s.active
+                            ? "border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20"
+                            : "border-success/20 bg-success/10 text-success/80 hover:bg-success/20",
+                        )}
+                        style={{ fontSize: "0.95rem" }}>
                         {s.active ? "Deactivate" : "Activate"}
                       </button>
                     </div>
@@ -898,29 +846,29 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
         savingLabel="Saving season stats…"
         successLabel="Season stats saved"
       />
-      <div className="mb-3" style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)" }} />
+      <div className="mb-3 h-px bg-border" />
       <div className="flex items-center justify-between mb-3">
-        <label className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <label className="font-display text-xs tracking-widest uppercase text-muted-foreground">
           Season Stats
         </label>
         {/* Season picker */}
-        <select
+        <NativeSelect
           value={selectedId}
           onChange={(e) => handleSeasonChange(e.target.value)}
-          style={{ ...inputStyle, width: "auto", fontSize: "0.75rem", padding: "4px 8px" }}
+          className="px-2 py-1 pr-8 text-xs"
         >
           {seasons.map((s) => (
-            <option key={s.id} value={s.id}>
+            <NativeSelectOption key={s.id} value={s.id}>
               {s.label}{s.active ? " (Active)" : ""}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </div>
 
-      {error && <p className="font-body text-xs mb-2" style={{ color: "#dc2626" }}>{error}</p>}
+      {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
 
       {loading ? (
-        <p className="font-display text-xs tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <AdminLoading className="font-display text-xs tracking-widest uppercase" />
       ) : (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
@@ -953,9 +901,9 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-5 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}
+              className="px-5 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-brand-foreground text-xs hover:bg-brand/90 disabled:opacity-60"
             >
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Stats"}
             </button>
           </div>
@@ -975,7 +923,7 @@ function StatField({
 }) {
   return (
     <div>
-      <label className="block font-display text-xs tracking-widest uppercase mb-1" style={{ color: "rgba(255,255,255,0.25)", fontSize: "0.6rem" }}>
+      <label className="block font-display text-xs tracking-widest uppercase mb-1 text-muted-foreground" style={{ fontSize: "0.6rem" }}>
         {label}
       </label>
       <input
@@ -983,7 +931,7 @@ function StatField({
         min={0}
         value={stats[field] ?? 0}
         onChange={(e) => onChange(field, Number(e.target.value))}
-        style={{ ...inputStyle, padding: "6px 10px" }}
+        className={ADMIN_INPUT_CLASS}
       />
     </div>
   );
@@ -997,7 +945,6 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
   const [photos, setPhotos]     = useState<ActionPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError]       = useState<string | null>(null);
-  const fileRef                 = useRef<HTMLInputElement>(null);
 
   async function loadPhotos() {
     const supabase = createClient();
@@ -1052,12 +999,12 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
 
   return (
     <div>
-      <div className="mb-3" style={{ height: 1, backgroundColor: "rgba(255,255,255,0.07)" }} />
-      <label className="block font-display text-xs tracking-widest uppercase mb-3" style={{ color: "rgba(255,255,255,0.35)" }}>
+      <div className="mb-3 h-px bg-border" />
+      <label className="block font-display text-xs tracking-widest uppercase mb-3 text-muted-foreground">
         Action Photos
       </label>
 
-      {error && <p className="font-body text-xs mb-2" style={{ color: "#dc2626" }}>{error}</p>}
+      {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
 
       <div className="flex flex-wrap gap-2 mb-3">
         {photos.map((photo) => (
@@ -1066,14 +1013,12 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
               src={photo.url}
               alt="Action photo"
               fallbackVariant="person"
-              className="w-full h-full object-cover rounded-lg"
-              style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+              className="w-full h-full rounded-lg border border-border object-cover"
             />
             <button
               type="button"
               onClick={() => void handleDelete(photo)}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ backgroundColor: "#dc2626" }}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               aria-label="Delete photo"
             >
               <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
@@ -1083,46 +1028,15 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
           </div>
         ))}
 
-        {/* Upload button */}
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="flex flex-col items-center justify-center rounded-lg transition-colors"
-          style={{
-            width: 72, height: 72,
-            border: "1px dashed rgba(255,255,255,0.15)",
-            backgroundColor: uploading ? "rgba(255,255,255,0.03)" : "transparent",
-            color: "rgba(255,255,255,0.3)",
-            cursor: uploading ? "not-allowed" : "pointer",
-          }}
-          aria-label="Add action photo"
-        >
-          {uploading ? (
-            <span className="font-display text-xs tracking-widest uppercase" style={{ fontSize: "0.6rem" }}>…</span>
-          ) : (
-            <>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ marginBottom: 4 }}>
-                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-              <span className="font-display uppercase" style={{ fontSize: "0.55rem", letterSpacing: "0.08em" }}>Add</span>
-            </>
-          )}
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => handleUpload(e.target.files)}
-        />
       </div>
-      {photos.length === 0 && !uploading && (
-        <p className="font-body text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
-          No action photos yet. Click + to upload.
-        </p>
-      )}
+
+      <FileUpload
+        label="Add action photos"
+        accept="image/*"
+        multiple
+        onUpload={(files) => void handleUpload(files)}
+        uploading={uploading}
+      />
     </div>
   );
 }
@@ -1139,8 +1053,19 @@ function PlayerFormFields({
   playerId?: string;
   position?: Position;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const { clubLogoUrl } = useClubBranding();
+  const club = useClubContext();
+  // The inline panel and the dedicated /admin/season-stats tab write the same
+  // player_season_stats / goalkeeper_season_stats rows, so academy@1 admins had
+  // two places to edit one number. The season-stats tab is the single entry
+  // point for this template; every other template keeps the inline panel.
+  // Nothing else depends on it: the panel only renders for an already-saved
+  // player and never seeds rows as a side effect of creating one.
+  // editorial@1 has the same dedicated season-stats entry point, so the inline
+  // redundancy is hidden there too.
+  const hidesInlineSeasonStats =
+    club.presentationTemplateKey === "academy@1" ||
+    club.presentationTemplateKey === "editorial@1";
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1162,45 +1087,32 @@ function PlayerFormFields({
 
   return (
     <div className="space-y-4">
-      {/* Photo picker */}
-      <div className="flex items-center gap-4">
-        <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: "#0e0e0e", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <ResilientNativeImage
-            src={preview}
-            alt="preview"
-            fallbackVariant="person"
-            className={`w-full h-full ${previewIsClubLogo ? "object-contain" : "object-cover"}`}
-          />
-        </div>
-        <div>
-          <button type="button" onClick={() => fileRef.current?.click()}
-            className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-            style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-            {preview ? "Change Photo" : "Upload Photo"}
-          </button>
-          {photoFile && (
-            <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{photoFile.name}</p>
-          )}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden"
-            onChange={(e) => onPhotoChange(e.target.files?.[0] ?? null)} />
-        </div>
-      </div>
+      {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
+      <FileUpload
+        label="Upload player photo"
+        accept="image/*"
+        onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
+        previewUrl={previewIsClubLogo ? null : preview}
+        onRemove={previewIsClubLogo ? undefined : () => {
+          onPhotoChange(null);
+          onChange({ ...form, photo_url: "" });
+        }}
+      />
 
       {/* Fields grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Name" required>
           <input type="text" placeholder="e.g. Christian Alcala" value={form.name}
-            onChange={(e) => set("name", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Jersey #" required>
           <input type="number" min={1} value={form.number || ""}
-            onChange={(e) => set("number", Number(e.target.value))} style={inputStyle} />
+            onChange={(e) => set("number", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Position" required>
-          <select value={form.position} onChange={(e) => set("position", e.target.value)} style={inputStyle}>
-            {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
+          <NativeSelect value={form.position} onChange={(e) => set("position", e.target.value)}>
+            {POSITIONS.map(p => <NativeSelectOption key={p} value={p}>{p}</NativeSelectOption>)}
+          </NativeSelect>
         </Field>
         <Field label="Nationality" required>
           <NationalitySelect
@@ -1210,45 +1122,44 @@ function PlayerFormFields({
         </Field>
         <Field label="Hometown" required>
           <input type="text" placeholder="e.g. Portland, OR" value={form.hometown}
-            onChange={(e) => set("hometown", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("hometown", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Age" required>
           <input type="number" min={1} value={form.age || ""}
-            onChange={(e) => set("age", Number(e.target.value))} style={inputStyle} />
+            onChange={(e) => set("age", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Height" required>
           <input type="text" placeholder={"e.g. 5'10\""} value={form.height}
-            onChange={(e) => set("height", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("height", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Weight" required>
           <input type="text" placeholder="e.g. 165 lbs" value={form.weight}
-            onChange={(e) => set("weight", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("weight", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="School (optional)">
           <input type="text" placeholder="e.g. University of Portland" value={form.school ?? ""}
-            onChange={(e) => set("school", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("school", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Previous Club (optional)">
           <input type="text" placeholder="e.g. Portland FC" value={form.previous_club ?? ""}
-            onChange={(e) => set("previous_club", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("previous_club", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Captain">
           <button
             type="button"
             onClick={() => set("caption", form.caption === "(C)" ? "" : "(C)")}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all"
-            style={{
-              backgroundColor: form.caption === "(C)" ? "rgba(220,38,38,0.15)" : "#0e0e0e",
-              border: `1px solid ${form.caption === "(C)" ? "rgba(220,38,38,0.5)" : "rgba(255,255,255,0.08)"}`,
-              width: "100%",
-            }}
+            className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg border transition-all ${
+              form.caption === "(C)"
+                ? "border-brand/50 bg-brand/15"
+                : "border-border bg-background"
+            }`}
           >
             <span
-              className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
-              style={{
-                backgroundColor: form.caption === "(C)" ? "#dc2626" : "transparent",
-                border: `2px solid ${form.caption === "(C)" ? "#dc2626" : "rgba(255,255,255,0.2)"}`,
-              }}
+              className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 ${
+                form.caption === "(C)"
+                  ? "border-brand bg-brand"
+                  : "border-border bg-transparent"
+              }`}
             >
               {form.caption === "(C)" && (
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -1256,36 +1167,38 @@ function PlayerFormFields({
                 </svg>
               )}
             </span>
-            <span className="font-body text-sm" style={{ color: form.caption === "(C)" ? "white" : "rgba(255,255,255,0.4)" }}>
+            <span className={`font-body text-sm ${form.caption === "(C)" ? "text-foreground" : "text-muted-foreground"}`}>
               {form.caption === "(C)" ? "Captain — displays (C) next to name" : "Not a captain"}
             </span>
           </button>
         </Field>
         <Field label="Pronunciation (optional)">
           <input type="text" placeholder='e.g. "duh-MORE-ee-uh"' value={form.pronunciation ?? ""}
-            onChange={(e) => set("pronunciation", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("pronunciation", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Preferred Foot (optional)">
-          <select value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)} style={inputStyle}>
-            <option value="">— Select —</option>
-            <option value="Right">Right</option>
-            <option value="Left">Left</option>
-            <option value="Both">Both</option>
-          </select>
+          <NativeSelect value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)}>
+            <NativeSelectOption value="">— Select —</NativeSelectOption>
+            <NativeSelectOption value="Right">Right</NativeSelectOption>
+            <NativeSelectOption value="Left">Left</NativeSelectOption>
+            <NativeSelectOption value="Both">Both</NativeSelectOption>
+          </NativeSelect>
         </Field>
       </div>
       <Field label="Bio (optional)">
-        <textarea
+        <Textarea
           placeholder="Short player bio…"
           value={form.bio ?? ""}
           onChange={(e) => set("bio", e.target.value)}
           rows={3}
-          style={{ ...inputStyle, resize: "vertical" }}
         />
       </Field>
 
-      {/* Season stats — only shown when editing an existing player */}
-      {playerId && <SeasonStatsPanel playerId={playerId} position={form.position} />}
+      {/* Season stats — only shown when editing an existing player, and only
+          for templates that do not route this to the Season Stats tab */}
+      {playerId && !hidesInlineSeasonStats && (
+        <SeasonStatsPanel playerId={playerId} position={form.position} />
+      )}
 
       {/* Action photos — only shown when editing an existing player */}
       {playerId && <ActionPhotosPanel playerId={playerId} />}
@@ -1303,8 +1216,24 @@ function StaffFormFields({
   photoFile: File | null;
   onPhotoChange: (f: File | null) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const preview = photoFile ? URL.createObjectURL(photoFile) : form.photo_url || null;
+  const { clubLogoUrl } = useClubBranding();
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(photoFile);
+    setPhotoPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [photoFile]);
+
+  // Same fallback-to-club-logo behavior as players (lib/roster-images), rather
+  // than showing initials when no photo is set — a staff member with no photo
+  // should read the same way an empty player slot already does.
+  const preview = photoPreview ?? getRosterImageSrc(form.photo_url, clubLogoUrl);
+  const previewIsClubLogo = !photoFile && isRosterPlaceholderLogo(form.photo_url);
 
   function set(field: string, value: string) {
     onChange({ ...form, [field]: value });
@@ -1312,60 +1241,46 @@ function StaffFormFields({
 
   return (
     <div className="space-y-4">
-      {/* Photo picker */}
-      <div className="flex items-center gap-4">
-        <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: "#0e0e0e", border: "1px solid rgba(255,255,255,0.08)" }}>
-          {preview
-            ? <ResilientNativeImage src={preview} alt="preview" fallbackVariant="person" className="w-full h-full object-cover" />
-            : <span className="font-display font-black text-lg" style={{ color: "rgba(255,255,255,0.2)" }}>
-                {form.initials || "?"}
-              </span>
-          }
-        </div>
-        <div>
-          <button type="button" onClick={() => fileRef.current?.click()}
-            className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-            style={{ backgroundColor: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}>
-            {preview ? "Change Photo" : "Upload Photo"}
-          </button>
-          {photoFile && (
-            <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.3)" }}>{photoFile.name}</p>
-          )}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden"
-            onChange={(e) => onPhotoChange(e.target.files?.[0] ?? null)} />
-        </div>
-      </div>
+      {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
+      <FileUpload
+        label="Upload staff photo"
+        accept="image/*"
+        onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
+        previewUrl={previewIsClubLogo ? null : preview}
+        onRemove={previewIsClubLogo ? undefined : () => {
+          onPhotoChange(null);
+          onChange({ ...form, photo_url: "" });
+        }}
+      />
 
       {/* Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Name" required>
           <input type="text" placeholder="e.g. John Smith" value={form.name}
-            onChange={(e) => set("name", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Initials" required>
           <input type="text" placeholder="e.g. JS" maxLength={3} value={form.initials}
-            onChange={(e) => set("initials", e.target.value.toUpperCase())} style={inputStyle} />
+            onChange={(e) => set("initials", e.target.value.toUpperCase())} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Role" required>
           <input type="text" placeholder="e.g. Head Coach" value={form.role}
-            onChange={(e) => set("role", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("role", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Hometown" required>
           <input type="text" placeholder="e.g. Portland, OR" value={form.hometown}
-            onChange={(e) => set("hometown", e.target.value)} style={inputStyle} />
+            onChange={(e) => set("hometown", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
         <Field label="Nationality">
           <NationalitySelect value={form.nationality} onChange={(v) => set("nationality", v)} />
         </Field>
       </div>
       <Field label="Bio (optional)">
-        <textarea
+        <Textarea
           placeholder="Short bio about this staff member…"
           value={form.bio}
           onChange={(e) => set("bio", e.target.value)}
           rows={3}
-          style={{ ...inputStyle, resize: "vertical" }}
         />
       </Field>
     </div>
@@ -1397,80 +1312,110 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
   }, []);
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div ref={ref} className="relative">
       {/* Trigger */}
       <button
         type="button"
         onClick={() => { setOpen((o) => !o); setSearch(""); }}
-        className="w-full flex items-center gap-3 text-left"
-        style={{ ...inputStyle, cursor: "pointer" }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={cn(
+          ADMIN_INPUT_CLASS,
+          "flex items-center gap-2.5 text-left",
+          open && "border-ring bg-input/50",
+        )}
       >
         {selected ? (
           <>
-            <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{selected.flag}</span>
-            <span className="font-body text-sm text-white">{selected.label}</span>
+            <span className="text-lg leading-none">{selected.flag}</span>
+            <span className="truncate font-body text-sm text-foreground">{selected.label}</span>
           </>
         ) : (
-          <span className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>Select nationality…</span>
+          <span className="font-body text-sm text-muted-foreground/60">Select nationality…</span>
         )}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ marginLeft: "auto", color: "rgba(255,255,255,0.3)", flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+          className={cn(
+            "ml-auto flex-shrink-0 text-muted-foreground transition-transform duration-150",
+            open && "rotate-180",
+          )}
+        >
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown. The search row and the option list are flex siblings inside
+          a clipped, height-capped panel, so the search header stays pinned
+          while only the options scroll. */}
       {open && (
-        <div
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            right: 0,
-            backgroundColor: "#1a1a1a",
-            border: "1px solid rgba(255,255,255,0.1)",
-            borderRadius: 8,
-            zIndex: 50,
-            maxHeight: 240,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
-          {/* Search */}
-          <div style={{ padding: "8px 10px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <input
-              autoFocus
-              type="text"
-              placeholder="Search…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full font-body text-sm text-white outline-none"
-              style={{ backgroundColor: "transparent", border: "none" }}
-            />
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 flex max-h-64 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/40">
+          {/* Search header */}
+          <div className="flex-shrink-0 border-b border-border bg-card p-2">
+            <div className="flex items-center gap-2 rounded-lg border border-input bg-input/30 px-2.5 py-2 focus-within:border-ring focus-within:bg-input/50">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+                className="flex-shrink-0 text-muted-foreground"
+              >
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+                <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full min-w-0 border-none bg-transparent font-body text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
+              />
+            </div>
           </div>
 
           {/* Options */}
-          <div style={{ overflowY: "auto" }}>
+          <div role="listbox" className="overflow-y-auto p-1">
             {filtered.length === 0 ? (
-              <p className="font-body text-xs px-3 py-3" style={{ color: "rgba(255,255,255,0.3)" }}>No results</p>
+              <p className="px-2.5 py-3 text-center font-body text-xs text-muted-foreground">
+                No results
+              </p>
             ) : (
-              filtered.map((n) => (
-                <button
-                  key={n.label}
-                  type="button"
-                  onClick={() => { onChange(n.label); setOpen(false); setSearch(""); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-left transition-colors"
-                  style={{
-                    backgroundColor: value === n.label ? "rgba(220,38,38,0.15)" : "transparent",
-                    border: "none",
-                  }}
-                  onMouseEnter={(e) => { if (value !== n.label) (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(255,255,255,0.05)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = value === n.label ? "rgba(220,38,38,0.15)" : "transparent"; }}
-                >
-                  <span style={{ fontSize: "1.2rem", lineHeight: 1 }}>{n.flag}</span>
-                  <span className="font-body text-sm text-white">{n.label}</span>
-                </button>
-              ))
+              filtered.map((n) => {
+                const isSelected = value === n.label;
+                return (
+                  <button
+                    key={n.label}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => { onChange(n.label); setOpen(false); setSearch(""); }}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+                      isSelected ? "bg-brand/10" : "hover:bg-accent",
+                    )}
+                  >
+                    <span className="text-lg leading-none">{n.flag}</span>
+                    <span className="truncate font-body text-sm text-foreground">{n.label}</span>
+                    {isSelected && (
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        className="ml-auto flex-shrink-0 text-brand"
+                      >
+                        <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
@@ -1481,26 +1426,45 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
 
 // ── Shared UI ─────────────────────────────────
 
+/**
+ * Placeholder rows for the Players and Staff lists while they load. Mirrors
+ * the real row shape below — round photo, name + meta lines, and the pair of
+ * row actions — so the list does not reflow when the data arrives. The
+ * `aria-label` carries the surface-specific loading message, since the
+ * skeleton itself has no readable text.
+ */
+function RosterListSkeleton({ label, rows = 4 }: { label: string; rows?: number }) {
+  return (
+    <div className="flex flex-col gap-3" role="status" aria-label={label}>
+      {Array.from({ length: rows }, (_, index) => (
+        <div
+          key={index}
+          className="flex flex-col gap-3 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <Skeleton className="h-20 w-20 flex-shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-2.5">
+              <Skeleton className="h-4 w-40 max-w-full" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+          <div className="flex flex-shrink-0 gap-3">
+            <Skeleton className="h-9 w-24 rounded-lg" />
+            <Skeleton className="h-9 w-28 rounded-lg" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block font-display text-xs tracking-widest uppercase mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>
-        {label}{required && <span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>}
+      <label className={ADMIN_LABEL_CLASS}>
+        {label}{required && <span className="ml-1 text-destructive">*</span>}
       </label>
       {children}
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  backgroundColor: "#0e0e0e",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "8px",
-  padding: "8px 12px",
-  color: "white",
-  fontSize: "0.875rem",
-  fontFamily: "inherit",
-  outline: "none",
-  colorScheme: "dark",
-};

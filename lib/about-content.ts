@@ -62,6 +62,19 @@ export const DEFAULT_ABOUT_PAGE_CONTENT: DBAboutPageContent = {
   updated_at: "",
 };
 
+export const EMPTY_ABOUT_PAGE_CONTENT: DBAboutPageContent = {
+  id: 0,
+  hero_title: "About",
+  story_paragraphs: [],
+  feature_image_url: "",
+  values_heading: "",
+  values: [],
+  closing_text: "",
+  closing_cta_label: "",
+  closing_cta_href: "",
+  updated_at: "",
+};
+
 export const DEFAULT_CLUB_LOGO_FEATURES: ClubLogoFeature[] = [
   {
     title: "The Name",
@@ -151,6 +164,15 @@ export const DEFAULT_CLUB_LOGO_PAGE_CONTENT: DBClubLogoPageContent = {
   features: DEFAULT_CLUB_LOGO_FEATURES,
   map_image_url: `${ABOUT_ASSETS}/Rose%20City%20FC%20Official%20Pasadena%20Map%202027.png`,
   color_cards: DEFAULT_CLUB_LOGO_COLOR_CARDS,
+  updated_at: "",
+};
+
+export const EMPTY_CLUB_LOGO_PAGE_CONTENT: DBClubLogoPageContent = {
+  id: 0,
+  annotated_image_url: "",
+  features: [],
+  map_image_url: "",
+  color_cards: [],
   updated_at: "",
 };
 

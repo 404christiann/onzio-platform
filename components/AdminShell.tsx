@@ -7,7 +7,6 @@ import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AdminThemeToggle } from "@/components/admin/AdminThemeToggle";
 import {
   Sidebar,
   SidebarContent,
@@ -26,9 +25,11 @@ type AdminNavItem = {
   label: string;
   href: string;
   icon: ReactNode;
+  feature?: string;
+  ownerOnly?: boolean;
 };
 
-const NAV_ITEMS = [
+const NAV_ITEMS: AdminNavItem[] = [
   {
     label: "Dashboard",
     href: "/admin",
@@ -49,6 +50,39 @@ const NAV_ITEMS = [
         <path d="M3 11l9-8 9 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         <path d="M5 10v10h14V10" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
         <path d="M9 20v-6h6v6" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Programs",
+    href: "/admin/programs",
+    feature: "programs",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M5 4h14v16H5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Contact",
+    href: "/admin/contact",
+    feature: "contact",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M4 5h16v14H4z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M4 7l8 6 8-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Tryouts",
+    href: "/admin/tryouts",
+    feature: "tryouts",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M7 3v3M17 3v3M4 8h16v12H4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8 12h3M13 12h3M8 16h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
       </svg>
     ),
   },
@@ -163,6 +197,27 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: "Registrations",
+    href: "/admin/registrations",
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M7 3h10a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="currentColor" strokeWidth="2"/>
+        <path d="M9 8h6M9 12h6M9 16h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
+    label: "Team access",
+    href: "/admin/members",
+    ownerOnly: true,
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="2"/>
+        <path d="M3 20v-2a4 4 0 014-4h4a4 4 0 014 4v2M16 11h5M18.5 8.5v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    ),
+  },
+  {
     label: "Payments",
     href: "/admin/payments",
     icon: (
@@ -172,27 +227,19 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
-] as const satisfies readonly AdminNavItem[];
-
-// Derived from NAV_ITEMS's actual hrefs so a typo'd href in a group's
-// `hrefs` list below is a compile error instead of a nav item that silently
-// never renders.
-type AdminNavHref = (typeof NAV_ITEMS)[number]["href"];
+];
 
 type AdminNavGroup = {
   key: string;
   label: string;
   icon: ReactNode;
-  hrefs: AdminNavHref[];
+  hrefs: string[];
 };
 
 type AdminNavEntry =
-  | { type: "link"; href: AdminNavHref }
+  | { type: "link"; href: string }
   | { type: "group"; group: AdminNavGroup };
 
-// Website/Competition/Club Settings groups only list hrefs that already
-// exist on main -- Programs, Contact, Tryouts, and Team access (members)
-// are ported in a later phase and would otherwise be dead nav links.
 const NAV_STRUCTURE: AdminNavEntry[] = [
   { type: "link", href: "/admin" },
   {
@@ -207,7 +254,7 @@ const NAV_STRUCTURE: AdminNavEntry[] = [
           <path d="M12 3c2.5 2.6 3.8 5.7 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.7-3.8-9S9.5 5.6 12 3z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
         </svg>
       ),
-      hrefs: ["/admin/homepage", "/admin/shop", "/admin/about", "/admin/sponsors"],
+      hrefs: ["/admin/homepage", "/admin/programs", "/admin/tryouts", "/admin/shop", "/admin/about", "/admin/sponsors", "/admin/contact"],
     },
   },
   {
@@ -225,6 +272,7 @@ const NAV_STRUCTURE: AdminNavEntry[] = [
     },
   },
   { type: "link", href: "/admin/analytics" },
+  { type: "link", href: "/admin/registrations" },
   {
     type: "group",
     group: {
@@ -236,7 +284,7 @@ const NAV_STRUCTURE: AdminNavEntry[] = [
           <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H4a2 2 0 01-2-2 2 2 0 012-2h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33h.08a1.65 1.65 0 001-1.51V4a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51h.08a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.08a1.65 1.65 0 001.51 1H20a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
-      hrefs: ["/admin/branding"],
+      hrefs: ["/admin/branding", "/admin/members"],
     },
   },
   { type: "link", href: "/admin/payments" },
@@ -289,8 +337,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     };
   }, [sidebarOpen]);
 
+  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  const EDITORIAL_HIDDEN_HREFS = ["/admin/programs", "/admin/analytics", "/admin/stats", "/admin/season-stats"];
+
   const navItems = NAV_ITEMS.filter(
-    (item) => item.href !== "/admin/payments" || isBillingAdmin,
+    (item) =>
+      (!item.ownerOnly || club.role === "owner") &&
+      (item.href !== "/admin/payments" || isBillingAdmin) &&
+      (!isEditorialTemplate || !EDITORIAL_HIDDEN_HREFS.includes(item.href)),
   );
 
   async function handleSignOut() {
@@ -302,7 +356,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
-  const visibleNavItem = (href: string): AdminNavItem | undefined =>
+  const visibleNavItem = (href: string) =>
     navItems.find((item) => item.href === href);
 
   const toggleGroup = (key: string) =>
@@ -323,7 +377,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         className="h-auto gap-4 px-4 py-3 font-display font-bold uppercase tracking-widest text-muted-foreground hover:bg-transparent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-transparent data-[active=true]:font-bold data-[active=true]:text-foreground"
         style={{ fontSize: "1.15rem" }}
       >
-        <span className={isActive(item.href) ? "text-destructive" : "text-muted-foreground/60"}>
+        <span className={isActive(item.href) ? "text-brand" : "text-muted-foreground/60"}>
           {item.icon}
         </span>
         {item.label}
@@ -335,7 +389,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <SidebarProvider
       open={sidebarOpen}
       onOpenChange={setSidebarOpen}
-      className="bg-background"
+      className="dark bg-background"
       style={{ "--sidebar-width": "280px" } as React.CSSProperties}
     >
       {/* Sidebar */}
@@ -437,20 +491,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         {/* User + sign out */}
         <SidebarFooter
-          className="gap-3 border-t border-border px-4 py-4"
+          className="border-t border-border px-4 py-4"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="flex items-center justify-between gap-3">
-            {userEmail && (
-              <p
-                className="font-body truncate text-sm text-muted-foreground/70"
-                title={userEmail}
-              >
-                {userEmail}
-              </p>
-            )}
-            <AdminThemeToggle className="flex-shrink-0" />
-          </div>
+          {userEmail && (
+            <p
+              className="font-body mb-3 truncate text-sm text-muted-foreground/70"
+              title={userEmail}
+            >
+              {userEmail}
+            </p>
+          )}
           <button
             onClick={handleSignOut}
             className="flex items-center gap-2 font-display text-sm tracking-widest uppercase text-foreground transition-opacity duration-200 opacity-40 hover:opacity-100"
@@ -484,6 +535,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
 
         <main className="flex-1 overflow-auto p-6 lg:p-8">
+          {club.kind === "customer" &&
+            (club.publicAccess === "grace" || club.publicAccess === "suspended") && (
+              <div className="mx-auto mb-6 max-w-7xl rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 font-body text-sm text-warning">
+                Billing needs attention. Content changes are paused;{" "}
+                <Link href="/admin/payments" className="font-bold underline">
+                  review payment details
+                </Link>
+                .
+              </div>
+            )}
           {children}
         </main>
       </div>

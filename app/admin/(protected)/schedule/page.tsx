@@ -4,12 +4,27 @@ import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import SeasonSelect from "@/components/admin/SeasonSelect";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import OpponentCrest from "@/components/OpponentCrest";
+import { useClubContext } from "@/components/ClubContextProvider";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { cn } from "@/lib/utils";
+import { ChevronDownIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverPositioner,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // ── Types ─────────────────────────────────────
 
@@ -47,6 +62,20 @@ function emptyForm(seasonId = ""): FormState {
 
 function normalizeScore(value: number | null): number | null {
   return value === null || Number.isNaN(value) ? null : value;
+}
+
+function parseDateInput(value: string): Date | undefined {
+  if (!value) return undefined;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return undefined;
+  return new Date(year, month - 1, day);
+}
+
+function formatDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 async function uploadPhoto(file: File, bucket: string, folder: string): Promise<string> {
@@ -91,6 +120,16 @@ async function deleteUnusedMatchImageUrls({
 // ── Main component ────────────────────────────
 
 export default function SchedulePage() {
+  const club = useClubContext();
+  // See MatchForm: academy@1 never renders match sponsors, so the fields are
+  // hidden and nothing is copied forward into a new match for that template.
+  // editorial@1's EditorialScheduleMatchCard/EditorialNextMatch also render no
+  // sponsor data, so the same applies there.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const hidesMatchSponsorFields = isAcademy || isEditorial;
+  const carrySponsor = (list: Match[], seasonId: string) =>
+    hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId);
   const {
     seasons,
     selectedSeasonId,
@@ -128,7 +167,7 @@ export default function SchedulePage() {
     setEditingId(null);
     setAddForm({
       ...emptyForm(selectedSeasonId),
-      ...carrySponsorFromLatestMatch(matches, selectedSeasonId),
+      ...carrySponsor(matches, selectedSeasonId),
     });
   }, [matches, selectedSeasonId]);
 
@@ -194,7 +233,7 @@ export default function SchedulePage() {
     if (e) { setError(e.message); setSaving(false); return; }
     setAddForm({
       ...emptyForm(selectedSeasonId),
-      ...carrySponsorFromLatestMatch(matches, selectedSeasonId),
+      ...carrySponsor(matches, selectedSeasonId),
     });
     setAddOpen(false);
     await load();
@@ -296,12 +335,12 @@ export default function SchedulePage() {
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1
-            className="font-display font-black uppercase text-white leading-none"
+            className="font-display font-black uppercase text-foreground leading-none"
             style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}
           >
             Schedule
           </h1>
-          <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
+          <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
             Add, edit, or remove matches.
           </p>
         </div>
@@ -319,13 +358,12 @@ export default function SchedulePage() {
               setAddOpen((open) => !open);
               setAddForm({
                 ...emptyForm(selectedSeasonId),
-                ...carrySponsorFromLatestMatch(matches, selectedSeasonId),
+                ...carrySponsor(matches, selectedSeasonId),
               });
               setError(null);
             }}
             disabled={!selectedSeasonId}
-            className="flex-shrink-0 px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white transition-opacity"
-            style={{ backgroundColor: "#dc2626", fontSize: "1.1rem", opacity: selectedSeasonId ? 1 : 0.5 }}
+            className="flex-shrink-0 px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white transition-opacity hover:bg-brand/90 disabled:opacity-50"
           >
             {addOpen ? "Cancel" : "+ Add Match"}
           </button>
@@ -334,18 +372,15 @@ export default function SchedulePage() {
 
       {/* Global feedback */}
       {error && (
-        <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>
+        <p className="font-body text-sm mb-4 text-destructive">
           Error: {error}
         </p>
       )}
 
       {/* Add form */}
       {addOpen && (
-        <div
-          className="rounded-xl p-5 mb-6"
-          style={{ backgroundColor: "#161616", border: "1px solid rgba(220,38,38,0.25)" }}
-        >
-          <p className="font-display font-black uppercase text-xs tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
+        <div className="rounded-xl border border-brand/25 bg-card p-5 mb-6">
+          <p className="font-display font-black uppercase text-xs tracking-widest mb-4 text-muted-foreground">
             New Match
           </p>
           <MatchForm form={addForm} onChange={setAddForm} seasons={seasons} cleanupDraftUploads />
@@ -353,9 +388,9 @@ export default function SchedulePage() {
             <button
               onClick={handleAdd}
               disabled={saving}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-              style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
+              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white text-xs hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
+              {saving && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving…" : "Save Match"}
             </button>
           </div>
@@ -364,11 +399,29 @@ export default function SchedulePage() {
 
       {/* Match list */}
       {loading || seasonsLoading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>
-          Loading…
-        </p>
+        <div role="status" aria-label="Loading matches" className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Skeleton className="h-10 w-10 flex-shrink-0 rounded-full" />
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-5 w-56" />
+                  <Skeleton className="h-3.5 w-64" />
+                </div>
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <Skeleton className="h-9 w-16 rounded-lg" />
+                <Skeleton className="h-9 w-20 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : sorted.length === 0 ? (
-        <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>
+        <p className="font-body text-sm text-muted-foreground">
           No matches for {selectedSeason?.label ?? "the selected season"}. Add one above.
         </p>
       ) : (
@@ -380,26 +433,27 @@ export default function SchedulePage() {
             return (
               <div
                 key={m.id}
-                className="rounded-xl overflow-hidden"
-                style={{ border: `1px solid ${isEditing ? "rgba(220,38,38,0.3)" : "rgba(255,255,255,0.07)"}` }}
+                className={cn(
+                  "rounded-xl overflow-hidden border",
+                  isEditing ? "border-brand/30" : "border-border",
+                )}
               >
                 {isEditing ? (
                   /* Edit mode */
-                  <div className="p-5" style={{ backgroundColor: "#161616" }}>
+                  <div className="bg-card p-5">
                     <MatchForm form={editForm} onChange={setEditForm} seasons={seasons} />
                     <div className="mt-4 flex gap-3">
                       <button
                         onClick={handleSaveEdit}
                         disabled={saving}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs"
-                        style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1, cursor: saving ? "not-allowed" : "pointer" }}
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest bg-brand text-white text-xs hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60"
                       >
+                        {saving && <AdminLoadingDots className="mr-2" />}
                         {saving ? "Saving…" : "Save"}
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs"
-                        style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}
+                        className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent"
                       >
                         Cancel
                       </button>
@@ -408,21 +462,21 @@ export default function SchedulePage() {
                 ) : (
                   /* View mode */
                   <div
-                    className="flex items-center justify-between gap-4 px-5 py-4"
-                    style={{ backgroundColor: "#111111" }}
+                    className="flex items-center justify-between gap-4 bg-card px-5 py-4 transition-colors hover:bg-accent/40"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={40} />
                       <div className="min-w-0">
                       {/* Date + home/away badge */}
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="font-display font-bold text-white" style={{ fontSize: "1.1rem" }}>{m.date}</span>
-                        <span className="font-body" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.3)" }}>{m.time}</span>
+                        <span className="font-display font-bold text-foreground" style={{ fontSize: "1.1rem" }}>{m.date}</span>
+                        <span className="font-body text-muted-foreground" style={{ fontSize: "1rem" }}>{m.time}</span>
                         <span
-                          className="font-display font-black uppercase px-2 py-0.5 rounded"
+                          className={cn(
+                            "font-display font-black uppercase px-2 py-0.5 rounded",
+                            m.home ? "bg-success/15 text-success" : "bg-muted/70 text-muted-foreground",
+                          )}
                           style={{
-                            backgroundColor: m.home ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)",
-                            color: m.home ? "rgba(34,197,94,0.9)" : "rgba(255,255,255,0.4)",
                             fontSize: "0.75rem",
                             letterSpacing: "0.08em",
                           }}
@@ -432,34 +486,34 @@ export default function SchedulePage() {
                       </div>
 
                       {/* Opponent */}
-                      <p className="font-display font-black uppercase text-white" style={{ fontSize: "1.25rem" }}>
+                      <p className="font-display font-black uppercase text-foreground" style={{ fontSize: "1.25rem" }}>
                         {m.home ? "vs" : "@"} {m.opponent}
                       </p>
 
                       {(m.rose_city_score !== null && m.opponent_score !== null) && (
                         <p
-                          className="font-display mt-1 font-black uppercase tracking-widest"
-                          style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.72)" }}
+                          className="font-display mt-1 font-black uppercase tracking-widest text-foreground/70"
+                          style={{ fontSize: "0.85rem" }}
                         >
-                          Result: Rose City {m.rose_city_score} - {m.opponent_score} {m.opponent}
+                          Result: {club.name} {m.rose_city_score} - {m.opponent_score} {m.opponent}
                         </p>
                       )}
 
                       {/* Competition */}
                       {m.competition && (
-                        <p className="font-body truncate" style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.35)" }}>
+                        <p className="font-body truncate text-muted-foreground" style={{ fontSize: "0.85rem" }}>
                           {m.competition}
                         </p>
                       )}
 
-                      {m.sponsor_logo_url && (
-                        <p className="font-body truncate" style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.3)" }}>
+                      {!hidesMatchSponsorFields && m.sponsor_logo_url && (
+                        <p className="font-body truncate text-muted-foreground/80" style={{ fontSize: "0.8rem" }}>
                           Presented by {m.sponsor_name || "match sponsor"}
                         </p>
                       )}
 
                       {/* Venue */}
-                      <p className="font-body mt-0.5 truncate" style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.3)" }}>
+                      <p className="font-body mt-0.5 truncate text-muted-foreground" style={{ fontSize: "0.95rem" }}>
                         {m.venue}
                         {m.city ? `, ${m.city}` : ""}
                         {m.state ? `, ${m.state}` : ""}
@@ -472,27 +526,16 @@ export default function SchedulePage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button
                         onClick={() => startEdit(m)}
-                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors"
-                        style={{
-                          fontSize: "0.95rem",
-                          backgroundColor: "#1e1e1e",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          color: "rgba(255,255,255,0.6)",
-                        }}
+                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors border border-border bg-muted/40 text-foreground/60 hover:bg-accent hover:text-foreground"
+                        style={{ fontSize: "0.95rem" }}
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(m.id)}
                         disabled={isDeleting}
-                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors"
-                        style={{
-                          fontSize: "0.95rem",
-                          backgroundColor: "rgba(220,38,38,0.1)",
-                          border: "1px solid rgba(220,38,38,0.2)",
-                          color: isDeleting ? "rgba(220,38,38,0.4)" : "rgba(220,38,38,0.8)",
-                          cursor: isDeleting ? "not-allowed" : "pointer",
-                        }}
+                        className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest transition-colors border border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20 disabled:cursor-not-allowed disabled:text-destructive/40 disabled:hover:bg-destructive/10"
+                        style={{ fontSize: "0.95rem" }}
                       >
                         {isDeleting ? "…" : "Delete"}
                       </button>
@@ -521,9 +564,25 @@ function MatchForm({
   seasons: DBSeason[];
   cleanupDraftUploads?: boolean;
 }) {
+  const club = useClubContext();
+  // academy@1 renders fixtures through AcademyNextMatch and AcademyFixtureRow,
+  // neither of which reads sponsor_name, sponsor_logo_url, or sponsor_link, so
+  // anything entered here could never appear on this club's site. Same
+  // dead-admin-surface removal as DCFC-D130. The columns, the upload/cleanup
+  // logic, and every other template's editor are untouched — clubhouse@1 still
+  // renders these through NextMatchCard.
+  // editorial@1's EditorialScheduleMatchCard and EditorialNextMatch also never
+  // read sponsor_name, sponsor_logo_url, or sponsor_link, so the same applies
+  // there.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const hidesMatchSponsorFields = isAcademy || isEditorial;
+
   function set(field: string, value: string | boolean | number | null) {
     onChange({ ...form, [field]: value });
   }
+
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   function setScore(field: "rose_city_score" | "opponent_score", value: string) {
     set(field, value === "" ? null : Number(value));
@@ -532,28 +591,45 @@ function MatchForm({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <Field label="Season" required>
-        <select
+        <NativeSelect
           value={form.season_id}
           onChange={(e) => set("season_id", e.target.value)}
-          style={inputStyle}
           required
         >
-          <option value="">— Select a season —</option>
+          <NativeSelectOption value="">— Select a season —</NativeSelectOption>
           {seasons.map((season) => (
-            <option key={season.id} value={season.id}>
+            <NativeSelectOption key={season.id} value={season.id}>
               {season.label}{season.active ? " (Active)" : ""}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
+        </NativeSelect>
       </Field>
 
       <Field label="Date" required>
-        <input
-          type="date"
-          value={form.date}
-          onChange={(e) => set("date", e.target.value)}
-          style={inputStyle}
-        />
+        <div className="dark">
+          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger
+              render={<Button variant="outline" />}
+              className="w-full justify-between font-normal"
+            >
+              {parseDateInput(form.date)?.toLocaleDateString() ?? "Select date"}
+              <ChevronDownIcon className="size-4 opacity-50" />
+            </PopoverTrigger>
+            <PopoverPositioner align="start">
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={parseDateInput(form.date)}
+                  captionLayout="dropdown"
+                  onSelect={(date) => {
+                    if (date) set("date", formatDateInput(date));
+                    setDatePickerOpen(false);
+                  }}
+                />
+              </PopoverContent>
+            </PopoverPositioner>
+          </Popover>
+        </div>
       </Field>
 
       <Field label="Time" required>
@@ -561,7 +637,7 @@ function MatchForm({
           type="time"
           value={form.time}
           onChange={(e) => set("time", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -571,7 +647,7 @@ function MatchForm({
           placeholder="e.g. Portland FC"
           value={form.opponent}
           onChange={(e) => set("opponent", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -584,7 +660,7 @@ function MatchForm({
           placeholder="e.g. LA Galaxy Reserves"
           value={form.opponent_short_name ?? ""}
           onChange={(e) => set("opponent_short_name", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -594,7 +670,7 @@ function MatchForm({
           placeholder="e.g. UPSL 2027 Premier SoCal North"
           value={form.competition ?? ""}
           onChange={(e) => set("competition", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -627,84 +703,78 @@ function MatchForm({
         />
       </Field>
 
-      <div
-        className="mt-2 border-t pt-4 sm:col-span-2"
-        style={{ borderColor: "rgba(255,255,255,0.08)" }}
-      >
-        <p
-          className="font-display text-xs font-black uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          Presented By Sponsor
-        </p>
-        <p
-          className="font-body mt-1 text-xs"
-          style={{ color: "rgba(255,255,255,0.28)" }}
-        >
-          New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage.
-        </p>
-      </div>
+      {!hidesMatchSponsorFields && (
+        <>
+          <div className="mt-2 border-t border-border pt-4 sm:col-span-2">
+            <p className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Presented By Sponsor
+            </p>
+            <p className="font-body mt-1 text-xs text-muted-foreground">
+              New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage.
+            </p>
+          </div>
 
-      <Field label="Sponsor Name (optional)">
-        <input
-          type="text"
-          placeholder="e.g. Tepito Coffee"
-          value={form.sponsor_name ?? ""}
-          onChange={(e) => set("sponsor_name", e.target.value)}
-          style={inputStyle}
-        />
-      </Field>
+          <Field label="Sponsor Name (optional)">
+            <input
+              type="text"
+              placeholder="e.g. Tepito Coffee"
+              value={form.sponsor_name ?? ""}
+              onChange={(e) => set("sponsor_name", e.target.value)}
+              className={ADMIN_INPUT_CLASS}
+            />
+          </Field>
 
-      <Field label="Sponsor Website Link (optional)">
-        <input
-          type="url"
-          placeholder="https://..."
-          value={form.sponsor_link ?? ""}
-          onChange={(e) => set("sponsor_link", e.target.value)}
-          style={inputStyle}
-        />
-      </Field>
+          <Field label="Sponsor Website Link (optional)">
+            <input
+              type="url"
+              placeholder="https://..."
+              value={form.sponsor_link ?? ""}
+              onChange={(e) => set("sponsor_link", e.target.value)}
+              className={ADMIN_INPUT_CLASS}
+            />
+          </Field>
 
-      <div className="sm:col-span-2">
-        <Field label="Sponsor Logo (optional)">
-          <SponsorLogoUpload
-            logoUrl={form.sponsor_logo_url}
-            sponsorName={form.sponsor_name ?? ""}
-            onUploaded={async (url) => {
-              if (cleanupDraftUploads) {
-                await deleteUnusedMatchImageUrls({
-                  bucket: "sponsors",
-                  urls: [form.sponsor_logo_url],
-                  column: "sponsor_logo_url",
-                  allowedPrefixes: ["match-sponsors/"],
-                });
-              }
-              onChange({ ...form, sponsor_logo_url: url });
-            }}
-            onRemove={async () => {
-              if (cleanupDraftUploads) {
-                await deleteUnusedMatchImageUrls({
-                  bucket: "sponsors",
-                  urls: [form.sponsor_logo_url],
-                  column: "sponsor_logo_url",
-                  allowedPrefixes: ["match-sponsors/"],
-                });
-              }
-              onChange({ ...form, sponsor_logo_url: null });
-            }}
-          />
-        </Field>
-      </div>
+          <div className="sm:col-span-2">
+            <Field label="Sponsor Logo (optional)">
+              <SponsorLogoUpload
+                logoUrl={form.sponsor_logo_url}
+                sponsorName={form.sponsor_name ?? ""}
+                onUploaded={async (url) => {
+                  if (cleanupDraftUploads) {
+                    await deleteUnusedMatchImageUrls({
+                      bucket: "sponsors",
+                      urls: [form.sponsor_logo_url],
+                      column: "sponsor_logo_url",
+                      allowedPrefixes: ["match-sponsors/"],
+                    });
+                  }
+                  onChange({ ...form, sponsor_logo_url: url });
+                }}
+                onRemove={async () => {
+                  if (cleanupDraftUploads) {
+                    await deleteUnusedMatchImageUrls({
+                      bucket: "sponsors",
+                      urls: [form.sponsor_logo_url],
+                      column: "sponsor_logo_url",
+                      allowedPrefixes: ["match-sponsors/"],
+                    });
+                  }
+                  onChange({ ...form, sponsor_logo_url: null });
+                }}
+              />
+            </Field>
+          </div>
+        </>
+      )}
 
       <Field label="Home / Away" required>
-        <select
+        <NativeSelect
           value={form.home ? "home" : "away"}
           onChange={(e) => set("home", e.target.value === "home")}
-          style={inputStyle}
         >
-          <option value="home">Home</option>
-          <option value="away">Away</option>
-        </select>
+          <NativeSelectOption value="home">Home</NativeSelectOption>
+          <NativeSelectOption value="away">Away</NativeSelectOption>
+        </NativeSelect>
       </Field>
 
       <Field label="Venue" required>
@@ -713,7 +783,7 @@ function MatchForm({
           placeholder="e.g. Delta Park"
           value={form.venue}
           onChange={(e) => set("venue", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -723,7 +793,7 @@ function MatchForm({
           placeholder="e.g. 1234 N Broadacre St"
           value={form.address ?? ""}
           onChange={(e) => set("address", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -733,7 +803,7 @@ function MatchForm({
           placeholder="e.g. Irvine"
           value={form.city ?? ""}
           onChange={(e) => set("city", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -743,29 +813,20 @@ function MatchForm({
           placeholder="e.g. CA"
           value={form.state ?? ""}
           onChange={(e) => set("state", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
-      <div
-        className="mt-2 border-t pt-4 sm:col-span-2"
-        style={{ borderColor: "rgba(255,255,255,0.08)" }}
-      >
-        <p
-          className="font-display text-xs font-black uppercase tracking-widest"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
+      <div className="mt-2 border-t border-border pt-4 sm:col-span-2">
+        <p className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
           Match Result
         </p>
-        <p
-          className="font-body mt-1 text-xs"
-          style={{ color: "rgba(255,255,255,0.28)" }}
-        >
+        <p className="font-body mt-1 text-xs text-muted-foreground">
           Leave both scores blank until the match is complete. The public schedule updates automatically once both scores are saved.
         </p>
       </div>
 
-      <Field label="Rose City Score (optional)">
+      <Field label={`${club.name} Score (optional)`}>
         <input
           type="number"
           min="0"
@@ -774,7 +835,7 @@ function MatchForm({
           placeholder="e.g. 2"
           value={form.rose_city_score ?? ""}
           onChange={(e) => setScore("rose_city_score", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
 
@@ -787,7 +848,7 @@ function MatchForm({
           placeholder="e.g. 1"
           value={form.opponent_score ?? ""}
           onChange={(e) => setScore("opponent_score", e.target.value)}
-          style={inputStyle}
+          className={ADMIN_INPUT_CLASS}
         />
       </Field>
     </div>
@@ -830,13 +891,7 @@ function OpponentLogoUpload({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="px-3 py-2 rounded-lg font-display font-bold uppercase tracking-widest text-xs"
-        style={{
-          backgroundColor: "#1e1e1e",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: uploading ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.7)",
-          cursor: uploading ? "not-allowed" : "pointer",
-        }}
+        className="px-3 py-2 rounded-lg font-display font-bold uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
       </button>
@@ -844,8 +899,7 @@ function OpponentLogoUpload({
         <button
           type="button"
           onClick={() => void onRemove()}
-          className="font-display font-bold uppercase tracking-widest text-xs"
-          style={{ color: "rgba(220,38,38,0.8)" }}
+          className="font-display font-bold uppercase tracking-widest text-xs text-destructive/80"
         >
           Remove
         </button>
@@ -858,7 +912,7 @@ function OpponentLogoUpload({
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
       {error && (
-        <p className="font-body text-xs" style={{ color: "#dc2626" }}>{error}</p>
+        <p className="font-body text-xs text-destructive">{error}</p>
       )}
     </div>
   );
@@ -896,11 +950,7 @@ function SponsorLogoUpload({
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div
-        className="relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-lg"
-        style={{
-          backgroundColor: "#FFFFFF",
-          border: "1px solid rgba(255,255,255,0.12)",
-        }}
+        className="relative flex h-14 w-28 items-center justify-center overflow-hidden rounded-lg border border-border bg-white"
       >
         {logoUrl ? (
           <Image
@@ -911,10 +961,7 @@ function SponsorLogoUpload({
             className="object-contain p-2"
           />
         ) : (
-          <span
-            className="font-display text-[0.55rem] font-bold uppercase tracking-widest"
-            style={{ color: "rgba(0,0,0,0.35)" }}
-          >
+          <span className="font-display text-[0.55rem] font-bold uppercase tracking-widest text-black/35">
             No Logo
           </span>
         )}
@@ -923,13 +970,7 @@ function SponsorLogoUpload({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="rounded-lg px-3 py-2 font-display text-xs font-bold uppercase tracking-widest"
-        style={{
-          backgroundColor: "#1e1e1e",
-          border: "1px solid rgba(255,255,255,0.08)",
-          color: uploading ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.7)",
-          cursor: uploading ? "not-allowed" : "pointer",
-        }}
+        className="rounded-lg border border-border bg-card px-3 py-2 font-display text-xs font-bold uppercase tracking-widest text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
       >
         {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
       </button>
@@ -937,8 +978,7 @@ function SponsorLogoUpload({
         <button
           type="button"
           onClick={() => void onRemove()}
-          className="font-display text-xs font-bold uppercase tracking-widest"
-          style={{ color: "rgba(220,38,38,0.8)" }}
+          className="font-display text-xs font-bold uppercase tracking-widest text-destructive/80"
         >
           Remove
         </button>
@@ -951,7 +991,7 @@ function SponsorLogoUpload({
         onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
       />
       {error && (
-        <p className="font-body w-full text-xs" style={{ color: "#dc2626" }}>
+        <p className="font-body w-full text-xs text-destructive">
           {error}
         </p>
       )}
@@ -962,32 +1002,16 @@ function SponsorLogoUpload({
 function Field({ label, required, help, children }: { label: string; required?: boolean; help?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label
-        className="block font-display text-xs tracking-widest uppercase mb-1"
-        style={{ color: "rgba(255,255,255,0.35)" }}
-      >
+      <label className={ADMIN_LABEL_CLASS}>
         {label}
-        {required && <span style={{ color: "#dc2626", marginLeft: 3 }}>*</span>}
+        {required && <span className="ml-1 text-destructive">*</span>}
       </label>
       {children}
       {help && (
-        <p className="font-body mt-1.5 text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.25)" }}>
+        <p className="font-body mt-1.5 text-xs leading-relaxed text-muted-foreground">
           {help}
         </p>
       )}
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  backgroundColor: "#0e0e0e",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "8px",
-  padding: "8px 12px",
-  color: "white",
-  fontSize: "0.875rem",
-  fontFamily: "inherit",
-  outline: "none",
-  colorScheme: "dark",
-};

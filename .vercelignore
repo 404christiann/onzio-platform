@@ -1,0 +1,8 @@
+.codex-work
+.claude
+.next
+node_modules
+test-results
+playwright-report
+coverage
+lions-font-comparison.html

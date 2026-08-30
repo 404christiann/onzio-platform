@@ -26,13 +26,9 @@ type ResolvePublicAccess = (
   input: Record<string, unknown>,
   now: Date,
 ) => "preview" | "live" | "grace" | "suspended";
-type ClubHasFeature = (
-  tier: "starter" | "pro",
-  feature: string,
-) => boolean;
 
 describe("admin authentication and role contract", () => {
-  it("allows an AAL2 owner to manage content and billing", async () => {
+  it("allows an AAL1 owner to manage content and billing", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
@@ -43,14 +39,14 @@ describe("admin authentication and role contract", () => {
           club: clubs.alpha,
           userId: USER_IDS.ownerAal2,
           memberships,
-          aal: "aal2",
+          aal: "aal1",
           capability,
         }),
       ).resolves.toMatchObject({ allowed: true, role: "owner" });
     }
   });
 
-  it("allows an AAL2 admin to manage content", async () => {
+  it("allows an AAL1 admin to manage content", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
@@ -60,7 +56,7 @@ describe("admin authentication and role contract", () => {
         club: clubs.alpha,
         userId: USER_IDS.adminAal2,
         memberships,
-        aal: "aal2",
+        aal: "aal1",
         capability: "content",
       }),
     ).resolves.toMatchObject({ allowed: true, role: "admin" });
@@ -76,8 +72,24 @@ describe("admin authentication and role contract", () => {
         club: clubs.bravo,
         userId: USER_IDS.multiClub,
         memberships,
-        aal: "aal2",
+        aal: "aal1",
         capability: "billing",
+      }),
+    ).resolves.toMatchObject({ allowed: true, role: "owner" });
+  });
+
+  it("allows an onboarding owner to manage content from private preview", async () => {
+    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
+      "@/lib/authorization",
+      "authorizeAdminAccess",
+    );
+    await expect(
+      authorizeAdminAccess({
+        club: clubs.bravo,
+        userId: USER_IDS.multiClub,
+        memberships,
+        aal: "aal1",
+        capability: "content",
       }),
     ).resolves.toMatchObject({ allowed: true, role: "owner" });
   });
@@ -100,22 +112,20 @@ describe("admin authentication and role contract", () => {
     );
   });
 
-  it("rejects an owner whose session has not reached AAL2", async () => {
+  it("allows an owner at AAL1 because content access is single-factor", async () => {
     const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
       "@/lib/authorization",
       "authorizeAdminAccess",
     );
-    await expectContractError(
-      () =>
-        authorizeAdminAccess({
-          club: clubs.alpha,
-          userId: USER_IDS.ownerAal1,
-          memberships,
-          aal: "aal1",
-          capability: "content",
-        }),
-      "MFA_REQUIRED",
-    );
+    await expect(
+      authorizeAdminAccess({
+        club: clubs.alpha,
+        userId: USER_IDS.ownerAal1,
+        memberships,
+        aal: "aal1",
+        capability: "content",
+      }),
+    ).resolves.toMatchObject({ allowed: true, role: "owner" });
   });
 
   it.each([
@@ -158,8 +168,8 @@ describe("admin authentication and role contract", () => {
   });
 });
 
-describe("tier and mutation boundary contract", () => {
-  it("allows Pro members to mutate Pro features", async () => {
+describe("tier-free mutation boundary contract", () => {
+  it("allows active members to mutate registered content", async () => {
     const authorizeMutation = await loadContract<AuthorizeMutation>(
       "@/lib/authorization",
       "authorizeMutation",
@@ -169,7 +179,7 @@ describe("tier and mutation boundary contract", () => {
         club: clubs.alpha,
         userId: USER_IDS.adminAal2,
         memberships,
-        aal: "aal2",
+        aal: "aal1",
         feature: "standings",
         payload: { title: "League table" },
       }),
@@ -179,14 +189,13 @@ describe("tier and mutation boundary contract", () => {
     });
   });
 
-  it("rejects Starter writes to Pro-only features", async () => {
+  it("does not use dormant tier metadata as authorization", async () => {
     const authorizeMutation = await loadContract<AuthorizeMutation>(
       "@/lib/authorization",
       "authorizeMutation",
     );
-    await expectContractError(
-      () =>
-        authorizeMutation({
+    await expect(
+      authorizeMutation({
           club: {
             ...clubs.alpha,
             tier: "starter",
@@ -196,9 +205,11 @@ describe("tier and mutation boundary contract", () => {
           aal: "aal2",
           feature: "standings",
           payload: { title: "League table" },
-        }),
-      "FEATURE_NOT_INCLUDED",
-    );
+      }),
+    ).resolves.toEqual({
+      clubId: clubs.alpha.id,
+      actorId: USER_IDS.adminAal2,
+    });
   });
 
   it("rejects authoritative club_id in a client payload", async () => {
@@ -223,21 +234,6 @@ describe("tier and mutation boundary contract", () => {
     );
   });
 
-  it.each([
-    ["starter", "branding", true],
-    ["starter", "standings", false],
-    ["pro", "standings", true],
-    ["pro", "shop", true],
-  ] as const)(
-    "evaluates %s access to %s",
-    async (tier, feature, expected) => {
-      const clubHasFeature = await loadContract<ClubHasFeature>(
-        "@/lib/club-features",
-        "clubHasFeature",
-      );
-      expect(clubHasFeature(tier, feature)).toBe(expected);
-    },
-  );
 });
 
 describe("public subscription access contract", () => {
@@ -246,7 +242,7 @@ describe("public subscription access contract", () => {
   it.each([
     ["onboarding", "preview"],
     ["active", "live"],
-    ["trialing", "live"],
+    ["trialing", "suspended"],
     ["grace", "grace"],
     ["suspended", "suspended"],
     ["archived", "suspended"],

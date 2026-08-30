@@ -5,10 +5,15 @@ import { Staff } from "@/lib/data";
 import ResilientImage from "@/components/ResilientImage";
 import StaffModal from "@/components/StaffModal";
 import NationalityFlag from "@/components/NationalityFlag";
+import { getRosterImageSrc, isRosterPlaceholderLogo } from "@/lib/roster-images";
+import { useClubBranding } from "@/components/ClubBrandingProvider";
 
 
 export default function StaffCard({ member }: { member: Staff }) {
+  const { clubLogoUrl } = useClubBranding();
   const [modalOpen, setModalOpen] = useState(false);
+  const isPlaceholderLogo = isRosterPlaceholderLogo(member.image);
+  const imageSrc = getRosterImageSrc(member.image, clubLogoUrl);
   const roleFontSize = member.role.length > 34
     ? "clamp(0.75rem, 1.15vw, 0.92rem)"
     : "clamp(0.82rem, 1.5vw, 1.12rem)";
@@ -28,10 +33,10 @@ export default function StaffCard({ member }: { member: Staff }) {
         {/* Photo */}
         <div className="absolute inset-0 overflow-hidden">
           <ResilientImage
-            src={member.image}
+            src={imageSrc}
             alt={member.name}
             fill
-            className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
+            className={`${isPlaceholderLogo ? "object-contain p-5 sm:p-8" : "object-cover object-top"} transition-transform duration-500 group-hover:scale-105`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             data-roster-card-image="true"
             fallback={

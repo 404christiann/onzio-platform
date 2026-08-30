@@ -6,9 +6,12 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import FixtureRow from "@/components/FixtureRow";
+import AcademyFixtureRow from "@/components/AcademyFixtureRow";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
+import EditorialSchedule from "@/components/editorial/EditorialSchedule";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,7 +56,16 @@ function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
 }
 
 export default function SchedulePage() {
+  const club = useClubContext();
+  if (club.presentationTemplateKey === "editorial@1") return <EditorialSchedule />;
+  if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSchedulePage />;
+  return <LegacySchedulePage />;
+}
+
+function LegacySchedulePage() {
+  const club = useClubContext();
   const clubId = useClubId();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const heroRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -141,19 +153,33 @@ export default function SchedulePage() {
             className="pt-36 pb-14 px-6 lg:px-10 max-w-7xl mx-auto"
             style={{ opacity: 0 }}
           >
-            <p
-              className="font-display font-bold tracking-widest uppercase mb-3"
-              style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
-            >
-              {seasonLabel} Season
-            </p>
-            <h1
-              className="font-display font-black uppercase leading-none"
-              style={{ fontSize: "clamp(4rem, 10vw, 8rem)", color: "var(--color-black)" }}
-            >
-              Fixtures
-            </h1>
-            <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
+            {isAcademy ? (
+              <>
+                <p className="font-nav text-sm font-bold uppercase text-[#FF1616] sm:text-base">
+                  {seasonLabel} Season
+                </p>
+                <h1 className="mt-5 font-display text-[4rem] font-black uppercase italic leading-none text-[#1E3653] sm:text-[6.5rem] lg:text-[9rem]">
+                  Fixtures
+                </h1>
+                <div className="mt-8 h-1 w-14 bg-[#FF1616] sm:w-20" />
+              </>
+            ) : (
+              <>
+                <p
+                  className="font-display font-bold tracking-widest uppercase mb-3"
+                  style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
+                >
+                  {seasonLabel} Season
+                </p>
+                <h1
+                  className="font-display font-black uppercase leading-none"
+                  style={{ fontSize: "clamp(4rem, 10vw, 8rem)", color: "var(--color-black)" }}
+                >
+                  Fixtures
+                </h1>
+                <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
+              </>
+            )}
           </div>
 
           {/* Fixture list */}
@@ -163,45 +189,77 @@ export default function SchedulePage() {
             style={{ opacity: 0 }}
           >
             {/* Column headers */}
-            <div
-              className="hidden sm:flex items-center px-6 md:px-8 py-3"
-              style={{ borderBottom: "2px solid var(--color-black)" }}
-            >
-              <span className="w-8 flex-shrink-0" />
-              <span
-                className="font-display font-black text-sm tracking-widest uppercase w-44 flex-shrink-0"
-                style={{ color: "var(--color-black)" }}
+            {isAcademy ? (
+              <div className="hidden grid-cols-[44px_240px_minmax(0,1fr)_160px] items-center border-b-2 border-[#1E3653] px-5 pb-4 md:grid">
+                <span aria-hidden="true" />
+                <span className="font-nav text-sm font-bold uppercase text-[#1E3653]">
+                  Date · Time
+                </span>
+                <span className="font-nav text-sm font-bold uppercase text-[#1E3653]">
+                  Opponent
+                </span>
+                <span aria-hidden="true" />
+              </div>
+            ) : (
+              <div
+                className="hidden sm:flex items-center px-6 md:px-8 py-3"
+                style={{ borderBottom: "2px solid var(--color-black)" }}
               >
-                Date · Time
-              </span>
-              <span
-                className="font-display font-black text-sm tracking-widest uppercase flex-1 px-6"
-                style={{ color: "var(--color-black)" }}
-              >
-                Opponent
-              </span>
-            </div>
+                <span className="w-8 flex-shrink-0" />
+                <span
+                  className="font-display font-black text-sm tracking-widest uppercase w-44 flex-shrink-0"
+                  style={{ color: "var(--color-black)" }}
+                >
+                  Date · Time
+                </span>
+                <span
+                  className="font-display font-black text-sm tracking-widest uppercase flex-1 px-6"
+                  style={{ color: "var(--color-black)" }}
+                >
+                  Opponent
+                </span>
+              </div>
+            )}
 
             {/* Rows */}
-            <div style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
-              {fixtures.map((fixture, i) => (
-                <FixtureRow
-                  key={i}
-                  fixture={fixture}
-                  isNext={i === nextMatchIdx}
-                  isPast={i < nextMatchIdx}
-                  index={i}
-                />
+            <div style={isAcademy ? undefined : { borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+              {fixtures.length === 0 ? (
+                <div className="px-6 py-14 text-center">
+                  <h2 className="font-display text-2xl font-black uppercase text-[var(--color-black)]">
+                    Schedule coming soon
+                  </h2>
+                  <p className="mx-auto mt-3 max-w-xl font-body text-[var(--color-gray-mid)]">
+                    No official fixtures have been published yet.
+                  </p>
+                </div>
+              ) : fixtures.map((fixture, i) => (
+                isAcademy ? (
+                  <AcademyFixtureRow
+                    key={i}
+                    fixture={fixture}
+                    isNext={i === nextMatchIdx}
+                    isPast={i < nextMatchIdx}
+                    index={i}
+                  />
+                ) : (
+                  <FixtureRow
+                    key={i}
+                    fixture={fixture}
+                    isNext={i === nextMatchIdx}
+                    isPast={i < nextMatchIdx}
+                    index={i}
+                  />
+                )
               ))}
             </div>
 
             {/* Footer note */}
-            <p
+            {fixtures.length > 0 && <p
               className="font-display font-bold text-sm tracking-widest uppercase text-center mt-10 px-6"
               style={{ color: "var(--color-black)" }}
             >
               Match details and venues are subject to change.
-            </p>
+            </p>}
           </div>
         </>
       )}

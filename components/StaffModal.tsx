@@ -4,6 +4,8 @@ import { Dialog, DialogPanel, DialogBackdrop } from "@headlessui/react";
 import ResilientImage from "@/components/ResilientImage";
 import { Staff } from "@/lib/data";
 import NationalityFlag from "@/components/NationalityFlag";
+import { getRosterImageSrc, isRosterPlaceholderLogo } from "@/lib/roster-images";
+import { useClubBranding } from "@/components/ClubBrandingProvider";
 
 
 interface Props {
@@ -12,6 +14,10 @@ interface Props {
 }
 
 export default function StaffModal({ member, onClose }: Props) {
+  const { clubLogoUrl } = useClubBranding();
+  const isPlaceholderLogo = isRosterPlaceholderLogo(member.image);
+  const imageSrc = getRosterImageSrc(member.image, clubLogoUrl);
+
   return (
     <Dialog open={true} onClose={onClose} className="relative z-[100]">
 
@@ -46,10 +52,10 @@ export default function StaffModal({ member, onClose }: Props) {
             style={{ WebkitTransform: "translateZ(0)" }}
           >
             <ResilientImage
-              src={member.image}
+              src={imageSrc}
               alt={member.name}
               fill
-              className="object-cover object-top"
+              className={isPlaceholderLogo ? "object-contain p-10" : "object-cover object-top"}
               sizes="(max-width: 768px) 100vw, 480px"
               data-roster-modal-image="true"
               fallback={

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import {
+  ADMIN_SELECT_MEDIA_REFERENCES,
   ADMIN_TABLE_FEATURES,
   adminDataRequestSchema,
   SINGLETON_TABLES,
   type AdminDataRequest,
 } from "@/lib/admin-data-contract";
+import { resolveMediaReferences } from "@/lib/media-assets";
+import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContext } from "@/lib/club-context";
@@ -49,20 +52,19 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return errorResponse("AUTHENTICATION_REQUIRED", 401);
-
-  const { data: assurance } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  const aal = assurance?.currentLevel === "aal2" ? "aal2" : "aal1";
+  let userId: string;
+  try {
+    ({ userId } = await requireFreshClubSession(supabase));
+  } catch (error) {
+    const code = error instanceof ContractError ? error.code : "AUTHENTICATION_REQUIRED";
+    return errorResponse(code, code === "AUTHENTICATION_REQUIRED" ? 401 : 403);
+  }
 
   let club;
   try {
     club = await getClubContext({
       hostname: request.headers.get("host") ?? "",
-      userId: user.id,
+      userId,
     });
   } catch (error) {
     const code = error instanceof ContractError ? error.code : "UNKNOWN_TENANT";
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
   const memberships = club.role
     ? [
         {
-          userId: user.id,
+          userId,
           clubId: club.id,
           role: club.role,
           status: "active",
@@ -84,17 +86,17 @@ export async function POST(request: Request) {
     if (parsed.data.operation === "select") {
       await authorizeAdminAccess({
         club,
-        userId: user.id,
+        userId,
         memberships,
-        aal,
+        aal: "aal1",
         capability: "content",
       });
     } else {
       await authorizeMutation({
         club,
-        userId: user.id,
+        userId,
         memberships,
-        aal,
+        aal: "aal1",
         feature: ADMIN_TABLE_FEATURES[parsed.data.table],
         payload: (parsed.data.payload ?? {}) as Record<string, unknown>,
       });
@@ -176,8 +178,30 @@ export async function POST(request: Request) {
   if (result.error) {
     return errorResponse("DATABASE_OPERATION_FAILED", 400, result.error.message);
   }
+
+  let data = result.data ?? null;
+  const mediaReferences = ADMIN_SELECT_MEDIA_REFERENCES[input.table];
+  if (input.operation === "select" && mediaReferences && data) {
+    // Admin editors need the same delivery URL the public site resolves, or a
+    // club's already-published hero and detail images have nothing to render.
+    const rows = Array.isArray(data) ? data : [data];
+    try {
+      const resolved = await resolveMediaReferences(
+        rows as Record<string, unknown>[],
+        club.id,
+        mediaReferences,
+        onzio as unknown as Parameters<typeof resolveMediaReferences>[3],
+      );
+      data = Array.isArray(data) ? resolved : (resolved[0] ?? null);
+    } catch {
+      // Media hydration is presentational. A club that can read its own rows
+      // should still get them if the asset lookup fails; the editor falls back
+      // to its "media attached" state rather than failing the whole page load.
+    }
+  }
+
   return NextResponse.json({
-    data: result.data ?? null,
+    data,
     count: result.count ?? null,
     error: null,
   });

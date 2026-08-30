@@ -1,31 +1,13 @@
 "use client";
 
-import nextDynamic from "next/dynamic";
-import { useClubContext } from "@/components/ClubContextProvider";
+import HomePageClient from "@/components/HomePageClient";
 
 export const dynamic = "force-dynamic";
 
-const Hero           = nextDynamic(() => import("@/components/Hero"),           { ssr: false });
-const NextMatchCard   = nextDynamic(() => import("@/components/NextMatchCard"),  { ssr: false });
-const ChampionsBadge = nextDynamic(() => import("@/components/ChampionsBadge"), { ssr: false });
-const PhotoSlideshow = nextDynamic(() => import("@/components/PhotoSlideshow"), { ssr: false });
-const SponsorCarousel = nextDynamic(() => import("@/components/SponsorCarouselContainer"), { ssr: false });
-const LeagueStandings = nextDynamic(() => import("@/components/LeagueStandingsContainer"), { ssr: false });
-const ShopKitSection  = nextDynamic(() => import("@/components/ShopKitSectionContainer"), { ssr: false });
-const BehindTheRose   = nextDynamic(() => import("@/components/BehindTheRose"),   { ssr: false });
-
+// Legacy unscoped route. All public tenant traffic is rewritten by
+// middleware.ts to app/%5Fclubs/[slug]/page.tsx, which resolves the hero
+// content server-side; this path has no slug to resolve, so it passes null
+// and Hero client-fetches from a tenant-neutral initial state.
 export default function HomePage() {
-  const club = useClubContext();
-  return (
-    <>
-      <Hero />
-      <ShopKitSection surface="home" fadeImageToWhite />
-      {club.slug === "rose-city" && <ChampionsBadge />}
-      <NextMatchCard />
-      <PhotoSlideshow />
-      <SponsorCarousel />
-      <LeagueStandings />
-      <BehindTheRose />
-    </>
-  );
+  return <HomePageClient initialHeroContent={null} />;
 }

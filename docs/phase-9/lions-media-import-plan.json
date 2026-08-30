@@ -1,0 +1,547 @@
+{
+  "formatVersion": 1,
+  "kind": "lions-fc-media-import-dry-run-plan",
+  "dryRunOnly": true,
+  "generatedAt": "2026-07-30T02:12:43.814Z",
+  "source": {
+    "projectRef": "ydvggllbrswfchgjhjhr",
+    "bucket": "assets",
+    "prefix": "onzioMockupsAssets",
+    "publicOrigin": "https://ydvggllbrswfchgjhjhr.supabase.co",
+    "readOnly": true
+  },
+  "destination": {
+    "environment": "staging",
+    "tenantId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+    "bucket": "onzio-media",
+    "hostedMutations": 0
+  },
+  "safeguards": {
+    "requiresExplicitSource": true,
+    "requiresExplicitDestination": true,
+    "requiresDryRun": true,
+    "rejectsSupabaseImageTransformations": true,
+    "rejectsCustomSupabaseImageLoader": true,
+    "rejectsSvgAndExecutableInput": true,
+    "usesUuidVersionedPaths": true,
+    "exposesSecrets": false
+  },
+  "assets": [
+    {
+      "assetId": "5d66ad31-86d7-55e9-a5a6-afaea4356852",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/490753204_17927675316024475_6690706346505779685_n.jpg",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/490753204_17927675316024475_6690706346505779685_n.jpg",
+      "sourceByteSize": 306279,
+      "sourceMimeType": "image/jpeg",
+      "sourceWidth": 1050,
+      "sourceHeight": 1312,
+      "sourceHasAlpha": false,
+      "sourceChecksumSha256": "ce396912320f0c3dabb36f4f18401a924862eb3c60caff87ae6a25d6a3e16a73",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/5d66ad31-86d7-55e9-a5a6-afaea4356852.webp",
+      "surface": "homepage",
+      "mediaKind": "photograph",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 112798,
+      "normalizedWidth": 1050,
+      "normalizedHeight": 1312,
+      "normalizedChecksumSha256": "76f6f1ad2634d0fef9940b177f69a68687385e80b0fcf8db5099a383e9dd3e0c",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "homepage_slideshow_photos",
+          "operation": "insert",
+          "fields": {
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/5d66ad31-86d7-55e9-a5a6-afaea4356852.webp",
+            "media_asset_id": "5d66ad31-86d7-55e9-a5a6-afaea4356852",
+            "alt": "Lions Football Club player portrait on match day",
+            "sort_order": 2
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "50fc7867-63d0-5b50-bf1d-e8f0305af348",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/491413366_17927675394024475_4053105668658067411_n.jpg",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/491413366_17927675394024475_4053105668658067411_n.jpg",
+      "sourceByteSize": 308546,
+      "sourceMimeType": "image/jpeg",
+      "sourceWidth": 1050,
+      "sourceHeight": 1312,
+      "sourceHasAlpha": false,
+      "sourceChecksumSha256": "fa0cb1b8e58df54bd6391a50259e472f32583120e058955b7a9674638551ed24",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/50fc7867-63d0-5b50-bf1d-e8f0305af348.webp",
+      "surface": "homepage",
+      "mediaKind": "photograph",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 115896,
+      "normalizedWidth": 1050,
+      "normalizedHeight": 1312,
+      "normalizedChecksumSha256": "b5eab4b90ef15adde4708f7a7ba39d0f5d0dae0d86f8a3da9ad3c7d6c3ae4880",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "homepage_slideshow_photos",
+          "operation": "insert",
+          "fields": {
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/50fc7867-63d0-5b50-bf1d-e8f0305af348.webp",
+            "media_asset_id": "50fc7867-63d0-5b50-bf1d-e8f0305af348",
+            "alt": "Lions Football Club player portrait in first-team kit",
+            "sort_order": 4
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "03b61fbf-81f1-5cae-b882-0bd3787e0449",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/491417483_17927675355024475_5496002634953332765_n.jpg",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/491417483_17927675355024475_5496002634953332765_n.jpg",
+      "sourceByteSize": 349584,
+      "sourceMimeType": "image/jpeg",
+      "sourceWidth": 1050,
+      "sourceHeight": 1312,
+      "sourceHasAlpha": false,
+      "sourceChecksumSha256": "fb733e44c94d6a5a3ecb9bba640f92fcc4bcbc310714a7ad3a460a299af211d8",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/03b61fbf-81f1-5cae-b882-0bd3787e0449.webp",
+      "surface": "homepage",
+      "mediaKind": "photograph",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 150076,
+      "normalizedWidth": 1050,
+      "normalizedHeight": 1312,
+      "normalizedChecksumSha256": "61676469f64d5a83988e810d18a3d0c32adaeee731b0d5b3e048d54079f7888c",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "homepage_slideshow_photos",
+          "operation": "insert",
+          "fields": {
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/03b61fbf-81f1-5cae-b882-0bd3787e0449.webp",
+            "media_asset_id": "03b61fbf-81f1-5cae-b882-0bd3787e0449",
+            "alt": "Lions Football Club captain wearing the navy first-team kit",
+            "sort_order": 0
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "d32cedb2-11c4-5b43-afd9-f9c4a26b12b1",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/491452867_17927675298024475_4413570856070124753_n.jpg",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/491452867_17927675298024475_4413570856070124753_n.jpg",
+      "sourceByteSize": 338910,
+      "sourceMimeType": "image/jpeg",
+      "sourceWidth": 1050,
+      "sourceHeight": 1312,
+      "sourceHasAlpha": false,
+      "sourceChecksumSha256": "ce584688b2161dd85ae9a6022e9ba818477ced1af21da758a0afbfeb669ee877",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/d32cedb2-11c4-5b43-afd9-f9c4a26b12b1.webp",
+      "surface": "homepage",
+      "mediaKind": "photograph",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 135022,
+      "normalizedWidth": 1050,
+      "normalizedHeight": 1312,
+      "normalizedChecksumSha256": "c349fc11120a7fa507caa09867be2ba01c69bd664b455352ea42b3643dc7d066",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "homepage_slideshow_photos",
+          "operation": "insert",
+          "fields": {
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/d32cedb2-11c4-5b43-afd9-f9c4a26b12b1.webp",
+            "media_asset_id": "d32cedb2-11c4-5b43-afd9-f9c4a26b12b1",
+            "alt": "Lions Football Club player portrait in red-accented kit",
+            "sort_order": 3
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "7073ba96-e994-59d8-aba7-991e54546055",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/491499458_17927675328024475_7356353145949999522_n.jpg",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/491499458_17927675328024475_7356353145949999522_n.jpg",
+      "sourceByteSize": 332616,
+      "sourceMimeType": "image/jpeg",
+      "sourceWidth": 1050,
+      "sourceHeight": 1312,
+      "sourceHasAlpha": false,
+      "sourceChecksumSha256": "c91ab0858c8066a8b30338852c288d71e7d72012da12d71762f87015565f4987",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/7073ba96-e994-59d8-aba7-991e54546055.webp",
+      "surface": "homepage",
+      "mediaKind": "photograph",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 134802,
+      "normalizedWidth": 1050,
+      "normalizedHeight": 1312,
+      "normalizedChecksumSha256": "e2745ff47319879779dcd90cc2c03113b087d5d1ff25c4c8e3635545c8268496",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "homepage_slideshow_photos",
+          "operation": "insert",
+          "fields": {
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/homepage/7073ba96-e994-59d8-aba7-991e54546055.webp",
+            "media_asset_id": "7073ba96-e994-59d8-aba7-991e54546055",
+            "alt": "Lions Football Club player portrait in navy kit",
+            "sort_order": 1
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "9255874a-b41a-54f4-8984-d2fdd666e8e4",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/blue-jersey-transparent.png",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/blue-jersey-transparent.png",
+      "sourceByteSize": 1299244,
+      "sourceMimeType": "image/png",
+      "sourceWidth": 1402,
+      "sourceHeight": 1122,
+      "sourceHasAlpha": true,
+      "sourceChecksumSha256": "3cefedf4f9c31a21ce73a3a72e62fb718bc9ab382812a8cb5fc47ced7d0ac62e",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/9255874a-b41a-54f4-8984-d2fdd666e8e4.webp",
+      "surface": "shop",
+      "mediaKind": "graphic",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 50600,
+      "normalizedWidth": 1402,
+      "normalizedHeight": 1122,
+      "normalizedChecksumSha256": "a840e39b7dbdfea9a4608c3a2c4acbb0bfd98dd677d6241c327509a55a1a9f49",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "shop_kit_photos",
+          "operation": "insert",
+          "fields": {
+            "surface": "shop",
+            "kit_variant": "home",
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/9255874a-b41a-54f4-8984-d2fdd666e8e4.webp",
+            "media_asset_id": "9255874a-b41a-54f4-8984-d2fdd666e8e4",
+            "sort_order": 0
+          }
+        },
+        {
+          "status": "ready",
+          "table": "shop_carousel_photos",
+          "operation": "insert",
+          "fields": {
+            "kit_variant": "home",
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/9255874a-b41a-54f4-8984-d2fdd666e8e4.webp",
+            "media_asset_id": "9255874a-b41a-54f4-8984-d2fdd666e8e4",
+            "sort_order": 0
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "2eea11ef-0658-5633-9a59-74d570f300d6",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/crest-white.png",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/crest-white.png",
+      "sourceByteSize": 102620,
+      "sourceMimeType": "image/png",
+      "sourceWidth": 1206,
+      "sourceHeight": 1194,
+      "sourceHasAlpha": true,
+      "sourceChecksumSha256": "011ea7a9aae854a0e8afc2d792d0b12de732cf676e2b0d88b254db7d73dd1624",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/branding/2eea11ef-0658-5633-9a59-74d570f300d6.webp",
+      "surface": "branding",
+      "mediaKind": "graphic",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 49202,
+      "normalizedWidth": 1206,
+      "normalizedHeight": 1194,
+      "normalizedChecksumSha256": "2772ac627a9d853541e7bbb198aaf0198298a4d5a3f549c4f109f79d3df230ae",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "site_branding",
+          "operation": "upsert",
+          "fields": {
+            "inverse_logo_path": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/branding/2eea11ef-0658-5633-9a59-74d570f300d6.webp",
+            "inverse_logo_asset_id": "2eea11ef-0658-5633-9a59-74d570f300d6"
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "50daddca-e32f-53d8-a2d3-8fa3a85a93d8",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/crest.png",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/crest.png",
+      "sourceByteSize": 174231,
+      "sourceMimeType": "image/png",
+      "sourceWidth": 1206,
+      "sourceHeight": 1194,
+      "sourceHasAlpha": true,
+      "sourceChecksumSha256": "2384943a2fde2c59d36a9e4bb2bad7a65ee80f1a9f6dc63daa5ac66584cad8a9",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/branding/50daddca-e32f-53d8-a2d3-8fa3a85a93d8.webp",
+      "surface": "branding",
+      "mediaKind": "graphic",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 68728,
+      "normalizedWidth": 1206,
+      "normalizedHeight": 1194,
+      "normalizedChecksumSha256": "ea8ae5d58917e1c3ce64874617cdd88369bc9058937d3496bbe0581e2180495c",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "site_branding",
+          "operation": "upsert",
+          "fields": {
+            "club_logo_path": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/branding/50daddca-e32f-53d8-a2d3-8fa3a85a93d8.webp",
+            "club_logo_asset_id": "50daddca-e32f-53d8-a2d3-8fa3a85a93d8"
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "ef68f588-8718-5a16-be7c-a0f9b601028a",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/red-jersey-transparent.png",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/red-jersey-transparent.png",
+      "sourceByteSize": 1336259,
+      "sourceMimeType": "image/png",
+      "sourceWidth": 1402,
+      "sourceHeight": 1122,
+      "sourceHasAlpha": true,
+      "sourceChecksumSha256": "4583de144d47b3a328eaebad5f69ad0d5ed4be7d59affed8f64eebdb2d2ad81c",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/ef68f588-8718-5a16-be7c-a0f9b601028a.webp",
+      "surface": "shop",
+      "mediaKind": "graphic",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 58410,
+      "normalizedWidth": 1402,
+      "normalizedHeight": 1122,
+      "normalizedChecksumSha256": "2e22574fc92a83e0879ef693c6807f422ea93dee16ee67cfe955dde6c4f6acea",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "shop_kit_photos",
+          "operation": "insert",
+          "fields": {
+            "surface": "shop",
+            "kit_variant": "third",
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/ef68f588-8718-5a16-be7c-a0f9b601028a.webp",
+            "media_asset_id": "ef68f588-8718-5a16-be7c-a0f9b601028a",
+            "sort_order": 0
+          }
+        },
+        {
+          "status": "ready",
+          "table": "shop_carousel_photos",
+          "operation": "insert",
+          "fields": {
+            "kit_variant": "third",
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/ef68f588-8718-5a16-be7c-a0f9b601028a.webp",
+            "media_asset_id": "ef68f588-8718-5a16-be7c-a0f9b601028a",
+            "sort_order": 1
+          }
+        }
+      ]
+    },
+    {
+      "assetId": "7ea389f3-97d6-57da-8a53-5256c043168e",
+      "sourceProjectRef": "ydvggllbrswfchgjhjhr",
+      "sourceBucket": "assets",
+      "sourcePrefix": "onzioMockupsAssets",
+      "sourcePath": "onzioMockupsAssets/white-jersey-transparent.png",
+      "sourcePublicUrl": "https://ydvggllbrswfchgjhjhr.supabase.co/storage/v1/object/public/assets/onzioMockupsAssets/white-jersey-transparent.png",
+      "sourceByteSize": 983618,
+      "sourceMimeType": "image/png",
+      "sourceWidth": 1402,
+      "sourceHeight": 1122,
+      "sourceHasAlpha": true,
+      "sourceChecksumSha256": "3ea26e3c74f07c0304e188799c1a4962fc6df0e52ce12aa6cf7588b825617b2f",
+      "destinationEnvironment": "staging",
+      "destinationClubId": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7",
+      "destinationBucket": "onzio-media",
+      "destinationPath": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/7ea389f3-97d6-57da-8a53-5256c043168e.webp",
+      "surface": "shop",
+      "mediaKind": "graphic",
+      "normalizedMimeType": "image/webp",
+      "normalizedByteSize": 36714,
+      "normalizedWidth": 1402,
+      "normalizedHeight": 1122,
+      "normalizedChecksumSha256": "52abb97c356e94459f1708bb4aab8f8a038ada7ddee59e04bd11f33eefbd69bc",
+      "dryRunOnly": true,
+      "plannedActions": [
+        "download-source-object",
+        "validate-signature-and-dimensions",
+        "normalize-image",
+        "upload-normalized-object",
+        "insert-media-asset"
+      ],
+      "contentLinks": [
+        {
+          "status": "ready",
+          "table": "shop_kit_photos",
+          "operation": "insert",
+          "fields": {
+            "surface": "shop",
+            "kit_variant": "away",
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/7ea389f3-97d6-57da-8a53-5256c043168e.webp",
+            "media_asset_id": "7ea389f3-97d6-57da-8a53-5256c043168e",
+            "sort_order": 0
+          }
+        },
+        {
+          "status": "ready",
+          "table": "shop_carousel_photos",
+          "operation": "insert",
+          "fields": {
+            "kit_variant": "away",
+            "url": "9d292f0a-6f93-54b1-b21c-ce2d0af3afa7/shop/7ea389f3-97d6-57da-8a53-5256c043168e.webp",
+            "media_asset_id": "7ea389f3-97d6-57da-8a53-5256c043168e",
+            "sort_order": 2
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "suppliedAssetCount": 10,
+    "plannedMediaAssetCount": 10,
+    "readyContentLinkCount": 13,
+    "blockedContentLinkCount": 0,
+    "sourceByteTotal": 5531907,
+    "normalizedByteTotal": 912248,
+    "checksumMismatches": 0,
+    "hostedMutations": 0
+  },
+  "gaps": [
+    "publishAuthorizedMedia creates media_assets but does not link assets to content tables; importer needs an explicit transactional linking layer."
+  ],
+  "idempotency": {
+    "assetIdSeed": "destinationEnvironment + destinationTenantId + sourceProjectRef + sourceBucket + sourcePath + sourceChecksumSha256",
+    "conflictStrategy": "existing matching media_assets row is reused; mismatched existing row fails closed",
+    "retrySafeBecause": [
+      "source inspection is read-only",
+      "published object paths include deterministic UUIDs and never overwrite in place",
+      "each media_assets row is keyed by the planned asset UUID",
+      "content links are planned separately from media publication"
+    ]
+  },
+  "planDigest": "883305c9509827ac1a2f43ee6d5ec5f1e2d9c91903c1331183dd3e6e01593715"
+}

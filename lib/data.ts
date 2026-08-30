@@ -57,6 +57,7 @@ export type Staff = {
 };
 
 export type Fixture = {
+  id?: string;
   date: string;
   opponent: string;
   opponentShortName?: string | null;
@@ -73,6 +74,14 @@ export type Fixture = {
   state?: string | null;
   roseCityScore?: number | null;
   opponentScore?: number | null;
+  // Additive, Lions E1/E4: onzio.matches.attendance/scorers, surfaced for
+  // editorial@1's match-area page. Every existing caller ignores these two
+  // fields, so their addition is not a breaking change to Fixture consumers.
+  attendance?: number | null;
+  // Match-day scorer summaries, e.g. ["Santiago Ruiz 34'", "Malik Johnson 71'"].
+  // Stored as onzio.matches.scorers (jsonb, defaults to `[]`); mapFixture
+  // narrows the raw jsonb value to a string[] defensively.
+  scorers?: string[];
 };
 
 export type ShopProduct = {

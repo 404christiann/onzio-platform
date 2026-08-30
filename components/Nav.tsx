@@ -8,6 +8,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { fetchPrograms, type ProgramContent } from "@/lib/queries";
 
 const MIGRATED_LOGO_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/branding`;
@@ -43,6 +44,54 @@ const affiliationLogos = [
   },
 ];
 
+const lionsLocalAffiliations = [
+  {
+    src: "/images/logo/affiliations/us-soccer-color.png",
+    alt: "US Soccer",
+    className: "h-8 w-8",
+    sizes: "32px",
+  },
+  {
+    src: "/images/logo/affiliations/fifa-color.png",
+    alt: "FIFA",
+    className: "h-8 w-14",
+    sizes: "56px",
+  },
+  {
+    src: "/images/logo/affiliations/upsl-color.png",
+    alt: "UPSL",
+    className: "h-8 w-8",
+    sizes: "32px",
+  },
+];
+
+// Standard US Soccer/FIFA/UPSL federation badges for the academy@1 template.
+// Scoped to the template key, not any single club's slug — see EPIC.md's
+// locked boundary against per-club tenant branches in presentation code.
+const academyAffiliations = [
+  {
+    colorSrc: "/images/logo/affiliations/us-soccer-color.png",
+    whiteSrc: "/images/logo/affiliations/us-soccer-white.png",
+    alt: "US Soccer",
+    className: "h-7 w-7 sm:h-10 sm:w-10",
+    sizes: "(max-width: 639px) 28px, 40px",
+  },
+  {
+    colorSrc: "/images/logo/affiliations/fifa-color.png",
+    whiteSrc: "/images/logo/affiliations/fifa-white.png",
+    alt: "FIFA",
+    className: "h-7 w-11 sm:h-10 sm:w-16",
+    sizes: "(max-width: 639px) 44px, 64px",
+  },
+  {
+    colorSrc: "/images/logo/affiliations/upsl-color.png",
+    whiteSrc: "/images/logo/affiliations/upsl-white.png",
+    alt: "UPSL",
+    className: "h-7 w-7 sm:h-10 sm:w-10",
+    sizes: "(max-width: 639px) 28px, 40px",
+  },
+];
+
 type NavLink = {
   label: string;
   // Omitted for parent items that are hover/tap-only triggers with no page
@@ -65,6 +114,37 @@ const navLinks: NavLink[] = [
   { label: "Shop", href: "/shop" },
 ];
 
+const lionsNavLinks: NavLink[] = [
+  { label: "Home", href: "/" },
+  { label: "Roster", href: "/roster" },
+  { label: "Schedule", href: "/schedule" },
+  { label: "Shop", href: "/shop" },
+];
+
+function academyNavLinks(programs: ProgramContent[]): NavLink[] {
+  return [
+    { label: "Home", href: "/" },
+    { label: "About", href: "/club/about" },
+    { label: "Roster", href: "/roster" },
+    {
+      label: "Schedule",
+      children: [
+        { label: "Fixtures", href: "/schedule" },
+        { label: "Tryouts", href: "/tryouts" },
+      ],
+    },
+    {
+      label: "Programs",
+      children: programs.map((program) => ({
+        label: program.navLabel || program.displayTitle,
+        href: `/programs/${program.slug}`,
+      })),
+    },
+    { label: "Store", href: "/shop" },
+    { label: "Contact", href: "/contact" },
+  ];
+}
+
 function isLinkActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -77,11 +157,14 @@ function isNavItemActive(pathname: string, link: NavLink) {
 export default function Nav() {
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
-  const pathname = usePathname();
+  const rewrittenPathname = usePathname();
+  const pathname = rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
+  const [academyPrograms, setAcademyPrograms] = useState<ProgramContent[]>([]);
   const navRef = useRef<HTMLElement>(null);
+  const isAcademy = club.presentationTemplateKey === "academy@1";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -93,6 +176,29 @@ export default function Nav() {
     setMenuOpen(false);
     setExpandedMobileLink(null);
   }, [pathname]);
+
+  // academy@1's mobile menu is a full-viewport overlay (mockup parity), so
+  // lock page scroll behind it while it is open.
+  useEffect(() => {
+    if (!isAcademy) return;
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isAcademy, menuOpen]);
+
+  useEffect(() => {
+    if (club.presentationTemplateKey !== "academy@1") {
+      setAcademyPrograms([]);
+      return;
+    }
+    fetchPrograms(club.id)
+      .then(setAcademyPrograms)
+      .catch((error) => {
+        console.error("Academy navigation programs:", error);
+        setAcademyPrograms([]);
+      });
+  }, [club.id, club.presentationTemplateKey]);
 
   // Transparent nav only on desktop for shop (mobile shop hero is compact, not full-bleed)
   const [isMobile, setIsMobile] = useState(false);
@@ -107,8 +213,108 @@ export default function Nav() {
   // transparent/white-text state throughout, since it never needs to
   // contrast against a light background there.
   const isAlwaysTransparentPage = pathname === "/club/logo";
-  const isDarkHeroPage = pathname === "/" || (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
-  const isHero = isAlwaysTransparentPage || (isDarkHeroPage && !scrolled);
+  // academy@1 program detail pages open on a full-bleed photo hero, so the
+  // nav starts transparent over it exactly like the mockup (which lists the
+  // four /programs/<slug> routes in its usesTransparentNav set). The
+  // /programs index page's hero is a solid navy band and keeps a solid nav.
+  const isAcademyProgramDetail =
+    isAcademy && /^\/programs\/[^/]+$/.test(pathname);
+  const isDarkHeroPage =
+    pathname === "/" ||
+    isAcademyProgramDetail ||
+    (pathname === "/shop" && SHOW_SHOP_HERO && !isMobile);
+  // Mockup parity: an open mobile menu forces the solid light header strip
+  // (mock: `transparent = usesTransparentNav && !scrolled && !open`).
+  const isHero =
+    isAlwaysTransparentPage ||
+    (isDarkHeroPage && !scrolled && !(isAcademy && menuOpen));
+  const activeNavLinks = club.presentationTemplateKey === "academy@1"
+    ? academyNavLinks(academyPrograms)
+    : navLinks;
+
+  if (club.presentationTemplateKey === "clubhouse@1") {
+    const isHomeTop = pathname === "/" && !scrolled;
+    return (
+      <header
+        ref={navRef}
+        className="clubhouse-site-header"
+        data-home={pathname === "/"}
+        data-scrolled={scrolled}
+        data-brand-visible={!isHomeTop || menuOpen}
+      >
+        <Link
+          href="/"
+          className="clubhouse-brand-lockup"
+          aria-label={`${club.name} Home`}
+        >
+          {clubLogoUrl ? (
+            <Image
+              src={clubLogoUrl}
+              alt={club.name}
+              width={82}
+              height={82}
+              priority
+              {...imageDeliveryProps("club-logo")}
+            />
+          ) : (
+            <span>{club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}</span>
+          )}
+        </Link>
+        <div className="clubhouse-affiliation-lockup" aria-label="Club affiliations">
+          <span aria-hidden="true" />
+          <div>
+            {lionsLocalAffiliations.map((logo) => (
+              <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
+                <Image
+                  src={logo.src}
+                  alt={logo.alt}
+                  fill
+                  className="object-contain"
+                  sizes={logo.sizes}
+                  {...imageDeliveryProps("small-graphic")}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+        <nav className="clubhouse-desktop-nav" aria-label="Primary navigation">
+          {lionsNavLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href ?? "/"}
+              data-active={link.href ? isLinkActive(pathname, link.href) : false}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="clubhouse-header-actions">
+          <button
+            type="button"
+            className="clubhouse-menu-button"
+            onClick={() => setMenuOpen((value) => !value)}
+            aria-expanded={menuOpen}
+            aria-label="Toggle menu"
+          >
+            <span />
+            <span />
+          </button>
+        </div>
+        {menuOpen && (
+          <div className="clubhouse-mobile-menu">
+            <div>
+              {lionsNavLinks.map((link, index) => (
+                <Link key={link.href} href={link.href ?? "/"}>
+                  <small>{String(index + 1).padStart(2, "0")}</small>
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </header>
+    );
+  }
 
   return (
     <header
@@ -140,14 +346,14 @@ export default function Nav() {
             )}
           </Link>
 
-          {club.slug === "rose-city" && <>
+          {(club.slug === "rose-city" || club.presentationTemplateKey === "academy@1") && <>
             <div
               className="flex-shrink-0"
               style={{ width: "1px", height: "28px", backgroundColor: isHero ? "rgba(255,255,255,0.3)" : "rgba(20,20,20,0.15)" }}
             />
 
             <div className="flex items-center gap-1 sm:gap-2">
-              {affiliationLogos.map((logo) => (
+              {(club.slug === "rose-city" ? affiliationLogos : academyAffiliations).map((logo) => (
                 <div key={logo.alt} className={`relative flex-shrink-0 ${logo.className}`}>
                   <Image
                     src={isHero ? logo.whiteSrc : logo.colorSrc}
@@ -170,12 +376,22 @@ export default function Nav() {
           </>}
         </div>
 
-        {/* Desktop Links */}
-        <ul className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => {
+        {/* Desktop Links. Below xl (1280px, where max-w-7xl caps out) this
+            stays a normal flex sibling of the logo, same as before — at
+            those widths the nav content already spans the full viewport, so
+            the links already sit flush against the true right edge and
+            there's no room to spare (an absolute right-anchor here would
+            overlap the logo on narrower "desktop" widths like ~820px).
+            Only past xl, once mx-auto starts centering the capped content
+            and leaving real margin, do the links pin to the header's own
+            right edge (header is fixed, already the containing block) so
+            they keep hugging the true page edge instead of stopping at the
+            1280px box. Logo position is untouched either way. */}
+        <ul className="hidden md:flex items-center gap-8 xl:absolute xl:right-[6.5rem] xl:top-1/2 xl:-translate-y-1/2">
+          {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const triggerClassName =
-              "font-body text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
+              "font-nav text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
             const triggerStyle = {
               color: isActive
                 ? isHero
@@ -250,7 +466,7 @@ export default function Nav() {
                           <Link
                             key={child.href}
                             href={child.href}
-                            className={`block px-5 py-3 font-body text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${
+                            className={`block px-5 py-3 font-nav text-xs font-semibold tracking-widest uppercase transition-colors duration-200 ${
                               isHero
                                 ? isChildActive
                                   ? "text-white"
@@ -287,19 +503,31 @@ export default function Nav() {
         </button>
       </nav>
 
-      {/* Mobile Menu Drawer */}
+      {/* Mobile Menu Drawer — academy@1 gets the mockup's full-viewport
+          overlay panel (page cannot bleed through below the last link);
+          other templates keep the compact drawer. */}
       <div
-        className={`md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
-          menuOpen ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
-        }`}
+        className={
+          isAcademy
+            ? `absolute inset-x-0 top-24 h-[calc(100dvh-6rem)] overflow-hidden bg-white transition-[opacity,visibility] duration-300 sm:top-28 sm:h-[calc(100dvh-7rem)] md:hidden ${
+                menuOpen ? "visible opacity-100" : "invisible opacity-0"
+              }`
+            : `md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
+                menuOpen ? "max-h-[30rem] opacity-100" : "max-h-0 opacity-0"
+              }`
+        }
       >
-        <ul className="flex flex-col px-8 py-6 gap-6">
-          {navLinks.map((link) => {
+        <ul className={isAcademy ? "flex h-full flex-col justify-center px-8 pb-16" : "flex flex-col px-8 py-6 gap-6"}>
+          {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const isExpanded = expandedMobileLink === link.label;
-            const labelClassName = `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
-              isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
-            }`;
+            const labelClassName = isAcademy
+              ? `font-display text-3xl font-black uppercase italic block py-4 ${
+                  isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
+                }`
+              : `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
+                  isActive ? "text-[var(--color-red)]" : "text-[var(--color-black)]"
+                }`;
             const chevron = (
               <svg
                 width="12"
@@ -319,22 +547,28 @@ export default function Nav() {
               </svg>
             );
             return (
-              <li key={link.label}>
+              <li
+                key={link.label}
+                className={isAcademy ? "border-b" : undefined}
+                style={isAcademy ? { borderColor: "rgba(30,54,83,0.1)" } : undefined}
+              >
                 {link.href ? (
                   <div className="flex items-center justify-between gap-3">
                     <Link href={link.href} className={labelClassName}>
                       {link.label}
                     </Link>
-                    {link.children && (
-                      <button
-                        type="button"
-                        aria-label={isExpanded ? `Collapse ${link.label} menu` : `Expand ${link.label} menu`}
-                        onClick={() => setExpandedMobileLink(isExpanded ? null : link.label)}
-                        className="p-2 -mr-2"
-                      >
-                        {chevron}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {link.children && (
+                        <button
+                          type="button"
+                          aria-label={isExpanded ? `Collapse ${link.label} menu` : `Expand ${link.label} menu`}
+                          onClick={() => setExpandedMobileLink(isExpanded ? null : link.label)}
+                          className="p-2 -mr-2"
+                        >
+                          {chevron}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <button
@@ -344,7 +578,9 @@ export default function Nav() {
                     className="flex items-center justify-between gap-3 w-full text-left"
                   >
                     <span className={labelClassName}>{link.label}</span>
-                    {chevron}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {chevron}
+                    </div>
                   </button>
                 )}
 

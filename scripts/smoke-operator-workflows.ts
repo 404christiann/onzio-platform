@@ -4,7 +4,7 @@ import {
   addClubMembership,
   removeClubMembership,
 } from "@/lib/operator/manage-membership";
-import { recoverMemberMfa } from "@/lib/operator/mfa-recovery";
+import { acquireOperatorAccessToken } from "@/scripts/operator-session";
 import { provisionClub } from "@/lib/operator/provision-club";
 import { purgeClub } from "@/lib/operator/purge-club";
 import { reactivateClub } from "@/lib/operator/reactivate-club";
@@ -14,8 +14,6 @@ import { createServiceRoleClient } from "@/lib/supabase-service-role";
 const OPERATOR_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 const EXISTING_OWNER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa6";
 const MEMBER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa5";
-const MFA_USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3";
-const ALPHA_CLUB_ID = "11111111-1111-4111-8111-111111111111";
 
 function requireLocalEnvironment() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -34,47 +32,49 @@ async function main() {
   const suffix = randomUUID().slice(0, 8);
   const slug = `operator-smoke-${suffix}`;
   const exportId = `export_${randomUUID()}`;
+  const operatorAccessToken = await acquireOperatorAccessToken();
 
   const provisioned = await provisionClub({
     slug,
     name: "Operator Smoke FC",
     primaryDomain: `${slug}.localhost`,
+    kind: "test",
     ownerEmail: "multiclub@local.test",
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
     existingAuthUserId: EXISTING_OWNER_ID,
     environment: "staging",
   });
 
   await addClubMembership({
     clubId: provisioned.club.id,
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
     userId: MEMBER_ID,
     userEmail: "unaffiliated@local.test",
     role: "admin",
   });
   await removeClubMembership({
     clubId: provisioned.club.id,
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
     userId: MEMBER_ID,
   });
   await archiveClub({
     clubId: provisioned.club.id,
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
     reason: "Local Phase 5 smoke",
   });
   await reactivateClub({
     clubId: provisioned.club.id,
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
   });
   await archiveClub({
     clubId: provisioned.club.id,
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
     reason: "Prepare local hard-purge smoke",
   });
   await registerClubExport({
     exportId,
     clubId: provisioned.club.id,
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
     checksumSha256: "a".repeat(64),
     objectCount: 0,
     rowCount: 4,
@@ -82,17 +82,9 @@ async function main() {
   });
   const purged = await purgeClub({
     clubId: provisioned.club.id,
-    actorId: OPERATOR_ID,
+    operatorAccessToken,
     exportId,
     confirmation: slug,
-  });
-
-  const recovery = await recoverMemberMfa({
-    clubId: ALPHA_CLUB_ID,
-    userId: MFA_USER_ID,
-    actorId: OPERATOR_ID,
-    identityVerified: true,
-    verificationReference: `local-smoke-${suffix}`,
   });
 
   const client = createServiceRoleClient().schema("onzio");
@@ -123,7 +115,7 @@ async function main() {
       archivedAndReactivated: true,
       purged: purged.purged,
       finalAuditOutsideTenant: purged.finalAuditOutsideTenant,
-      mfaRecoveryAudited: recovery.audited,
+      operatorSessionVerified: true,
     }),
   );
 }

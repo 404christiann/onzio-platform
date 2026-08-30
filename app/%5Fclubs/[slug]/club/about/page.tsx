@@ -1,7 +1,10 @@
 import AboutClubPageClient from "@/components/AboutClubPageClient";
-import { DEFAULT_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
+import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
+import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
+import { EMPTY_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
 import { getClubContextBySlug } from "@/lib/club-context";
-import { fetchAboutClubContent } from "@/lib/queries";
+import { fetchAboutClubContent, fetchSiteSponsorLogos } from "@/lib/queries";
+import { createClient } from "@/lib/supabase-server";
 
 export default async function TenantAboutPage({
   params,
@@ -9,9 +12,17 @@ export default async function TenantAboutPage({
   params: Promise<{ slug: string }>;
 }) {
   const club = await getClubContextBySlug((await params).slug);
-  const content = await fetchAboutClubContent(club.id).catch((error) => {
+  const onzio = (await createClient()).schema("onzio");
+  const content = await fetchAboutClubContent(club.id, onzio).catch((error) => {
     console.error("TenantAboutPage:", error);
-    return { about: DEFAULT_ABOUT_PAGE_CONTENT };
+    return { about: EMPTY_ABOUT_PAGE_CONTENT };
   });
+  if (club.presentationTemplateKey === "editorial@1") {
+    return <EditorialAboutPage content={content.about} />;
+  }
+  if (club.presentationTemplateKey === "clubhouse@1") {
+    const sponsors = await fetchSiteSponsorLogos("carousel", club.id);
+    return <ClubhouseAboutPage content={content.about} sponsors={sponsors} />;
+  }
   return <AboutClubPageClient content={content.about} />;
 }

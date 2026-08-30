@@ -69,4 +69,29 @@ describe("normalizeStandingsRows", () => {
 
     expect(normalized.team_abbreviation).toBe("PA");
   });
+
+  it("returns an empty array on no data when fallbackToSample is false, instead of the Rose City sample table", () => {
+    expect(normalizeStandingsRows([], { fallbackToSample: false })).toEqual([]);
+  });
+
+  it("still returns the sample table on no data when fallbackToSample is omitted, preserving existing callers' behavior", () => {
+    expect(normalizeStandingsRows([])).toEqual(DEFAULT_STANDINGS_ROWS);
+  });
+
+  it("ignores fallbackToSample entirely when real rows are present", () => {
+    const real = [row("row-a", 5, 1)];
+    expect(normalizeStandingsRows(real, { fallbackToSample: false })).toHaveLength(1);
+  });
+
+  it("never leaks another club's team names through the disabled fallback", () => {
+    // The sample table is Rose City's; academy@1 and editorial@1 previews opt
+    // out of it so DCFC/Lions admins never see "Rose City FC" as their own.
+    const sampleNames = DEFAULT_STANDINGS_ROWS.map((item) => item.team_name);
+    expect(sampleNames).toContain("Rose City FC");
+    expect(
+      normalizeStandingsRows([], { fallbackToSample: false }).map(
+        (item) => item.team_name,
+      ),
+    ).toEqual([]);
+  });
 });

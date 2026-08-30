@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { ContractError } from "@/lib/contract-error";
 import { finalizeMediaRequestSchema } from "@/lib/media-api-contract";
-import {
-  publishAuthorizedMedia,
-  verifyMediaAuthorizationToken,
-} from "@/lib/media-processing";
+import { verifyMediaAuthorizationToken } from "@/lib/media-authorization-token";
+import { publishAuthorizedMedia } from "@/lib/media-processing";
 import { requireMediaRouteAuthorization } from "@/lib/media-route-auth";
 
 export const runtime = "nodejs";

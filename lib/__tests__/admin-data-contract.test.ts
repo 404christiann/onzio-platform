@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { adminDataRequestSchema } from "@/lib/admin-data-contract";
+import {
+  ADMIN_TABLE_FEATURES,
+  adminDataRequestSchema,
+} from "@/lib/admin-data-contract";
 
 describe("admin data request contract", () => {
   it("accepts a tenant-free validated content mutation", () => {
@@ -10,6 +13,24 @@ describe("admin data request contract", () => {
         payload: {
           primary_color: "#aabbcc",
           homepage_url: "https://example.test",
+        },
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts editable homepage hero content as a homepage mutation", () => {
+    expect(
+      adminDataRequestSchema.safeParse({
+        table: "homepage_hero_content",
+        operation: "upsert",
+        payload: {
+          headline_line_one: "Capital City.",
+          headline_line_two: "Roar as One.",
+          intro: "Semi-pro soccer built for Columbus.",
+          primary_cta_label: "Next match",
+          primary_cta_href: "/schedule",
+          secondary_cta_label: "Meet the squad",
+          secondary_cta_href: "/roster",
         },
       }).success,
     ).toBe(true);
@@ -37,5 +58,20 @@ describe("admin data request contract", () => {
       },
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it.each([
+    "registrations",
+    "registration_forms",
+    "registration_form_fields",
+    "registration_price_options",
+  ] as const)("allows the %s registration admin entity", (table) => {
+    expect(ADMIN_TABLE_FEATURES[table]).toBe("registrations");
+    expect(
+      adminDataRequestSchema.safeParse({
+        table,
+        operation: "select",
+      }).success,
+    ).toBe(true);
   });
 });

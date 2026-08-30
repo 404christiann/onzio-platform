@@ -4,6 +4,36 @@
 //  from lib/data.ts via lib/queries.ts instead.
 // ─────────────────────────────────────────────
 
+import type { Tables } from "@/lib/database.generated";
+
+export type DBProgram = Tables<{ schema: "onzio" }, "programs">;
+export type DBProgramMedia = Tables<{ schema: "onzio" }, "program_media">;
+export type DBContactProfile = Tables<
+  { schema: "onzio" },
+  "contact_profile"
+>;
+export type DBContactPageContent = Tables<
+  { schema: "onzio" },
+  "contact_page_content"
+>;
+export type DBTryout = Tables<{ schema: "onzio" }, "tryouts">;
+export type DBRegistrationForm = Tables<
+  { schema: "onzio" },
+  "registration_forms"
+>;
+export type DBHomepageStorySection = Tables<
+  { schema: "onzio" },
+  "homepage_story_section"
+>;
+export type DBProgramsPageContent = Tables<
+  { schema: "onzio" },
+  "programs_page_content"
+>;
+export type DBTryoutsPageContent = Tables<
+  { schema: "onzio" },
+  "tryouts_page_content"
+>;
+
 export type DBPlayer = {
   id: string;
   number: number;
@@ -55,6 +85,10 @@ export type DBMatch = {
   rose_city_score: number | null;
   opponent_score: number | null;
   season_id: string | null;
+  // Lions E1 (onzio.matches.attendance/scorers). Nullable/defaulted so every
+  // pre-E1 row still parses; scorers is jsonb and defaults to `[]`.
+  attendance: number | null;
+  scorers: unknown;
 };
 
 export type DBSeason = {
@@ -106,10 +140,11 @@ export type DBGoalkeeperMatchStats = {
 };
 
 export type ShopKitSurface = "home" | "shop";
-export type ShopKitVariant = "home" | "away";
+export type ShopKitVariant = "home" | "third" | "away";
 
 export type DBShopKitSection = {
-  id: number;
+  id: string;
+  club_id?: string;
   surface: ShopKitSurface;
   kit_variant: ShopKitVariant;
   eyebrow: string;
@@ -167,6 +202,43 @@ export type DBHomepageSlideshowPhoto = {
 export type DBHomepageSlideshowSettings = {
   id: number;
   season_label: string;
+  updated_at: string;
+};
+
+export type DBHomepageHeroContent = {
+  id: number;
+  eyebrow: string;
+  headline_line_one: string;
+  headline_line_two: string;
+  intro: string;
+  primary_cta_label: string;
+  primary_cta_href: string;
+  secondary_cta_label: string;
+  secondary_cta_href: string;
+  updated_at: string;
+};
+
+export type DBClubIdentity = {
+  club_id: string;
+  short_name: string;
+  initials: string;
+  founded_year: number;
+  league: string;
+  division: string;
+  city: string;
+  state: string;
+  venue: string;
+  time_zone: string;
+  contact_address: string;
+  slideshow_heading_top: string;
+  slideshow_heading_em: string;
+  identity_heading_top: string;
+  identity_heading_em: string;
+  story_heading_top: string;
+  story_heading_em: string;
+  mission: string;
+  highlights: unknown;
+  created_at: string;
   updated_at: string;
 };
 
@@ -244,6 +316,11 @@ export type DBBehindTheRoseSection = {
 export type DBSiteBranding = {
   id: number;
   club_logo_path: string;
+  club_logo_asset_id: string | null;
+  inverse_logo_path: string;
+  inverse_logo_asset_id: string | null;
+  /** academy@1 footer tagline; empty means "use the template default". */
+  footer_tagline: string;
   updated_at: string;
 };
 

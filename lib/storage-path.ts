@@ -3,11 +3,14 @@ import { failContract } from "@/lib/contract-error";
 export const MEDIA_SURFACES = [
   "about",
   "branding",
+  "contact",
   "homepage",
+  "programs",
   "roster",
   "schedule",
   "shop",
   "standings",
+  "tryouts",
 ] as const;
 
 export type MediaSurface = (typeof MEDIA_SURFACES)[number];

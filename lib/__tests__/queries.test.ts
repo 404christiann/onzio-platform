@@ -30,6 +30,7 @@ import {
   fetchPlayerMatchTrend,
   type MatchLogRow,
 } from '@/lib/queries'
+import { DEFAULT_ACADEMY_FOOTER_TAGLINE } from '@/lib/club-branding'
 
 // ─────────────────────────────────────────────────────────────
 // Supabase mock
@@ -165,6 +166,10 @@ describe('fetchClubBranding', () => {
 
     await expect(fetchClubBranding()).resolves.toEqual({
       logoPath: 'club-branding/new-crest.png',
+      inverseLogoPath: '',
+      // A row with no stored tagline resolves to the approved template
+      // wording, never a blank footer line.
+      footerTagline: DEFAULT_ACADEMY_FOOTER_TAGLINE,
     })
     expect(mockFrom).toHaveBeenCalledWith('site_branding')
     expect(q.eq).toHaveBeenCalledWith('id', 1)
@@ -175,6 +180,8 @@ describe('fetchClubBranding', () => {
 
     await expect(fetchClubBranding()).resolves.toEqual({
       logoPath: 'Rose City FC Patch Color.png',
+      inverseLogoPath: '',
+      footerTagline: DEFAULT_ACADEMY_FOOTER_TAGLINE,
     })
   })
 
@@ -472,9 +479,11 @@ describe('fetchSchedule sponsor mapping', () => {
     }))
 
     await expect(fetchSchedule()).resolves.toEqual([{
+      id: 'match-sponsored',
       date: '2027-03-10',
       time: '19:00',
       opponent: 'Pasadena Athletic',
+      opponentShortName: undefined,
       opponentLogoUrl: 'opponent.png',
       competition: null,
       sponsorName: 'Tepito Coffee',
@@ -483,8 +492,15 @@ describe('fetchSchedule sponsor mapping', () => {
       home: true,
       venue: 'Rose City Stadium',
       address: undefined,
+      city: undefined,
+      state: undefined,
       roseCityScore: 2,
       opponentScore: 1,
+      // Lions E1/E4: onzio.matches.attendance/scorers, additively mapped by
+      // mapFixture(). This mock row predates those columns, so attendance
+      // resolves to the DB null default and scorers to its jsonb `[]` default.
+      attendance: undefined,
+      scorers: [],
     }])
   })
 })
@@ -771,6 +787,27 @@ describe('fetchRoster (season-aware)', () => {
 
     const result = await fetchRoster()   // no seasonId
     expect(result.seasonId).toBe(activeSeason.id)
+  })
+
+  it('does not query season stats and returns an empty roster when the club has no active season', async () => {
+    const calledTables: string[] = []
+    mockFrom.mockImplementation((table: string) => {
+      calledTables.push(table)
+      if (table === 'seasons') return chain({ data: [], error: null }) // no active season
+      return chain({ data: [], error: null })
+    })
+
+    const result = await fetchRoster()   // no seasonId, no active season exists
+
+    expect(result.seasonId).toBe('')
+    expect(result.seasonLabel).toBe('Current Season')
+    expect(result.goalkeepers).toEqual([])
+    expect(result.defenders).toEqual([])
+    expect(result.midfielders).toEqual([])
+    expect(result.forwards).toEqual([])
+    // Must never send season_id=eq.<empty string> against these uuid columns.
+    expect(calledTables).not.toContain('player_season_stats')
+    expect(calledTables).not.toContain('goalkeeper_season_stats')
   })
 
   it('excludes a deactivated player from the active season even when their season stats remain', async () => {

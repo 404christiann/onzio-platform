@@ -283,7 +283,6 @@ describe("media finalization and delivery contract", () => {
   it.each([
     [{ clubId: clubs.bravo.id }, "CROSS_CLUB_MEDIA"],
     [{ membership: null }, "MEMBERSHIP_REQUIRED"],
-    [{ tier: "starter", surface: "shop" }, "FEATURE_NOT_INCLUDED"],
     [{ lifecycle: "archived" }, "CLUB_ARCHIVED"],
     [{ simulateDatabaseFailure: true }, "FINALIZATION_ROLLED_BACK"],
     [{ publicWriteBeforeValidation: true }, "UNVALIDATED_PUBLIC_WRITE"],

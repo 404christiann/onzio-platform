@@ -3,20 +3,20 @@
 import { useEffect, useState } from "react";
 import SponsorCarousel from "@/components/SponsorCarousel";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
-import { DEFAULT_CAROUSEL_SPONSORS } from "@/lib/sponsor-content";
 import { fetchSiteSponsorLogos } from "@/lib/queries";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext } from "@/components/ClubContextProvider";
 
 export default function SponsorCarouselContainer() {
-  const clubId = useClubId();
-  const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>(DEFAULT_CAROUSEL_SPONSORS);
+  const club = useClubContext();
+  const clubId = club.id;
+  const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>([]);
 
   useEffect(() => {
     fetchSiteSponsorLogos("carousel", clubId)
       .then(setSponsors)
       .catch((error) => {
         console.error("SponsorCarouselContainer:", error);
-        setSponsors(DEFAULT_CAROUSEL_SPONSORS);
+        setSponsors([]);
       });
   }, [clubId]);
 

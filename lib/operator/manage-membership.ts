@@ -5,6 +5,7 @@ import {
   assertOperator,
   emailSchema,
   getOperatorClient,
+  operatorAccessTokenSchema,
   operatorNow,
   parseOperatorInput,
   type OperatorDependencies,
@@ -14,7 +15,7 @@ import {
 
 const addMembershipSchema = z.object({
   clubId: uuidSchema,
-  actorId: uuidSchema,
+  operatorAccessToken: operatorAccessTokenSchema,
   userId: uuidSchema,
   userEmail: emailSchema.optional(),
   role: z.enum(["owner", "admin"]),
@@ -23,7 +24,7 @@ const addMembershipSchema = z.object({
 
 const removeMembershipSchema = z.object({
   clubId: uuidSchema,
-  actorId: uuidSchema,
+  operatorAccessToken: operatorAccessTokenSchema,
   userId: uuidSchema,
   invokedFromApplicationRoute: z.boolean().optional(),
 });
@@ -36,7 +37,10 @@ export async function addClubMembership(
   const dependencies = rawInput.dependencies;
   const input = parseOperatorInput(addMembershipSchema, rawInput);
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
-  assertOperator(input.actorId);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
   const client = getOperatorClient(dependencies);
 
   const { data: authUser, error: authError } =
@@ -87,7 +91,7 @@ export async function addClubMembership(
 
   try {
     await writeOperatorAudit(client, {
-      actorId: input.actorId,
+      actorId,
       clubId: input.clubId,
       operation: "membership_added",
       resourceType: "club_member",
@@ -137,7 +141,10 @@ export async function removeClubMembership(
   const dependencies = rawInput.dependencies;
   const input = parseOperatorInput(removeMembershipSchema, rawInput);
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
-  assertOperator(input.actorId);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
   const client = getOperatorClient(dependencies);
 
   const { data: membership, error: membershipError } = await client
@@ -180,7 +187,7 @@ export async function removeClubMembership(
 
   try {
     await writeOperatorAudit(client, {
-      actorId: input.actorId,
+      actorId,
       clubId: input.clubId,
       operation: "membership_removed",
       resourceType: "club_member",

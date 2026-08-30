@@ -7,6 +7,30 @@ still expect future local Supabase migrations; and architecture tests still
 expect future tenant/security modules. Until each corresponding delivery phase
 is implemented, those contracts must remain red.
 
+## Local database setup — required before `test:db` or `npm test`
+
+The database suite needs a running local Supabase **and** the test environment
+exported into the shell. Vitest does **not** auto-load `.env.test`; nothing in
+`vitest.config.ts` reads it, so the file alone is not enough.
+
+```bash
+supabase start
+cp .env.test.example .env.test   # then fill in from `supabase status`
+set -a && . ./.env.test && set +a && npm run test:db
+```
+
+Skipping the `set -a && . ./.env.test` step produces
+`[RED CONTRACT] Local Supabase is unavailable or the planned onzio.clubs
+contract is missing: Error: Expected 3 parts in JWT; got 1`, plus
+`Invalid supabaseUrl`. Both mean **the environment was not exported**, not that
+Supabase is down — check `supabase status` before concluding the database is
+unavailable. Roughly 75 database tests fail this way, and the message has
+already been misread once as an unrunnable environment (`DCFC-702`, 2026-08-06).
+
+`.env.test` is gitignored. Its values are local fixtures: the Supabase demo JWTs
+are identical on every local install, and the Stripe entries are inert
+placeholders the suite rejects live values for.
+
 Commands:
 
 - `npm test` — legacy regressions plus all platform contracts
@@ -14,6 +38,20 @@ Commands:
 - `npm run test:contracts` — TypeScript behavior contracts
 - `npm run test:db` — local Supabase/RLS contracts
 - `npm run test:architecture` — static architecture contracts
+- `npx vitest run lib/__tests__/registration-fields.test.ts
+  lib/__tests__/registration-export.test.ts
+  lib/__tests__/special-kickers-registration.test.ts
+  tests/contracts/registration-submit.test.ts
+  tests/database/registration-rls.test.ts` — participant-mode branching,
+  branch-scoped validation, combined CSV behavior, the local-only Special
+  Kickers draft definition, submission routing, and database enforcement
+- `npx vitest run tests/contracts/diverse-city-programs-admin.test.ts
+  tests/contracts/diverse-city-program-registration-admin.test.ts
+  tests/contracts/diverse-city-tryouts-admin.test.ts
+  tests/contracts/diverse-city-query-mutations.test.ts
+  tests/database/registration-form-links.test.ts` — optional tenant-safe
+  Program/Tryout form links, admin round-tripping, open native-modal precedence,
+  unchanged draft/closed/no-link fallbacks, and composite-FK enforcement
 - `ROSTER_MEDIA_BASE_URL=https://onzio-rcfc.vercel.app npm run test:browser:roster`
   — retained focused roster compatibility check
 - `SITE_MEDIA_BASE_URL=http://127.0.0.1:3000 npx playwright test

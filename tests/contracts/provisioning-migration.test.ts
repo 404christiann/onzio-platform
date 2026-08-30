@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { clubs, USER_IDS } from "../fixtures/entities";
 import { expectContractError, loadContract } from "../helpers/contract";
 
@@ -8,13 +8,29 @@ type ReactivateClub = (input: Record<string, unknown>) => Promise<Record<string,
 type PurgeClub = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
 type TransformRoseCity = (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
+const OPERATOR_TOKEN = "verified-operator-token";
+const operatorDependencies = {
+  now: () => new Date("2026-08-03T18:00:00Z"),
+  verifyOperatorAccessToken: async () => ({
+    sub: USER_IDS.ownerAal2,
+    aal: "aal2",
+    amr: [{ method: "totp", timestamp: 1785780000 }],
+  }),
+};
+
+beforeEach(() => {
+  vi.stubEnv("ONZIO_OPERATOR_USER_IDS", USER_IDS.ownerAal2);
+});
+
 describe("operator provisioning contract", () => {
   const request = {
     slug: "charlie",
     name: "Charlie Athletic",
     primaryDomain: "charlie-onzio.vercel.app",
+    kind: "customer" as const,
     ownerEmail: "owner@charlie.example",
-    actorId: USER_IDS.ownerAal2,
+    operatorAccessToken: OPERATOR_TOKEN,
+    dependencies: operatorDependencies,
   };
 
   it("creates the onboarding tenant atomically", async () => {
@@ -25,6 +41,7 @@ describe("operator provisioning contract", () => {
     await expect(provisionClub(request)).resolves.toMatchObject({
       club: {
         slug: "charlie",
+        kind: "customer",
         lifecycle: "onboarding",
         publicAccess: "preview",
       },
@@ -58,6 +75,8 @@ describe("operator provisioning contract", () => {
     [{ existingSlug: true }, "SLUG_CONFLICT"],
     [{ existingDomain: true }, "DOMAIN_CONFLICT"],
     [{ simulateMembershipFailure: true }, "PROVISIONING_ROLLED_BACK"],
+    [{ kind: undefined }, "INVALID_OPERATOR_INPUT"],
+    [{ kind: "enterprise" }, "INVALID_OPERATOR_INPUT"],
   ] as const)("rolls back invalid provisioning %#", async (override, code) => {
     const provisionClub = await loadContract<ProvisionClub>(
       "@/lib/operator/provision-club",
@@ -68,6 +87,19 @@ describe("operator provisioning contract", () => {
       code,
     );
   });
+
+  it.each(["customer", "demo", "test"] as const)(
+    "persists the requested kind (%s)",
+    async (kind) => {
+      const provisionClub = await loadContract<ProvisionClub>(
+        "@/lib/operator/provision-club",
+        "provisionClub",
+      );
+      await expect(
+        provisionClub({ ...request, kind }),
+      ).resolves.toMatchObject({ club: { kind } });
+    },
+  );
 });
 
 describe("archive, reactivate, and purge contract", () => {
@@ -77,7 +109,11 @@ describe("archive, reactivate, and purge contract", () => {
       "archiveClub",
     );
     await expect(
-      archiveClub({ clubId: clubs.alpha.id, actorId: USER_IDS.ownerAal2 }),
+      archiveClub({
+        clubId: clubs.alpha.id,
+        operatorAccessToken: OPERATOR_TOKEN,
+        dependencies: operatorDependencies,
+      }),
     ).resolves.toMatchObject({
       lifecycle: "archived",
       domainsDetached: true,
@@ -97,7 +133,8 @@ describe("archive, reactivate, and purge contract", () => {
     await expect(
       reactivateClub({
         clubId: clubs.alpha.id,
-        actorId: USER_IDS.ownerAal2,
+        operatorAccessToken: OPERATOR_TOKEN,
+        dependencies: operatorDependencies,
       }),
     ).resolves.toMatchObject({
       clubId: clubs.alpha.id,
@@ -119,8 +156,10 @@ describe("archive, reactivate, and purge contract", () => {
       () =>
         purgeClub({
           clubId: clubs.alpha.id,
+          operatorAccessToken: OPERATOR_TOKEN,
           exportId: "export_123",
           confirmation: clubs.alpha.slug,
+          dependencies: operatorDependencies,
           ...override,
         }),
       code,

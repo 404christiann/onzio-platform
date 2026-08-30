@@ -1,5 +1,5 @@
 import { authorizeMutation } from "@/lib/authorization";
-import { ContractError } from "@/lib/contract-error";
+import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
 import { createClient } from "@/lib/supabase-server";
 import type { MediaSurface } from "@/lib/storage-path";
@@ -9,22 +9,15 @@ export async function requireMediaRouteAuthorization(
   surface: MediaSurface,
 ) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new ContractError("AUTHENTICATION_REQUIRED");
-
-  const { data: assurance } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  const aal = assurance?.currentLevel === "aal2" ? "aal2" : "aal1";
+  const { userId } = await requireFreshClubSession(supabase);
   const club = await getClubContext({
     hostname: request.headers.get("host") ?? "",
-    userId: user.id,
+    userId,
   });
   const memberships = club.role
     ? [
         {
-          userId: user.id,
+          userId,
           clubId: club.id,
           role: club.role,
           status: "active",
@@ -33,12 +26,12 @@ export async function requireMediaRouteAuthorization(
     : [];
   await authorizeMutation({
     club,
-    userId: user.id,
+    userId,
     memberships,
-    aal,
+    aal: "aal1",
     feature: surface,
     payload: {},
   });
 
-  return { supabase, user, club };
+  return { supabase, user: { id: userId }, club };
 }

@@ -6,6 +6,7 @@ import {
   getOperatorClient,
   isContractSimulation,
   operatorNow,
+  operatorAccessTokenSchema,
   parseOperatorInput,
   type OperatorDependencies,
   uuidSchema,
@@ -14,7 +15,7 @@ import {
 
 const reactivateSchema = z.object({
   clubId: uuidSchema,
-  actorId: uuidSchema,
+  operatorAccessToken: operatorAccessTokenSchema,
   invokedFromApplicationRoute: z.boolean().optional(),
 });
 
@@ -26,6 +27,10 @@ export async function reactivateClub(
   const dependencies = rawInput.dependencies;
   const input = parseOperatorInput(reactivateSchema, rawInput);
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
 
   if (isContractSimulation(dependencies)) {
     return {
@@ -38,7 +43,6 @@ export async function reactivateClub(
     };
   }
 
-  assertOperator(input.actorId);
   const client = getOperatorClient(dependencies);
   const { data: club, error: clubError } = await client
     .schema("onzio")
@@ -96,7 +100,7 @@ export async function reactivateClub(
 
   try {
     await writeOperatorAudit(client, {
-      actorId: input.actorId,
+      actorId,
       clubId: input.clubId,
       operation: "reactivate",
       resourceType: "club",

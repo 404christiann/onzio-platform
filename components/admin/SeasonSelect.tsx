@@ -1,3 +1,4 @@
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { DBSeason } from "@/lib/db-types";
 
 type SeasonSelectProps = {
@@ -18,26 +19,21 @@ export default function SeasonSelect({
   className = "",
 }: SeasonSelectProps) {
   const select = (
-    <select
+    <NativeSelect
       value={value}
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled}
-      className={`rounded-lg px-4 py-2.5 font-body outline-none ${className}`}
-      style={{
-        backgroundColor: "#1a1a1a",
-        border: "1px solid rgba(255,255,255,0.1)",
-        color: "white",
-        colorScheme: "dark",
-        opacity: disabled ? 0.55 : 1,
-      }}
+      className={className}
     >
-      {seasons.length === 0 && <option value="">No seasons available</option>}
+      {seasons.length === 0 && (
+        <NativeSelectOption value="">No seasons available</NativeSelectOption>
+      )}
       {seasons.map((season) => (
-        <option key={season.id} value={season.id}>
+        <NativeSelectOption key={season.id} value={season.id}>
           {season.label}{season.active ? " (Active)" : ""}
-        </option>
+        </NativeSelectOption>
       ))}
-    </select>
+    </NativeSelect>
   );
 
   if (!label) return select;
@@ -45,8 +41,8 @@ export default function SeasonSelect({
   return (
     <label className="flex flex-col gap-1.5">
       <span
-        className="font-display tracking-widest uppercase"
-        style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.4)" }}
+        className="font-display tracking-widest uppercase text-muted-foreground"
+        style={{ fontSize: "0.8rem" }}
       >
         {label}
       </span>

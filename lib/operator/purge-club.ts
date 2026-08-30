@@ -6,6 +6,7 @@ import {
   getOperatorClient,
   isContractSimulation,
   operatorNow,
+  operatorAccessTokenSchema,
   parseOperatorInput,
   type OperatorClient,
   type OperatorDependencies,
@@ -15,7 +16,7 @@ import {
 
 const purgeSchema = z.object({
   clubId: uuidSchema,
-  actorId: uuidSchema.optional(),
+  operatorAccessToken: operatorAccessTokenSchema,
   exportId: z.string().trim().min(1).max(200).nullable(),
   confirmation: z.string().trim().min(1).max(63),
   invokedFromApplicationRoute: z.boolean().optional(),
@@ -114,6 +115,10 @@ export async function purgeClub(
 
   if (!input.exportId) failContract("EXPORT_REQUIRED");
   assertDirectOperatorInvocation(input.invokedFromApplicationRoute);
+  const { actorId } = await assertOperator(
+    input.operatorAccessToken,
+    dependencies,
+  );
 
   if (isContractSimulation(dependencies)) {
     if (input.confirmation !== "alpha") {
@@ -125,8 +130,6 @@ export async function purgeClub(
     };
   }
 
-  if (!input.actorId) failContract("OPERATOR_ONLY");
-  assertOperator(input.actorId);
   const client = getOperatorClient(dependencies);
   const { data: club, error: clubError } = await client
     .schema("onzio")
@@ -187,7 +190,7 @@ export async function purgeClub(
   }
 
   await writeOperatorAudit(client, {
-    actorId: input.actorId,
+    actorId,
     clubId: null,
     operation: "hard_purge",
     resourceType: "purged_club",

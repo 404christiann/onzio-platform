@@ -1,13 +1,18 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
-import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import AboutClubPageClient from "@/components/AboutClubPageClient";
-import ClubLogoPageClient from "@/components/ClubLogoPageClient";
+import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
+import { Textarea } from "@/components/ui/textarea";
+import ScaledAboutPreview from "@/components/admin/ScaledAboutPreview";
+import {
+  SlidingPanel,
+  type SlidingPanelDirection,
+} from "@/components/ui/sliding-panel";
 import type {
   DBAboutPageContent,
   DBClubLogoPageContent,
@@ -30,6 +35,10 @@ import { createClient } from "@/lib/admin-client";
 type AdminTab = "about" | "logo";
 type AboutPanel = "story" | "values" | "closing";
 type LogoPanel = "images" | "features" | "colors";
+
+const ADMIN_TAB_ORDER: AdminTab[] = ["about", "logo"];
+const ABOUT_PANEL_ORDER: AboutPanel[] = ["story", "values", "closing"];
+const LOGO_PANEL_ORDER: LogoPanel[] = ["images", "features", "colors"];
 type UploadTarget =
   | { kind: "aboutFeature" }
   | { kind: "logoAnnotated" }
@@ -38,16 +47,14 @@ type UploadTarget =
   | { kind: "logoFeaturePatch"; index: number }
   | { kind: "logoFeatureIcon"; index: number };
 
-const inputStyle: CSSProperties = {
-  width: "100%",
-  backgroundColor: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  borderRadius: "0.5rem",
-  color: "white",
-  padding: "0.72rem 0.82rem",
-  fontSize: "0.9rem",
-  outline: "none",
-};
+/**
+ * Where academy@1's About closing button points. Operator-owned per DCFC-D007,
+ * so it lives in code rather than in an admin free-text field. This is the
+ * destination the button already resolved to — `about_page_content
+ * .closing_cta_href` is `/schedule` for Diverse City and `/schedule` is also
+ * the shipped default in lib/about-content.ts — not a new destination.
+ */
+const ACADEMY_ABOUT_CLOSING_CTA_HREF = "/schedule";
 
 function toAboutDraft(content: DBAboutPageContent): DBAboutPageContent {
   return {
@@ -85,9 +92,67 @@ async function uploadAboutImage(
 
 export default function AdminAboutPage() {
   const clubId = useClubId();
+  const club = useClubContext();
+  // DCFC-D007: club owners edit copy, Onzio operators own navigation
+  // destinations. The About closing button follows the precedent already set by
+  // DevelopingNextGeneration's "Our Story" button — the label stays editable,
+  // the destination is fixed in code. academy@1's button already resolves to
+  // /schedule (both the stored value and the shipped default), so pinning it
+  // changes nothing about where the button goes; it only removes a free-text
+  // href field that could save a broken path.
+  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const isEditorial = club.presentationTemplateKey === "editorial@1";
+  // editorial@1 genuinely has an About page -- components/editorial/
+  // EditorialHeader.tsx's nav and EditorialFooter.tsx both link /club/about,
+  // and app/%5Fclubs/[slug]/club/about/page.tsx renders EditorialAboutPage
+  // from this very editor's about_page_content row. (An earlier revision hid
+  // this whole page for editorial@1 after checking Nav.tsx's lionsNavLinks,
+  // which is dead code for this template -- Lions never mounts Nav.tsx.)
+  //
+  // The Club Logo tab is the part that stays hidden: templateRegistry's
+  // editorial@1 entry lists no "club-logo" in defaultRoutes/supportedRoutes,
+  // and nothing on the editorial site links /club/logo, so its content row is
+  // never read -- exactly the academy@1 situation this gate already covered.
+  const hasClubLogoPage = !isAcademy && !isEditorial;
   const [activeTab, setActiveTab] = useState<AdminTab>("about");
+  const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
   const [aboutPanel, setAboutPanel] = useState<AboutPanel>("story");
+  const [aboutPanelDirection, setAboutPanelDirection] =
+    useState<SlidingPanelDirection>(1);
   const [logoPanel, setLogoPanel] = useState<LogoPanel>("images");
+  const [logoPanelDirection, setLogoPanelDirection] =
+    useState<SlidingPanelDirection>(1);
+  const selectTab = (next: AdminTab) => {
+    setActiveTab((current) => {
+      if (next === current) return current;
+      setTabDirection(
+        ADMIN_TAB_ORDER.indexOf(next) > ADMIN_TAB_ORDER.indexOf(current) ? 1 : -1,
+      );
+      return next;
+    });
+  };
+  const selectAboutPanel = (next: AboutPanel) => {
+    setAboutPanel((current) => {
+      if (next === current) return current;
+      setAboutPanelDirection(
+        ABOUT_PANEL_ORDER.indexOf(next) > ABOUT_PANEL_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  };
+  const selectLogoPanel = (next: LogoPanel) => {
+    setLogoPanel((current) => {
+      if (next === current) return current;
+      setLogoPanelDirection(
+        LOGO_PANEL_ORDER.indexOf(next) > LOGO_PANEL_ORDER.indexOf(current)
+          ? 1
+          : -1,
+      );
+      return next;
+    });
+  };
   const [selectedLogoFeature, setSelectedLogoFeature] = useState(0);
   const [aboutDraft, setAboutDraft] = useState<DBAboutPageContent>(
     toAboutDraft(DEFAULT_ABOUT_PAGE_CONTENT),
@@ -255,7 +320,9 @@ export default function AdminAboutPage() {
         values: normalizeAboutValues(aboutDraft.values),
         closing_text: aboutDraft.closing_text.trim(),
         closing_cta_label: aboutDraft.closing_cta_label.trim(),
-        closing_cta_href: aboutDraft.closing_cta_href.trim() || "/schedule",
+        closing_cta_href: isAcademy
+          ? ACADEMY_ABOUT_CLOSING_CTA_HREF
+          : aboutDraft.closing_cta_href.trim() || "/schedule",
         updated_at: new Date().toISOString(),
       };
       const logoPayload = {
@@ -265,9 +332,14 @@ export default function AdminAboutPage() {
         updated_at: new Date().toISOString(),
       };
 
+      // academy@1 and editorial@1 sites have no /club/logo page, so their
+      // content row is never read; skipping the upsert keeps the unreachable
+      // editor from writing.
       const [aboutResult, logoResult] = await Promise.all([
         supabase.from("about_page_content").upsert([aboutPayload]),
-        supabase.from("club_logo_page_content").upsert([logoPayload]),
+        hasClubLogoPage
+          ? supabase.from("club_logo_page_content").upsert([logoPayload])
+          : Promise.resolve({ error: null }),
       ]);
       const saveError = aboutResult.error ?? logoResult.error;
       if (saveError) throw new Error(saveError.message);
@@ -293,27 +365,34 @@ export default function AdminAboutPage() {
       <AdminSaveFeedback saving={saving} saved={saved} />
       <div className="mb-4 sm:mb-6">
         <h1
-          className="font-display font-black uppercase leading-none text-white"
+          className="font-display font-black uppercase leading-none text-foreground"
           style={{ fontSize: "clamp(2rem, 10vw, 2.75rem)" }}
         >
           About
         </h1>
-        <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>
-          Edit the About Club and Club Logo public pages.
+        <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>
+          {hasClubLogoPage
+            ? "Edit the About Club and Club Logo public pages."
+            : "Edit the public About page."}
         </p>
       </div>
 
       {loading ? (
-        <p className="font-display text-sm uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>
-          Loading...
-        </p>
+        <AdminLoading className="font-display text-sm uppercase tracking-widest" />
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(420px,560px)_minmax(0,1fr)]">
           <section
-            className="flex min-w-0 max-h-[calc(100vh-9rem)] flex-col self-start overflow-hidden rounded-xl p-4 sm:p-5"
-            style={{ backgroundColor: "#141414", border: "1px solid rgba(255,255,255,0.07)" }}
+            className="flex min-w-0 max-h-[calc(100vh-9rem)] flex-col self-start overflow-hidden rounded-xl border border-border bg-background p-4 sm:p-5"
           >
-            <div className="grid grid-cols-2 gap-1 rounded-lg p-1" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
+            {/* academy@1 and editorial@1 have no reachable /club/logo route
+                (templateRegistry lists no club-logo in defaultRoutes/
+                supportedRoutes for either), so the Club Logo editor is
+                unreachable content for both templates — same shape as
+                DCFC-D130's sponsors decision. With one tab left the switcher
+                itself is hidden; every other template keeps both tabs
+                untouched. */}
+            {hasClubLogoPage && (
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-card p-1">
               {[
                 { id: "about" as const, label: "About" },
                 { id: "logo" as const, label: "Club Logo" },
@@ -324,32 +403,37 @@ export default function AdminAboutPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => {
-                      setActiveTab(tab.id);
-                      if (tab.id === "about") setAboutPanel("story");
-                      if (tab.id === "logo") setLogoPanel("images");
+                      selectTab(tab.id);
+                      if (tab.id === "about") {
+                        setAboutPanel("story");
+                        setAboutPanelDirection(1);
+                      }
+                      if (tab.id === "logo") {
+                        setLogoPanel("images");
+                        setLogoPanelDirection(1);
+                      }
                     }}
                     disabled={saving || uploading}
-                    className="font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors"
-                    style={{
-                      backgroundColor: selected ? "#FFFFFF" : "transparent",
-                      color: selected ? "#141414" : "rgba(255,255,255,0.5)",
-                    }}
+                    className={`font-display rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
+                      selected ? "bg-foreground text-background" : "text-muted-foreground"
+                    }`}
                   >
                     {tab.label}
                   </button>
                 );
               })}
             </div>
+            )}
 
             {activeTab === "about" ? (
               <SectionNav
                 tabs={[
                   { id: "story", label: "Story" },
                   { id: "values", label: "Values" },
-                  { id: "closing", label: "CTA" },
+                  { id: "closing", label: "Closing" },
                 ]}
                 value={aboutPanel}
-                onChange={setAboutPanel}
+                onChange={selectAboutPanel}
                 disabled={saving || uploading}
               />
             ) : (
@@ -360,14 +444,15 @@ export default function AdminAboutPage() {
                   { id: "colors", label: "Colors" },
                 ]}
                 value={logoPanel}
-                onChange={setLogoPanel}
+                onChange={selectLogoPanel}
                 disabled={saving || uploading}
               />
             )}
 
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+              <SlidingPanel activeKey={activeTab} direction={tabDirection}>
               {activeTab === "about" ? (
-                <div>
+                <SlidingPanel activeKey={aboutPanel} direction={aboutPanelDirection}>
                   {aboutPanel === "story" && (
                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]">
                       <div className="space-y-3">
@@ -375,15 +460,14 @@ export default function AdminAboutPage() {
                           <input
                             value={aboutDraft.hero_title}
                             onChange={(event) => setAboutField("hero_title", event.target.value)}
-                            style={inputStyle}
+                            className={ADMIN_INPUT_CLASS}
                           />
                         </Field>
                         <Field label="Story Paragraphs" help="Each line becomes one paragraph.">
-                          <textarea
+                          <Textarea
                             value={aboutDraft.story_paragraphs.join("\n")}
                             onChange={(event) => setStoryText(event.target.value)}
                             rows={9}
-                            style={{ ...inputStyle, resize: "vertical" }}
                           />
                         </Field>
                       </div>
@@ -403,25 +487,24 @@ export default function AdminAboutPage() {
                         <input
                           value={aboutDraft.values_heading}
                           onChange={(event) => setAboutField("values_heading", event.target.value)}
-                          style={inputStyle}
+                          className={ADMIN_INPUT_CLASS}
                         />
                       </Field>
                       <div className="grid gap-3 lg:grid-cols-3">
                         {aboutDraft.values.map((value, index) => (
-                          <div key={index} className="rounded-lg border border-white/10 p-3">
+                          <div key={index} className="rounded-lg border border-border p-3">
                             <Field label={`Value ${index + 1} Title`}>
                               <input
                                 value={value.title}
                                 onChange={(event) => setValue(index, "title", event.target.value)}
-                                style={inputStyle}
+                                className={ADMIN_INPUT_CLASS}
                               />
                             </Field>
                             <Field label={`Value ${index + 1} Description`}>
-                              <textarea
+                              <Textarea
                                 value={value.description}
                                 onChange={(event) => setValue(index, "description", event.target.value)}
                                 rows={5}
-                                style={{ ...inputStyle, resize: "vertical" }}
                               />
                             </Field>
                           </div>
@@ -433,34 +516,42 @@ export default function AdminAboutPage() {
                   {aboutPanel === "closing" && (
                     <div className="grid gap-3 lg:grid-cols-2">
                       <Field label="Closing Text">
-                        <textarea
+                        <Textarea
                           value={aboutDraft.closing_text}
                           onChange={(event) => setAboutField("closing_text", event.target.value)}
                           rows={5}
-                          style={{ ...inputStyle, resize: "vertical" }}
                         />
                       </Field>
                       <div className="grid gap-3">
-                        <Field label="CTA Label" flush>
+                        <Field label="Button Text" flush>
                           <input
                             value={aboutDraft.closing_cta_label}
                             onChange={(event) => setAboutField("closing_cta_label", event.target.value)}
-                            style={inputStyle}
+                            className={ADMIN_INPUT_CLASS}
                           />
                         </Field>
-                        <Field label="CTA Link" flush>
-                          <input
-                            value={aboutDraft.closing_cta_href}
-                            onChange={(event) => setAboutField("closing_cta_href", event.target.value)}
-                            style={inputStyle}
-                          />
-                        </Field>
+                        {isAcademy ? (
+                          <Field label="Button Goes To" flush>
+                            <p className="font-body text-sm text-muted-foreground">
+                              {ACADEMY_ABOUT_CLOSING_CTA_HREF} — the Schedule page.
+                              Contact Onzio to change where this button goes.
+                            </p>
+                          </Field>
+                        ) : (
+                          <Field label="Button Link" flush>
+                            <input
+                              value={aboutDraft.closing_cta_href}
+                              onChange={(event) => setAboutField("closing_cta_href", event.target.value)}
+                              className={ADMIN_INPUT_CLASS}
+                            />
+                          </Field>
+                        )}
                       </div>
                     </div>
                   )}
-                </div>
+                </SlidingPanel>
               ) : (
-                <div>
+                <SlidingPanel activeKey={logoPanel} direction={logoPanelDirection}>
                   {logoPanel === "images" && (
                     <div className="grid gap-3 lg:grid-cols-2">
                       <ImageControl
@@ -491,12 +582,11 @@ export default function AdminAboutPage() {
                               type="button"
                               onClick={() => setSelectedLogoFeature(index)}
                               disabled={saving || uploading}
-                              className="font-display rounded-md border px-2 py-2 text-[0.65rem] uppercase tracking-widest transition-colors"
-                              style={{
-                                backgroundColor: selected ? "white" : "rgba(255,255,255,0.04)",
-                                borderColor: selected ? "white" : "rgba(255,255,255,0.08)",
-                                color: selected ? "#141414" : "rgba(255,255,255,0.55)",
-                              }}
+                              className={`font-display rounded-md border px-2 py-2 text-[0.65rem] uppercase tracking-widest transition-colors ${
+                                selected
+                                  ? "border-foreground bg-foreground text-background"
+                                  : "border-border bg-card text-muted-foreground"
+                              }`}
                             >
                               {feature.title.replace("The ", "")}
                             </button>
@@ -505,22 +595,21 @@ export default function AdminAboutPage() {
                       </div>
 
                       {logoDraft.features[selectedLogoFeature] && (
-                        <div className="rounded-lg border border-white/10 p-3">
+                        <div className="rounded-lg border border-border p-3">
                           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_210px]">
                             <div className="space-y-3">
                               <Field label={`Feature ${selectedLogoFeature + 1} Title`}>
                                 <input
                                   value={logoDraft.features[selectedLogoFeature].title}
                                   onChange={(event) => setLogoFeature(selectedLogoFeature, "title", event.target.value)}
-                                  style={inputStyle}
+                                  className={ADMIN_INPUT_CLASS}
                                 />
                               </Field>
                               <Field label={`Feature ${selectedLogoFeature + 1} Description`}>
-                                <textarea
+                                <Textarea
                                   value={logoDraft.features[selectedLogoFeature].description}
                                   onChange={(event) => setLogoFeature(selectedLogoFeature, "description", event.target.value)}
                                   rows={8}
-                                  style={{ ...inputStyle, resize: "vertical" }}
                                 />
                               </Field>
                             </div>
@@ -547,7 +636,7 @@ export default function AdminAboutPage() {
                                     max={140}
                                     value={logoDraft.features[selectedLogoFeature].icon_size}
                                     onChange={(event) => setLogoFeature(selectedLogoFeature, "icon_size", Number(event.target.value))}
-                                    style={inputStyle}
+                                    className={ADMIN_INPUT_CLASS}
                                   />
                                 </Field>
                                 <Field label="Icon Scale" flush>
@@ -558,7 +647,7 @@ export default function AdminAboutPage() {
                                     step={0.05}
                                     value={logoDraft.features[selectedLogoFeature].icon_scale}
                                     onChange={(event) => setLogoFeature(selectedLogoFeature, "icon_scale", Number(event.target.value))}
-                                    style={inputStyle}
+                                    className={ADMIN_INPUT_CLASS}
                                   />
                                 </Field>
                               </div>
@@ -570,14 +659,11 @@ export default function AdminAboutPage() {
                   )}
 
                   {logoPanel === "colors" && (
-                    <div className="rounded-lg border border-white/10 p-3">
-                      <p
-                        className="font-display text-xs uppercase tracking-widest"
-                        style={{ color: "rgba(255,255,255,0.35)" }}
-                      >
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
                         Brand Color Cards
                       </p>
-                      <p className="font-body mb-3 text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
+                      <p className="font-body mb-3 text-xs text-muted-foreground">
                         Six fixed slots render below the Pasadena map.
                       </p>
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -594,11 +680,12 @@ export default function AdminAboutPage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </SlidingPanel>
               )}
+              </SlidingPanel>
             </div>
 
-            <div className="mt-4 border-t border-white/10 pt-4">
+            <div className="mt-4 border-t border-border pt-4">
               <input
                 ref={fileRef}
                 type="file"
@@ -608,7 +695,7 @@ export default function AdminAboutPage() {
               />
 
               {error && (
-                <p className="font-body mb-3 text-sm" style={{ color: "#E7001B" }}>
+                <p className="font-body mb-3 text-sm text-destructive">
                   Error: {error}
                 </p>
               )}
@@ -617,34 +704,27 @@ export default function AdminAboutPage() {
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saveDisabled}
-                className="font-display w-full rounded-lg py-3 text-sm font-bold uppercase tracking-widest transition-opacity"
-                style={{
-                  backgroundColor: "#E7001B",
-                  color: "white",
-                  opacity: saveDisabled ? 0.5 : 1,
-                  cursor: saveDisabled ? "not-allowed" : "pointer",
-                }}
+                className="font-display w-full rounded-lg bg-brand py-3 text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
                 {saving ? "Saving..." : uploading ? "Uploading..." : "Save About Pages"}
               </button>
             </div>
           </section>
 
           <section className="min-w-0">
-            <p
-              className="font-display mb-3 text-xs uppercase tracking-widest"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
+            <p className="font-display mb-3 text-xs uppercase tracking-widest text-muted-foreground">
               {activeTab === "about" ? "About Preview" : "Club Logo Preview"}
             </p>
-            <div
-              className="h-[760px] overflow-auto rounded-lg bg-white"
-              style={{ border: "1px solid rgba(255,255,255,0.08)" }}
-            >
+            <p className="font-body mb-3 text-xs text-muted-foreground">
+              Desktop website view, scaled to fit. The layout stays in the
+              proportions visitors see instead of re-flowing to this panel.
+            </p>
+            <div className="h-[760px] overflow-auto rounded-lg border border-border bg-white">
               {activeTab === "about" ? (
-                <AboutClubPageClient content={aboutDraft} animate={false} />
+                <ScaledAboutPreview variant="about" content={aboutDraft} />
               ) : (
-                <ClubLogoPageClient content={logoDraft} animate={false} />
+                <ScaledAboutPreview variant="logo" content={logoDraft} />
               )}
             </div>
           </section>
@@ -667,15 +747,12 @@ function Field({
 }) {
   return (
     <div className={flush ? "" : "mt-3 first:mt-0"}>
-      <label
-        className="font-display mb-1 block text-xs uppercase tracking-widest"
-        style={{ color: "rgba(255,255,255,0.35)" }}
-      >
+      <label className={ADMIN_LABEL_CLASS}>
         {label}
       </label>
       {children}
       {help && (
-        <p className="font-body mt-1 text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+        <p className="font-body mt-1 text-xs text-muted-foreground">
           {help}
         </p>
       )}
@@ -695,7 +772,7 @@ function SectionNav<T extends string>({
   disabled: boolean;
 }) {
   return (
-    <div className="mt-3 grid gap-1 rounded-lg p-1 sm:grid-cols-3" style={{ backgroundColor: "rgba(255,255,255,0.025)" }}>
+    <div className="mt-3 grid gap-1 rounded-lg bg-card p-1 sm:grid-cols-3">
       {tabs.map((tab) => {
         const selected = tab.id === value;
         return (
@@ -704,12 +781,9 @@ function SectionNav<T extends string>({
             type="button"
             onClick={() => onChange(tab.id)}
             disabled={disabled}
-            className="font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors"
-            style={{
-              backgroundColor: selected ? "rgba(231,0,27,0.9)" : "transparent",
-              color: selected ? "white" : "rgba(255,255,255,0.45)",
-              cursor: disabled ? "not-allowed" : "pointer",
-            }}
+            className={`font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors disabled:cursor-not-allowed ${
+              selected ? "bg-foreground text-background" : "text-muted-foreground"
+            }`}
           >
             {tab.label}
           </button>
@@ -734,15 +808,12 @@ function ImageControl({
 }) {
   return (
     <div>
-      <p
-        className="font-display mb-1 text-xs uppercase tracking-widest"
-        style={{ color: "rgba(255,255,255,0.35)" }}
-      >
+      <p className="font-display mb-1 text-xs uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
       <div className={compact
-        ? "grid min-w-0 gap-2 rounded-lg border border-white/10 p-2"
-        : "grid min-w-0 grid-cols-[64px_minmax(0,1fr)] gap-2 rounded-lg border border-white/10 p-2 sm:grid-cols-[72px_minmax(0,1fr)]"
+        ? "grid min-w-0 gap-2 rounded-lg border border-border p-2"
+        : "grid min-w-0 grid-cols-[64px_minmax(0,1fr)] gap-2 rounded-lg border border-border p-2 sm:grid-cols-[72px_minmax(0,1fr)]"
       }>
         <div className={compact
           ? "relative h-24 min-w-0 overflow-hidden rounded-md bg-black"
@@ -752,8 +823,7 @@ function ImageControl({
         </div>
         <div className="flex min-w-0 flex-col">
           <p
-            className="font-body min-w-0 truncate text-xs"
-            style={{ color: "rgba(255,255,255,0.32)" }}
+            className="font-body min-w-0 truncate text-xs text-muted-foreground"
             title={url}
           >
             {url}
@@ -762,13 +832,7 @@ function ImageControl({
             type="button"
             onClick={onReplace}
             disabled={disabled}
-            className="font-display mt-2 w-full max-w-full rounded-md px-2 py-2 text-[0.65rem] font-bold uppercase tracking-widest"
-            style={{
-              backgroundColor: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.65)",
-              opacity: disabled ? 0.45 : 1,
-              cursor: disabled ? "not-allowed" : "pointer",
-            }}
+            className="font-display mt-2 w-full max-w-full rounded-md bg-card px-2 py-2 text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
           >
             Replace
           </button>

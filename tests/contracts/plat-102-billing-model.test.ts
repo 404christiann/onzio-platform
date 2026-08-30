@@ -1,0 +1,253 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import { clubs } from "../fixtures/entities";
+import { STRIPE_IDS, stripeEvent, stripeEvents } from "../fixtures/stripe";
+import { expectContractError, loadContract } from "../helpers/contract";
+
+const DIVERSE_CITY_TEST_PRICE = "price_1U0Y0sK6WajTkwHYnnttR9nN";
+
+type BuildCheckoutDecision = (input: Record<string, unknown>) => {
+  destination: "checkout" | "portal";
+  metadata?: Record<string, string>;
+  priceId?: string;
+};
+
+type ResolveStripeEvent = (
+  event: Record<string, unknown>,
+  current: Record<string, unknown> | null,
+  config: Record<string, unknown>,
+) => Promise<Record<string, unknown>>;
+
+type CheckoutIdempotencyKeys = (input: {
+  environment: "staging" | "production";
+  clubId: string;
+  sessionId: string;
+}) => { customer: string; checkout: string };
+
+describe("PLAT-102 per-club billing intent", () => {
+  it("scopes Checkout idempotency to the authenticated owner session", async () => {
+    const keys = await loadContract<CheckoutIdempotencyKeys>(
+      "@/lib/stripe-checkout-idempotency",
+      "checkoutIdempotencyKeys",
+    );
+    const firstSession = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const secondSession = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+    const first = keys({
+      environment: "staging",
+      clubId: clubs.alpha.id,
+      sessionId: firstSession,
+    });
+    expect(
+      keys({
+        environment: "staging",
+        clubId: clubs.alpha.id,
+        sessionId: firstSession,
+      }),
+    ).toEqual(first);
+    expect(
+      keys({
+        environment: "staging",
+        clubId: clubs.alpha.id,
+        sessionId: secondSession,
+      }),
+    ).not.toEqual(first);
+    expect(JSON.stringify(first)).not.toContain(firstSession);
+    await expectContractError(
+      () =>
+        keys({
+          environment: "staging",
+          clubId: clubs.alpha.id,
+          sessionId: "not-a-session-id",
+        }),
+      "CHECKOUT_ATTEMPT_INVALID",
+    );
+  });
+
+  it("does not retain permanent per-club first-Checkout keys", async () => {
+    const checkoutRoute = await readFile(
+      resolve(process.cwd(), "app/api/stripe/checkout/route.ts"),
+      "utf8",
+    );
+    expect(checkoutRoute).toContain("checkoutIdempotencyKeys");
+    expect(checkoutRoute).toContain("sessionId: user.sessionId");
+    expect(checkoutRoute).not.toContain(":first-customer");
+    expect(checkoutRoute).not.toContain(":first-checkout");
+  });
+
+  it("uses the server-owned club Price and never accepts a client tier or Price", async () => {
+    const buildCheckoutDecision = await loadContract<BuildCheckoutDecision>(
+      "@/lib/stripe-event-routing",
+      "buildCheckoutDecision",
+    );
+    const club = {
+      ...clubs.alpha,
+      kind: "customer",
+      stripePriceId: DIVERSE_CITY_TEST_PRICE,
+    };
+
+    expect(
+      buildCheckoutDecision({
+        club,
+        currentSubscription: null,
+        config: { environment: "staging" },
+      }),
+    ).toEqual({
+      destination: "checkout",
+      priceId: DIVERSE_CITY_TEST_PRICE,
+      metadata: {
+        onzio_club_id: clubs.alpha.id,
+        onzio_environment: "staging",
+      },
+    });
+
+    await expectContractError(
+      () =>
+        buildCheckoutDecision({
+          club,
+          requestedPriceId: STRIPE_IDS.proPrice,
+          currentSubscription: null,
+          config: { environment: "staging" },
+        }),
+      "UNTRUSTED_BILLING_INPUT",
+    );
+    await expectContractError(
+      () =>
+        buildCheckoutDecision({
+          club,
+          requestedTier: "pro",
+          currentSubscription: null,
+          config: { environment: "staging" },
+        }),
+      "UNTRUSTED_BILLING_INPUT",
+    );
+  });
+
+  it("does not create Checkout for demo or test clubs", async () => {
+    const buildCheckoutDecision = await loadContract<BuildCheckoutDecision>(
+      "@/lib/stripe-event-routing",
+      "buildCheckoutDecision",
+    );
+
+    for (const kind of ["demo", "test"] as const) {
+      await expectContractError(
+        () =>
+          buildCheckoutDecision({
+            club: {
+              ...clubs.alpha,
+              kind,
+              stripePriceId: null,
+            },
+            currentSubscription: null,
+            config: { environment: "staging" },
+          }),
+        "BILLING_NOT_REQUIRED",
+      );
+    }
+  });
+
+  it("projects any canonical Stripe-reported Price without tier mapping", async () => {
+    const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
+      "@/lib/stripe-event-routing",
+      "resolveStripeEvent",
+    );
+    const arbitraryPrice = "price_negotiated_future_customer";
+    const result = await resolveStripeEvent(
+      stripeEvent(
+        { id: "evt_negotiated_price" },
+        { items: { data: [{ price: { id: arbitraryPrice } }] } },
+      ),
+      {
+        clubId: clubs.alpha.id,
+        customerId: STRIPE_IDS.alphaCustomer,
+        subscriptionId: STRIPE_IDS.currentSubscription,
+        lastEventId: "evt_previous",
+        lastEventCreated: 1784500000,
+        status: "active",
+        graceEndsAt: null,
+      },
+      { environment: "production" },
+    );
+
+    expect(result).toMatchObject({ action: "apply", priceId: arbitraryPrice });
+    expect(result).not.toHaveProperty("tier");
+  });
+
+  it("rejects trialing because PLAT-102 has no trial state", async () => {
+    const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
+      "@/lib/stripe-event-routing",
+      "resolveStripeEvent",
+    );
+    await expectContractError(
+      () =>
+        resolveStripeEvent(
+          stripeEvent(
+            { id: "evt_trialing" },
+            { status: "trialing" },
+          ),
+          null,
+          { environment: "production" },
+        ),
+      "TRIALING_NOT_SUPPORTED",
+    );
+  });
+
+  it("keeps Portal self-service limited to cards and invoices", async () => {
+    const portalCapabilities = await loadContract<() => Record<string, unknown>>(
+      "@/lib/stripe-portal",
+      "stripePortalCapabilities",
+    );
+    expect(portalCapabilities()).toEqual({
+      payment_method_update: { enabled: true },
+      invoice_history: { enabled: true },
+      subscription_cancel: { enabled: false },
+      subscription_update: { enabled: false },
+    });
+  });
+
+  it("tells owners that content editing remains available during grace", async () => {
+    // The grace-period messaging moved into the shared PaymentStatusCard
+    // component that the payments page renders, rather than living inline
+    // in the page itself.
+    const paymentStatusCard = await readFile(
+      resolve(
+        process.cwd(),
+        "components/admin/payments/PaymentStatusCard.tsx",
+      ),
+      "utf8",
+    );
+    expect(paymentStatusCard).toContain("Content editing remains available");
+    expect(paymentStatusCard).toContain("until the grace period ends");
+    expect(paymentStatusCard).not.toContain("Content changes are paused");
+  });
+
+  it("contains no runtime imports of the deleted tier gate", async () => {
+    const candidates = [
+      "lib/authorization.ts",
+      "lib/media-processing.ts",
+      "components/AdminShell.tsx",
+      "app/admin/(protected)/programs/page.tsx",
+      "app/admin/(protected)/tryouts/page.tsx",
+      "app/api/stripe/checkout/route.ts",
+      "app/api/stripe/webhook/route.ts",
+    ];
+    for (const candidate of candidates) {
+      const source = await readFile(resolve(process.cwd(), candidate), "utf8");
+      expect(source, candidate).not.toContain("clubHasFeature");
+      expect(source, candidate).not.toContain("stripe-tiers");
+    }
+  });
+
+  it("does not keep unknown Price rejection in the accepted webhook path", async () => {
+    const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
+      "@/lib/stripe-event-routing",
+      "resolveStripeEvent",
+    );
+    await expect(
+      resolveStripeEvent(stripeEvents.unknownPrice, null, {
+        environment: "production",
+      }),
+    ).resolves.toMatchObject({ priceId: "price_unknown" });
+  });
+});
