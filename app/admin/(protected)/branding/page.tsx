@@ -283,14 +283,29 @@ export default function BrandingPage() {
   // Drives the "Footer preview" panel below: the real Footer component,
   // fed the in-progress (possibly unsaved) tagline and social-link draft
   // state instead of what is currently saved in the database.
+  //
+  // Both fields are normalized to what would actually go live, so the
+  // preview never lies:
+  // - tagline runs through resolveFooterTagline, matching how the live site
+  //   maps a stored-empty tagline to the standard template wording (and the
+  //   field's own "Leave empty to keep the standard wording" copy) — the
+  //   raw "" would otherwise render a blank tagline in the preview only.
+  // - socialLinks passes through only configuredSocialIds, the same gate
+  //   saveSocialLinks uses. Untouched platforms are still showing
+  //   DEFAULT_SITE_SOCIAL_LINKS' Rose City FC sample URLs as unsaved
+  //   onboarding suggestions; the real public footer (raw DB rows via
+  //   fetchSiteSocialLinks) shows nothing for them, so neither may the
+  //   preview.
   const footerPreviewOverrides = useMemo(
     () => ({
-      tagline: footerTagline,
+      tagline: resolveFooterTagline(footerTagline),
       socialLinks: Object.fromEntries(
-        socialLinks.map((link) => [link.id, link.href]),
+        socialLinks
+          .filter((link) => configuredSocialIds.has(link.id))
+          .map((link) => [link.id, link.href]),
       ) as Partial<Record<SiteSocialPlatform, string>>,
     }),
-    [footerTagline, socialLinks],
+    [footerTagline, socialLinks, configuredSocialIds],
   );
 
   return (
