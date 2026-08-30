@@ -398,3 +398,52 @@ main.dark {
 .admin-theme[data-admin-theme="light"] > .dark .dark [data-slot="native-select"] {
   color-scheme: dark;
 }
+
+@layer utilities {
+  /* hsl(var(--foreground) / alpha) instead of a literal white so the thumb
+     and focus outline stay visible in both the light and dark admin theme
+     -- --foreground resolves near-white in dark and near-black in light. */
+  .admin-nav-scrollbar {
+    scrollbar-color: hsl(var(--foreground) / 0.2) transparent;
+    scrollbar-width: thin;
+  }
+
+  .admin-nav-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .admin-nav-scrollbar::-webkit-scrollbar-track,
+  .admin-nav-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  .admin-nav-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--foreground) / 0.2);
+    border-radius: 999px;
+  }
+
+  .admin-nav-scrollbar:hover::-webkit-scrollbar-thumb,
+  .admin-nav-scrollbar:focus-visible::-webkit-scrollbar-thumb {
+    background: hsl(var(--foreground) / 0.36);
+  }
+
+  .admin-nav-scrollbar:focus-visible {
+    outline: 1px solid hsl(var(--foreground) / 0.16);
+    outline-offset: -1px;
+  }
+}
+
+/* Keyframe for the shared admin loading indicator
+   (components/admin/AdminLoading.tsx), referenced there through arbitrary
+   `animate-[...]` utilities exactly like the save-feedback keyframes above.
+   Kept outside @layer so Tailwind never tree-shakes it. */
+@keyframes spinner-ellipsis {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-0.4em);
+  }
+}
