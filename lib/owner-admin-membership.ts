@@ -61,13 +61,21 @@ async function writeOwnerAudit(
   if (result.error) failContract("MEMBERSHIP_AUDIT_FAILED");
 }
 
-// The caller (app/api/admin/members/route.ts) has already re-verified the
-// actor is a signed-in, AAL2-verified owner of `clubId` right now via
-// requireMembershipRouteAuthorization -- the same authorizeAdminAccess
-// re-check-at-mutation-time boundary the billing route uses, not a
-// bespoke check reimplemented here. This just packages that already-proven
-// identity with a service-role client for the mutation helpers below.
-export function createClubOwnerSession(
+// PERFORMS NO AUTHORIZATION CHECK ITSELF -- this only packages an actor/club
+// pair with a service-role client (full RLS bypass) into the privileged
+// session type every function below trusts completely. Only call this with
+// an actorId/clubId that requireMembershipRouteAuthorization (or an
+// equivalent fresh authorizeAdminAccess re-check) has *just* verified for
+// the current request; do not reuse a session across requests or construct
+// one from unverified input. staging's original equivalent
+// (assertClubOwnerSession) did its own verification as part of construction,
+// so calling it WAS the check -- this version splits that responsibility out
+// to lib/membership-route-auth.ts so main's password+AAL2 re-check (instead
+// of staging's passwordless access-token-claims re-check) only has to be
+// implemented once, but that split means this function's name alone can no
+// longer be trusted to imply "verified" -- read this comment before adding
+// a second call site.
+export function createClubOwnerSessionFromVerifiedIdentity(
   actorId: string,
   clubId: string,
   options?: {
@@ -124,25 +132,30 @@ export async function addClubAdmin(
     identityCreated = true;
   }
 
-  const previous = await session.client
-    .schema("onzio")
-    .from("club_members")
-    .select("role,status,removed_at")
-    .eq("club_id", session.clubId)
-    .eq("user_id", identity.id)
-    .maybeSingle();
-  if (previous.error) failContract("MEMBERSHIP_READ_FAILED");
-  if (previous.data?.role === "owner") {
-    failContract("OWNER_TRANSFER_OPERATOR_REQUIRED");
-  }
-  if (previous.data?.status === "active") failContract("MEMBERSHIP_EXISTS");
-
   const now = new Date().toISOString();
-  // The membership write lives inside the rollback boundary: if it fails after
-  // we just provisioned a brand-new auth identity, that identity has to be
-  // deleted too, or it is orphaned in Auth with no club membership.
+  // Everything from here on lives inside the rollback boundary: if any of it
+  // fails after we just provisioned a brand-new auth identity above, that
+  // identity has to be deleted too, or it is orphaned in Auth with no club
+  // membership -- including the `previous` lookup itself, which used to run
+  // before this boundary and could leak an identity on a transient read
+  // failure with no rollback at all.
   let membershipWritten = false;
+  let previousRow: { role: string; status: string; removed_at: string | null } | null = null;
   try {
+    const previous = await session.client
+      .schema("onzio")
+      .from("club_members")
+      .select("role,status,removed_at")
+      .eq("club_id", session.clubId)
+      .eq("user_id", identity.id)
+      .maybeSingle();
+    if (previous.error) failContract("MEMBERSHIP_READ_FAILED");
+    previousRow = previous.data;
+    if (previous.data?.role === "owner") {
+      failContract("OWNER_TRANSFER_OPERATOR_REQUIRED");
+    }
+    if (previous.data?.status === "active") failContract("MEMBERSHIP_EXISTS");
+
     const membership = await session.client
       .schema("onzio")
       .from("club_members")
@@ -184,25 +197,35 @@ export async function addClubAdmin(
       userId: identity.id,
       payload: { role: "admin", recipient_domain: email.split("@")[1] },
     });
+
+    return { userId: identity.id, email, role: "admin" as const, codeSent: true };
   } catch (error) {
     // Only revert club_members when this call actually wrote it. When the
-    // upsert itself failed there is nothing to revert, and the pre-existing
-    // row (if any) is already the correct state.
+    // upsert itself failed (or never ran, e.g. the `previous` read failed)
+    // there is nothing to revert, and any pre-existing row is already the
+    // correct state. The `.eq("updated_at", now)` guard on both branches
+    // makes the revert a no-op if a second request already wrote its own
+    // change to this same row after us (e.g. a concurrent retry that
+    // succeeded) -- without it, reverting to the *snapshot* taken before our
+    // own upsert could stomp on a legitimate later write neither of us knew
+    // about yet.
     if (membershipWritten) {
-      if (previous.data) {
+      if (previousRow) {
         await session.client
           .schema("onzio")
           .from("club_members")
-          .update(previous.data)
+          .update(previousRow)
           .eq("club_id", session.clubId)
-          .eq("user_id", identity.id);
+          .eq("user_id", identity.id)
+          .eq("updated_at", now);
       } else {
         await session.client
           .schema("onzio")
           .from("club_members")
           .delete()
           .eq("club_id", session.clubId)
-          .eq("user_id", identity.id);
+          .eq("user_id", identity.id)
+          .eq("updated_at", now);
       }
     }
     // Never delete an identity we did not create in this call.
@@ -211,8 +234,6 @@ export async function addClubAdmin(
     }
     throw error;
   }
-
-  return { userId: identity.id, email, role: "admin" as const, codeSent: true };
 }
 
 export async function removeClubAdmin(

@@ -17,8 +17,24 @@ const MEMBERSHIP_ERROR_MESSAGES = new Map<string, string>([
     "Your session expired — sign in again and retry this change.",
   ],
   [
+    "MFA_REQUIRED",
+    "This action needs your authenticator code. Sign in again to verify it, then retry.",
+  ],
+  [
     "OWNER_REQUIRED",
     "Only the club owner can add or remove administrators.",
+  ],
+  [
+    "CLUB_ARCHIVED",
+    "This club has been archived and can no longer be changed.",
+  ],
+  [
+    "CLUB_INACTIVE",
+    "This club isn't active yet, so team access can't be changed. Contact Onzio if you think this is wrong.",
+  ],
+  [
+    "UNKNOWN_TENANT",
+    "We couldn't identify this club. Refresh the page and try again.",
   ],
   [
     "INVALID_MEMBERSHIP_INPUT",
@@ -61,8 +77,12 @@ const MEMBERSHIP_ERROR_MESSAGES = new Map<string, string>([
     "We couldn't record this change, so it was undone. Try again in a minute.",
   ],
   [
+    // Thrown both when the target admin is no longer on the team, and (less
+    // commonly) when the signed-in owner's own membership was itself
+    // revoked or never existed -- kept deliberately generic rather than
+    // presuming which one happened, since the two cases share this code.
     "MEMBERSHIP_REQUIRED",
-    "This person is no longer on this club's team. Refresh the page to see the current list.",
+    "This didn't go through -- team membership may have changed. Refresh the page and try again; sign in again if that doesn't help.",
   ],
   [
     "MEMBERSHIP_INACTIVE",

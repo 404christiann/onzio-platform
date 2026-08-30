@@ -174,6 +174,45 @@ describe("admin authentication and role contract", () => {
       "CLUB_ARCHIVED",
     );
   });
+
+  it.each([
+    [USER_IDS.removed, "MEMBERSHIP_INACTIVE"],
+    [USER_IDS.unaffiliated, "MEMBERSHIP_REQUIRED"],
+  ])("rejects member state for %s managing team membership", async (userId, code) => {
+    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
+      "@/lib/authorization",
+      "authorizeAdminAccess",
+    );
+    await expectContractError(
+      () =>
+        authorizeAdminAccess({
+          club: clubs.alpha,
+          userId,
+          memberships,
+          aal: "aal2",
+          capability: "membership",
+        }),
+      code,
+    );
+  });
+
+  it("rejects team membership changes for an archived club even as its owner", async () => {
+    const authorizeAdminAccess = await loadContract<AuthorizeAdminAccess>(
+      "@/lib/authorization",
+      "authorizeAdminAccess",
+    );
+    await expectContractError(
+      () =>
+        authorizeAdminAccess({
+          club: { ...clubs.alpha, lifecycle: "archived" },
+          userId: USER_IDS.ownerAal2,
+          memberships,
+          aal: "aal2",
+          capability: "membership",
+        }),
+      "CLUB_ARCHIVED",
+    );
+  });
 });
 
 describe("tier and mutation boundary contract", () => {

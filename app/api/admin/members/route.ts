@@ -4,7 +4,7 @@ import { createAuthEmailCallbackUrl } from "@/lib/auth-email-callback";
 import { ContractError } from "@/lib/contract-error";
 import {
   addClubAdmin,
-  createClubOwnerSession,
+  createClubOwnerSessionFromVerifiedIdentity,
   listClubAdmins,
   removeClubAdmin,
 } from "@/lib/owner-admin-membership";
@@ -17,16 +17,35 @@ const requestSchema = z.discriminatedUnion("action", [
 
 async function ownerSession(request: Request) {
   const { user, club } = await requireMembershipRouteAuthorization(request);
-  return createClubOwnerSession(user.id, club.id);
+  return createClubOwnerSessionFromVerifiedIdentity(user.id, club.id);
 }
+
+// Every ContractError code reachable from this route, mapped to the HTTP
+// status it actually represents -- rather than collapsing almost everything
+// to 403, which would give client-side retry/alerting logic (and any future
+// caller besides this route's own page) the wrong signal for e.g. an
+// internal write failure (5xx, safe to retry) vs. a real permission denial
+// (403, retrying won't help) vs. a conflict (409, the caller needs to
+// refresh state first).
+const STATUS_BY_CODE: Record<string, number> = {
+  AUTHENTICATION_REQUIRED: 401,
+  MFA_REQUIRED: 401,
+  AUTH_CODE_RATE_LIMITED: 429,
+  UNKNOWN_TENANT: 404,
+  MEMBERSHIP_REQUIRED: 404,
+  MEMBERSHIP_EXISTS: 409,
+  MEMBERSHIP_INACTIVE: 409,
+  MEMBERSHIP_READ_FAILED: 502,
+  MEMBERSHIP_MUTATION_FAILED: 502,
+  MEMBERSHIP_AUDIT_FAILED: 502,
+  AUTH_IDENTITY_LOOKUP_FAILED: 502,
+  AUTH_PROVISIONING_FAILED: 502,
+  AUTH_CODE_DELIVERY_FAILED: 502,
+};
 
 function failure(error: unknown) {
   const code = error instanceof ContractError ? error.code : "MEMBERSHIP_FAILED";
-  const status = code === "AUTHENTICATION_REQUIRED"
-    ? 401
-    : code === "AUTH_CODE_RATE_LIMITED"
-      ? 429
-      : 403;
+  const status = STATUS_BY_CODE[code] ?? 403;
   return NextResponse.json({ error: code }, { status });
 }
 
