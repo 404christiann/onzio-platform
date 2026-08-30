@@ -313,6 +313,15 @@ export const adminDataRequestSchema = z
       })
       .optional(),
     limit: z.number().int().positive().max(1_000).optional(),
+    // Inclusive row window for paginated reads (PostgREST .range()). Reads
+    // that can exceed PostgREST's default row cap must page with an explicit
+    // stable order plus this window.
+    range: z
+      .object({
+        from: z.number().int().min(0),
+        to: z.number().int().min(0),
+      })
+      .optional(),
     single: z.enum(["single", "maybeSingle"]).optional(),
     count: z.enum(["exact"]).optional(),
     head: z.boolean().optional(),

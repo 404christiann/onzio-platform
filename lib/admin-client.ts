@@ -181,6 +181,14 @@ class AdminQueryBuilder implements PromiseLike<AdminResult> {
     return this;
   }
 
+  /** Inclusive row window, mirroring PostgREST's .range(from, to). Always
+   * pair with a stable .order() — otherwise successive pages have no
+   * guaranteed row order and can skip or repeat rows. */
+  range(from: number, to: number) {
+    this.request.range = { from, to };
+    return this;
+  }
+
   single() {
     this.request.single = "single";
     return this;

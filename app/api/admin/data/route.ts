@@ -172,6 +172,7 @@ export async function POST(request: Request) {
     });
   }
   if (input.limit) query = query.limit(input.limit);
+  if (input.range) query = query.range(input.range.from, input.range.to);
   if (input.single) query = query[input.single]();
 
   const result = await query;

@@ -44,11 +44,16 @@ async function readAllPaidRegistrations(
   const pageSize = 500;
   const rows: PaidRegistration[] = [];
   for (let start = 0; ; start += pageSize) {
+    // The .order("id") is load-bearing: without an explicit stable ordering,
+    // Postgres/PostgREST make no guarantee that successive .range() windows
+    // see the rows in the same order, so pages can skip or double-count rows
+    // once a club has more than one page of paid registrations.
     const { data, error } = await onzio
       .from("registrations")
       .select("form_id")
       .eq("club_id", clubId)
       .eq("status", "paid")
+      .order("id", { ascending: true })
       .range(start, start + pageSize - 1);
     if (error) throw error;
     const page = (data ?? []) as Array<{ form_id: string }>;
@@ -70,7 +75,17 @@ export async function loadAdminDashboardData(
   clubId: string,
 ): Promise<AdminDashboardData> {
   const onzio = supabase.schema("onzio");
-  const today = new Date().toISOString().slice(0, 10);
+  // "Today" in the server's local timezone, matching how fixture/tryout dates
+  // are entered and displayed (plain YYYY-MM-DD, local — see formatDateInput
+  // in app/admin/(protected)/schedule/page.tsx). toISOString() would compute
+  // the UTC date, which drops tonight's events off "Upcoming Fixtures &
+  // Events" hours before local midnight for US-timezone clubs.
+  const now = new Date();
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
 
   const activeSeasonPromise = onzio
     .from("seasons")

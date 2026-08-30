@@ -190,25 +190,46 @@ export default function RegistrationsAdminPage() {
   const canEditStructure = draft.status !== "open" && !draft.archivedAt;
   const refresh = useCallback(async () => {
     const client = createClient();
-    const [formsResult, registrationsResult] = await Promise.all([
+    // Reads every registration row page by page with a stable ordering —
+    // the same pagination contract as readAllPaidRegistrations in
+    // lib/admin-dashboard-data.ts (which can't be reused directly here: it
+    // is paid-only and takes a server-side onzio-schema client, while this
+    // page needs paid AND total counts through the RLS-scoped admin
+    // client). A single unpaginated select silently truncates at Supabase's
+    // default 1000-row cap and undercounts; .range() without .order() has
+    // no stable row order across pages and can skip/double-count.
+    const readAllRegistrationRows = async () => {
+      const pageSize = 500;
+      const rows: Array<{ form_id: string; status: Registration["status"] }> = [];
+      for (let start = 0; ; start += pageSize) {
+        const { data, error } = await client
+          .from("registrations")
+          .select("form_id,status")
+          .order("id", { ascending: true })
+          .range(start, start + pageSize - 1);
+        if (error) throw new Error(error.message);
+        const page = (data ?? []) as Array<{
+          form_id: string;
+          status: Registration["status"];
+        }>;
+        rows.push(...page);
+        if (page.length < pageSize) return rows;
+      }
+    };
+    const [formsResult, registrationRows] = await Promise.all([
       client
         .from("registration_forms")
         .select("*")
         .order("created_at", { ascending: false }),
-      client.from("registrations").select("form_id,status"),
+      readAllRegistrationRows(),
     ]);
-    if (formsResult.error || registrationsResult.error) {
+    if (formsResult.error) {
       throw new Error(
-        formsResult.error?.message ??
-          registrationsResult.error?.message ??
-          "Could not load registrations.",
+        formsResult.error?.message ?? "Could not load registrations.",
       );
     }
     const nextCounts: FormCounts = {};
-    for (const row of (registrationsResult.data ?? []) as Array<{
-      form_id: string;
-      status: Registration["status"];
-    }>) {
+    for (const row of registrationRows) {
       const current = nextCounts[row.form_id] ?? { paid: 0, total: 0 };
       current.total += 1;
       if (row.status === "paid") current.paid += 1;
