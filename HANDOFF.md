@@ -2,6 +2,14 @@
 
 Last updated: 2026-08-30
 
+## `staging` → `main` promotion, Phase 3's `members` route merged to `main` — 1 of 5 Phase 3 routes done
+
+Agent: Claude Sonnet 5 (Claude Code), 2026-08-30. Status: **[PR #4](https://github.com/404christiann/onzio-platform/pull/4) merged to `main` (`1d2dd1c`). `main` now has "Team access" (`/admin/members`) live, reviewed and fixed before merge this time per Christian's instruction.** Full details of the review (two real correctness bugs found and fixed, plus 6 more, plus 2 deliberately-left findings) are in the entry directly below this one.
+
+**Working tree.** `main` here fast-forwarded from `fb593e9` to `1d2dd1c`. No production database, Stripe, or hosted state touched.
+
+**Exact next step:** Phase 3's other 4 routes (contact, programs, registrations, tryouts) remain unstarted. Per the earlier scouting report, `contact` is next-safest, then `tryouts`/`programs` (need a `FileUpload` component ported first), `registrations` last (Stripe Connect coupling, largest scope). Worth remembering for whichever route comes next: this session's `members` route needed real architecture adaptation, not a straight port (staging's passwordless-auth dependencies) — worth checking each remaining route for similar staging-only dependencies (`FileUpload`, Stripe Connect state, etc.) before assuming a scouting report's risk estimate holds once you're actually inside the file.
+
 ## `staging` → `main` promotion, Phase 3's `members` route reviewed and fixed before merge — a second real crash-risk bug caught, plus a wrong claim in this file's own previous entry corrected
 
 Agent: Claude Sonnet 5 (Claude Code), 2026-08-30. Status: **The `members` route diff was reviewed with the same 8-angle parallel process used for PR #3, before pushing this time (Christian asked for review-then-push-and-merge, not push-then-review). 10 findings confirmed, 8 fixed, 2 documented and deliberately left. Full verification contract green again after fixes; live-verified end to end again post-fix.**
