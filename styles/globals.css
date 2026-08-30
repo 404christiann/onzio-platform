@@ -429,3 +429,18 @@ main.dark {
     outline-offset: -1px;
   }
 }
+
+/* Keyframe for the shared admin loading indicator
+   (components/admin/AdminLoading.tsx), referenced there through arbitrary
+   `animate-[...]` utilities exactly like the save-feedback keyframes above.
+   Kept outside @layer so Tailwind never tree-shakes it. */
+@keyframes spinner-ellipsis {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-0.4em);
+  }
+}

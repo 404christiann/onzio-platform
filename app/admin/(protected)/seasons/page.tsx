@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { AdminLoadingDots } from "@/components/admin/AdminLoading";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
+import { cn } from "@/lib/utils";
 
 type SeasonDeleteState = { deletable: boolean; reason: string };
 
@@ -219,19 +222,19 @@ export default function SeasonsPage() {
         successLabel="Season changes saved"
       />
       {showCreateConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 200, backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }} onClick={() => setShowCreateConfirm(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="create-season-title" className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ backgroundColor: "#161616", border: "1px solid rgba(255,255,255,0.1)" }} onClick={(event) => event.stopPropagation()}>
-            <h2 id="create-season-title" className="font-display font-black uppercase text-white mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
-            <p className="font-body text-sm leading-relaxed mb-1" style={{ color: "rgba(255,255,255,0.55)" }}>This will:</p>
-            <ul className="font-body text-sm mb-5 space-y-1" style={{ color: "rgba(255,255,255,0.45)" }}>
-              <li>• Create the <strong style={{ color: "white" }}>{nextLabel}</strong> season</li>
+        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm" style={{ zIndex: 200 }} onClick={() => setShowCreateConfirm(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="create-season-title" className="rounded-2xl p-8 max-w-sm w-full mx-4 border border-border bg-background" onClick={(event) => event.stopPropagation()}>
+            <h2 id="create-season-title" className="font-display font-black uppercase text-foreground mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
+            <p className="font-body text-sm leading-relaxed mb-1 text-muted-foreground">This will:</p>
+            <ul className="font-body text-sm mb-5 space-y-1 text-muted-foreground">
+              <li>• Create the <strong className="text-foreground">{nextLabel}</strong> season</li>
               <li>• Seed zero stats for all active players</li>
               <li>• Keep the current season active until you change it</li>
             </ul>
-            <p className="font-body text-xs mb-6" style={{ color: "rgba(255,255,255,0.3)" }}>A new season remains removable until matches or recorded stats are added.</p>
+            <p className="font-body text-xs mb-6 text-muted-foreground">A new season remains removable until matches or recorded stats are added.</p>
             <div className="flex gap-3">
-              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white text-xs" style={{ backgroundColor: "#dc2626", opacity: saving ? 0.6 : 1 }}>{saving ? "Creating…" : "Create Season"}</button>
-              <button onClick={() => setShowCreateConfirm(false)} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-xs" style={{ backgroundColor: "#222", color: "rgba(255,255,255,0.5)" }}>Cancel</button>
+              <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground text-xs bg-brand transition-opacity hover:bg-brand/90 disabled:opacity-60 disabled:cursor-not-allowed">{saving && <AdminLoadingDots className="mr-2" />}{saving ? "Creating…" : "Create Season"}</button>
+              <button onClick={() => setShowCreateConfirm(false)} className="flex-1 px-5 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-xs bg-secondary text-muted-foreground">Cancel</button>
             </div>
           </div>
         </div>
@@ -239,43 +242,78 @@ export default function SeasonsPage() {
 
       <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display font-black uppercase text-white leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}>Seasons</h1>
-          <p className="font-body mt-1" style={{ fontSize: "1rem", color: "rgba(255,255,255,0.35)" }}>Create seasons, choose what is active, and protect historical records.</p>
+          <h1 className="font-display font-black uppercase text-foreground leading-none" style={{ fontSize: "clamp(2.5rem, 5vw, 3.5rem)" }}>Seasons</h1>
+          <p className="font-body mt-1 text-muted-foreground" style={{ fontSize: "1rem" }}>Create seasons, choose what is active, and protect historical records.</p>
         </div>
-        <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-white" style={{ backgroundColor: "#dc2626", fontSize: "1.1rem", opacity: saving || seasons.length === 0 ? 0.6 : 1 }}>+ Create Next Season</button>
+        <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="px-6 py-2.5 rounded-lg font-display font-black uppercase tracking-widest text-brand-foreground bg-brand transition-opacity hover:bg-brand/90 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "1.1rem" }}>+ Create Next Season</button>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl px-5 py-4" style={{ backgroundColor: "#161616", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div><p className="font-display uppercase tracking-widest" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)" }}>Active Season</p><p className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{activeSeason?.label ?? "Not set"}</p></div>
-        <div><p className="font-display uppercase tracking-widest" style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)" }}>Season Records</p><p className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{seasons.length}</p></div>
+      <div className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border bg-background px-5 py-4">
+        <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{activeSeason?.label ?? "Not set"}</p></div>
+        <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{seasons.length}</p></div>
       </div>
 
-      {error && <p className="font-body text-sm mb-4" style={{ color: "#dc2626" }}>Error: {error}</p>}
+      {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
       {loading ? (
-        <p className="font-display text-sm tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.3)" }}>Loading…</p>
+        <div role="status" aria-label="Loading seasons" className="flex flex-col gap-3">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3.5 w-28" />
+              </div>
+              <div className="flex flex-shrink-0 items-center gap-3">
+                <Skeleton className="h-8 w-24 rounded-lg" />
+                <Skeleton className="h-8 w-20 rounded-lg" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : seasons.length === 0 ? (
-        <div className="rounded-xl px-5 py-6" style={{ backgroundColor: "#111", border: "1px solid rgba(255,255,255,0.07)" }}><p className="font-body" style={{ color: "rgba(255,255,255,0.5)" }}>No seasons exist yet. Create the first season in Supabase before using this workflow.</p></div>
+        <div className="rounded-xl border border-border bg-background px-5 py-6"><p className="font-body text-muted-foreground">No seasons exist yet. Create the first season in Supabase before using this workflow.</p></div>
       ) : (
         <div className="flex flex-col gap-3">
           {seasons.map((season) => {
             const deleteState = deleteStates[season.id];
             const canDelete = deleteState?.deletable === true;
             return (
-              <div key={season.id} className="flex flex-col gap-4 px-5 py-4 rounded-xl sm:flex-row sm:items-center sm:justify-between" style={{ backgroundColor: season.active ? "#161616" : "#111111", border: `1px solid ${season.active ? "rgba(220,38,38,0.3)" : "rgba(255,255,255,0.07)"}` }}>
+              <div
+                key={season.id}
+                className={cn(
+                  "flex flex-col gap-4 px-5 py-4 rounded-xl border sm:flex-row sm:items-center sm:justify-between",
+                  season.active
+                    ? "border-primary/30 bg-accent/50"
+                    : "border-border bg-card transition-colors hover:border-muted-foreground/40",
+                )}
+              >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-display font-black text-white" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
-                    {season.active && <span className="font-display text-xs tracking-widest uppercase px-3 py-1 rounded-full" style={{ backgroundColor: "rgba(34,197,94,0.15)", color: "rgba(34,197,94,0.9)", border: "1px solid rgba(34,197,94,0.3)" }}>Active</span>}
+                    <p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
+                    {season.active && <span className="font-display text-xs tracking-widest uppercase px-3 py-1 rounded-full border border-success/30 bg-success/15 text-success">Active</span>}
                   </div>
-                  <p className="font-body text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>{season.start_year} – {season.end_year}</p>
-                  {!season.active && deleteState && <p className="font-body text-xs mt-1" style={{ color: "rgba(255,255,255,0.26)" }}>{deleteState.reason}</p>}
+                  <p className="font-body text-sm text-muted-foreground">{season.start_year} – {season.end_year}</p>
+                  {!season.active && deleteState && <p className="font-body text-xs mt-1 text-muted-foreground/80">{deleteState.reason}</p>}
                 </div>
 
                 {!season.active && (
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <button onClick={() => handleSetActive(season.id)} disabled={saving} className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest" style={{ fontSize: "0.85rem", backgroundColor: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "rgba(34,197,94,0.8)", opacity: saving ? 0.6 : 1 }}>Set Active</button>
-                    <button onClick={() => confirmDeleteId === season.id ? handleDelete(season.id) : setConfirmDeleteId(season.id)} disabled={saving || !canDelete} title={deleteState?.reason ?? "Checking whether this season can be deleted."} className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest" style={{ fontSize: "0.85rem", backgroundColor: confirmDeleteId === season.id ? "rgba(220,38,38,0.2)" : "transparent", border: `1px solid ${confirmDeleteId === season.id ? "rgba(220,38,38,0.5)" : "rgba(255,255,255,0.08)"}`, color: confirmDeleteId === season.id ? "#dc2626" : "rgba(255,255,255,0.3)", opacity: saving || !canDelete ? 0.4 : 1, cursor: saving || !canDelete ? "not-allowed" : "pointer" }}>{confirmDeleteId === season.id ? "Confirm Delete" : "Delete"}</button>
+                    <button onClick={() => handleSetActive(season.id)} disabled={saving} className="px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border border-success/20 bg-success/10 text-success/80 transition-colors hover:bg-success/20 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "0.85rem" }}>Set Active</button>
+                    <button
+                      onClick={() => confirmDeleteId === season.id ? handleDelete(season.id) : setConfirmDeleteId(season.id)}
+                      disabled={saving || !canDelete}
+                      title={deleteState?.reason ?? "Checking whether this season can be deleted."}
+                      className={cn(
+                        "px-4 py-2 rounded-lg font-display font-black uppercase tracking-widest border transition-colors disabled:opacity-40 disabled:cursor-not-allowed",
+                        confirmDeleteId === season.id
+                          ? "border-destructive/50 bg-destructive/20 text-destructive hover:bg-destructive/30"
+                          : "border-border bg-transparent text-muted-foreground hover:bg-destructive/10 hover:border-destructive/40 hover:text-destructive/80",
+                      )}
+                      style={{ fontSize: "0.85rem" }}
+                    >{confirmDeleteId === season.id ? "Confirm Delete" : "Delete"}</button>
                   </div>
                 )}
               </div>
