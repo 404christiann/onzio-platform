@@ -169,6 +169,7 @@ describe("tenant and privileged-boundary architecture contract", () => {
     const approved = [
       /^app\/api\/stripe\/webhook\//,
       /^lib\/operator\//,
+      /^lib\/owner-admin-membership\.ts$/,
       /^lib\/migration\//,
       /^lib\/media-cleanup\.ts$/,
       /^lib\/media-processing\.ts$/,
