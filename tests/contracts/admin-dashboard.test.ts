@@ -29,7 +29,12 @@ describe("protected admin dashboard", () => {
 
   it("derives actions from the same strict route capability manifest", () => {
     expect(page).toContain("getVisibleAdminQuickActions");
-    expect(page).toContain("isBillingAdminEmail");
+    // Payments visibility must use the same predicate every other billing
+    // surface uses (active owner — requireBillingRouteAuthorization and the
+    // payments page's own redirect), not the BILLING_ADMIN_EMAIL(S) env
+    // allowlist, which no other surface consults.
+    expect(page).toContain('club.role === "owner" && club.lifecycle !== "archived"');
+    expect(page).not.toContain("isBillingAdminEmail");
     expect(page).toContain("canMutateContent");
   });
 
@@ -48,6 +53,8 @@ describe("protected admin dashboard", () => {
   it("paginates paid-only mix rows and scopes them to current forms", () => {
     expect(loader).toContain('select("form_id")');
     expect(loader).toContain('.eq("status", "paid")');
+    // Stable ordering is required for .range() pagination to be correct.
+    expect(loader).toContain('.order("id", { ascending: true })');
     expect(loader).toContain(".range(start, start + pageSize - 1)");
     expect(loader).toContain('.is("archived_at", null)');
     expect(mix).toContain("sorted.slice(0, 5)");

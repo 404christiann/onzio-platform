@@ -18,7 +18,6 @@ import {
 } from "@/lib/admin-dashboard-data";
 import { REGISTRATION_MIX_COLORS } from "@/lib/admin-dashboard-mix";
 import { requireFreshClubSession } from "@/lib/auth-session";
-import { isBillingAdminEmail } from "@/lib/billing-admin";
 import { getClubContext } from "@/lib/club-context";
 import {
   getVisibleAdminQuickActions,
@@ -72,14 +71,23 @@ export default function AdminDashboard() {
 
 async function AdminDashboardContent() {
   const supabase = await createClient();
-  const { userId, claims } = await requireFreshClubSession(supabase);
+  const { userId } = await requireFreshClubSession(supabase);
   const requestHeaders = await headers();
   const club = await getClubContext({
     hostname: requestHeaders.get("host") ?? "",
     userId,
   });
+  // Same predicate as everywhere else Payments access is decided: an active
+  // (non-archived) owner. AdminShell's sidebar/route-search check resolves
+  // /api/stripe/billing-admin -> requireBillingRouteAuthorization ->
+  // authorizeAdminAccess({ capability: "billing" }) (owner + not archived),
+  // and app/admin/(protected)/payments/page.tsx redirects on exactly
+  // `club.role !== "owner" || club.lifecycle === "archived"`. This used to
+  // additionally gate on the BILLING_ADMIN_EMAIL(S) env allowlist
+  // (lib/billing-admin.ts), which no other Payments surface consults — so
+  // the sidebar and this quick action could disagree.
   const isBillingAuthorized =
-    club.role === "owner" && isBillingAdminEmail(claims.email as string | undefined);
+    club.role === "owner" && club.lifecycle !== "archived";
   const canMutateContent =
     club.lifecycle === "onboarding" ||
     (club.lifecycle === "active" &&
