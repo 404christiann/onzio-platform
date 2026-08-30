@@ -167,10 +167,14 @@ export default function MembersPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<MembershipMessage | null>(null);
 
-  // This route is owner-only (route manifest `ownerOnly: true`, plus the
-  // server-side `assertClubOwnerSession`/OWNER_REQUIRED checks in the API
-  // route), so whoever is viewing this page is always the club owner. The
-  // owner row below is derived entirely from that client-side identity —
+  // This route is owner-only in the manifest (`ownerOnly: true`, which hides
+  // it from nav/search) and every read/mutation goes through the API route's
+  // server-side `assertClubOwnerSession`/OWNER_REQUIRED checks. The page
+  // itself, though, is a client component with no role-based redirect: a
+  // non-owner admin who types the URL directly still renders it — they just
+  // get empty/error chrome because the API rejects them. So nothing here may
+  // assume the viewer is the owner; showOwnerRow below checks club.role. The
+  // owner row is derived entirely from client-side identity —
   // `club.role` from useClubContext() and the signed-in email from
   // supabase.auth.getUser() — the same pattern AdminShell.tsx already uses.
   // It adds no request to `listClubAdmins()`, which intentionally only

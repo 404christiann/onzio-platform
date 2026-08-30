@@ -1059,6 +1059,9 @@ function MatchForm({
       </Field>
 
       {/* ── Presented By Sponsor ── */}
+      {/* This whole block is hidden for academy@1 and editorial@1 — neither
+          template's fixture cards read the sponsor columns, so their rows
+          never show a "Presented by" line either. */}
       {!hidesMatchSponsorFields && (
         <>
           <SectionHeader
@@ -1116,11 +1119,6 @@ function MatchForm({
               />
             </Field>
           </div>
-
-          <p className="rounded-lg border border-border bg-muted/40 px-3.5 py-3 font-body text-xs leading-relaxed text-muted-foreground sm:col-span-2">
-            This whole block is hidden for academy@1 and editorial@1 — neither template&rsquo;s fixture cards read
-            the sponsor columns, so their rows never show a &ldquo;Presented by&rdquo; line either.
-          </p>
         </>
       )}
     </div>

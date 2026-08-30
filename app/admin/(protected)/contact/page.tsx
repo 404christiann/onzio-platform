@@ -526,6 +526,9 @@ export default function AdminContactPage() {
           </div>
         </AdminPanel>
 
+        {/* The live preview only renders for academy@1 today — every other
+            template edits this page without one, since ScaledContactPreview
+            renders the academy contact page markup specifically. */}
         {isAcademy && (
           <AdminPanel
             as="aside"
@@ -541,9 +544,6 @@ export default function AdminContactPage() {
             <div className="mt-4 overflow-hidden rounded-xl border border-border">
               <ScaledContactPreview content={previewContent} clubName={club.name} />
             </div>
-            <p className="mt-3 font-body text-[0.7rem] leading-5 text-muted-foreground">
-              The preview only renders for academy@1 today — every other template edits this page blind.
-            </p>
           </AdminPanel>
         )}
       </div>
