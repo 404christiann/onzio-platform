@@ -1,5 +1,39 @@
 # Onzio Platform Handoff
 
+Last updated: 2026-09-01
+
+## Public site media smoke target corrected to the active Rose City hostname
+
+Agent: Codex, 2026-09-01. Status: **implemented and locally verified;
+production push evidence recorded below before closeout.**
+
+The scheduled GitHub Actions workflow had continued targeting retired hostname
+`https://onzio-rcfc.vercel.app`, which returns Vercel
+`DEPLOYMENT_NOT_FOUND`. That prevented the application from loading, so both
+desktop and iPhone smoke projects reported zero critical images and zero
+application fallbacks. The workflow and its documented focused command now
+target active Rose City hostname `https://onzio-platform.vercel.app`.
+
+This is CI/test configuration only. No Next.js runtime source, tenant data,
+Supabase schema or migration, Stripe configuration, Vercel domain, or club
+content changed. Before the edit, `diversecityfc.com` was verified as Ready on
+production deployment `dpl_BCBcATvrxq6Sp9NWB4zvJzsrTC6n`, built from the exact
+checked-out `main` commit `5bdb6f7aece13c01b6a9270569ba6158f6b015d9`.
+
+Verification before commit:
+
+- active Rose City homepage returned the application and healthy direct media;
+  retired `onzio-rcfc.vercel.app` independently returned Vercel
+  `DEPLOYMENT_NOT_FOUND`
+- first full desktop/iPhone media run passed 3/4; one iPhone roster pass timed
+  out on six still-lazy images
+- the exact iPhone healthy-media case then passed twice consecutively
+- the final complete desktop/iPhone healthy-media and simulated-origin-failure
+  suite passed 4/4
+- `git diff --check` passed
+
+Final Git/Vercel deployment and post-deploy DCFC evidence: pending.
+
 Last updated: 2026-08-30
 
 ## `staging` retired; Vercel's Git integration reconnected — supersedes the "disconnected" statements in the entries below

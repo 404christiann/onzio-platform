@@ -52,7 +52,7 @@ Commands:
   tests/database/registration-form-links.test.ts` — optional tenant-safe
   Program/Tryout form links, admin round-tripping, open native-modal precedence,
   unchanged draft/closed/no-link fallbacks, and composite-FK enforcement
-- `ROSTER_MEDIA_BASE_URL=https://onzio-rcfc.vercel.app npm run test:browser:roster`
+- `ROSTER_MEDIA_BASE_URL=https://onzio-platform.vercel.app npm run test:browser:roster`
   — retained focused roster compatibility check
 - `SITE_MEDIA_BASE_URL=http://127.0.0.1:3000 npx playwright test
   --config=playwright.site-media.config.ts` — desktop and iPhone checks for
