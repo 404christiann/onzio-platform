@@ -4,8 +4,8 @@ Last updated: 2026-09-01
 
 ## Public site media smoke target corrected to the active Rose City hostname
 
-Agent: Codex, 2026-09-01. Status: **implemented and locally verified;
-production push evidence recorded below before closeout.**
+Agent: Codex, 2026-09-01. Status: **complete, pushed, deployed, and verified
+without a DCFC runtime regression.**
 
 The scheduled GitHub Actions workflow had continued targeting retired hostname
 `https://onzio-rcfc.vercel.app`, which returns Vercel
@@ -32,7 +32,26 @@ Verification before commit:
   suite passed 4/4
 - `git diff --check` passed
 
-Final Git/Vercel deployment and post-deploy DCFC evidence: pending.
+Final Git/Vercel and post-deploy evidence:
+
+- committed only this workflow URL, its documented command, and this handoff
+  entry as `fc910ab13c09684bd20f6957b0c8fda71129cc3f`; pushed to `origin/main`
+- Vercel production deployment `dpl_CM7EKe9BXZVmTbfrX5yiX5g4PMkQ` reached
+  Ready from exact commit `fc910ab`; existing production aliases, including
+  `diversecityfc.com`, `www.diversecityfc.com`, and
+  `onzio-platform.vercel.app`, remained attached
+- DCFC apex retained its canonical redirect to `www`; Home, Roster, Programs,
+  and Contact returned HTTP 200 after redirect
+- the older DCFC rollout test reached the correct Programs page but stopped on
+  a stale literal expectation (`Building Future Champions`); production now
+  renders `One pathway. Every athlete belongs.`
+- a copy-independent live Playwright check then passed across those four DCFC
+  routes at 1440x900 and 390x844, with the correct site identity, zero broken
+  images, zero horizontal overflow, and no framework error overlay
+
+No database, Stripe, domain, tenant-content, authentication, or application
+runtime mutation was made. The Vercel build was triggered by the connected Git
+integration, but the runtime source was unchanged.
 
 Last updated: 2026-08-30
 
