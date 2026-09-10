@@ -29,10 +29,29 @@ describe("admin roster player editor UX", () => {
   const sidePanel = read(SIDE_PANEL);
   const fileUpload = read(FILE_UPLOAD);
 
-  const playersTab = section(roster, "function PlayersTab()", "function PlayerPositionGroup");
-  const staffTab = section(roster, "function StaffTab()", "function SeasonStatsPanel");
+  const rosterShell = section(roster, "export default function RosterPage", "// ── Players tab");
+  const playersTab = section(roster, "function PlayersTab", "function PlayerPositionGroup");
+  const staffTab = section(roster, "function StaffTab", "function SeasonStatsPanel");
   const actionPhotos = section(roster, "function ActionPhotosPanel", "function PlayerFormFields");
   const playerFields = section(roster, "function PlayerFormFields", "function StaffFormFields");
+
+  it("pairs the roster tabs with one responsive contextual add action", () => {
+    expect(rosterShell).toContain('role="tablist"');
+    expect(rosterShell).toContain('aria-label="Roster sections"');
+    expect(rosterShell).toContain('role="tab"');
+    expect(rosterShell).toContain("aria-selected={tab === rosterTab}");
+    expect(rosterShell).toContain("aria-controls={`roster-${rosterTab}-panel`}");
+    expect(rosterShell).toContain('event.key === "ArrowRight"');
+    expect(rosterShell).toContain('event.key === "ArrowLeft"');
+    expect(rosterShell).toContain('event.key === "Home"');
+    expect(rosterShell).toContain('event.key === "End"');
+    expect(rosterShell).toContain('tab === "players" ? "Add player" : "Add staff"');
+    expect(rosterShell).toMatch(/min-h-11 w-full[\s\S]*?sm:w-auto/);
+    expect(rosterShell).toContain("<PlayersTab addRequest={addRequests.players}");
+    expect(rosterShell).toContain("<StaffTab addRequest={addRequests.staff}");
+    expect(playersTab).not.toContain("+ Add Player");
+    expect(staffTab).not.toContain("+ Add Staff");
+  });
 
   it("keeps the shared panel default narrow while letting the player editor opt into a wider panel", () => {
     expect(sidePanel).toContain("className?: string;");

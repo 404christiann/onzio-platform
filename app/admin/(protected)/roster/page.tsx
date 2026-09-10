@@ -3,8 +3,8 @@
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
-import { useEffect, useMemo, useState, useRef } from "react";
-import { Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { Plus, Search } from "lucide-react";
 import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import {
@@ -122,6 +122,10 @@ const ROSTER_TAB_ORDER: RosterTab[] = ["players", "staff"];
 export default function RosterPage() {
   const [tab, setTab] = useState<RosterTab>("players");
   const [tabDirection, setTabDirection] = useState<SlidingPanelDirection>(1);
+  const [addRequests, setAddRequests] = useState<Record<RosterTab, number>>({
+    players: 0,
+    staff: 0,
+  });
   const selectTab = (next: RosterTab) => {
     setTab((current) => {
       if (next === current) return current;
@@ -133,30 +137,87 @@ export default function RosterPage() {
       return next;
     });
   };
+  const requestAdd = () => {
+    setAddRequests((current) => ({
+      ...current,
+      [tab]: current[tab] + 1,
+    }));
+  };
 
   return (
     <AdminPage className="max-w-4xl">
       <AdminPageHeader title="Roster" description="Manage players and staff." />
 
-      {/* Tabs */}
-      <AdminPageToolbar className="flex-row gap-1 p-1 sm:p-1">
-        {ROSTER_TAB_ORDER.map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => selectTab(t)}
-            className={`font-display flex-1 rounded-md px-3 py-3 text-xs uppercase tracking-widest transition-colors ${
-              tab === t ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
+      <AdminPageToolbar className="mb-6 flex-col items-stretch gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-3">
+        <div
+          role="tablist"
+          aria-label="Roster sections"
+          className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:w-72"
+        >
+          {ROSTER_TAB_ORDER.map((rosterTab) => (
+            <button
+              key={rosterTab}
+              id={`roster-${rosterTab}-tab`}
+              type="button"
+              role="tab"
+              aria-selected={tab === rosterTab}
+              aria-controls={`roster-${rosterTab}-panel`}
+              tabIndex={tab === rosterTab ? 0 : -1}
+              onClick={() => selectTab(rosterTab)}
+              onKeyDown={(event) => {
+                const currentIndex = ROSTER_TAB_ORDER.indexOf(rosterTab);
+                let nextIndex: number | null = null;
+                if (event.key === "ArrowRight") {
+                  nextIndex = (currentIndex + 1) % ROSTER_TAB_ORDER.length;
+                } else if (event.key === "ArrowLeft") {
+                  nextIndex = (currentIndex - 1 + ROSTER_TAB_ORDER.length) % ROSTER_TAB_ORDER.length;
+                } else if (event.key === "Home") {
+                  nextIndex = 0;
+                } else if (event.key === "End") {
+                  nextIndex = ROSTER_TAB_ORDER.length - 1;
+                }
+                if (nextIndex === null) return;
+                event.preventDefault();
+                const nextTab = ROSTER_TAB_ORDER[nextIndex];
+                selectTab(nextTab);
+                requestAnimationFrame(() => {
+                  document.getElementById(`roster-${nextTab}-tab`)?.focus();
+                });
+              }}
+              className={cn(
+                "min-h-11 rounded-md px-4 py-2 font-display text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                tab === rosterTab
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              )}
+            >
+              {rosterTab === "players" ? "Players" : "Staff"}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={requestAdd}
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          {tab === "players" ? "Add player" : "Add staff"}
+        </button>
       </AdminPageToolbar>
 
-      <SlidingPanel activeKey={tab} direction={tabDirection}>
-        {tab === "players" ? <PlayersTab /> : <StaffTab />}
-      </SlidingPanel>
+      <div
+        id={`roster-${tab}-panel`}
+        role="tabpanel"
+        aria-labelledby={`roster-${tab}-tab`}
+      >
+        <SlidingPanel activeKey={tab} direction={tabDirection}>
+          {tab === "players" ? (
+            <PlayersTab addRequest={addRequests.players} />
+          ) : (
+            <StaffTab addRequest={addRequests.staff} />
+          )}
+        </SlidingPanel>
+      </div>
     </AdminPage>
   );
 }
@@ -166,7 +227,7 @@ export default function RosterPage() {
 type StatusFilter = "all" | "active" | "inactive";
 type PositionFilter = "All" | Position;
 
-function PlayersTab() {
+function PlayersTab({ addRequest }: { addRequest: number }) {
   const clubId = useClubId();
   const [players, setPlayers]     = useState<Player[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -180,6 +241,7 @@ function PlayersTab() {
   const [error, setError]         = useState<string | null>(null);
   const [saved, setSaved]         = useState(false);
   const [confirmingDeactivation, setConfirmingDeactivation] = useState(false);
+  const handledAddRequest = useRef(addRequest);
 
   // Panel state: the side panel is open whenever `addOpen` or `editingId` is
   // set. `panelDirection` drives the SlidingPanel content-swap animation —
@@ -294,7 +356,7 @@ function PlayersTab() {
     return sorted.findIndex((p) => p.id === key);
   }
 
-  function openAddPanel() {
+  const openAddPanel = useCallback(() => {
     setPanelDirection(1);
     setEditingId(null);
     setConfirmingDeactivation(false);
@@ -302,7 +364,13 @@ function PlayersTab() {
     setAddPhoto(null);
     setError(null);
     setAddOpen(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (handledAddRequest.current === addRequest) return;
+    handledAddRequest.current = addRequest;
+    openAddPanel();
+  }, [addRequest, openAddPanel]);
 
   function openEditPanel(p: Player) {
     const fromIndex = addOpen ? -1 : panelIndex(editingId);
@@ -463,17 +531,10 @@ function PlayersTab() {
               className={cn(ADMIN_INPUT_CLASS, "pl-9")}
             />
           </div>
-          <div className="flex flex-none items-center gap-3">
+          <div className="flex flex-none items-center">
             <p className="whitespace-nowrap font-body text-sm text-muted-foreground">
               {players.filter(p => p.active).length} active · {players.filter(p => !p.active).length} inactive
             </p>
-            <button
-              onClick={openAddPanel}
-              className="whitespace-nowrap rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground hover:bg-primary/90"
-              style={{ fontSize: "1.1rem" }}
-            >
-              + Add Player
-            </button>
           </div>
         </div>
 
@@ -765,7 +826,7 @@ function PlayerPositionGroup({
 
 // ── Staff tab ─────────────────────────────────
 
-function StaffTab() {
+function StaffTab({ addRequest }: { addRequest: number }) {
   const { clubLogoUrl } = useClubBranding();
   const [staff, setStaff]         = useState<Staff[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -778,6 +839,7 @@ function StaffTab() {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [saved, setSaved]         = useState(false);
+  const handledAddRequest = useRef(addRequest);
 
   const [panelDirection, setPanelDirection] = useState<SlidingPanelDirection>(1);
   const [searchQuery, setSearchQuery]       = useState("");
@@ -837,14 +899,20 @@ function StaffTab() {
     return staff.findIndex((s) => s.id === key);
   }
 
-  function openAddPanel() {
+  const openAddPanel = useCallback(() => {
     setPanelDirection(1);
     setEditingId(null);
     setAddForm(emptyStaff());
     setAddPhoto(null);
     setError(null);
     setAddOpen(true);
-  }
+  }, []);
+
+  useEffect(() => {
+    if (handledAddRequest.current === addRequest) return;
+    handledAddRequest.current = addRequest;
+    openAddPanel();
+  }, [addRequest, openAddPanel]);
 
   function openEditPanel(s: Staff) {
     const fromIndex = addOpen ? -1 : panelIndex(editingId);
@@ -957,16 +1025,10 @@ function StaffTab() {
               className={cn(ADMIN_INPUT_CLASS, "pl-9")}
             />
           </div>
-          <div className="flex flex-none items-center gap-3">
+          <div className="flex flex-none items-center">
             <p className="whitespace-nowrap font-body text-sm text-muted-foreground">
               {staff.filter(s => s.active).length} active · {staff.filter(s => !s.active).length} inactive
             </p>
-            <button
-              onClick={openAddPanel}
-              className="whitespace-nowrap rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground hover:bg-primary/90"
-              style={{ fontSize: "1.1rem" }}>
-              + Add Staff
-            </button>
           </div>
         </div>
 

@@ -2,6 +2,46 @@
 
 Last updated: 2026-09-10
 
+## Roster contextual add action placement
+
+Agent: Codex, 2026-09-10. Status: **accepted by Christian and ready for a
+focused local commit on `codex/roster-player-editor-ux`; not pushed or deployed.**
+
+The Players/Staff switcher and the active collection's creation action now
+share one responsive context bar above the search/filter utilities. The action
+reads `Add player` or `Add staff` as the selected tab changes. On phones the
+segmented switcher stays on the first row and the 44px action fills the second
+row; at `sm` and above they align on one row. The search, status counts,
+position filters, and status select are now creation-free utilities.
+
+The switcher uses tablist/tab/tabpanel semantics, selected-tab roving focus,
+and Arrow Left/Right plus Home/End keyboard navigation. The contextual action
+reuses the existing add-player and add-staff panel state without changing any
+database, validation, upload, tenant, or mutation behavior.
+
+Verification:
+
+- `npx tsc --noEmit`: passed
+- `npm run lint`: no warnings or errors
+- focused roster/template contracts: 84/84 passed
+- full contract suite: 815/815 passed
+- architecture suite: 21/21 passed
+- authenticated local browser at desktop width: the contextual action aligned
+  with the switcher and opened the correct New Player and New Staff Member
+  panels
+- authenticated local browser at 390x844: the action stacked full-width,
+  Players/Staff changed both the label and panel target, Arrow Right selected
+  Staff, and body/document scroll widths remained exactly 390px
+- `git diff --check`: passed
+
+The live review remains at `http://alpha.localhost:3007/admin/roster` using the
+local-only Supabase/Mailpit stack. Port 3000 and its unrelated process remain
+untouched.
+
+Exact next step: keep the accepted roster control bar stable while the Schedule
+Add Match panel is reorganized; obtain separate approval before any push to
+`main` or production deployment.
+
 ## Mobile-first roster player editor reorganization
 
 Agent: Codex with implementation and verification sub-agents, 2026-09-10.
