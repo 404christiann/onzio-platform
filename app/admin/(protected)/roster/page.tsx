@@ -179,6 +179,7 @@ function PlayersTab() {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [saved, setSaved]         = useState(false);
+  const [confirmingDeactivation, setConfirmingDeactivation] = useState(false);
 
   // Panel state: the side panel is open whenever `addOpen` or `editingId` is
   // set. `panelDirection` drives the SlidingPanel content-swap animation —
@@ -296,6 +297,7 @@ function PlayersTab() {
   function openAddPanel() {
     setPanelDirection(1);
     setEditingId(null);
+    setConfirmingDeactivation(false);
     setAddForm(emptyPlayer());
     setAddPhoto(null);
     setError(null);
@@ -307,6 +309,7 @@ function PlayersTab() {
     const toIndex = panelIndex(p.id);
     setPanelDirection(fromIndex === -1 ? 1 : toIndex >= fromIndex ? 1 : -1);
     setAddOpen(false);
+    setConfirmingDeactivation(false);
     setError(null);
     startEdit(p);
   }
@@ -314,6 +317,7 @@ function PlayersTab() {
   function closePanel() {
     setAddOpen(false);
     setEditingId(null);
+    setConfirmingDeactivation(false);
     setError(null);
   }
 
@@ -558,6 +562,34 @@ function PlayersTab() {
         description={editingId ? `#${editForm.number || "—"} · ${editForm.position}` : "Add a player to the roster."}
         activeKey={panelKey}
         direction={panelDirection}
+        className="max-w-2xl"
+        footer={
+          <div className="space-y-3">
+            {error && (
+              <p role="alert" className="font-body text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <div className="flex w-full items-center gap-3">
+              <button
+                type="button"
+                onClick={closePanel}
+                className="min-h-11 flex-1 rounded-lg border border-border bg-card px-5 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={editingId ? handleSaveEdit : handleAdd}
+                disabled={saving}
+                className="min-h-11 flex-1 rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:ml-auto sm:flex-none"
+              >
+                {saving && <AdminLoadingDots className="mr-2" />}
+                {saving ? "Saving…" : editingId ? "Save changes" : "Save player"}
+              </button>
+            </div>
+          </div>
+        }
       >
         <PlayerFormFields
           form={panelForm}
@@ -566,35 +598,70 @@ function PlayersTab() {
           onPhotoChange={panelOnPhotoChange}
           playerId={editingId ?? undefined}
         />
-        {error && <p className="mt-4 font-body text-sm text-destructive">Error: {error}</p>}
-        <div className="mt-4 flex items-center gap-3">
-          {editingPlayer && (
-            <button
-              type="button"
-              onClick={handlePanelToggleActive}
-              disabled={saving}
-              className={cn(
-                "rounded-lg border px-4 py-2 font-display text-xs font-black uppercase tracking-widest disabled:opacity-60",
-                editingPlayer.active
-                  ? "border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20"
-                  : "border-success/20 bg-success/10 text-success/80 hover:bg-success/20",
+        {editingPlayer && (
+          <section className="mt-8 border-t border-border pt-6" aria-labelledby="player-status-heading">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2.5">
+                  <h3 id="player-status-heading" className="font-display text-sm font-semibold text-foreground">
+                    Player status
+                  </h3>
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full px-2 py-0.5 font-body text-xs font-semibold",
+                      editingPlayer.active
+                        ? "bg-success/10 text-success"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {editingPlayer.active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <p className="mt-1 font-body text-sm leading-6 text-muted-foreground">
+                  {editingPlayer.active
+                    ? "Deactivate to hide this player from the public roster. Their profile and stats are kept."
+                    : "Activate to show this player on the public roster again."}
+                </p>
+              </div>
+              {editingPlayer.active && confirmingDeactivation ? (
+                <div className="flex shrink-0 gap-2" role="group" aria-label="Confirm player deactivation">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDeactivation(false)}
+                    disabled={saving}
+                    className="min-h-11 rounded-lg border border-border bg-card px-4 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                  >
+                    Keep active
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePanelToggleActive}
+                    disabled={saving}
+                    className="min-h-11 rounded-lg bg-destructive px-4 py-2.5 font-body text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={editingPlayer.active
+                    ? () => setConfirmingDeactivation(true)
+                    : handlePanelToggleActive}
+                  disabled={saving}
+                  className={cn(
+                    "min-h-11 shrink-0 rounded-lg border px-4 py-2.5 font-body text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+                    editingPlayer.active
+                      ? "border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20"
+                      : "border-success/20 bg-success/10 text-success/80 hover:bg-success/20",
+                  )}
+                >
+                  {editingPlayer.active ? "Deactivate player" : "Activate player"}
+                </button>
               )}
-            >
-              {editingPlayer.active ? "Deactivate" : "Activate"}
-            </button>
-          )}
-          <div className="ml-auto flex gap-3">
-            <button onClick={closePanel}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent">
-              Cancel
-            </button>
-            <button onClick={editingId ? handleSaveEdit : handleAdd} disabled={saving}
-              className="rounded-lg bg-primary px-6 py-2 font-display text-xs font-black uppercase tracking-widest text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
-              {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : editingId ? "Save" : "Save Player"}
-            </button>
-          </div>
-        </div>
+            </div>
+          </section>
+        )}
       </AdminSidePanel>
     </div>
   );
@@ -1273,37 +1340,37 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
   }
 
   return (
-    <div>
-      <div className="mb-3 h-px bg-border" />
-      <label className="block font-display text-xs tracking-widest uppercase mb-3 text-muted-foreground">
-        Action Photos
-      </label>
+    <section className="space-y-4" aria-labelledby="action-photos-heading">
+      <FormSectionHeading id="action-photos-heading" title="Action photos" />
 
       {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
 
-      <div className="flex flex-wrap gap-2 mb-3">
-        {photos.map((photo) => (
-          <div key={photo.id} className="relative group" style={{ width: 72, height: 72 }}>
+      {photos.length > 0 && (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+          {photos.map((photo, index) => (
+            <div key={photo.id} className="group relative aspect-square min-w-0">
             <ResilientNativeImage
               src={photo.url}
-              alt="Action photo"
+                alt={`Action photo ${index + 1}`}
               fallbackVariant="person"
               className="w-full h-full rounded-lg border border-border object-cover"
             />
             <button
               type="button"
               onClick={() => void handleDelete(photo)}
-              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label="Delete photo"
+                className="absolute -right-2 -top-2 flex size-11 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`Delete action photo ${index + 1}`}
             >
-              <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                <path d="M1 1L9 9M9 1L1 9" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-              </svg>
+                <span className="flex size-7 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-transform group-hover:scale-105">
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                </span>
             </button>
           </div>
-        ))}
-
-      </div>
+          ))}
+        </div>
+      )}
 
       <FileUpload
         label="Add action photos"
@@ -1311,8 +1378,9 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
         multiple
         onUpload={(files) => void handleUpload(files)}
         uploading={uploading}
+        density="compact"
       />
-    </div>
+    </section>
   );
 }
 
@@ -1361,129 +1429,138 @@ function PlayerFormFields({
   }
 
   return (
-    <div className="space-y-5">
-      {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
-      <FileUpload
-        label="Upload player photo"
-        accept="image/*"
-        onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
-        previewUrl={previewIsClubLogo ? null : preview}
-        onRemove={previewIsClubLogo ? undefined : () => {
-          onPhotoChange(null);
-          onChange({ ...form, photo_url: "" });
-        }}
-      />
-
-      {/* Identity: number, name, position, nationality, pronunciation */}
-      <div className="space-y-3">
-        <FormSectionHeading title="Identity" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[88px_minmax(0,1fr)]">
-          <Field label="No." required>
-            <input type="number" min={1} value={form.number || ""}
-              onChange={(e) => set("number", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
-          </Field>
-          <Field label="Name" required>
-            <input type="text" placeholder="e.g. Christian Alcala" value={form.name}
-              onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
-          </Field>
+    <div className="space-y-8">
+      <section className="space-y-4" aria-labelledby="basic-information-heading">
+        <div>
+          <FormSectionHeading id="basic-information-heading" title="Basic information" />
+          <p className="mt-1.5 font-body text-xs text-muted-foreground">Required fields are marked with *.</p>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Position" required>
-            <NativeSelect value={form.position} onChange={(e) => set("position", e.target.value)}>
+
+        {/* Photo picker — deferred: the File is stored locally and uploaded at save time. */}
+        <FileUpload
+          label="Upload player photo"
+          previewLabel="Player photo"
+          density="compact"
+          accept="image/*"
+          onUpload={(files) => onPhotoChange(files?.[0] ?? null)}
+          previewUrl={previewIsClubLogo ? null : preview}
+          onRemove={previewIsClubLogo ? undefined : () => {
+            onPhotoChange(null);
+            onChange({ ...form, photo_url: "" });
+          }}
+        />
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
+          <PlayerField id="player-name" label="Name" required>
+            <input id="player-name" type="text" required placeholder="e.g. Christian Alcala" value={form.name}
+              onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
+          </PlayerField>
+          <PlayerField id="player-number" label="Jersey number" required>
+            <input id="player-number" type="number" required min={1} value={form.number || ""}
+              onChange={(e) => set("number", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
+          </PlayerField>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <PlayerField id="player-position" label="Position" required>
+            <NativeSelect id="player-position" required value={form.position} onChange={(e) => set("position", e.target.value)}>
               {POSITIONS.map(p => <NativeSelectOption key={p} value={p}>{p}</NativeSelectOption>)}
             </NativeSelect>
-          </Field>
-          <Field label="Nationality" required>
+          </PlayerField>
+          <PlayerField id="player-nationality" label="Nationality" required>
             <NationalitySelect
+              id="player-nationality"
               value={form.nationality}
               onChange={(v) => set("nationality", v)}
             />
-          </Field>
+          </PlayerField>
         </div>
-        <Field label="Pronunciation (optional)">
-          <input type="text" placeholder='e.g. "duh-MORE-ee-uh"' value={form.pronunciation ?? ""}
+        <PlayerField id="player-pronunciation" label="Pronunciation">
+          <input id="player-pronunciation" type="text" placeholder='e.g. "duh-MORE-ee-uh"' value={form.pronunciation ?? ""}
             onChange={(e) => set("pronunciation", e.target.value)} className={ADMIN_INPUT_CLASS} />
-        </Field>
-      </div>
+        </PlayerField>
+      </section>
 
-      {/* Profile: height, weight, age, hometown, foot, school, previous club, captain, bio */}
-      <div className="space-y-3">
-        <FormSectionHeading title="Profile" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Field label="Height" required>
-            <input type="text" placeholder={"e.g. 5'10\""} value={form.height}
+      <section className="space-y-4" aria-labelledby="player-details-heading">
+        <FormSectionHeading id="player-details-heading" title="Player details" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <PlayerField id="player-height" label="Height" required>
+            <input id="player-height" type="text" required placeholder={"e.g. 5'10\""} value={form.height}
               onChange={(e) => set("height", e.target.value)} className={ADMIN_INPUT_CLASS} />
-          </Field>
-          <Field label="Weight" required>
-            <input type="text" placeholder="e.g. 165 lbs" value={form.weight}
+          </PlayerField>
+          <PlayerField id="player-weight" label="Weight" required>
+            <input id="player-weight" type="text" required placeholder="e.g. 165 lbs" value={form.weight}
               onChange={(e) => set("weight", e.target.value)} className={ADMIN_INPUT_CLASS} />
-          </Field>
-          <Field label="Age" required>
-            <input type="number" min={1} value={form.age || ""}
+          </PlayerField>
+          <PlayerField id="player-age" label="Age" required>
+            <input id="player-age" type="number" required min={1} value={form.age || ""}
               onChange={(e) => set("age", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
-          </Field>
+          </PlayerField>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Hometown" required>
-            <input type="text" placeholder="e.g. Portland, OR" value={form.hometown}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <PlayerField id="player-hometown" label="Hometown" required>
+            <input id="player-hometown" type="text" required placeholder="e.g. Portland, OR" value={form.hometown}
               onChange={(e) => set("hometown", e.target.value)} className={ADMIN_INPUT_CLASS} />
-          </Field>
-          <Field label="Preferred Foot (optional)">
-            <NativeSelect value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)}>
-              <NativeSelectOption value="">— Select —</NativeSelectOption>
+          </PlayerField>
+          <PlayerField id="player-foot" label="Preferred foot">
+            <NativeSelect id="player-foot" value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)}>
+              <NativeSelectOption value="">Select a foot</NativeSelectOption>
               <NativeSelectOption value="Right">Right</NativeSelectOption>
               <NativeSelectOption value="Left">Left</NativeSelectOption>
               <NativeSelectOption value="Both">Both</NativeSelectOption>
             </NativeSelect>
-          </Field>
+          </PlayerField>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="School (optional)">
-            <input type="text" placeholder="e.g. University of Portland" value={form.school ?? ""}
-              onChange={(e) => set("school", e.target.value)} className={ADMIN_INPUT_CLASS} />
-          </Field>
-          <Field label="Previous Club (optional)">
-            <input type="text" placeholder="e.g. Portland FC" value={form.previous_club ?? ""}
-              onChange={(e) => set("previous_club", e.target.value)} className={ADMIN_INPUT_CLASS} />
-          </Field>
-        </div>
-        <Field label="Captain">
-          <button
-            type="button"
-            onClick={() => set("caption", form.caption === "(C)" ? "" : "(C)")}
-            className={`flex w-full items-center gap-3 px-3 py-2 rounded-lg border transition-all ${
-              form.caption === "(C)"
-                ? "border-primary/50 bg-primary/10"
-                : "border-border bg-background"
-            }`}
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={form.caption === "(C)"}
+          onClick={() => set("caption", form.caption === "(C)" ? "" : "(C)")}
+          className="flex min-h-11 w-full items-center justify-between gap-4 rounded-lg border border-border bg-background px-3.5 py-3 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span>
+            <span className="block font-body text-sm font-semibold text-foreground">Captain</span>
+            <span className="mt-0.5 block font-body text-xs text-muted-foreground">Show (C) next to this player&apos;s name.</span>
+          </span>
+          <span
+            aria-hidden="true"
+            className={cn(
+              "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+              form.caption === "(C)" ? "bg-primary" : "bg-muted",
+            )}
           >
             <span
-              className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 ${
-                form.caption === "(C)"
-                  ? "border-primary bg-primary"
-                  : "border-border bg-transparent"
-              }`}
-            >
-              {form.caption === "(C)" && (
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+              className={cn(
+                "absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
+                form.caption === "(C)" ? "translate-x-5" : "translate-x-0.5",
               )}
-            </span>
-            <span className={`font-body text-sm ${form.caption === "(C)" ? "text-foreground" : "text-muted-foreground"}`}>
-              {form.caption === "(C)" ? "Captain — displays (C) next to name" : "Not a captain"}
-            </span>
-          </button>
-        </Field>
-        <Field label="Bio (optional)">
+            />
+          </span>
+        </button>
+      </section>
+
+      <section className="space-y-4" aria-labelledby="player-background-heading">
+        <FormSectionHeading id="player-background-heading" title="Background" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <PlayerField id="player-school" label="School">
+            <input id="player-school" type="text" placeholder="e.g. University of Portland" value={form.school ?? ""}
+              onChange={(e) => set("school", e.target.value)} className={ADMIN_INPUT_CLASS} />
+          </PlayerField>
+          <PlayerField id="player-previous-club" label="Previous club">
+            <input id="player-previous-club" type="text" placeholder="e.g. Portland FC" value={form.previous_club ?? ""}
+              onChange={(e) => set("previous_club", e.target.value)} className={ADMIN_INPUT_CLASS} />
+          </PlayerField>
+        </div>
+        <PlayerField id="player-bio" label="Bio">
           <Textarea
+            id="player-bio"
             placeholder="Short player bio…"
             value={form.bio ?? ""}
             onChange={(e) => set("bio", e.target.value)}
             rows={3}
           />
-        </Field>
-      </div>
+        </PlayerField>
+      </section>
 
       {/* Season stats — only shown when editing an existing player, and only
           for templates that do not route this to the Season Stats tab */}
@@ -1582,7 +1659,15 @@ function StaffFormFields({
 
 // ── Nationality dropdown ──────────────────────
 
-function NationalitySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function NationalitySelect({
+  id,
+  value,
+  onChange,
+}: {
+  id?: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
@@ -1608,6 +1693,7 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
     <div ref={ref} className="relative">
       {/* Trigger */}
       <button
+        id={id}
         type="button"
         onClick={() => { setOpen((o) => !o); setSearch(""); }}
         aria-haspopup="listbox"
@@ -1663,6 +1749,7 @@ function NationalitySelect({ value, onChange }: { value: string; onChange: (v: s
               <input
                 autoFocus
                 type="text"
+                aria-label="Search nationalities"
                 placeholder="Search…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1751,6 +1838,27 @@ function RosterListSkeleton({ label, rows = 4 }: { label: string; rows?: number 
   );
 }
 
+function PlayerField({
+  id,
+  label,
+  required,
+  children,
+}: {
+  id: string;
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-2 block font-body text-sm font-semibold text-foreground">
+        {label}{required && <span className="ml-1 text-destructive">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -1762,15 +1870,13 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-/** Uppercase label + hairline rule used to divide the edit panel into named
- * field groups (Identity, Profile), matching the grouped-fields layout in
- * the roster admin mockup. */
-function FormSectionHeading({ title }: { title: string }) {
+/** Quiet sentence-case heading for the player editor's task-based sections. */
+function FormSectionHeading({ id, title }: { id?: string; title: string }) {
   return (
-    <div className="flex items-center gap-2.5">
-      <span className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="flex items-center gap-3">
+      <h3 id={id} className="font-display text-sm font-semibold normal-case text-foreground">
         {title}
-      </span>
+      </h3>
       <span className="h-px flex-1 bg-border" aria-hidden="true" />
     </div>
   );

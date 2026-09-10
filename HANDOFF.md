@@ -1,6 +1,62 @@
 # Onzio Platform Handoff
 
-Last updated: 2026-09-01
+Last updated: 2026-09-10
+
+## Mobile-first roster player editor reorganization
+
+Agent: Codex with implementation and verification sub-agents, 2026-09-10.
+Status: **implemented and verified locally at the source/build level on
+`codex/roster-player-editor-ux`; authenticated browser QA and any push remain
+pending.**
+
+The Players edit panel now uses an opt-in 672px desktop/tablet width while
+remaining full-width and single-column on phones. Its header and safe-area-aware
+Cancel/Save footer stay fixed while only the form body scrolls. Player fields
+are organized into Basic information, Player details, Background, Action
+photos, and Player status. Labels are sentence case with explicit required
+markers and associated control IDs. The Captain control is an accessible
+switch, storage UUIDs are replaced by the friendly `Player photo` label, and
+the action-photo upload is compact. Photo removal and panel-close controls have
+44px touch targets. Deactivation is separated from Save and requires an
+explicit second confirmation action.
+
+The shared `AdminSidePanel` and `FileUpload` additions are opt-in. Existing
+Staff and Schedule panel widths/footers, every player mutation and validation,
+profile-photo deferred saving, immediate action-photo upload/delete behavior,
+media cleanup, and academy/editorial inline-season-stat gates remain intact.
+No database, API, auth, billing, tenant, or public-template behavior changed.
+
+Verification:
+
+- `npx tsc --noEmit`: passed
+- focused player-editor plus existing roster/template contracts: 83/83 passed
+- full contract suite: 814/814 passed
+- architecture suite: 21/21 passed
+- legacy suite: 365/365 passed
+- `npm run lint`: no warnings or errors
+- `npm run build`: passed using the existing loopback-only `.env.local`; only
+  the pre-existing Supabase Edge Runtime warning appeared
+- compiled-CSS responsive layout harness at 390x844, 768x1024, and 1440x900:
+  zero horizontal overflow; measured panel widths were 390px, 672px, and 672px
+- `git diff --check`: passed
+
+Authenticated local browser QA and the database-inclusive full suite could not
+run because the local Supabase stack is stopped and the installed Intel
+Colima/Lima binaries refuse to start on this arm64 host (`limactl is running
+under rosetta, please reinstall lima with native arch`). No hosted environment
+was used as a workaround.
+
+Files changed: `app/admin/(protected)/roster/page.tsx`,
+`components/admin/AdminSidePanel.tsx`, `components/admin/FileUpload.tsx`,
+`tests/contracts/admin-roster-player-editor.test.ts`, `tests/README.md`, and
+this handoff entry.
+
+Exact next step: restore a native local Colima/Lima runtime, then perform the
+authenticated Alpha admin matrix at 375x667, 390x844, 768x1024, 1024x768, and
+1440x900 in both themes, including software-keyboard, sticky-footer,
+nationality, photo, deactivation-confirmation, Staff, and Schedule checks.
+After Christian reviews that evidence, request separate approval before any
+push to `main`, which auto-deploys.
 
 ## Public site media smoke target corrected to the active Rose City hostname
 
