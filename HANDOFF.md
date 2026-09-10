@@ -2,10 +2,60 @@
 
 Last updated: 2026-09-10
 
+## Mobile-first Schedule Add/Edit Match reorganization
+
+Agent: Codex with implementation, contract, and independent UX review
+sub-agents, 2026-09-10. Status: **implemented and verified locally on
+`codex/roster-player-editor-ux`; not pushed or deployed.**
+
+The shared Add/Edit Match drawer now opts into a 672px maximum width on
+tablet/desktop while remaining full-width on phones. Its fields are organized
+into Match details, Opponent, Venue, Result, and template-gated Presented by
+sections. Each section owns a mobile-first layout instead of participating in
+one compressed grid. Labels are sentence case and explicitly associated with
+stable control IDs; required and optional states are visible, date/media/footer
+controls have 44px minimum touch targets, and logo actions expose contextual
+accessible names.
+
+Validation plus Cancel/Save now live in the fixed, safe-area-aware panel footer
+while only the form body scrolls. Edit-only Delete match remains visually
+separate from the paired actions. All match fields, validation, create/edit/delete
+handlers, sponsor inheritance, upload buckets/path prefixes, draft and old-image
+cleanup, persisted column names, and academy@1/editorial@1 sponsor visibility
+gates remain unchanged.
+
+Verification:
+
+- `npx tsc --noEmit`: passed
+- schedule source/new contract ESLint: no warnings or errors
+- focused Schedule plus existing sponsor/template contracts: 81/81 passed
+- full contract suite: 823/823 passed
+- architecture suite: 21/21 passed
+- authenticated browser at desktop, 768x1024 tablet, and 390x844 phone:
+  section hierarchy and responsive grids rendered correctly, the action footer
+  remained pinned, the date picker fit the phone viewport, and body/document
+  widths matched the viewport with no horizontal overflow
+- independent sub-agent review: no blocking issues; its two accessibility and
+  optional-label consistency findings were corrected and rechecked in the live
+  accessibility tree
+- `git diff --check`: passed
+
+The authenticated live review remains at
+`http://alpha.localhost:3007/admin/schedule` with the New Match drawer open.
+Port 3000 and its unrelated process remain untouched.
+
+Files changed: `app/admin/(protected)/schedule/page.tsx`,
+`tests/contracts/admin-schedule-match-editor.test.ts`,
+`tests/contracts/diverse-city-admin-punch-list.test.ts`, `tests/README.md`, and
+`HANDOFF.md`.
+
+Exact next step: Christian reviews Add Match locally. Obtain explicit approval
+before any push to `main` or production deployment.
+
 ## Roster contextual add action placement
 
-Agent: Codex, 2026-09-10. Status: **accepted by Christian and ready for a
-focused local commit on `codex/roster-player-editor-ux`; not pushed or deployed.**
+Agent: Codex, 2026-09-10. Status: **accepted by Christian and committed locally
+as `86e1971` on `codex/roster-player-editor-ux`; not pushed or deployed.**
 
 The Players/Staff switcher and the active collection's creation action now
 share one responsive context bar above the search/filter utilities. The action

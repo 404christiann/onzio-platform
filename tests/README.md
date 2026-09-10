@@ -43,6 +43,11 @@ Commands:
   tests/contracts/editorial-admin-surface.test.ts` — mobile-first player editor
   layout, fixed panel actions, compact media controls, touch targets, Staff
   isolation, and template-specific season-stat visibility
+- `npx vitest run tests/contracts/admin-schedule-match-editor.test.ts
+  tests/contracts/diverse-city-admin-punch-list.test.ts
+  tests/contracts/editorial-admin-surface.test.ts` — mobile-first Add/Edit Match
+  organization, fixed panel actions, semantic field groups, accessible labels,
+  touch targets, and template-specific sponsor visibility
 - `npx vitest run lib/__tests__/registration-fields.test.ts
   lib/__tests__/registration-export.test.ts
   lib/__tests__/special-kickers-registration.test.ts
