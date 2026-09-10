@@ -2,11 +2,78 @@
 
 Last updated: 2026-09-10
 
+## Roster and Schedule admin UX production release
+
+Agent: Codex with implementation, contract, UX-review, and release-verification
+sub-agents, 2026-09-10. Status: **approved by Christian, pushed to `main`,
+deployed to production, and verified against the authenticated DCFC admin.**
+
+Christian explicitly approved publishing the three committed UX changes:
+
+- `d0339b9` reorganizes the mobile-first player editor without changing its
+  validation, uploads, mutations, or lifecycle behavior.
+- `86e1971` places the active Players/Staff creation action beside the section
+  switcher and changes it contextually between `Add player` and `Add staff`.
+- `217f6e7` reorganizes the shared Add/Edit Match drawer into Match details,
+  Opponent, Venue, Result, and template-gated Presented by sections.
+
+Release boundary: the fast-forward push moved `origin/main` from
+`6174279fd5a9a9504903c4e37f11f5ba148c7e2c` to
+`217f6e7e1863df07a061e72fe57deee57c8fb0be`. This release contains no database
+migration, schema, tenant-data, authentication, billing, or public-template
+behavior change. Port 3000 and its unrelated local process were not touched.
+
+Production safeguards and rollback evidence:
+
+- completed production Supabase physical backup `1634876986`, created
+  `2026-09-10T11:14:33.773Z`, was verified before the push
+- previous Ready production rollback deployment:
+  `dpl_2uqPQU6LQ8mWYNh3iDdkypJ6Rbv6`
+  (`onzio-platform-bup12du4k-404christianns-projects.vercel.app`)
+- release preview reached Ready as `dpl_N8AEaC9j1pcSSTraFouJ2M2pCgE1`
+- production deployment reached Ready as
+  `dpl_vyzcZyJCohJzM91m83EecucH1dRT`
+  (`onzio-platform-nydbf7xx4-404christianns-projects.vercel.app`), with the
+  existing DCFC, Columbus Lions, and Onzio aliases attached
+
+Release gates on the exact application commit:
+
+- `npx tsc --noEmit`: passed
+- `npm run lint`: passed with no warnings or errors
+- `npm run test:contracts`: 823/823 passed across 73 files
+- `npm run test:architecture`: 21/21 passed across 3 files
+- `npm run test:db`: 212/212 passed across 20 files against the isolated local
+  Supabase stack
+- `npm test`: 1421/1421 passed across 136 files against the isolated local
+  Supabase stack
+- `npm run build`: passed with Next.js 15.5.22 using loopback-only Supabase
+
+Post-deploy verification:
+
+- DCFC Home, Roster, and Schedule returned HTTP 200; protected admin Roster and
+  Schedule correctly redirected unauthenticated requests to login
+- an existing authenticated production session confirmed the responsive roster
+  section bar, context-aware Staff action, reorganized Edit Player drawer, and
+  five-section New Match drawer; the panels were closed without submitting or
+  changing production data
+- the live checks ran inside the phone-sized simulator, matching the mobile-first
+  acceptance work; earlier authenticated local checks also covered 390x844,
+  768x1024, and desktop widths with no horizontal overflow
+- the new production deployment returned no Vercel error logs during the
+  post-release window
+- Columbus Lions admin login resolves normally; its public pages remain 404 by
+  design while that tenant is still `onboarding` with `public_access=preview`
+
+Exact next step: keep the released admin UX stable. Roll back to the recorded
+previous Ready deployment if a production regression is discovered; otherwise
+start the next change on a fresh topic branch and obtain separate approval
+before its `main` push.
+
 ## Mobile-first Schedule Add/Edit Match reorganization
 
 Agent: Codex with implementation, contract, and independent UX review
-sub-agents, 2026-09-10. Status: **implemented and verified locally on
-`codex/roster-player-editor-ux`; not pushed or deployed.**
+sub-agents, 2026-09-10. Status: **deployed to production on
+`main` as `217f6e7`; see the release entry above.**
 
 The shared Add/Edit Match drawer now opts into a 672px maximum width on
 tablet/desktop while remaining full-width on phones. Its fields are organized
@@ -40,22 +107,18 @@ Verification:
   accessibility tree
 - `git diff --check`: passed
 
-The authenticated live review remains at
-`http://alpha.localhost:3007/admin/schedule` with the New Match drawer open.
-Port 3000 and its unrelated process remain untouched.
-
 Files changed: `app/admin/(protected)/schedule/page.tsx`,
 `tests/contracts/admin-schedule-match-editor.test.ts`,
 `tests/contracts/diverse-city-admin-punch-list.test.ts`, `tests/README.md`, and
 `HANDOFF.md`.
 
-Exact next step: Christian reviews Add Match locally. Obtain explicit approval
-before any push to `main` or production deployment.
+Superseded next step: Christian approved the release; production evidence is
+recorded in the entry above.
 
 ## Roster contextual add action placement
 
-Agent: Codex, 2026-09-10. Status: **accepted by Christian and committed locally
-as `86e1971` on `codex/roster-player-editor-ux`; not pushed or deployed.**
+Agent: Codex, 2026-09-10. Status: **accepted by Christian and deployed to
+production on `main` as `86e1971`; see the release entry above.**
 
 The Players/Staff switcher and the active collection's creation action now
 share one responsive context bar above the search/filter utilities. The action
@@ -84,20 +147,15 @@ Verification:
   Staff, and body/document scroll widths remained exactly 390px
 - `git diff --check`: passed
 
-The live review remains at `http://alpha.localhost:3007/admin/roster` using the
-local-only Supabase/Mailpit stack. Port 3000 and its unrelated process remain
-untouched.
-
-Exact next step: keep the accepted roster control bar stable while the Schedule
-Add Match panel is reorganized; obtain separate approval before any push to
-`main` or production deployment.
+Superseded next step: the accepted roster control bar and Schedule drawer were
+released together after explicit approval; production evidence is above.
 
 ## Mobile-first roster player editor reorganization
 
 Agent: Codex with implementation and verification sub-agents, 2026-09-10.
-Status: **implemented and verified locally at the source/build level on
-`codex/roster-player-editor-ux`; authenticated browser QA and any push remain
-pending.**
+Status: **verified with the complete local suite and authenticated browser QA,
+then deployed to production on `main` as `d0339b9`; see the release entry
+above.**
 
 The Players edit panel now uses an opt-in 672px desktop/tablet width while
 remaining full-width and single-column on phones. Its header and safe-area-aware
@@ -130,23 +188,17 @@ Verification:
   zero horizontal overflow; measured panel widths were 390px, 672px, and 672px
 - `git diff --check`: passed
 
-Authenticated local browser QA and the database-inclusive full suite could not
-run because the local Supabase stack is stopped and the installed Intel
-Colima/Lima binaries refuse to start on this arm64 host (`limactl is running
-under rosetta, please reinstall lima with native arch`). No hosted environment
-was used as a workaround.
+The earlier local-runtime blocker was resolved with the dedicated native local
+Docker socket. The database-inclusive suite and authenticated responsive checks
+subsequently passed as recorded in the release entry above.
 
 Files changed: `app/admin/(protected)/roster/page.tsx`,
 `components/admin/AdminSidePanel.tsx`, `components/admin/FileUpload.tsx`,
 `tests/contracts/admin-roster-player-editor.test.ts`, `tests/README.md`, and
 this handoff entry.
 
-Exact next step: restore a native local Colima/Lima runtime, then perform the
-authenticated Alpha admin matrix at 375x667, 390x844, 768x1024, 1024x768, and
-1440x900 in both themes, including software-keyboard, sticky-footer,
-nationality, photo, deactivation-confirmation, Staff, and Schedule checks.
-After Christian reviews that evidence, request separate approval before any
-push to `main`, which auto-deploys.
+Superseded next step: the blocking release matrix passed and Christian approved
+the production push; production evidence is above.
 
 ## Public site media smoke target corrected to the active Rose City hostname
 
