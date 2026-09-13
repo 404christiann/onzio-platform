@@ -16,9 +16,9 @@ import {
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import { AdminTabs } from "@/components/admin/AdminTabs";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import { RegistrationsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import {
   formatRegistrationUsd,
   formatRegistrationUsdInput,
@@ -168,7 +168,6 @@ export default function RegistrationsAdminPage() {
     payoutsEnabled: boolean;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const showFullLoader = useDelayedLoading(loading, 400);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const core = useMemo(
@@ -241,7 +240,8 @@ export default function RegistrationsAdminPage() {
     return nextForms;
   }, []);
   useEffect(() => {
-    Promise.all([
+    // A failed account request must not reveal forms whose data is still pending.
+    Promise.allSettled([
       refresh(),
       fetch("/api/stripe/connect?action=status", {
         credentials: "same-origin",
@@ -251,14 +251,14 @@ export default function RegistrationsAdminPage() {
         setConnect(await response.json());
       }),
     ])
-      .catch((error: unknown) =>
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : "Could not load registrations.",
-        ),
-      )
-      .finally(() => setLoading(false));
+      .then((results) => {
+        const failure = results.find((result) => result.status === "rejected");
+        if (failure?.status === "rejected") {
+          const error: unknown = failure.reason;
+          setMessage(error instanceof Error ? error.message : "Could not load registrations.");
+        }
+        setLoading(false);
+      });
   }, [refresh]);
   async function edit(form: FormRow): Promise<boolean> {
     setMessage(null);
@@ -622,34 +622,22 @@ export default function RegistrationsAdminPage() {
         entry.registrant_email.toLowerCase().includes(query)
       );
     });
-  if (loading || showFullLoader)
-    return showFullLoader ? (
-      <AdminFullPageLoader label="Loading registrations" />
-    ) : (
+  if (loading)
+    return (
       <AdminPage>
         <AdminPageHeader
           eyebrow="Registration desk"
           title="Registrations"
           description="Build forms, collect required consent, and keep a paid roster for each program."
-        />
-        <div
-          className="flex flex-col gap-3"
-          role="status"
-          aria-label="Loading registrations"
-        >
-          {Array.from({ length: 3 }, (_, index) => (
-            <div
-              key={index}
-              className="flex flex-col gap-3 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center"
-            >
-              <div className="min-w-0 flex-1 space-y-2.5">
-                <Skeleton className="h-4 w-48 max-w-full" />
-                <Skeleton className="h-3 w-28" />
-              </div>
-              <Skeleton className="h-8 w-24 rounded-lg" />
+          actions={<>
+            <div className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5">
+              <span className="text-xs font-semibold text-muted-foreground">Club payment account</span>
+              <AdminSkeletonRegion label="Loading payment account status"><Skeleton className="h-6 w-24 rounded-full" /></AdminSkeletonRegion>
             </div>
-          ))}
-        </div>
+            <button disabled className={`${button} bg-primary text-primary-foreground disabled:opacity-50`}>New form</button>
+          </>}
+        />
+        <RegistrationsWorkspaceSkeleton />
       </AdminPage>
     );
   return (

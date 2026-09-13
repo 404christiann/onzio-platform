@@ -1,4 +1,6 @@
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { DBSeason } from "@/lib/db-types";
 
 type SeasonSelectProps = {
@@ -7,6 +9,7 @@ type SeasonSelectProps = {
   onChange: (seasonId: string) => void;
   label?: string;
   disabled?: boolean;
+  loading?: boolean;
   className?: string;
 };
 
@@ -16,8 +19,24 @@ export default function SeasonSelect({
   onChange,
   label,
   disabled = false,
+  loading = false,
   className = "",
 }: SeasonSelectProps) {
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        {label && (
+          <span className="font-display tracking-widest uppercase text-muted-foreground" style={{ fontSize: "0.8rem" }}>
+            {label}
+          </span>
+        )}
+        <AdminSkeletonRegion label="Loading seasons" className={className}>
+          <Skeleton className="h-10 w-full min-w-36 rounded-lg" />
+        </AdminSkeletonRegion>
+      </div>
+    );
+  }
+
   const select = (
     <NativeSelect
       value={value}

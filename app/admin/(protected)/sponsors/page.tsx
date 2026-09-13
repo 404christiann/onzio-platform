@@ -6,7 +6,7 @@ import Image from "@/components/ResilientImage";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { SponsorsContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
@@ -33,8 +33,6 @@ import {
   type DraftSponsorLogo,
 } from "@/lib/sponsor-content";
 import { createClient } from "@/lib/admin-client";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const PLACEMENT_ORDER: SponsorLogoPlacement[] = ["carousel", "footer"];
 
@@ -139,7 +137,6 @@ export default function AdminSponsorsPage() {
   const [error, setError] = useState<string | null>(null);
   const replaceFileRef = useRef<HTMLInputElement>(null);
   const replacingIndexRef = useRef<number | null>(null);
-  const showFullLoader = useDelayedLoading(loading, 400);
 
   useEffect(() => {
     setLoading(true);
@@ -370,15 +367,8 @@ export default function AdminSponsorsPage() {
         }
       />
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading sponsors" />
-        ) : (
-          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)]" role="status" aria-label="Loading sponsors">
-            <Skeleton className="h-32 w-full rounded-xl" />
-            <Skeleton className="h-96 w-full rounded-xl" />
-          </div>
-        )
+      {loading ? (
+        <SponsorsContentSkeleton hidesSponsorFooterTab={hidesSponsorFooterTab} />
       ) : (
         <div className={`grid min-w-0 gap-6 ${!hidesSponsorFooterTab ? "xl:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)]" : ""}`}>
           {!hidesSponsorFooterTab && (

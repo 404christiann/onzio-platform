@@ -1,5 +1,42 @@
 # Onzio Platform Handoff
 
+## Admin container skeletons — local implementation complete
+
+Agent: Codex with three implementation subagents and cross-review, 2026-09-13.
+Branch: `codex/admin-container-skeletons`. Status: **complete locally; awaiting
+Christian's visual review. No push or deployment.**
+
+Replaced the soccer-ball overlay on all 16 admin routes with container-shaped
+skeletons for lists, forms, media previews, charts, metrics and billing cards.
+Stable page headers/navigation remain visible. Removed the unused overlay,
+delay hook and animation; retained inline save/upload feedback. Shared skeletons
+respect reduced motion and expose named loading regions. Season selectors now
+show a loading footprint instead of a premature empty message on affected pages.
+
+Targeted readiness fixes protect Match Stats/Season Stats context switches,
+prevent premature create/save actions and wait for both Registrations initial
+requests even if one fails early. Valid content stays visible during existing
+same-context refresh flows. No schema, tenant/auth policy, hosted content,
+Stripe configuration or public-site layout changes were made.
+
+Verification: TypeScript and lint clean; 804 contracts, 21 architecture tests,
+212 local database tests and all 1,402 full-suite tests passed. Production build
+passed (existing Supabase Edge Runtime warning only). Twelve distinct browser
+cases passed across the combined and focused runs: desktop/mobile light/dark
+slow-load checks, reduced motion/navigation, registrations failure/refresh and
+stats/season race/failure cases. Dashboard/Payments real server fallbacks passed
+at desktop/mobile; five content pages also passed the Clubhouse variant, after
+which the local Alpha publication pointer was restored. Review caught and fixed
+Seasons invalid paragraph markup, status-label spacing and a stale stats error.
+
+Package ledger, exact scope, evidence and the pre-existing shared standings
+error-fallback limitation: `docs/admin-container-skeletons.md` (LOAD-01–05).
+Local screenshots, transition recording and logs:
+`test-results/admin-container-skeletons/` (ignored). Existing unrelated dirty
+files were preserved. Exact next step: Christian reviews the visuals and diff;
+obtain separate current approval before any production release.
+
+
 Last updated: 2026-09-01
 
 ## Public site media smoke target corrected to the active Rose City hostname

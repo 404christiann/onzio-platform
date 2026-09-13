@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentStatusCard } from "@/components/admin/payments/PaymentStatusCard";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { getClubContext } from "@/lib/club-context";
@@ -14,9 +15,33 @@ import {
 
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<AdminFullPageLoader label="Loading payments" />}>
+    <Suspense fallback={<PaymentsSkeleton />}>
       <PaymentsPageContent />
     </Suspense>
+  );
+}
+
+function PaymentsSkeleton() {
+  return (
+    <AdminPage className="max-w-4xl">
+      <AdminPageHeader title="Payments" description="Subscription and billing." />
+      <section className="rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-7">
+        <AdminSkeletonRegion label="Loading subscription details" className="space-y-6">
+          <div className="flex items-center justify-between gap-4">
+            <Skeleton className="h-6 w-36" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-12 w-48 max-w-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-72 max-w-full" />
+            <Skeleton className="h-4 w-56 max-w-full" />
+          </div>
+          <div className="border-t border-border pt-5">
+            <Skeleton className="h-10 w-full rounded-lg sm:w-44" />
+          </div>
+        </AdminSkeletonRegion>
+      </section>
+    </AdminPage>
   );
 }
 

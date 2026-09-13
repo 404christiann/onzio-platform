@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import {
@@ -13,7 +13,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { cn } from "@/lib/utils";
 
 type SeasonDeleteState = { deletable: boolean; reason: string; matchCount: number; statRowCount: number };
@@ -63,33 +62,37 @@ export default function SeasonsPage() {
   const [saved, setSaved] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showCreateConfirm, setShowCreateConfirm] = useState(false);
-  const showFullLoader = useDelayedLoading(loading, 400);
 
   async function load() {
-    const supabase = createClient();
-    const { data, error: seasonsError } = await supabase
-      .from("seasons")
-      .select("*")
-      .order("start_year", { ascending: false });
-
-    if (seasonsError) {
-      setError(seasonsError.message);
-      setLoading(false);
-      return;
-    }
-
-    const rows = (data ?? []) as DBSeason[];
-    setSeasons(rows);
     try {
-      const states = await Promise.all(
-        rows.map(async (season) => [season.id, await getSeasonDeleteState(supabase, season.id)] as const)
-      );
-      setDeleteStates(Object.fromEntries(states));
-    } catch (guardError) {
-      setError(guardError instanceof Error ? guardError.message : "Failed to check season usage");
-      setDeleteStates({});
+      const supabase = createClient();
+      const { data, error: seasonsError } = await supabase
+        .from("seasons")
+        .select("*")
+        .order("start_year", { ascending: false });
+
+      if (seasonsError) {
+        setError(seasonsError.message);
+        setLoading(false);
+        return;
+      }
+
+      const rows = (data ?? []) as DBSeason[];
+      setSeasons(rows);
+      try {
+        const states = await Promise.all(
+          rows.map(async (season) => [season.id, await getSeasonDeleteState(supabase, season.id)] as const)
+        );
+        setDeleteStates(Object.fromEntries(states));
+      } catch (guardError) {
+        setError(guardError instanceof Error ? guardError.message : "Failed to check season usage");
+        setDeleteStates({});
+      }
+    } catch (loadError: unknown) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load seasons");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -255,31 +258,34 @@ export default function SeasonsPage() {
         title="Seasons"
         description="Create seasons, choose what is active, and protect historical records."
         actions={(
-          <button onClick={() => setShowCreateConfirm(true)} disabled={saving || seasons.length === 0} className="rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">Create Next Season</button>
+          <button onClick={() => setShowCreateConfirm(true)} disabled={loading || saving || seasons.length === 0} className="rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">Create Next Season</button>
         )}
       />
 
       <AdminPageToolbar>
         <div className="flex flex-row flex-wrap items-center gap-x-8 gap-y-2">
-          <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{activeSeason?.label ?? "Not set"}</p></div>
-          <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><p className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{seasons.length}</p></div>
+          <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><div className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-28" /> : activeSeason?.label ?? "Not set"}</div></div>
+          <div><p className="font-display uppercase tracking-widest text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><div className="font-display font-black text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-8" /> : seasons.length}</div></div>
         </div>
         <p className="font-body text-xs text-muted-foreground/80 sm:max-w-sm sm:text-right">The active season is what Roster, Schedule, Match Stats and Standings all read. Changing it changes every one of those pages.</p>
       </AdminPageToolbar>
 
       {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading seasons" />
-        ) : (
-          <div className="flex flex-col gap-3" role="status" aria-label="Loading seasons">
-            {Array.from({ length: 4 }, (_, index) => (
-              <Skeleton key={index} className="h-16 w-full rounded-xl" />
-            ))}
-          </div>
-        )
-      ) : seasons.length === 0 ? (
+      {loading ? (
+        <AdminSkeletonRegion className="space-y-3" label="Loading seasons">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="flex flex-col gap-4 rounded-xl border border-border bg-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 space-y-2">
+                <Skeleton className="h-6 w-44" />
+                <Skeleton className="h-4 w-64 max-w-full" />
+                <Skeleton className="h-3 w-52 max-w-full" />
+              </div>
+              <div className="flex gap-3"><Skeleton className="h-10 w-28" /><Skeleton className="h-10 w-20" /></div>
+            </div>
+          ))}
+        </AdminSkeletonRegion>
+      ) : error && seasons.length === 0 ? null : seasons.length === 0 ? (
         <AdminPanel><p className="font-body text-muted-foreground">No seasons exist yet. Create the first season in Supabase before using this workflow.</p></AdminPanel>
       ) : (
         <div className="flex flex-col gap-3">

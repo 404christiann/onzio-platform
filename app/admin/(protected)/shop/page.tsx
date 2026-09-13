@@ -4,7 +4,7 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useState } from "react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
@@ -61,8 +61,6 @@ import {
 } from "@/lib/shop-purchase-details";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { createClient } from "@/lib/admin-client";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type SectionFields = {
   eyebrow: string;
@@ -260,7 +258,6 @@ export default function AdminShopPage() {
   // handleSave below (unchanged) — this state never splits it up. Mirrors
   // the same pattern already used on the Homepage admin page.
   const [dirtyTabs, setDirtyTabs] = useState<Set<AdminTab>>(new Set());
-  const showFullLoader = useDelayedLoading(loading, 400);
 
   useEffect(() => {
     setLoading(true);
@@ -783,18 +780,8 @@ export default function AdminShopPage() {
         description="Manage independent kit content and photos for each public page."
       />
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading shop" />
-        ) : (
-          <div className="flex flex-col gap-6" role="status" aria-label="Loading shop">
-            <Skeleton className="h-12 w-full rounded-xl" />
-            <div className="grid gap-6 sm:grid-cols-[minmax(12rem,15rem)_minmax(0,1fr)]">
-              <Skeleton className="h-64 w-full rounded-xl" />
-              <Skeleton className="h-96 w-full rounded-xl" />
-            </div>
-          </div>
-        )
+      {loading ? (
+        <ShopContentSkeleton sectionCount={sectionItems.filter((item) => !item.hidden).length} />
       ) : (
         <div className="flex min-w-0 flex-col gap-6">
           {/* Unified "what am I editing" bar: the surface and kit-variant

@@ -2,7 +2,7 @@
 
 import Image from "@/components/ResilientImage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminPage, AdminPageHeader, AdminPageToolbar, AdminPanel } from "@/components/admin/AdminPage";
 import { AdminSidePanel } from "@/components/admin/AdminSidePanel";
@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/popover";
 import type { SlidingPanelDirection } from "@/components/ui/sliding-panel";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 
 // ── Types ─────────────────────────────────────
 
@@ -58,12 +57,10 @@ type FormState = Omit<Match, "id">;
 
 type ResultFilter = "all" | "home" | "away" | "missing";
 
-/** Lightweight placeholder shown for fast loads, before (if ever) escalating
- * to AdminFullPageLoader. Loosely mirrors the loaded layout: a couple of
- * month-group cards, each with a few match-row placeholders. */
+/** Month cards reserve the responsive match-row layout throughout loading. */
 function ScheduleListSkeleton() {
   return (
-    <div className="flex flex-col gap-4" role="status" aria-label="Loading schedule">
+    <AdminSkeletonRegion className="flex flex-col gap-4" label="Loading schedule">
       {Array.from({ length: 2 }, (_, groupIndex) => (
         <div key={groupIndex} className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="border-b border-border bg-muted/40 px-4 py-2.5">
@@ -71,18 +68,24 @@ function ScheduleListSkeleton() {
           </div>
           <div className="divide-y divide-border">
             {Array.from({ length: 3 }, (_, rowIndex) => (
-              <div key={rowIndex} className="flex items-center justify-between gap-4 px-4 py-3">
+              <div key={rowIndex} className="flex items-center gap-3 px-4 py-3 sm:grid sm:grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] sm:gap-4">
+                <div className="hidden space-y-2 sm:block"><Skeleton className="h-4 w-16" /><Skeleton className="h-3 w-12" /></div>
+                <Skeleton className="size-9 flex-none rounded-full" />
                 <div className="min-w-0 flex-1 space-y-2">
                   <Skeleton className="h-4 w-40 max-w-full" />
                   <Skeleton className="h-3 w-32 max-w-full" />
+                  <Skeleton className="h-3 w-24 sm:hidden" />
+                  <Skeleton className="h-3 w-16 sm:hidden" />
                 </div>
-                <Skeleton className="h-8 w-16 flex-shrink-0 rounded-lg" />
+                <Skeleton className="hidden h-4 w-20 sm:block" />
+                <Skeleton className="hidden h-3 w-full sm:block" />
+                <Skeleton className="h-7 w-12 flex-shrink-0 rounded-lg sm:justify-self-end" />
               </div>
             ))}
           </div>
         </div>
       ))}
-    </div>
+    </AdminSkeletonRegion>
   );
 }
 
@@ -235,6 +238,7 @@ export default function SchedulePage() {
   } = useSeasons();
   const [matches, setMatches]       = useState<Match[]>([]);
   const [loading, setLoading]       = useState(true);
+  const [matchesReady, setMatchesReady] = useState(false);
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [editForm, setEditForm]     = useState<FormState>(emptyForm());
   const [addOpen, setAddOpen]       = useState(false);
@@ -259,15 +263,23 @@ export default function SchedulePage() {
   // ── Load ────────────────────────────────────
 
   async function load() {
-    const supabase = createClient();
-    const { data, error: loadError } = await supabase
-      .from("matches")
-      .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, competition, sponsor_name, sponsor_logo_url, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, season_id")
-      .order("date")
-      .order("time");
-    if (loadError) setError(loadError.message);
-    setMatches((data ?? []) as Match[]);
-    setLoading(false);
+    try {
+      const supabase = createClient();
+      const { data, error: loadError } = await supabase
+        .from("matches")
+        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, competition, sponsor_name, sponsor_logo_url, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, season_id")
+        .order("date")
+        .order("time");
+      if (loadError) setError(loadError.message);
+      else {
+        setMatches((data ?? []) as Match[]);
+        setMatchesReady(true);
+      }
+    } catch (loadError: unknown) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load schedule");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []);
@@ -280,10 +292,6 @@ export default function SchedulePage() {
     });
   }, [carrySponsor, matches, selectedSeasonId]);
 
-  // Fast (local/typical) loads should only ever show the lightweight
-  // skeleton below; the full-page overlay is reserved for genuinely slow
-  // loads. See lib/use-delayed-loading.ts.
-  const showFullLoader = useDelayedLoading(loading || seasonsLoading, 400);
 
   function flash() {
     setSaved(true);
@@ -537,6 +545,7 @@ export default function SchedulePage() {
         actions={<div className="flex flex-wrap items-end gap-3">
           <SeasonSelect
             seasons={seasons}
+            loading={seasonsLoading}
             value={selectedSeasonId}
             onChange={setSelectedSeasonId}
             label="View Season"
@@ -544,7 +553,7 @@ export default function SchedulePage() {
           />
           <button
             onClick={openAddPanel}
-            disabled={!selectedSeasonId}
+            disabled={!matchesReady || seasonsLoading || saving || !selectedSeasonId}
             className="flex-shrink-0 rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-50"
           >
             + Add Match
@@ -570,6 +579,7 @@ export default function SchedulePage() {
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            disabled={loading || seasonsLoading}
             placeholder="Search opponent or venue…"
             aria-label="Search matches by opponent or venue"
             className={cn(ADMIN_INPUT_CLASS, "pl-9")}
@@ -592,6 +602,7 @@ export default function SchedulePage() {
                 type="button"
                 onClick={() => setResultFilter(value)}
                 aria-pressed={resultFilter === value}
+                disabled={loading || seasonsLoading}
                 className={cn(
                   "min-h-9 flex-none rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                   resultFilter === value
@@ -599,7 +610,7 @@ export default function SchedulePage() {
                     : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
                 )}
               >
-                {label}
+                {loading || seasonsLoading ? label.replace(/\s\d+$/, "") : label}
               </button>
             ))}
           </div>
@@ -610,13 +621,9 @@ export default function SchedulePage() {
       </AdminPageToolbar>
 
       {/* Match list, grouped by month */}
-      {loading || seasonsLoading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading schedule" />
-        ) : (
-          <ScheduleListSkeleton />
-        )
-      ) : filtered.length === 0 ? (
+      {loading || seasonsLoading ? (
+        <ScheduleListSkeleton />
+      ) : !matchesReady ? null : filtered.length === 0 ? (
         <AdminPanel className="flex flex-col items-center gap-1 py-10 text-center">
           <p className="font-body text-sm font-semibold text-foreground">
             {sorted.length === 0

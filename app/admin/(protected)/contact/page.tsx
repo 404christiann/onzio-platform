@@ -5,15 +5,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { ContactContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import {
   AdminPage,
   AdminPageHeader,
   AdminPageToolbar,
   AdminPanel,
 } from "@/components/admin/AdminPage";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import ScaledContactPreview from "@/components/admin/ScaledContactPreview";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,7 +61,6 @@ export default function AdminContactPage() {
   const heroInput = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<ContactDraft>(emptyContactDraft);
   const [loading, setLoading] = useState(true);
-  const showFullLoader = useDelayedLoading(loading, 400);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -231,10 +228,7 @@ export default function AdminContactPage() {
     socialLinks: [],
   };
 
-  if (loading || showFullLoader) {
-    if (showFullLoader) {
-      return <AdminFullPageLoader label="Loading contact content" />;
-    }
+  if (loading) {
     return (
       <AdminPage className={isAcademy ? "max-w-7xl" : "max-w-6xl"}>
         <AdminPageHeader
@@ -242,22 +236,7 @@ export default function AdminContactPage() {
           title="Contact"
           description="Manage how supporters reach the club and how that information is introduced on the Contact page."
         />
-        <div
-          className="grid gap-6 lg:grid-cols-2"
-          role="status"
-          aria-label="Loading contact content"
-        >
-          <AdminPanel className="flex flex-col gap-4 p-5 sm:p-7">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-9 w-full rounded-lg" />
-            <Skeleton className="h-9 w-full rounded-lg" />
-          </AdminPanel>
-          <AdminPanel className="flex flex-col gap-4 p-5 sm:p-7">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-9 w-full rounded-lg" />
-            <Skeleton className="h-24 w-full rounded-lg" />
-          </AdminPanel>
-        </div>
+        <ContactContentSkeleton label="Loading contact content" isAcademy={isAcademy} hidesHeroImageField={hidesHeroImageField} />
       </AdminPage>
     );
   }

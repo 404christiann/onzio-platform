@@ -12,8 +12,8 @@ import {
 } from "@/lib/queries";
 import type { Player, GoalkeeperStats, FieldStats } from "@/lib/data";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
-import AdminLoading from "@/components/admin/AdminLoading";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import { AnalyticsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import {
   AdminPage,
   AdminPageHeader,
@@ -21,7 +21,6 @@ import {
   AdminPanel,
 } from "@/components/admin/AdminPage";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { useAdminTheme } from "@/components/admin/AdminThemeProvider";
 import type { AdminTheme } from "@/lib/admin-theme";
 
@@ -203,7 +202,6 @@ export default function AnalyticsPage() {
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [seasonLabel, setSeasonLabel] = useState("");
   const [loading, setLoading] = useState(true);
-  const showFullLoader = useDelayedLoading(loading, 400);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [posFilter, setPosFilter] = useState<PositionKey>("All");
@@ -263,10 +261,7 @@ export default function AnalyticsPage() {
 
   if (isEditorialTemplate) return null;
 
-  if (loading || showFullLoader) {
-    if (showFullLoader) {
-      return <AdminFullPageLoader label="Loading analytics" />;
-    }
+  if (loading) {
     return (
       <AdminPage>
         <AdminPageHeader
@@ -274,22 +269,7 @@ export default function AnalyticsPage() {
           title="Analytics"
           description="Player performance, peer comparisons, and match trends."
         />
-        <div
-          className="grid min-w-0 items-start gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]"
-          role="status"
-          aria-label="Loading analytics"
-        >
-          <AdminPanel as="aside" className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-14 w-full rounded-lg" />
-            <Skeleton className="h-14 w-full rounded-lg" />
-            <Skeleton className="h-14 w-full rounded-lg" />
-          </AdminPanel>
-          <AdminPanel className="flex flex-col gap-4">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-64 w-full rounded-lg" />
-          </AdminPanel>
-        </div>
+        <AnalyticsWorkspaceSkeleton />
       </AdminPage>
     );
   }
@@ -1021,9 +1001,9 @@ function TrendLine({
       </div>
       <div className="relative h-48">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <AdminLoading label="Loading match trends" className="text-xs" />
-          </div>
+          <AdminSkeletonRegion label="Loading match trends" className="h-full">
+            <Skeleton className="h-48 w-full rounded-lg" />
+          </AdminSkeletonRegion>
         ) : data.length < 2 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-muted-foreground">

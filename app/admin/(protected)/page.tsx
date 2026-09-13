@@ -8,7 +8,8 @@ import {
 import Link from "next/link";
 import { Suspense } from "react";
 import { headers } from "next/headers";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AdminRegistrationMixChart } from "@/components/admin/AdminRegistrationMixChart";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import {
@@ -52,7 +53,7 @@ function formatTime(time: string | null) {
 /**
  * Route entry for `/admin`. Wraps the actual dashboard (which does its data
  * loading as an async Server Component) in a Suspense boundary so
- * `AdminFullPageLoader` shows for the initial load, instead of a blank page,
+ * container-shaped placeholders show for the initial load,
  * while `AdminDashboardContent` awaits the session/club/data lookups below.
  *
  * A shared `loading.tsx` file at `app/admin/(protected)/` was deliberately
@@ -63,9 +64,81 @@ function formatTime(time: string | null) {
  */
 export default function AdminDashboard() {
   return (
-    <Suspense fallback={<AdminFullPageLoader label="Loading dashboard" />}>
+    <Suspense fallback={<DashboardSkeleton />}>
       <AdminDashboardContent />
     </Suspense>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <AdminPage>
+      <AdminPageHeader title="Dashboard" description="Club operations overview" />
+      <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {["Active Players", "Active Staff", "Season Matches", "Paid Registrations"].map((label) => (
+          <AdminPanel key={label} className="p-4 sm:p-5">
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <AdminSkeletonRegion label={`Loading ${label.toLowerCase()}`} className="mt-3">
+              <Skeleton className="h-8 w-16" />
+            </AdminSkeletonRegion>
+          </AdminPanel>
+        ))}
+      </section>
+      <section aria-label="Quick Actions">
+        <h2 className="mb-3 text-sm font-semibold normal-case text-foreground">Quick Actions</h2>
+        <AdminSkeletonRegion label="Loading quick actions" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
+              <Skeleton className="size-9 shrink-0 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-24 max-w-full" />
+                <Skeleton className="h-3 w-32 max-w-full" />
+              </div>
+            </div>
+          ))}
+        </AdminSkeletonRegion>
+      </section>
+      <div className="grid gap-6 xl:grid-cols-2">
+        <DashboardPanel title="Registration Forms">
+          <DashboardRowsSkeleton label="Loading registration forms" />
+        </DashboardPanel>
+        <DashboardPanel title="Upcoming Fixtures & Events">
+          <DashboardRowsSkeleton label="Loading fixtures and events" />
+        </DashboardPanel>
+      </div>
+      <DashboardPanel title="Registration Mix" description="Paid registrations across current forms">
+        <AdminSkeletonRegion label="Loading registration mix" className="grid items-center gap-8 lg:grid-cols-[minmax(240px,360px)_1fr]">
+          <div className="mx-auto flex h-72 w-full max-w-sm items-center justify-center">
+            <Skeleton className="aspect-square h-56 max-w-full rounded-full" />
+          </div>
+          <div className="space-y-4">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="flex items-center gap-4 border-b border-border pb-3">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="ml-auto h-4 w-10" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+            ))}
+          </div>
+        </AdminSkeletonRegion>
+      </DashboardPanel>
+    </AdminPage>
+  );
+}
+
+function DashboardRowsSkeleton({ label }: { label: string }) {
+  return (
+    <AdminSkeletonRegion label={label} className="divide-y divide-border">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div key={index} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-5 w-48 max-w-full" />
+            <Skeleton className="h-4 w-32 max-w-full" />
+          </div>
+          <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
+        </div>
+      ))}
+    </AdminSkeletonRegion>
   );
 }
 

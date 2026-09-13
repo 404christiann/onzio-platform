@@ -4,7 +4,7 @@ import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
@@ -26,7 +26,6 @@ import {
 } from "@/lib/standings-content";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { createClient } from "@/lib/admin-client";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { cn } from "@/lib/utils";
 
 type DraftRow = DBLeagueStandingRow & {
@@ -95,6 +94,7 @@ export default function AdminStandingsPage() {
   const [originalRows, setOriginalRows] = useState<DBLeagueStandingRow[]>([]);
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -102,13 +102,15 @@ export default function AdminStandingsPage() {
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadIndexRef = useRef<number | null>(null);
-  const showFullLoader = useDelayedLoading(loading, 400);
 
   useEffect(() => {
+    let cancelled = false;
     setLoading(true);
+    setLoadFailed(false);
     setError(null);
     fetchLeagueStandings(clubId)
       .then((content) => {
+        if (cancelled) return;
         setSettings(content.settings);
         setRows(content.rows.map((row) => ({
           ...row,
@@ -119,9 +121,12 @@ export default function AdminStandingsPage() {
         setDirty(false);
       })
       .catch((loadError: unknown) => {
+        if (cancelled) return;
+        setLoadFailed(true);
         setError(loadError instanceof Error ? loadError.message : "Failed to load standings");
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [clubId]);
 
   function markDirty() {
@@ -376,7 +381,7 @@ export default function AdminStandingsPage() {
             <button
               type="button"
               onClick={() => void handleSave()}
-              disabled={saving || uploading || !dirty}
+              disabled={loading || loadFailed || saving || uploading || !dirty}
               className="font-display rounded-lg bg-primary px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
@@ -395,21 +400,48 @@ export default function AdminStandingsPage() {
         </p>
       )}
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading standings" />
-        ) : (
-          <div className="flex flex-col gap-6" role="status" aria-label="Loading standings">
-            <Skeleton className="h-28 w-full rounded-xl" />
-            <div className="flex flex-col gap-3">
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
-              <Skeleton className="h-10 w-full rounded-lg" />
+      {loading ? (
+        <AdminSkeletonRegion label="Loading standings" className="space-y-6">
+          <AdminPanel className="overflow-hidden p-0 sm:p-0">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">
+              <h2 className={panelTitleClass}>Table heading</h2>
+              <p className="font-body text-xs text-muted-foreground">Shown above the table on your homepage</p>
             </div>
+            <div className="grid gap-5 p-5 sm:grid-cols-3">
+              {["Eyebrow", "Table Title", "Intro"].map((label) => (
+                <div key={label}><span className={ADMIN_LABEL_CLASS}>{label}</span><Skeleton className={label === "Intro" ? "h-16 w-full" : "h-10 w-full"} /></div>
+              ))}
+            </div>
+          </AdminPanel>
+          <AdminPanel className="overflow-hidden p-0 sm:p-0">
+            <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+              <h2 className={eyebrowLabelClass}>Teams</h2><Skeleton className="h-3 w-20" /><Skeleton className="ml-auto h-8 w-24" />
+            </div>
+            <div className="overflow-hidden [contain:paint]">
+              <div className="min-w-[900px]">
+                <div className="flex gap-4 border-b border-border bg-muted/40 px-5 py-2"><Skeleton className="h-4 w-56" />{Array.from({ length: 8 }, (_, index) => <Skeleton key={index} className="h-4 flex-1" />)}</div>
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div key={index} className="flex items-center gap-4 border-b border-border px-5 py-3 last:border-0">
+                    <Skeleton className="h-4 w-5" /><Skeleton className="size-9 rounded-full" /><Skeleton className="h-9 w-44" />
+                    {Array.from({ length: 8 }, (_, column) => <Skeleton key={column} className="h-9 flex-1" />)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </AdminPanel>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <AdminPanel className="overflow-hidden p-0 sm:p-0">
+              <div className="border-b border-border px-5 py-3.5"><h2 className={eyebrowLabelClass}>Homepage preview</h2></div>
+              <div className="space-y-3 p-5"><Skeleton className="h-5 w-40" />{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-10 w-full" />)}</div>
+            </AdminPanel>
+            <AdminPanel className="flex flex-col gap-2.5 p-4 sm:p-5">
+              <h2 className={panelTitleClass}>Two rules worth knowing</h2>
+              <p className="font-body text-xs leading-relaxed text-muted-foreground">Your own row uses the club crest, so its logo controls are locked.</p>
+              <p className="font-body text-xs leading-relaxed text-muted-foreground">The public table ranks itself: points, then goal difference, then wins. Row order here does not change it.</p>
+            </AdminPanel>
           </div>
-        )
-      ) : (
+        </AdminSkeletonRegion>
+      ) : loadFailed ? null : (
         <div className="flex min-w-0 flex-col gap-6">
           <AdminPanel className="overflow-hidden p-0 sm:p-0">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">

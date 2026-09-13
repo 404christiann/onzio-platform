@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MoreVertical } from "lucide-react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import {
@@ -17,13 +16,12 @@ import {
 } from "@/components/admin/AdminSectionRail";
 import FileUpload from "@/components/admin/FileUpload";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { Skeleton } from "@/components/ui/skeleton";
+import { OperationsToolbarSkeleton, TryoutsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import { Textarea } from "@/components/ui/textarea";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import type {
   DBContactProfile,
   DBProgram,
@@ -92,7 +90,6 @@ export default function AdminTryoutsPage() {
   const [registrationForms, setRegistrationForms] = useState<RegistrationFormOption[]>([]);
   const [draft, setDraft] = useState<TryoutDraft | null>(null);
   const [loading, setLoading] = useState(true);
-  const showFullLoader = useDelayedLoading(loading, 400);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -497,7 +494,8 @@ export default function AdminTryoutsPage() {
         actions={<button
           type="button"
           onClick={startCreate}
-          className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring"
+          disabled={loading}
+          className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
           Create tryout
         </button>}
@@ -508,6 +506,8 @@ export default function AdminTryoutsPage() {
           {error}
         </div>
       )}
+
+      {loading && <OperationsToolbarSkeleton label="Loading tryout actions" />}
 
       {!loading && draft && (
         <AdminPageToolbar className="sticky top-16 z-10 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -575,23 +575,8 @@ export default function AdminTryoutsPage() {
         </AdminPageToolbar>
       )}
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading tryout events" />
-        ) : (
-          <div
-            className="grid min-w-0 gap-6 sm:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]"
-            role="status"
-            aria-label="Loading tryout events"
-          >
-            <Skeleton className="h-40 w-full rounded-xl" />
-            <div className="flex flex-col gap-4">
-              <Skeleton className="h-6 w-1/3" />
-              <Skeleton className="h-24 w-full rounded-lg" />
-              <Skeleton className="h-24 w-full rounded-lg" />
-            </div>
-          </div>
-        )
+      {loading ? (
+        <TryoutsWorkspaceSkeleton label="Loading tryout events" pageIntro={activeSection === "page-intro"} />
       ) : (
         <div className="grid min-w-0 gap-6 sm:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
           <AdminSectionRail

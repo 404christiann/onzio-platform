@@ -4,7 +4,8 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import { useRouter } from "next/navigation";
 
 import { useEffect, useState } from "react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import { AdminStatsGroupsSkeleton } from "@/components/admin/AdminCompetitionSkeletons";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPageToolbar } from "@/components/admin/AdminPage";
@@ -13,7 +14,6 @@ import StatInput from "@/components/admin/StatInput";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/admin-client";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { useSeasons } from "@/lib/use-seasons";
 import { cn } from "@/lib/utils";
 
@@ -95,6 +95,12 @@ export default function StatsPage() {
     loading: seasonsLoading,
   } = useSeasons();
   const [matches, setMatches]     = useState<Match[]>([]);
+  const [matchesLoading, setMatchesLoading] = useState(true);
+  const [statsLoadFailed, setStatsLoadFailed] = useState(false);
+  const [matchesError, setMatchesError] = useState<string | null>(null);
+  const [playersLoadFailed, setPlayersLoadFailed] = useState(false);
+  const [loadedPlayersSeasonId, setLoadedPlayersSeasonId] = useState<string | null>(null);
+  const [loadedMatchId, setLoadedMatchId] = useState<string | null>(null);
   const [players, setPlayers]     = useState<Player[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
   const [stats, setStats]         = useState<StatsMap>({});
@@ -106,13 +112,18 @@ export default function StatsPage() {
   const [dirtyGroups, setDirtyGroups] = useState<Set<Player["position"]>>(new Set());
   const hasChanges = dirtyGroups.size > 0;
   const [loading, setLoading]     = useState(false);
-  const showFullLoader = useDelayedLoading(loading, 400);
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
   const [error, setError]         = useState<string | null>(null);
 
+  const playersPending = seasonsLoading || Boolean(selectedSeasonId && loadedPlayersSeasonId !== selectedSeasonId);
+  const matchBelongsToSeason = matches.some((match) => match.id === selectedMatch && match.season_id === selectedSeasonId);
+  const statsPending = Boolean(selectedMatch && matchBelongsToSeason && (playersPending || loading || loadedMatchId !== selectedMatch));
+  const statsReady = Boolean(selectedMatch && matchBelongsToSeason && !statsPending && !statsLoadFailed);
+
   // Load matches on mount. The player cohort is loaded separately per season.
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
     supabase
       .from("matches")
@@ -120,12 +131,19 @@ export default function StatsPage() {
       .order("date")
       .order("time")
       .then(({ data, error: matchesError }) => {
+        if (cancelled) return;
+        setMatchesLoading(false);
         if (matchesError) {
-          setError(matchesError.message);
+          setMatchesError(matchesError.message);
           return;
         }
         setMatches((data ?? []) as Match[]);
+      }, (loadError: unknown) => {
+        if (cancelled) return;
+        setMatchesError(loadError instanceof Error ? loadError.message : "Failed to load matches");
+        setMatchesLoading(false);
       });
+    return () => { cancelled = true; };
   }, []);
 
   // Season-stat rows define season membership. This keeps departed players
@@ -138,6 +156,8 @@ export default function StatsPage() {
 
     let cancelled = false;
     setError(null);
+    setPlayersLoadFailed(false);
+    setDirtyGroups(new Set());
     const supabase = createClient();
     Promise.all([
       supabase.from("players").select("id, number, name, position").order("number"),
@@ -145,8 +165,10 @@ export default function StatsPage() {
       supabase.from("goalkeeper_season_stats").select("player_id").eq("season_id", selectedSeasonId),
     ]).then(([playersResult, fieldResult, goalkeeperResult]) => {
       if (cancelled) return;
+      setLoadedPlayersSeasonId(selectedSeasonId);
       const queryError = playersResult.error ?? fieldResult.error ?? goalkeeperResult.error;
       if (queryError) {
+        setPlayersLoadFailed(true);
         setError(queryError.message);
         setPlayers([]);
         return;
@@ -157,6 +179,12 @@ export default function StatsPage() {
         ...(goalkeeperResult.data ?? []).map((row: { player_id: string }) => row.player_id),
       ]);
       setPlayers(((playersResult.data ?? []) as Player[]).filter((player) => seasonPlayerIds.has(player.id)));
+    }).catch((loadError: unknown) => {
+      if (cancelled) return;
+      setLoadedPlayersSeasonId(selectedSeasonId);
+      setPlayersLoadFailed(true);
+      setPlayers([]);
+      setError(loadError instanceof Error ? loadError.message : "Failed to load players");
     });
 
     return () => { cancelled = true; };
@@ -173,13 +201,24 @@ export default function StatsPage() {
 
   // When match is selected, load existing stats
   useEffect(() => {
-    if (!selectedMatch || players.length === 0) {
+    if (!selectedMatch || !matchBelongsToSeason || playersPending) {
+      setStatsLoadFailed(false);
+      setStats({});
+      setLoading(false);
+      setLoadedMatchId(null);
+      return;
+    }
+    if (players.length === 0) {
+      setStatsLoadFailed(false);
+      setLoadedMatchId(selectedMatch);
       setStats({});
       setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
+    setStatsLoadFailed(false);
+    setStats({});
     setSaved(false);
     setDirtyGroups(new Set());
     setError(null);
@@ -190,8 +229,10 @@ export default function StatsPage() {
       supabase.from("goalkeeper_match_stats").select("*").eq("match_id", selectedMatch),
     ]).then(([fieldResult, goalkeeperResult]) => {
       if (cancelled) return;
+      setLoadedMatchId(selectedMatch);
       const queryError = fieldResult.error ?? goalkeeperResult.error;
       if (queryError) {
+        setStatsLoadFailed(true);
         setError(queryError.message);
         setLoading(false);
         return;
@@ -237,9 +278,15 @@ export default function StatsPage() {
 
       setStats(map);
       setLoading(false);
+    }).catch((loadError: unknown) => {
+      if (cancelled) return;
+      setLoadedMatchId(selectedMatch);
+      setStatsLoadFailed(true);
+      setError(loadError instanceof Error ? loadError.message : "Failed to load match stats");
+      setLoading(false);
     });
     return () => { cancelled = true; };
-  }, [selectedMatch, players]);
+  }, [selectedMatch, players, matchBelongsToSeason, playersPending]);
 
   // Tag a position group as having unsaved edits.
   function markGroupDirty(position: Player["position"]) {
@@ -267,7 +314,7 @@ export default function StatsPage() {
 
   // Save all stats
   async function handleSave() {
-    if (!selectedMatch || !hasChanges) return;
+    if (!statsReady || saving || !selectedMatch || !hasChanges) return;
     setSaving(true);
     setError(null);
 
@@ -324,18 +371,30 @@ export default function StatsPage() {
         <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-end">
           <SeasonSelect
             seasons={seasons}
+            loading={seasonsLoading}
             value={selectedSeasonId}
-            onChange={setSelectedSeasonId}
+            onChange={(seasonId) => {
+              setSelectedSeasonId(seasonId);
+              setSelectedMatch(null);
+              setDirtyGroups(new Set());
+              setSaved(false);
+            }}
             label="Season"
-            disabled={seasonsLoading}
+            disabled={seasonsLoading || saving}
             className="w-full"
           />
           <label className="block min-w-0 flex-1 font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">
             <span className="mb-2 block">Match</span>
-            <NativeSelect
-              value={selectedMatch ?? ""}
-              onChange={(e) => setSelectedMatch(e.target.value || null)}
-              disabled={seasonsLoading || !selectedSeasonId}
+            {matchesLoading ? (
+              <AdminSkeletonRegion label="Loading matches"><Skeleton className="h-10 w-full" /></AdminSkeletonRegion>
+            ) : <NativeSelect
+              value={matchBelongsToSeason ? selectedMatch ?? "" : ""}
+              onChange={(e) => {
+                setSelectedMatch(e.target.value || null);
+                setLoadedMatchId(null);
+                setDirtyGroups(new Set());
+              }}
+              disabled={saving || playersPending || playersLoadFailed || Boolean(matchesError) || !selectedSeasonId}
             >
               <NativeSelectOption value="">— Select a match —</NativeSelectOption>
               {seasonMatches
@@ -346,7 +405,7 @@ export default function StatsPage() {
                     {m.date} · {m.home ? "vs" : "@"} {m.opponent}
                   </NativeSelectOption>
                 ))}
-            </NativeSelect>
+            </NativeSelect>}
           </label>
         </div>
 
@@ -358,7 +417,7 @@ export default function StatsPage() {
           )}
           <button
             onClick={handleSave}
-            disabled={saving || !hasChanges || !selectedMatch}
+            disabled={saving || !statsReady || !hasChanges || !selectedMatch}
             className="whitespace-nowrap rounded-lg bg-primary px-6 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving && <AdminLoadingDots className="mr-2" />}
@@ -367,14 +426,14 @@ export default function StatsPage() {
         </div>
       </AdminPageToolbar>
 
-      {!seasonsLoading && selectedSeasonId && seasonMatches.length === 0 && (
+      {!seasonsLoading && !matchesLoading && !matchesError && !error && selectedSeasonId && seasonMatches.length === 0 && (
         <p className="font-body text-sm text-muted-foreground">
           No matches are assigned to this season.
         </p>
       )}
 
       {/* Stats form */}
-      {selectedMatch && !loading && (
+      {statsReady && (
         <>
           {/* Match label */}
           {selectedMatchData && (
@@ -407,26 +466,16 @@ export default function StatsPage() {
           })}
 
 
-          {/* Error */}
-          {error && (
-            <p className="font-body text-sm mb-4 text-destructive">
-              Error saving: {error}
-            </p>
-          )}
         </>
       )}
 
-      {/* Loading state */}
-      {(loading || showFullLoader) && (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading players" />
-        ) : (
-          <div className="flex flex-col gap-3" role="status" aria-label="Loading players">
-            <Skeleton className="h-12 w-full rounded-xl" />
-            <Skeleton className="h-12 w-full rounded-xl" />
-            <Skeleton className="h-12 w-full rounded-xl" />
-          </div>
-        )
+      {(error || matchesError) && <p role="alert" className="font-body text-sm text-destructive">Error: {error || matchesError}</p>}
+      {statsReady && !error && players.length === 0 && <p className="font-body text-sm text-muted-foreground">No players are assigned to this season.</p>}
+      {statsPending && (
+        <AdminStatsGroupsSkeleton
+          label="Loading match stats"
+          groups={playersPending ? undefined : POSITIONS.map((position) => players.filter((player) => player.position === position).length).filter(Boolean)}
+        />
       )}
     </AdminPage>
   );

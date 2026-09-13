@@ -4,7 +4,8 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import { useRouter } from "next/navigation";
 
 import { useEffect, useState } from "react";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
+import { AdminStatsGroupsSkeleton } from "@/components/admin/AdminCompetitionSkeletons";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPageToolbar } from "@/components/admin/AdminPage";
@@ -12,7 +13,6 @@ import SeasonSelect from "@/components/admin/SeasonSelect";
 import StatInput from "@/components/admin/StatInput";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/admin-client";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import { useSeasons } from "@/lib/use-seasons";
 import { cn } from "@/lib/utils";
 
@@ -85,10 +85,11 @@ export default function SeasonStatsPage() {
   const [stats, setStats]         = useState<StatsMap>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadedSeasonId, setLoadedSeasonId] = useState<string | null>(null);
+  const statsPending = seasonsLoading || loading || Boolean(selectedSeasonId && loadedSeasonId !== selectedSeasonId);
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
   const [error, setError]     = useState<string | null>(null);
-  const showFullLoader = useDelayedLoading(loading || seasonsLoading, 400);
 
   useEffect(() => {
     if (!selectedSeasonId) {
@@ -101,6 +102,7 @@ export default function SeasonStatsPage() {
     async function load() {
       setLoading(true);
       setError(null);
+      setHasChanges(false);
       const supabase = createClient();
       const [playersResult, fieldResult, gkResult] = await Promise.all([
         supabase.from("players").select("id, number, name, position, active").order("number"),
@@ -109,6 +111,7 @@ export default function SeasonStatsPage() {
       ]);
 
       if (cancelled) return;
+      setLoadedSeasonId(selectedSeasonId);
       const queryError = playersResult.error ?? fieldResult.error ?? gkResult.error;
       if (queryError) {
         setError(queryError.message);
@@ -166,7 +169,14 @@ export default function SeasonStatsPage() {
       setHasChanges(false);
       setLoading(false);
     }
-    load();
+    load().catch((loadError: unknown) => {
+      if (cancelled) return;
+      setLoadedSeasonId(selectedSeasonId);
+      setPlayers([]);
+      setStats({});
+      setError(loadError instanceof Error ? loadError.message : "Failed to load season stats");
+      setLoading(false);
+    });
     return () => { cancelled = true; };
   }, [activeSeasonId, selectedSeasonId, seasonsLoading]);
 
@@ -179,7 +189,7 @@ export default function SeasonStatsPage() {
   }
 
   async function handleSave() {
-    if (!hasChanges || !selectedSeasonId) return;
+    if (statsPending || saving || !hasChanges || !selectedSeasonId) return;
     setSaving(true);
     setError(null);
     const supabase = createClient();
@@ -227,6 +237,7 @@ export default function SeasonStatsPage() {
         actions={<div className="flex flex-wrap items-end gap-4">
           <SeasonSelect
             seasons={seasons}
+            loading={seasonsLoading}
             value={selectedSeasonId}
             onChange={setSelectedSeasonId}
             label="Season"
@@ -234,7 +245,7 @@ export default function SeasonStatsPage() {
           />
           <button
             onClick={handleSave}
-            disabled={saving || loading || !hasChanges || !selectedSeasonId}
+            disabled={saving || statsPending || !hasChanges || !selectedSeasonId}
             className="rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving && <AdminLoadingDots className="mr-2" />}
@@ -247,24 +258,19 @@ export default function SeasonStatsPage() {
         <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>
       )}
 
-      {loading || seasonsLoading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading season stats" />
-        ) : (
-          <div className="flex flex-col gap-4" role="status" aria-label="Loading season stats">
-            <Skeleton className="h-10 w-full max-w-sm" />
-            <div className="flex flex-col gap-3">
-              {Array.from({ length: 3 }, (_, index) => (
-                <Skeleton key={index} className="h-32 w-full rounded-xl" />
-              ))}
-            </div>
-          </div>
-        )
+      {statsPending ? (
+        <div className="space-y-4">
+          <AdminPageToolbar className="items-start sm:items-center">
+            <p className="font-body text-sm text-muted-foreground">These totals are what visitors see on the roster page — they are not calculated from Match Stats.</p>
+            <AdminSkeletonRegion label="Loading player count"><Skeleton className="h-4 w-16" /></AdminSkeletonRegion>
+          </AdminPageToolbar>
+          <AdminStatsGroupsSkeleton label="Loading season stats" />
+        </div>
       ) : !selectedSeasonId ? (
         <p className="font-body text-sm text-muted-foreground">
           Create a season before editing season stats.
         </p>
-      ) : players.length === 0 ? (
+      ) : error && players.length === 0 ? null : players.length === 0 ? (
         <p className="font-body text-sm text-muted-foreground">
           No players are assigned to this season.
         </p>

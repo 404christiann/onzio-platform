@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { HomepageContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import {
   AdminPage,
   AdminPageHeader,
@@ -22,7 +22,6 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import FileUpload from "@/components/admin/FileUpload";
 import ScaledSlideshowPreview from "@/components/admin/ScaledSlideshowPreview";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   DBBehindTheRoseSection,
@@ -60,7 +59,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/admin-client";
 import { siteRouteOptionsWithFallback, type SiteRouteOption } from "@/lib/site-routes";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 
 type AdminTab = "hero" | "slideshow" | "story" | "behind";
 
@@ -229,7 +227,6 @@ export default function AdminHomepagePage() {
     {},
   );
   const [loading, setLoading] = useState(true);
-  const showFullLoader = useDelayedLoading(loading, 400);
   const [linkablePrograms, setLinkablePrograms] = useState<
     { slug: string; navLabel: string; displayTitle: string }[]
   >([]);
@@ -615,32 +612,8 @@ export default function AdminHomepagePage() {
         }
       />
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading homepage" />
-        ) : (
-          <div
-            className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,26rem)]"
-            role="status"
-            aria-label="Loading homepage"
-          >
-            <div className="flex flex-col gap-2 self-start">
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-            </div>
-            <div className="flex flex-col gap-3 self-start rounded-xl border border-border bg-card p-4 sm:p-5">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-            </div>
-            <div className="self-start">
-              <Skeleton className="h-64 w-full rounded-xl" />
-            </div>
-          </div>
-        )
+      {loading ? (
+        <HomepageContentSkeleton sectionCount={sectionItems.filter((item) => !item.hidden).length} />
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,26rem)]">
           <div className="flex min-w-0 flex-col gap-3 xl:sticky xl:top-24 xl:self-start">

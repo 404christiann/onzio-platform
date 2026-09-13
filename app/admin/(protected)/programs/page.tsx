@@ -6,11 +6,9 @@ import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 import { GripVertical } from "lucide-react";
 import ResilientImage from "@/components/ResilientImage";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
+import { OperationsToolbarSkeleton, ProgramsCopySkeleton, ProgramsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import {
   AdminPage,
   AdminPageHeader,
@@ -188,30 +186,6 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-/** Lightweight placeholder shown for fast loads, before (if ever) escalating
- * to AdminFullPageLoader. Loosely mirrors the loaded layout: a program list
- * rail on the left and an editor panel on the right. */
-function ProgramsPageSkeleton() {
-  return (
-    <div
-      className="grid grid-cols-1 gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]"
-      role="status"
-      aria-label="Loading programs"
-    >
-      <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-12 w-full rounded-lg" />
-        ))}
-      </div>
-      <div className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-        <Skeleton className="h-5 w-48" />
-        <Skeleton className="h-32 w-full rounded-lg" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-    </div>
-  );
-}
-
 export default function AdminProgramsPage() {
   const club = useClubContext();
   const router = useRouter();
@@ -372,11 +346,6 @@ export default function AdminProgramsPage() {
   useEffect(() => {
     void loadPrograms();
   }, [club.id, loadPrograms]);
-
-  // Fast (local/typical) loads should only ever show the lightweight
-  // skeleton below; the full-page overlay is reserved for genuinely slow
-  // loads. See lib/use-delayed-loading.ts.
-  const showFullLoader = useDelayedLoading(loading, 400);
 
   function markDirty() {
     setDirty(true);
@@ -917,7 +886,8 @@ export default function AdminProgramsPage() {
           <button
             type="button"
             onClick={startCreate}
-            className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring"
+            disabled={loading}
+            className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           >
             Create program
           </button>
@@ -930,7 +900,9 @@ export default function AdminProgramsPage() {
         </div>
       )}
 
-      {!loading && !showFullLoader && !hidesPageCopyEditor && (
+      {loading && !hidesPageCopyEditor && <ProgramsCopySkeleton />}
+
+      {!loading && !hidesPageCopyEditor && (
         <div className="grid min-w-0 gap-6 sm:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
           <AdminSectionRail
             className="self-start"
@@ -1111,7 +1083,9 @@ export default function AdminProgramsPage() {
         </div>
       )}
 
-      {!loading && !showFullLoader && draft && (
+      {loading && <OperationsToolbarSkeleton label="Loading program actions" />}
+
+      {!loading && draft && (
         <AdminPageToolbar className="sticky top-16 z-10 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <span className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
@@ -1177,12 +1151,8 @@ export default function AdminProgramsPage() {
         </AdminPageToolbar>
       )}
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading programs" />
-        ) : (
-          <ProgramsPageSkeleton />
-        )
+      {loading ? (
+        <ProgramsWorkspaceSkeleton label="Loading programs" />
       ) : programs.length === 0 && !draft ? (
         <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center shadow-sm">
           <h2 className="font-display text-xl font-black uppercase text-foreground">

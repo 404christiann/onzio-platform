@@ -6,10 +6,8 @@ import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
-import AdminFullPageLoader from "@/components/admin/AdminFullPageLoader";
+import { AboutContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useDelayedLoading } from "@/lib/use-delayed-loading";
 import {
   AdminSectionRail,
   type AdminSectionRailItem,
@@ -156,7 +154,6 @@ export default function AdminAboutPage() {
   );
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const showFullLoader = useDelayedLoading(loading, 400);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -402,7 +399,7 @@ export default function AdminAboutPage() {
             ? "Edit the About Club and Club Logo public pages."
             : "Edit the public About page."}
         actions={
-          !loading && !showFullLoader ? (
+          !loading ? (
             <>
               {dirty && (
                 <div className="flex items-center gap-2 border-r border-border pr-3">
@@ -429,32 +426,8 @@ export default function AdminAboutPage() {
         }
       />
 
-      {loading || showFullLoader ? (
-        showFullLoader ? (
-          <AdminFullPageLoader label="Loading about page" />
-        ) : (
-          <div
-            className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,1fr)]"
-            role="status"
-            aria-label="Loading about page"
-          >
-            <div className="flex flex-col gap-2 self-start">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-            </div>
-            <div className="flex flex-col gap-3 self-start rounded-xl border border-border bg-card p-4 sm:p-5">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-9 w-full rounded-lg" />
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-32 w-full rounded-lg" />
-            </div>
-            <div className="self-start">
-              <Skeleton className="h-64 w-full rounded-xl" />
-            </div>
-          </div>
-        )
+      {loading ? (
+        <AboutContentSkeleton hasClubLogoPage={hasClubLogoPage} />
       ) : (
         <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,1fr)]">
           <div className="flex min-w-0 flex-col gap-4 self-start">

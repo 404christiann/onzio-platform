@@ -480,23 +480,6 @@ body:has([data-font-pack="academy"]) {
   }
 }
 
-/* Keyframe for the full-page admin loading overlay
-   (components/admin/AdminFullPageLoader.tsx), referenced there through
-   arbitrary `animate-[...]` utilities on each SVG path, one per path with a
-   staggered negative delay so the mark ripples in sequence. Named distinctly
-   from Tailwind's built-in `animate-pulse` utility and from the unrelated
-   `spinner-ellipsis` keyframe above (a bounce, not an opacity ramp). Kept
-   outside @layer so Tailwind never tree-shakes it. */
-@keyframes admin-mark-pulse {
-  0%,
-  100% {
-    opacity: 0.1;
-  }
-  30% {
-    opacity: 0.8;
-  }
-}
-
 @layer components {
   .clubhouse-prospect-home {
     --clubhouse-primary: #1B2958;
