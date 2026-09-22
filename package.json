@@ -23,6 +23,7 @@
     "db:types:check": "node scripts/check-database-types.mjs",
     "db:rehearse:plat-101": "node scripts/rehearse-plat-101-rollback.mjs",
     "media:cleanup": "tsx scripts/cleanup-staging-media.ts",
+    "seed:homepage-media:local": "tsx scripts/seed-local-homepage-media.ts",
     "media:smoke": "tsx scripts/smoke-media-pipeline.ts",
     "migration:export:rose-city": "node scripts/export-rose-city-rehearsal.mjs",
     "migration:import:lions-media:local": "eval \"$(supabase status -o env 2>/dev/null)\"; NEXT_PUBLIC_SUPABASE_URL=\"$API_URL\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"$ANON_KEY\" SUPABASE_SERVICE_ROLE_KEY=\"$SERVICE_ROLE_KEY\" SUPABASE_DB_URL=\"$DB_URL\" tsx scripts/import-lions-media-local.ts --execute-local --confirm-local",
@@ -48,7 +49,9 @@
     "staging:backfill:plat-102": "tsx scripts/backfill-plat-102-staging.ts",
     "stripe:verify-portal-config": "tsx scripts/verify-stripe-portal-config.ts",
     "stripe:verify-connect-config": "tsx scripts/verify-stripe-connect-config.ts",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "fixture:homepage:restore:local": "tsx scripts/restore-local-homepage-fixture.ts",
+    "dev:device-proxy": "node scripts/device-preview-proxy.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

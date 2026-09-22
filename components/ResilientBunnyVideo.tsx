@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { bunnyVideoMp4Url } from "@/lib/bunny-video";
 
@@ -26,6 +27,15 @@ export default function ResilientBunnyVideo({
   className,
   style,
 }: Props) {
+  const preview = useHomepagePreview();
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    update(); query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const editing = preview !== null && (!preview.playback || reducedMotion);
   const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -37,7 +47,7 @@ export default function ResilientBunnyVideo({
   // play() so autoplay policy allows it, and retry once on first touch for
   // mobile browsers that defer autoplay until user interaction.
   useEffect(() => {
-    if (failed) return;
+    if (editing || failed) return;
     const video = videoRef.current;
     if (!video) return;
     const play = () => {
@@ -47,9 +57,9 @@ export default function ResilientBunnyVideo({
     play();
     document.addEventListener("touchstart", play, { once: true });
     return () => document.removeEventListener("touchstart", play);
-  }, [failed]);
+  }, [failed, editing]);
 
-  if (failed) {
+  if (editing || failed) {
     return (
       <ResilientNativeImage
         src={posterSrc}

@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
+
 import { useEffect, useRef } from "react";
 import Image from "@/components/ResilientImage";
 import { gsap } from "gsap";
@@ -8,11 +10,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 export default function ChampionsBadge() {
+  const editing = useHomepagePreview() !== null;
   const sectionRef = useRef<HTMLElement>(null);
   const trophyRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (editing) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         trophyRef.current,
@@ -23,6 +27,9 @@ export default function ChampionsBadge() {
           scale: 1,
           duration: 1,
           ease: "power3.out",
+          onComplete: () => {
+            if (trophyRef.current) gsap.set(trophyRef.current, { clearProps: "transform" });
+          },
           scrollTrigger: {
             trigger: sectionRef.current,
             start: "top 80%",
@@ -38,6 +45,9 @@ export default function ChampionsBadge() {
           duration: 0.9,
           ease: "power2.out",
           delay: 0.2,
+          onComplete: () => {
+            if (textRef.current) gsap.set(textRef.current, { clearProps: "transform" });
+          },
           scrollTrigger: {
             trigger: sectionRef.current,
             start: "top 80%",
@@ -47,7 +57,7 @@ export default function ChampionsBadge() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [editing]);
 
   return (
     <section
@@ -57,7 +67,7 @@ export default function ChampionsBadge() {
     >
       <div className="relative z-10 mx-auto flex w-full max-w-[1400px] flex-col items-center gap-10 md:flex-row md:justify-center md:gap-8 lg:gap-12">
         {/* Trophy */}
-        <div ref={trophyRef} className="flex w-full flex-shrink-0 justify-center md:w-[52%]" style={{ opacity: 0 }}>
+        <div ref={trophyRef} className="flex w-full flex-shrink-0 justify-center md:w-[52%]" style={{ opacity: editing ? 1 : 0 }}>
           <div className="relative aspect-square w-[min(100vw,950px)] drop-shadow-2xl md:w-full md:max-w-[650px] lg:max-w-[700px]">
             <Image
               src="/images/home/trophy.png"
@@ -71,7 +81,7 @@ export default function ChampionsBadge() {
         </div>
 
         {/* Text block */}
-        <div ref={textRef} className="w-full max-w-xl md:w-[48%]" style={{ opacity: 0 }}>
+        <div ref={textRef} className="w-full max-w-xl md:w-[48%]" style={{ opacity: editing ? 1 : 0 }}>
           {/* Eyebrow */}
           <p
             className="font-display font-bold tracking-widest uppercase mb-4"

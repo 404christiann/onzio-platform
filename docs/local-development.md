@@ -176,6 +176,17 @@ SUPABASE_TEST_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY>
 Do not substitute the newer `PUBLISHABLE_KEY`/`SECRET_KEY` values for these
 test variables until the Auth helper is deliberately migrated.
 
+After a local reset, restore the deterministic Alpha branding object through
+the real Storage API (never by inserting `storage.objects` rows):
+
+```bash
+set -a; . ./.env.test; set +a
+npm run seed:homepage-media:local
+```
+
+The loopback-only script uploads the checked-in deterministic 64×64 PNG and
+then records its actual byte size and SHA-256 in `onzio.media_assets`.
+
 Regenerate and verify committed database types with:
 
 ```bash

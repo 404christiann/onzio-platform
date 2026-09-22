@@ -9,12 +9,13 @@ const source = readFileSync(
 
 describe("homepage slideshow media resilience", () => {
   it("keeps legacy reveal scoped away from prospect slideshows", () => {
+    expect(source).toContain("if (editing) return;");
     expect(source).toContain("if (!usesLegacyRoseCitySlideshow) return;");
     expect(source).toContain(
       "if (visibleSlides.length === 0 || !section) return;",
     );
     expect(source).toContain(
-      "}, [usesLegacyRoseCitySlideshow, visibleSlides.length]);",
+      "}, [usesLegacyRoseCitySlideshow, visibleSlides.length, editing]);",
     );
     expect(source).toContain("opacity: 1,");
   });

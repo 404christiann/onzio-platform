@@ -8,6 +8,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import ResilientBunnyVideo from "@/components/ResilientBunnyVideo";
 import { DIVERSE_CITY_HERO_VIDEO } from "@/lib/bunny-video";
+import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import type { DBHomepageHeroContent } from "@/lib/db-types";
@@ -25,18 +26,27 @@ export default function Hero({
    */
   initialContent: DBHomepageHeroContent | null;
 }) {
+  const preview = useHomepagePreview();
+  const editing = preview !== null;
+  const selecting = editing && !preview.playback;
+  const headingPiece = useHomepagePiece("hero.heading");
+  const smallHeadingPiece = useHomepagePiece("hero.eyebrow");
+  const paragraphPiece = useHomepagePiece("hero.intro");
+  const buttonsPiece = useHomepagePiece("hero.cta");
   const club = useClubContext();
   const branding = useClubBranding();
   const usesLegacyRoseCityHero = club.slug === "rose-city";
   const ctaRef   = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
   const hasServerContent = initialContent !== null;
-  const [heroContent, setHeroContent] = useState<DBHomepageHeroContent>(
+  const [loadedHeroContent, setHeroContent] = useState<DBHomepageHeroContent>(
     initialContent ?? EMPTY_HOMEPAGE_HERO_CONTENT,
   );
 
+  const heroContent = preview?.draft.hero ?? loadedHeroContent;
+
   useEffect(() => {
-    if (hasServerContent) return;
+    if (editing || hasServerContent) return;
     let cancelled = false;
     fetchHomepageContent(club.id)
       .then((content) => {
@@ -51,18 +61,30 @@ export default function Hero({
     return () => {
       cancelled = true;
     };
-  }, [club.id, hasServerContent]);
+  }, [club.id, hasServerContent, editing]);
 
   useEffect(() => {
-    if (hasAnimated.current) return;
+    if (editing || hasAnimated.current) return;
     hasAnimated.current = true;
 
     gsap.fromTo(
       ctaRef.current,
       { y: 24, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.9, ease: "power3.out", delay: 0.8 }
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.9,
+        ease: "power3.out",
+        delay: 0.8,
+        onComplete: () => {
+          // GSAP leaves an identity transform behind otherwise. Clearing it
+          // keeps the completed public CTA in the same offset-parent chain as
+          // the static editor preview without changing its final appearance.
+          if (ctaRef.current) gsap.set(ctaRef.current, { clearProps: "transform" });
+        },
+      },
     );
-  }, []);
+  }, [editing]);
 
   if (club.presentationTemplateKey === "clubhouse@1") {
     const headlineOne = heroContent.headline_line_one.trim() || club.name;
@@ -75,12 +97,12 @@ export default function Hero({
       <section className="clubhouse-hero">
         <div className="clubhouse-hero-content">
           <div className="clubhouse-hero-copy">
-            <h1>
+            <h1 {...headingPiece}>
               <span>{headlineOne}</span>
               {headlineTwo && <em>{headlineTwo}</em>}
             </h1>
-            {intro && <p className="clubhouse-hero-intro">{intro}</p>}
-            <div ref={ctaRef} className="clubhouse-hero-cta" style={{ opacity: 0 }}>
+            {(intro || selecting) && <p {...paragraphPiece} className="clubhouse-hero-intro">{intro}</p>}
+            <div {...buttonsPiece} ref={ctaRef} className="clubhouse-hero-cta" style={{ opacity: editing ? 1 : 0 }}>
               <Link href={primaryHref}>
                 {heroContent.primary_cta_label.trim() || "Next match"}
               </Link>
@@ -128,12 +150,12 @@ export default function Hero({
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#14283F] via-[#14283F]/45 to-[#14283F]/30" />
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-6 pb-12 pt-36 md:pb-8 lg:px-10">
           <div className="w-full min-w-0 max-w-5xl">
-            {heroContent.eyebrow.trim() && (
-              <p className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/70">
+            {(heroContent.eyebrow.trim() || selecting) && (
+              <p {...smallHeadingPiece} className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/70">
                 {heroContent.eyebrow}
               </p>
             )}
-            <h1 className="max-w-5xl font-display font-black uppercase italic leading-[.88]">
+            <h1 {...headingPiece} className="max-w-5xl font-display font-black uppercase italic leading-[.88]">
               <span className="block text-[1.9rem] text-[#F9FAFD] sm:text-[2.7rem] md:text-[3.4rem]">
                 {headlineOne}
               </span>
@@ -143,15 +165,15 @@ export default function Hero({
                 </span>
               )}
             </h1>
-            {intro && (
-              <p className="mt-7 max-w-2xl font-body text-base leading-7 text-white/80 md:text-lg">
+            {(intro || selecting) && (
+              <p {...paragraphPiece} className="mt-7 max-w-2xl font-body text-base leading-7 text-white/80 md:text-lg">
                 {intro}
               </p>
             )}
             <div
-              ref={ctaRef}
+              {...buttonsPiece} ref={ctaRef}
               className="mt-8 flex flex-col gap-3 sm:flex-row"
-              style={{ opacity: 0 }}
+              style={{ opacity: editing ? 1 : 0 }}
             >
               <Link
                 href={primaryHref}
@@ -195,12 +217,12 @@ export default function Hero({
         />
         <div className="relative z-10 mx-auto grid w-full max-w-[1500px] grid-cols-1 items-center gap-2 px-5 pb-8 pt-24 sm:gap-6 sm:px-8 md:pt-32 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:gap-10 lg:px-12">
           <div className="order-2 pb-6 lg:order-1 lg:pb-0">
-            {heroContent.eyebrow.trim() && (
-              <p className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/60">
+            {(heroContent.eyebrow.trim() || selecting) && (
+              <p {...smallHeadingPiece} className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/60">
                 {heroContent.eyebrow}
               </p>
             )}
-            <h1 className="font-display text-4xl font-black not-italic uppercase leading-[0.92] text-white sm:text-6xl lg:text-8xl">
+            <h1 {...headingPiece} className="font-display text-4xl font-black not-italic uppercase leading-[0.92] text-white sm:text-6xl lg:text-8xl">
               <span className="block lg:whitespace-nowrap">{headlineOne}</span>
               {headlineTwo && (
                 <span className="block lg:whitespace-nowrap" style={{ color: "#F0F0F0" }}>
@@ -208,15 +230,15 @@ export default function Hero({
                 </span>
               )}
             </h1>
-            {intro && (
-              <p className="font-body mt-7 max-w-xl text-base leading-7 text-white/74">
+            {(intro || selecting) && (
+              <p {...paragraphPiece} className="font-body mt-7 max-w-xl text-base leading-7 text-white/74">
                 {intro}
               </p>
             )}
             <div
-              ref={ctaRef}
+              {...buttonsPiece} ref={ctaRef}
               className="mt-8 flex flex-col gap-3 sm:flex-row"
-              style={{ opacity: 0 }}
+              style={{ opacity: editing ? 1 : 0 }}
             >
               <Link
                 href={primaryHref}
@@ -295,14 +317,14 @@ export default function Hero({
         style={{ zIndex: 3 }}
       >
         {!usesLegacyRoseCityHero && (
-          <h1 className="mb-10 w-full text-center font-display text-5xl font-black uppercase text-white sm:text-7xl">
+          <h1 {...headingPiece} className="mb-10 w-full text-center font-display text-5xl font-black uppercase text-white sm:text-7xl">
             {club.name}
           </h1>
         )}
         <div
-          ref={ctaRef}
+          {...buttonsPiece} ref={ctaRef}
           className="flex flex-col sm:flex-row gap-4 w-full justify-center"
-          style={{ opacity: 0 }}
+          style={{ opacity: editing ? 1 : 0 }}
         >
           <Link
             href="/shop"

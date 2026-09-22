@@ -416,7 +416,8 @@ describe("editorial our story teaser", () => {
     const source = read("components/editorial/EditorialStoryTeaser.tsx");
     expect(source).toContain("identity?.identityHeadingTop");
     expect(source).toContain("identity?.identityHeadingEm");
-    expect(source).toContain("{excerpt && <p>{excerpt}</p>}");
+    expect(source).toContain('const sharedPiece = useHomepagePiece("shared.story")');
+    expect(source).toContain("{excerpt && <p {...sharedPiece}>{excerpt}</p>}");
     expect(source).toContain("identity?.foundedYear");
     expect(source).toContain("identity?.venue");
     expect(source).toContain('className="story-meta"');
@@ -431,6 +432,10 @@ describe("editorial our story teaser", () => {
     expect(source).toContain('<Link href="/club/about">Our story</Link>');
     expect(source).not.toContain("Our story →");
     const css = read("styles/editorial.css");
+    const home = read("components/editorial/EditorialHome.tsx");
+    expect(home).toContain("fetchAboutClubContent(club.id)");
+    expect(home).toContain("about.story_paragraphs[0] ?? null");
+    expect(home).toContain("<EditorialStoryTeaser excerpt={storyExcerpt} />");
     expect(css).toContain('[data-site-template="editorial"] .story-pillar-list');
     expect(css).toContain('[data-site-template="editorial"] .story-pillar-item');
     expect(css).toMatch(

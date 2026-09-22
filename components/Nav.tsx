@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import Image from "@/components/ResilientImage";
 import { usePathname } from "next/navigation";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
@@ -157,8 +158,9 @@ function isNavItemActive(pathname: string, link: NavLink) {
 export default function Nav() {
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
+  const preview = useHomepagePreview();
   const rewrittenPathname = usePathname();
-  const pathname = rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
+  const pathname = preview ? "/" : rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
@@ -167,9 +169,11 @@ export default function Nav() {
   const isAcademy = club.presentationTemplateKey === "academy@1";
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const viewport = navRef.current?.ownerDocument.defaultView ?? window;
+    const onScroll = () => setScrolled(viewport.scrollY > 40);
+    onScroll();
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -181,9 +185,10 @@ export default function Nav() {
   // lock page scroll behind it while it is open.
   useEffect(() => {
     if (!isAcademy) return;
-    document.body.style.overflow = menuOpen ? "hidden" : "";
+    const body = navRef.current?.ownerDocument.body ?? document.body;
+    body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
-      document.body.style.overflow = "";
+      body.style.overflow = "";
     };
   }, [isAcademy, menuOpen]);
 
@@ -203,10 +208,11 @@ export default function Nav() {
   // Transparent nav only on desktop for shop (mobile shop hero is compact, not full-bleed)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
+    const viewport = navRef.current?.ownerDocument.defaultView ?? window;
+    const check = () => setIsMobile(viewport.innerWidth < 640);
     check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    viewport.addEventListener("resize", check);
+    return () => viewport.removeEventListener("resize", check);
   }, []);
 
   // /club/logo is a full-page dark infographic — the nav stays in its

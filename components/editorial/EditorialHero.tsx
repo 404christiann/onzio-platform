@@ -6,6 +6,7 @@ import Image from "@/components/ResilientImage";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
+import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import type { DBHomepageHeroContent } from "@/lib/db-types";
@@ -34,14 +35,23 @@ export default function EditorialHero({
 }: {
   initialHeroContent: DBHomepageHeroContent | null;
 }) {
+  const preview = useHomepagePreview();
+  const editing = preview !== null;
+  const selecting = editing && !preview.playback;
+  const headingPiece = useHomepagePiece("hero.heading");
+  const paragraphPiece = useHomepagePiece("hero.intro");
+  const buttonsPiece = useHomepagePiece("hero.cta");
   const club = useClubContext();
   const { crestUrl } = useEditorialIdentity();
   const hasServerContent = initialHeroContent !== null;
-  const [heroContent, setHeroContent] = useState<DBHomepageHeroContent>(
+  const [loadedHeroContent, setHeroContent] = useState<DBHomepageHeroContent>(
     initialHeroContent ?? EMPTY_HOMEPAGE_HERO_CONTENT,
   );
 
+  const heroContent = preview?.draft.hero ?? loadedHeroContent;
+
   useEffect(() => {
+    if (editing) return;
     if (hasServerContent) return;
     let cancelled = false;
     fetchHomepageContent(club.id)
@@ -54,7 +64,7 @@ export default function EditorialHero({
     return () => {
       cancelled = true;
     };
-  }, [club.id, hasServerContent]);
+  }, [club.id, hasServerContent, editing]);
 
   const headlineTop = heroContent.headline_line_one.trim() || club.name;
   const headlineEm = heroContent.headline_line_two.trim();
@@ -68,12 +78,12 @@ export default function EditorialHero({
     <section className="hero">
       <div className="hero-content">
         <div className="hero-copy">
-          <h1>
+          <h1 {...headingPiece}>
             <span>{headlineTop}</span>
             {headlineEm && <em>{headlineEm}</em>}
           </h1>
-          {intro && <p className="hero-intro">{intro}</p>}
-          <div className="hero-cta">
+          {(intro || selecting) && <p {...paragraphPiece} className="hero-intro">{intro}</p>}
+          <div {...buttonsPiece} className="hero-cta">
             <Link href={primaryHref}>{primaryLabel}</Link>
             <Link href={secondaryHref}>{secondaryLabel}</Link>
           </div>

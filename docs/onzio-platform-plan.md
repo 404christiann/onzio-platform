@@ -138,6 +138,23 @@ The first section uses `homepage_hero_content` keyed by `club_id` for
 headline, intro, and CTA copy. It follows the same public-read and fresh
 club-session admin-mutation rules as slideshow and other homepage tables.
 
+The homepage editor redesign adds one atomic, explicitly requested Save homepage
+transaction for all changed applicable sections. No autosave or separate publish
+step is introduced. User-scoped invoker RPCs `load_homepage` and `save_homepage`
+retain content RLS. Private revision tracking notices legacy writers; actor-scoped
+operation UUIDs, request hashes and receipts support response-loss reconciliation.
+Content/design version conflicts return 409 without automatic transaction retry.
+All related writers acquire the same advisory lock before row locks at the
+current small tenant scale. Upload preparation stays outside this transaction;
+only validated tenant-owned normalized asset references enter it. Storage cleanup
+must occur separately after confirmed content changes, through the existing
+reference-safe boundary.
+
+The approved editor recovery design keeps unsaved browser drafts locally, scoped
+to origin, user and club; it does not add server drafts or change publication
+semantics. Persistent browser recovery is a later implementation package.
+Detailed contracts and acceptance status: `docs/homepage-editor-redesign-plan.md`.
+
 #### `audit_events`
 
 Append-only records containing:

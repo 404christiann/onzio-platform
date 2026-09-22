@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "@/components/ResilientImage";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 
@@ -115,26 +116,30 @@ export default function EditorialHeader({
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
+  const header = useRef<HTMLElement>(null);
+  const preview = useHomepagePreview();
   const rewrittenPathname = usePathname();
   // Tenant routes render at /_clubs/<slug>/... internally; strip that prefix
   // for active-link comparisons, exactly like Nav.tsx.
-  const pathname = rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
+  const pathname = preview ? "/" : rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
 
   useLayoutEffect(() => {
+    const viewport = header.current?.ownerDocument.defaultView ?? window;
     const updateHeader = () =>
-      setScrolled(window.scrollY > (pathname === "/" ? 0 : 24));
+      setScrolled(viewport.scrollY > (pathname === "/" ? 0 : 24));
     updateHeader();
-    window.addEventListener("scroll", updateHeader, { passive: true });
-    return () => window.removeEventListener("scroll", updateHeader);
+    viewport.addEventListener("scroll", updateHeader, { passive: true });
+    return () => viewport.removeEventListener("scroll", updateHeader);
   }, [pathname]);
 
   // Opening the mobile menu locks background page scrolling.
   useLayoutEffect(() => {
     if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const body = header.current?.ownerDocument.body ?? document.body;
+    const previousOverflow = body.style.overflow;
+    body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = previousOverflow;
+      body.style.overflow = previousOverflow;
     };
   }, [open]);
 
@@ -149,6 +154,7 @@ export default function EditorialHeader({
 
   return (
     <header
+      ref={header}
       className="site-header"
       data-home={isHome}
       data-scrolled={scrolled}

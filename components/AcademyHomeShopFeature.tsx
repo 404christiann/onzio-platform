@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
+
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
@@ -18,6 +20,7 @@ import { useClubId } from "@/components/ClubContextProvider";
 // ground, and the red "Buy Now"-style CTA into /shop. Copy stays
 // admin-editable through the existing home-surface shop kit section.
 export default function AcademyHomeShopFeature() {
+  const sharedPiece = useHomepagePiece("shared.shop");
   const clubId = useClubId();
   const [content, setContent] = useState<ShopKitContent | null>(null);
 
@@ -40,7 +43,7 @@ export default function AcademyHomeShopFeature() {
   const storeNote = normalizeKitStoreNote(section.store_note).trim();
 
   return (
-    <section className="relative w-full overflow-hidden bg-[#F9FAFD]">
+    <section {...sharedPiece} className="relative w-full overflow-hidden bg-[#F9FAFD]">
       <div className="flex flex-col md:min-h-[680px] md:flex-row">
         <div className="relative min-h-[520px] w-full overflow-hidden bg-[#B9E3F6] md:min-h-full md:w-1/2">
           {back ? (

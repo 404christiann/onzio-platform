@@ -1,5 +1,6 @@
 "use client";
 
+import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { useEffect, useState } from "react";
 import Image from "@/components/ResilientImage";
 import { imageDeliveryProps } from "@/lib/image-delivery";
@@ -30,12 +31,16 @@ export default function EditorialMatchdaySlideshow({
 }: {
   photos: DBHomepageSlideshowPhoto[];
 }) {
+  const preview = useHomepagePreview();
+  const editing = preview !== null && !preview.playback;
+  const photoPiece = useHomepagePiece("photos");
   const club = useClubContext();
   const { identity } = useEditorialIdentity();
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
+    if (editing) return;
     if (
       photos.length < 2 ||
       paused ||
@@ -49,13 +54,14 @@ export default function EditorialMatchdaySlideshow({
     }, SLIDE_DURATION);
 
     return () => window.clearInterval(timer);
-  }, [paused, photos.length]);
+  }, [paused, photos.length, editing]);
 
   // Keep the active slide in range if the photo list changes underneath us.
   useEffect(() => {
     setCurrent((index) => (photos.length === 0 ? 0 : index % photos.length));
   }, [photos.length]);
 
+  if (editing && photos.length === 0) return <HomepageMissingPiece piece="photos">Photos · Add photo</HomepageMissingPiece>;
   if (photos.length === 0) return null;
 
   const headingTop = identity?.slideshowHeadingTop ?? "";
@@ -68,7 +74,7 @@ export default function EditorialMatchdaySlideshow({
   const nextSlide = () => setCurrent((index) => (index + 1) % photos.length);
 
   return (
-    <section
+    <section {...photoPiece}
       className="matchday-slideshow"
       aria-labelledby="matchday-slideshow-title"
       onMouseEnter={() => setPaused(true)}

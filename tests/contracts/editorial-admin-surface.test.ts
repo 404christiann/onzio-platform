@@ -7,6 +7,13 @@ import {
   getVisibleAdminRoutes,
   type AdminRouteAccessContext,
 } from "@/lib/admin-route-manifest";
+import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
+import { buildHomepageSaveRequest } from "@/lib/homepage-editor/adapter";
+import {
+  createHomepageEditorState,
+  reduceHomepageEditor,
+} from "@/lib/homepage-editor/model";
+import { homepageDraft, SAVE_OPERATION } from "../fixtures/homepage-editor";
 
 const root = process.cwd();
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
@@ -17,7 +24,6 @@ const ADMIN_SHELL = "components/AdminShell.tsx";
 const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
 const ABOUT_ADMIN = "app/admin/(protected)/about/page.tsx";
 const ANALYTICS_ADMIN = "app/admin/(protected)/analytics/page.tsx";
-const HOMEPAGE_ADMIN = "app/admin/(protected)/homepage/page.tsx";
 const SHOP_ADMIN = "app/admin/(protected)/shop/page.tsx";
 const SPONSORS_ADMIN = "app/admin/(protected)/sponsors/page.tsx";
 const CONTACT_ADMIN = "app/admin/(protected)/contact/page.tsx";
@@ -226,52 +232,84 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
-  describe("homepage admin: Behind the Rose hidden for editorial@1", () => {
-    it("filters 'behind' out of the tab order itself, not just the rendered tabs", () => {
-      const page = source(HOMEPAGE_ADMIN);
-      expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
-      expect(page).toContain(
-        'ADMIN_TAB_ORDER.filter((tab) => tab !== "behind")',
-      );
-      // Slide-direction indexing must use the filtered order so active-tab
-      // state can never desync from the rendered tabs.
-      expect(page).toContain(
-        "tabOrder.indexOf(next) > tabOrder.indexOf(current)",
-      );
-      expect(page).not.toContain("ADMIN_TAB_ORDER.indexOf(next)");
+  describe("homepage editor capabilities follow the public renderer", () => {
+    it("keeps Academy limited to hero and story editing", () => {
+      expect(resolveHomepageCapabilities({
+        templateKey: "academy@1",
+        slideshowVariant: "none",
+        heroVariant: "editable",
+      })).toMatchObject({
+        editableSections: ["hero", "story"],
+        heroEditableFields: [
+          "eyebrow", "headline_line_one", "headline_line_two", "intro",
+          "primary_cta_label", "primary_cta_href",
+          "secondary_cta_label", "secondary_cta_href",
+        ],
+        photoCaptionEditable: false,
+        videoSourceEditable: false,
+        sharedTargets: {
+          storyText: null,
+          shop: { owner: "shop", editorHref: "/admin/shop", surface: "home" },
+          programs: { owner: "programs", editorHref: "/admin/programs" },
+        },
+      });
     });
 
-    it("skips behind-the-rose validation, save, and preview for editorial@1", () => {
-      const page = source(HOMEPAGE_ADMIN);
-      expect(page).toContain(
-        "const hidesBehindTheRoseSection = hidesLegacyHomepageSections || isEditorial;",
-      );
-      expect(page).toContain("!hidesBehindTheRoseSection &&");
-      expect(page).toContain("if (!hidesBehindTheRoseSection) {");
-      expect(page).toContain("{!isEditorial && behindFields.visible && (");
-      // The rail's "behind" item resolves `hidden` from
-      // hidesBehindTheRoseSection (== hidesLegacyHomepageSections ||
-      // isEditorial), so it never enters the rail or the DOM for editorial@1
-      // — this replaced the old pill-array `.filter()` predicate, but the
-      // same combined boolean still gates it.
-      expect(page).toContain(
-        ': tab === "behind"\n          ? hidesBehindTheRoseSection\n          : false,',
-      );
+    it("keeps Editorial limited to hero and photos, with shared story and shop targets", () => {
+      expect(resolveHomepageCapabilities({
+        templateKey: "editorial@1",
+        slideshowVariant: "editorial",
+        heroVariant: "editable",
+      })).toMatchObject({
+        editableSections: ["hero", "photos"],
+        heroEditableFields: [
+          "headline_line_one", "headline_line_two", "intro",
+          "primary_cta_label", "primary_cta_href",
+          "secondary_cta_label", "secondary_cta_href",
+        ],
+        photoCaptionEditable: false,
+        videoSourceEditable: false,
+        sharedTargets: {
+          storyText: { owner: "about", editorHref: "/admin/about" },
+          shop: { owner: "shop", editorHref: "/admin/shop", surface: "shop" },
+        },
+      });
+      expect(resolveHomepageCapabilities({
+        templateKey: "editorial@1",
+        slideshowVariant: "editorial",
+        heroVariant: "editable",
+      }).editableSections).not.toContain("video");
     });
 
-    it("keeps academy@1's legacy-section gate and the behind upsert intact", () => {
-      const page = source(HOMEPAGE_ADMIN);
-      // academy@1's own gate is unchanged and stays academy-only…
-      expect(page).toContain(`club.${ACADEMY_GATE}`);
-      // The rail's "slideshow" item resolves `hidden` straight from
-      // hidesLegacyHomepageSections, so academy@1 never renders it — the
-      // successor to the old pill-array `.filter()` predicate.
-      expect(page).toContain(
-        'tab === "slideshow"\n        ? hidesLegacyHomepageSections',
+    it("omits unavailable video from the Editorial save payload", () => {
+      const state = createHomepageEditorState({
+        content: homepageDraft(),
+        revision: "revision-1",
+        designRevision: "design-1",
+        editableSections: ["hero", "photos"],
+      });
+      const withIgnoredVideoEdit = reduceHomepageEditor(state, {
+        type: "field-changed",
+        field: "video.title",
+        value: "Should never be sent",
+      });
+      const edited = reduceHomepageEditor(withIgnoredVideoEdit, {
+        type: "field-changed",
+        field: "hero.intro",
+        value: "Updated Editorial intro",
+      });
+      const payload = buildHomepageSaveRequest(
+        edited,
+        {
+          templateKey: "editorial@1",
+          slideshowVariant: "editorial",
+          heroVariant: "editable",
+        },
+        SAVE_OPERATION,
       );
-      // …and the hide is not a deletion: default templates still upsert.
-      expect(page).toContain('.from("behind_the_rose_section")');
-      expect(page).toContain('.from("homepage_slideshow_settings")');
+      expect(Object.keys(payload.sections)).toEqual(["hero"]);
+      expect(payload.sections).not.toHaveProperty("video");
+      expect(payload.sections.hero).not.toHaveProperty("eyebrow");
     });
   });
 
@@ -568,7 +606,6 @@ describe("editorial@1 admin surface hides", () => {
         PROGRAMS_ADMIN,
         ABOUT_ADMIN,
         ANALYTICS_ADMIN,
-        HOMEPAGE_ADMIN,
         SHOP_ADMIN,
         SPONSORS_ADMIN,
         CONTACT_ADMIN,

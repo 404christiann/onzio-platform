@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
+
 import Image from "@/components/ResilientImage";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -52,6 +54,7 @@ function formatMatchTime(timeStr: string): string {
 }
 
 export default function NextMatchCard() {
+  const editing = useHomepagePreview() !== null;
   const club = useClubContext();
   const clubId = club.id;
   const { clubLogoUrl } = useClubBranding();
@@ -81,7 +84,7 @@ export default function NextMatchCard() {
   }, [clubId]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || editing) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         sectionRef.current,
@@ -96,7 +99,7 @@ export default function NextMatchCard() {
       );
     }, sectionRef);
     return () => ctx.revert();
-  }, [loading]);
+  }, [loading, editing]);
 
   const sponsorLogo = nextFixture?.sponsorLogoUrl?.trim() || null;
   const sponsorName = nextFixture?.sponsorName?.trim() || "Match sponsor";
@@ -129,7 +132,7 @@ export default function NextMatchCard() {
       style={{
         backgroundColor: "var(--color-white)",
         borderColor: "#e5e5e5",
-        opacity: 0,
+        opacity: editing ? 1 : 0,
       }}
     >
       <div className="mx-auto max-w-5xl text-center">

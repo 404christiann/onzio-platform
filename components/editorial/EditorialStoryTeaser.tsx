@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
+
 import Link from "next/link";
 import { useEditorialIdentity } from "@/components/editorial/EditorialIdentityContext";
 
@@ -10,6 +12,7 @@ export default function EditorialStoryTeaser({
   excerpt: string | null;
 }) {
   const { identity } = useEditorialIdentity();
+  const sharedPiece = useHomepagePiece("shared.story");
   const headingTop = identity?.identityHeadingTop ?? "";
   const headingEm = identity?.identityHeadingEm ?? "";
   const highlights = Array.isArray(identity?.highlights)
@@ -36,7 +39,7 @@ export default function EditorialStoryTeaser({
           )}
         </header>
         <div className="story-copy">
-          {excerpt && <p>{excerpt}</p>}
+          {excerpt && <p {...sharedPiece}>{excerpt}</p>}
           {(identity?.foundedYear || identity?.venue) && (
             <div className="story-meta">
               {identity?.foundedYear ? (

@@ -27,6 +27,7 @@ import {
   HOMEPAGE_STORY_LIMITS,
   resolveHomepageStorySection,
 } from "@/lib/homepage-story-content";
+import { resolveHomepageCapabilities } from "@/lib/homepage-editor/capabilities";
 import {
   buildProgramsPageMutationPayload,
   emptyProgramsPageDraft,
@@ -535,19 +536,39 @@ describe("academy@1 surfaces render stored content, not literals", () => {
   });
 
   it("exposes every new field in the admin forms", () => {
-    const homepageAdmin = source("app/admin/(protected)/homepage/page.tsx");
+    const homepageFields = source("components/admin/homepage/HomepageFields.tsx");
     for (const field of [
-      "storyFields",
-      "bodyPrimary",
-      "bodySecondary",
-      "ctaLabel",
-      "homepage_story_section",
+      "story.heading",
+      "story.bodyPrimary",
+      "story.bodySecondary",
+      "story.ctaLabel",
+      "hero.headline_line_one",
+      "hero.headline_line_two",
+      "hero.intro",
     ]) {
-      expect(
-        homepageAdmin,
-        `${field} must be editable in /admin/homepage`,
-      ).toContain(field);
+      expect(homepageFields, `${field} must have an editor field`).toContain(field);
     }
+    for (const limit of [80, 120, 320, 1200, 40]) {
+      expect(homepageFields, `HomepageFields must preserve maxLength ${limit}`).toContain(
+        `maxLength={${limit}}`,
+      );
+    }
+
+    expect(resolveHomepageCapabilities({
+      templateKey: "academy@1",
+      slideshowVariant: "none",
+      heroVariant: "editable",
+    }).editableSections).toEqual(["hero", "story"]);
+    expect(resolveHomepageCapabilities({
+      templateKey: "editorial@1",
+      slideshowVariant: "editorial",
+      heroVariant: "editable",
+    }).editableSections).toEqual(["hero", "photos"]);
+    expect(resolveHomepageCapabilities({
+      templateKey: "editorial@1",
+      slideshowVariant: "editorial",
+      heroVariant: "editable",
+    }).videoSourceEditable).toBe(false);
 
     const programsAdmin = source("app/admin/(protected)/programs/page.tsx");
     for (const field of [

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HomepageMissingPiece, HomepagePieceGroup, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import Link from "next/link";
 import { useClubContext } from "@/components/ClubContextProvider";
 import ResilientBunnyVideo from "@/components/ResilientBunnyVideo";
@@ -27,12 +28,17 @@ import { fetchHomepageStorySection } from "@/lib/queries";
  * content boundary (DCFC-D131).
  */
 export default function DevelopingNextGeneration() {
+  const preview = useHomepagePreview();
+  const editing = preview !== null;
+  const buttonPiece = useHomepagePiece("story.cta");
   const club = useClubContext();
-  const [story, setStory] = useState<HomepageStoryContent>(() =>
+  const [loadedStory, setStory] = useState<HomepageStoryContent>(() =>
     resolveHomepageStorySection(null, club.name),
   );
 
+  const story = preview ? resolveHomepageStorySection({ visible: preview.draft.story.visible, heading: preview.draft.story.heading, body_primary: preview.draft.story.bodyPrimary, body_secondary: preview.draft.story.bodySecondary, cta_label: preview.draft.story.ctaLabel }, club.name) : loadedStory;
   useEffect(() => {
+    if (editing) return;
     let active = true;
     fetchHomepageStorySection(club.id, club.name)
       .then((content) => {
@@ -44,9 +50,9 @@ export default function DevelopingNextGeneration() {
     return () => {
       active = false;
     };
-  }, [club.id, club.name]);
+  }, [club.id, club.name, editing]);
 
-  if (!story.visible) return null;
+  if (!story.visible) return <HomepageMissingPiece piece="story.text">Your club’s story · Hidden from homepage</HomepageMissingPiece>;
 
   return (
     <section className="grid bg-[#F9FAFD] lg:grid-cols-[0.9fr_1.1fr]">
@@ -60,7 +66,7 @@ export default function DevelopingNextGeneration() {
       </div>
       <div className="flex min-w-0 items-center px-6 py-16 md:px-12 lg:px-20">
         <div className="w-full min-w-0 max-w-2xl">
-          <h2 className="font-display text-[2.35rem] font-black uppercase italic leading-[.92] text-[#1E3653] sm:text-[3.2rem] md:text-[4.4rem] lg:text-[5.8rem]">
+          <HomepagePieceGroup piece="story.text"><h2 className="font-display text-[2.35rem] font-black uppercase italic leading-[.92] text-[#1E3653] sm:text-[3.2rem] md:text-[4.4rem] lg:text-[5.8rem]">
             {story.heading}
           </h2>
           <p className="mt-7 font-body text-base leading-8 text-[#51667E]">
@@ -71,8 +77,9 @@ export default function DevelopingNextGeneration() {
               {story.bodySecondary}
             </p>
           ) : null}
+          </HomepagePieceGroup>
           {story.ctaLabel ? (
-            <Link
+            <Link {...buttonPiece}
               href="/club/about"
               className="mt-8 inline-block px-7 py-4 font-display text-sm font-bold uppercase text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: "var(--color-red)" }}

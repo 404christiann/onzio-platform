@@ -43,8 +43,10 @@ const DEFAULT_SECONDARY = "#AD3234";
  */
 export default function EditorialShell({
   children,
+  editing = false,
 }: {
   children: React.ReactNode;
+  editing?: boolean;
 }) {
   const club = useClubContext();
   const { clubLogoUrl, inverseLogoUrl } = useClubBranding();
@@ -116,24 +118,24 @@ export default function EditorialShell({
         } as CSSProperties
       }
     >
-      <EditorialHeader
-        clubName={club.name}
-        clubInitials={club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3).toUpperCase()}
-        crestUrl={clubLogoUrl}
-        storeEnabled={club.storeEnabled}
-      />
+      {!editing && <EditorialHeader
+          clubName={club.name}
+          clubInitials={club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3).toUpperCase()}
+          crestUrl={clubLogoUrl}
+          storeEnabled={club.storeEnabled}
+        />}
       <EditorialMotion />
       <EditorialIdentityProvider value={{ identity, crestUrl: clubLogoUrl, crestOnDarkUrl }}>
-        <main className="public-main">{children}</main>
+        <main className={`public-main${editing ? " editor-main" : ""}`}>{children}</main>
       </EditorialIdentityProvider>
-      <EditorialFooter
-        clubName={club.name}
-        crestOnDarkUrl={crestOnDarkUrl}
-        identity={identity}
-        contactProfile={contactProfile}
-        socialLinks={socialLinks}
-        storeEnabled={club.storeEnabled}
-      />
+      {!editing && <EditorialFooter
+          clubName={club.name}
+          crestOnDarkUrl={crestOnDarkUrl}
+          identity={identity}
+          contactProfile={contactProfile}
+          socialLinks={socialLinks}
+          storeEnabled={club.storeEnabled}
+        />}
     </div>
   );
 }

@@ -6,30 +6,36 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { DBBehindTheRoseSection } from "@/lib/db-types";
 import { DEFAULT_BEHIND_THE_ROSE_SECTION } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
+import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { useClubId } from "@/components/ClubContextProvider";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function BehindTheRose() {
+  const preview = useHomepagePreview();
+  const editing = preview !== null;
+  const piece = useHomepagePiece("video");
   const clubId = useClubId();
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef  = useRef<HTMLDivElement>(null);
   const videoRef   = useRef<HTMLDivElement>(null);
-  const [content, setContent] = useState<DBBehindTheRoseSection>(
+  const [loadedContent, setContent] = useState<DBBehindTheRoseSection>(
     { ...DEFAULT_BEHIND_THE_ROSE_SECTION, visible: false },
   );
 
+  const content = preview ? { ...loadedContent, ...preview.draft.video, video_url: preview.videoSource } : loadedContent;
   useEffect(() => {
+    if (editing) return;
     fetchHomepageContent(clubId)
       .then(({ behindTheRose }) => setContent(behindTheRose))
       .catch((error) => {
         console.error("BehindTheRose:", error);
         setContent({ ...DEFAULT_BEHIND_THE_ROSE_SECTION, visible: false });
       });
-  }, [clubId]);
+  }, [clubId, editing]);
 
   useEffect(() => {
-    if (!content.visible) return;
+    if (editing || !content.visible) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         headerRef.current,
@@ -49,18 +55,19 @@ export default function BehindTheRose() {
       );
     }, sectionRef);
     return () => ctx.revert();
-  }, [content.visible]);
+  }, [content.visible, editing]);
 
-  if (!content.visible) return null;
+  if (preview && !preview.allowedPieces.includes("video")) return null;
+  if (!content.visible) return <HomepageMissingPiece piece="video">Video feature · Hidden from homepage</HomepageMissingPiece>;
 
   return (
-    <section
+    <section {...piece}
       ref={sectionRef}
       className="relative w-full overflow-hidden pt-10 pb-20 md:pt-16 md:pb-32 px-6"
       style={{ backgroundColor: "var(--color-black)" }}
     >
       {/* Header */}
-      <div ref={headerRef} className="max-w-3xl mx-auto text-center mb-12 md:mb-16" style={{ opacity: 0 }}>
+      <div ref={headerRef} className="max-w-3xl mx-auto text-center mb-12 md:mb-16" style={{ opacity: editing ? 1 : 0 }}>
         <p
           className="font-display font-bold tracking-widest uppercase mb-4"
           style={{ color: "var(--color-red)", fontSize: "clamp(0.58rem, 2.6vw, 1.3rem)", whiteSpace: "nowrap" }}
@@ -85,7 +92,7 @@ export default function BehindTheRose() {
       <div
         ref={videoRef}
         className="max-w-5xl mx-auto"
-        style={{ opacity: 0 }}
+        style={{ opacity: editing ? 1 : 0 }}
       >
         {/* 16:9 aspect ratio wrapper */}
         <div

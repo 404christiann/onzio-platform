@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
@@ -45,6 +46,7 @@ function formatMatchTime(timeStr: string): string {
 }
 
 export default function AcademyNextMatch() {
+  const editing = useHomepagePreview() !== null;
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
   const sectionRef = useRef<HTMLElement>(null);
@@ -100,7 +102,7 @@ export default function AcademyNextMatch() {
   }, [club.id]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || editing) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         sectionRef.current,
@@ -115,7 +117,7 @@ export default function AcademyNextMatch() {
       );
     }, sectionRef);
     return () => ctx.revert();
-  }, [loading]);
+  }, [loading, editing]);
 
   if (loading) return null;
 
@@ -136,7 +138,7 @@ export default function AcademyNextMatch() {
     <section
       ref={sectionRef}
       className="bg-white px-6 py-12 lg:px-10 lg:py-12"
-      style={{ opacity: 0 }}
+      style={{ opacity: editing ? 1 : 0 }}
     >
       <div className="mx-auto max-w-6xl">
         <div className="mb-8">

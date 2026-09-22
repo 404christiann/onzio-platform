@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
+
 import { Fragment, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -35,6 +37,8 @@ export default function ShopKitSection({
   ctaHref,
   variantTabs,
 }: ShopKitSectionProps) {
+  const editing = useHomepagePreview() !== null;
+  const shopPiece = useHomepagePiece("shared.shop");
   const sectionRef = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
@@ -58,7 +62,7 @@ export default function ShopKitSection({
   const isHero = headingTag === "h1";
 
   useEffect(() => {
-    if (!animate) return;
+    if (!animate || editing) return;
 
     const ctx = gsap.context(() => {
       gsap.fromTo(
@@ -90,10 +94,10 @@ export default function ShopKitSection({
       );
     }, sectionRef);
     return () => ctx.revert();
-  }, [animate, isHero]);
+  }, [animate, isHero, editing]);
 
   return (
-    <section
+    <section {...shopPiece}
       ref={sectionRef}
       className="relative w-full overflow-hidden"
       style={{ backgroundColor: "var(--color-white)" }}
@@ -102,7 +106,7 @@ export default function ShopKitSection({
         <div
           ref={imageRef}
           className="relative w-full md:w-1/2"
-          style={{ opacity: animate ? 0 : 1 }}
+          style={{ opacity: animate && !editing ? 0 : 1 }}
         >
           <div
             className="relative w-full md:hidden"
@@ -128,7 +132,7 @@ export default function ShopKitSection({
         <div
           ref={textRef}
           className="flex w-full flex-col justify-center px-6 py-12 sm:px-10 md:w-1/2 md:px-14 md:py-20 lg:px-20"
-          style={{ opacity: animate ? 0 : 1 }}
+          style={{ opacity: animate && !editing ? 0 : 1 }}
         >
           <p
             className="font-display mb-4 font-bold uppercase tracking-widest"

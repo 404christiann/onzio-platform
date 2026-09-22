@@ -11,6 +11,7 @@ import {
 } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import ImageFallback from "@/components/ImageFallback";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -19,26 +20,33 @@ const SLIDE_DURATION = 4500;
 type SlideOrientation = "portrait" | "landscape";
 
 export default function PhotoSlideshow() {
+  const preview = useHomepagePreview();
+  const editing = preview !== null;
+  const selecting = editing && !preview.playback;
+  const photoPiece = useHomepagePiece("photos");
   const club = useClubContext();
   const clubId = useClubId();
   const usesLegacyRoseCitySlideshow = club.slug === "rose-city";
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
-  const [slides, setSlides] = useState<DBHomepageSlideshowPhoto[]>([]);
+  const [loadedSlides, setSlides] = useState<DBHomepageSlideshowPhoto[]>([]);
   const [orientations, setOrientations] = useState<Record<string, SlideOrientation>>({});
   const [failedSlideIds, setFailedSlideIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [seasonLabel, setSeasonLabel] = useState(
+  const [loadedSeasonLabel, setSeasonLabel] = useState(
     DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS.season_label,
   );
   const sectionRef = useRef<HTMLElement>(null);
+  const slides: DBHomepageSlideshowPhoto[] = preview ? preview.draft.photos.items.filter(p => p.url).map(p => ({ id: p.rowId ?? p.clientId, url: p.url!, alt: p.alt, sort_order: p.order, created_at: "" })) : loadedSlides;
+  const seasonLabel = preview?.draft.photos.seasonLabel ?? loadedSeasonLabel;
   const visibleSlides = slides.filter((slide) => !failedSlideIds.has(slide.id));
   const safeCurrent =
     visibleSlides.length === 0 ? 0 : current % visibleSlides.length;
 
   useEffect(() => {
+    if (editing) return;
     fetchHomepageContent(clubId)
       .then(({ slideshowPhotos, slideshowSettings }) => {
         setSlides(slideshowPhotos);
@@ -53,12 +61,12 @@ export default function PhotoSlideshow() {
         setSlides([]);
         setSeasonLabel(DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS.season_label);
       });
-  }, [clubId]);
+  }, [clubId, editing]);
 
   // Auto-advance
   useEffect(() => {
     if (
-      visibleSlides.length <= 1 ||
+      selecting || visibleSlides.length <= 1 ||
       paused ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ) {
@@ -69,10 +77,11 @@ export default function PhotoSlideshow() {
       setCurrent((index) => (index + 1) % visibleSlides.length);
     }, SLIDE_DURATION);
     return () => clearInterval(timer);
-  }, [paused, safeCurrent, visibleSlides.length]);
+  }, [paused, safeCurrent, visibleSlides.length, selecting]);
 
   // Scroll reveal
   useEffect(() => {
+    if (editing) return;
     if (!usesLegacyRoseCitySlideshow) return;
     const section = sectionRef.current;
     if (visibleSlides.length === 0 || !section) return;
@@ -93,12 +102,14 @@ export default function PhotoSlideshow() {
       );
     }, section);
     return () => ctx.revert();
-  }, [usesLegacyRoseCitySlideshow, visibleSlides.length]);
+  }, [usesLegacyRoseCitySlideshow, visibleSlides.length, editing]);
 
+  if (preview && !preview.allowedPieces.includes("photos")) return null;
   if (visibleSlides.length === 0) {
+    if (selecting) return <HomepageMissingPiece piece="photos">Photos · Add photo</HomepageMissingPiece>;
     if (slides.length === 0) return null;
     return (
-      <section
+      <section {...photoPiece}
         className="relative min-h-[560px] w-full overflow-hidden"
         style={{ height: "85vh", backgroundColor: "#141414" }}
       >
@@ -126,7 +137,7 @@ export default function PhotoSlideshow() {
     };
 
     return (
-      <section
+      <section {...photoPiece}
         ref={sectionRef}
         className="clubhouse-matchday-slideshow"
         style={{
@@ -253,10 +264,10 @@ export default function PhotoSlideshow() {
   }
 
   return (
-    <section
+    <section {...photoPiece}
       ref={sectionRef}
       className="relative w-full overflow-hidden"
-      style={{ height: "85vh", minHeight: "560px", opacity: 0, display: "block", margin: 0, padding: 0 }}
+      style={{ height: "85vh", minHeight: "560px", opacity: editing ? 1 : 0, display: "block", margin: 0, padding: 0 }}
     >
       {/* Images */}
       {visibleSlides.map((slide, i) => (

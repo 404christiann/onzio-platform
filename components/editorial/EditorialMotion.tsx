@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect } from "react";
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { usePathname } from "next/navigation";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -36,8 +37,10 @@ const CARD_SELECTOR = [
 
 export default function EditorialMotion() {
   const pathname = usePathname();
+  const editing = useHomepagePreview() !== null;
 
   useLayoutEffect(() => {
+    if (editing) return;
     const root = document.querySelector<HTMLElement>(
       '[data-site-template="editorial"] .public-main',
     );
@@ -198,7 +201,7 @@ export default function EditorialMotion() {
       media.revert();
       context.revert();
     };
-  }, [pathname]);
+  }, [pathname, editing]);
 
   return null;
 }

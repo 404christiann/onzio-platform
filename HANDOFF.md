@@ -1,5 +1,708 @@
 # Onzio Platform Handoff
 
+## Homepage editor — first real iOS Safari check — 2026-09-22 (Claude)
+
+Christian installed the iOS 26.5 simulator runtime. The editor was driven in real
+Mobile Safari (iPhone 17 Pro) against the local build. No code change to the app.
+
+**Passed on device.** With the genuine iOS software keyboard raised, the options
+sheet kept `Save homepage` (heading), the focused field, the next field and
+`Done` visible and unclipped — the HP-06 keyboard-open requirement. A full
+save → failure → `Try saving again` → success cycle rendered its notifications
+*inside* the modal sheet, the error was replaced (not stacked) by the success,
+and the panel stayed open after saving. This is device evidence for HP-08C.
+
+**Findings, none of them app defects:**
+
+- iOS Safari cannot resolve `alpha.localhost`, and the tenant is resolved from
+  the `Host` header. Added `scripts/device-preview-proxy.mjs`
+  (`npm run dev:device-proxy`), a development-only proxy that rewrites `Host`,
+  `Origin` and `Referer`. Workflow documented in `tests/README.md`.
+- The first device save failed with "You no longer have permission to save this
+  homepage". That was the save route's CSRF check (`route.ts:51` rejects a
+  mismatched `Origin`) correctly refusing the proxy. Working as designed.
+- iOS will not raise the keyboard when the sheet focuses its first field
+  programmatically; it appears once the field is tapped. Platform policy on
+  programmatic focus, not an editor bug.
+- The Simulator hides the on-screen keyboard while the Mac keyboard is attached,
+  so keyboard checks prove nothing until that is off. Disabled on this machine
+  with `defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false`.
+
+**Phone shortcut row tightened (Christian approved the mockup):** the off-canvas
+shared-section row cost about 110pt on a phone. Below 768px it now reads
+"Edited elsewhere: [Programs →] [Shop →]" on one line (~48pt); buttons keep
+44pt touch targets and their full accessible names ("Edit in Programs") via
+`aria-label`, so the unsaved-changes guard and screen-reader wording are
+unchanged. Desktop is unchanged. The arrow is Lucide `ArrowRight` (already used
+across the admin), matching Christian's reference; checked in light and dark.
+Verified in the iOS Simulator; new regression
+in the accessibility spec. Homepage browser 34/34; full suite 1535/1535.
+
+**Still open:** VoiceOver/TalkBack acceptance. The Simulator cannot run a screen
+reader, so that half of the gate needs a real iPhone — reachable over Wi-Fi with
+`LISTEN_HOST=0.0.0.0 npm run dev:device-proxy`. Nothing committed or deployed.
+
+## Homepage editor — Christian's review round 2 — 2026-09-21 (Claude)
+
+Two defects Christian found while reviewing locally, both fixed.
+
+### Placeholder label stayed glued to typed text
+
+Every empty target shows its own label as a CSS `::before` placeholder so it can
+still be found and clicked. `HomepagePreviewFrame` only ever *added* that flag —
+so after typing, the preview rendered `SMALL HEADINGThis is my text`. Three
+compounding causes, all fixed:
+
+- the `data-homepage-piece-empty` flag was never removed when content arrived
+- the emptiness test counted the injected `.hp-piece-corners` span as content, so
+  a target could never be re-evaluated after the first pass
+- the MutationObserver did not watch `characterData`, and React writes simple
+  text updates straight into the existing text node — so it never re-ran on typing
+
+The flag now clears as soon as real content exists and returns when the field is
+emptied. Covered by a regression that asserts the *drawn* `::before` content,
+since generated content is invisible to `textContent`.
+
+### Shared sections left the editing canvas (Christian's decision)
+
+Programs/About/Shop content is owned by its own admin page and cannot be typed
+into on the Homepage, but it carried the same box as editable content. Christian
+asked for it not to be displayed at all while editing. `useHomepagePiece` now
+emits `data-homepage-shared` for those pieces and the editing preview hides them;
+Playback and the public site are untouched (verified: no shared attribute and the
+Programs copy present in Playback).
+
+Because clicking a shared block was the **only** trigger for the
+"Save your homepage changes?" dialog, removing it outright would have made the
+whole unsaved-changes guard unreachable. Christian chose to keep an off-canvas
+shortcut: the editor now shows "Some sections come from their own pages, so they
+are not shown here:" with `Edit in Programs` / `Edit in About` / `Edit in Shop`
+buttons wired to the same `go()`, so the guard still works. `allowedPieces` is
+unchanged, so no contract was weakened. Applied to all shared targets across
+templates, per Christian's answer.
+
+### Verification
+
+Homepage browser **33/33**, full suite **1535/1535**, admin-loading **12/12**,
+media **4/4**, tsc/lint/build clean.
+
+## Homepage editor stabilization — 2026-09-21 (Claude)
+
+Continued the uncommitted `codex/homepage-editor-redesign` checkout. No commit,
+push, deployment, hosted migration or hosted data write. The approved UI, atomic
+save, recovery and navigation guards are unchanged.
+
+### Christian's reported bug, reproduced and fixed
+
+Clicking a text box to edit it made the preview jump. Root cause: opening the
+options panel takes 348px from the preview viewport, so the real public page
+rewraps. Measured at 1280x800, the selected heading moved **+276px** and
+`hero.intro` **+312px**, both leaving the preview frame and the window entirely
+— people were editing content they could no longer see. 1152px behaved the same;
+1440px and wider hid the problem, which is why it had not been caught.
+
+`HomepageEditor.tsx` now anchors the selected piece across every transition that
+resizes the preview (opening options, Done, Escape, selecting another piece while
+the panel is open): it records the piece's viewport position before the change
+and restores the preview's own scroll after it. Measured after the fix: 0px at
+1512/1280/1152 on the content used for that run, and at worst a ~29-80px settle
+when the preview is already scrolled to its top and the drift is upward, where a
+scroll clamp makes full compensation impossible. The piece stays fully inside
+both the preview and the window in every measured case. The existing window-scroll
+preservation and `preventScroll` focus restoration are retained.
+
+### Notification requirement gaps closed (HP-08C)
+
+The presenter held its own five-second success timer, so every host that could
+show a notification (editor, panel, mobile slot, leave dialog) had a private copy
+of it. `useHomepageNotification` now owns one queue for the editor:
+
+- amber warning variant; the "another tab has newer unsaved work" recovery message
+  moved into it from a second, undismissable notice surface
+- success is dismissible, and its five-second lifetime pauses on hover, on focus
+  and while the document is hidden
+- one live region on phones — the editor-level presenter is now desktop-only, so
+  the mobile slot no longer announces the same event twice
+- opening or closing the options sheet no longer replays a finished save
+
+### The photo/recovery failures were fixture contamination, now proven
+
+Not flaky and not environmental. `homepage-editor-{templates,photos,recovery}.spec.ts`
+republish Alpha's presentation document and restore it in `finally`. An interrupted
+run never reaches that `finally`, and because each run captures *whatever is
+published now* as its baseline, the leak becomes the new baseline permanently.
+Alpha was found published on a **clubhouse** fixture with ~260 leaked presentation
+documents. Under clubhouse, `story.text` does not exist and hero saves that include
+`eyebrow` fail with `FIELD_UNAVAILABLE` — which is exactly what the "unexplained"
+failures were. Restoring the seeded academy document turned recovery-hardening
+green 3/3 immediately.
+
+A second, independent trap: the specs typed fixed marker text. Once a crashed run
+left `Local retry verification` in the headline, the next run could not make the
+field dirty, Save stayed disabled, and the test could never restore the value.
+
+Fixes: markers are unique per run; all three specs assert Alpha starts from its
+seeded presentation document and fail with an actionable message otherwise; and
+`npm run fixture:homepage:restore:local` repairs a leaked local fixture in one
+command. Two specs also still clicked a `Close options` button the approved
+revision replaced with `Save homepage`; they now use the `Done` that closes the
+panel and clears selection.
+
+### Verification (local, this session)
+
+- Homepage browser suite **32/32** (was 24/26 with the known photo/recovery
+  failures); includes the previously failing mixed-photo test and 6 new
+  regressions: 4 anchor checks at 1152/1280 and 2 notification queue/pause checks
+- `npm test` **1535/1535**, contracts **910/910**, architecture **21/21**,
+  local DB **239/239**
+- `npx tsc --noEmit`, `npm run lint`, `npm run build` clean
+- admin-loading **12/12**, site media **4/4**
+- Desktop light/dark, phone sheet and panel-error screenshots reviewed
+
+### Blockers and next step
+
+- Real iOS Safari / Android Chrome keyboard and VoiceOver/TalkBack acceptance is
+  still not done; reduced-height Chromium proves layout only.
+- **Local build footgun:** `.env.production.local` overrides `.env.local` for
+  `next build`/`next start`, so a plain `npm run build` bakes the *hosted
+  production* Supabase URL into the local bundle. Build and start the local app
+  with `set -a && . ./.env.local && set +a` first, and check the bundle with
+  `grep -rhoE "https://[a-z0-9]+\.supabase\.co" .next/static/chunks/*.js`.
+- Next: Christian reviews the anchored selection behaviour and the notifications,
+  then reports any remaining interaction bugs with repro steps.
+
+## Claude stabilization handoff — 2026-09-20
+
+Christian reports remaining Homepage editor bugs and wants to continue in Claude.
+Use `docs/homepage-editor-claude-stabilization-handoff.md`, which supersedes the
+older Claude continuation. It records Luna's implemented changes and separate
+test runs, the still-failing broader photo/recovery checks, and source-observed
+notification gaps requiring investigation. HP-08C acceptance is reopened; HP-08D
+is not green. Branch/dirty state and source/docs were inspected today; no runtime
+edits or tests. Next: Claude reproduces remaining UI issues and isolates the
+photo/recovery failures, preserving approved design and all uncommitted work.
+
+## Homepage focus scroll-jump fix — 2026-09-17
+
+Fixed the Homepage editor jumping vertically when a text target opens its
+options. Native non-modal dialog layout was auto-scrolling the static panel into
+view; the editor now captures and restores the document scroll position after
+panel open and close while retaining `preventScroll` focus restoration. The
+focused accessibility suite passes 12/12 after narrowing one obsolete preview
+link selector to the content links that remain in editing mode. TypeScript,
+lint, build and diff checks pass. No commit, push, deployment or hosted write.
+
+## HP-08 visual feedback revision — 2026-09-17
+
+Christian requests simple boxes around editable content instead of floating
+discovery badges, circles only on the selected box, and Save homepage replacing
+Close options. Operation toasts remain. The superseding revision at the top of
+`docs/homepage-editor-feedback-luna-plan.md` defines atomic save, Done-without-save,
+single visible Save and mobile acceptance. Return this narrow revision to the
+existing Luna task and continue unfinished HP-08D verification. Astra changed
+documentation only; no new runtime verification. Prior HP-08B acceptance is
+reopened for this feedback.
+
+## HP-08 visual follow-up checkpoint — 2026-09-17
+
+Christian's latest follow-up is implemented: operation notifications now render
+at the save surface that initiated them—inside the open options panel for panel
+Save, in the editor status area for the top Save, above the mobile toolbar for
+toolbar Save, and inside the leave dialog for Save and continue. Focused
+panel-placement regression passes 1/1 against the rebuilt local app.
+
+Applied Christian's follow-up revision in the existing uncommitted
+`codex/homepage-editor-redesign` checkout: editable content now has quiet
+rectangular outlines at rest with no floating labels; only the selected target
+shows the four white-filled purple circles. The panel heading now uses the
+existing atomic Save homepage action, with Done retained for closing without
+saving and one visible Save per layout. Operation notifications remain intact.
+No commit, push, deployment, hosted migration or hosted data write.
+
+Changed for this revision: HomepageEditor.tsx, HomepagePreviewFrame.tsx,
+homepage-editor.css, focused Homepage browser assertions, and the scoped/main
+plans. Existing public components, recovery, navigation guards and notifications
+remain otherwise unchanged.
+
+Verification: `npx tsc --noEmit`, `npm run lint`, local `npm run build`, and
+`git diff --check` pass. The revised focused Homepage suite is 15/15, including
+quiet boxes/no badges, selected-only circles, panel Save, Done, mobile keyboard
+reachability, failure retention/retry, Playback chrome and public output.
+Retained desktop/mobile matrix screenshots were inspected. The broader 10-test
+follow-up run is 5/10: the known mixed-photo test still cannot observe the
+successful preview `<img>`; subsequent local recovery/cleanup cases failed after
+that fixture run and are not treated as green.
+
+Real-device iOS Safari/Android Chrome keyboard and VoiceOver/TalkBack acceptance
+is still unavailable; Chromium reduced-height checks are not a substitute. HP-08B
+and HP-08D remain in_progress pending Christian's visual review and the media /
+cleanup verification. Next: isolate the local photo preview failure, restore a
+clean local fixture, rerun Homepage/media/admin-loading and required repository
+gates, then review this visual revision. No release is authorized.
+
+## HP-06 / HP-07 narrow repair checkpoint — 2026-09-17 (Codex)
+
+Continued the existing uncommitted `codex/homepage-editor-redesign` checkout.
+HP-05 runtime hardening is implemented. The exact parity and local-media browser
+gates are green, and Christian has approved the refreshed visual review. HP-06/07
+remain **in_progress** only until real keyboard/screen-reader acceptance. No commit,
+hosted write/migration, push or deployment. Existing unrelated dirty files remain
+untouched. AdminShell, protected layout, middleware and route navigation remain
+unchanged.
+
+### Implemented
+
+- Cleared completed GSAP identity transforms from the Hero CTA and the legacy
+  ChampionsBadge entrance target. Public/preview geometry now uses the same
+  offset-parent chain while preserving the visible final opacity and entrance
+  motion; no assertion tolerance was added.
+- Added `scripts/seed-local-homepage-media.ts`, a loopback-only repeatable
+  fixture setup that uploads the real deterministic Alpha 64×64 PNG through
+  Supabase Storage and records its actual 183-byte size and SHA-256
+  (`f5098d1c2d1da60e107b44f1835bef67f84996c1ee6d0ba51d8a0c7d0b9eff94`).
+  Added one minimal Alpha roster/stat fixture to `supabase/seed.sql` so the
+  unchanged healthy-media suite can exercise its existing player modal.
+- Isolated `site_branding` mutations in `schema-rls.test.ts` and
+  `storage-audit.test.ts` with per-test restoration of the original paths.
+
+- HP-06: native modal options sheet on phones, nonmodal desktop options, focus
+  containment/return, Escape/Done handling, one reachable Save inside the mobile
+  sheet, and save failure/retry announced inside that modal. The page-scoped CSS
+  handles narrow/short viewports, 44px selection targets, light/dark and reduced
+  motion. Added a page-specific loading skeleton without changing AdminShell.
+- Added labeled Playback preview with real public slideshow/video behavior,
+  preserved working draft, no save, and navigation blocked inside the preview.
+  Editing mode makes nested interactive controls inert so keyboard selection does
+  not activate the underlying public controls. Public pages remain unannotated.
+- Corrected public preview headers to use the home path and their own iframe
+  scroll, resize and menu-lock document. Screenshot review found the prior
+  parent-admin route mismatch despite passing text signatures. The iframe now
+  explicitly uses standards mode, and parity checks use actual inner viewport
+  dimensions, header state and structural layout geometry after public scroll reveals.
+  Offset-based layout bounds exclude CSS transforms, including transient GSAP
+  entrance translations; structural transform parity still needs screenshot
+  review. This is not screenshot pixel equality.
+  AcademyNextMatch now skips parent-window entrance animation in preview,
+  matching the other always-visible editor sections.
+- Fixed preview stylesheet readiness: copied CSS must load before public portal
+  content mounts; old styles stay until replacements load. Browser checks had
+  exposed intermittent fallback font rendering before this fix.
+- HP-05: serialized IndexedDB writes/clears, transaction-completion semantics,
+  bounded unavailable/blocked storage handling and visible best-effort warning.
+  Save checkpoints and deletion compare against the current stored record, so a
+  first tab cannot erase a newer second-tab draft. Ordinary editing retains the
+  approved single last-edited recovery copy, not per-tab version history.
+- Lost-response recovery now queries the actual operation receipt and adopts the
+  latest server snapshot on confirmed commit. A conflicting recovered draft is
+  explicitly reviewed instead of silently overlaid. Applying it merges changed
+  scalar fields onto the current document, retaining unrelated newer text;
+  photo-list replacement is explicitly explained. A changed design requires
+  manual copy/discard. Pending photo blobs are read within the user/club scope.
+
+The earlier HP-05 claim that simply overlaying a saved draft reconciles a lost
+response "for free" was too strong. New browser coverage found real gaps in
+receipt reconciliation and cross-tab deletion; those runtime paths are now fixed.
+
+### Files in this continuation
+
+`components/admin/homepage/{HomepageEditor,HomepagePreviewFrame,HomepageEditorSkeleton,HomepageRecoveryReview}.tsx`,
+`components/admin/homepage/homepage-editor.css`,
+`lib/homepage-editor/{useHomepageEditor,recovery-storage,preview-context}.tsx/ts`,
+`components/{AcademyNextMatch,Hero,Nav,PhotoSlideshow,ResilientBunnyVideo}.tsx`,
+`components/editorial/{EditorialHeader,EditorialHero,EditorialMatchdaySlideshow}.tsx`,
+`tests/browser/homepage-editor-{accessibility,recovery-hardening,photos,templates}.spec.ts`,
+`tests/browser/admin-loading.spec.ts`, `tests/README.md`, this ledger and `HANDOFF.md`.
+Earlier packages' source/migration files remain uncommitted, including untracked files.
+
+Bounded GPT-5.6-Luna work: read-only accessibility/recovery review and two browser
+specs. Lead authored runtime, reviewed assertions, corrected test selectors and
+integration details, executed checks and inspected screenshots. The assistant
+was not its own sole acceptance reviewer.
+
+### Verification and next step
+
+Verification and the final browser/approval blockers are recorded below. Baseline and final
+repository suites both passed 1,535/1,535. All commands use local `.env.test`;
+`ONZIO_ENVIRONMENT=production` selects the local fixture domain tag only.
+
+Device acceptance remains pending: Xcode has no usable installed iOS runtime;
+Android emulator has no configured AVD. Reduced-height Chromium proves layout
+only. Run iOS Safari and Android Chrome on device/simulator: every field type,
+last of six photo descriptions, Done/Save with keyboard open, dismissal, rotation,
+return to selection. Also perform screen-reader traversal and Christian's visual
+review. No production release is authorized by this checkpoint.
+
+The template matrix compares main-page geometry, text, typography, colors, header state and media
+references for all five designs plus the synthetic legacy Rose City branch at
+matched desktop/mobile preview viewport sizes and captures screenshots. This is
+not a claim of exact pixel equality or real production media acceptance. The
+legacy test temporarily changes only local Alpha's slug/design, restores them in
+`finally`, and never touches Rose City production. Never overlap it with DB tests
+or another suite using Alpha. Browser auth remains outside the repository.
+
+Remaining coverage limits: no dedicated real quota-abort or cross-user blob
+browser exercise; unavailable storage and two-tab conflicts are browser-tested,
+identity/expiry decisions are contract-tested. Shop/Programs shortcuts still use
+About's tested generic mechanism without individual browser cases.
+
+
+### Recorded local gates — 2026-09-17
+
+| Gate | Result / evidence |
+| --- | --- |
+| `npx tsc --noEmit` | Pass (`/private/tmp/hp06-types-final.log`). |
+| `npm run lint` | Pass, no ESLint warnings/errors (`/private/tmp/hp06-lint-final.log`). |
+| `npm run build` with local Supabase overrides | Pass after final runtime edits (`/private/tmp/hp06-build-final.log`). |
+| `npm run test:contracts` | 910 pass (`/private/tmp/hp06-contracts.log`); also included in final full suite. |
+| `npm run test:architecture` | 21 pass (`/private/tmp/hp06-architecture.log`); also included in final full suite. |
+| `npm run test:db` | 239 pass (`/private/tmp/hp06-db.log`); also included in final full suite. |
+| `npm test` | 1,535 pass / 145 files, zero failures or skips after final runtime edits (`/private/tmp/hp06-all-final.log`). |
+| `DOCKER_HOST=unix:///Users/christianalcala/.colima/onzio-local/docker.sock PATH=/opt/homebrew/bin:$PATH npm run db:types:check` | Generated types match the local schema (`/private/tmp/hp06-dbtypes.log`). |
+| Homepage Playwright | 24/24 pass after the transform cleanup, including exact five-template plus legacy parity and real mixed-photo upload/retry. |
+| Admin-loading Playwright | 12/12 pass, including all 13 admin routes in four viewport/theme combinations (`/private/tmp/hp06-admin-final.log`). |
+| Site-media Playwright | 4/4 pass across desktop/mobile: healthy direct media and simulated outage fallback. |
+| Protected files / whitespace | No diff to AdminShell, protected layout, middleware or `lib/admin-route-manifest.ts`; `git diff --check` plus untracked Homepage source whitespace scan pass. |
+
+The earlier dev-server navigation timeout came from a cold About compile (8.5s
+versus a 5s assertion); the same real navigation passes against the compiled app.
+The admin reduced-motion check was corrected to poll its unchanged `none`
+assertion across skeleton replacement; its earlier immediate read saw a detached
+node's empty computed style. The delayed-loading test now holds the new actual
+Homepage GET endpoint as well as the unchanged endpoints for other pages.
+
+Resume with the local production-mode preview on port 3110. Auth helper/state:
+`node scripts/homepage-local-auth.mjs`, then
+`HOMEPAGE_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-auth.json npx playwright test --config=playwright.homepage.config.ts`.
+Use `ADMIN_LOADING_STORAGE_STATE` for `playwright.admin-loading.config.ts` and
+`SITE_MEDIA_BASE_URL=http://alpha.localhost:3110` for `playwright.site-media.config.ts`.
+Do not overlap Alpha browser mutations with database tests. Stop only the owned
+3110 server before rebuilding `.next`; no services were reset or hosted data
+changed in this continuation.
+
+### Resolved parity blocker
+
+The exact assertion remains unchanged and now passes after clearing the completed
+GSAP transforms. No tolerance, skip, normalization, or assertion weakening was
+used. Fresh screenshots and traces are under the current Playwright
+`test-results/homepage-editor-browser/` output; the historical review bundle
+under `/private/tmp/hp06-review/final-homepage-acceptance/` remains preserved.
+
+### Real-device acceptance walkthrough (pending equipment)
+
+On iOS Safari with VoiceOver and Android Chrome with TalkBack, exercise a
+single-line field, multiline paragraph, native destination select, visibility
+checkbox, and the sixth photo description. With the keyboard open, keep the
+focused field, Done, and Save homepage reachable; save once and verify announced
+success/error feedback. Dismiss the keyboard, rotate portrait → landscape →
+portrait with unsaved text, and confirm the draft survives. Verify modal focus
+containment and return to the selected preview piece after closing. Chromium
+viewport checks do not satisfy this gate. No usable iOS runtime or Android AVD
+was available in this environment, so device evidence remains pending.
+
+Next step: perform the same walkthrough on available real devices/simulators
+before any HP-06/07 release decision. No production release is authorized by
+this checkpoint.
+
+## HP-05 IndexedDB draft recovery — 2026-09-16 (Claude)
+
+Continued straight on from the HP-04 checkpoint below, same session, same
+uncommitted `codex/homepage-editor-redesign` branch. No commit, hosted write,
+push or deploy.
+
+Implemented `resolveHomepageRecovery` (`lib/homepage-editor/recovery.ts`)
+against the 15 already-written contract tests: validates an unknown stored
+record, checks origin/user/club identity first, rejects invalid or >7-day-old
+timestamps, reconciles an in-flight submitted operation against a changed
+revision before calling it a conflict, otherwise restores/conflicts/ignores.
+All 15 pass. **Full suite is now 1,535/1,535 — zero failures, zero skipped,
+zero expected reds. First fully green run this project has had.**
+
+Wired it into the real editor: `lib/homepage-editor/recovery-storage.ts` (a
+small best-effort IndexedDB adapter, drafts keyed by `clubId:userId`, a
+separate blob store for pending photo files) and `useHomepageEditor.ts` (write
+on a 500ms debounce, restore on load by overlaying the recovered draft onto
+the fresh server baseline — which turns out to handle "did my lost-response
+save commit" for free, since a committed save's draft is now identical to the
+fresh baseline and shows nothing dirty — clear on successful save and on
+explicit "Leave without saving"). `HomepageEditor.tsx` shows a dismissible
+restore notice and awaits the recovery clear before navigating away.
+
+**A real race was found and fixed only by running the new browser tests**: the
+debounced write can fire *after* an explicit clear, resurrecting a discarded
+draft. Manual clicking never hit it; Playwright's speed did. Fixed by tracking
+the debounce timeout in a ref the clear path also cancels. New regression
+test: `tests/browser/homepage-editor-recovery.spec.ts` (2 cases).
+
+Also hit and fixed: a manual template-switch script used for interactive
+debugging left Alpha's fixture stuck on `clubhouse` instead of `academy`,
+breaking 4 unrelated already-passing tests on the next run — fixed by
+pointing `presentation_state` back at the original seeded document plus a
+full `supabase db reset`.
+
+**Verified**: `npx tsc --noEmit`, `npm run lint`, `npm run build` clean; full
+`npm test` 1,535/1,535; homepage Playwright suite 10/10 across all six spec
+files (2 new recovery cases: reload restores with a visible notice and
+identical server content; a successful save clears recovery so a later reload
+finds nothing).
+
+**Not yet done for full HP-05 acceptance**: a dedicated browser test for the
+lost-response reconcile path through the real hook (only contract-tested so
+far); no dedicated two-tab/two-user browser test (identity/revision checks
+proven at the decision layer only); no user-visible warning when IndexedDB is
+unavailable/full (silently degrades to non-durable in-memory editing, matching
+the plan's "best-effort" wording but not explicitly surfaced).
+
+**Exact next step**: HP-06 (responsive/keyboard/accessibility polish, real
+on-screen keyboard evidence, visual parity, labeled playback preview) and
+HP-07 (final gates + Christian's visual review) remain. The small HP-05 gaps
+above are optional hardening, not blockers, if HP-06 is the priority instead.
+
+## HP-04 reference-safe media cleanup — 2026-09-16 (Claude)
+
+Continued the existing uncommitted `codex/homepage-editor-redesign` branch per
+`docs/homepage-editor-claude-handoff.md`. No commit, hosted write, push or
+deploy. Read `AGENTS.md`, this file's latest section, `docs/onzio-platform-plan.md`,
+`tests/README.md`, then the complete `docs/homepage-editor-redesign-plan.md`
+and its relevant tests before changing anything, per that plan's required order.
+
+Found and fixed the actual gap the handoff pointed at: `onzio.save_homepage`
+(migration `20260915180623_homepage_atomic_save.sql`, amended in place — still
+local-only and uncommitted) deleted orphaned `homepage_slideshow_photos` rows
+but never retired their `onzio.media_assets` row or storage object, so a
+removed/replaced photo's published asset leaked forever. The SQL now returns
+`retiredMediaAssetIds` (assets referenced before this save's photo writes and
+not after, covering both a deleted row and a kept row whose asset was swapped).
+`app/api/admin/homepage/route.ts` retires each one via the existing
+`retirePublishedMedia` after the save has already committed, strips that
+bookkeeping field before the response reaches the browser, and never lets a
+retirement failure turn a committed save into a reported failure. Everything
+else HP-04 needed (reorder/remove/retry, shared shortcuts, hidden/zero-state
+selection, the `homepage` media-bucket mapping) was already correctly wired —
+this cleanup gap was the one real missing behavior.
+
+Added tests before implementing: `tests/database/homepage-atomic-save.test.ts`
+(removed/kept/reordered/reassigned-asset retirement, and no retirement on a
+later-section rollback) and `tests/contracts/homepage-editor-route.test.ts`
+(route calls retirement per ID, never on GET, strips the field, and 200s even
+when retirement rejects). New `tests/browser/homepage-editor-photos.spec.ts`
+covers real local mixed photo upload success/failure through the actual media
+pipeline, retrying only the failed file, the six-photo boundary, reorder,
+removal, the shared About shortcut's three leave choices while dirty, and a
+hidden video section that can be shown again — built from a careful reading of
+the current `HomepageEditor.tsx`/`homepage-editor.css`/`BehindTheRose.tsx`/
+`PhotoSlideshow.tsx` source, not guessed selectors.
+
+**Docker was unavailable at first** (`colima`/`limactl` were x86_64 under
+Rosetta, no arm64 Homebrew, no Docker Desktop). Fixed with Christian's explicit
+choice (native colima fix, not Docker Desktop): installed arm64 Homebrew,
+reinstalled `colima`/`lima`/`docker` from it, and started the existing
+`onzio-local` colima profile — its VM disk was already `arch: aarch64`, so it
+came up immediately; the 6-day-idle stack was reachable at once. This is a
+durable fix to the machine's own dev tooling.
+
+Getting a genuinely clean run also surfaced two more pre-existing,
+unrelated-to-this-plan environment issues, both resolved: (1) the test suite's
+shared `actor()` helper builds JWT freshness timestamps at whole-second
+precision compared against Postgres's sub-millisecond `now()`, causing a rare
+(~few percent) freshness-check flake that hits random unrelated tests — not
+fixed (shared infra, out of scope), but diagnosed with a standalone repro and
+documented; re-running once or twice reliably gets a clean pass. (2) Kong
+couldn't read the bind-mounted custom OTP-email template (stale virtiofs mount
+state from the container's 6-day-old session — `open()` returned
+"Operation not permitted"), silently breaking local sign-in emails; a full
+`colima stop`/`start` of the VM (not just `supabase stop`/`start`) cleared it.
+Also needed `supabase start --exclude vector` since that log-shipping sidecar
+can't start under this colima/virtiofs setup and was already absent before.
+
+**Verified this session, against the real local stack**: `npx tsc --noEmit`
+and `npm run lint` clean; full `npm test` **1,520 passed, 15 expected HP-05
+reds, 0 unexpected, 0 skipped**; `homepage-atomic-save.test.ts` +
+`homepage-concurrent-save.test.ts` 27/27 including the 4 new retirement cases;
+`npx playwright test --config=playwright.homepage.config.ts` **8/8 passed**
+across all five spec files, including the 3 new `homepage-editor-photos.spec.ts`
+cases; `npm run build` compiled successfully. Confirmed Alpha's fixture data is
+restored byte-identical after every browser test by querying
+`onzio.homepage_hero_content` directly.
+
+Running the new browser spec for real caught two bugs **in the test itself**
+(not the app): the zero-photo piece needs a second click to open its
+disclosure panel (same as every other piece — the first test attempt only
+clicked once), and the shared-shortcut test's cleanup resubmitted the full
+hero object including `eyebrow`, which `clubhouse` rejects as
+`FIELD_UNAVAILABLE` — the restore silently failed and left Alpha's fixture
+hero stuck at `"Saved before leaving"` until caught by querying Postgres
+directly and fixed with `supabase db reset`. Both are fixed in
+`tests/browser/homepage-editor-photos.spec.ts` and reverified clean. This is
+exactly why running the suite mattered, not just writing it.
+
+**Exact next step**: HP-04's required acceptance evidence is real and
+verified now — move to HP-05 (IndexedDB recovery, its 15 red tests intact).
+Optional low-risk follow-up: shared Shop/Programs shortcuts use the same
+generic three-choice mechanism already proven for About but remain
+individually unexercised.
+
+## Continuation transferred to Claude — 2026-09-16
+
+Christian requested Claude take over the remaining Homepage editor work.
+Read `docs/homepage-editor-claude-handoff.md` for the self-contained continuation
+prompt, exact next task and local commands. Branch and dirty-file state were
+rechecked; no runtime changes or new test runs occurred during this documentation
+handoff. HP-04 remains in progress; HP-05/06 and final HP-07 acceptance remain.
+Continue the existing uncommitted work; do not reset or restart planning.
+
+## Homepage editor — HP-03 vertical slice complete locally; HP-04 started
+
+Agent: Codex with bounded GPT-5.6-Luna contributions, 2026-09-15.
+Branch: `codex/homepage-editor-redesign`. **No commit, hosted writes, push or deploy.**
+Christian’s “Lets do it” authorized the next preview/edit/save slice.
+
+The Homepage route now mounts `components/admin/homepage/HomepageEditor.tsx`.
+It renders actual public components inside a same-origin React-portal iframe,
+using working-state overrides and the existing template, fonts, branding,
+header and footer. Individual hero pieces select independently; repeated
+selection opens labeled fields. Desktop tools/side panel, initial mobile thumb
+bar/sheet, Done, per-section dirty status and the single atomic Save are wired.
+AdminShell, its protected layout/theme/navigation, middleware and route manifest
+have no diff. Public components emit no editor annotations without preview context.
+
+New integration files: `lib/homepage-editor/{adapter,preview-context,useHomepageEditor}`,
+`components/admin/homepage/{HomepageEditor,HomepagePreviewFrame,HomepageFields,homepage-editor.css}`,
+`playwright.homepage.config.ts`, `scripts/homepage-local-auth.mjs`, browser specs
+`homepage-editor.spec.ts` / `homepage-editor-templates.spec.ts`, adapter contracts.
+Public hero/photo/story/video and shared-content components have scoped preview
+hooks. Existing tab/source contracts were migrated to capability, field-limit,
+shared ownership and payload assertions under approved plan section 11.
+
+Verified:
+
+- **Five browser tests pass**, covering individual selection/repeated click,
+  immediate draft preview with no pre-save database change, real atomic save,
+  held saving state, injected failure retaining fields, identical-operation
+  retry, editable Story defaults without false dirty state, keyboard selection,
+  Escape/Done focus return, mobile 390×678 and reduced 390×408 viewports.
+- Template matrix covers Academy, Editorial, Clubhouse, Cinematic and Heritage:
+  expected targets, public pages without annotations, same-width hero text,
+  classes and computed font after fonts load. Local Alpha’s original design
+  pointer and saved hero content were restored in finally blocks. Immutable
+  local design fixture documents remain. No hosted fixtures.
+- Regression-first fixes: preview-only button semantics changed Academy heading
+  fonts; initial Story fields lost editable default wording; Done lost focus.
+  Each was caught by a failing browser assertion before fixing.
+- Full local `npm test`: **1,515 passed, 15 expected HP-05 failures, zero skipped**.
+  Breakdown: 893 passing contracts, 236 database, 21 architecture, 365 legacy.
+  Only `homepage-editor-recovery.test.ts` is red.
+- TypeScript, changed-file lint, production build and `git diff --check` pass.
+  Owned dev server on 3110 was stopped before building.
+- Current screenshots: `test-results/homepage-editor-browser/` (ignored).
+  Reports: `/private/tmp/homepage-hp03-full-results.json`,
+  `/private/tmp/homepage-hp03-build.log`, `/private/tmp/hp-browser-all.log`.
+  Earlier ignored `homepage-baseline` screenshots/helpers were removed by a
+  Playwright output cleanup; use the current evidence above. Auth is now written
+  outside cleaned test output to `/private/tmp/onzio-homepage-tests/local-auth.json`
+  with private permissions. Never commit authentication state.
+
+Luna supplied presentational fields, bounded contract migrations and the initial
+matrix test. Lead reviewed/corrected the fixture setup, ran the browser with the
+required local runtime permissions and fixed all discovered integration bugs.
+Use the existing delegation protocol in plan 10.1; no Spark/config changes.
+
+**Exact next step: finish HP-04.** All section forms and photo queue/reorder/retry
+controls are initially wired, but photo failure/six-photo/cleanup acceptance and
+shared-shortcut scenarios remain unverified. Keep HP-04 `in_progress`. Add real
+local upload tests (success followed by failure, retry only failed file, removal,
+reorder, unchanged draft), finish reference-safe post-commit cleanup, and verify
+shared About/Shop/Programs navigation choices. Then HP-05: IndexedDB recovery,
+request-correlated reconciliation of lost saves against later revisions,
+conflict/auth/quota handling and persistent files. Current retry uses the same
+immutable operation but does not complete those recovery flows.
+
+HP-06/07 still own real on-screen keyboard, accessibility/light/dark/touch-target,
+full visual acceptance (including legacy Rose City) and final regression gates.
+Reduced viewport height is not real keyboard evidence. A labeled playback
+preview is not yet implemented; editing pauses disruptive motion/video. No
+undo/redo or role modes. This is a working integration, **not release-ready**.
+Unrelated dirty `.gitignore`, `.claude/`, `docs/cv-united-launch-plan.md` and
+`lions-font-comparison.html` remain preserved.
+
+## Homepage editor foundation — previous HP-00–02 checkpoint
+
+Agent: Codex with bounded GPT-5.6-Luna contributions, 2026-09-15.
+Branch: `codex/homepage-editor-redesign`, base `74b8145` (inherited skeleton
+work still has its own visual gate). **No commit, hosted writes, push or deploy.**
+
+Christian explicitly approved implementation from inspected prototype source
+and starting steps 1/2. The earlier interactive-prototype prerequisite is revised;
+D5/M5 were not executed because browser security prohibited the local HTML and
+workarounds. Desktop/mobile/real-keyboard acceptance remains required later.
+No more interview answers or implementation approval are pending for this scope.
+
+Plan and status ledger: `docs/homepage-editor-redesign-plan.md`, HP-00–07.
+HP-00/01 are complete; HP-02 is complete locally. Added state, validation and
+capability modules under `lib/homepage-editor`, atomic GET/POST
+`app/api/admin/homepage/route.ts`, SQL migration
+`20260915180623_homepage_atomic_save.sql`, generated RPC types and tests.
+The migration is applied and recorded only on the isolated local Supabase stack.
+The existing homepage UI, public components, AdminShell, navigation and middleware
+remain unchanged. This is a tested foundation, not a finished editor.
+
+Implemented: real-template/fallback ownership (including existing Rose City
+fixed hero), semantic section dirty state, separate piece/disclosure state,
+immutable submitted save snapshot, strict existing field limits, ordered six-photo
+validation, single RLS-enforced content transaction, content/design conflicts,
+actor-scoped hashed idempotency receipt, canonical media URLs and read-only video
+source. Legacy/direct writes participate in revision tracking and a common
+before-statement advisory lock. The lock serializes related writes across tenants
+at current small scale; preserve lock ordering during future changes.
+
+Serious regressions found and fixed: Next exposes internal localhost URLs, so
+origin checks must use the verified tenant Host; SQLSTATE 40001 caused PostgREST
+transaction retries, so business conflicts now use PT409. Failing tests were
+added before each fix. Real HTTP save/retry/conflict/reconciliation now passes.
+
+Verification:
+
+- 86 new foundation contract tests and 24 database tests pass.
+- Full local `npm test`: **1,512 passed, 15 expected failures, zero skipped**.
+  All existing tests pass. The only red file is
+  `tests/contracts/homepage-editor-recovery.test.ts` (HP-05 not implemented).
+  Totals: 890 passing contracts, 236 database, 21 architecture, 365 legacy.
+- TypeScript, targeted lint, generated DB type check, production build pass.
+- DB coverage includes rollback after later story/video failures, photos/audits/
+  revisions/receipts, stale/design conflicts, replay and actor isolation,
+  expired/removed/cross-tenant access, grace/suspension, immutable video source,
+  and competing real transactions plus a real PostgREST conflict response.
+- Fresh migration DDL and an authenticated save rehearsed in a rolled-back local
+  transaction. No database reset. Local migration history records this version.
+- Current application browser baseline captured at 1440×900 and 390×678 in
+  `test-results/homepage-baseline/`; mobile document width is 390px. Some local
+  fixture images are unavailable. Not new-editor or keyboard acceptance.
+- Temporary local club API smoke: GET/save/retry/reconcile 200, stale 409,
+  cross-origin 403; fixtures cleaned up. Evidence `api-smoke.json` in that folder.
+- Reports: `/private/tmp/homepage-full-results.json`,
+  `/private/tmp/homepage-build.log`. Protected-file hashes in baseline folder;
+  existing editor/public/AdminShell/middleware have no diff from `74b8145`.
+- Baseline auth state is ignored/private; never commit `local-auth.json`.
+  Owned dev server on 3110 was stopped before the build.
+
+Luna handled bounded state fixes and route/media tests under lead review. The
+lead implemented API/SQL/capabilities, independently reviewed the model and added
+edge/concurrency/HTTP regressions. Continue the delegation protocol in plan 10.1;
+Spark remains unavailable for the user’s ChatGPT CLI login. No global config edits.
+
+**Exact next step: HP-03**, real public-component preview integration and one
+selectable/editable hero field wired to the single atomic Save. HP-04 still owns
+photo queue/retries/reordering and reference-safe post-commit media cleanup;
+current saves remove references but do not delete stored assets. HP-05 owns
+IndexedDB recovery and request-correlated reconciliation/shortcut/conflict flows.
+HP-06/07 own responsive/focus/keyboard/visual acceptance. Preserve all five
+approved product decisions, exact labels, excluded undo/redo/role modes, and
+unchanged AdminShell. No release approval is implied.
+
+Architecture plan now records the atomic boundary and approved local recovery
+design; `tests/README.md` documents the new narrow suites and remaining red tests. Detailed file inventory, assumptions and evidence are in the scoped plan.
+Preexisting unrelated dirty paths `.gitignore`, `.claude/`,
+`docs/cv-united-launch-plan.md` and `lions-font-comparison.html` remain preserved.
+
 ## Admin container skeletons — local implementation complete
 
 Agent: Codex with three implementation subagents and cross-review, 2026-09-13.

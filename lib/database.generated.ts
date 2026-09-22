@@ -2943,6 +2943,10 @@ export type Database = {
         Returns: undefined
       }
       get_club_runtime_access: { Args: { p_club_id: string }; Returns: string }
+      load_homepage: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       mark_free_registration_paid: {
         Args: { p_club_id: string; p_registration_id: string }
         Returns: undefined
@@ -2974,6 +2978,10 @@ export type Database = {
           p_reconciliation_enabled: boolean
           p_suspension_enabled: boolean
         }
+        Returns: Json
+      }
+      save_homepage: {
+        Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }
     }

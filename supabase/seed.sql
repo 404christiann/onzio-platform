@@ -471,6 +471,38 @@ values
   )
 on conflict (id) do nothing;
 
+-- Alpha needs one deterministic roster record so local public-media acceptance
+-- can exercise the existing player modal and its logo fallback.
+insert into onzio.players (
+  id, club_id, number, name, nationality, position, height, weight,
+  hometown, age, photo_url, active
+)
+values (
+  '55555555-5555-4555-8555-555555555551',
+  '11111111-1111-4111-8111-111111111111',
+  1,
+  'Alpha Keeper',
+  'US',
+  'Goalkeeper',
+  '6 ft 1 in',
+  '185 lb',
+  'Pasadena',
+  24,
+  '',
+  true
+)
+on conflict (id) do nothing;
+
+insert into onzio.player_season_stats (
+  club_id, player_id, season_id
+)
+values (
+  '11111111-1111-4111-8111-111111111111',
+  '55555555-5555-4555-8555-555555555551',
+  '33333333-3333-4333-8333-333333333331'
+)
+on conflict (club_id, player_id, season_id) do nothing;
+
 insert into onzio.site_branding (
   club_id,
   club_logo_path,

@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
@@ -26,6 +28,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 // with the approved academy@1 wording in lib/programs-page-content.ts as the
 // fallback. The numbered program list itself is already admin content.
 export default function AcademyProgramsPathway() {
+  const sharedPiece = useHomepagePiece("shared.programs");
   const club = useClubContext();
   const [programs, setPrograms] = useState<ProgramContent[]>([]);
   const [content, setContent] = useState<ProgramsPageContent>(() =>
@@ -61,7 +64,7 @@ export default function AcademyProgramsPathway() {
     programs.find((program) => program.heroMediaUrl)?.heroMediaUrl ?? "";
 
   return (
-    <section className="grid min-h-[680px] bg-[#F9FAFD] lg:grid-cols-2">
+    <section {...sharedPiece} className="grid min-h-[680px] bg-[#F9FAFD] lg:grid-cols-2">
       <div className="relative min-h-[420px] bg-[#1E3653] lg:min-h-full">
         {featureImage ? (
           <ResilientImage

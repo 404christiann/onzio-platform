@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CLUB_IDS } from "../fixtures/entities";
 import { expectPostgrestError } from "../helpers/database-security";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../helpers/supabase";
 
 let clients: LocalClients;
+let originalBrandingPaths: Record<string, string | null> = {};
 
 async function expectAllowed(
   operation: PromiseLike<{ error: { message: string } | null }>,
@@ -28,6 +29,26 @@ async function tableExists(
 beforeEach(async () => {
   clients = createLocalClients();
   await requirePlannedDatabase(clients.service);
+  const { data, error } = await clients.service
+    .from("site_branding")
+    .select("club_id,club_logo_path")
+    .in("club_id", [CLUB_IDS.alpha, CLUB_IDS.bravo]);
+  expect(error?.message).toBeUndefined();
+  originalBrandingPaths = Object.fromEntries(
+    (data ?? []).map((row) => [row.club_id, row.club_logo_path ?? null]),
+  );
+});
+
+afterEach(async () => {
+  for (const clubId of [CLUB_IDS.alpha, CLUB_IDS.bravo]) {
+    if (!(clubId in originalBrandingPaths)) continue;
+    const { error } = await clients.service
+      .from("site_branding")
+      .update({ club_logo_path: originalBrandingPaths[clubId] })
+      .eq("club_id", clubId);
+    expect(error?.message).toBeUndefined();
+  }
+  originalBrandingPaths = {};
 });
 
 describe("planned schema contract", () => {

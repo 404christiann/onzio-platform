@@ -13,10 +13,28 @@ import {
 } from "../helpers/supabase";
 
 let clients: LocalClients;
+let originalAlphaBrandingPath: string | null | undefined;
 
 beforeEach(async () => {
   clients = createLocalClients();
   await requirePlannedDatabase(clients.service);
+  const { data, error } = await clients.service
+    .from("site_branding")
+    .select("club_logo_path")
+    .eq("club_id", CLUB_IDS.alpha)
+    .single();
+  expect(error?.message).toBeUndefined();
+  originalAlphaBrandingPath = data?.club_logo_path ?? null;
+});
+
+afterEach(async () => {
+  if (originalAlphaBrandingPath === undefined) return;
+  const { error } = await clients.service
+    .from("site_branding")
+    .update({ club_logo_path: originalAlphaBrandingPath })
+    .eq("club_id", CLUB_IDS.alpha);
+  expect(error?.message).toBeUndefined();
+  originalAlphaBrandingPath = undefined;
 });
 
 describe("storage isolation contract", () => {

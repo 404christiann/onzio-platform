@@ -1,5 +1,6 @@
 "use client";
 
+import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { useEffect, useState } from "react";
 import { useClubContext } from "@/components/ClubContextProvider";
 import EditorialHero from "@/components/editorial/EditorialHero";
@@ -35,6 +36,7 @@ export default function EditorialHome({
 }: {
   initialHeroContent: DBHomepageHeroContent | null;
 }) {
+  const preview = useHomepagePreview();
   const club = useClubContext();
   const [fixtures, setFixtures] = useState<Fixture[] | null>(null);
   const [slideshowPhotos, setSlideshowPhotos] = useState<DBHomepageSlideshowPhoto[]>([]);
@@ -81,7 +83,7 @@ export default function EditorialHome({
       <EditorialHomeStore />
       <EditorialSponsorCarousel />
       <EditorialNextMatch fixtures={fixtures} />
-      <EditorialMatchdaySlideshow photos={slideshowPhotos} />
+      <EditorialMatchdaySlideshow photos={preview ? preview.draft.photos.items.filter(p => p.url).map(p => ({ id: p.rowId ?? p.clientId, url: p.url!, alt: p.alt, sort_order: p.order, created_at: "" })) : slideshowPhotos} />
       <EditorialStandingsTable />
       <EditorialStoryTeaser excerpt={storyExcerpt} />
     </>

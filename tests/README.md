@@ -63,5 +63,90 @@ Commands:
 The database suite accepts only loopback Supabase URLs. Stripe fixtures accept
 only test-mode keys and events.
 
-Phase 1 verified 229 passing legacy tests. The current platform failures are
-requirements, not harness defects; do not skip, weaken, or broadly mock them.
+Phase 1 verified 229 passing legacy tests. The 2026-09-17 local full suite passes
+1,535 tests. Treat future contract failures as requirements, not harness defects;
+do not skip, weaken, or broadly mock them.
+
+## Homepage editor redesign
+
+Status and acceptance ledger: `docs/homepage-editor-redesign-plan.md`.
+The state, capability, save schema, route and media hydration contracts have
+production implementations. Local SQL/HTTP transaction coverage lives in
+`tests/database/homepage-atomic-save.test.ts` and
+`tests/database/homepage-concurrent-save.test.ts`.
+
+```bash
+npx vitest run tests/contracts/homepage-editor-state.test.ts tests/contracts/homepage-editor-model-edge-cases.test.ts tests/contracts/homepage-editor-save-contract.test.ts tests/contracts/homepage-editor-capabilities.test.ts tests/contracts/homepage-editor-fallback-capabilities.test.ts tests/contracts/homepage-editor-route.test.ts tests/contracts/homepage-editor-server.test.ts
+set -a && . ./.env.test && set +a && npx vitest run tests/database/homepage-atomic-save.test.ts tests/database/homepage-concurrent-save.test.ts
+```
+
+The transaction tests require migration `20260915180623` on local Supabase.
+Most fixtures roll back; the independent-connection/HTTP test creates and cleans
+up a temporary local club. Business conflicts must use `PT409`, not PostgreSQL
+serialization failure `40001`, which can trigger PostgREST retries.
+The 15 pure recovery contracts now pass. Real browser coverage also checks
+receipt reconciliation after a committed response is lost, cross-tab protection,
+explicit conflict review, and unavailable IndexedDB. See the scoped plan for
+current acceptance evidence and limitations. Never commit browser authentication
+state.
+
+
+Homepage preview browser checks (isolated local app on port 3110, Alpha fixture):
+
+```bash
+set -a && . ./.env.test && set +a
+node scripts/homepage-local-auth.mjs
+HOMEPAGE_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-auth.json npx playwright test --config=playwright.homepage.config.ts
+```
+
+The suite covers real atomic saves, failures and exact retries, mixed photo
+uploads, six-photo ordering/removal, recovery and concurrent tabs, native modal
+focus, mobile Save/Done access, playback, themes, reduced motion and touch targets.
+The template matrix compares public/preview geometry, header state, text, typography and media across
+five templates plus the legacy Rose City renderer using **synthetic local Alpha**.
+It temporarily changes only local fixture design/slug state and restores it in
+`finally`. Do not run it concurrently with any database suite or other browser
+suite using Alpha. Recovery test writes and photo assets are restored/retired.
+
+If a Homepage browser run is interrupted, it cannot reach the `finally` that
+restores Alpha's presentation fixture. Because each run captures whatever is
+published as its own baseline, that leak otherwise becomes permanent: Alpha stays
+on the wrong template, `story.text` disappears, hero saves fail `FIELD_UNAVAILABLE`,
+and unrelated specs fail in ways that look like product defects. The specs now
+refuse to run in that state and name the fix:
+
+```bash
+npm run fixture:homepage:restore:local
+```
+
+It is loopback-only, never resets the database, repoints Alpha at its seeded
+Academy document and clears leftover marker text from the hero fields.
+
+### iOS Simulator / real-device checks
+
+Chromium at a reduced height proves layout only. For real WebKit, a real
+software keyboard and real safe-area behaviour, drive Mobile Safari in the iOS
+Simulator. Safari cannot resolve `alpha.localhost`, and the tenant is resolved
+from the `Host` header, so run the development proxy first:
+
+```bash
+npm run dev:device-proxy
+```
+
+Then open `http://127.0.0.1:3111/admin/homepage` in the Simulator's Safari, or
+`http://<mac-lan-ip>:3111` on a real iPhone after starting it with
+`LISTEN_HOST=0.0.0.0`. The proxy also rewrites `Origin`/`Referer`: the save route
+rejects a mismatched origin as cross-site, which is correct CSRF protection and
+not a bug. It is a development tool only — never point it at a hosted
+environment.
+
+The Simulator suppresses the on-screen keyboard while the Mac's keyboard is
+attached. Turn that off (Simulator ⌘K, or
+`defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false`
+then restart Simulator) or the keyboard-open checks prove nothing.
+
+The auth helper uses the local email inbox and writes private state outside
+Playwright's cleaned output directory. Screenshots are under
+`test-results/homepage-editor-browser/`. Reduced-height browser tests prove layout
+and focus only; real iOS Safari/Android Chrome keyboard and screen-reader
+walkthroughs remain separate acceptance requirements.

@@ -29,6 +29,8 @@ for (const viewport of [
         await route.continue();
       };
       await page.route("**/api/admin/data", handler);
+      // Homepage now hydrates through its atomic document endpoint.
+      await page.route("**/api/admin/homepage", async route => { await held; await route.continue(); });
       await page.route("**/rest/v1/**", async route => { await held; await route.continue(); });
       try {
         await page.goto(`/admin/${routeName}`, { waitUntil: "domcontentloaded" });
@@ -49,6 +51,7 @@ for (const viewport of [
       } finally {
         release();
         await page.unroute("**/api/admin/data", handler);
+        await page.unroute("**/api/admin/homepage");
         await page.unroute("**/rest/v1/**");
       }
     }
@@ -65,7 +68,7 @@ test("reduced motion disables skeleton animation and navigation remains availabl
     await page.goto("/admin/schedule", { waitUntil: "domcontentloaded" });
     const placeholder = page.locator('[data-slot="skeleton"]').first();
     await expect(placeholder).toBeVisible();
-    expect(await placeholder.evaluate(node => getComputedStyle(node).animationName)).toBe("none");
+    await expect.poll(() => placeholder.evaluate(node => getComputedStyle(node).animationName)).toBe("none");
     await expect(page.getByRole("button", { name: "Add Match" })).toBeDisabled();
     await page.getByRole("navigation", { name: "Admin navigation" }).getByRole("link", { name: "Dashboard", exact: true }).click();
     await expect(page).toHaveURL(/\/admin$/);

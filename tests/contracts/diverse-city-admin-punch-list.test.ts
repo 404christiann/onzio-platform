@@ -3,9 +3,14 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { authorizeMediaRequestSchema } from "@/lib/media-api-contract";
 import { describeMediaRequestValidationFailure } from "@/lib/media-diagnostics";
+import {
+  defaultHomepageStoryContent,
+  resolveHomepageStorySection,
+} from "@/lib/homepage-story-content";
 
 const root = process.cwd();
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
+const CLUB_NAME = "Diverse City FC";
 
 const SHOP_ADMIN = "app/admin/(protected)/shop/page.tsx";
 const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
@@ -414,9 +419,12 @@ describe("Diverse City admin punch list", () => {
       const content = source("lib/homepage-content.ts");
       expect(content).toContain("resolveHomepageStorySection(row, clubName)");
       expect(content).toContain("resolveHomepageStorySection(null, clubName)");
-      const homepage = source(HOMEPAGE_ADMIN);
-      expect(homepage).toContain("emptyHomepageStoryDraft(club.name)");
-      expect(homepage).toContain("homepageStoryToDraft(");
+      const story = source("components/DevelopingNextGeneration.tsx");
+      expect(story).toContain("resolveHomepageStorySection(null, club.name)");
+      expect(story).toContain("preview.draft.story.bodyPrimary");
+      expect(resolveHomepageStorySection(null, CLUB_NAME)).toMatchObject(
+        defaultHomepageStoryContent(CLUB_NAME),
+      );
     });
 
     it("Branding Footer tagline: no placeholder prop remains, and the load resolves the default", () => {

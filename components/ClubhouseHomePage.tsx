@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "@/components/ResilientImage";
@@ -161,6 +163,7 @@ function ClubhouseNextMatch() {
 }
 
 function ClubhouseKitHome() {
+  const shopPiece = useHomepagePiece("shared.shop");
   const club = useClubContext();
   const [contentByVariant, setContentByVariant] =
     useState<Record<ShopKitVariant, ShopKitContent> | null>(null);
@@ -190,7 +193,7 @@ function ClubhouseKitHome() {
   if (kits.length === 0) return null;
 
   return (
-    <section className="clubhouse-kit-home">
+    <section {...shopPiece} className="clubhouse-kit-home">
       <header className="clubhouse-kit-home-head">
         <div>
           <span className="clubhouse-eyebrow">Official collection · 2026</span>
@@ -242,6 +245,7 @@ function ClubhouseKitHome() {
 }
 
 function ClubhouseClubStory() {
+  const storyPiece = useHomepagePiece("shared.story");
   const club = useClubContext();
   const [about, setAbout] = useState<DBAboutPageContent | null>(null);
 
@@ -269,7 +273,7 @@ function ClubhouseClubStory() {
         </h2>
       </header>
       <div className="clubhouse-story-copy">
-        <p>{story}</p>
+        <p {...storyPiece}>{story}</p>
         <div className="clubhouse-story-meta">
           <span>
             Founded <strong>2014</strong>

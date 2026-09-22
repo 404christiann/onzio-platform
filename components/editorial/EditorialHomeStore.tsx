@@ -1,5 +1,7 @@
 "use client";
 
+import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
@@ -23,6 +25,7 @@ type HomeStoreProduct = {
 };
 
 export default function EditorialHomeStore() {
+  const sharedPiece = useHomepagePiece("shared.shop");
   const club = useClubContext();
   const [content, setContent] =
     useState<Record<ShopKitVariant, ShopKitContent> | null>(null);
@@ -70,7 +73,7 @@ export default function EditorialHomeStore() {
     products[0];
 
   return (
-    <section className="editorial-home-store" aria-labelledby="home-store-title">
+    <section {...sharedPiece} className="editorial-home-store" aria-labelledby="home-store-title">
       <div className="editorial-home-store-head">
         <div>
           <p className="eyebrow">Team Shop</p>
