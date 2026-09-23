@@ -1,5 +1,41 @@
 # Onzio Platform Handoff
 
+## Homepage editor — ready for Codex closeout — 2026-09-23
+
+Christian is handing the Homepage editor back to Codex to close out and push to
+`main`. Full instructions: `docs/homepage-editor-codex-closeout-handoff.md`.
+
+Branch `codex/homepage-editor-redesign` carries one commit, `b692654` (83
+files). Nothing pushed. All HP packages are now `complete` in both ledgers:
+Christian approved the visual review 2026-09-21 and real iOS Safari keyboard
+acceptance passed 2026-09-22.
+
+**Screen-reader acceptance is waived**, on Christian's decision of 2026-09-23,
+and recorded as an accepted gap rather than completed work. Structure is covered
+by automated tests; spoken wording and timing are unverified. iPhone Mirroring
+cannot test it — iOS disables VoiceOver during a mirroring session.
+
+**Blocking for merge:** `npm test` is 1532/1535. Three database tests fail per
+run, a *different* three each time, all `NOT_AUTHORIZED`/RLS, clustered on
+fresh-auth-session tests and spread across files unrelated to the editor. The
+same commit was 1535/1535 twice on 2026-09-22; the failures began after a
+reboot, a Colima restart and `npm install` (lockfile unchanged). Dependency
+drift and test parallelism are ruled out. Probably a local stack that came back
+mid-flight, but unproven — diagnose, do not reset to hide it.
+
+**Before any production deploy:** this branch adds migration
+`20260915180623_homepage_atomic_save.sql`, which production does not have. The
+mandatory `supabase migration list --linked` gate in CLAUDE.md applies; apply
+the migration first, then deploy. The Supabase CLI on this Mac is currently an
+x86_64 binary with no Rosetta and will not run — `brew install
+supabase/tap/supabase` is needed before that gate can be executed.
+
+Also recorded for whoever runs the local app: `pkill -f "next start"` matches
+nothing (Next renames itself `next-server`) and silently leaves a stale server
+serving a build whose chunks 400; kill by port instead. `.env.production.local`
+overrides `.env.local` at build time and bakes the hosted Supabase URL into a
+local bundle.
+
 ## Homepage editor — first real iOS Safari check — 2026-09-22 (Claude)
 
 Christian installed the iOS 26.5 simulator runtime. The editor was driven in real

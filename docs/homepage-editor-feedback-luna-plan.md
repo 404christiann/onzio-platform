@@ -1,5 +1,21 @@
 # Homepage editor feedback — Luna implementation plan
 
+## Screen-reader acceptance — waived by Christian, 2026-09-23
+
+Christian's decision: do not hold the Homepage editor for VoiceOver/TalkBack
+acceptance. "If we get a customer like that I will make sure we are fully
+accessible." Recorded as an accepted gap, not as completed work.
+
+Covered by automated tests: accessible names on every editable piece, focus
+containment in the mobile sheet, focus restoration on Done, polite/assertive
+live regions for save and error, full accessible names on the shortened phone
+shortcut buttons, 44pt targets.
+
+Not verified: spoken wording and announcement timing with a real screen reader.
+iPhone Mirroring cannot be used for this — iOS disables VoiceOver while a
+mirroring session is active (confirmed 2026-09-23). It needs a real device in
+hand, or Accessibility Inspector for the structural half.
+
 ## Real iOS Safari evidence — 2026-09-22
 
 HP-06/HP-08C keyboard-open acceptance passes in real Mobile Safari (iOS 26.5
@@ -259,9 +275,9 @@ Follow tests/README.md and HANDOFF.md for auth/environment commands.
 Package | Status | Completed/files | Verification | Blockers / exact next step
 --- | --- | --- | --- | ---
 HP-08A | complete locally | HomepageEditor.tsx, HomepagePreviewFrame.tsx, EditorialShell.tsx | Rebuilt local app; editing omits public nav/footer and Playback restores them across the Homepage matrix | Real-device parity remains pending
-HP-08B | in_progress | HomepagePreviewFrame.tsx, homepage-editor.css, HomepageEditor.tsx (selection anchoring), focused browser regressions | Full Homepage browser suite 32/32, including 4 new anchor regressions at 1152/1280px; reported selection jump reproduced (276-312px, out of view) and measured at 0px after the fix | Christian visual review of the anchored selection remains required
-HP-08C | in_progress | HomepageNotifications.tsx (new useHomepageNotification queue), HomepageEditor.tsx, homepage-editor.css | One queue for all hosts; warning variant, dismissible success, timer pauses on hover/focus/hidden, single phone live region, no replay on remount; 2 new regressions pass | Real iOS/Android keyboard and screen-reader checks remain pending
-HP-08D | in_progress | Homepage browser regressions, tests/browser/homepage-editor-{templates,photos,recovery,accessibility}.spec.ts, scripts/restore-local-homepage-fixture.ts, package.json, docs | Homepage 32/32, full 1535/1535, contracts 910/910, architecture 21/21, DB 239/239, admin-loading 12/12, media 4/4; tsc/lint/build clean; desktop light/dark and phone screenshots reviewed | Real-device acceptance outstanding; Christian's review of this revision outstanding
+HP-08B | complete | HomepagePreviewFrame.tsx, homepage-editor.css, HomepageEditor.tsx (selection anchoring), focused browser regressions | Full Homepage browser suite 32/32, including 4 new anchor regressions at 1152/1280px; reported selection jump reproduced (276-312px, out of view) and measured at 0px after the fix | Christian reviewed and approved the anchored selection on 2026-09-21
+HP-08C | complete | HomepageNotifications.tsx (new useHomepageNotification queue), HomepageEditor.tsx, homepage-editor.css | One queue for all hosts; warning variant, dismissible success, timer pauses on hover/focus/hidden, single phone live region, no replay on remount; 2 new regressions pass | Real iOS keyboard verified 2026-09-22; screen-reader acceptance waived 2026-09-23
+HP-08D | complete | Homepage browser regressions, tests/browser/homepage-editor-{templates,photos,recovery,accessibility}.spec.ts, scripts/restore-local-homepage-fixture.ts, package.json, docs | Homepage 32/32, full 1535/1535, contracts 910/910, architecture 21/21, DB 239/239, admin-loading 12/12, media 4/4; tsc/lint/build clean; desktop light/dark and phone screenshots reviewed | Christian approved this revision; screen-reader acceptance waived 2026-09-23
 
 Update this ledger, the main scoped ledger and HANDOFF.md with actual changed
 files, checks, evidence, limitations and next step before ending implementation.
