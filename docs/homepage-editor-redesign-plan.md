@@ -484,6 +484,16 @@ complete; next release work is the remaining gates and production migration
 before deployment. The original failing-run logs were not retained, so the
 historical failure-by-failure attribution remains limited.
 
+2026-09-23 release verification follow-up on `ce5c2b1`: `npx tsc --noEmit`,
+`npm run lint`, and a build with `.env.local` exported passed; contracts
+910/910, architecture 21/21, local DB 241/241, full suite 1537/1537.
+The fresh local build passed Homepage browser 34/34, admin-loading 12/12,
+and site-media 4/4. `npm run fixture:homepage:restore:local` confirmed the
+seeded Alpha presentation both before and after browser checks. Client chunks
+contained the local Supabase URL and no hosted Supabase URL. HP-07 remains
+complete; the production migration gate, PR, push and deployment were outside
+this verification step and remain pending.
+
 Keep each package a coherent change. Run its narrow checks during development;
 run the full gate after integration. Christian subsequently authorized
 GPT-5.6-Luna for bounded tasks that do not require the lead model. Delegate

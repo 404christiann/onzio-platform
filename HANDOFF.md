@@ -6,7 +6,7 @@ Christian is handing the Homepage editor back to Codex to close out and push to
 `main`. Full instructions: `docs/homepage-editor-codex-closeout-handoff.md`.
 
 Branch `codex/homepage-editor-redesign` includes the editor commit `b692654`
-and closeout documentation commit `d05b844`. Nothing pushed. All HP packages
+and closeout commits `d05b844` and `ce5c2b1`. Nothing pushed. All HP packages
 are `complete` in both ledgers:
 Christian approved the visual review 2026-09-21 and real iOS Safari keyboard
 acceptance passed 2026-09-22.
@@ -30,6 +30,19 @@ passed **241/241 three times**, `npm test` passed **1537/1537**, and tsc/lint
 passed. The original failing-run logs were not retained, so this establishes
 and fixes the timing fault without assigning every historical failure to it.
 No stack restart or database reset was used.
+
+**Release gate re-run on `ce5c2b1`, 2026-09-23:** `npx tsc --noEmit`,
+`npm run lint`, and a local-environment `npm run build` passed. Contracts
+**910/910**, architecture **21/21**, local database **241/241**, and full
+suite **1537/1537** passed. A fresh `next start` on port 3110 passed Homepage
+browser **34/34**, admin-loading **12/12**, and site-media **4/4**. Before the
+browser runs, `npm run fixture:homepage:restore:local` found the seeded Alpha
+presentation already in place; the same check after the runs confirmed it was
+restored. The built client chunks contained the local Supabase URL and **zero**
+hosted Supabase URLs. Database and browser checks targeted loopback Supabase;
+no hosted migration, production deploy, PR, push, or merge was performed.
+The Alpha fixture still contains Christian's `hero.intro` text, "Testing this
+short paragraph." VoiceOver remains waived as stated above.
 
 **Before any production deploy:** this branch adds migration
 `20260915180623_homepage_atomic_save.sql`, which production does not have. The

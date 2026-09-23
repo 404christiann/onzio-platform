@@ -6,7 +6,7 @@ Prepared 2026-09-23 by Claude. Christian wants this taken to `main`.
 
 The editor is feature-complete and reviewed. Branch
 `codex/homepage-editor-redesign` contains editor commit `b692654` (83 files)
-and closeout documentation commit `d05b844`. Nothing is pushed.
+and closeout commits `d05b844` and `ce5c2b1`. Nothing is pushed.
 
 All HP packages are now `complete` in both ledgers. Christian approved the
 visual review on 2026-09-21; real iOS Safari keyboard acceptance passed on
@@ -119,10 +119,15 @@ SITE_MEDIA_BASE_URL=http://alpha.localhost:3110 \
   npx playwright test --config=playwright.site-media.config.ts
 ```
 
-Latest closeout verification (2026-09-23): local DB **241/241** three times,
-full suite **1537/1537**, tsc/lint clean. Previously recorded editor checks:
-Homepage browser **34/34**, admin-loading 12/12, media 4/4, contracts 910/910,
-architecture 21/21 and build clean; repeat the release gates before merge.
+Release gate re-run on `ce5c2b1` (2026-09-23): `npx tsc --noEmit`,
+`npm run lint`, and `npm run build` passed; contracts **910/910**,
+architecture **21/21**, local DB **241/241**, and full suite **1537/1537**.
+The freshly built local app passed Homepage browser **34/34**, admin-loading
+**12/12**, and site-media **4/4**. `.env.local` was exported for the build and
+server; among 143 client chunk files, nine contained the local Supabase URL
+and none contained a hosted Supabase URL. The Alpha fixture was confirmed at
+its seeded Academy presentation before and after browser checks. These are
+local verification results, separate from the earlier real iOS acceptance.
 
 Run `npm run fixture:homepage:restore:local` if a browser run is interrupted;
 the specs refuse to run on a leaked fixture and name that command.
@@ -131,10 +136,9 @@ the specs refuse to run on a leaked fixture and name that command.
 
 1. Establish a durable Apple Silicon Supabase CLI or use the checksum-verified
    temporary binary for the release gate (section 4).
-2. Re-run the remaining release gate list (section 5) and record the evidence.
-3. Open the PR for review. Before any production deployment or merge to `main`,
+2. Open the PR for review. Before any production deployment or merge to `main`,
    apply the migration and confirm the remote ledger (section 3).
-4. Merge to `main` after the migration gate passes; the main push deploys.
+3. Merge to `main` after the migration gate passes; the main push deploys.
 
 Christian's outstanding manual item, unrelated to merge: the Alpha fixture's
 `hero.intro` still reads "Testing this short paragraph." from his own testing.

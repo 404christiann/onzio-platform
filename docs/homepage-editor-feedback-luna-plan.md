@@ -279,6 +279,13 @@ HP-08B | complete | HomepagePreviewFrame.tsx, homepage-editor.css, HomepageEdito
 HP-08C | complete | HomepageNotifications.tsx (new useHomepageNotification queue), HomepageEditor.tsx, homepage-editor.css | One queue for all hosts; warning variant, dismissible success, timer pauses on hover/focus/hidden, single phone live region, no replay on remount; 2 new regressions pass | Real iOS keyboard verified 2026-09-22; screen-reader acceptance waived 2026-09-23
 HP-08D | complete | Homepage browser regressions, tests/browser/homepage-editor-{templates,photos,recovery,accessibility}.spec.ts, scripts/restore-local-homepage-fixture.ts, package.json, docs | Homepage 32/32, full 1535/1535, contracts 910/910, architecture 21/21, DB 239/239, admin-loading 12/12, media 4/4; tsc/lint/build clean; desktop light/dark and phone screenshots reviewed | Christian approved this revision; screen-reader acceptance waived 2026-09-23
 
+2026-09-23 release verification follow-up on `ce5c2b1`: Homepage browser
+34/34, admin-loading 12/12, site-media 4/4, contracts 910/910,
+architecture 21/21, local DB 241/241, full suite 1537/1537, and
+tsc/lint/local build clean. Seeded Alpha presentation confirmed before and
+after the browser run; database and browser checks used loopback Supabase.
+HP-08 remains complete. The production migration gate and release are pending.
+
 Update this ledger, the main scoped ledger and HANDOFF.md with actual changed
 files, checks, evidence, limitations and next step before ending implementation.
 Do not mark packages complete without their acceptance evidence.
