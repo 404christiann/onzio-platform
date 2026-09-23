@@ -5,47 +5,47 @@ Prepared 2026-09-23 by Claude. Christian wants this taken to `main`.
 ## Where it stands
 
 The editor is feature-complete and reviewed. Branch
-`codex/homepage-editor-redesign` carries one commit, `b692654`, with 83 files
-(app, lib, tests, migration, scripts, docs). Nothing is pushed. The branch is
-one commit ahead of `74b8145`.
+`codex/homepage-editor-redesign` contains editor commit `b692654` (83 files)
+and closeout documentation commit `d05b844`. Nothing is pushed.
 
 All HP packages are now `complete` in both ledgers. Christian approved the
 visual review on 2026-09-21; real iOS Safari keyboard acceptance passed on
 2026-09-22; screen-reader acceptance is **waived** (see below).
 
-Uncommitted and deliberately excluded from that commit — leave them alone:
+Unrelated dirty files are deliberately excluded — leave them alone:
 `.gitignore`, `.claude/`, `docs/cv-united-launch-plan.md`,
 `lions-font-comparison.html`.
 
-## 1. Blocker: local database suite is flaky after an environment restart
+## 1. Resolved: local database test token timing
 
-`npm test` is **not** green: 3 of 239 database tests fail per run. This must be
-resolved or proven environmental before merging.
+The 2026-09-23 handoff recorded 3 rotating database failures per run,
+`NOT_AUTHORIZED` or RLS errors on tests using fresh local JWTs. Same-commit
+passes on 2026-09-22 and the unchanged lockfile argued against a deterministic
+product regression or dependency drift. A Colima status check initially
+reported `Broken` only because the sandbox could not inspect its socket.
+Outside the sandbox, the containers were running and Auth health returned 200.
+No restart or reset was used.
 
-What is known:
+Codex reproduced a test-harness timing fault in a rolled-back local
+transaction. `homepage-atomic-save.test.ts` begins a transaction, then minted
+an AMR timestamp using the Mac clock. PostgreSQL `now()` stays at transaction
+start; crossing a one-second boundary made the AMR timestamp one second later
+than `now()`, so `is_club_session_fresh()` returned false. The SQL homepage
+tests now anchor AMR timestamps to their own transaction start. Other database
+tests mint JWTs on the Mac and check them inside the local VM; their shared
+helper now signs them one minute in the past, still comfortably within the
+30-day freshness contract. Two new tests force both clock cases. Production
+SQL, application auth and RLS remain unchanged.
 
-- The same commit ran **1535/1535** and **239/239** twice on 2026-09-22.
-- The failures started after the Mac rebooted, Colima restarted, and
-  `npm install` ran. `package-lock.json` is unchanged, so dependencies did not
-  move.
-- **A different set of 3 tests fails on every run.** Failures roam across
-  `tests/database/authenticated-rls.test.ts`,
-  `tests/database/homepage-atomic-save.test.ts` and others, including files
-  unrelated to the Homepage editor.
-- Every failure is `NOT_AUTHORIZED` or `new row violates row-level security
-  policy`, and they cluster on tests that mint fresh auth sessions
-  ("fresh aal1 owner session", "fresh member session insert").
-- Ruled out: dependency drift (lockfile unchanged) and test parallelism
-  (`--no-file-parallelism` fails *more*, 6+).
+Verification after the fix: focused auth/homepage database tests **43/43**;
+`npm run test:db` **241/241** on three consecutive runs; `npm test`
+**1537/1537**; `npx tsc --noEmit` and `npm run lint` clean. The original failing
+run logs were not retained, so the fix is tied to a reproduced fault and the
+reported failure pattern, not a claim that each earlier failure was traced
+individually.
 
-Most likely a local Supabase stack that came back up mid-flight rather than a
-product defect, but that is **not proven** — do not assume it. Suggested next
-step: bring the stack down and up cleanly (`supabase stop && supabase start`),
-re-run `npm run test:db` several times, and only then consider `supabase db
-reset`. Per `AGENTS.md`, a reset must not be used to make failures disappear —
-diagnose first and record the evidence.
-
-Note the CLI is currently broken on this Mac (see section 4).
+This closes the database test blocker. Release verification and the production
+migration gate remain separate steps.
 
 ## 2. Screen-reader acceptance is waived, not done
 
@@ -80,10 +80,14 @@ site-wide, not feature-local.
 
 ## 4. Environment repairs needed on this Mac
 
-- **Supabase CLI does not run.** `/usr/local/bin/supabase` is an x86_64 binary
-  and Rosetta is gone after the macOS upgrade (`bad CPU type in executable`).
-  Fix: `brew install supabase/tap/supabase`. This currently blocks the
-  mandatory migration gate in section 3 and a clean stack restart in section 1.
+- **The old Supabase CLI does not run.** `/usr/local/bin/supabase` is x86_64
+  and Rosetta is gone (`bad CPU type in executable`). Homebrew refused
+  `brew install supabase/tap/supabase` because Xcode 26.6 is below its required
+  27.0. Codex downloaded the Apple Silicon 2.117.0 archive, verified its
+  SHA-256 against the tapped formula, and ran the CLI from
+  `/private/tmp/onzio-supabase-cli-2.117.0/supabase`. This is temporary and
+  may not survive a reboot. `migration list --local` confirms migration
+  `20260915180623`; the linked production ledger remains unchecked.
 - **`npx next` resolves to Next 16**, not the project's 15.5.22, and cannot read
   the build. Use `npm run start` or `./node_modules/.bin/next`.
 - **Do not use `pkill -f "next start"`** — Next renames its process to
@@ -115,21 +119,22 @@ SITE_MEDIA_BASE_URL=http://alpha.localhost:3110 \
   npx playwright test --config=playwright.site-media.config.ts
 ```
 
-Last known good on this commit (2026-09-23): Homepage browser **34/34**,
-admin-loading 12/12, media 4/4, contracts 910/910, architecture 21/21,
-tsc/lint/build clean. `npm test` **1532/1535** — the 3 in section 1.
+Latest closeout verification (2026-09-23): local DB **241/241** three times,
+full suite **1537/1537**, tsc/lint clean. Previously recorded editor checks:
+Homepage browser **34/34**, admin-loading 12/12, media 4/4, contracts 910/910,
+architecture 21/21 and build clean; repeat the release gates before merge.
 
 Run `npm run fixture:homepage:restore:local` if a browser run is interrupted;
 the specs refuse to run on a leaked fixture and name that command.
 
 ## 6. Remaining work, in order
 
-1. Resolve or prove environmental the 3 database failures (section 1).
-2. Repair the Supabase CLI (section 4) — needed for step 4.
-3. Re-run the full gate list (section 5) and record the evidence.
-4. Apply the migration to production, confirm the remote ledger, then deploy
-   (section 3).
-5. Open the PR and merge to `main`.
+1. Establish a durable Apple Silicon Supabase CLI or use the checksum-verified
+   temporary binary for the release gate (section 4).
+2. Re-run the remaining release gate list (section 5) and record the evidence.
+3. Open the PR for review. Before any production deployment or merge to `main`,
+   apply the migration and confirm the remote ledger (section 3).
+4. Merge to `main` after the migration gate passes; the main push deploys.
 
 Christian's outstanding manual item, unrelated to merge: the Alpha fixture's
 `hero.intro` still reads "Testing this short paragraph." from his own testing.

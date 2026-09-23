@@ -17,8 +17,11 @@ it("serializes independent authenticated saves and rejects the losing stale base
     for (const client of [first, second]) {
       await client.query("begin");
       await client.query("set local statement_timeout='5s'");
+      const transactionSecond = Number((await client.query(
+        "select floor(extract(epoch from now()))::bigint as second",
+      )).rows[0].second);
       await client.query("select set_config('request.jwt.claims',$1,true)", [JSON.stringify({
-        sub: USER_IDS.ownerAal2, role: "authenticated", aal: "aal1", amr: [{ method: "otp", timestamp: Math.floor(Date.now()/1000) }],
+        sub: USER_IDS.ownerAal2, role: "authenticated", aal: "aal1", amr: [{ method: "otp", timestamp: transactionSecond }],
       })]);
       await client.query("set local role authenticated");
     }

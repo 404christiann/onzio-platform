@@ -470,6 +470,20 @@ commands/results, evidence paths, blockers and its exact next step here and in
 | HP-06 | complete | Native options dialog, mobile Save/error access, focus/44px targets, light/dark/reduced motion, skeleton, playback; scoped public preview header/window fixes; 2026-09-21 selection anchoring in `HomepageEditor.tsx` | Automated desktop/mobile/template checks pass. Christian's reported selection jump is reproduced and fixed: opening options took 348px from the preview and pushed the selected piece 276-312px out of view at 1152-1280px; now anchored, measured 0px, with 4 new regressions. Real iOS Safari keyboard acceptance passed 2026-09-22. Screen-reader acceptance waived by Christian 2026-09-23 and recorded as an accepted gap. |
 | HP-07 | complete | Repository and browser gates, synthetic five-template plus legacy comparison, saved review evidence and documentation | 2026-09-21 (Claude): Homepage browser suite 32/32 with the previously failing photo/recovery cases green; full 1,535/1,535, contracts 910/910, architecture 21/21, local DB 239/239, admin-loading 12/12, media 4/4, tsc/lint/build clean. The earlier 5/10 broader run was **local fixture contamination, proven**: an interrupted templates run left Alpha published on a clubhouse fixture, under which `story.text` does not exist and hero saves including `eyebrow` fail `FIELD_UNAVAILABLE`; fixed-string test markers then made the specs unable to restore themselves. Guarded by seeded-fixture preconditions, per-run unique markers and `npm run fixture:homepage:restore:local`. Real-device keyboard evidence recorded 2026-09-22; Christian approved the visual review 2026-09-21; screen-reader acceptance waived 2026-09-23. |
 
+2026-09-23 Codex closeout follow-up: the later rotating local DB failures were
+traced to a reproducible test-token clock fault. A long-lived SQL test
+transaction could begin before a Mac-minted AMR timestamp; PostgreSQL's
+transaction-start `now()` then rejected that token as future-dated. The local
+HTTP JWT test helper also needed a one-minute host/VM clock margin. Changed
+`tests/database/homepage-{atomic,concurrent}-save.test.ts`,
+`tests/database/club-identity.test.ts` and `tests/helpers/mfa.ts`; added two
+clock-boundary regressions. Focused tests 43/43, local DB 241/241 on three
+consecutive runs, full suite 1537/1537, tsc/lint clean. No stack reset,
+production behavior change, hosted migration, push or deployment. HP-07 stays
+complete; next release work is the remaining gates and production migration
+before deployment. The original failing-run logs were not retained, so the
+historical failure-by-failure attribution remains limited.
+
 Keep each package a coherent change. Run its narrow checks during development;
 run the full gate after integration. Christian subsequently authorized
 GPT-5.6-Luna for bounded tasks that do not require the lead model. Delegate

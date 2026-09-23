@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { expectPostgrestError } from "../helpers/database-security";
 import { createFreshLocalClient } from "../helpers/mfa";
@@ -80,6 +80,29 @@ describe("club identity anonymous RLS contract", () => {
 });
 
 describe("club identity authenticated RLS contract", () => {
+  it("keeps a host-signed test session fresh across a small host/VM clock offset", async () => {
+    const hostNow = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(hostNow + 5_000);
+    let session: Awaited<ReturnType<typeof createFreshLocalClient>>;
+    try {
+      session = await createFreshLocalClient({
+        email: "owner-aal1@alpha.local",
+        userId: USER_IDS.ownerAal1,
+      });
+    } finally {
+      clock.mockRestore();
+    }
+    cleanups.push(session.cleanup);
+
+    const membership = await session.client
+      .from("club_members")
+      .select("club_id")
+      .eq("club_id", CLUB_IDS.alpha)
+      .eq("user_id", USER_IDS.ownerAal1);
+    expect(membership.error).toBeNull();
+    expect(membership.data).toEqual([{ club_id: CLUB_IDS.alpha }]);
+  });
+
   it("allows a fresh member session insert and update only inside the member's club", async () => {
     const session = await createFreshLocalClient({
       email: "admin-aal2@alpha.local",

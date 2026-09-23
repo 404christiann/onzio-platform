@@ -59,7 +59,10 @@ export async function createFreshLocalClient(params: {
     auth: { persistSession: false, autoRefreshToken: false },
     realtime: { transport: nodeWebSocket },
   } as const;
-  const now = Math.floor(Date.now() / 1_000);
+  // These test JWTs are signed on the Mac but checked by PostgreSQL in the
+  // local VM. A small host/VM clock offset can make a just-issued AMR claim
+  // appear to be from the future; one minute ago is still a fresh session.
+  const now = Math.floor(Date.now() / 1_000) - 60;
   const header = encode({ alg: "HS256", typ: "JWT" });
   const payload = encode({
     iss: `${supabaseUrl}/auth/v1`,

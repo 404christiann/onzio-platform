@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 
@@ -11,9 +11,14 @@ let operation: string;
 const clubId = CLUB_IDS.alpha;
 async function actor(userId: string = USER_IDS.ownerAal2, ageDays = 0) {
   await db.query("reset role");
+  // The invoker token must predate this test's long-lived transaction, as it
+  // does for a real request. RLS compares AMR age with transaction-start now().
+  const transactionSecond = Number((await db.query(
+    "select floor(extract(epoch from now()))::bigint as second",
+  )).rows[0].second);
   await db.query("select set_config('request.jwt.claims', $1, true)", [JSON.stringify({
     sub: userId, role: "authenticated", aal: "aal1",
-    amr: [{ method: "otp", timestamp: Math.floor(Date.now() / 1000) - ageDays * 86400 }],
+    amr: [{ method: "otp", timestamp: transactionSecond - ageDays * 86400 }],
   })]);
   await db.query("set local role authenticated");
 }
@@ -67,6 +72,23 @@ beforeEach(async () => {
 afterEach(async () => { if (db) { await db.query("rollback"); await db.end(); } });
 
 describe("atomic homepage database contract", () => {
+  it("keeps the invoker fresh when the host clock advances past transaction start", async () => {
+    const transactionSecond = Number((await db.query(
+      "select floor(extract(epoch from now()))::bigint as second",
+    )).rows[0].second);
+    const clock = vi.spyOn(Date, "now").mockReturnValue((transactionSecond + 1) * 1000);
+    try {
+      await actor();
+    } finally {
+      clock.mockRestore();
+    }
+
+    expect((await db.query(
+      "select onzio_private.is_club_session_fresh() as fresh",
+    )).rows[0].fresh).toBe(true);
+    await save(await request({ hero: { intro: "Transaction-safe session" } }));
+  });
+
   it("commits hero and story together through an authenticated invoker", async () => {
     const payload = await request({ hero: { intro: "Atomic introduction" }, story });
     const result = await save(payload);

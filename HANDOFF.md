@@ -5,8 +5,9 @@
 Christian is handing the Homepage editor back to Codex to close out and push to
 `main`. Full instructions: `docs/homepage-editor-codex-closeout-handoff.md`.
 
-Branch `codex/homepage-editor-redesign` carries one commit, `b692654` (83
-files). Nothing pushed. All HP packages are now `complete` in both ledgers:
+Branch `codex/homepage-editor-redesign` includes the editor commit `b692654`
+and closeout documentation commit `d05b844`. Nothing pushed. All HP packages
+are `complete` in both ledgers:
 Christian approved the visual review 2026-09-21 and real iOS Safari keyboard
 acceptance passed 2026-09-22.
 
@@ -15,20 +16,29 @@ and recorded as an accepted gap rather than completed work. Structure is covered
 by automated tests; spoken wording and timing are unverified. iPhone Mirroring
 cannot test it — iOS disables VoiceOver during a mirroring session.
 
-**Blocking for merge:** `npm test` is 1532/1535. Three database tests fail per
-run, a *different* three each time, all `NOT_AUTHORIZED`/RLS, clustered on
-fresh-auth-session tests and spread across files unrelated to the editor. The
-same commit was 1535/1535 twice on 2026-09-22; the failures began after a
-reboot, a Colima restart and `npm install` (lockfile unchanged). Dependency
-drift and test parallelism are ruled out. Probably a local stack that came back
-mid-flight, but unproven — diagnose, do not reset to hide it.
+**Database test blocker resolved in the test harness:** the earlier rotating
+`NOT_AUTHORIZED`/RLS failures clustered on locally minted fresh-session JWTs.
+The Homepage SQL tests began a long transaction and then used the Mac clock for
+an AMR timestamp. PostgreSQL's `now()` remains at transaction start, so a
+second-boundary crossing makes that token appear to come from the future. Codex
+reproduced `is_club_session_fresh() = false` in a rolled-back local transaction
+and changed the SQL tests to anchor test tokens to transaction start. The HTTP
+test helper now gives Mac-minted tokens a one-minute clock margin relative to
+the local VM; two regressions force these conditions. No production code,
+policy, migration or hosted database was changed. After the fix, local DB tests
+passed **241/241 three times**, `npm test` passed **1537/1537**, and tsc/lint
+passed. The original failing-run logs were not retained, so this establishes
+and fixes the timing fault without assigning every historical failure to it.
+No stack restart or database reset was used.
 
 **Before any production deploy:** this branch adds migration
 `20260915180623_homepage_atomic_save.sql`, which production does not have. The
 mandatory `supabase migration list --linked` gate in CLAUDE.md applies; apply
-the migration first, then deploy. The Supabase CLI on this Mac is currently an
-x86_64 binary with no Rosetta and will not run — `brew install
-supabase/tap/supabase` is needed before that gate can be executed.
+the migration first, then deploy. `/usr/local/bin/supabase` is an x86_64 binary
+and will not run. Homebrew refused the Apple Silicon install because Xcode 26.6
+is below its required 27.0. A SHA-256-verified Apple Silicon CLI 2.117.0 runs
+from `/private/tmp/onzio-supabase-cli-2.117.0/supabase`; it confirmed the local
+homepage migration, but the linked production gate has not been run.
 
 Also recorded for whoever runs the local app: `pkill -f "next start"` matches
 nothing (Next renames itself `next-server`) and silently leaves a stale server
