@@ -1,5 +1,17 @@
 # Onzio Platform Handoff
 
+## OTP page previews recolored to portal purple — 2026-09-24
+
+Christian requested the native purple used by the admin portal and black
+lettering for the Onzio logo. Updated only
+`design-previews/otp-page-options.html`: its accent now uses `#6158dc`, the
+purple used by the Homepage editor controls, and the existing wordmark PNG is
+rendered black via CSS directly on light surfaces. The three A/B/C layouts,
+desktop/mobile pairing, and submit-behavior proposals remain available for
+selection. The actual admin login remains unchanged. Local Chromium confirmed
+all logos load and no page-level overflow at 1440px and 390px. Next: Christian
+selects a direction and submit behavior, then implement and verify it.
+
 ## OTP page design directions awaiting selection — 2026-09-24
 
 Christian supplied a mobile OTP inspiration screenshot and asked for desktop
