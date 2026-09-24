@@ -44,8 +44,9 @@ alone and in the final full run. Alpha's local fixture was restored afterward.
 eventual production code deploy, take and verify the required backup, inspect
 the linked migration dry run, apply the pending migrations, and verify the
 remote migration ledger as `CLAUDE.md` requires. Exact next step: Christian
-reviews and approves the PR merge; only then follow the ordered production
-migration/deployment gate. Do not merge or deploy without that approval.
+approves resuming the release; then complete the backup and production
+migration gate **before** merging into auto-deploying `main`. Merge only with
+his explicit approval, then verify the deployment and live sites.
 
 ## PR #5 review hardening — 2026-09-23 (Codex)
 

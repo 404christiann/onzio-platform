@@ -23,8 +23,9 @@ The local build contains nine client chunks with the local Supabase URL and
 none with the hosted URL. Status: **complete locally; release blocked by
 Christian's paused merge and the two pending production migrations**. Exact
 next step: await merge approval; before any production deploy, complete the
-backup and migration gate in `CLAUDE.md`. Screen-reader acceptance remains
-waived as previously recorded.
+backup and migration gate in `CLAUDE.md` **before merging** into auto-deploying
+`main`. Merge only with Christian's explicit approval. Screen-reader
+acceptance remains waived as previously recorded.
 
 ## PR review fix status — 2026-09-23
 

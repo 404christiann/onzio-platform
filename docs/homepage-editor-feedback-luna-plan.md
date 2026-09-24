@@ -17,7 +17,8 @@ architecture 21/21, local DB 245/245, full 1573/1573, Homepage browser
 new migration was applied locally only; it and the earlier upload-cleanup
 migration are pending in production. Status: **complete locally, merge/deploy
 paused**. Exact next step: obtain Christian's approval to merge PR #5, then
-complete the `CLAUDE.md` production migration gate before code deployment.
+complete the `CLAUDE.md` backup and production migration gate **before** the
+approved merge into auto-deploying `main`; then verify live deployment.
 
 ## PR review fix status — 2026-09-23
 
