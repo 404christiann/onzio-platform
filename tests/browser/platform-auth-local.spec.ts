@@ -63,7 +63,7 @@ test("admin login accepts a pasted email code at desktop and phone widths", asyn
     const input = page.getByLabel("Sign-in code");
     await input.click();
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-    await page.evaluate(() => navigator.clipboard.writeText("Code: 428 913"));
+    await page.evaluate(() => navigator.clipboard.writeText("Code: 428 913. Expires in 10 minutes."));
     const verification = page.waitForRequest((request) =>
       request.url().includes("/auth/v1/verify") && request.postDataJSON()?.token === "428913",
     );
@@ -87,7 +87,7 @@ test("code-entry paste action supports variable code lengths and narrow screens"
     await page.getByLabel("Email").fill("owner-aal2@alpha.local");
     await page.getByRole("button", { name: "I already have a code" }).click();
 
-    await page.evaluate(() => navigator.clipboard.writeText("Your code: 1234 5678 90"));
+    await page.evaluate(() => navigator.clipboard.writeText("Your code: 1234 5678 90. Expires in 10 minutes."));
     const verification = page.waitForRequest((request) =>
       request.url().includes("/auth/v1/verify") && request.postDataJSON()?.token === "1234567890",
     );
@@ -99,7 +99,7 @@ test("code-entry paste action supports variable code lengths and narrow screens"
   }
 });
 
-test("typing an eight-digit code auto-verifies once after entry finishes", async ({ page }) => {
+test("typing a local six-digit code does not verify early, even after a long pause", async ({ page }) => {
   await page.goto("/admin/login", { waitUntil: "networkidle" });
   await page.getByLabel("Email").fill("owner-aal2@alpha.local");
   await page.getByRole("button", { name: "I already have a code" }).click();
@@ -112,11 +112,11 @@ test("typing an eight-digit code auto-verifies once after entry finishes", async
   });
   const input = page.getByLabel("Sign-in code");
   await input.pressSequentially("12345", { delay: 40 });
-  await page.waitForTimeout(750);
+  await page.waitForTimeout(900);
   expect(requests).toHaveLength(0);
-  await input.pressSequentially("678", { delay: 40 });
+  await input.press("6");
   await expect.poll(() => requests.length).toBe(1);
-  expect(requests).toEqual(["12345678"]);
+  expect(requests).toEqual(["123456"]);
 });
 
 async function expectAdminNavigationScrollable(page: Page) {

@@ -5,25 +5,21 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
 import AdminLoading from "@/components/admin/AdminLoading";
+import { expectedEmailCodeLength, extractPastedEmailCode, shouldAutoVerifyEmailCode } from "./otp-code";
 
 type LoginStep = "email" | "code" | "unknown";
 
 const UNKNOWN_ADDRESS_ERROR = "Signups not allowed for otp";
 const UNKNOWN_ADDRESS_INTRO = "We couldn't find an Onzio account for";
 const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
-// The configured otp_length is 6 (supabase/config.toml), but production has
-// drifted from that before and currently issues 8-digit codes — silently
-// rejecting a correct code is worse than accepting whatever length the
-// server actually issues. The client therefore accepts 4-10 digits and
-// never hard-codes an exact count anywhere in submit gating. DEFAULT_BOX_COUNT
-// only controls how many circles render before typing; it's set to production's
-// current actual length (8). The row still grows to fit longer codes.
+// Keep the input compatible with Auth's 4-10 digit range. The configured
+// length only decides when sequential typing is complete; paste and autofill
+// carry a complete value and can submit at any valid length.
+const EXPECTED_CODE_LENGTH = expectedEmailCodeLength(
+  process.env.NEXT_PUBLIC_ONZIO_EMAIL_OTP_LENGTH,
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+);
 const DEFAULT_BOX_COUNT = 8;
-// Auth does not tell the browser how many digits it just sent. A short pause
-// lets a six-digit local code finish without verifying the first six digits
-// of an eight-digit hosted code. Paste and one-time-code autofill are complete
-// values, so those can verify immediately.
-const TYPED_CODE_PAUSE_MS = 650;
 // Floor on how long the post-submit loading state stays up. `verifyOtp` can
 // resolve in a few dozen milliseconds locally and on fast hosted connections,
 // which makes the code-card → AdminLoading crossfade imperceptible — it reads
@@ -45,7 +41,6 @@ export default function LoginPage() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastSubmittedCode = useRef<string | null>(null);
-  const autoVerifyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const codeInput = useRef<HTMLInputElement>(null);
   const [pasteHint, setPasteHint] = useState<string | null>(null);
 
@@ -63,17 +58,7 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  useEffect(() => () => {
-    if (autoVerifyTimer.current) clearTimeout(autoVerifyTimer.current);
-  }, []);
-
-  function cancelAutoVerify() {
-    if (autoVerifyTimer.current) clearTimeout(autoVerifyTimer.current);
-    autoVerifyTimer.current = null;
-  }
-
   async function sendCode(isResend = false) {
-    cancelAutoVerify();
     if (isResend) setResending(true);
     else setLoading(true);
     setError(null);
@@ -124,7 +109,6 @@ export default function LoginPage() {
   }
 
   async function verifyCode(candidate: string) {
-    cancelAutoVerify();
     if (candidate.length < 4 || loading || resending) return;
     if (lastSubmittedCode.current === candidate) return;
     lastSubmittedCode.current = candidate;
@@ -161,32 +145,24 @@ export default function LoginPage() {
   }
 
   function autoVerify(candidate: string, completeValue = false) {
-    cancelAutoVerify();
     if (candidate.length < 4) return;
-    if (completeValue) {
+    if (shouldAutoVerifyEmailCode(candidate, EXPECTED_CODE_LENGTH, completeValue)) {
       void verifyCode(candidate);
-      return;
     }
-    // Supabase currently issues at least six digits. Keep the input's wider
-    // 4-10 range for compatibility, but don't submit a half-typed code.
-    if (candidate.length < 6) return;
-    autoVerifyTimer.current = setTimeout(() => {
-      autoVerifyTimer.current = null;
-      void verifyCode(candidate);
-    }, TYPED_CODE_PAUSE_MS);
   }
 
   function pasteCode(event: ClipboardEvent<HTMLInputElement>) {
     // Read the complete clipboard value before the input's maxLength can
     // truncate a code copied with spaces or surrounding email text.
     event.preventDefault();
-    const digits = event.clipboardData.getData("text/plain").replace(/\D/g, "");
-    if (digits) {
-      const nextCode = digits.slice(0, 10);
-      setCode(nextCode);
+    const pastedCode = extractPastedEmailCode(event.clipboardData.getData("text/plain"));
+    if (pastedCode) {
+      setCode(pastedCode);
       setPasteHint(null);
       setError(null);
-      autoVerify(nextCode, true);
+      autoVerify(pastedCode, true);
+    } else {
+      setPasteHint("Select just the sign-in code and paste it again.");
     }
   }
 
@@ -194,15 +170,15 @@ export default function LoginPage() {
     codeInput.current?.focus();
     try {
       const clipboard = await navigator.clipboard.readText();
-      const digits = clipboard.replace(/\D/g, "").slice(0, 10);
-      if (!digits) {
-        setPasteHint("No code was found on your clipboard. You can paste into the circles instead.");
+      const pastedCode = extractPastedEmailCode(clipboard);
+      if (!pastedCode) {
+        setPasteHint("Select just the sign-in code and paste it again.");
         return;
       }
-      setCode(digits);
+      setCode(pastedCode);
       setError(null);
       setPasteHint(null);
-      autoVerify(digits, true);
+      autoVerify(pastedCode, true);
     } catch {
       // The native input remains available for Cmd/Ctrl+V and mobile's
       // long-press Paste menu if clipboard permission was not granted.
@@ -211,7 +187,6 @@ export default function LoginPage() {
   }
 
   function startOver() {
-    cancelAutoVerify();
     setStep("email");
     setCode("");
     setError(null);
@@ -224,7 +199,6 @@ export default function LoginPage() {
       setError("Enter the email address that received the code.");
       return;
     }
-    cancelAutoVerify();
     setCode("");
     setError(null);
     setPasteHint(null);
