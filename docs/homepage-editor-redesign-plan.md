@@ -1,5 +1,21 @@
 # Homepage editor redesign — implementation plan
 
+## PR #5 release gate — 2026-09-24
+
+Status: **HP-00–08 complete with the accepted screen-reader waiver; production
+database gate passed; merge authorized and pending**. Christian chose to keep
+the docs tracked. The two pending migrations were applied to production after
+a completed physical backup check, restricted `onzio`/`onzio_private` schema
+and data dumps, and an exact two-file dry run. The linked ledger now matches
+every local migration and a second dry run is empty. Read-only SQL found both
+new history rows, 40 media guards, one Diverse City tenant and two verified
+domains. Diverse City's four checked public routes returned 200 afterward.
+Files changed for this release entry: `HANDOFF.md`, this ledger and the HP-08
+ledger; production migration files were already reviewed and committed.
+Verification and backup details are in `HANDOFF.md`. Exact next step: push the
+release evidence on PR #5, merge its verified head into auto-deploying `main`,
+then confirm the deployment and live tenants.
+
 ## PR #5 second review fix status — 2026-09-24
 
 HP-04 media cleanup and HP-05 recovery follow-up findings are fixed on the

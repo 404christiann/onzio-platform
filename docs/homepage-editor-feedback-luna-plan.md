@@ -1,5 +1,19 @@
 # Homepage editor feedback — Luna implementation plan
 
+## PR #5 release gate — 2026-09-24
+
+HP-08A–D remain complete; Christian's screen-reader waiver remains accepted.
+Christian authorized the merge. The completed production physical backup and
+fresh restricted schema/data dumps were verified before the exact two-file
+dry run and migration application. The linked ledger now matches the branch;
+the post-apply dry run is empty. SQL readback found both migrations and 40
+media guards, and Diverse City's four checked public routes returned HTTP 200.
+Files changed for this release entry: `HANDOFF.md`, the main HP ledger, and
+this ledger. Full backup and verification evidence is in `HANDOFF.md`. Status:
+**release gate passed; PR merge and post-deploy live checks pending**. Exact
+next step: push this release evidence, merge the verified PR head, and check
+the resulting production deployment and live tenants.
+
 ## PR #5 second review fix status — 2026-09-24
 
 HP-08D remains complete with Christian's accepted screen-reader waiver. The

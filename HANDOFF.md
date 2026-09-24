@@ -1,5 +1,46 @@
 # Onzio Platform Handoff
 
+## PR #5 production migration gate passed; merge authorized — 2026-09-24 (Codex)
+
+Christian authorized merging PR #5 and chose to leave the repository docs
+tracked. The PR is still open at head `032730b` as this entry is written;
+`main` has not changed yet. A read-only production check found one Diverse City
+tenant and both verified domains. The current Ready Vercel production deployment
+`onzio-platform-2ynqk0zpp-404christianns-projects.vercel.app` is from `main`
+commit `2c01081` and is the code rollback target.
+
+The ARM Supabase CLI 2.117.0 confirmed that production lacked exactly
+`20260924040401_homepage_unreferenced_upload_cleanup.sql` and
+`20260924154404_media_reference_safe_retirement.sql`. Its dry run listed those
+two files only, with no seeds, roles, or Vault changes. Before applying them,
+the backup list showed completed physical backup `1772099331` from
+`2026-09-24T11:16:23.507Z`. Fresh restricted schema and data dumps are in
+`/private/tmp/onzio-pr5-prod-backup.O225wp/` (directory mode 700, files mode
+600): 53 schema tables and 53 matching COPY sections/terminators. Both dumps
+exited successfully. SHA-256: schema
+`816c6c020978bdb071e6091327765412bb0fc5c1dfd3f6778e512521d87ee2bb`,
+data `1bff4811b0f28a43ec20e0bcf1069d251fc76558a4c456108b100ef38029d7f7`.
+The logical dumps
+cover `onzio` and `onzio_private`; the physical backup is the full recovery
+point for managed data.
+
+`db push --linked --skip-vault` then applied exactly those two migrations.
+Post-apply, all local and remote migration versions match and a second dry run
+reports no pending migrations. Read-only SQL confirmed both history rows, 40
+media guards, one Diverse City tenant, and two verified domains. Diverse City's
+`/`, `/programs`, `/roster`, and `/shop` all returned HTTP 200 after the SQL
+change. The local PR build also passed a public availability smoke across ten
+Diverse City routes at desktop/mobile sizes (20/20: HTTP 200, correct tenant,
+no broken images, page errors, or overflow). The older DCFC-403 browser test
+has stale copy expectations; it was left unchanged and is not counted as a
+pass. Earlier PR gates remain 1573/1573 full tests and 39/39 Homepage browser;
+screen-reader acceptance remains explicitly waived.
+
+Changed files in this release record: this handoff and the two HP status
+ledgers. Exact next step: commit/push this documentation to PR #5, verify its
+new head and checks, merge into auto-deploying `main`, then verify the Ready
+deployment and public tenant sites. Preserve the unrelated dirty files.
+
 ## PR #5 second review fixes — 2026-09-24 (Codex)
 
 The four follow-up review findings are fixed on
