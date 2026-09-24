@@ -1,5 +1,25 @@
 # Onzio Platform Handoff
 
+## Email login Option A implemented with logo in heading position — 2026-09-24
+
+Christian selected Option A for the admin email-address step, then removed its
+“Sign in to Onzio” heading and moved the black Onzio wordmark into that visual
+position on desktop and mobile. `app/admin/login/page.tsx` now renders that step
+on the same open white canvas and portal-purple system as the approved OTP
+step. It keeps the existing email request, existing-code entry, loading, and
+error behavior. The unknown-address screen and OTP step were not redesigned.
+Option A in `design-previews/email-login-options.html` reflects the selected
+logo-only layout; B and C remain comparison examples.
+
+Verification: TypeScript, targeted ESLint, PLAT-101 contracts 25/25, and full
+Vitest suite 1573/1573 pass. Local Chromium at 1440/390/320px confirmed the
+black logo loads, the removed heading is absent, the email field is visible,
+and there is no horizontal overflow. The existing-code path and Back return
+worked at each width. A real local six-digit email-code sign-in still reached
+`/admin` at 390px. The unknown-address message and Try another address return
+also worked locally. Preview remains live at
+`http://alpha.localhost:3115/admin/login`; next is Christian's visual review.
+
 ## Three email-login design previews — 2026-09-24
 
 Christian requested three standalone designs for the email-address step that

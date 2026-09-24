@@ -350,15 +350,65 @@ export default function LoginPage() {
     );
   }
 
+  if (step === "email") {
+    return (
+      <main aria-label="Onzio sign in" className="min-h-screen bg-white px-5 pb-16 pt-[116px] text-[#202235] sm:px-10 sm:pt-[180px]">
+        <section className="mx-auto w-full max-w-[510px] text-center">
+          <Image
+            src="/images/onzio/onzio-black-logo-no-bg-trimmed.png"
+            alt="Onzio"
+            width={352}
+            height={92}
+            priority
+            className="mx-auto h-auto w-28 sm:w-[132px]"
+          />
+          <p className="mx-auto mt-4 max-w-[460px] text-sm leading-6 text-[#6a6d7e] sm:text-base">
+            Enter the email address for your club account. We&apos;ll send you a one-time code.
+          </p>
+
+          <form onSubmit={requestCode} className="mx-auto mt-[42px] w-full max-w-[440px] text-left sm:mt-[45px]">
+            <label className="block text-sm font-semibold" htmlFor="email">Email address</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="username"
+              autoFocus
+              required
+              placeholder="name@yourclub.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="mt-2.5 h-[54px] w-full rounded-[13px] border border-[#d7d9e4] bg-white px-4 text-base text-[#202235] outline-none focus:border-[#6158dc] focus:ring-4 focus:ring-[#6158dc]/10"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-4 min-h-[52px] w-full rounded-[13px] bg-[#6158dc] text-[15px] font-semibold text-white transition-colors hover:bg-[#5148c6] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+            >
+              {loading ? "Sending…" : "Send sign-in code"}
+            </button>
+            <button
+              type="button"
+              onClick={useExistingCode}
+              className="mx-auto mt-4 flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-[#6158dc] underline underline-offset-4 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+            >
+              I already have a code
+            </button>
+          </form>
+
+          {error && <p role="alert" className="mx-auto mt-5 max-w-md text-sm text-red-600">{error}</p>}
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="dark flex min-h-screen items-center justify-center bg-background px-6 py-10">
       <section className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-foreground shadow-2xl shadow-black/30">
         {/* The real Onzio wordmark replaces the styled text lockup that used
             to stand in for it. The source PNG is a 500x500 square whose
             artwork only occupies x 76-425 / y 196-286, so the negative
-            margins below crop the surrounding transparent padding back off
-            and leave the wordmark optically flush with the heading beneath
-            it. Rendered at 132px the visible mark is ~92x24. This is the
+            margins below crop the surrounding transparent padding back off.
+            Rendered at 132px the visible mark is ~92x24. This is the
             Onzio platform's own mark and is unrelated to the per-club logo
             in the admin sidebar, which stays tenant-driven. */}
         <Image
@@ -369,81 +419,34 @@ export default function LoginPage() {
           priority
           className="-ml-[20px] -mt-[52px] -mb-[56px] max-w-none"
         />
-        {/* The email and unknown-address steps deliberately have no heading —
-            the wordmark above is the only title the email step needs, and the
-            unknown-address step's own intro paragraph ("We couldn't find an
-            Onzio account for...") already states the same thing the removed
-            heading did, so nothing is lost. Rendering nothing (rather than an
-            empty h1) also removes the heading's own 36px box and its mt-2, so
-            no dead space is left behind; the logo's negative bottom margin
-            already lands the flow cursor at the wordmark's visible baseline,
-            so the following element's own top margin becomes the whole
-            visible gap — both steps use mt-8 for that reason, matching each
-            other. Only the code step keeps a heading. */}
-        {step === "unknown" ? (
-          <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
-            <p>
-              {UNKNOWN_ADDRESS_INTRO}{" "}
-              <strong className="break-all text-foreground">{email.trim()}</strong>.
-            </p>
-            <p>
-              Onzio accounts are set up by us — there&apos;s no signup. If your
-              club is new, or you&apos;re using a different address than the one
-              we set up for you, that&apos;s usually the reason.
-            </p>
-            <p>
-              Double-check the address, or email us at{" "}
-              <a
-                href="mailto:onziofutbol@gmail.com"
-                className="font-semibold text-brand underline decoration-brand/40 underline-offset-4 hover:text-foreground"
-              >
-                onziofutbol@gmail.com
-              </a>{" "}
-              and we&apos;ll sort it out.
-            </p>
-            <button
-              type="button"
-              onClick={startOver}
-              className="mt-2 w-full rounded-lg border border-border py-3 font-display text-sm font-bold uppercase tracking-widest hover:border-foreground/30"
+        <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
+          <p>
+            {UNKNOWN_ADDRESS_INTRO}{" "}
+            <strong className="break-all text-foreground">{email.trim()}</strong>.
+          </p>
+          <p>
+            Onzio accounts are set up by us — there&apos;s no signup. If your
+            club is new, or you&apos;re using a different address than the one
+            we set up for you, that&apos;s usually the reason.
+          </p>
+          <p>
+            Double-check the address, or email us at{" "}
+            <a
+              href="mailto:onziofutbol@gmail.com"
+              className="font-semibold text-brand underline decoration-brand/40 underline-offset-4 hover:text-foreground"
             >
-              Try another address
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={requestCode} className="mt-8 space-y-4">
-            <p className="text-sm leading-6 text-muted-foreground">
-              Enter the email address Onzio set up for your club. We&apos;ll send
-              a one-time code—no password required.
-            </p>
-            <label className="block text-sm font-semibold" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground outline-none focus:border-ring"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-brand py-3 font-display font-black uppercase tracking-widest text-brand-foreground disabled:opacity-50"
-            >
-              {loading ? "Sending…" : "Send sign-in code"}
-            </button>
-            <button
-              type="button"
-              onClick={useExistingCode}
-              className="w-full py-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              I already have a code
-            </button>
-          </form>
-        )}
+              onziofutbol@gmail.com
+            </a>{" "}
+            and we&apos;ll sort it out.
+          </p>
+          <button
+            type="button"
+            onClick={startOver}
+            className="mt-2 w-full rounded-lg border border-border py-3 font-display text-sm font-bold uppercase tracking-widest hover:border-foreground/30"
+          >
+            Try another address
+          </button>
+        </div>
 
         {error && (
           <p role="alert" className="mt-5 text-sm text-destructive">
