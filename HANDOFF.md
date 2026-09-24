@@ -18,9 +18,10 @@ does not trigger a premature verify attempt.
 template's public black PNG URL serves HTTP 200, `image/png`, and bytes matching
 the committed asset. The live check still fails HTTP 404: the asset has not
 been deployed. Local Mailpit likewise shows a broken logo until the asset is
-public. No production deployment, hosted Auth template sync, or Vercel
-environment update has occurred. Do not mark the email fixed or sync hosted
-Auth until the logo check passes and a fresh hosted OTP is visually inspected.
+public. The feature branch was pushed for review; no production deployment,
+hosted Auth template sync, or Vercel environment update has occurred. Do not
+mark the email fixed or sync hosted Auth until the logo check passes and a
+fresh hosted OTP is visually inspected.
 
 Verification after the code changes: `npx tsc --noEmit`, contract suite
 948/948, architecture suite 21/21, local database suite 245/245, full Vitest
@@ -29,7 +30,11 @@ browser checks include a real typed six-digit mobile sign-in, native paste at
 desktop/phone widths, mismatched paste staying editable, and no early local
 verification after a pause. Hosted eight-digit end-to-end acceptance and
 Android native paste remain open. The branch was merged with current
-`origin/main` (PR #6 changes) locally; no push or deployment occurred.
+`origin/main` (PR #6 changes) locally, then pushed without touching `main`.
+The post-merge full suite and focused browser checks passed at the same counts.
+GitHub's compare view is available, but a draft PR could not be opened from
+this host: the local `gh` executable cannot run on its CPU, and the in-app
+GitHub browser is signed out.
 
 Next: obtain Christian's explicit production release approval, configure the
 hosted OTP-length environment to match Auth, deploy the approved app/asset,
