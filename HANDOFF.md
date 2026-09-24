@@ -1,5 +1,18 @@
 # Onzio Platform Handoff
 
+## OTP page option A selected and refined — 2026-09-24
+
+Christian selected option A and requested the black Onzio wordmark directly
+above “Enter your code” on both desktop and mobile. Updated only
+`design-previews/otp-page-options.html`: the wordmark now sits centered above
+the heading in each A preview, with the back control alone at the top. B and C
+remain for comparison and B is no longer labeled recommended. Local Chromium
+confirmed the logo loads, is centered above the heading on both surfaces, and
+the 390px page has no horizontal overflow. The actual login UI is unchanged.
+Next: implement selected A after resolving how buttonless submission will know
+the real server OTP length; the current login accepts 4–10 digits because hosted
+and local Auth lengths differ. Preserve paste/autofill and keyboard access.
+
 ## OTP page previews recolored to portal purple — 2026-09-24
 
 Christian requested the native purple used by the admin portal and black

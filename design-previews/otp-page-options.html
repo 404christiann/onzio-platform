@@ -47,13 +47,15 @@
       .option-note strong { color: #202235; }
 
       /* A: screenshot-led open canvas. */
-      .a-desktop .top { display: flex; align-items: center; justify-content: space-between; padding: 30px 42px; }
-      .a-desktop .body { max-width: 660px; margin: 47px auto 0; text-align: center; padding: 0 18px; }
+      .a-desktop .top { display: flex; align-items: center; padding: 30px 42px; }
+      .a-desktop .body { max-width: 660px; margin: 29px auto 0; text-align: center; padding: 0 18px; }
+      .a-desktop .body .mark { margin-bottom: 30px; }
       .a-desktop .code-row { margin: 47px 0 28px; }
       .a-desktop .paste { margin-bottom: 24px; }
-      .a-phone .mobile-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 0; }
-      .a-phone .mark img { width: 86px; }
-      .a-phone .body { padding: 45px 17px 0; text-align: center; }
+      .a-phone .mobile-top { display: flex; align-items: center; padding: 12px 20px 0; }
+      .a-phone .body { padding: 28px 17px 0; text-align: center; }
+      .a-phone .body .mark { margin-bottom: 25px; }
+      .a-phone .body .mark img { width: 96px; }
       .a-phone .screen-title { font-size: 28px; }
       .a-phone .screen-copy { font-size: 13px; line-height: 1.55; }
       .a-phone .code-row { gap: 5px; margin: 37px 0 25px; }
@@ -149,18 +151,18 @@
       </header>
 
       <section class="option" aria-labelledby="option-a">
-        <div class="option-head"><h2 id="option-a">A — Open canvas</h2><span>Closest to the reference · no button</span></div>
+        <div class="option-head"><h2 id="option-a">A — Open canvas</h2><span>Selected · logo above the heading · no button</span></div>
         <div class="pair">
           <div class="scene desktop a-desktop"><span class="preview-label">Desktop</span>
-            <div class="top"><button class="back" aria-label="Back">←</button><span class="mark large"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span></div>
-            <div class="body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to <span class="address">club.admin@example.com</span>.<br />Enter it below to access your Onzio admin portal.</p>
+            <div class="top"><button class="back" aria-label="Back">←</button></div>
+            <div class="body"><span class="mark large"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to <span class="address">club.admin@example.com</span>.<br />Enter it below to access your Onzio admin portal.</p>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit active">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
               <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p>
             </div>
           </div>
           <div class="scene mobile"><span class="preview-label">Mobile</span><div class="phone a-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆  ◕  ▰</span></div>
-            <div class="mobile-top"><button class="back" aria-label="Back">←</button><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span></div>
-            <div class="body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.<br />Enter it to access your admin portal.</p>
+            <div class="mobile-top"><button class="back" aria-label="Back">←</button></div>
+            <div class="body"><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.<br />Enter it to access your admin portal.</p>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit active">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
               <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p>
             </div>
@@ -169,7 +171,7 @@
       </section>
 
       <section class="option" aria-labelledby="option-b">
-        <div class="option-head"><h2 id="option-b">B — Quiet card</h2><span>Recommended · calm button</span></div>
+        <div class="option-head"><h2 id="option-b">B — Quiet card</h2><span>Alternative · calm button</span></div>
         <div class="pair">
           <div class="scene desktop b-desktop"><span class="preview-label">Desktop</span><div class="brand mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></div>
             <div class="card"><div class="card-top"><button class="back" aria-label="Back">←</button><div><h3 class="screen-title">Check your email</h3><p class="screen-copy">Code sent to <span class="address">club.admin@example.com</span></p></div></div>
