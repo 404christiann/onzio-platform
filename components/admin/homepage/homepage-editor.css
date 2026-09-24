@@ -57,6 +57,7 @@ textarea.hp-field { min-height:108px; resize:vertical; }
 .hp-photo img { width:100%; max-height:180px; object-fit:cover; border-radius:7px; }
 .hp-photo-actions { display:flex; flex-wrap:wrap; gap:6px; }
 .hp-thumb-bar { display:none; }
+.hp-thumb-bar[hidden] { display:none; }
 .hp-leave-dialog { max-width:min(460px,calc(100vw - 32px)); border:1px solid hsl(var(--border)); border-radius:14px; background:hsl(var(--card)); color:hsl(var(--foreground)); padding:24px; }
 .hp-leave-dialog::backdrop { background:#10172a66; }
 .hp-leave-dialog h2 { font-size:20px; font-weight:600; }
