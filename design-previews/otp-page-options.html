@@ -27,7 +27,7 @@
       .status { height: 38px; padding: 13px 22px 0; display: flex; justify-content: space-between; font-size: 12px; font-weight: 720; letter-spacing: -.01em; }
       .signal { font-size: 10px; letter-spacing: -.09em; }
       .mark { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-      .mark img { display: block; width: 104px; height: auto; filter: brightness(0); }
+      .mark img { display: block; width: 104px; height: auto; }
       .mark.large img { width: 126px; }
       .back { width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #f1f0ff; color: #2c2b44; font-size: 24px; font-weight: 350; line-height: 1; }
       .screen-title { margin: 0; font-size: 38px; line-height: 1.1; letter-spacing: -.052em; font-weight: 680; }
@@ -147,7 +147,8 @@
     <main class="gallery">
       <header class="intro">
         <h1>Enter your code, the Onzio way.</h1>
-        <p>Three directions based on your reference, now using the portal’s purple accent and black Onzio wordmark. Each shows desktop and mobile. Eight slots reflect the current portal display, not a fixed code-length decision.</p>
+        <p>Three directions based on your reference, using the portal’s purple accent and your supplied black Onzio wordmark. Each shows desktop and mobile. Eight slots reflect the current portal display, not a fixed code-length decision.</p>
+        <p style="margin-top: 14px"><a href="./otp-page-a-iterations.html" style="color: #6158dc; font-weight: 650; text-underline-offset: 4px">See three new variations of A →</a></p>
       </header>
 
       <section class="option" aria-labelledby="option-a">
@@ -155,14 +156,14 @@
         <div class="pair">
           <div class="scene desktop a-desktop"><span class="preview-label">Desktop</span>
             <div class="top"><button class="back" aria-label="Back">←</button></div>
-            <div class="body"><span class="mark large"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to <span class="address">club.admin@example.com</span>.<br />Enter it below to access your Onzio admin portal.</p>
+            <div class="body"><span class="mark large"><img src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /></span><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to <span class="address">club.admin@example.com</span>.<br />Enter it below to access your Onzio admin portal.</p>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit active">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
               <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p>
             </div>
           </div>
           <div class="scene mobile"><span class="preview-label">Mobile</span><div class="phone a-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆  ◕  ▰</span></div>
             <div class="mobile-top"><button class="back" aria-label="Back">←</button></div>
-            <div class="body"><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.<br />Enter it to access your admin portal.</p>
+            <div class="body"><span class="mark"><img src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /></span><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.<br />Enter it to access your admin portal.</p>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit active">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
               <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p>
             </div>
@@ -173,14 +174,14 @@
       <section class="option" aria-labelledby="option-b">
         <div class="option-head"><h2 id="option-b">B — Quiet card</h2><span>Alternative · calm button</span></div>
         <div class="pair">
-          <div class="scene desktop b-desktop"><span class="preview-label">Desktop</span><div class="brand mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></div>
+          <div class="scene desktop b-desktop"><span class="preview-label">Desktop</span><div class="brand mark"><img src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /></div>
             <div class="card"><div class="card-top"><button class="back" aria-label="Back">←</button><div><h3 class="screen-title">Check your email</h3><p class="screen-copy">Code sent to <span class="address">club.admin@example.com</span></p></div></div>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
               <button class="paste">Paste code</button><div class="actions"><p class="resend">No code? <strong>Resend code</strong></p><button class="primary">Continue</button></div>
             </div>
           </div>
           <div class="scene mobile"><span class="preview-label">Mobile</span><div class="phone b-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆  ◕  ▰</span></div>
-            <div class="mobile-top"><button class="back" aria-label="Back">←</button><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span></div>
+            <div class="mobile-top"><button class="back" aria-label="Back">←</button><span class="mark"><img src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /></span></div>
             <div class="body"><h3 class="screen-title">Check your email</h3><p class="screen-copy">Enter the code we sent to<br /><span class="address">club.admin@example.com</span>.</p>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
               <button class="paste">Paste code</button><button class="primary">Continue</button><p class="resend">No code? <strong>Resend code</strong></p>
@@ -193,14 +194,14 @@
         <div class="option-head"><h2 id="option-c">C — Brand frame</h2><span>More Onzio presence · compact action</span></div>
         <div class="pair">
           <div class="scene desktop c-desktop"><span class="preview-label">Desktop</span>
-            <div class="brand-panel"><span class="mark large"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><p>One code away from your club workspace.</p></div>
+            <div class="brand-panel"><span class="mark large"><img src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /></span><p>One code away from your club workspace.</p></div>
             <div class="entry"><button class="back" aria-label="Back">←</button><div class="entry-body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.</p>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
               <div class="entry-actions"><button class="verify-link">Verify code</button><button class="paste">Paste code</button></div><p class="resend">Didn’t receive it? <strong>Resend code</strong></p>
             </div></div>
           </div>
           <div class="scene mobile"><span class="preview-label">Mobile</span><div class="phone c-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆  ◕  ▰</span></div>
-            <div class="brand-top"><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><button class="back" aria-label="Back">←</button></div>
+            <div class="brand-top"><span class="mark"><img src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /></span><button class="back" aria-label="Back">←</button></div>
             <div class="body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.</p>
               <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
               <div class="entry-actions"><button class="verify-link">Verify code</button><button class="paste">Paste code</button></div><p class="resend">Didn’t receive it? <strong>Resend code</strong></p>

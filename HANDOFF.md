@@ -1,5 +1,28 @@
 # Onzio Platform Handoff
 
+## Three more OTP page option A iterations — 2026-09-24
+
+Christian requested three further desktop/mobile variants of selected option A
+and supplied `/Users/christianalcala/Desktop/Onzio-logos/onzio-black-logo-no-bg.png`.
+Added `design-previews/otp-page-a-iterations.html` with A1 (airier centered
+layout), A2 (restrained lavender field), and A3 (editorial left-aligned flow).
+Each keeps the logo above the heading, the portal purple accent, and no large
+Sign in button. Copied the supplied PNG unchanged to
+`design-previews/assets/onzio-black-logo-no-bg.png` and made an alpha-only
+trimmed derivative for layout; its original green dot remains visible.
+`design-previews/otp-page-options.html` now links to the new comparison and
+uses the same supplied logo in its original A/B/C previews.
+
+Local Chromium rendered all three options at 1440px, 1024px, and 390px: all
+logos load, no page-level overflow or clipped content, and A3's tablet code
+row remains fully visible after a responsive adjustment. A2's decorative
+background is intentionally clipped by its frame. Narrow 320px widths use
+smaller code circles; Chromium confirmed that all three code rows fit there.
+The real login page is unchanged. Next: Christian selects an A variation or
+asks for refinements. Then resolve the server OTP length before implementing
+buttonless automatic verification, while preserving native paste, autofill,
+and keyboard access.
+
 ## OTP page option A selected and refined — 2026-09-24
 
 Christian selected option A and requested the black Onzio wordmark directly
