@@ -13,8 +13,8 @@ const UNKNOWN_ADDRESS_ERROR = "Signups not allowed for otp";
 const UNKNOWN_ADDRESS_INTRO = "We couldn't find an Onzio account for";
 const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
 // Keep the input compatible with Auth's 4-10 digit range. The configured
-// length only decides when sequential typing is complete; paste and autofill
-// carry a complete value and can submit at any valid length.
+// length decides when typed, pasted, or autofilled codes can auto-submit.
+// Manual Enter still supports other valid lengths if an Auth setting drifts.
 const EXPECTED_CODE_LENGTH = expectedEmailCodeLength(
   process.env.NEXT_PUBLIC_ONZIO_EMAIL_OTP_LENGTH,
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -158,7 +158,11 @@ export default function LoginPage() {
     const pastedCode = extractPastedEmailCode(event.clipboardData.getData("text/plain"));
     if (pastedCode) {
       setCode(pastedCode);
-      setPasteHint(null);
+      setPasteHint(
+        EXPECTED_CODE_LENGTH !== null && pastedCode.length !== EXPECTED_CODE_LENGTH
+          ? `This sign-in expects ${EXPECTED_CODE_LENGTH} digits. Check your code, or press Enter to try it.`
+          : null,
+      );
       setError(null);
       autoVerify(pastedCode, true);
     } else {
@@ -177,7 +181,11 @@ export default function LoginPage() {
       }
       setCode(pastedCode);
       setError(null);
-      setPasteHint(null);
+      setPasteHint(
+        EXPECTED_CODE_LENGTH !== null && pastedCode.length !== EXPECTED_CODE_LENGTH
+          ? `This sign-in expects ${EXPECTED_CODE_LENGTH} digits. Check your code, or press Enter to try it.`
+          : null,
+      );
       autoVerify(pastedCode, true);
     } catch {
       // The native input remains available for Cmd/Ctrl+V and mobile's
@@ -299,6 +307,11 @@ export default function LoginPage() {
                 Paste code
               </button>
               {pasteHint && <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">{pasteHint}</p>}
+              {EXPECTED_CODE_LENGTH !== null && code.length > EXPECTED_CODE_LENGTH && !loading && !pasteHint && (
+                <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">
+                  This sign-in expects {EXPECTED_CODE_LENGTH} digits. Check your code, or press Enter to try it.
+                </p>
+              )}
               <p className="mt-5 text-sm text-[#777b8d]">
                 Didn&apos;t get it?{" "}
                 <button

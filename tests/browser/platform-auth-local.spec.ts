@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { assertSafeTestEnvironment } from "../helpers/environment";
@@ -79,7 +79,7 @@ test("admin login accepts a pasted email code at desktop and phone widths", asyn
   }
 });
 
-test("code-entry paste action supports variable code lengths and narrow screens", async ({ page }) => {
+test("code-entry paste action keeps mismatched codes editable and submits a complete local code", async ({ page }) => {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 850 });
@@ -87,15 +87,24 @@ test("code-entry paste action supports variable code lengths and narrow screens"
     await page.getByLabel("Email").fill("owner-aal2@alpha.local");
     await page.getByRole("button", { name: "I already have a code" }).click();
 
+    const requests: string[] = [];
+    const recordVerification = (request: Request) => {
+      if (request.url().includes("/auth/v1/verify")) requests.push(request.postDataJSON()?.token);
+    };
+    page.on("request", recordVerification);
     await page.evaluate(() => navigator.clipboard.writeText("Your code: 1234 5678 90. Expires in 10 minutes."));
-    const verification = page.waitForRequest((request) =>
-      request.url().includes("/auth/v1/verify") && request.postDataJSON()?.token === "1234567890",
-    );
     await page.getByRole("button", { name: "Paste code" }).click();
-    await verification;
     await expect(page.getByLabel("Sign-in code")).toHaveValue("1234567890");
     await expect(page.locator('[data-slot="otp-digit"]')).toHaveCount(10);
+    await expect(page.getByText("This sign-in expects 6 digits.", { exact: false })).toBeVisible();
+    await page.waitForTimeout(950);
+    expect(requests).toHaveLength(0);
+
+    await page.evaluate(() => navigator.clipboard.writeText("Your code: 428 913. Expires in 10 minutes."));
+    await page.getByRole("button", { name: "Paste code" }).click();
+    await expect.poll(() => requests).toEqual(["428913"]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    page.off("request", recordVerification);
   }
 });
 

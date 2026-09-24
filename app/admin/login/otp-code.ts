@@ -30,8 +30,9 @@ export function shouldAutoVerifyEmailCode(
   expectedLength: number | null,
   completeValue: boolean,
 ): boolean {
-  return code.length >= MIN_CODE_LENGTH &&
-    (completeValue || (expectedLength !== null && code.length === expectedLength));
+  if (code.length < MIN_CODE_LENGTH || code.length > MAX_CODE_LENGTH) return false;
+  if (expectedLength !== null) return code.length === expectedLength;
+  return completeValue;
 }
 
 export function extractPastedEmailCode(text: string): string | null {

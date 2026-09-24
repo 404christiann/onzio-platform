@@ -14,10 +14,13 @@ describe("admin email-code input", () => {
     expect(expectedEmailCodeLength("6.5", "https://hosted.supabase.co")).toBeNull();
     expect(expectedEmailCodeLength("11", "https://hosted.supabase.co")).toBeNull();
     expect(shouldAutoVerifyEmailCode("492257", 8, false)).toBe(false);
-    expect(shouldAutoVerifyEmailCode("492257", 8, true)).toBe(true);
+    expect(shouldAutoVerifyEmailCode("492257", 8, true)).toBe(false);
     expect(shouldAutoVerifyEmailCode("49225731", 8, false)).toBe(true);
+    expect(shouldAutoVerifyEmailCode("49225731", 8, true)).toBe(true);
     expect(shouldAutoVerifyEmailCode("492257", 6, false)).toBe(true);
+    expect(shouldAutoVerifyEmailCode("49225731", 6, true)).toBe(false);
     expect(shouldAutoVerifyEmailCode("492257", null, false)).toBe(false);
+    expect(shouldAutoVerifyEmailCode("492257", null, true)).toBe(true);
   });
 
   it("extracts a single code without joining expiry or date digits", () => {
