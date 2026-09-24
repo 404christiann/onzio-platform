@@ -1,5 +1,27 @@
 # Onzio Platform Handoff
 
+## Admin OTP auto-verification and Back control — 2026-09-24
+
+Christian clarified that entering or pasting a complete code must start login
+without a Verify button. `app/admin/login/page.tsx` now verifies native paste,
+the Paste code action, and multi-digit OS autofill immediately. Sequential
+typing verifies after a 650ms pause once at least six digits have been entered.
+Supabase's current email OTP setting supports 6–10 digits, while Onzio's local
+Auth issues six and hosted Auth has issued eight; the pause avoids treating
+each early digit as a complete code. The input still accepts 4–10 digits and
+Enter remains a keyboard fallback. Pending timers are canceled on edits,
+resend, Back, and unmount. The top arrow has become a 44px-high light neutral
+pill labeled Back.
+
+`tests/browser/platform-auth-local.spec.ts` now asserts automatic verification
+for native desktop paste, the Paste code action at desktop and narrow mobile
+widths, typed eight-digit entry without a premature five-digit request, and a
+real six-digit local OTP typed on a 390px viewport reaching `/admin` without a
+button. Verification: TypeScript, targeted ESLint, PLAT-101 contracts 25/25,
+full Vitest suite 1573/1573, and the focused browser checks passed. The local
+preview remains on `http://alpha.localhost:3115/admin/login`. Android native
+paste acceptance and hosted eight-digit end-to-end acceptance remain open.
+
 ## Option A admin OTP page implemented locally — 2026-09-24
 
 Christian selected the original open-canvas Option A for the admin login code

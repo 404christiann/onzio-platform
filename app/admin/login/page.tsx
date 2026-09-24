@@ -19,6 +19,11 @@ const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
 // only controls how many circles render before typing; it's set to production's
 // current actual length (8). The row still grows to fit longer codes.
 const DEFAULT_BOX_COUNT = 8;
+// Auth does not tell the browser how many digits it just sent. A short pause
+// lets a six-digit local code finish without verifying the first six digits
+// of an eight-digit hosted code. Paste and one-time-code autofill are complete
+// values, so those can verify immediately.
+const TYPED_CODE_PAUSE_MS = 650;
 // Floor on how long the post-submit loading state stays up. `verifyOtp` can
 // resolve in a few dozen milliseconds locally and on fast hosted connections,
 // which makes the code-card → AdminLoading crossfade imperceptible — it reads
@@ -40,6 +45,7 @@ export default function LoginPage() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastSubmittedCode = useRef<string | null>(null);
+  const autoVerifyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const codeInput = useRef<HTMLInputElement>(null);
   const [pasteHint, setPasteHint] = useState<string | null>(null);
 
@@ -57,7 +63,17 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
+  useEffect(() => () => {
+    if (autoVerifyTimer.current) clearTimeout(autoVerifyTimer.current);
+  }, []);
+
+  function cancelAutoVerify() {
+    if (autoVerifyTimer.current) clearTimeout(autoVerifyTimer.current);
+    autoVerifyTimer.current = null;
+  }
+
   async function sendCode(isResend = false) {
+    cancelAutoVerify();
     if (isResend) setResending(true);
     else setLoading(true);
     setError(null);
@@ -108,6 +124,7 @@ export default function LoginPage() {
   }
 
   async function verifyCode(candidate: string) {
+    cancelAutoVerify();
     if (candidate.length < 4 || loading || resending) return;
     if (lastSubmittedCode.current === candidate) return;
     lastSubmittedCode.current = candidate;
@@ -143,15 +160,33 @@ export default function LoginPage() {
     void verifyCode(code);
   }
 
+  function autoVerify(candidate: string, completeValue = false) {
+    cancelAutoVerify();
+    if (candidate.length < 4) return;
+    if (completeValue) {
+      void verifyCode(candidate);
+      return;
+    }
+    // Supabase currently issues at least six digits. Keep the input's wider
+    // 4-10 range for compatibility, but don't submit a half-typed code.
+    if (candidate.length < 6) return;
+    autoVerifyTimer.current = setTimeout(() => {
+      autoVerifyTimer.current = null;
+      void verifyCode(candidate);
+    }, TYPED_CODE_PAUSE_MS);
+  }
+
   function pasteCode(event: ClipboardEvent<HTMLInputElement>) {
     // Read the complete clipboard value before the input's maxLength can
     // truncate a code copied with spaces or surrounding email text.
     event.preventDefault();
     const digits = event.clipboardData.getData("text/plain").replace(/\D/g, "");
     if (digits) {
-      setCode(digits.slice(0, 10));
+      const nextCode = digits.slice(0, 10);
+      setCode(nextCode);
       setPasteHint(null);
       setError(null);
+      autoVerify(nextCode, true);
     }
   }
 
@@ -167,6 +202,7 @@ export default function LoginPage() {
       setCode(digits);
       setError(null);
       setPasteHint(null);
+      autoVerify(digits, true);
     } catch {
       // The native input remains available for Cmd/Ctrl+V and mobile's
       // long-press Paste menu if clipboard permission was not granted.
@@ -175,6 +211,7 @@ export default function LoginPage() {
   }
 
   function startOver() {
+    cancelAutoVerify();
     setStep("email");
     setCode("");
     setError(null);
@@ -187,6 +224,7 @@ export default function LoginPage() {
       setError("Enter the email address that received the code.");
       return;
     }
+    cancelAutoVerify();
     setCode("");
     setError(null);
     setPasteHint(null);
@@ -201,10 +239,9 @@ export default function LoginPage() {
           type="button"
           onClick={startOver}
           disabled={loading || resending}
-          aria-label="Use a different email address"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f0ff] text-2xl font-light text-[#2c2b44] transition-colors hover:bg-[#e8e6ff] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#f5f5f7] px-5 text-sm font-semibold text-[#202235] transition-colors hover:bg-[#eaeaef] active:bg-[#dedee5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
         >
-          <span aria-hidden="true">←</span>
+          Back
         </button>
 
         <section className="mx-auto mt-8 w-full max-w-[660px] text-center sm:mt-4 lg:mt-8">
@@ -266,9 +303,11 @@ export default function LoginPage() {
                   maxLength={10}
                   value={code}
                   onChange={(event) => {
-                    setCode(event.target.value.replace(/\D/g, "").slice(0, 10));
+                    const nextCode = event.target.value.replace(/\D/g, "").slice(0, 10);
+                    setCode(nextCode);
                     setError(null);
                     setPasteHint(null);
+                    autoVerify(nextCode, nextCode.length - code.length > 1);
                   }}
                   onPaste={pasteCode}
                   onFocus={() => setCodeFocused(true)}
@@ -280,20 +319,12 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => void pasteFromClipboard()}
+                disabled={loading || resending}
                 className="mt-7 text-sm font-semibold text-[#6158dc] underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
               >
                 Paste code
               </button>
               {pasteHint && <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">{pasteHint}</p>}
-              <div className="mt-5">
-                <button
-                  type="submit"
-                  disabled={loading || resending || code.length < 4}
-                  className="min-h-11 px-4 text-sm font-semibold text-[#6158dc] underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
-                >
-                  Verify code
-                </button>
-              </div>
               <p className="mt-5 text-sm text-[#777b8d]">
                 Didn&apos;t get it?{" "}
                 <button

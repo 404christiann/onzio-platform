@@ -31,7 +31,7 @@ async function latestCode(email: string, after: number) {
   throw new Error(`No local sign-in code arrived for ${email}`);
 }
 
-async function requestAndVerify(page: Page, email: string) {
+async function requestAndVerify(page: Page, email: string, entry: "fill" | "type" = "fill") {
   await page.goto("/admin/login", { waitUntil: "networkidle" });
   const requestedAt = Date.now();
   await page.getByLabel("Email").fill(email);
@@ -42,10 +42,16 @@ async function requestAndVerify(page: Page, email: string) {
     .filter({ hasText: "A sign-in code was sent recently" })
     .isVisible();
   const code = await latestCode(email, recentlySent ? 0 : requestedAt);
-  await page.getByLabel("Sign-in code").fill(code);
-  await page.getByRole("button", { name: "Verify code" }).click();
+  const input = page.getByLabel("Sign-in code");
+  if (entry === "type") await input.pressSequentially(code, { delay: 50 });
+  else await input.fill(code);
   await page.waitForURL(/\/admin$/);
 }
+
+test("a real six-digit code signs in automatically when typed on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await requestAndVerify(page, "owner-aal2@alpha.local", "type");
+});
 
 test("admin login accepts a pasted email code at desktop and phone widths", async ({ page }) => {
   for (const width of [1280, 390]) {
@@ -58,11 +64,16 @@ test("admin login accepts a pasted email code at desktop and phone widths", asyn
     await input.click();
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.evaluate(() => navigator.clipboard.writeText("Code: 428 913"));
+    const verification = page.waitForRequest((request) =>
+      request.url().includes("/auth/v1/verify") && request.postDataJSON()?.token === "428913",
+    );
     await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
 
+    await verification;
     await expect(input).toHaveValue("428913");
     await expect(page.locator('[data-slot="otp-digit"]')).toHaveText(["4", "2", "8", "9", "1", "3", "", ""]);
-    await expect(page.getByRole("button", { name: "Verify code" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Back" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Verify code" })).toHaveCount(0);
     await expect(page.locator('img[alt="Onzio"]')).toHaveAttribute("src", /onzio-black-logo-no-bg-trimmed/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   }
@@ -77,12 +88,35 @@ test("code-entry paste action supports variable code lengths and narrow screens"
     await page.getByRole("button", { name: "I already have a code" }).click();
 
     await page.evaluate(() => navigator.clipboard.writeText("Your code: 1234 5678 90"));
+    const verification = page.waitForRequest((request) =>
+      request.url().includes("/auth/v1/verify") && request.postDataJSON()?.token === "1234567890",
+    );
     await page.getByRole("button", { name: "Paste code" }).click();
+    await verification;
     await expect(page.getByLabel("Sign-in code")).toHaveValue("1234567890");
     await expect(page.locator('[data-slot="otp-digit"]')).toHaveCount(10);
-    await expect(page.getByRole("button", { name: "Verify code" })).toBeEnabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   }
+});
+
+test("typing an eight-digit code auto-verifies once after entry finishes", async ({ page }) => {
+  await page.goto("/admin/login", { waitUntil: "networkidle" });
+  await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+  await page.getByRole("button", { name: "I already have a code" }).click();
+
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/auth/v1/verify")) {
+      requests.push(request.postDataJSON()?.token);
+    }
+  });
+  const input = page.getByLabel("Sign-in code");
+  await input.pressSequentially("12345", { delay: 40 });
+  await page.waitForTimeout(750);
+  expect(requests).toHaveLength(0);
+  await input.pressSequentially("678", { delay: 40 });
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests).toEqual(["12345678"]);
 });
 
 async function expectAdminNavigationScrollable(page: Page) {
@@ -166,7 +200,6 @@ test("passwordless owner adds an admin who signs in from desktop and mobile", as
         .filter({ hasText: "A sign-in code was sent recently" }),
     ).toBeVisible();
     await page.getByLabel("Sign-in code").fill(adminCode);
-    await page.getByLabel("Sign-in code").press("Enter");
     await page.waitForURL(/\/admin$/);
     await expect(page.getByText("Team access")).toHaveCount(0);
     await expectAdminNavigationScrollable(page);
