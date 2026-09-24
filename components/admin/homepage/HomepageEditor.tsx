@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useSidebar } from "@/components/ui/sidebar";
 import HomePageClient from "@/components/HomePageClient";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import Nav from "@/components/Nav";
@@ -25,6 +26,7 @@ const SECTION_NAMES = { hero: "Top of your homepage", photos: "Photos", story: "
 
 export default function HomepageEditor() {
   const club = useClubContext();
+  const { openMobile: navigationOpen } = useSidebar();
   const router = useRouter();
   const editor = useHomepageEditor(club.id);
   const { state, snapshot, dispatch } = editor;
@@ -42,6 +44,13 @@ export default function HomepageEditor() {
   const disclosure = state?.disclosure;
   const disclosurePiece = disclosure?.piece;
   const disclosureMode = disclosure?.mode;
+
+  useEffect(() => {
+    if (!navigationOpen || (!piece && !disclosure)) return;
+    if (panel.current?.open) panel.current.close();
+    anchor.current = null;
+    dispatch({ type: "done" });
+  }, [navigationOpen, piece, disclosure, dispatch]);
 
   const previewPieceTop = useCallback((target: PieceId | null) => {
     if (!target) return null;
@@ -125,6 +134,7 @@ export default function HomepageEditor() {
   const notifications = useHomepageNotification({
     save: state?.save ?? "idle",
     error: editor.error,
+    paused: navigationOpen,
     warning: editor.recoveryOtherTab ? editor.recoveryConflict
       ? "Another tab changed the recovered draft. Reload this page before reviewing or discarding it."
       : "Another tab has newer unsaved work. Its recovery copy has been kept. Save this page before closing it." : null,
@@ -192,13 +202,13 @@ export default function HomepageEditor() {
   return <div ref={root} className="hp-editor" data-sheet-open={!!disclosure && !playback} data-playback={playback}>
     <header className="hp-heading"><div><h1>Homepage</h1><p>Click a part of your page to make it yours.</p></div><div className="hp-desktop-save">{!disclosure && saveButton}</div></header>
     <div className="hp-status" role="status" aria-live="off" data-dirty={editor.dirty.length > 0}>{status}</div>
-    {!mobile && !disclosure && !destination && <HomepageNotifications {...notificationProps} />}
+    {!navigationOpen && !mobile && !disclosure && !destination && <HomepageNotifications {...notificationProps} />}
     {editor.recoveryUnavailable && <p className="hp-recovery-notice" role="alert">Browser recovery is unavailable. Keep this page open until you save; your unsaved work may not survive closing it.</p>}
     {editor.cleanupWarning && <div className="hp-recovery-notice" role="alert"><p>An unused photo could not be removed from storage.</p><button className="hp-button" onClick={() => void editor.retryUnusedCleanup()}>Try removing it again</button></div>}
     {editor.recoveryConflict && <div className="hp-recovery-notice" role="alert"><p>Another version of this homepage was saved. Your recovered draft is kept separately.</p><button className="hp-button" disabled={editor.discardingRecovery || editor.recoveryOtherTab} onClick={() => setReviewRecovery(true)}>Review recovered draft</button><button className="hp-button" disabled={editor.discardingRecovery || editor.recoveryOtherTab} onClick={() => void editor.discardRecoveredDraft()}>{editor.discardingRecovery ? "Discarding recovered draft…" : "Discard recovered draft"}</button></div>}
     {reviewRecovery && editor.recoveryConflict && <HomepageRecoveryReview current={state.baseline} recovered={editor.recoveryConflict.draft} designChanged={editor.recoveryConflict.reason === "DESIGN_CHANGED"} close={() => setReviewRecovery(false)} restore={editor.restoreRecoveredDraft} />}
     {editor.recoveryNotice && <div className="hp-recovery-notice" role="status"><p>{editor.recoveryNotice === "restored" ? "Restored an unsaved draft from before. Review it, then save when ready. Browser recovery keeps drafts for up to seven days." : "Checked on your last save attempt and restored your draft. Review it, then save when ready."}</p><button className="hp-button" onClick={editor.dismissRecoveryNotice}>Dismiss</button></div>}
-    <div className="hp-toolbar" aria-label="Homepage tools" hidden={playback}>{piece ? <><strong>{HOMEPAGE_PIECE_LABELS[piece]}</strong><div className="hp-tools">{tools}</div></> : <p>Click any words, photo or button in the preview to edit it.</p>}</div>
+    <div className="hp-toolbar" aria-label="Homepage tools" hidden={playback || navigationOpen}>{piece ? <><strong>{HOMEPAGE_PIECE_LABELS[piece]}</strong><div className="hp-tools">{tools}</div></> : <p>Click any words, photo or button in the preview to edit it.</p>}</div>
     <div className="hp-preview-actions"><p>{playback ? "Play videos and browse photos. Links stay in this preview." : "Select pieces to edit, or preview photos and video playback."}</p><button className="hp-button" aria-pressed={playback} onClick={() => { dispatch({ type: "disclosure-closed" }); setPlayback(value => !value); }}>{playback ? "Back to editing" : "Playback preview"}</button></div>
     {!playback && sharedShortcuts.length > 0 && <div className="hp-shared-links">
       <p><span className="hp-shared-long">Some sections come from their own pages, so they are not shown here:</span><span className="hp-shared-short">Edited elsewhere:</span></p>
@@ -212,7 +222,7 @@ export default function HomepageEditor() {
           {club.presentationTemplateKey === "editorial@1" ? <EditorialShell editing={!playback}>{preview}</EditorialShell> : <TemplateFontScope templateKey={club.presentationTemplateKey}>{playback && <Nav />}<main>{preview}</main>{playback && <Footer />}</TemplateFontScope>}
         </HomepagePreviewFrame>
       </HomepagePreviewContext.Provider>
-      {piece && disclosure && !isShared && !playback && <dialog ref={panel} className="hp-panel" aria-label={HOMEPAGE_PIECE_LABELS[piece]} aria-modal={mobile || undefined} onCancel={event => { event.preventDefault(); closePanel(); }} onKeyDown={event => {
+      {piece && disclosure && !navigationOpen && !isShared && !playback && <dialog ref={panel} className="hp-panel" aria-label={HOMEPAGE_PIECE_LABELS[piece]} aria-modal={mobile || undefined} onCancel={event => { event.preventDefault(); closePanel(); }} onKeyDown={event => {
         if (event.key === "Escape" && !mobile) { event.preventDefault(); closePanel(); }
         if (event.key === "Tab" && mobile) {
           const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled)')).filter(control => control.getClientRects().length);
@@ -242,9 +252,9 @@ export default function HomepageEditor() {
         <div className="hp-panel-footer"><button className="hp-button" onClick={done}>Done</button></div>
       </dialog>}
     </div>
-    {mobile && !disclosure && !destination && <div className="hp-mobile-notification-slot"><HomepageNotifications {...notificationProps} /></div>}
+    {mobile && !navigationOpen && !disclosure && !destination && <div className="hp-mobile-notification-slot"><HomepageNotifications {...notificationProps} /></div>}
     <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
-    <div ref={thumbBar} className="hp-thumb-bar"><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div><div className="hp-thumb-save">{saveButton}</div>{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
+    <div ref={thumbBar} className="hp-thumb-bar" hidden={navigationOpen}><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div><div className="hp-thumb-save">{saveButton}</div>{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
     <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={event => { if (editor.isDiscardingUnsaved()) event.preventDefault(); else setDestination(null); }}><h2 id="hp-leave-title">Save your homepage changes?</h2><p>Your changes have not been saved yet.</p>{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict || editor.discardingUnsaved} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" disabled={editor.discardingUnsaved} onClick={() => { if (!editor.isDiscardingUnsaved()) setDestination(null); }}>Keep editing</button><button className="hp-button" disabled={state.save === "saving" || editor.discardingUnsaved} onClick={async () => { if (!await editor.discardUnsavedUploads()) return; setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
   </div>;
 }

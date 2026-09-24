@@ -1,5 +1,42 @@
 # Onzio Platform Handoff
 
+## OTP review fixes and email logo release gate — 2026-09-24
+
+On `codex/otp-email-design-and-paste`, the follow-up review found two OTP
+entry failures and one email release blocker. `app/admin/login/otp-code.ts`
+now extracts one code from copied email text without joining expiry/date
+digits; ambiguous clipboard text asks the user to select the code. Typed,
+pasted, and autofilled values automatically verify only at Auth's known
+code length. Local loopback Auth defaults to its checked-in six digits.
+Hosted environments must set `NEXT_PUBLIC_ONZIO_EMAIL_OTP_LENGTH` to the
+actual Supabase Auth email OTP length (currently eight in the hosted project)
+at build time. An unknown hosted length leaves typed auto-submit disabled;
+Enter remains a manual fallback. An incomplete paste remains editable and
+does not trigger a premature verify attempt.
+
+`npm run auth:email:logo-check` now verifies that the selected Pure and quiet
+template's public black PNG URL serves HTTP 200, `image/png`, and bytes matching
+the committed asset. The live check still fails HTTP 404: the asset has not
+been deployed. Local Mailpit likewise shows a broken logo until the asset is
+public. No production deployment, hosted Auth template sync, or Vercel
+environment update has occurred. Do not mark the email fixed or sync hosted
+Auth until the logo check passes and a fresh hosted OTP is visually inspected.
+
+Verification after the code changes: `npx tsc --noEmit`, contract suite
+948/948, architecture suite 21/21, local database suite 245/245, full Vitest
+1579/1579, and focused local Chromium OTP browser checks 4/4 passed. The
+browser checks include a real typed six-digit mobile sign-in, native paste at
+desktop/phone widths, mismatched paste staying editable, and no early local
+verification after a pause. Hosted eight-digit end-to-end acceptance and
+Android native paste remain open. The branch was merged with current
+`origin/main` (PR #6 changes) locally; no push or deployment occurred.
+
+Next: obtain Christian's explicit production release approval, configure the
+hosted OTP-length environment to match Auth, deploy the approved app/asset,
+run `npm run auth:email:logo-check`, sync the hosted Supabase Auth template,
+then send and inspect a fresh OTP email and perform a real hosted eight-digit
+typed/pasted login on desktop and mobile. Preserve the unrelated dirty files.
+
 ## Selected OTP email now uses black wordmark on white — 2026-09-24
 
 Christian requested the same black Onzio wordmark used on the admin login in
@@ -236,6 +273,51 @@ code-only Supabase email template with an absolute hosted logo URL, verify
 email-client rendering and local Mailpit delivery, then address OTP paste in
 the admin login UI with a focused regression test. Do not send a hosted OTP or
 push/deploy without the appropriate approval.
+
+## PR #6 tablet-to-desktop navigation review fix — 2026-09-24 (Codex)
+
+Status: **fixed and verified locally; awaiting Christian's review and merge
+approval**. With the mobile admin drawer open, crossing the `lg` (1024px)
+breakpoint now clears its open state. The Homepage editor controls return, body
+scroll unlocks, and shrinking back to tablet keeps the drawer closed. Opening
+the drawer still deselects the editor piece, while unsaved draft text remains.
+Changed files: `components/AdminShell.tsx`,
+`tests/browser/homepage-editor-accessibility.spec.ts`, this handoff, and
+`docs/homepage-editor-redesign-plan.md`. No migration or hosted data change.
+
+The new resize regression failed before the fix because the sidebar remained
+`expanded` at 1100px, then passed with the fix. The complete Homepage
+accessibility browser spec passed 26/26; the final regression including the
+body-scroll check passed again. `npx tsc --noEmit`, `npm run lint`, and the full
+local-database-backed `npm test` passed 1,573/1,573. Exact next step: review
+the updated PR #6; merge and deploy only with Christian's approval, then verify
+the menu on a real iPhone/tablet.
+
+## Homepage editor mobile navigation fix — 2026-09-24 (Codex)
+
+PR #5 is live on `main` at `561ff5c`. Christian found a real iPhone bug:
+opening the admin navigation drawer left the Homepage editor's fixed bottom
+controls above the menu. This follow-up lives on
+`codex/homepage-nav-drawer-fix` and is **not deployed**.
+
+The editor now reads the admin drawer state, clears the selected piece and any
+options panel when the drawer opens, and hides its toolbar, fixed bottom
+controls, and save feedback until the drawer closes. Draft edits remain intact.
+A timed success message pauses while hidden so it is still visible afterward.
+Changed files: `components/admin/homepage/{HomepageEditor.tsx,HomepageNotifications.tsx,homepage-editor.css}`
+and `tests/browser/homepage-editor-accessibility.spec.ts`. No migration or
+hosted data change is involved.
+
+Verification: the reported case failed before the fix and passed afterward;
+five new phone/tablet/feedback browser cases passed. The related notification
+checks passed 7/7, the complete Homepage accessibility spec passed 24/24
+before the final timer refinement, and `npm test` passed 1,573/1,573 after it.
+TypeScript, lint, and an isolated local-environment production build passed;
+client build chunks contain the local Supabase URL and no hosted project URL.
+The broad Homepage browser run passed 42/43 on its first attempt; one template
+parity case hit Chromium `ERR_ABORTED` during navigation and passed unchanged
+on an isolated rerun. No production push was made. Exact next step: review the
+fix PR, merge only with Christian's approval, then verify the live iPhone menu.
 
 ## PR #5 production migration gate passed; merge authorized — 2026-09-24 (Codex)
 

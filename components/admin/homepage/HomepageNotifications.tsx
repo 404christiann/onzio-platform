@@ -30,10 +30,12 @@ export function useHomepageNotification({
   save,
   error,
   warning,
+  paused = false,
 }: {
   save: SaveState;
   error: NotificationError;
   warning?: string | null;
+  paused?: boolean;
 }) {
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
   const [expiredKey, setExpiredKey] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function useHomepageNotification({
     if (!timed || !key || dismissedKey === key || expiredKey === key) return;
     let remaining = SUCCESS_LIFETIME_MS;
     const tick = window.setInterval(() => {
-      if (held || document.hidden) return;
+      if (held || paused || document.hidden) return;
       remaining -= TICK_MS;
       if (remaining <= 0) {
         window.clearInterval(tick);
@@ -67,7 +69,7 @@ export function useHomepageNotification({
       }
     }, TICK_MS);
     return () => window.clearInterval(tick);
-  }, [key, timed, held, dismissedKey, expiredKey]);
+  }, [key, timed, held, paused, dismissedKey, expiredKey]);
 
   useEffect(() => {
     const sync = () => setHeld(holds.current > 0 || document.hidden);

@@ -168,6 +168,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     }
   }, []);
 
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeMobileDrawer = () => {
+      if (desktop.matches) setSidebarOpen(false);
+    };
+    desktop.addEventListener("change", closeMobileDrawer);
+    closeMobileDrawer();
+    return () => desktop.removeEventListener("change", closeMobileDrawer);
+  }, []);
+
   const handleSidebarOpenChange = useCallback(
     (open: boolean) => {
       if (open) setSidebarOpen(true);

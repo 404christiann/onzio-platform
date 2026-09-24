@@ -17,6 +17,115 @@ async function expectFocusInside(page: Page, panel: Locator) {
 }
 
 test.describe("homepage editor accessibility and playback acceptance", () => {
+  for (const width of [320, 390]) test(`opening mobile admin navigation dismisses editor controls and selection at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 678 });
+    await page.goto("/admin/homepage");
+    const heading = page.frameLocator('iframe[title="Homepage preview"]').locator('[data-homepage-piece="hero.heading"]');
+    await expect(heading).toBeVisible();
+    await page.getByRole("button", { name: "Top", exact: true }).click();
+    await expect(heading).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".hp-thumb-bar")).toBeVisible();
+
+    await page.getByRole("button", { name: "Open admin navigation" }).click();
+    await expect(page.getByRole("button", { name: "Close admin navigation" })).toBeVisible();
+    await expect(page.locator(".hp-thumb-bar")).toBeHidden();
+    await expect(heading).toHaveAttribute("aria-pressed", "false");
+
+    await page.getByRole("button", { name: "Close admin navigation" }).click();
+    await expect(page.locator(".hp-thumb-bar")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Top", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Change the words", exact: true })).toHaveCount(0);
+  });
+
+  test("admin navigation closes a tablet editor panel without losing unsaved work", async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 800 });
+    const marker = `Unsaved menu check ${crypto.randomUUID().slice(0, 8)}`;
+    const { heading } = await openHeadingEditor(page);
+    await page.getByLabel("Line one", { exact: true }).fill(marker);
+    await expect(page.getByRole("status").filter({ hasText: "Not saved yet: Top of your homepage" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Open admin navigation" }).click();
+    await expect(page.getByRole("button", { name: "Close admin navigation" })).toBeVisible();
+    await expect(page.locator(".hp-panel")).toHaveCount(0);
+    await expect(page.locator(".hp-toolbar")).toBeHidden();
+    await expect(heading).toHaveAttribute("aria-pressed", "false");
+
+    await page.getByRole("button", { name: "Close admin navigation" }).click();
+    await expect(page.locator(".hp-toolbar")).toBeVisible();
+    await expect(heading).toContainText(marker);
+    await expect(page.getByRole("status").filter({ hasText: "Not saved yet: Top of your homepage" })).toBeVisible();
+  });
+
+  test("resizing an open tablet navigation to desktop restores editor controls", async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 800 });
+    const marker = `Unsaved resize check ${crypto.randomUUID().slice(0, 8)}`;
+    const { heading } = await openHeadingEditor(page);
+    await page.getByLabel("Line one", { exact: true }).fill(marker);
+
+    await page.getByRole("button", { name: "Open admin navigation" }).click();
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute("data-state", "expanded");
+    await expect(page.locator(".hp-toolbar")).toBeHidden();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+    await expect(heading).toHaveAttribute("aria-pressed", "false");
+
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute("data-state", "collapsed");
+    await expect(page.locator(".hp-toolbar")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
+    await expect(heading).toContainText(marker);
+    await expect(page.getByRole("status").filter({ hasText: "Not saved yet: Top of your homepage" })).toBeVisible();
+
+    await page.setViewportSize({ width: 820, height: 800 });
+    await expect(page.getByRole("button", { name: "Open admin navigation" })).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute("data-state", "collapsed");
+    await expect(page.locator(".hp-toolbar")).toBeVisible();
+  });
+
+  test("admin navigation also hides editor save feedback until the menu closes", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 678 });
+    await page.route("**/api/admin/homepage", route => route.request().method() === "POST"
+      ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { code: "SAVE_UNCERTAIN", message: "Your changes are still here." } }) })
+      : route.continue());
+    await openHeadingEditor(page);
+    await page.getByLabel("Line one", { exact: true }).fill(`Unsaved feedback ${crypto.randomUUID().slice(0, 8)}`);
+    await page.locator(".hp-panel").getByRole("button", { name: "Save homepage", exact: true }).click();
+    await expect(page.locator(".hp-notification-error")).toBeVisible();
+    await page.locator(".hp-panel").getByRole("button", { name: "Done", exact: true }).click();
+    await expect(page.locator(".hp-notification-error")).toBeVisible();
+
+    await page.getByRole("button", { name: "Open admin navigation" }).click();
+    await expect(page.locator(".hp-notification")).toHaveCount(0);
+    await page.getByRole("button", { name: "Close admin navigation" }).click();
+    await expect(page.locator(".hp-notification-error")).toBeVisible();
+  });
+
+  test("a successful save notice does not expire behind admin navigation", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 678 });
+    const marker = `Menu success notice ${crypto.randomUUID().slice(0, 8)}`;
+    const baseline = await (await page.request.get("/api/admin/homepage")).json();
+    try {
+      await openHeadingEditor(page);
+      await page.getByLabel("Line one", { exact: true }).fill(marker);
+      await page.locator(".hp-panel").getByRole("button", { name: "Save homepage", exact: true }).click();
+      await expect(page.locator(".hp-notification-success")).toBeVisible();
+      await page.locator(".hp-panel").getByRole("button", { name: "Done", exact: true }).click();
+      await page.getByRole("button", { name: "Open admin navigation" }).click();
+      await expect(page.locator(".hp-notification")).toHaveCount(0);
+      await page.waitForTimeout(5_500);
+      await page.getByRole("button", { name: "Close admin navigation" }).click();
+      await expect(page.locator(".hp-notification-success")).toBeVisible();
+    } finally {
+      const currentResponse = await page.request.get("/api/admin/homepage");
+      if (currentResponse.ok()) {
+        const current = await currentResponse.json();
+        if (current.content.hero.headline_line_one === marker) {
+          const restored = await page.request.post("/api/admin/homepage", { data: { operationId: crypto.randomUUID(), expectedRevision: current.revision, designRevision: current.designRevision, sections: { hero: baseline.content.hero } } });
+          expect(restored.ok()).toBe(true);
+        }
+      }
+    }
+  });
+
   for (const viewport of [
     { width: 390, height: 678, name: "phone" },
     { width: 320, height: 568, name: "narrow phone" },
