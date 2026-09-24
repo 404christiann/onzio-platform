@@ -3,6 +3,16 @@
 ## Live mobile navigation follow-up — 2026-09-24
 
 Status: **fixed and tested locally; awaiting review and release approval**.
+PR #6 review fix: opening the admin drawer at 820px and resizing to desktop
+now clears the drawer state at the shared shell's 1024px breakpoint. Editor
+controls and body scrolling return; narrowing again keeps the drawer closed,
+and the unsaved draft is preserved. Changed files: `components/AdminShell.tsx`
+and `tests/browser/homepage-editor-accessibility.spec.ts`. The regression
+failed before the fix and passed afterward. The complete Homepage
+accessibility browser spec passed 26/26; TypeScript, lint, and the full local
+suite passed 1,573/1,573. No migration. Exact next step: review updated PR #6,
+then merge and verify on a real device only after Christian approves.
+
 Opening the mobile admin drawer now deselects the Homepage piece, closes its
 options panel, and hides the fixed editor controls and save feedback. The draft
 is preserved; a timed success notice waits while the drawer is open. Files:

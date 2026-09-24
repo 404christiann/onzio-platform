@@ -1,5 +1,24 @@
 # Onzio Platform Handoff
 
+## PR #6 tablet-to-desktop navigation review fix — 2026-09-24 (Codex)
+
+Status: **fixed and verified locally; awaiting Christian's review and merge
+approval**. With the mobile admin drawer open, crossing the `lg` (1024px)
+breakpoint now clears its open state. The Homepage editor controls return, body
+scroll unlocks, and shrinking back to tablet keeps the drawer closed. Opening
+the drawer still deselects the editor piece, while unsaved draft text remains.
+Changed files: `components/AdminShell.tsx`,
+`tests/browser/homepage-editor-accessibility.spec.ts`, this handoff, and
+`docs/homepage-editor-redesign-plan.md`. No migration or hosted data change.
+
+The new resize regression failed before the fix because the sidebar remained
+`expanded` at 1100px, then passed with the fix. The complete Homepage
+accessibility browser spec passed 26/26; the final regression including the
+body-scroll check passed again. `npx tsc --noEmit`, `npm run lint`, and the full
+local-database-backed `npm test` passed 1,573/1,573. Exact next step: review
+the updated PR #6; merge and deploy only with Christian's approval, then verify
+the menu on a real iPhone/tablet.
+
 ## Homepage editor mobile navigation fix — 2026-09-24 (Codex)
 
 PR #5 is live on `main` at `561ff5c`. Christian found a real iPhone bug:

@@ -56,6 +56,31 @@ test.describe("homepage editor accessibility and playback acceptance", () => {
     await expect(page.getByRole("status").filter({ hasText: "Not saved yet: Top of your homepage" })).toBeVisible();
   });
 
+  test("resizing an open tablet navigation to desktop restores editor controls", async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 800 });
+    const marker = `Unsaved resize check ${crypto.randomUUID().slice(0, 8)}`;
+    const { heading } = await openHeadingEditor(page);
+    await page.getByLabel("Line one", { exact: true }).fill(marker);
+
+    await page.getByRole("button", { name: "Open admin navigation" }).click();
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute("data-state", "expanded");
+    await expect(page.locator(".hp-toolbar")).toBeHidden();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+    await expect(heading).toHaveAttribute("aria-pressed", "false");
+
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute("data-state", "collapsed");
+    await expect(page.locator(".hp-toolbar")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("");
+    await expect(heading).toContainText(marker);
+    await expect(page.getByRole("status").filter({ hasText: "Not saved yet: Top of your homepage" })).toBeVisible();
+
+    await page.setViewportSize({ width: 820, height: 800 });
+    await expect(page.getByRole("button", { name: "Open admin navigation" })).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator('[data-slot="sidebar"]')).toHaveAttribute("data-state", "collapsed");
+    await expect(page.locator(".hp-toolbar")).toBeVisible();
+  });
+
   test("admin navigation also hides editor save feedback until the menu closes", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 678 });
     await page.route("**/api/admin/homepage", route => route.request().method() === "POST"
