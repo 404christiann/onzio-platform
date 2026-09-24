@@ -46,6 +46,25 @@ async function requestAndVerify(page: Page, email: string) {
   await page.waitForURL(/\/admin$/);
 }
 
+test("admin login accepts a pasted email code at desktop and phone widths", async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto("/admin/login", { waitUntil: "networkidle" });
+    await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+    await page.getByRole("button", { name: "I already have a code" }).click();
+
+    const input = page.getByLabel("Sign-in code");
+    await input.click();
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.evaluate(() => navigator.clipboard.writeText("Code: 428 913"));
+    await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
+
+    await expect(input).toHaveValue("428913");
+    await expect(page.locator('[data-slot="otp-digit"]')).toHaveText(["4", "2", "8", "9", "1", "3", "", ""]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+});
+
 async function expectAdminNavigationScrollable(page: Page) {
   const navigation = page.getByRole("navigation", { name: "Admin navigation" });
   await expect(navigation).toBeVisible();

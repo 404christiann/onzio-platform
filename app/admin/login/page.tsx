@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Fragment, useEffect, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, Fragment, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
@@ -134,6 +134,14 @@ export default function LoginPage() {
     void verifyCode(code);
   }
 
+  function pasteCode(event: ClipboardEvent<HTMLInputElement>) {
+    // Read the complete clipboard value before the input's maxLength can
+    // truncate a code copied with spaces or surrounding email text.
+    event.preventDefault();
+    const digits = event.clipboardData.getData("text/plain").replace(/\D/g, "");
+    if (digits) setCode(digits.slice(0, 10));
+  }
+
   function startOver() {
     setStep("email");
     setCode("");
@@ -246,10 +254,9 @@ export default function LoginPage() {
                   Sign-in code
                 </label>
                 {/* One real input holds the whole code; the boxes are a purely
-                    visual layer, so autofill, paste, and non-6-digit codes all
-                    work without per-box juggling. The grid renders six boxes by
-                    default and grows to match however many digits the server's
-                    code actually has. */}
+                    visual layer. Keep the input itself visible to the browser
+                    (with transparent text) so native paste menus can target it.
+                    The grid grows to match the server's code length. */}
                 <div className="relative mt-2.5">
                   <div aria-hidden="true" className="flex items-center gap-1.5 sm:gap-2">
                     {Array.from({ length: boxCount }, (_, index) => (
@@ -287,9 +294,10 @@ export default function LoginPage() {
                     onChange={(event) =>
                       setCode(event.target.value.replace(/\D/g, "").slice(0, 10))
                     }
+                    onPaste={pasteCode}
                     onFocus={() => setCodeFocused(true)}
                     onBlur={() => setCodeFocused(false)}
-                    className="absolute inset-0 h-full w-full cursor-text opacity-0"
+                    className="absolute inset-0 h-full w-full cursor-text bg-transparent text-transparent caret-transparent outline-none [-webkit-text-fill-color:transparent]"
                   />
                 </div>
               </div>

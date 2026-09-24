@@ -1,5 +1,51 @@
 # Onzio Platform Handoff
 
+## Admin sign-in email A and OTP paste implemented locally — 2026-09-24
+
+Branch: `codex/otp-email-design-and-paste`. Christian selected email option A.
+`supabase/templates/magic_link.html` now uses its light, centered layout, the
+real Onzio wordmark at the verified public PNG URL, and the copyable Supabase
+`{{ .Token }}` text. The code-only subject and auth configuration did not
+change. `app/admin/login/page.tsx` keeps the visual digit boxes but no longer
+sets the real input to `opacity-0`; transparent text leaves it available to
+native paste UI. Its paste handler reads and sanitizes the complete clipboard
+value before HTML `maxLength` can truncate a code copied with surrounding text.
+
+Regression coverage: `tests/browser/platform-auth-local.spec.ts` pastes
+`Code: 428 913` via the OS shortcut at 1280px and 390px and asserts all six
+digits and no overflow. `tests/database/platform-auth-email-code.test.ts`
+checks the real local Mailpit email for the selected copy and logo URL. Local
+Supabase was stopped and restarted with an isolated Docker configuration after
+the first test observed its cached old template; it is running again. The
+Mailpit test then passed, and browser rendering of the delivered HTML at 600px
+and 320px showed the logo and code with no overflow. The public logo URL
+returned HTTP 200 with `image/png`. TypeScript, lint, architecture 21/21,
+PLAT-101 contract 25/25, focused paste browser 1/1, local auth email 1/1,
+full suite 1573/1573, and `git diff --check` passed.
+
+The hosted Supabase email template and deployed login UI are unchanged. Native
+iOS/Android long-press paste menus have not been checked on devices. Next:
+review this branch, then obtain Christian's deployment approval before syncing
+the hosted Auth template or deploying code; verify an approved hosted email
+and device paste afterward. Preserve the unrelated dirty worktree files.
+
+## Admin sign-in email design review — 2026-09-24
+
+Branch: `codex/otp-email-design-and-paste`, created from the current checkout
+while preserving unrelated worktree changes. Added
+`design-previews/otp-email-options.html` with three reviewable designs for the
+Supabase email-code message. Each uses the checked-in Onzio wordmark and sample
+six-digit code. The live template `supabase/templates/magic_link.html`, Supabase
+configuration, and admin login UI remain unchanged pending Christian's design
+selection. Local Chromium rendered the file at 1440px and 390px: all three
+logos loaded and neither width overflowed. `git diff --check` passed.
+
+Next: Christian selects A, B, or C. Implement the selected design in the
+code-only Supabase email template with an absolute hosted logo URL, verify
+email-client rendering and local Mailpit delivery, then address OTP paste in
+the admin login UI with a focused regression test. Do not send a hosted OTP or
+push/deploy without the appropriate approval.
+
 ## PR #5 production migration gate passed; merge authorized — 2026-09-24 (Codex)
 
 Christian authorized merging PR #5 and chose to leave the repository docs

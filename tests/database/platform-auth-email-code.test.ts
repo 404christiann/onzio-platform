@@ -72,6 +72,10 @@ describe("PLAT-101 local email-code authentication", () => {
       await fetch(`http://127.0.0.1:54324/api/v1/message/${message.ID}`)
     ).json()) as { HTML: string };
     expect(detail.HTML).toContain(code);
+    expect(detail.HTML).toContain("Sign in to Onzio");
+    expect(detail.HTML).toContain(
+      "https://onzio-platform.vercel.app/images/onzio/onzio-wordmark-white-trimmed.png",
+    );
     expect(detail.HTML).not.toContain("href=");
 
     const verified = await client.auth.verifyOtp({
