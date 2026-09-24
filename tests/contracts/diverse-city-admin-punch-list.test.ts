@@ -327,7 +327,8 @@ describe("Diverse City admin punch list", () => {
     it("uses the club's own name in the score label and result line", () => {
       const schedule = source(SCHEDULE_ADMIN);
       expect(schedule).not.toContain("Rose City");
-      expect(schedule).toContain("`${club.name} Score (optional)`");
+      expect(schedule).toContain("`${club.name} score`");
+      expect(schedule).toContain('label={`${club.name} score`} optional');
       expect(schedule).toContain("Result: {club.name}");
     });
   });

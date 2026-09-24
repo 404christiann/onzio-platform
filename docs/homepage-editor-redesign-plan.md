@@ -14,6 +14,11 @@ completed physical backup plus mode-600 logical schema/data dumps, one-file dry
 run, successful apply, zero-file post-apply dry run, and read-only table/RPC/
 trigger readback. Christian paused step 3, so the exact next step is to wait for
 his instruction to merge PR #5, then verify the deployment and live sites.
+Current `origin/main` was merged into the feature branch to resolve its
+`HANDOFF.md` conflict; the combined branch passed TypeScript, lint, local build
+and full suite 1556/1556. Its client bundle contains the local Supabase URL in
+nine chunks and the hosted URL in zero chunks. Browser gates above predate that
+merge; no Homepage implementation changed in it.
 
 ## Approved follow-up: HP-08, 2026-09-17
 

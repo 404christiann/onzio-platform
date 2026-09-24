@@ -17,6 +17,8 @@ type FileUploadProps = {
   uploading?: boolean;
   /** Current uploaded image URL, shown as a thumbnail when set. */
   previewUrl?: string | null;
+  /** Friendly label for an existing preview URL. A newly selected filename wins. */
+  previewLabel?: string;
   /** File-type filter, e.g. "image/jpeg,image/png,image/webp". */
   accept?: string;
   /** When provided, renders a remove affordance for clearing the upload. */
@@ -32,6 +34,8 @@ type FileUploadProps = {
    * uploading state and returns to idle.
    */
   multiple?: boolean;
+  /** Visual density for the idle and uploading surfaces. Defaults to `default`. */
+  density?: "default" | "compact";
   disabled?: boolean;
   className?: string;
 };
@@ -105,11 +109,13 @@ function FileUpload({
   onUpload,
   uploading = false,
   previewUrl,
+  previewLabel,
   accept,
   onRemove,
   label,
   hint,
   multiple = false,
+  density = "default",
   disabled = false,
   className,
 }: FileUploadProps) {
@@ -123,6 +129,7 @@ function FileUpload({
 
   const interactive = !disabled && !uploading;
   const hintText = hint ?? acceptHint(accept);
+  const compact = density === "compact";
 
   function openBrowser() {
     if (interactive) inputRef.current?.click();
@@ -185,7 +192,7 @@ function FileUpload({
   }
 
   const displayName =
-    fileMeta?.name ?? (previewUrl ? nameFromUrl(previewUrl) : null);
+    fileMeta?.name ?? previewLabel ?? (previewUrl ? nameFromUrl(previewUrl) : null);
 
   return (
     <div
@@ -217,7 +224,12 @@ function FileUpload({
       {uploading ? (
         <div
           data-slot="file-upload-uploading"
-          className="flex items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card px-6 py-10"
+          className={cn(
+            "flex items-center gap-3 rounded-xl border border-dashed border-border bg-card",
+            compact
+              ? "min-h-16 justify-start px-4 py-3"
+              : "justify-center px-6 py-10",
+          )}
           aria-busy="true"
         >
           <AdminLoadingDots className="shrink-0 text-lg text-muted-foreground" />
@@ -262,7 +274,10 @@ function FileUpload({
             data-slot="file-upload-replace"
             onClick={openBrowser}
             disabled={disabled}
-            className="shrink-0 rounded-lg border border-input bg-background px-3 py-2 font-body text-xs font-medium text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+            className={cn(
+              "shrink-0 rounded-lg border border-input bg-background px-3 font-body text-xs font-medium text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
+              compact ? "min-h-11 py-2.5" : "py-2",
+            )}
           >
             Replace
           </button>
@@ -273,7 +288,10 @@ function FileUpload({
               onClick={onRemove}
               disabled={disabled}
               aria-label="Remove uploaded file"
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-destructive focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-destructive focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
+              compact ? "size-11" : "size-8",
+            )}
             >
               <X className="size-4" />
             </button>
@@ -288,16 +306,24 @@ function FileUpload({
             disabled={disabled}
             aria-label={label}
             className={cn(
-              "flex w-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card px-6 py-10 text-center outline-none transition-colors",
+              "flex w-full items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-card outline-none transition-colors",
+              compact
+                ? "min-h-16 flex-row px-4 py-3 text-left"
+                : "flex-col px-6 py-10 text-center",
               "hover:bg-accent/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
               "disabled:cursor-not-allowed disabled:opacity-50",
               dragActive && "border-ring bg-accent/40",
             )}
           >
-            <span className="flex size-11 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
-              <Upload className="size-5" aria-hidden="true" />
+            <span
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground",
+                compact ? "size-10" : "size-11",
+              )}
+            >
+              <Upload className={compact ? "size-4" : "size-5"} aria-hidden="true" />
             </span>
-            <span className="space-y-1">
+            <span className={cn("min-w-0", compact ? "flex-1 space-y-0.5" : "space-y-1")}>
               <span className="block font-body text-sm font-medium text-foreground">
                 {label ?? "Upload a file"}
               </span>

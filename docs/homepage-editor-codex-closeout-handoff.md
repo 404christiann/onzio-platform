@@ -10,7 +10,10 @@ was recovered into this branch as the exact original file (`e32db49`), and the
 September Homepage migration was applied after a one-file dry run, a completed
 physical backup check, and fresh restricted logical backups. A second dry run
 reports no pending migrations; the linked ledger matches the branch. See
-`HANDOFF.md` for backup and schema readback evidence. Christian has put step 3
+`HANDOFF.md` for backup and schema readback evidence. Current `origin/main` was
+merged into the feature branch to resolve a handoff-only PR conflict; on that
+combined branch, TypeScript, lint, local build and full tests 1556/1556 passed.
+The earlier browser gate was not rerun after this merge. Christian has put step 3
 on hold: **do not merge PR #5 or deploy production**. The historical handoff
 below records the pre-release state and is superseded by this section.
 

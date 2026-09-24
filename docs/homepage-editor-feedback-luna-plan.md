@@ -11,6 +11,9 @@ read-only SQL confirms the tables, RPCs and triggers. Files changed for this
 release step: the recovered pathway migration, `HANDOFF.md`, the main HP ledger,
 this ledger and the closeout handoff. Christian paused step 3. Next: wait for
 his instruction to merge PR #5, then verify deployment and live tenant sites.
+Current `origin/main` was merged into the feature branch to resolve the PR's
+handoff-only conflict. The combined branch passed TypeScript, lint, local build
+and full suite 1556/1556; the earlier browser gates were not rerun.
 
 ## Screen-reader acceptance — waived by Christian, 2026-09-23
 

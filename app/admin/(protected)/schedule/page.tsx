@@ -7,7 +7,7 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminPage, AdminPageHeader, AdminPageToolbar, AdminPanel } from "@/components/admin/AdminPage";
 import { AdminSidePanel } from "@/components/admin/AdminSidePanel";
 import SeasonSelect from "@/components/admin/SeasonSelect";
-import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
+import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import OpponentCrest from "@/components/OpponentCrest";
 import { useClubContext } from "@/components/ClubContextProvider";
@@ -782,6 +782,46 @@ export default function SchedulePage() {
         }
         activeKey={panelKey}
         direction={panelDirection}
+        className="max-w-2xl"
+        footer={
+          <div className="space-y-3">
+            {error && (
+              <p role="alert" className="font-body text-sm text-destructive">
+                {error}
+              </p>
+            )}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(editingId)}
+                  disabled={deletingId === editingId}
+                  className="min-h-11 w-full rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                >
+                  {deletingId === editingId ? "Deleting…" : "Delete match"}
+                </button>
+              )}
+              <div className="grid w-full grid-cols-2 gap-3 sm:ml-auto sm:flex sm:w-auto">
+                <button
+                  type="button"
+                  onClick={closePanel}
+                  className="min-h-11 rounded-lg border border-border bg-card px-5 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={editingId ? handleSaveEdit : handleAdd}
+                  disabled={saving}
+                  className="min-h-11 rounded-lg bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving && <AdminLoadingDots className="mr-2" />}
+                  {saving ? "Saving…" : editingId ? "Save changes" : "Save match"}
+                </button>
+              </div>
+            </div>
+          </div>
+        }
       >
         <MatchForm
           form={panelForm}
@@ -789,34 +829,6 @@ export default function SchedulePage() {
           seasons={seasons}
           cleanupDraftUploads={!editingId}
         />
-        {error && <p className="mt-4 font-body text-sm text-destructive">Error: {error}</p>}
-        <div className="mt-4 flex items-center gap-3">
-          {editingId && (
-            <button
-              onClick={() => handleDelete(editingId)}
-              disabled={deletingId === editingId}
-              className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2 font-display text-xs font-black uppercase tracking-widest text-destructive/80 hover:bg-destructive/20 disabled:cursor-not-allowed disabled:text-destructive/40 disabled:hover:bg-destructive/10"
-            >
-              {deletingId === editingId ? "Deleting…" : "Delete"}
-            </button>
-          )}
-          <div className="ml-auto flex gap-3">
-            <button
-              onClick={closePanel}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={editingId ? handleSaveEdit : handleAdd}
-              disabled={saving}
-              className="rounded-lg bg-primary px-6 py-2 font-display text-xs font-black uppercase tracking-widest text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : editingId ? "Save" : "Save Match"}
-            </button>
-          </div>
-        </div>
       </AdminSidePanel>
     </AdminPage>
   );
@@ -860,245 +872,279 @@ function MatchForm({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {/* ── Fixture ── */}
-      <SectionHeader title="Fixture" />
-
-      <Field label="Season" required>
-        <NativeSelect
-          value={form.season_id}
-          onChange={(e) => set("season_id", e.target.value)}
-          required
-        >
-          <NativeSelectOption value="">— Select a season —</NativeSelectOption>
-          {seasons.map((season) => (
-            <NativeSelectOption key={season.id} value={season.id}>
-              {season.label}{season.active ? " (Active)" : ""}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Field>
-
-      <Field label="Date" required>
-        <div>
-          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-            <PopoverTrigger
-              render={<Button variant="outline" />}
-              className="w-full justify-between font-normal"
-            >
-              {parseDateInput(form.date)?.toLocaleDateString() ?? "Select date"}
-              <ChevronDownIcon className="size-4 opacity-50" />
-            </PopoverTrigger>
-            <PopoverPositioner align="start">
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={parseDateInput(form.date)}
-                  captionLayout="dropdown"
-                  onSelect={(date) => {
-                    if (date) set("date", formatDateInput(date));
-                    setDatePickerOpen(false);
-                  }}
-                />
-              </PopoverContent>
-            </PopoverPositioner>
-          </Popover>
-        </div>
-      </Field>
-
-      <Field label="Time" required>
-        <input
-          type="time"
-          value={form.time}
-          onChange={(e) => set("time", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
-
-      <Field label="Home / Away" required>
-        <NativeSelect
-          value={form.home ? "home" : "away"}
-          onChange={(e) => set("home", e.target.value === "home")}
-        >
-          <NativeSelectOption value="home">Home</NativeSelectOption>
-          <NativeSelectOption value="away">Away</NativeSelectOption>
-        </NativeSelect>
-      </Field>
-
-      {/* ── Opponent ── */}
-      <SectionHeader title="Opponent" />
-
-      <Field label="Opponent" required className="sm:col-span-2">
-        <input
-          type="text"
-          placeholder="e.g. Portland FC"
-          value={form.opponent}
-          onChange={(e) => set("opponent", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
-
-      <Field
-        label="Opponent Short Name (optional)"
-        help="Used on the homepage Next Match card only when the full opponent name is too long to fit on one line."
-        className="sm:col-span-2"
+    <div className="space-y-8">
+      <MatchFormSection
+        id="match-details-heading"
+        title="Match details"
+        description="Required fields are marked with *."
       >
-        <input
-          type="text"
-          placeholder="e.g. LA Galaxy Reserves"
-          value={form.opponent_short_name ?? ""}
-          onChange={(e) => set("opponent_short_name", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field id="match-season" label="Season" required>
+            <NativeSelect
+              id="match-season"
+              value={form.season_id}
+              onChange={(e) => set("season_id", e.target.value)}
+              className="min-h-11"
+              required
+            >
+              <NativeSelectOption value="">Select a season</NativeSelectOption>
+              {seasons.map((season) => (
+                <NativeSelectOption key={season.id} value={season.id}>
+                  {season.label}{season.active ? " (Active)" : ""}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </Field>
 
-      <Field label="Competition (optional)">
-        <input
-          type="text"
-          placeholder="e.g. UPSL 2027 Premier SoCal North"
-          value={form.competition ?? ""}
-          onChange={(e) => set("competition", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
+          <Field id="match-home-away" label="Home or away" required>
+            <NativeSelect
+              id="match-home-away"
+              value={form.home ? "home" : "away"}
+              onChange={(e) => set("home", e.target.value === "home")}
+              className="min-h-11"
+              required
+            >
+              <NativeSelectOption value="home">Home</NativeSelectOption>
+              <NativeSelectOption value="away">Away</NativeSelectOption>
+            </NativeSelect>
+          </Field>
 
-      <Field label="Opponent Logo (optional)">
-        <OpponentLogoUpload
-          logoUrl={form.opponent_logo_url}
-          opponentName={form.opponent}
-          onUploaded={async (url) => {
-            if (cleanupDraftUploads) {
-              await deleteUnusedMatchImageUrls({
-                bucket: "opponent-logos",
-                urls: [form.opponent_logo_url],
-                column: "opponent_logo_url",
-                allowedPrefixes: ["match-opponents/"],
-              });
-            }
-            onChange({ ...form, opponent_logo_url: url });
-          }}
-          onRemove={async () => {
-            if (cleanupDraftUploads) {
-              await deleteUnusedMatchImageUrls({
-                bucket: "opponent-logos",
-                urls: [form.opponent_logo_url],
-                column: "opponent_logo_url",
-                allowedPrefixes: ["match-opponents/"],
-              });
-            }
-            onChange({ ...form, opponent_logo_url: null });
-          }}
-        />
-      </Field>
+          <Field id="match-date" label="Date" required>
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger
+                id="match-date"
+                aria-required="true"
+                render={<Button variant="outline" />}
+                className="min-h-11 w-full justify-between font-normal"
+              >
+                {parseDateInput(form.date)?.toLocaleDateString() ?? "Select date"}
+                <ChevronDownIcon className="size-4 opacity-50" />
+              </PopoverTrigger>
+              <PopoverPositioner align="start">
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={parseDateInput(form.date)}
+                    captionLayout="dropdown"
+                    onSelect={(date) => {
+                      if (date) set("date", formatDateInput(date));
+                      setDatePickerOpen(false);
+                    }}
+                  />
+                </PopoverContent>
+              </PopoverPositioner>
+            </Popover>
+          </Field>
 
-      {/* ── Venue ── */}
-      <SectionHeader title="Venue" />
+          <Field id="match-time" label="Time" required>
+            <input
+              id="match-time"
+              type="time"
+              value={form.time}
+              onChange={(e) => set("time", e.target.value)}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              required
+            />
+          </Field>
 
-      <Field label="Venue" required className="sm:col-span-2">
-        <input
-          type="text"
-          placeholder="e.g. Delta Park"
-          value={form.venue}
-          onChange={(e) => set("venue", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
+          <Field id="match-competition" label="Competition" optional className="sm:col-span-2">
+            <input
+              id="match-competition"
+              type="text"
+              placeholder="e.g. UPSL Premier Division"
+              value={form.competition ?? ""}
+              onChange={(e) => set("competition", e.target.value)}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+            />
+          </Field>
+        </div>
+      </MatchFormSection>
 
-      <div className="grid grid-cols-1 gap-3 sm:col-span-2 sm:grid-cols-[1fr_1fr_5rem]">
-        <Field label="Address (optional)">
-          <input
-            type="text"
-            placeholder="e.g. 1234 N Broadacre St"
-            value={form.address ?? ""}
-            onChange={(e) => set("address", e.target.value)}
-            className={ADMIN_INPUT_CLASS}
-          />
-        </Field>
+      <MatchFormSection id="opponent-heading" title="Opponent">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field id="match-opponent" label="Opponent name" required>
+            <input
+              id="match-opponent"
+              type="text"
+              placeholder="e.g. Portland FC"
+              value={form.opponent}
+              onChange={(e) => set("opponent", e.target.value)}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              required
+            />
+          </Field>
 
-        <Field label="City (optional)">
-          <input
-            type="text"
-            placeholder="e.g. Irvine"
-            value={form.city ?? ""}
-            onChange={(e) => set("city", e.target.value)}
-            className={ADMIN_INPUT_CLASS}
-          />
-        </Field>
+          <Field
+            id="match-opponent-short-name"
+            label="Short name"
+            optional
+            help="Use only when the full name is too long for the homepage card."
+          >
+            <input
+              id="match-opponent-short-name"
+              type="text"
+              placeholder="e.g. Portland"
+              value={form.opponent_short_name ?? ""}
+              onChange={(e) => set("opponent_short_name", e.target.value)}
+              aria-describedby="match-opponent-short-name-help"
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+            />
+          </Field>
 
-        <Field label="State (optional)">
-          <input
-            type="text"
-            placeholder="e.g. CA"
-            value={form.state ?? ""}
-            onChange={(e) => set("state", e.target.value)}
-            className={ADMIN_INPUT_CLASS}
-          />
-        </Field>
-      </div>
+          <Field id="match-opponent-logo" label="Opponent logo" optional className="sm:col-span-2">
+            <OpponentLogoUpload
+              inputId="match-opponent-logo"
+              logoUrl={form.opponent_logo_url}
+              opponentName={form.opponent}
+              onUploaded={async (url) => {
+                if (cleanupDraftUploads) {
+                  await deleteUnusedMatchImageUrls({
+                    bucket: "opponent-logos",
+                    urls: [form.opponent_logo_url],
+                    column: "opponent_logo_url",
+                    allowedPrefixes: ["match-opponents/"],
+                  });
+                }
+                onChange({ ...form, opponent_logo_url: url });
+              }}
+              onRemove={async () => {
+                if (cleanupDraftUploads) {
+                  await deleteUnusedMatchImageUrls({
+                    bucket: "opponent-logos",
+                    urls: [form.opponent_logo_url],
+                    column: "opponent_logo_url",
+                    allowedPrefixes: ["match-opponents/"],
+                  });
+                }
+                onChange({ ...form, opponent_logo_url: null });
+              }}
+            />
+          </Field>
+        </div>
+      </MatchFormSection>
 
-      {/* ── Result ── */}
-      <SectionHeader title="Result" help="Leave blank until the match is played" />
+      <MatchFormSection id="venue-heading" title="Venue">
+        <div className="space-y-4">
+          <Field id="match-venue" label="Venue name" required>
+            <input
+              id="match-venue"
+              type="text"
+              placeholder="e.g. Delta Park"
+              value={form.venue}
+              onChange={(e) => set("venue", e.target.value)}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              required
+            />
+          </Field>
 
-      <Field label={`${club.name} Score (optional)`}>
-        <input
-          type="number"
-          min="0"
-          step="1"
-          inputMode="numeric"
-          placeholder="e.g. 2"
-          value={form.rose_city_score ?? ""}
-          onChange={(e) => setScore("rose_city_score", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
+          <Field id="match-address" label="Street address" optional>
+            <input
+              id="match-address"
+              type="text"
+              placeholder="e.g. 1234 N Broadacre St"
+              value={form.address ?? ""}
+              onChange={(e) => set("address", e.target.value)}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+            />
+          </Field>
 
-      <Field label="Opponent Score (optional)">
-        <input
-          type="number"
-          min="0"
-          step="1"
-          inputMode="numeric"
-          placeholder="e.g. 1"
-          value={form.opponent_score ?? ""}
-          onChange={(e) => setScore("opponent_score", e.target.value)}
-          className={ADMIN_INPUT_CLASS}
-        />
-      </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
+            <Field id="match-city" label="City" optional>
+              <input
+                id="match-city"
+                type="text"
+                placeholder="e.g. Irvine"
+                value={form.city ?? ""}
+                onChange={(e) => set("city", e.target.value)}
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
 
-      {/* ── Presented By Sponsor ── */}
+            <Field id="match-state" label="State" optional>
+              <input
+                id="match-state"
+                type="text"
+                placeholder="e.g. CA"
+                value={form.state ?? ""}
+                onChange={(e) => set("state", e.target.value)}
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
+          </div>
+        </div>
+      </MatchFormSection>
+
+      <MatchFormSection
+        id="result-heading"
+        title="Result"
+        description="Leave both scores blank until the match is played."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field id="match-club-score" label={`${club.name} score`} optional>
+            <input
+              id="match-club-score"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              placeholder="e.g. 2"
+              value={form.rose_city_score ?? ""}
+              onChange={(e) => setScore("rose_city_score", e.target.value)}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+            />
+          </Field>
+
+          <Field id="match-opponent-score" label="Opponent score" optional>
+            <input
+              id="match-opponent-score"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              placeholder="e.g. 1"
+              value={form.opponent_score ?? ""}
+              onChange={(e) => setScore("opponent_score", e.target.value)}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+            />
+          </Field>
+        </div>
+      </MatchFormSection>
+
       {/* This whole block is hidden for academy@1 and editorial@1 — neither
           template's fixture cards read the sponsor columns, so their rows
           never show a "Presented by" line either. */}
       {!hidesMatchSponsorFields && (
-        <>
-          <SectionHeader
-            title="Presented By Sponsor"
-            help="New matches inherit these sponsor details from the latest match. Clear the logo to hide the sponsor on the homepage."
-          />
+        <MatchFormSection
+          id="sponsor-heading"
+          title="Presented by"
+          description="New matches reuse the latest sponsor details. Clear the logo to hide the sponsor on the homepage."
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field id="match-sponsor-name" label="Sponsor name" optional>
+              <input
+                id="match-sponsor-name"
+                type="text"
+                placeholder="e.g. Tepito Coffee"
+                value={form.sponsor_name ?? ""}
+                onChange={(e) => set("sponsor_name", e.target.value)}
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
 
-          <Field label="Sponsor Name (optional)">
-            <input
-              type="text"
-              placeholder="e.g. Tepito Coffee"
-              value={form.sponsor_name ?? ""}
-              onChange={(e) => set("sponsor_name", e.target.value)}
-              className={ADMIN_INPUT_CLASS}
-            />
-          </Field>
+            <Field id="match-sponsor-link" label="Sponsor website" optional>
+              <input
+                id="match-sponsor-link"
+                type="url"
+                placeholder="https://..."
+                value={form.sponsor_link ?? ""}
+                onChange={(e) => set("sponsor_link", e.target.value)}
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
 
-          <Field label="Sponsor Website Link (optional)">
-            <input
-              type="url"
-              placeholder="https://..."
-              value={form.sponsor_link ?? ""}
-              onChange={(e) => set("sponsor_link", e.target.value)}
-              className={ADMIN_INPUT_CLASS}
-            />
-          </Field>
-
-          <div className="sm:col-span-2">
-            <Field label="Sponsor Logo (optional)">
+            <Field id="match-sponsor-logo" label="Sponsor logo" optional className="sm:col-span-2">
               <SponsorLogoUpload
+                inputId="match-sponsor-logo"
                 logoUrl={form.sponsor_logo_url}
                 sponsorName={form.sponsor_name ?? ""}
                 onUploaded={async (url) => {
@@ -1126,18 +1172,20 @@ function MatchForm({
               />
             </Field>
           </div>
-        </>
+        </MatchFormSection>
       )}
     </div>
   );
 }
 
 function OpponentLogoUpload({
+  inputId,
   logoUrl,
   opponentName,
   onUploaded,
   onRemove,
 }: {
+  inputId: string;
   logoUrl: string | null;
   opponentName: string;
   onUploaded: (url: string) => void | Promise<void>;
@@ -1162,13 +1210,14 @@ function OpponentLogoUpload({
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <OpponentCrest name={opponentName || "?"} logoUrl={logoUrl} size={40} />
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="px-3 py-2 rounded-lg font-display font-bold uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label={uploading ? "Uploading opponent logo" : logoUrl ? "Replace opponent logo" : "Upload opponent logo"}
+        className="min-h-11 rounded-lg border border-border bg-card px-4 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
         {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
       </button>
@@ -1176,12 +1225,14 @@ function OpponentLogoUpload({
         <button
           type="button"
           onClick={() => void onRemove()}
-          className="font-display font-bold uppercase tracking-widest text-xs text-destructive/80"
+          aria-label="Remove opponent logo"
+          className="min-h-11 rounded-lg px-3 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Remove
         </button>
       )}
       <input
+        id={inputId}
         ref={fileRef}
         type="file"
         accept="image/*"
@@ -1189,18 +1240,20 @@ function OpponentLogoUpload({
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
       {error && (
-        <p className="font-body text-xs text-destructive">{error}</p>
+        <p className="w-full font-body text-xs text-destructive">{error}</p>
       )}
     </div>
   );
 }
 
 function SponsorLogoUpload({
+  inputId,
   logoUrl,
   sponsorName,
   onUploaded,
   onRemove,
 }: {
+  inputId: string;
   logoUrl: string | null;
   sponsorName: string;
   onUploaded: (url: string) => void | Promise<void>;
@@ -1247,7 +1300,8 @@ function SponsorLogoUpload({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="rounded-lg border border-border bg-card px-3 py-2 font-display text-xs font-bold uppercase tracking-widest text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label={uploading ? "Uploading sponsor logo" : logoUrl ? "Replace sponsor logo" : "Upload sponsor logo"}
+        className="min-h-11 rounded-lg border border-border bg-card px-4 py-2.5 font-body text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
         {uploading ? "Uploading…" : logoUrl ? "Replace" : "Upload"}
       </button>
@@ -1255,12 +1309,14 @@ function SponsorLogoUpload({
         <button
           type="button"
           onClick={() => void onRemove()}
-          className="font-display text-xs font-bold uppercase tracking-widest text-destructive/80"
+          aria-label="Remove sponsor logo"
+          className="min-h-11 rounded-lg px-3 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Remove
         </button>
       )}
       <input
+        id={inputId}
         ref={fileRef}
         type="file"
         accept="image/*"
@@ -1277,27 +1333,32 @@ function SponsorLogoUpload({
 }
 
 function Field({
+  id,
   label,
   required,
+  optional,
   help,
   className,
   children,
 }: {
+  id: string;
   label: string;
   required?: boolean;
+  optional?: boolean;
   help?: string;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className={className}>
-      <label className={ADMIN_LABEL_CLASS}>
+      <label htmlFor={id} className="mb-2 block font-body text-sm font-semibold text-foreground">
         {label}
         {required && <span className="ml-1 text-destructive">*</span>}
+        {optional && <span className="ml-1.5 font-normal text-muted-foreground">Optional</span>}
       </label>
       {children}
       {help && (
-        <p className="font-body mt-1.5 text-xs leading-relaxed text-muted-foreground">
+        <p id={`${id}-help`} className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground">
           {help}
         </p>
       )}
@@ -1305,17 +1366,33 @@ function Field({
   );
 }
 
-/** Eyebrow label that groups the fields below it into a named section
- * (Fixture, Opponent, Venue, Result, Presented By Sponsor), matching the
- * mockup's panel grouping. Must be the first grid child of a section for
- * the `first:` divider suppression to apply. */
-function SectionHeader({ title, help }: { title: string; help?: string }) {
+function MatchFormSection({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex flex-col gap-1 border-t border-border pt-4 first:border-t-0 first:pt-0 sm:col-span-2">
-      <span className="font-display text-xs font-black uppercase tracking-widest text-muted-foreground">
-        {title}
-      </span>
-      {help && <span className="font-body text-xs text-muted-foreground">{help}</span>}
-    </div>
+    <section className="space-y-4" aria-labelledby={id}>
+      <div>
+        <div className="flex items-center gap-3">
+          <h3 id={id} className="font-display text-sm font-semibold normal-case text-foreground">
+            {title}
+          </h3>
+          <span className="h-px flex-1 bg-border" aria-hidden="true" />
+        </div>
+        {description && (
+          <p className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground">
+            {description}
+          </p>
+        )}
+      </div>
+      {children}
+    </section>
   );
 }

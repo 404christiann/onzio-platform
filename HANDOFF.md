@@ -4,10 +4,15 @@
 
 The reviewed Homepage editor branch is pushed and [PR #5](https://github.com/404christiann/onzio-platform/pull/5)
 is open against `main`. The PR includes the previously reviewed admin container
-skeleton commit. Christian asked to hold step 3: **do not merge or deploy yet**.
-The prior local gate remains 1537/1537 full tests, 34/34 Homepage browser,
-12/12 admin-loading and 4/4 media, with tsc/lint/build clean. Screen-reader
-acceptance remains explicitly waived, not passed.
+skeleton commit. Current `origin/main` had four newer roster/schedule admin UX
+commits; it was merged **into the feature branch only** to resolve the PR's
+`HANDOFF.md` conflict while preserving both release notes. On the combined
+branch, TypeScript, lint, local-environment build and full suite **1556/1556**
+pass. The built client has nine chunks with the local Supabase URL and zero with
+the hosted URL. The earlier Homepage browser 34/34, admin-loading 12/12 and
+media 4/4 checks were run before this merge; no Homepage implementation changed
+in it. Screen-reader acceptance remains explicitly waived, not passed.
+Christian asked to hold step 3: **do not merge the PR or deploy yet**.
 
 The linked production project is `ioalthwsdrlzrubomrow`. Its ledger had the
 already-applied `20260815140402_pathway_presentation_template` migration, which
@@ -834,7 +839,203 @@ files were preserved. Exact next step: Christian reviews the visuals and diff;
 obtain separate current approval before any production release.
 
 
-Last updated: 2026-09-01
+## Roster and Schedule admin UX production release
+
+Agent: Codex with implementation, contract, UX-review, and release-verification
+sub-agents, 2026-09-10. Status: **approved by Christian, pushed to `main`,
+deployed to production, and verified against the authenticated DCFC admin.**
+
+Christian explicitly approved publishing the three committed UX changes:
+
+- `d0339b9` reorganizes the mobile-first player editor without changing its
+  validation, uploads, mutations, or lifecycle behavior.
+- `86e1971` places the active Players/Staff creation action beside the section
+  switcher and changes it contextually between `Add player` and `Add staff`.
+- `217f6e7` reorganizes the shared Add/Edit Match drawer into Match details,
+  Opponent, Venue, Result, and template-gated Presented by sections.
+
+Release boundary: the fast-forward push moved `origin/main` from
+`6174279fd5a9a9504903c4e37f11f5ba148c7e2c` to
+`217f6e7e1863df07a061e72fe57deee57c8fb0be`. This release contains no database
+migration, schema, tenant-data, authentication, billing, or public-template
+behavior change. Port 3000 and its unrelated local process were not touched.
+
+Production safeguards and rollback evidence:
+
+- completed production Supabase physical backup `1634876986`, created
+  `2026-09-10T11:14:33.773Z`, was verified before the push
+- previous Ready production rollback deployment:
+  `dpl_2uqPQU6LQ8mWYNh3iDdkypJ6Rbv6`
+  (`onzio-platform-bup12du4k-404christianns-projects.vercel.app`)
+- release preview reached Ready as `dpl_N8AEaC9j1pcSSTraFouJ2M2pCgE1`
+- production deployment reached Ready as
+  `dpl_vyzcZyJCohJzM91m83EecucH1dRT`
+  (`onzio-platform-nydbf7xx4-404christianns-projects.vercel.app`), with the
+  existing DCFC, Columbus Lions, and Onzio aliases attached
+
+Release gates on the exact application commit:
+
+- `npx tsc --noEmit`: passed
+- `npm run lint`: passed with no warnings or errors
+- `npm run test:contracts`: 823/823 passed across 73 files
+- `npm run test:architecture`: 21/21 passed across 3 files
+- `npm run test:db`: 212/212 passed across 20 files against the isolated local
+  Supabase stack
+- `npm test`: 1421/1421 passed across 136 files against the isolated local
+  Supabase stack
+- `npm run build`: passed with Next.js 15.5.22 using loopback-only Supabase
+
+Post-deploy verification:
+
+- DCFC Home, Roster, and Schedule returned HTTP 200; protected admin Roster and
+  Schedule correctly redirected unauthenticated requests to login
+- an existing authenticated production session confirmed the responsive roster
+  section bar, context-aware Staff action, reorganized Edit Player drawer, and
+  five-section New Match drawer; the panels were closed without submitting or
+  changing production data
+- the live checks ran inside the phone-sized simulator, matching the mobile-first
+  acceptance work; earlier authenticated local checks also covered 390x844,
+  768x1024, and desktop widths with no horizontal overflow
+- the new production deployment returned no Vercel error logs during the
+  post-release window
+- Columbus Lions admin login resolves normally; its public pages remain 404 by
+  design while that tenant is still `onboarding` with `public_access=preview`
+
+Exact next step: keep the released admin UX stable. Roll back to the recorded
+previous Ready deployment if a production regression is discovered; otherwise
+start the next change on a fresh topic branch and obtain separate approval
+before its `main` push.
+
+## Mobile-first Schedule Add/Edit Match reorganization
+
+Agent: Codex with implementation, contract, and independent UX review
+sub-agents, 2026-09-10. Status: **deployed to production on
+`main` as `217f6e7`; see the release entry above.**
+
+The shared Add/Edit Match drawer now opts into a 672px maximum width on
+tablet/desktop while remaining full-width on phones. Its fields are organized
+into Match details, Opponent, Venue, Result, and template-gated Presented by
+sections. Each section owns a mobile-first layout instead of participating in
+one compressed grid. Labels are sentence case and explicitly associated with
+stable control IDs; required and optional states are visible, date/media/footer
+controls have 44px minimum touch targets, and logo actions expose contextual
+accessible names.
+
+Validation plus Cancel/Save now live in the fixed, safe-area-aware panel footer
+while only the form body scrolls. Edit-only Delete match remains visually
+separate from the paired actions. All match fields, validation, create/edit/delete
+handlers, sponsor inheritance, upload buckets/path prefixes, draft and old-image
+cleanup, persisted column names, and academy@1/editorial@1 sponsor visibility
+gates remain unchanged.
+
+Verification:
+
+- `npx tsc --noEmit`: passed
+- schedule source/new contract ESLint: no warnings or errors
+- focused Schedule plus existing sponsor/template contracts: 81/81 passed
+- full contract suite: 823/823 passed
+- architecture suite: 21/21 passed
+- authenticated browser at desktop, 768x1024 tablet, and 390x844 phone:
+  section hierarchy and responsive grids rendered correctly, the action footer
+  remained pinned, the date picker fit the phone viewport, and body/document
+  widths matched the viewport with no horizontal overflow
+- independent sub-agent review: no blocking issues; its two accessibility and
+  optional-label consistency findings were corrected and rechecked in the live
+  accessibility tree
+- `git diff --check`: passed
+
+Files changed: `app/admin/(protected)/schedule/page.tsx`,
+`tests/contracts/admin-schedule-match-editor.test.ts`,
+`tests/contracts/diverse-city-admin-punch-list.test.ts`, `tests/README.md`, and
+`HANDOFF.md`.
+
+Superseded next step: Christian approved the release; production evidence is
+recorded in the entry above.
+
+## Roster contextual add action placement
+
+Agent: Codex, 2026-09-10. Status: **accepted by Christian and deployed to
+production on `main` as `86e1971`; see the release entry above.**
+
+The Players/Staff switcher and the active collection's creation action now
+share one responsive context bar above the search/filter utilities. The action
+reads `Add player` or `Add staff` as the selected tab changes. On phones the
+segmented switcher stays on the first row and the 44px action fills the second
+row; at `sm` and above they align on one row. The search, status counts,
+position filters, and status select are now creation-free utilities.
+
+The switcher uses tablist/tab/tabpanel semantics, selected-tab roving focus,
+and Arrow Left/Right plus Home/End keyboard navigation. The contextual action
+reuses the existing add-player and add-staff panel state without changing any
+database, validation, upload, tenant, or mutation behavior.
+
+Verification:
+
+- `npx tsc --noEmit`: passed
+- `npm run lint`: no warnings or errors
+- focused roster/template contracts: 84/84 passed
+- full contract suite: 815/815 passed
+- architecture suite: 21/21 passed
+- authenticated local browser at desktop width: the contextual action aligned
+  with the switcher and opened the correct New Player and New Staff Member
+  panels
+- authenticated local browser at 390x844: the action stacked full-width,
+  Players/Staff changed both the label and panel target, Arrow Right selected
+  Staff, and body/document scroll widths remained exactly 390px
+- `git diff --check`: passed
+
+Superseded next step: the accepted roster control bar and Schedule drawer were
+released together after explicit approval; production evidence is above.
+
+## Mobile-first roster player editor reorganization
+
+Agent: Codex with implementation and verification sub-agents, 2026-09-10.
+Status: **verified with the complete local suite and authenticated browser QA,
+then deployed to production on `main` as `d0339b9`; see the release entry
+above.**
+
+The Players edit panel now uses an opt-in 672px desktop/tablet width while
+remaining full-width and single-column on phones. Its header and safe-area-aware
+Cancel/Save footer stay fixed while only the form body scrolls. Player fields
+are organized into Basic information, Player details, Background, Action
+photos, and Player status. Labels are sentence case with explicit required
+markers and associated control IDs. The Captain control is an accessible
+switch, storage UUIDs are replaced by the friendly `Player photo` label, and
+the action-photo upload is compact. Photo removal and panel-close controls have
+44px touch targets. Deactivation is separated from Save and requires an
+explicit second confirmation action.
+
+The shared `AdminSidePanel` and `FileUpload` additions are opt-in. Existing
+Staff and Schedule panel widths/footers, every player mutation and validation,
+profile-photo deferred saving, immediate action-photo upload/delete behavior,
+media cleanup, and academy/editorial inline-season-stat gates remain intact.
+No database, API, auth, billing, tenant, or public-template behavior changed.
+
+Verification:
+
+- `npx tsc --noEmit`: passed
+- focused player-editor plus existing roster/template contracts: 83/83 passed
+- full contract suite: 814/814 passed
+- architecture suite: 21/21 passed
+- legacy suite: 365/365 passed
+- `npm run lint`: no warnings or errors
+- `npm run build`: passed using the existing loopback-only `.env.local`; only
+  the pre-existing Supabase Edge Runtime warning appeared
+- compiled-CSS responsive layout harness at 390x844, 768x1024, and 1440x900:
+  zero horizontal overflow; measured panel widths were 390px, 672px, and 672px
+- `git diff --check`: passed
+
+The earlier local-runtime blocker was resolved with the dedicated native local
+Docker socket. The database-inclusive suite and authenticated responsive checks
+subsequently passed as recorded in the release entry above.
+
+Files changed: `app/admin/(protected)/roster/page.tsx`,
+`components/admin/AdminSidePanel.tsx`, `components/admin/FileUpload.tsx`,
+`tests/contracts/admin-roster-player-editor.test.ts`, `tests/README.md`, and
+this handoff entry.
+
+Superseded next step: the blocking release matrix passed and Christian approved
+the production push; production evidence is above.
 
 ## Public site media smoke target corrected to the active Rose City hostname
 

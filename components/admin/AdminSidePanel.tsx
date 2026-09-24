@@ -26,6 +26,10 @@ type AdminSidePanelProps = {
   /** Slide direction for the SlidingPanel content swap. Defaults to 1. */
   direction?: SlidingPanelDirection;
   children: ReactNode;
+  /** Optional fixed action area rendered below the scrolling panel content. */
+  footer?: ReactNode;
+  /** Optional classes for the animated, padded content container. */
+  contentClassName?: string;
   className?: string;
 };
 
@@ -50,6 +54,8 @@ export function AdminSidePanel({
   activeKey,
   direction = 1,
   children,
+  footer,
+  contentClassName,
   className,
 }: AdminSidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -99,11 +105,11 @@ export function AdminSidePanel({
         aria-label={typeof title === "string" ? title : undefined}
         tabIndex={-1}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-md flex-col border-l border-border bg-card text-card-foreground shadow-xl outline-none",
+          "fixed inset-y-0 right-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-border bg-card text-card-foreground shadow-xl outline-none",
           className,
         )}
       >
-        <div className="flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-4">
+        <div className="flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-4 [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))] [padding-top:max(1rem,env(safe-area-inset-top))]">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-foreground">{title}</h2>
             {description && (
@@ -114,16 +120,28 @@ export function AdminSidePanel({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <X className="size-4" aria-hidden="true" />
+            <X className="size-5" aria-hidden="true" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <SlidingPanel activeKey={activeKey} direction={direction} className="p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <SlidingPanel
+            activeKey={activeKey}
+            direction={direction}
+            className={cn(
+              "p-5 [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))]",
+              contentClassName,
+            )}
+          >
             {children}
           </SlidingPanel>
         </div>
+        {footer && (
+          <div className="flex-none border-t border-border bg-card px-5 py-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))] [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))]">
+            {footer}
+          </div>
+        )}
       </div>
     </>
   );
