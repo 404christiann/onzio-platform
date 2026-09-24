@@ -1,5 +1,27 @@
 # Onzio Platform Handoff
 
+## OTP page design directions awaiting selection — 2026-09-24
+
+Christian supplied a mobile OTP inspiration screenshot and asked for desktop
+and mobile alternatives that retain the Onzio logo, questioning whether a
+large Sign in button is needed. Added `design-previews/otp-page-options.html`
+with three paired previews: A is an open circular layout without a submit
+button, B is a quiet card with a Continue button, and C is a stronger Onzio
+brand frame with a compact Verify code action. The examples use eight visible
+slots because the current portal begins with eight, while the real input must
+continue to accept 4–10 digits until hosted OTP length is verified and kept in
+sync. A's automatic submission cannot safely be implemented with today's
+variable-length acceptance without first resolving that boundary. B is the
+recommended low-risk behavior; C reduces visual weight while preserving an
+explicit submit. This work is **preview only**: `app/admin/login/page.tsx` is
+unchanged from commit `4155669`.
+
+Local Chromium rendered the preview at 1440px and 390px with three options,
+all logo assets loaded, and no page-level overflow. Next: Christian selects a
+direction and button behavior. Then implement only the code-entry step, retain
+the previously verified paste/autofill behavior and flexible length, and test
+desktop/mobile plus native device paste before release.
+
 ## Admin sign-in email A and OTP paste implemented locally — 2026-09-24
 
 Branch: `codex/otp-email-design-and-paste`. Christian selected email option A.

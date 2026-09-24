@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Onzio code entry — desktop and mobile directions</title>
+    <style>
+      :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #202723; background: #f0f2f0; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      button { font: inherit; }
+      .gallery { max-width: 1510px; margin: auto; padding: 54px 30px 80px; }
+      .intro { max-width: 810px; margin-bottom: 46px; }
+      .intro h1 { margin: 0 0 13px; font-size: clamp(32px, 3.5vw, 48px); line-height: 1.08; letter-spacing: -.055em; font-weight: 680; }
+      .intro p { margin: 0; color: #65716a; font-size: 16px; line-height: 1.6; }
+      .option { margin: 0 0 58px; }
+      .option-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 9px 18px; margin-bottom: 16px; }
+      .option-head h2 { margin: 0; font-size: 21px; letter-spacing: -.035em; }
+      .option-head span { font-size: 13px; color: #536159; }
+      .pair { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 18px; align-items: stretch; }
+      .preview-label { position: absolute; left: 16px; top: 14px; z-index: 5; padding: 5px 9px; border-radius: 999px; background: rgba(228,233,229,.91); color: #506057; font-size: 11px; font-weight: 650; }
+      .scene { position: relative; overflow: hidden; height: 660px; border: 1px solid #dce3dc; border-radius: 19px; background: #fff; box-shadow: 0 16px 50px rgba(23,42,28,.06); }
+      .desktop { min-width: 0; }
+      .mobile { padding: 16px; display: flex; align-items: center; justify-content: center; background: #e3e7e3; }
+      .mobile .preview-label { top: 12px; left: 13px; }
+      .phone { position: relative; overflow: hidden; width: 312px; height: 626px; border: 5px solid #17221b; border-radius: 40px; background: #fff; box-shadow: 0 12px 34px rgba(12,27,18,.13); }
+      .status { height: 38px; padding: 13px 22px 0; display: flex; justify-content: space-between; font-size: 12px; font-weight: 720; letter-spacing: -.01em; }
+      .signal { font-size: 10px; letter-spacing: -.09em; }
+      .mark { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 11px 15px; border-radius: 11px; background: #142119; }
+      .mark img { display: block; width: 104px; height: auto; }
+      .mark.large img { width: 126px; }
+      .back { width: 45px; height: 45px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #f2f4f2; color: #202a23; font-size: 24px; font-weight: 350; line-height: 1; }
+      .screen-title { margin: 0; font-size: 38px; line-height: 1.1; letter-spacing: -.052em; font-weight: 680; }
+      .screen-copy { margin: 13px 0 0; color: #667269; font-size: 16px; line-height: 1.55; }
+      .address { color: #26372a; font-weight: 650; white-space: nowrap; }
+      .code-row { display: flex; align-items: center; justify-content: center; gap: 9px; white-space: nowrap; }
+      .digit { display: flex; align-items: center; justify-content: center; width: 51px; height: 51px; border-radius: 50%; background: #f4f6f4; color: #243027; font-size: 22px; font-weight: 590; }
+      .digit.active { border: 1.5px solid #25a752; background: #fff; }
+      .digit.empty { color: transparent; }
+      .code-gap { width: 7px; }
+      .paste { border: 0; background: transparent; color: #238448; font-size: 14px; font-weight: 620; }
+      .resend { margin: 0; color: #768179; font-size: 13px; line-height: 1.5; }
+      .resend strong { color: #2d6640; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+      .primary { border: 0; border-radius: 12px; background: #163e24; color: white; padding: 15px 25px; font-size: 15px; font-weight: 660; }
+      .verify-link { border: 0; border-bottom: 1.5px solid #276f42; background: transparent; color: #276f42; padding: 5px 0; font-size: 15px; font-weight: 660; }
+      .option-note { display: flex; flex-wrap: wrap; gap: 7px 19px; margin: 13px 2px 0; font-size: 14px; line-height: 1.5; color: #5c6960; }
+      .option-note strong { color: #25342a; }
+
+      /* A: screenshot-led open canvas. */
+      .a-desktop .top { display: flex; align-items: center; justify-content: space-between; padding: 30px 42px; }
+      .a-desktop .body { max-width: 660px; margin: 47px auto 0; text-align: center; padding: 0 18px; }
+      .a-desktop .code-row { margin: 47px 0 28px; }
+      .a-desktop .paste { margin-bottom: 24px; }
+      .a-phone .mobile-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 0; }
+      .a-phone .mark { padding: 9px 11px; border-radius: 9px; }
+      .a-phone .mark img { width: 76px; }
+      .a-phone .body { padding: 45px 17px 0; text-align: center; }
+      .a-phone .screen-title { font-size: 28px; }
+      .a-phone .screen-copy { font-size: 13px; line-height: 1.55; }
+      .a-phone .code-row { gap: 5px; margin: 37px 0 25px; }
+      .a-phone .digit { width: 27px; height: 35px; font-size: 16px; border-radius: 17px; }
+      .a-phone .code-gap { width: 1px; }
+      .a-phone .paste { margin-bottom: 22px; font-size: 13px; }
+      .a-phone .resend { font-size: 12px; }
+
+      /* B: quiet action card with an explicit, understated submit. */
+      .b-desktop { background: #e8eeea; }
+      .b-desktop .brand { position: absolute; left: 34px; top: 31px; }
+      .b-desktop .card { max-width: 566px; margin: 96px auto 0; padding: 45px 48px 38px; border: 1px solid #e3eae4; border-radius: 22px; background: #fff; box-shadow: 0 16px 44px rgba(26,49,32,.05); }
+      .b-desktop .card-top { display: flex; align-items: center; gap: 23px; }
+      .b-desktop .screen-title { font-size: 34px; }
+      .b-desktop .screen-copy { margin-top: 9px; }
+      .b-desktop .code-row { margin: 38px 0 22px; }
+      .b-desktop .digit { width: 45px; height: 48px; border-radius: 13px; }
+      .b-desktop .actions { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; }
+      .b-phone .mobile-top { padding: 14px 22px 0; display: flex; justify-content: space-between; align-items: center; }
+      .b-phone .mark { padding: 9px 11px; border-radius: 9px; }
+      .b-phone .mark img { width: 78px; }
+      .b-phone .body { padding: 48px 19px 0; }
+      .b-phone .screen-title { font-size: 29px; }
+      .b-phone .screen-copy { font-size: 13px; line-height: 1.55; }
+      .b-phone .code-row { justify-content: flex-start; gap: 5px; margin: 34px 0 18px; }
+      .b-phone .digit { width: 28px; height: 36px; font-size: 16px; border-radius: 10px; }
+      .b-phone .code-gap { width: 1px; }
+      .b-phone .primary { display: block; width: 100%; margin: 30px 0 18px; padding: 14px; font-size: 14px; }
+      .b-phone .resend { text-align: center; font-size: 12px; }
+
+      /* C: stronger Onzio brand frame, with a smaller explicit action. */
+      .c-desktop { display: grid; grid-template-columns: 37% 63%; }
+      .c-desktop .brand-panel { display: flex; flex-direction: column; justify-content: space-between; padding: 38px; background: #14271b; color: #f9fbf9; }
+      .c-desktop .brand-panel p { max-width: 240px; font-size: 29px; line-height: 1.15; letter-spacing: -.04em; font-weight: 600; }
+      .c-desktop .brand-panel .mark { justify-content: flex-start; padding: 0; background: none; }
+      .c-desktop .entry { padding: 40px 45px; }
+      .c-desktop .entry-body { max-width: 540px; margin: 74px auto 0; }
+      .c-desktop .screen-title { font-size: 36px; }
+      .c-desktop .code-row { justify-content: flex-start; margin: 41px 0 27px; }
+      .c-desktop .digit { width: 43px; height: 47px; border-radius: 12px; }
+      .c-desktop .entry-actions { display: flex; align-items: center; gap: 26px; margin-bottom: 31px; }
+      .c-phone .green-top { height: 126px; background: #14271b; padding: 18px 22px; display: flex; align-items: flex-start; justify-content: space-between; }
+      .c-phone .green-top .mark { padding: 0; background: none; }
+      .c-phone .green-top .mark img { width: 92px; }
+      .c-phone .green-top .back { width: 38px; height: 38px; background: #2b4332; color: white; }
+      .c-phone .body { padding: 35px 19px 0; }
+      .c-phone .screen-title { font-size: 28px; }
+      .c-phone .screen-copy { font-size: 13px; line-height: 1.55; }
+      .c-phone .code-row { justify-content: flex-start; gap: 5px; margin: 35px 0 26px; }
+      .c-phone .digit { width: 27px; height: 35px; font-size: 16px; border-radius: 10px; }
+      .c-phone .code-gap { width: 1px; }
+      .c-phone .entry-actions { display: flex; align-items: center; gap: 20px; margin-bottom: 28px; }
+      .c-phone .verify-link, .c-phone .paste { font-size: 13px; }
+      .c-phone .resend { font-size: 12px; }
+
+      @media (max-width: 970px) {
+        .pair { grid-template-columns: 1fr; }
+        .desktop { height: 550px; }
+        .b-desktop .card { margin-top: 65px; }
+        .c-desktop .entry-body { margin-top: 46px; }
+      }
+      @media (max-width: 610px) {
+        .gallery { padding: 31px 14px 60px; }
+        .intro { margin-bottom: 34px; }
+        .intro p { font-size: 14px; }
+        .desktop { display: none; }
+        .a-desktop .top { padding: 25px 20px; }
+        .a-desktop .body { margin-top: 34px; }
+        .screen-title { font-size: 30px; }
+        .screen-copy { font-size: 14px; }
+        .desktop .code-row { gap: 5px; }
+        .desktop .digit { width: 30px; height: 36px; font-size: 16px; }
+        .desktop .code-gap { width: 2px; }
+        .b-desktop .brand { top: 22px; left: 22px; }
+        .b-desktop .card { margin: 90px 14px 0; padding: 27px 20px; }
+        .b-desktop .card-top { gap: 12px; }
+        .b-desktop .screen-title { font-size: 26px; }
+        .b-desktop .primary { padding: 12px 17px; font-size: 13px; }
+        .c-desktop { grid-template-columns: 30% 70%; }
+        .c-desktop .brand-panel { padding: 21px 13px; }
+        .c-desktop .brand-panel p { font-size: 16px; }
+        .c-desktop .brand-panel .mark img { width: 62px; }
+        .c-desktop .entry { padding: 20px 12px; }
+        .c-desktop .entry-body { margin-top: 50px; }
+        .c-desktop .screen-title { font-size: 25px; }
+        .mobile { padding: 16px 7px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="gallery">
+      <header class="intro">
+        <h1>Enter your code, the Onzio way.</h1>
+        <p>Three directions based on your reference. Each shows the desktop page and the mobile page using the same Onzio wordmark. Eight slots reflect the current portal display, not a fixed code-length decision. Sample digits and email are for design review only.</p>
+      </header>
+
+      <section class="option" aria-labelledby="option-a">
+        <div class="option-head"><h2 id="option-a">A — Open canvas</h2><span>Closest to the reference · no button</span></div>
+        <div class="pair">
+          <div class="scene desktop a-desktop"><span class="preview-label">Desktop</span>
+            <div class="top"><button class="back" aria-label="Back">←</button><span class="mark large"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span></div>
+            <div class="body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to <span class="address">club.admin@example.com</span>.<br />Enter it below to access your Onzio admin portal.</p>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit active">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+              <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p>
+            </div>
+          </div>
+          <div class="scene mobile"><span class="preview-label">Mobile</span><div class="phone a-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆  ◕  ▰</span></div>
+            <div class="mobile-top"><button class="back" aria-label="Back">←</button><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span></div>
+            <div class="body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.<br />Enter it to access your admin portal.</p>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit active">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+              <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p>
+            </div>
+          </div></div>
+        <p class="option-note"><strong>Behavior:</strong> Verify automatically when the final digit arrives. This needs a reliable server-confirmed code length; the current login deliberately accepts 4–10 digits.</p>
+      </section>
+
+      <section class="option" aria-labelledby="option-b">
+        <div class="option-head"><h2 id="option-b">B — Quiet card</h2><span>Recommended · calm button</span></div>
+        <div class="pair">
+          <div class="scene desktop b-desktop"><span class="preview-label">Desktop</span><div class="brand mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></div>
+            <div class="card"><div class="card-top"><button class="back" aria-label="Back">←</button><div><h3 class="screen-title">Check your email</h3><p class="screen-copy">Code sent to <span class="address">club.admin@example.com</span></p></div></div>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
+              <button class="paste">Paste code</button><div class="actions"><p class="resend">No code? <strong>Resend code</strong></p><button class="primary">Continue</button></div>
+            </div>
+          </div>
+          <div class="scene mobile"><span class="preview-label">Mobile</span><div class="phone b-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆  ◕  ▰</span></div>
+            <div class="mobile-top"><button class="back" aria-label="Back">←</button><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span></div>
+            <div class="body"><h3 class="screen-title">Check your email</h3><p class="screen-copy">Enter the code we sent to<br /><span class="address">club.admin@example.com</span>.</p>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
+              <button class="paste">Paste code</button><button class="primary">Continue</button><p class="resend">No code? <strong>Resend code</strong></p>
+            </div>
+          </div></div>
+        <p class="option-note"><strong>Behavior:</strong> Continue becomes available once a plausible code is present. It keeps the existing flexible-length verification and gives keyboard and screen-reader users a clear action.</p>
+      </section>
+
+      <section class="option" aria-labelledby="option-c">
+        <div class="option-head"><h2 id="option-c">C — Brand frame</h2><span>More Onzio presence · compact action</span></div>
+        <div class="pair">
+          <div class="scene desktop c-desktop"><span class="preview-label">Desktop</span>
+            <div class="brand-panel"><span class="mark large"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><p>One code away from your club workspace.</p></div>
+            <div class="entry"><button class="back" aria-label="Back">←</button><div class="entry-body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.</p>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
+              <div class="entry-actions"><button class="verify-link">Verify code</button><button class="paste">Paste code</button></div><p class="resend">Didn’t receive it? <strong>Resend code</strong></p>
+            </div></div>
+          </div>
+          <div class="scene mobile"><span class="preview-label">Mobile</span><div class="phone c-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆  ◕  ▰</span></div>
+            <div class="green-top"><span class="mark"><img src="../public/images/onzio/onzio-wordmark-white-trimmed.png" alt="Onzio" /></span><button class="back" aria-label="Back">←</button></div>
+            <div class="body"><h3 class="screen-title">Enter your code</h3><p class="screen-copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.</p>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit">9</span><span class="code-gap"></span><span class="digit">1</span><span class="digit">3</span><span class="digit">5</span><span class="digit active">7</span></div>
+              <div class="entry-actions"><button class="verify-link">Verify code</button><button class="paste">Paste code</button></div><p class="resend">Didn’t receive it? <strong>Resend code</strong></p>
+            </div>
+          </div></div>
+        <p class="option-note"><strong>Behavior:</strong> A smaller Verify code action replaces the large Sign in button. Submission stays explicit while the page feels lighter.</p>
+      </section>
+    </main>
+  </body>
+</html>
