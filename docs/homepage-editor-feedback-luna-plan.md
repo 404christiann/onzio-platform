@@ -1,5 +1,24 @@
 # Homepage editor feedback — Luna implementation plan
 
+## PR #5 second review fix status — 2026-09-24
+
+HP-08D remains complete with Christian's accepted screen-reader waiver. The
+second PR review's four findings are fixed locally: reference-safe media
+retirement (including shared, URL-only, JSON, and social icon references), a
+working checked cleanup retry queue, Save/Leave serialization, and cleanup of
+uploads when a recovered draft is discarded. Partial cleanup leaves the draft
+and local files available, with affected photos requiring reupload. Files:
+new `20260924154404_media_reference_safe_retirement.sql` migration,
+`lib/media-{processing,cleanup}.ts`, generated RPC type, Homepage editor hook
+and component, media contract/database tests, and Homepage browser tests.
+Verification: TypeScript, lint and local build pass; contracts 942/942,
+architecture 21/21, local DB 245/245, full 1573/1573, Homepage browser
+39/39 and final focused recovery browser 2/2 pass. Alpha was restored. The
+new migration was applied locally only; it and the earlier upload-cleanup
+migration are pending in production. Status: **complete locally, merge/deploy
+paused**. Exact next step: obtain Christian's approval to merge PR #5, then
+complete the `CLAUDE.md` production migration gate before code deployment.
+
 ## PR review fix status — 2026-09-23
 
 HP-08D remains complete with the accepted screen-reader waiver. PR #5 review

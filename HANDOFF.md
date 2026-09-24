@@ -1,5 +1,52 @@
 # Onzio Platform Handoff
 
+## PR #5 second review fixes — 2026-09-24 (Codex)
+
+The four follow-up review findings are fixed on
+`codex/homepage-editor-redesign`; PR #5 remains open and unmerged. A new
+forward migration, `20260924154404_media_reference_safe_retirement.sql`,
+protects published assets shared with other club content. Retirement checks
+all 20 current media foreign keys, 17 URL/path columns, the Club Logo page's
+JSON image collections, and social icon paths. Reference writes and retirement
+take conflicting media-row locks, so a direct admin write cannot link an asset
+between the reference check and retirement or relink an orphaned asset. The
+existing atomic-save migration was **not** rewritten because production already
+has it. The new migration was applied to **local Supabase only**.
+
+Failed Storage deletions now use an allowed cleanup-queue reason; queue insert
+errors are surfaced, and the scheduled media cleanup processes bounded retries
+with a fresh reference/status check. In the editor, Leave without saving cannot
+race an in-flight Save. Discarding a recovered draft cleans its unsaved uploads
+before clearing recovery; partial failures keep the draft and its local files,
+while affected photos require reupload before saving. A competing tab's newer
+recovery copy is preserved and shown as a reload warning.
+
+Changed files: the new migration, `lib/media-{processing,cleanup}.ts`,
+`lib/database.generated.ts`, `lib/homepage-editor/useHomepageEditor.ts`,
+`components/admin/homepage/HomepageEditor.tsx`, new media contract/database
+tests, browser recovery/photo regressions, and the HP ledgers. An independent
+read-only audit checked media references and found the Club Logo JSON and
+social icon paths, which are included in the final migration.
+
+Verification: TypeScript, lint, and local-environment build pass; contracts
+**942/942**, architecture **21/21**, local DB **245/245**, full suite
+**1573/1573**, Homepage browser **39/39**, and the final focused recovery
+browser checks **2/2** pass. The client build has nine chunks containing the
+local Supabase URL and zero containing the hosted project URL. The first broad
+DB attempt timed out because this sandbox could not reach loopback HTTP;
+rerunning with local socket access passed. The first Homepage browser run had
+one Chromium navigation `ERR_ABORTED` before an assertion; that test passed
+alone and in the final full run. Alpha's local fixture was restored afterward.
+
+**Release remains paused.** Production has neither
+`20260924040401_homepage_unreferenced_upload_cleanup.sql` nor the new
+`20260924154404_media_reference_safe_retirement.sql` migration. Before an
+eventual production code deploy, take and verify the required backup, inspect
+the linked migration dry run, apply the pending migrations, and verify the
+remote migration ledger as `CLAUDE.md` requires. Exact next step: Christian
+reviews and approves the PR merge; only then follow the ordered production
+migration/deployment gate. Do not merge or deploy without that approval.
+
 ## PR #5 review hardening — 2026-09-23 (Codex)
 
 Two pre-merge review findings are fixed on the PR branch. Ordinary IndexedDB

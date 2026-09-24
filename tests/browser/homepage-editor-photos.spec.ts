@@ -322,6 +322,108 @@ test.describe("homepage editor photo queue", () => {
     }
   });
 
+  test("partial recovered-draft cleanup keeps photos unsaveable until discard is retried", async ({ page }) => {
+    const db = localDb();
+    await db.connect();
+    const original = await readOriginalState(db);
+    const source = parsePresentationDocument(original.configuration, { surface: "production" });
+    const uploadedAssetIds: string[] = [];
+    let baselineIntro: string | null = null;
+    const newerIntro = `Newer homepage ${crypto.randomUUID().slice(0, 8)}`;
+    try {
+      await publishTemplate(db, source, "clubhouse", original.updated_by);
+      const baseline = await (await page.request.get("/api/admin/homepage")).json();
+      baselineIntro = baseline.content.hero.intro;
+      await page.goto("/admin/homepage");
+      const frame = page.frameLocator('iframe[title="Homepage preview"]');
+      await frame.locator('[data-homepage-piece="photos"]').click();
+      await frame.locator('[data-homepage-piece="photos"]').click();
+      await page.getByRole("button", { name: "Add photo" }).filter({ visible: true }).first().click();
+      await page.getByLabel("Choose homepage photos").setInputFiles(FIXTURE_PHOTOS.slice(0, 2));
+      const photos = page.locator(".hp-panel .hp-photo img");
+      await expect(photos).toHaveCount(2);
+      for (let index = 0; index < 2; index += 1) {
+        await expect(photos.nth(index)).toBeVisible();
+        const src = await photos.nth(index).getAttribute("src");
+        const storagePath = decodeURIComponent(new URL(src!).pathname.split("/storage/v1/object/public/onzio-media/")[1]);
+        const assetId = (await db.query("select id from onzio.media_assets where storage_path=$1", [storagePath])).rows[0]?.id;
+        expect(assetId).toBeTruthy();
+        uploadedAssetIds.push(assetId);
+      }
+      // Give the debounced IndexedDB write time to persist the uploaded asset.
+      await page.waitForTimeout(900);
+      const newer = await page.request.post("/api/admin/homepage", { data: {
+        operationId: crypto.randomUUID(), expectedRevision: baseline.revision,
+        designRevision: baseline.designRevision, sections: { hero: { intro: newerIntro } },
+      } });
+      expect(newer.ok()).toBe(true);
+      await page.reload();
+      const discard = page.getByRole("button", { name: "Discard recovered draft", exact: true });
+      await expect(discard).toBeVisible();
+
+      await page.route("**/api/admin/homepage/upload-cleanup", route => {
+        const { assetId } = route.request().postDataJSON() as { assetId: string };
+        if (assetId !== uploadedAssetIds[1]) return route.continue();
+        return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { code: "MEDIA_CLEANUP_FAILED" } }) });
+      });
+      await discard.click();
+      await expect(page.getByRole("alert").filter({ hasText: "An unused photo could not be removed" })).toBeVisible();
+      await expect(discard).toBeVisible();
+      await expect.poll(async () => (await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetIds[0]])).rows[0]?.status).toBe("orphaned");
+      expect((await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetIds[1]])).rows[0]?.status).toBe("published");
+      const recoveryPhotos = await page.evaluate(async () => {
+        const request = indexedDB.open("onzio-homepage-editor", 1);
+        const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+        try {
+          const records = await new Promise<Array<{ draft: { photos: { items: Array<{ upload: string; assetId: string | null; localFileKey?: string }> } } }>>((resolve, reject) => {
+            const tx = db.transaction("drafts", "readonly");
+            const read = tx.objectStore("drafts").getAll();
+            read.onsuccess = () => resolve(read.result);
+            read.onerror = () => reject(read.error);
+          });
+          return records[0]?.draft.photos.items ?? [];
+        } finally { db.close(); }
+      });
+      expect(recoveryPhotos).toHaveLength(2);
+      expect(recoveryPhotos.map(photo => photo.upload)).toEqual(["failed", "failed"]);
+      expect(recoveryPhotos.map(photo => photo.assetId)).toEqual(uploadedAssetIds);
+      expect(recoveryPhotos.every(photo => !!photo.localFileKey)).toBe(true);
+
+      await page.reload();
+      await expect(discard).toBeVisible();
+
+      await page.unroute("**/api/admin/homepage/upload-cleanup");
+      await discard.click();
+      await expect(discard).toHaveCount(0);
+      await expect.poll(async () => (await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetIds[1]])).rows[0]?.status).toBe("orphaned");
+      await page.reload();
+      await expect(page.getByRole("button", { name: "Discard recovered draft", exact: true })).toHaveCount(0);
+    } finally {
+      await page.unroute("**/api/admin/homepage/upload-cleanup");
+      try {
+        for (const assetId of uploadedAssetIds) await page.request.post("/api/admin/homepage/upload-cleanup", { data: { assetId } }).catch(() => {});
+        if (baselineIntro !== null) {
+          const current = await (await page.request.get("/api/admin/homepage")).json();
+          if (current.content.hero.intro === newerIntro) {
+            const restore = await page.request.post("/api/admin/homepage", { data: {
+              operationId: crypto.randomUUID(), expectedRevision: current.revision,
+              designRevision: current.designRevision, sections: { hero: { intro: baselineIntro } },
+            } });
+            expect(restore.ok(), JSON.stringify(await restore.json())).toBe(true);
+          }
+        }
+      } finally {
+        await restorePhotos(db);
+        await restoreTemplate(db, original);
+        for (const assetId of uploadedAssetIds) {
+          await db.query("delete from onzio.audit_events where resource_id=$1", [assetId]);
+          await db.query("delete from onzio.media_assets where id=$1", [assetId]);
+        }
+        await db.end();
+      }
+    }
+  });
+
   test("shared About shortcut offers Save and continue, Keep editing and Leave without saving while dirty", async ({ page }) => {
     const db = localDb();
     await db.connect();

@@ -1,5 +1,31 @@
 # Homepage editor redesign — implementation plan
 
+## PR #5 second review fix status — 2026-09-24
+
+HP-04 media cleanup and HP-05 recovery follow-up findings are fixed on the
+open PR branch. New local-only migration
+`20260924154404_media_reference_safe_retirement.sql` makes media retirement
+check current relational, URL/path, Club Logo JSON, and social icon references
+under a conflicting media-row lock; direct writes cannot relink retired media.
+The existing production-applied atomic-save migration was left intact. Failed
+Storage deletion now has an allowed, checked queue entry and a bounded cron
+retry. The editor blocks Leave while Save is in flight and cleans a recovered
+draft's unsaved uploads before discarding it, preserving a safe recovery copy
+on partial cleanup failure.
+
+Files: new migration, `lib/media-{processing,cleanup}.ts`, generated RPC type,
+`lib/homepage-editor/useHomepageEditor.ts`,
+`components/admin/homepage/HomepageEditor.tsx`, media contract/database tests,
+and Homepage browser regressions. Evidence: TypeScript, lint, local build,
+contracts 942/942, architecture 21/21, local DB 245/245, full suite
+1573/1573, Homepage browser 39/39, and final focused recovery browser 2/2.
+The local build contains nine client chunks with the local Supabase URL and
+none with the hosted URL. Status: **complete locally; release blocked by
+Christian's paused merge and the two pending production migrations**. Exact
+next step: await merge approval; before any production deploy, complete the
+backup and migration gate in `CLAUDE.md`. Screen-reader acceptance remains
+waived as previously recorded.
+
 ## PR review fix status — 2026-09-23
 
 HP-04 and HP-05 review findings are fixed on the PR #5 branch.

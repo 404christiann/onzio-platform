@@ -346,65 +346,37 @@ export async function retirePublishedMedia(input: {
   clubId: string;
   actorId: string;
   assetId: string;
-}): Promise<{ status: "retired"; cleanupQueued: boolean; idempotent: boolean }> {
+}): Promise<{ status: "retired" | "referenced"; cleanupQueued: boolean; idempotent: boolean }> {
   const service = createServiceRoleClient();
-  const onzio = service.schema("onzio");
-  const { data: asset, error } = await onzio
-    .from("media_assets")
-    .select("id, club_id, storage_bucket, storage_path, status, deleted_at")
-    .eq("id", input.assetId)
-    .eq("club_id", input.clubId)
-    .maybeSingle();
-  if (error) throw new Error(`Unable to resolve media asset: ${error.message}`);
-  if (!asset) failContract("MEDIA_ASSET_NOT_FOUND");
-  if (asset.club_id !== input.clubId) failContract("CROSS_CLUB_MEDIA");
-  if (asset.status === "orphaned" || asset.deleted_at) {
-    return { status: "retired", cleanupQueued: false, idempotent: true };
+  const { data, error } = await service.schema("onzio").rpc("retire_unreferenced_media_asset", {
+    p_club_id: input.clubId,
+    p_asset_id: input.assetId,
+    p_actor_id: input.actorId,
+  });
+  if (error || !data) throw new Error(`Unable to retire media asset: ${error?.message ?? "empty result"}`);
+  const result = data as { status: string; storagePath?: string; idempotent?: boolean };
+  if (result.status === "referenced") {
+    return { status: "referenced", cleanupQueued: false, idempotent: false };
   }
-  if (
-    asset.status !== "published" ||
-    asset.storage_bucket !== "onzio-media"
-  ) {
-    failContract("MEDIA_NOT_PUBLISHED");
-  }
-
-  const deletedAt = new Date().toISOString();
-  const { error: updateError } = await onzio
-    .from("media_assets")
-    .update({ status: "orphaned", deleted_at: deletedAt })
-    .eq("id", input.assetId)
-    .eq("club_id", input.clubId)
-    .eq("status", "published");
-  if (updateError) {
-    throw new Error(`Unable to retire media asset: ${updateError.message}`);
-  }
+  if (result.status === "not-found") failContract("MEDIA_ASSET_NOT_FOUND");
+  if (result.status !== "retired" || !result.storagePath) failContract("MEDIA_NOT_PUBLISHED");
 
   const { error: deleteError } = await service.storage
     .from("onzio-media")
-    .remove([asset.storage_path]);
+    .remove([result.storagePath]);
   if (deleteError) {
     await queueMediaCleanup({
       clubId: input.clubId,
       storageBucket: "onzio-media",
-      storagePath: asset.storage_path,
+      storagePath: result.storagePath,
       reason: "published-object-retirement",
     });
   }
 
-  await onzio.from("audit_events").insert({
-    club_id: input.clubId,
-    actor_user_id: input.actorId,
-    actor_type: "media_processor",
-    operation: "media.retire",
-    resource_type: "media_asset",
-    resource_id: input.assetId,
-    payload: { cleanup_queued: Boolean(deleteError) },
-  });
-
   return {
     status: "retired",
     cleanupQueued: Boolean(deleteError),
-    idempotent: false,
+    idempotent: Boolean(result.idempotent),
   };
 }
 

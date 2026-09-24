@@ -12,6 +12,41 @@ async function openHeroEditor(page: Page) {
 }
 
 test.describe("homepage editor recovery hardening", () => {
+  test("Leave without saving waits for an in-flight Save and is available after failure", async ({ page }) => {
+    const baseline = await (await page.request.get("/api/admin/homepage")).json();
+    let releaseSave: (() => void) | undefined;
+    let saveStarted: (() => void) | undefined;
+    const heldSave = new Promise<void>(resolve => { releaseSave = resolve; });
+    const saveReachedServer = new Promise<void>(resolve => { saveStarted = resolve; });
+    await page.route("**/api/admin/homepage", async route => {
+      if (route.request().method() !== "POST") return route.continue();
+      saveStarted?.();
+      await heldSave;
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { code: "SAVE_FAILED", message: "Save failed for this test." } }) });
+    });
+
+    try {
+      await openHeroEditor(page);
+      await page.getByLabel("Line one", { exact: true }).fill(`Pending save ${crypto.randomUUID().slice(0, 8)}`);
+      await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
+      await page.getByRole("button", { name: "Edit in Shop" }).filter({ visible: true }).click();
+      const dialog = page.getByRole("dialog", { name: "Save your homepage changes?" });
+      await dialog.getByRole("button", { name: "Save and continue" }).click();
+      await saveReachedServer;
+      await expect(dialog.getByRole("button", { name: "Leave without saving" })).toBeDisabled();
+      await expect(page).toHaveURL(/\/admin\/homepage$/);
+
+      releaseSave?.();
+      await expect(dialog.getByRole("button", { name: "Leave without saving" })).toBeEnabled();
+      await expect(dialog.getByRole("alert").filter({ hasText: "Save failed for this test." })).toBeVisible();
+      expect((await (await page.request.get("/api/admin/homepage")).json()).content.hero).toEqual(baseline.content.hero);
+      await dialog.getByRole("button", { name: "Leave without saving" }).click();
+      await expect(page).toHaveURL(/\/admin\/shop$/);
+    } finally {
+      releaseSave?.();
+    }
+  });
+
   test("two tabs opened before editing keep the first unsaved recovery copy", async ({ page, context }) => {
     const second = await context.newPage();
     try {

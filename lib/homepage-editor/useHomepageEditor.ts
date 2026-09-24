@@ -24,14 +24,18 @@ export function useHomepageEditor(clubId: string) {
   const [recoveryUnavailable, setRecoveryUnavailable] = useState(false);
   const [recoveryConflict, setRecoveryConflict] = useState<Extract<HomepageRecoveryResult, { kind: "conflict" }> | null>(null);
   const [cleanupWarning, setCleanupWarning] = useState(false);
+  const [discardingUnsaved, setDiscardingUnsaved] = useState(false);
+  const [discardingRecovery, setDiscardingRecovery] = useState(false);
   const ownedRecord = useRef<unknown>(null);
   const persistence = useRef<Promise<void>>(Promise.resolve());
   const busy = useRef(false);
+  const leaving = useRef(false);
   const files = useRef(new Map<string, File>());
   const uploading = useRef(new Set<string>());
   const uploadTasks = useRef(new Map<string, Promise<void>>());
   const pendingUploadCleanup = useRef(new Set<string>());
   const cleanupTasks = useRef(new Map<string, Promise<boolean>>());
+  const recoveryDiscardBusy = useRef(false);
   const generation = useRef(0);
   const recoveryKey = useRef<string | null>(null);
   const recoveryUserId = useRef<string | null>(null);
@@ -39,14 +43,18 @@ export function useHomepageEditor(clubId: string) {
   function cancelPendingPersistence() {
     if (persistTimeout.current) { clearTimeout(persistTimeout.current); persistTimeout.current = null; }
   }
-  function clearRecoveryNow(): Promise<void> {
+  function clearRecoveryNow(): Promise<boolean> {
     cancelPendingPersistence();
     const key = recoveryKey.current;
     const pending = persistence.current.then(async () => {
-      if (key && !await clearRecoveryRecord(key, ownedRecord.current, Array.from(files.current.keys()))) setRecoveryUnavailable(true);
+      if (key && !await clearRecoveryRecord(key, ownedRecord.current, Array.from(files.current.keys()))) {
+        setRecoveryUnavailable(true);
+        return false;
+      }
       ownedRecord.current = null;
+      return true;
     });
-    persistence.current = pending;
+    persistence.current = pending.then(() => undefined);
     return pending;
   }
   function persistState(value: HomepageEditorState): Promise<void> {
@@ -72,6 +80,7 @@ export function useHomepageEditor(clubId: string) {
     current.current = next;
     setState(next);
   }, []);
+  const saveInFlight = () => busy.current || current.current?.save === "saving";
 
   async function cleanupUploadedAsset(assetId: string): Promise<boolean> {
     const existing = cleanupTasks.current.get(assetId);
@@ -97,13 +106,31 @@ export function useHomepageEditor(clubId: string) {
   }
 
   async function discardUnsavedUploads(): Promise<boolean> {
-    await Promise.allSettled(Array.from(uploadTasks.current.values()));
-    const unsaved = current.current?.draft.photos.items
-      .filter(photo => photo.rowId === null && photo.assetId !== null)
-      .map(photo => photo.assetId!) ?? [];
-    const assets = new Set([...pendingUploadCleanup.current, ...unsaved]);
-    const results = await Promise.all(Array.from(assets, cleanupUploadedAsset));
-    return results.every(Boolean);
+    // Save may have started before React has disabled the Leave button. Never
+    // navigate away from an in-flight operation that can still commit.
+    if (leaving.current || saveInFlight()) return false;
+    leaving.current = true; setDiscardingUnsaved(true);
+    const run = generation.current;
+    let readyToNavigate = false;
+    try {
+      await Promise.allSettled(Array.from(uploadTasks.current.values()));
+      if (run !== generation.current || saveInFlight()) return false;
+      const unsaved = current.current?.draft.photos.items
+        .filter(photo => photo.rowId === null && photo.assetId !== null)
+        .map(photo => photo.assetId!) ?? [];
+      const assets = new Set([...pendingUploadCleanup.current, ...unsaved]);
+      const results = await Promise.all(Array.from(assets, cleanupUploadedAsset));
+      if (!results.every(Boolean) || run !== generation.current || saveInFlight()) return false;
+      if (!await clearRecoveryNow() || run !== generation.current || saveInFlight()) return false;
+      readyToNavigate = true;
+      return true;
+    } finally {
+      // A successful Leave keeps the lock until this editor unmounts. A failed
+      // cleanup/clear releases it so the person can retry or keep editing.
+      if (!readyToNavigate && run === generation.current) {
+        leaving.current = false; setDiscardingUnsaved(false);
+      }
+    }
   }
   async function retryUnusedCleanup(): Promise<void> {
     await Promise.all(Array.from(pendingUploadCleanup.current, cleanupUploadedAsset));
@@ -114,7 +141,7 @@ export function useHomepageEditor(clubId: string) {
     const run = ++generation.current;
     current.current = null;
     setState(null); setSnapshot(null); setLoading(true); setError(null); setRecoveryNotice(null); setRecoveryConflict(null); setRecoveryUnavailable(false); setRecoveryOtherTab(false); ownedRecord.current = null;
-    files.current.clear(); uploading.current.clear(); busy.current = false; recoveryKey.current = null;
+    files.current.clear(); uploading.current.clear(); busy.current = false; leaving.current = false; setDiscardingUnsaved(false); recoveryDiscardBusy.current = false; setDiscardingRecovery(false); recoveryKey.current = null;
     async function load() {
       try {
         const response = await fetch("/api/admin/homepage", { credentials: "same-origin", cache: "no-store", signal: controller.signal });
@@ -243,7 +270,7 @@ export function useHomepageEditor(clubId: string) {
 
   async function save(): Promise<boolean> {
     const before = current.current;
-    if (!before || !snapshot || busy.current || recoveryConflict) return false;
+    if (!before || !snapshot || busy.current || leaving.current || recoveryConflict) return false;
     let payload;
     try { payload = buildHomepageSaveRequest(before, snapshot.design, crypto.randomUUID()); }
     catch { setError({ code: "INVALID_FIELDS", message: "Check the field lengths and photo descriptions before saving." }); return false; }
@@ -331,16 +358,67 @@ export function useHomepageEditor(clubId: string) {
   return {
     state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, retryPhoto: startUpload, updatePhoto,
     retryLoad: () => setReload(x => x + 1), recoveryNotice, dismissRecoveryNotice: () => setRecoveryNotice(null),
-    clearRecovery: clearRecoveryNow, discardUnsavedUploads, cleanupWarning, retryUnusedCleanup, removePhoto: (id: string) => {
+    clearRecovery: clearRecoveryNow, discardUnsavedUploads, isDiscardingUnsaved: () => leaving.current, cleanupWarning, retryUnusedCleanup, removePhoto: (id: string) => {
       const before = current.current;
       if (!before) return;
       const photo = before.draft.photos.items.find(item => item.clientId === id);
       dispatch({ type: "photos-changed", photos: before.draft.photos.items.filter(item => item.clientId !== id).map((item, order) => ({ ...item, order })) });
       if (photo?.rowId === null && photo.assetId) void cleanupUploadedAsset(photo.assetId);
-    }, recoveryUnavailable, recoveryOtherTab, recoveryConflict,
-    discardRecoveredDraft: async () => { await clearRecoveryNow(); setRecoveryConflict(null); },
+    }, recoveryUnavailable, recoveryOtherTab, recoveryConflict, discardingUnsaved, discardingRecovery,
+    discardRecoveredDraft: async () => {
+      if (recoveryDiscardBusy.current || recoveryOtherTab || !recoveryConflict) return;
+      const stored = ownedRecord.current as HomepageRecoveryRecord;
+      const key = recoveryKey.current;
+      const run = generation.current;
+      recoveryDiscardBusy.current = true; setDiscardingRecovery(true);
+      try {
+        // First make the browser recovery copy safe to restore after a partial
+        // cleanup or reload: retired assets remain identifiable for retries,
+        // but failed photos cannot be submitted as ready. The original local
+        // file is retained so the person can reupload it if they restore.
+        const assetIds = new Set(recoveryConflict.draft.photos.items
+          .filter(photo => photo.rowId === null && photo.assetId)
+          .map(photo => photo.assetId!));
+        if (assetIds.size) {
+          if (!key) { setRecoveryUnavailable(true); return; }
+          const safeDraft = structuredClone(recoveryConflict.draft);
+          safeDraft.photos.items = safeDraft.photos.items.map(photo => photo.rowId === null && photo.assetId ? {
+            ...photo, upload: "failed" as const, url: null,
+            error: { code: "RECOVERY_CLEANUP_PENDING", message: "This photo needs to be added again if you restore this draft." },
+          } : photo);
+          const safeRecord: HomepageRecoveryRecord = { ...stored, savedAt: new Date().toISOString(), draft: safeDraft };
+          const writeResult = await persistence.current.then(() => writeRecoveryRecord(key, safeRecord, { expected: stored }));
+          if (run !== generation.current) return;
+          if (writeResult !== "written") {
+            if (writeResult === "newer-record") setRecoveryOtherTab(true);
+            else setRecoveryUnavailable(true);
+            return;
+          }
+          ownedRecord.current = safeRecord;
+          setRecoveryConflict({ ...recoveryConflict, draft: safeDraft });
+        }
+        const results = await Promise.all(Array.from(assetIds, cleanupUploadedAsset));
+        if (!results.every(Boolean) || run !== generation.current) return;
+        const expected = ownedRecord.current;
+        if (!await clearRecoveryNow()) return;
+        if (run !== generation.current) return;
+        const remaining = key ? await readRecoveryRecord(key) : null;
+        if (remaining === RECOVERY_UNAVAILABLE) { setRecoveryUnavailable(true); return; }
+        if (remaining) {
+          // A concurrent tab replaced our expected record. Its copy stays in
+          // IndexedDB; keep the visible conflict and ask this tab to reload.
+          ownedRecord.current = remaining;
+          setRecoveryOtherTab(true);
+          return;
+        }
+        if (expected) setRecoveryConflict(null);
+      } finally {
+        recoveryDiscardBusy.current = false;
+        if (run === generation.current) setDiscardingRecovery(false);
+      }
+    },
     restoreRecoveredDraft: async () => {
-      if (!recoveryConflict || recoveryConflict.reason === "DESIGN_CHANGED" || !current.current) return;
+      if (recoveryDiscardBusy.current || recoveryOtherTab || !recoveryConflict || recoveryConflict.reason === "DESIGN_CHANGED" || !current.current) return;
       const stored = ownedRecord.current as HomepageRecoveryRecord;
       const run = generation.current;
       const draft = structuredClone(current.current.draft);
