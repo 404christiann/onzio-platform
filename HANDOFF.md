@@ -1,5 +1,27 @@
 # Onzio Platform Handoff
 
+## Selected OTP email now uses black wordmark on white — 2026-09-24
+
+Christian requested the same black Onzio wordmark used on the admin login in
+the selected OTP email. `supabase/templates/magic_link.html` now places that
+asset directly on the white card instead of placing the white logo in a dark
+badge. Option A in `design-previews/otp-email-options.html` matches it; B and C
+remain comparison designs. The subject, code text `{{ .Token }}`, copy,
+divider, and email-only authentication flow are unchanged.
+
+The local Supabase Auth container initially served its cached old template;
+the Kong mount already matched the edited file, so only the isolated local
+Auth container was restarted. The focused Mailpit delivery test then passed,
+including the black-logo URL and absence of the dark badge. TypeScript,
+PLAT-101 contracts 25/25, full Vitest 1573/1573, and `git diff --check` pass.
+The black PNG serves locally (HTTP 200). Its future email URL at
+`https://onzio-platform.vercel.app/images/onzio/onzio-black-logo-no-bg-trimmed.png`
+currently returns HTTP 404 because this feature branch has not been deployed.
+Do not sync this template to hosted Auth until that asset is live. Hosted Auth
+and the deployed app were not changed. Next: Christian reviews the revised
+email preview, then an approved release deploys the asset before syncing and
+verifying the hosted Auth template.
+
 ## Email login Option A implemented with logo in heading position — 2026-09-24
 
 Christian selected Option A for the admin email-address step, then removed its
