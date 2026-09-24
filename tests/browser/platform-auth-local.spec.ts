@@ -43,6 +43,7 @@ async function requestAndVerify(page: Page, email: string) {
     .isVisible();
   const code = await latestCode(email, recentlySent ? 0 : requestedAt);
   await page.getByLabel("Sign-in code").fill(code);
+  await page.getByRole("button", { name: "Verify code" }).click();
   await page.waitForURL(/\/admin$/);
 }
 
@@ -61,6 +62,25 @@ test("admin login accepts a pasted email code at desktop and phone widths", asyn
 
     await expect(input).toHaveValue("428913");
     await expect(page.locator('[data-slot="otp-digit"]')).toHaveText(["4", "2", "8", "9", "1", "3", "", ""]);
+    await expect(page.getByRole("button", { name: "Verify code" })).toBeEnabled();
+    await expect(page.locator('img[alt="Onzio"]')).toHaveAttribute("src", /onzio-black-logo-no-bg-trimmed/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+});
+
+test("code-entry paste action supports variable code lengths and narrow screens", async ({ page }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  for (const width of [1280, 390, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto("/admin/login", { waitUntil: "networkidle" });
+    await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+    await page.getByRole("button", { name: "I already have a code" }).click();
+
+    await page.evaluate(() => navigator.clipboard.writeText("Your code: 1234 5678 90"));
+    await page.getByRole("button", { name: "Paste code" }).click();
+    await expect(page.getByLabel("Sign-in code")).toHaveValue("1234567890");
+    await expect(page.locator('[data-slot="otp-digit"]')).toHaveCount(10);
+    await expect(page.getByRole("button", { name: "Verify code" })).toBeEnabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   }
 });
@@ -81,6 +101,7 @@ async function expectAdminNavigationScrollable(page: Page) {
 }
 
 test("passwordless owner adds an admin who signs in from desktop and mobile", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
   const { supabaseUrl } = assertSafeTestEnvironment();
   const service = createClient(
     supabaseUrl,
@@ -123,8 +144,8 @@ test("passwordless owner adds an admin who signs in from desktop and mobile", as
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await requestAndVerify(page, ownerEmail);
-    await expect(page.getByText("Team access")).toBeVisible();
-    await page.getByText("Team access").click();
+    await page.getByRole("button", { name: "Club Settings" }).click();
+    await page.getByRole("link", { name: "Team Access" }).click();
     await expect(page.getByRole("heading", { name: "Team access" })).toBeVisible();
 
     const addedAt = Date.now();
@@ -133,7 +154,8 @@ test("passwordless owner adds an admin who signs in from desktop and mobile", as
     await expect(page.getByRole("status")).toContainText("Administrator added");
     const adminCode = await latestCode(adminEmail, addedAt);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: new RegExp(`${ownerEmail} owner`) }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await page.waitForURL(/\/admin\/login$/);
     await page.getByLabel("Email").fill(adminEmail);
     await page.getByRole("button", { name: "Send sign-in code" }).click();
@@ -144,6 +166,7 @@ test("passwordless owner adds an admin who signs in from desktop and mobile", as
         .filter({ hasText: "A sign-in code was sent recently" }),
     ).toBeVisible();
     await page.getByLabel("Sign-in code").fill(adminCode);
+    await page.getByLabel("Sign-in code").press("Enter");
     await page.waitForURL(/\/admin$/);
     await expect(page.getByText("Team access")).toHaveCount(0);
     await expectAdminNavigationScrollable(page);

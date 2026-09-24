@@ -1,5 +1,48 @@
 # Onzio Platform Handoff
 
+## Option A admin OTP page implemented locally — 2026-09-24
+
+Christian selected the original open-canvas Option A for the admin login code
+step. `app/admin/login/page.tsx` now uses a centered black Onzio wordmark with
+its original green dot, sentence-case “Enter your code” heading, white canvas,
+portal purple `#6158dc`, responsive circular digit slots, back control,
+clipboard Paste action, and Resend code link. The supplied preview asset was
+copied to `public/images/onzio/onzio-black-logo-no-bg-trimmed.png` so the real
+login can serve it. The email-address and unknown-account steps remain as they
+were. The code step has one actual input for keyboard entry, desktop paste,
+mobile long-press Paste, and OS one-time-code autofill; its visual circles are
+presentation only. Loading makes the form inert and disables the back control.
+
+The large Sign in button is replaced by a compact, visible Verify code text
+action; Enter also submits. Automatic submission on an inferred final digit is
+unsafe because local Auth emits six digits, the hosted project has emitted
+eight, and the PLAT-101 contract preserves 4–10-digit entry. The clipboard
+action populates the input without prematurely verifying a possibly partial
+clipboard value. Resend requests a fresh code and preserves entered digits if
+Auth reports the cooldown.
+
+Verification: TypeScript, targeted lint, PLAT-101 contracts 25/25, complete
+Vitest suite 1573/1573, and focused Chromium OTP paste/UI tests 2/2 pass.
+Chromium screenshots at 1440px, 390px,
+and 320px showed the logo, sentence-case heading, and no page overflow. A
+separate local owner/admin browser run verified a real six-digit code could
+reach `/admin` via Verify code and Enter. The broader owner-to-admin test still
+fails afterward on its existing admin-navigation scroll assertion because the
+current collapsed sidebar does not overflow; the assertion was left intact.
+The local app used an explicitly isolated local Supabase URL and the fixture's
+`production` domain tag; no hosted Auth service or deployment was changed.
+
+Native iPhone 17 Simulator running iOS 26.5 Safari also confirmed the real
+input exposes the iOS Paste menu. Pasting the fake clipboard text
+`Code: 428 913` filled `428913` across the circles without truncation. The
+separate Paste code action surfaced Safari's Paste affordance and populated
+the circles, and the heading rendered in sentence case after a refresh.
+Android native paste remains unverified.
+
+Next: review Option A in the local login, complete Android native paste
+acceptance if a device is available, then obtain Christian's release approval
+before deployment.
+
 ## Three more OTP page option A iterations — 2026-09-24
 
 Christian requested three further desktop/mobile variants of selected option A

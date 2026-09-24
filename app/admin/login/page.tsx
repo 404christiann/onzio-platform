@@ -1,10 +1,9 @@
 "use client";
 
-import { ClipboardEvent, FormEvent, Fragment, useEffect, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
-import { Button } from "@/components/ui/button";
 import AdminLoading from "@/components/admin/AdminLoading";
 
 type LoginStep = "email" | "code" | "unknown";
@@ -17,10 +16,8 @@ const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
 // rejecting a correct code is worse than accepting whatever length the
 // server actually issues. The client therefore accepts 4-10 digits and
 // never hard-codes an exact count anywhere in submit gating. DEFAULT_BOX_COUNT
-// only controls how many boxes render before typing; it's set to production's
-// current actual length (8), not the stale config value, so pasting a real
-// code doesn't visibly grow the grid. The grid still grows to fit longer
-// codes if the length drifts again.
+// only controls how many circles render before typing; it's set to production's
+// current actual length (8). The row still grows to fit longer codes.
 const DEFAULT_BOX_COUNT = 8;
 // Floor on how long the post-submit loading state stays up. `verifyOtp` can
 // resolve in a few dozen milliseconds locally and on fast hosted connections,
@@ -40,8 +37,11 @@ export default function LoginPage() {
   const [codeFocused, setCodeFocused] = useState(false);
   const [step, setStep] = useState<LoginStep>("email");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastSubmittedCode = useRef<string | null>(null);
+  const codeInput = useRef<HTMLInputElement>(null);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
 
   const boxCount = Math.max(DEFAULT_BOX_COUNT, code.length);
   const activeBoxIndex = Math.min(code.length, boxCount - 1);
@@ -57,10 +57,11 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  async function requestCode(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
+  async function sendCode(isResend = false) {
+    if (isResend) setResending(true);
+    else setLoading(true);
     setError(null);
+    setPasteHint(null);
 
     try {
       const supabase = createClient();
@@ -74,8 +75,10 @@ export default function LoginPage() {
           return;
         }
         if (requestError.code === EMAIL_COOLDOWN_ERROR) {
-          setCode("");
-          lastSubmittedCode.current = null;
+          if (!isResend) {
+            setCode("");
+            lastSubmittedCode.current = null;
+          }
           setStep("code");
           setError(
             "A sign-in code was sent recently. Enter the code from your email—there's no need to request another.",
@@ -94,12 +97,18 @@ export default function LoginPage() {
           : "Unable to send a sign-in code",
       );
     } finally {
-      setLoading(false);
+      if (isResend) setResending(false);
+      else setLoading(false);
     }
   }
 
+  function requestCode(event: FormEvent) {
+    event.preventDefault();
+    void sendCode();
+  }
+
   async function verifyCode(candidate: string) {
-    if (candidate.length < 4 || loading) return;
+    if (candidate.length < 4 || loading || resending) return;
     if (lastSubmittedCode.current === candidate) return;
     lastSubmittedCode.current = candidate;
     setLoading(true);
@@ -139,13 +148,37 @@ export default function LoginPage() {
     // truncate a code copied with spaces or surrounding email text.
     event.preventDefault();
     const digits = event.clipboardData.getData("text/plain").replace(/\D/g, "");
-    if (digits) setCode(digits.slice(0, 10));
+    if (digits) {
+      setCode(digits.slice(0, 10));
+      setPasteHint(null);
+      setError(null);
+    }
+  }
+
+  async function pasteFromClipboard() {
+    codeInput.current?.focus();
+    try {
+      const clipboard = await navigator.clipboard.readText();
+      const digits = clipboard.replace(/\D/g, "").slice(0, 10);
+      if (!digits) {
+        setPasteHint("No code was found on your clipboard. You can paste into the circles instead.");
+        return;
+      }
+      setCode(digits);
+      setError(null);
+      setPasteHint(null);
+    } catch {
+      // The native input remains available for Cmd/Ctrl+V and mobile's
+      // long-press Paste menu if clipboard permission was not granted.
+      setPasteHint("Use Paste on the code field to insert your code.");
+    }
   }
 
   function startOver() {
     setStep("email");
     setCode("");
     setError(null);
+    setPasteHint(null);
     lastSubmittedCode.current = null;
   }
 
@@ -156,8 +189,134 @@ export default function LoginPage() {
     }
     setCode("");
     setError(null);
+    setPasteHint(null);
     lastSubmittedCode.current = null;
     setStep("code");
+  }
+
+  if (step === "code") {
+    return (
+      <main className="min-h-screen bg-white px-5 pb-16 pt-7 text-[#202235] sm:px-10 sm:pt-10">
+        <button
+          type="button"
+          onClick={startOver}
+          disabled={loading || resending}
+          aria-label="Use a different email address"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f1f0ff] text-2xl font-light text-[#2c2b44] transition-colors hover:bg-[#e8e6ff] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+        >
+          <span aria-hidden="true">←</span>
+        </button>
+
+        <section className="mx-auto mt-8 w-full max-w-[660px] text-center sm:mt-4 lg:mt-8">
+          <Image
+            src="/images/onzio/onzio-black-logo-no-bg-trimmed.png"
+            alt="Onzio"
+            width={352}
+            height={92}
+            priority
+            className="mx-auto mb-7 h-auto w-24 sm:mb-8 sm:w-32"
+          />
+          <h1 className="font-body text-[30px] font-semibold normal-case leading-tight tracking-[-0.05em] sm:text-[40px]">
+            Enter your code
+          </h1>
+          <p className="mx-auto mt-3 max-w-[500px] text-sm leading-6 text-[#6a6d7e] sm:text-base">
+            We sent a one-time code to{" "}
+            <span className="block break-words sm:inline">
+              <strong className="font-semibold text-[#202235]">{email.trim()}</strong>.
+            </span>
+            <br className="hidden sm:block" /> Enter it to access your Onzio admin portal.
+          </p>
+
+          <div className="relative mt-10 sm:mt-12">
+            <form
+              onSubmit={submitCode}
+              aria-hidden={loading}
+              inert={loading}
+              className={`transition-opacity duration-300 ${
+                loading ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
+              <label htmlFor="sign-in-code" className="sr-only">Sign-in code</label>
+              <div className="relative mx-auto max-w-[490px]">
+                <div aria-hidden="true" className="flex items-center justify-center gap-1 sm:gap-2">
+                  {Array.from({ length: boxCount }, (_, index) => (
+                    <span
+                      key={index}
+                      data-slot="otp-digit"
+                      className={`flex min-w-0 max-w-[51px] flex-1 aspect-square items-center justify-center rounded-full text-[16px] font-semibold text-[#26283a] sm:text-[22px] ${
+                        codeFocused && index === activeBoxIndex
+                          ? "border-[1.5px] border-[#6158dc] bg-white"
+                          : "bg-[#f5f5fb]"
+                      } ${index === Math.floor(boxCount / 2) && index > 0 ? "ml-1 sm:ml-2" : ""}`}
+                    >
+                      {code[index] ?? ""}
+                    </span>
+                  ))}
+                </div>
+                <input
+                  ref={codeInput}
+                  id="sign-in-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                  pattern="[0-9]{4,10}"
+                  minLength={4}
+                  maxLength={10}
+                  value={code}
+                  onChange={(event) => {
+                    setCode(event.target.value.replace(/\D/g, "").slice(0, 10));
+                    setError(null);
+                    setPasteHint(null);
+                  }}
+                  onPaste={pasteCode}
+                  onFocus={() => setCodeFocused(true)}
+                  onBlur={() => setCodeFocused(false)}
+                  className="absolute inset-0 h-full w-full cursor-text bg-transparent text-transparent caret-transparent outline-none [-webkit-text-fill-color:transparent]"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void pasteFromClipboard()}
+                className="mt-7 text-sm font-semibold text-[#6158dc] underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+              >
+                Paste code
+              </button>
+              {pasteHint && <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">{pasteHint}</p>}
+              <div className="mt-5">
+                <button
+                  type="submit"
+                  disabled={loading || resending || code.length < 4}
+                  className="min-h-11 px-4 text-sm font-semibold text-[#6158dc] underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+                >
+                  Verify code
+                </button>
+              </div>
+              <p className="mt-5 text-sm text-[#777b8d]">
+                Didn&apos;t get it?{" "}
+                <button
+                  type="button"
+                  disabled={loading || resending}
+                  onClick={() => void sendCode(true)}
+                  className="font-semibold text-[#6158dc] underline underline-offset-4 disabled:opacity-50 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+                >
+                  {resending ? "Sending…" : "Resend code"}
+                </button>
+              </p>
+            </form>
+
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center animate-in fade-in duration-300">
+                <AdminLoading tone="brand" className="text-sm font-semibold tracking-wide" />
+              </div>
+            )}
+          </div>
+          {error && <p role="alert" className="mx-auto mt-6 max-w-md text-sm text-red-600">{error}</p>}
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -190,12 +349,6 @@ export default function LoginPage() {
             so the following element's own top margin becomes the whole
             visible gap — both steps use mt-8 for that reason, matching each
             other. Only the code step keeps a heading. */}
-        {step === "code" && (
-          <h1 className="mt-2 font-display text-3xl font-black uppercase">
-            Enter your code
-          </h1>
-        )}
-
         {step === "unknown" ? (
           <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
             <p>
@@ -224,108 +377,6 @@ export default function LoginPage() {
             >
               Try another address
             </button>
-          </div>
-        ) : step === "code" ? (
-          /* Submitting swaps the whole code-entry card for a loading state
-             rather than only relabelling the button. Both children stay
-             mounted in the same box so the swap is a real crossfade instead
-             of a jump-cut, and the form is made inert (opacity 0,
-             pointer-events off, aria-hidden) so it is genuinely replaced
-             rather than covered by an overlay. None of the flexible-length
-             OTP logic below is touched by this — only what renders while a
-             verification is in flight. */
-          <div className="relative mt-8">
-            <form
-              onSubmit={submitCode}
-              aria-hidden={loading}
-              className={`space-y-5 transition-opacity duration-300 ${
-                loading ? "pointer-events-none opacity-0" : "opacity-100"
-              }`}
-            >
-              <p className="text-sm leading-6 text-muted-foreground">
-                We sent a sign-in code to{" "}
-                <strong className="break-all text-foreground">{email.trim()}</strong>.
-              </p>
-              <div>
-                <label
-                  className="block text-sm font-semibold"
-                  htmlFor="sign-in-code"
-                >
-                  Sign-in code
-                </label>
-                {/* One real input holds the whole code; the boxes are a purely
-                    visual layer. Keep the input itself visible to the browser
-                    (with transparent text) so native paste menus can target it.
-                    The grid grows to match the server's code length. */}
-                <div className="relative mt-2.5">
-                  <div aria-hidden="true" className="flex items-center gap-1.5 sm:gap-2">
-                    {Array.from({ length: boxCount }, (_, index) => (
-                      <Fragment key={index}>
-                        {boxCount % 2 === 0 && index === boxCount / 2 && (
-                          <span
-                            data-slot="otp-separator"
-                            className="h-0.5 w-3 shrink-0 rounded-full bg-muted-foreground/60"
-                          />
-                        )}
-                        <span
-                          data-slot="otp-digit"
-                          className={`flex h-11 min-w-0 max-w-12 flex-1 items-center justify-center rounded-lg border bg-background text-center font-mono text-xl text-foreground transition-shadow sm:h-12 ${
-                            codeFocused && index === activeBoxIndex
-                              ? "border-ring ring-[3px] ring-ring/50"
-                              : "border-input"
-                          }`}
-                        >
-                          {code[index] ?? ""}
-                        </span>
-                      </Fragment>
-                    ))}
-                  </div>
-                  <input
-                    id="sign-in-code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    required
-                    pattern="[0-9]{4,10}"
-                    minLength={4}
-                    maxLength={10}
-                    value={code}
-                    onChange={(event) =>
-                      setCode(event.target.value.replace(/\D/g, "").slice(0, 10))
-                    }
-                    onPaste={pasteCode}
-                    onFocus={() => setCodeFocused(true)}
-                    onBlur={() => setCodeFocused(false)}
-                    className="absolute inset-0 h-full w-full cursor-text bg-transparent text-transparent caret-transparent outline-none [-webkit-text-fill-color:transparent]"
-                  />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                variant="brand"
-                disabled={loading || code.length < 4}
-                className="h-auto w-full rounded-lg py-3 font-display font-black uppercase tracking-widest"
-              >
-                {loading ? "Verifying…" : "Sign in"}
-              </Button>
-              <button
-                type="button"
-                onClick={startOver}
-                className="w-full py-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                Use a different address
-              </button>
-            </form>
-
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center animate-in fade-in duration-300">
-                <AdminLoading
-                  tone="brand"
-                  className="font-display text-sm font-bold uppercase tracking-[0.25em]"
-                />
-              </div>
-            )}
           </div>
         ) : (
           <form onSubmit={requestCode} className="mt-8 space-y-4">
