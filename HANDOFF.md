@@ -1,13 +1,47 @@
 # Onzio Platform Handoff
 
+## Homepage editor PR and production migration gate — 2026-09-23 (Codex)
+
+The reviewed Homepage editor branch is pushed and [PR #5](https://github.com/404christiann/onzio-platform/pull/5)
+is open against `main`. The PR includes the previously reviewed admin container
+skeleton commit. Christian asked to hold step 3: **do not merge or deploy yet**.
+The prior local gate remains 1537/1537 full tests, 34/34 Homepage browser,
+12/12 admin-loading and 4/4 media, with tsc/lint/build clean. Screen-reader
+acceptance remains explicitly waived, not passed.
+
+The linked production project is `ioalthwsdrlzrubomrow`. Its ledger had the
+already-applied `20260815140402_pathway_presentation_template` migration, which
+this branch lacked. Its stored SQL and live constraint matched the original
+file in sibling commit `0a4534a`; the exact file was committed and pushed in
+`e32db49`. No migration-history repair was run. With that file present,
+`supabase db push --linked --dry-run --skip-vault` listed exactly one pending
+file: `20260915180623_homepage_atomic_save.sql`.
+
+Before applying it, the Supabase backup list showed a **completed physical
+backup** from `2026-09-23T11:15:44.966Z`. A fresh restricted logical backup of
+`onzio` and `onzio_private` schema and data was saved under
+`/private/tmp/onzio-homepage-prod-pre-migration-20260923/` (mode 600 files;
+51 table definitions and 51 data COPY sections; complete dump trailers and
+SHA-256 checksums verified). This temporary backup does not include managed
+Auth/Storage data; the physical backup is the full recovery point.
+
+The verified Apple Silicon Supabase CLI 2.117.0 applied **only** the Homepage
+migration via `db push --linked --skip-vault`. No seeds, roles or Vault changes
+were included. The post-apply migration list matches every local version; a
+second dry run reports no pending migrations. Read-only production SQL confirms
+one history row, both private tables, both Homepage RPCs, ten serialization
+triggers and five revision triggers. **No code was deployed and `main` was not
+changed.** Next step, when Christian resumes step 3: review/merge PR #5 and
+verify the resulting production deployment and live tenant sites.
+
 ## Homepage editor — ready for Codex closeout — 2026-09-23
 
 Christian is handing the Homepage editor back to Codex to close out and push to
 `main`. Full instructions: `docs/homepage-editor-codex-closeout-handoff.md`.
 
 Branch `codex/homepage-editor-redesign` includes the editor commit `b692654`
-and closeout commits `d05b844` and `ce5c2b1`. Nothing pushed. All HP packages
-are `complete` in both ledgers:
+and closeout commits `d05b844` and `ce5c2b1`. At this handoff, nothing had
+been pushed. All HP packages are `complete` in both ledgers:
 Christian approved the visual review 2026-09-21 and real iOS Safari keyboard
 acceptance passed 2026-09-22.
 
@@ -44,8 +78,9 @@ no hosted migration, production deploy, PR, push, or merge was performed.
 The Alpha fixture still contains Christian's `hero.intro` text, "Testing this
 short paragraph." VoiceOver remains waived as stated above.
 
-**Before any production deploy:** this branch adds migration
-`20260915180623_homepage_atomic_save.sql`, which production does not have. The
+**Before any production deploy (historical state; gate completed above):** this
+branch adds migration `20260915180623_homepage_atomic_save.sql`, which
+production lacked at this handoff. The
 mandatory `supabase migration list --linked` gate in CLAUDE.md applies; apply
 the migration first, then deploy. `/usr/local/bin/supabase` is an x86_64 binary
 and will not run. Homebrew refused the Apple Silicon install because Xcode 26.6

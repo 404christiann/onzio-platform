@@ -1,5 +1,17 @@
 # Homepage editor feedback — Luna implementation plan
 
+## Release status — 2026-09-23
+
+HP-08A–D remain complete, with screen-reader acceptance explicitly waived.
+PR #5 is open. The production Homepage migration was the sole pending file after
+the already-applied pathway migration was restored to this branch in `e32db49`.
+It was applied after verified physical and restricted logical backups. The
+post-apply migration ledger matches the branch, the dry run is empty, and
+read-only SQL confirms the tables, RPCs and triggers. Files changed for this
+release step: the recovered pathway migration, `HANDOFF.md`, the main HP ledger,
+this ledger and the closeout handoff. Christian paused step 3. Next: wait for
+his instruction to merge PR #5, then verify deployment and live tenant sites.
+
 ## Screen-reader acceptance — waived by Christian, 2026-09-23
 
 Christian's decision: do not hold the Homepage editor for VoiceOver/TalkBack

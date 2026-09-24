@@ -2,11 +2,24 @@
 
 Prepared 2026-09-23 by Claude. Christian wants this taken to `main`.
 
+## Latest release state — 2026-09-23 (Codex)
+
+[PR #5](https://github.com/404christiann/onzio-platform/pull/5) is open. The
+production migration gate passed: the already-applied August pathway migration
+was recovered into this branch as the exact original file (`e32db49`), and the
+September Homepage migration was applied after a one-file dry run, a completed
+physical backup check, and fresh restricted logical backups. A second dry run
+reports no pending migrations; the linked ledger matches the branch. See
+`HANDOFF.md` for backup and schema readback evidence. Christian has put step 3
+on hold: **do not merge PR #5 or deploy production**. The historical handoff
+below records the pre-release state and is superseded by this section.
+
 ## Where it stands
 
 The editor is feature-complete and reviewed. Branch
 `codex/homepage-editor-redesign` contains editor commit `b692654` (83 files)
-and closeout commits `d05b844` and `ce5c2b1`. Nothing is pushed.
+and closeout commits `d05b844` and `ce5c2b1`. At this handoff, nothing had
+been pushed.
 
 All HP packages are now `complete` in both ledgers. Christian approved the
 visual review on 2026-09-21; real iOS Safari keyboard acceptance passed on
@@ -63,7 +76,8 @@ mirroring session is active (confirmed 2026-09-23).
 ## 3. Mandatory gate before any production deploy
 
 This branch adds migration `supabase/migrations/20260915180623_homepage_atomic_save.sql`,
-which production has **not** got. `CLAUDE.md` makes this check mandatory, and it
+which production lacked at this handoff (now applied; see latest state above).
+`CLAUDE.md` makes this check mandatory, and it
 is exactly the class of mismatch that broke Diverse City FC on 2026-08-14:
 
 ```bash
@@ -87,7 +101,8 @@ site-wide, not feature-local.
   SHA-256 against the tapped formula, and ran the CLI from
   `/private/tmp/onzio-supabase-cli-2.117.0/supabase`. This is temporary and
   may not survive a reboot. `migration list --local` confirms migration
-  `20260915180623`; the linked production ledger remains unchecked.
+  `20260915180623`; the linked production ledger was unchecked at this handoff
+  and has since been verified (see latest state above).
 - **`npx next` resolves to Next 16**, not the project's 15.5.22, and cannot read
   the build. Use `npm run start` or `./node_modules/.bin/next`.
 - **Do not use `pkill -f "next start"`** — Next renames its process to
@@ -134,11 +149,13 @@ the specs refuse to run on a leaked fixture and name that command.
 
 ## 6. Remaining work, in order
 
-1. Establish a durable Apple Silicon Supabase CLI or use the checksum-verified
-   temporary binary for the release gate (section 4).
-2. Open the PR for review. Before any production deployment or merge to `main`,
-   apply the migration and confirm the remote ledger (section 3).
-3. Merge to `main` after the migration gate passes; the main push deploys.
+1. Hold the merge while Christian has step 3 paused. PR #5 is open and the
+   production migration ledger is current.
+2. When Christian resumes step 3, review/merge the PR; the `main` push deploys.
+   Verify the resulting deployment and live tenant sites.
+
+The temporary Apple Silicon Supabase CLI is suitable for this gate but may not
+survive a reboot. Installing a durable CLI remains environment maintenance.
 
 Christian's outstanding manual item, unrelated to merge: the Alpha fixture's
 `hero.intro` still reads "Testing this short paragraph." from his own testing.

@@ -1,5 +1,20 @@
 # Homepage editor redesign — implementation plan
 
+## Release status — 2026-09-23
+
+HP-00–08 are complete with the accepted VoiceOver/TalkBack waiver recorded below.
+PR #5 is open. The production migration gate passed: the previously applied
+pathway migration was checked into this branch in `e32db49`, the Homepage
+atomic-save migration was the only pending file in the dry run and was applied
+after verified backups, and the post-apply ledger matches the branch with no
+pending migrations. Changed files for this release step:
+`supabase/migrations/20260815140402_pathway_presentation_template.sql`,
+`HANDOFF.md`, this ledger, the HP-08 ledger and the closeout handoff. Verification:
+completed physical backup plus mode-600 logical schema/data dumps, one-file dry
+run, successful apply, zero-file post-apply dry run, and read-only table/RPC/
+trigger readback. Christian paused step 3, so the exact next step is to wait for
+his instruction to merge PR #5, then verify the deployment and live sites.
+
 ## Approved follow-up: HP-08, 2026-09-17
 
 Christian approved the feedback scope in `docs/homepage-editor-feedback-luna-plan.md`:
