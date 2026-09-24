@@ -1,5 +1,19 @@
 # Onzio Platform Handoff
 
+## Three email-login design previews — 2026-09-24
+
+Christian requested three standalone designs for the email-address step that
+visually continue the selected OTP page. Added
+`design-previews/email-login-options.html` with desktop and mobile examples:
+A is the closest centered white-canvas continuation, B adds a quiet lavender
+header, and C separates the message from entry on desktop while stacking the
+same elements on mobile. All three use the existing black Onzio logo asset,
+portal purple `#6158dc`, and the current passwordless actions. Preview forms
+interact locally and explicitly do not send email. The production login page
+was not changed. Local Chromium confirmed three options, all logos loaded, no
+page overflow at 1440/1024/390/320px, and no clipped mobile actions. Next:
+Christian selects an option or asks for a refinement before implementation.
+
 ## Admin OTP auto-verification and Back control — 2026-09-24
 
 Christian clarified that entering or pasting a complete code must start login
