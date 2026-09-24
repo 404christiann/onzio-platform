@@ -2972,6 +2972,10 @@ export type Database = {
           slug: string
         }[]
       }
+      retire_unreferenced_homepage_upload: {
+        Args: { p_asset_id: string; p_club_id: string }
+        Returns: Json
+      }
       run_billing_lifecycle: {
         Args: {
           p_now: string

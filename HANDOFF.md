@@ -1,5 +1,47 @@
 # Onzio Platform Handoff
 
+## PR #5 review hardening — 2026-09-23 (Codex)
+
+Two pre-merge review findings are fixed on the PR branch. Ordinary IndexedDB
+recovery writes now compare against the last record this tab read, so two tabs
+opened before editing cannot
+silently replace each other's unsaved copy. The losing tab gets the existing
+visible warning. New Homepage uploads removed before Save, while finalization
+is in flight, or through explicit Leave without saving are retired by a narrow
+server route. Its database RPC holds the same advisory lock as Homepage saves,
+checks tenant/session/actor and current photo references, and refuses retirement
+if another tab saved the asset. Storage deletion happens only after that
+transaction reports retirement; failures queue the existing cleanup worker.
+This does not guarantee cleanup when a browser tab is forcibly closed before
+the async upload or cleanup finishes; the browser cannot reliably perform a
+network cleanup during hard close.
+
+Changed files: `lib/homepage-editor/{recovery-storage,useHomepageEditor}.ts`,
+`components/admin/homepage/HomepageEditor.tsx`,
+`app/api/admin/homepage/upload-cleanup/route.ts`, `lib/media-processing.ts`,
+`lib/database.generated.ts`, migration
+`20260924040401_homepage_unreferenced_upload_cleanup.sql`, route/DB/browser
+regressions, this handoff and both HP ledgers. The Supabase CLI created and
+applied this migration **locally only**; the older pathway migration was also
+applied to the local ledger because it was already present in this branch and
+the local stack had skipped it. Production has the earlier Homepage migration
+but **does not have this new cleanup migration**. The production migration gate
+must therefore be repeated before any eventual production code deployment.
+
+Verification on the local build: TypeScript, lint, build, contracts **933/933**,
+architecture **21/21**, local DB **242/242**, full suite **1561/1561**, and
+Homepage browser **37/37** passed. The client build had nine chunks with the
+local Supabase URL and zero with the hosted URL. The new DB test proved a
+concurrent photo save wins the reference lock and prevents deletion; browser
+tests covered two tabs opened before editing, ready-photo removal, removal
+during upload finalization and explicit discard/navigation. A direct
+`supabase gen types --local` run could not start postgres-meta because the
+machine's Docker credential helper is missing; the generated file's only diff
+is the new RPC signature, checked by TypeScript. Next: wait for Christian to
+resume the release, then repeat the production migration gate for the new file
+before merging PR #5 and verifying the resulting production deployment.
+Do not merge or deploy while step 3 remains paused.
+
 ## Homepage editor PR and production migration gate — 2026-09-23 (Codex)
 
 The reviewed Homepage editor branch is pushed and [PR #5](https://github.com/404christiann/onzio-platform/pull/5)

@@ -217,9 +217,15 @@ test.describe("homepage editor photo queue", () => {
       await expect(photos.nth(5).getByRole("button", { name: "Move down" })).toBeDisabled();
 
       // Removal frees a slot and keeps the remaining order contiguous.
+      const removedSrc = await photos.nth(2).locator("img").getAttribute("src");
+      expect(removedSrc).toBeTruthy();
+      const removedPath = decodeURIComponent(new URL(removedSrc!).pathname.split("/storage/v1/object/public/onzio-media/")[1]);
+      const removedAsset = await db.query("select id from onzio.media_assets where storage_path=$1", [removedPath]);
+      expect(removedAsset.rows).toHaveLength(1);
       await photos.nth(2).getByRole("button", { name: "Remove photo" }).click();
       await expect(photos).toHaveCount(5);
       await expect(toolbar.getByRole("button", { name: "Add photo" })).toBeEnabled();
+      await expect.poll(async () => (await db.query("select status from onzio.media_assets where id=$1", [removedAsset.rows[0].id])).rows[0]?.status).toBe("orphaned");
 
       await page.getByRole("button", { name: "Save homepage", exact: true }).filter({ visible: true }).click();
       await expect(page.getByText("Saved. Your homepage is updated.", { exact: true })).toBeVisible();
@@ -231,6 +237,87 @@ test.describe("homepage editor photo queue", () => {
     } finally {
       await restorePhotos(db);
       await restoreTemplate(db, original);
+      await db.end();
+    }
+  });
+
+  test("removing a photo while finalization is in flight retires the completed upload", async ({ page }) => {
+    const db = localDb();
+    await db.connect();
+    const original = await readOriginalState(db);
+    const source = parsePresentationDocument(original.configuration, { surface: "production" });
+    let releaseFinalize: (() => void) | undefined;
+    const finalizeReleased = new Promise<void>(resolve => { releaseFinalize = resolve; });
+    let finalizeStarted: (() => void) | undefined;
+    const finalized = new Promise<void>(resolve => { finalizeStarted = resolve; });
+    let uploadedAssetId: string | null = null;
+    await page.route("**/api/admin/media/finalize", async route => {
+      const response = await route.fetch();
+      const body = await response.json() as { data?: { assetId?: string } };
+      uploadedAssetId = body.data?.assetId ?? null;
+      finalizeStarted?.();
+      await finalizeReleased;
+      await route.fulfill({ response });
+    });
+    try {
+      await publishTemplate(db, source, "clubhouse", original.updated_by);
+      await page.goto("/admin/homepage");
+      const frame = page.frameLocator('iframe[title="Homepage preview"]');
+      await frame.locator('[data-homepage-piece="photos"]').click();
+      await frame.locator('[data-homepage-piece="photos"]').click();
+      await page.getByRole("button", { name: "Add photo" }).filter({ visible: true }).first().click();
+      await page.getByLabel("Choose homepage photos").setInputFiles(FIXTURE_PHOTOS[0]);
+      await finalized;
+      expect(uploadedAssetId).toBeTruthy();
+      const photo = page.locator(".hp-panel .hp-photo");
+      await expect(photo).toHaveCount(1);
+      await photo.getByRole("button", { name: "Remove photo" }).click();
+      await expect(photo).toHaveCount(0);
+      releaseFinalize?.();
+      await expect.poll(async () => (await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetId])).rows[0]?.status).toBe("orphaned");
+    } finally {
+      releaseFinalize?.();
+      await restorePhotos(db);
+      await restoreTemplate(db, original);
+      if (uploadedAssetId) {
+        await db.query("delete from onzio.audit_events where resource_id=$1", [uploadedAssetId]);
+        await db.query("delete from onzio.media_assets where id=$1", [uploadedAssetId]);
+      }
+      await db.end();
+    }
+  });
+
+  test("Leave without saving retires an uploaded photo before navigating", async ({ page }) => {
+    const db = localDb();
+    await db.connect();
+    const original = await readOriginalState(db);
+    const source = parsePresentationDocument(original.configuration, { surface: "production" });
+    let uploadedAssetId: string | null = null;
+    try {
+      await publishTemplate(db, source, "clubhouse", original.updated_by);
+      await page.goto("/admin/homepage");
+      const frame = page.frameLocator('iframe[title="Homepage preview"]');
+      await frame.locator('[data-homepage-piece="photos"]').click();
+      await frame.locator('[data-homepage-piece="photos"]').click();
+      await page.getByRole("button", { name: "Add photo" }).filter({ visible: true }).first().click();
+      await page.getByLabel("Choose homepage photos").setInputFiles(FIXTURE_PHOTOS[0]);
+      const photo = page.locator(".hp-panel .hp-photo");
+      await expect(photo.locator("img")).toBeVisible();
+      const src = await photo.locator("img").getAttribute("src");
+      const storagePath = decodeURIComponent(new URL(src!).pathname.split("/storage/v1/object/public/onzio-media/")[1]);
+      uploadedAssetId = (await db.query("select id from onzio.media_assets where storage_path=$1", [storagePath])).rows[0]?.id ?? null;
+      expect(uploadedAssetId).toBeTruthy();
+      await page.getByRole("button", { name: "Edit in About" }).filter({ visible: true }).click();
+      await page.getByRole("dialog").filter({ hasText: "Save your homepage changes?" }).getByRole("button", { name: "Leave without saving" }).click();
+      await expect(page).toHaveURL(/\/admin\/about$/);
+      expect((await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetId])).rows[0]?.status).toBe("orphaned");
+    } finally {
+      await restorePhotos(db);
+      await restoreTemplate(db, original);
+      if (uploadedAssetId) {
+        await db.query("delete from onzio.audit_events where resource_id=$1", [uploadedAssetId]);
+        await db.query("delete from onzio.media_assets where id=$1", [uploadedAssetId]);
+      }
       await db.end();
     }
   });

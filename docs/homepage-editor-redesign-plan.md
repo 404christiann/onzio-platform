@@ -1,5 +1,32 @@
 # Homepage editor redesign — implementation plan
 
+## PR review fix status — 2026-09-23
+
+HP-04 and HP-05 review findings are fixed on the PR #5 branch.
+`useHomepageEditor.ts` now guards every recovery write against
+the tab's acknowledged IndexedDB record; a competing tab receives a visible
+warning and cannot replace the first tab's unsaved draft. The editor cleans up
+newly uploaded photos removed before Save, during finalization, or on explicit
+Leave without saving. New
+`20260924040401_homepage_unreferenced_upload_cleanup.sql` adds a narrow
+private security-definer RPC behind an invoker endpoint: it shares the Homepage
+save lock, checks actor/tenant and current references, then retires only an
+unreferenced own Homepage upload. Storage cleanup follows on the server.
+Files: `lib/homepage-editor/{recovery-storage,useHomepageEditor}.ts`,
+`components/admin/homepage/HomepageEditor.tsx`,
+`app/api/admin/homepage/upload-cleanup/route.ts`, `lib/media-processing.ts`,
+`lib/database.generated.ts`, the new migration and targeted route/DB/browser
+tests. Evidence: TypeScript, lint and local build pass; contracts 933/933,
+architecture 21/21, local DB 242/242, full 1561/1561 and Homepage browser
+37/37 pass. Forced tab close during an unfinished network operation cannot
+guarantee cleanup. The new migration is **local only** and will be pending in
+production. Exact next step: when Christian resumes release, repeat the
+production migration gate before any merge/deploy. Screen-reader acceptance
+remains waived as recorded below.
+
+The following release-status paragraph records the earlier PR state before
+this review fix.
+
 ## Release status — 2026-09-23
 
 HP-00–08 are complete with the accepted VoiceOver/TalkBack waiver recorded below.
@@ -487,6 +514,8 @@ commands/results, evidence paths, blockers and its exact next step here and in
 | HP-03 | complete locally | Actual route integration; `components/admin/homepage/*`, `lib/homepage-editor/{adapter,preview-context,useHomepageEditor}`, scoped public hooks | Five browser cases pass: hero selection/edit/atomic save, failure/retry, Story fallback, keyboard focus, five-template hero parity and mobile viewports. Full visual/real keyboard acceptance stays HP-06/07. See checkpoint below. |
 | HP-04 | complete | Reference-safe post-commit media cleanup (migration `20260915180623`, `app/api/admin/homepage/route.ts`); mixed-upload/shared-shortcut/hidden-section browser cases (`tests/browser/homepage-editor-photos.spec.ts`) | Verified against the real local stack: full suite 1,520 passed / 15 expected HP-05 reds / 0 unexpected; homepage DB tests 27/27 including 4 new retirement cases; homepage Playwright suite 8/8 across all five spec files; tsc/lint/build clean. See Claude checkpoint below. Shared Shop/Programs shortcuts share About's proven mechanism but are individually unexercised — optional follow-up, not a blocker. |
 | HP-05 | complete locally | Recovery hardening in `recovery-storage.ts`, `useHomepageEditor.ts` and `HomepageRecoveryReview.tsx`; real lost-response/two-tab browser coverage | Receipt reconciliation, serialized/guarded persistence, conflict review and visible unavailable-storage behavior pass. Dedicated quota-abort/cross-user blob browser exercises remain optional coverage under Christian’s continuation instructions; see 2026-09-17 checkpoint for exact limits. |
+| HP-04 / review fix | complete locally | `HomepageEditor.tsx`, `useHomepageEditor.ts`, `app/api/admin/homepage/upload-cleanup/route.ts`, `lib/media-processing.ts`, generated RPC types, migration `20260924040401`, route/DB/browser tests | Local DB 242/242, full 1561/1561 and Homepage browser 37/37; an in-flight save holds the lock and prevents retirement of its referenced asset. New migration is local only. Next: apply migration before eventual deploy. |
+| HP-05 / review fix | complete locally | `recovery-storage.ts`, `useHomepageEditor.ts`, two-tabs-before-editing browser regression | Both tabs open first: the second tab gets a visible warning, and reloading the first restores its own unsaved draft. Homepage browser 37/37 and full 1561/1561 pass. Next: retain accepted screen-reader waiver; merge remains paused. |
 | HP-06 | complete | Native options dialog, mobile Save/error access, focus/44px targets, light/dark/reduced motion, skeleton, playback; scoped public preview header/window fixes; 2026-09-21 selection anchoring in `HomepageEditor.tsx` | Automated desktop/mobile/template checks pass. Christian's reported selection jump is reproduced and fixed: opening options took 348px from the preview and pushed the selected piece 276-312px out of view at 1152-1280px; now anchored, measured 0px, with 4 new regressions. Real iOS Safari keyboard acceptance passed 2026-09-22. Screen-reader acceptance waived by Christian 2026-09-23 and recorded as an accepted gap. |
 | HP-07 | complete | Repository and browser gates, synthetic five-template plus legacy comparison, saved review evidence and documentation | 2026-09-21 (Claude): Homepage browser suite 32/32 with the previously failing photo/recovery cases green; full 1,535/1,535, contracts 910/910, architecture 21/21, local DB 239/239, admin-loading 12/12, media 4/4, tsc/lint/build clean. The earlier 5/10 broader run was **local fixture contamination, proven**: an interrupted templates run left Alpha published on a clubhouse fixture, under which `story.text` does not exist and hero saves including `eyebrow` fail `FIELD_UNAVAILABLE`; fixed-string test markers then made the specs unable to restore themselves. Guarded by seeded-fixture preconditions, per-run unique markers and `npm run fixture:homepage:restore:local`. Real-device keyboard evidence recorded 2026-09-22; Christian approved the visual review 2026-09-21; screen-reader acceptance waived 2026-09-23. |
 

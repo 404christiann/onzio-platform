@@ -408,6 +408,25 @@ export async function retirePublishedMedia(input: {
   };
 }
 
+/** Storage half of the atomically checked unsaved-Homepage-upload retirement. */
+export async function deleteRetiredHomepageUpload(input: {
+  clubId: string;
+  storagePath: string;
+}): Promise<{ cleanupQueued: boolean }> {
+  const { error } = await createServiceRoleClient().storage
+    .from("onzio-media")
+    .remove([input.storagePath]);
+  if (error) {
+    await queueMediaCleanup({
+      clubId: input.clubId,
+      storageBucket: "onzio-media",
+      storagePath: input.storagePath,
+      reason: "unsaved-homepage-upload",
+    });
+  }
+  return { cleanupQueued: Boolean(error) };
+}
+
 export async function getMediaUsageByClub(clubId: string): Promise<{
   assetCount: number;
   totalBytes: number;

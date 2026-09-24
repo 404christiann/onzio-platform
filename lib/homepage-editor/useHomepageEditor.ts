@@ -23,11 +23,15 @@ export function useHomepageEditor(clubId: string) {
   const [recoveryOtherTab, setRecoveryOtherTab] = useState(false);
   const [recoveryUnavailable, setRecoveryUnavailable] = useState(false);
   const [recoveryConflict, setRecoveryConflict] = useState<Extract<HomepageRecoveryResult, { kind: "conflict" }> | null>(null);
+  const [cleanupWarning, setCleanupWarning] = useState(false);
   const ownedRecord = useRef<unknown>(null);
   const persistence = useRef<Promise<void>>(Promise.resolve());
   const busy = useRef(false);
   const files = useRef(new Map<string, File>());
   const uploading = useRef(new Set<string>());
+  const uploadTasks = useRef(new Map<string, Promise<void>>());
+  const pendingUploadCleanup = useRef(new Set<string>());
+  const cleanupTasks = useRef(new Map<string, Promise<boolean>>());
   const generation = useRef(0);
   const recoveryKey = useRef<string | null>(null);
   const recoveryUserId = useRef<string | null>(null);
@@ -54,7 +58,7 @@ export function useHomepageEditor(clubId: string) {
       designRevision: value.designRevision, baseline: value.baseline, draft: value.draft, submitted: value.submitted,
     };
     const pending = persistence.current.then(async () => {
-      const result = await writeRecoveryRecord(key, record, value.submitted ? { expected: ownedRecord.current } : undefined);
+      const result = await writeRecoveryRecord(key, record, { expected: ownedRecord.current });
       if (result === "written") { ownedRecord.current = record; setRecoveryOtherTab(false); }
       else if (result === "newer-record") setRecoveryOtherTab(true);
       else setRecoveryUnavailable(true);
@@ -68,6 +72,42 @@ export function useHomepageEditor(clubId: string) {
     current.current = next;
     setState(next);
   }, []);
+
+  async function cleanupUploadedAsset(assetId: string): Promise<boolean> {
+    const existing = cleanupTasks.current.get(assetId);
+    if (existing) return existing;
+    pendingUploadCleanup.current.add(assetId);
+    const task = (async () => {
+      try {
+        const response = await fetch("/api/admin/homepage/upload-cleanup", {
+          method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ assetId }),
+        });
+        if (!response.ok) throw new Error("Could not remove the unused photo.");
+        pendingUploadCleanup.current.delete(assetId);
+        if (pendingUploadCleanup.current.size === 0) setCleanupWarning(false);
+        return true;
+      } catch {
+        setCleanupWarning(true);
+        return false;
+      } finally { cleanupTasks.current.delete(assetId); }
+    })();
+    cleanupTasks.current.set(assetId, task);
+    return task;
+  }
+
+  async function discardUnsavedUploads(): Promise<boolean> {
+    await Promise.allSettled(Array.from(uploadTasks.current.values()));
+    const unsaved = current.current?.draft.photos.items
+      .filter(photo => photo.rowId === null && photo.assetId !== null)
+      .map(photo => photo.assetId!) ?? [];
+    const assets = new Set([...pendingUploadCleanup.current, ...unsaved]);
+    const results = await Promise.all(Array.from(assets, cleanupUploadedAsset));
+    return results.every(Boolean);
+  }
+  async function retryUnusedCleanup(): Promise<void> {
+    await Promise.all(Array.from(pendingUploadCleanup.current, cleanupUploadedAsset));
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -257,10 +297,20 @@ export function useHomepageEditor(clubId: string) {
       const result = await storage.upload(path, file);
       if (result.error || !result.data) throw new Error("This photo could not be added. Your other changes are still here.");
       const url = storage.getPublicUrl(path).data.publicUrl;
-      if (generation.current === run) updatePhoto(id, { assetId: result.data.assetId, url, upload: "ready", error: undefined });
+      const stillInDraft = generation.current === run && current.current?.draft.photos.items.some(photo => photo.clientId === id);
+      if (stillInDraft) updatePhoto(id, { assetId: result.data.assetId, url, upload: "ready", error: undefined });
+      else await cleanupUploadedAsset(result.data.assetId);
     } catch (failure) {
       if (generation.current === run) updatePhoto(id, { upload: "failed", error: { code: "UPLOAD_FAILED", message: failure instanceof Error ? failure.message : "This photo could not be added." } });
     } finally { uploading.current.delete(id); }
+  }
+  function startUpload(id: string) {
+    const existing = uploadTasks.current.get(id);
+    if (existing) return existing;
+    const task = upload(id);
+    uploadTasks.current.set(id, task);
+    void task.finally(() => uploadTasks.current.delete(id));
+    return task;
   }
   function addPhotos(selected: FileList | null) {
     const before = current.current;
@@ -276,12 +326,18 @@ export function useHomepageEditor(clubId: string) {
       return { clientId, rowId: null, assetId: null, url: null, alt: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "), order: 0, upload: "queued" as const, localFileKey: clientId };
     });
     dispatch({ type: "photos-changed", photos: [...before.draft.photos.items, ...additions].map((p, order) => ({ ...p, order })) });
-    additions.forEach(photo => void upload(photo.clientId));
+    additions.forEach(photo => void startUpload(photo.clientId));
   }
   return {
-    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, retryPhoto: upload, updatePhoto,
+    state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, retryPhoto: startUpload, updatePhoto,
     retryLoad: () => setReload(x => x + 1), recoveryNotice, dismissRecoveryNotice: () => setRecoveryNotice(null),
-    clearRecovery: clearRecoveryNow, recoveryUnavailable, recoveryOtherTab, recoveryConflict,
+    clearRecovery: clearRecoveryNow, discardUnsavedUploads, cleanupWarning, retryUnusedCleanup, removePhoto: (id: string) => {
+      const before = current.current;
+      if (!before) return;
+      const photo = before.draft.photos.items.find(item => item.clientId === id);
+      dispatch({ type: "photos-changed", photos: before.draft.photos.items.filter(item => item.clientId !== id).map((item, order) => ({ ...item, order })) });
+      if (photo?.rowId === null && photo.assetId) void cleanupUploadedAsset(photo.assetId);
+    }, recoveryUnavailable, recoveryOtherTab, recoveryConflict,
     discardRecoveredDraft: async () => { await clearRecoveryNow(); setRecoveryConflict(null); },
     restoreRecoveredDraft: async () => {
       if (!recoveryConflict || recoveryConflict.reason === "DESIGN_CHANGED" || !current.current) return;

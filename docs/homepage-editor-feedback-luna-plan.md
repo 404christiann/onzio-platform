@@ -1,5 +1,22 @@
 # Homepage editor feedback — Luna implementation plan
 
+## PR review fix status — 2026-09-23
+
+HP-08D remains complete with the accepted screen-reader waiver. PR #5 review
+found two pre-merge HP-04/05 defects: ordinary two-tab recovery overwrites and
+unretired uploads removed before saving. `useHomepageEditor.ts`,
+`recovery-storage.ts`, `HomepageEditor.tsx`, a new server cleanup route,
+`lib/media-processing.ts`, generated RPC types and local-only migration
+`20260924040401_homepage_unreferenced_upload_cleanup.sql` fix them. Browser
+regressions cover two tabs opened before edits, removal before Save, removal
+during finalize, and explicit discard. The full Homepage suite passes 37/37;
+TypeScript, lint, local build, contracts 933/933, architecture 21/21, local DB
+242/242 and full suite 1561/1561 pass. Hard tab close during an unfinished
+network operation remains a best-effort cleanup limit. The new migration is
+pending in production. Exact next step: after Christian resumes release, apply
+this migration before merge/deploy and
+verify live sites. The status paragraph below predates this review fix.
+
 ## Release status — 2026-09-23
 
 HP-08A–D remain complete, with screen-reader acceptance explicitly waived.
@@ -293,6 +310,7 @@ HP-08A | complete locally | HomepageEditor.tsx, HomepagePreviewFrame.tsx, Editor
 HP-08B | complete | HomepagePreviewFrame.tsx, homepage-editor.css, HomepageEditor.tsx (selection anchoring), focused browser regressions | Full Homepage browser suite 32/32, including 4 new anchor regressions at 1152/1280px; reported selection jump reproduced (276-312px, out of view) and measured at 0px after the fix | Christian reviewed and approved the anchored selection on 2026-09-21
 HP-08C | complete | HomepageNotifications.tsx (new useHomepageNotification queue), HomepageEditor.tsx, homepage-editor.css | One queue for all hosts; warning variant, dismissible success, timer pauses on hover/focus/hidden, single phone live region, no replay on remount; 2 new regressions pass | Real iOS keyboard verified 2026-09-22; screen-reader acceptance waived 2026-09-23
 HP-08D | complete | Homepage browser regressions, tests/browser/homepage-editor-{templates,photos,recovery,accessibility}.spec.ts, scripts/restore-local-homepage-fixture.ts, package.json, docs | Homepage 32/32, full 1535/1535, contracts 910/910, architecture 21/21, DB 239/239, admin-loading 12/12, media 4/4; tsc/lint/build clean; desktop light/dark and phone screenshots reviewed | Christian approved this revision; screen-reader acceptance waived 2026-09-23
+HP-08D / PR review fix | complete locally | `HomepageEditor.tsx`, `useHomepageEditor.ts`, `recovery-storage.ts`, upload cleanup route/media helper/local migration, recovery and photo browser regressions | Homepage 37/37; full 1561/1561, contracts 933/933, DB 242/242, architecture 21/21, tsc/lint/local build pass | New migration is pending in production; apply it before eventual deploy. Hard tab close during network cleanup remains best effort; VoiceOver/TalkBack waiver remains accepted.
 
 2026-09-23 release verification follow-up on `ce5c2b1`: Homepage browser
 34/34, admin-loading 12/12, site-media 4/4, contracts 910/910,

@@ -57,7 +57,9 @@ export async function writeRecoveryRecord(key: string, record: unknown, guard?: 
         let written = false;
         const request = store.get(key);
         request.onsuccess = () => {
-          if (guard && request.result != null && JSON.stringify(request.result) !== JSON.stringify(guard.expected)) return;
+          // Compare even when either side is absent: another tab may have
+          // created or cleared the record since this tab last read it.
+          if (guard && JSON.stringify(request.result ?? null) !== JSON.stringify(guard.expected ?? null)) return;
           store.put(record, key); written = true;
         };
         tx.oncomplete = () => resolve(written ? "written" : "newer-record");

@@ -12,6 +12,25 @@ async function openHeroEditor(page: Page) {
 }
 
 test.describe("homepage editor recovery hardening", () => {
+  test("two tabs opened before editing keep the first unsaved recovery copy", async ({ page, context }) => {
+    const second = await context.newPage();
+    try {
+      await openHeroEditor(page);
+      await openHeroEditor(second);
+      await page.getByLabel("Line one", { exact: true }).fill("First tab unsaved draft");
+      await page.waitForTimeout(900);
+      await second.getByLabel("Line one", { exact: true }).fill("Second tab unsaved draft");
+      await expect(second.getByRole("status").filter({ hasText: "Another tab has newer unsaved work" })).toBeVisible();
+
+      await page.reload();
+      await expect(page.frameLocator('iframe[title="Homepage preview"]').locator('[data-homepage-piece="hero.heading"]'))
+        .toContainText("First tab unsaved draft");
+      await expect(page.getByText("Restored an unsaved draft from before.", { exact: false })).toBeVisible();
+    } finally {
+      await second.close();
+    }
+  });
+
   test("warns when browser storage is unavailable while keeping editing usable", async ({ page }) => {
     await page.addInitScript(() => {
       Object.defineProperty(window, "indexedDB", {

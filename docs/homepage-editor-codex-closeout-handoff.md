@@ -2,6 +2,20 @@
 
 Prepared 2026-09-23 by Claude. Christian wants this taken to `main`.
 
+## PR review follow-up — 2026-09-23 (Codex)
+
+Two pre-merge findings were fixed on PR #5: two tabs can no longer silently
+overwrite each other's unsaved recovery draft, and newly uploaded photos removed
+before Save or during upload finalization are retired only when still
+unreferenced. The cleanup uses new migration
+`20260924040401_homepage_unreferenced_upload_cleanup.sql`, applied **locally
+only**. Local gates pass: full suite 1561/1561, Homepage browser 37/37,
+contracts 933/933, architecture 21/21, database 242/242, TypeScript, lint and
+build. See `HANDOFF.md` and both HP ledgers for evidence and the hard-tab-close
+limit. The production migration gate must be repeated for this new file before
+any eventual merge/deploy. Christian has paused that release step. The section
+below records the earlier PR state before these fixes.
+
 ## Latest release state — 2026-09-23 (Codex)
 
 [PR #5](https://github.com/404christiann/onzio-platform/pull/5) is open. The

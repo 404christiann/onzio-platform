@@ -150,7 +150,10 @@ export default function HomepageEditor() {
     restoreSelectionFocus();
     window.requestAnimationFrame(() => window.scrollTo({ left: scrollX, top: scrollY, behavior: "auto" }));
   }
-  function go(href: string) { if (editor.dirty.length) setDestination(href); else router.push(href); }
+  async function go(href: string) {
+    if (editor.dirty.length) { setDestination(href); return; }
+    if (await editor.discardUnsavedUploads()) router.push(href);
+  }
 
   if (editor.loading) return <HomepageEditorSkeleton />;
   if (!state || !snapshot) return <section className="hp-editor" aria-label="Homepage editor"><h1>Homepage</h1><p role="alert">{editor.error?.message ?? "We could not load your homepage."}</p><button className="hp-button" onClick={editor.retryLoad}>Try loading again</button></section>;
@@ -189,6 +192,7 @@ export default function HomepageEditor() {
     <div className="hp-status" role="status" aria-live="off" data-dirty={editor.dirty.length > 0}>{status}</div>
     {!mobile && !disclosure && !destination && <HomepageNotifications {...notificationProps} />}
     {editor.recoveryUnavailable && <p className="hp-recovery-notice" role="alert">Browser recovery is unavailable. Keep this page open until you save; your unsaved work may not survive closing it.</p>}
+    {editor.cleanupWarning && <div className="hp-recovery-notice" role="alert"><p>An unused photo could not be removed from storage.</p><button className="hp-button" onClick={() => void editor.retryUnusedCleanup()}>Try removing it again</button></div>}
     {editor.recoveryConflict && <div className="hp-recovery-notice" role="alert"><p>Another version of this homepage was saved. Your recovered draft is kept separately.</p><button className="hp-button" onClick={() => setReviewRecovery(true)}>Review recovered draft</button><button className="hp-button" onClick={() => void editor.discardRecoveredDraft()}>Discard recovered draft</button></div>}
     {reviewRecovery && editor.recoveryConflict && <HomepageRecoveryReview current={state.baseline} recovered={editor.recoveryConflict.draft} designChanged={editor.recoveryConflict.reason === "DESIGN_CHANGED"} close={() => setReviewRecovery(false)} restore={editor.restoreRecoveredDraft} />}
     {editor.recoveryNotice && <div className="hp-recovery-notice" role="status"><p>{editor.recoveryNotice === "restored" ? "Restored an unsaved draft from before. Review it, then save when ready. Browser recovery keeps drafts for up to seven days." : "Checked on your last save attempt and restored your draft. Review it, then save when ready."}</p><button className="hp-button" onClick={editor.dismissRecoveryNotice}>Dismiss</button></div>}
@@ -229,7 +233,7 @@ export default function HomepageEditor() {
             <div className="hp-photo-actions">{([-1, 1] as const).map(delta => <button className="hp-button" key={delta} disabled={frozen || (delta === -1 ? index === 0 : index === state.draft.photos.items.length - 1)} onClick={() => {
               const items = [...state.draft.photos.items]; [items[index], items[index + delta]] = [items[index + delta], items[index]];
               dispatch({ type: "photos-changed", photos: items.map((p, order) => ({ ...p, order })) });
-            }}>{delta === -1 ? "Move up" : "Move down"}</button>)}<button className="hp-button" disabled={frozen} onClick={() => dispatch({ type: "photos-changed", photos: state.draft.photos.items.filter(p => p.clientId !== photo.clientId).map((p, order) => ({ ...p, order })) })}>Remove photo</button></div>
+            }}>{delta === -1 ? "Move up" : "Move down"}</button>)}<button className="hp-button" disabled={frozen} onClick={() => editor.removePhoto(photo.clientId)}>Remove photo</button></div>
             {photo.upload === "uploading" && <p role="status">Adding your photo…</p>}{photo.upload === "failed" && <div role="alert"><p>{photo.error?.message}</p><button className="hp-button" onClick={() => void editor.retryPhoto(photo.clientId)}>Try this photo again</button></div>}
           </section>)}<button className="hp-button" disabled={frozen || state.draft.photos.items.length >= 6} onClick={() => photoInput.current?.click()}>Add photo</button></>}
         </div>
@@ -239,6 +243,6 @@ export default function HomepageEditor() {
     {mobile && !disclosure && !destination && <div className="hp-mobile-notification-slot"><HomepageNotifications {...notificationProps} /></div>}
     <input ref={photoInput} className="sr-only" tabIndex={-1} aria-label="Choose homepage photos" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => { editor.addPhotos(event.target.files); event.target.value = ""; }} />
     <div ref={thumbBar} className="hp-thumb-bar"><div className="hp-thumb-tools">{playback ? <button className="hp-button" onClick={() => setPlayback(false)}>Back to editing</button> : piece ? tools : parts.map(part => <button key={part.piece} className="hp-button" onClick={() => select(part.piece)}>{part.name}</button>)}</div><div className="hp-thumb-save">{saveButton}</div>{piece && <p className="hp-selected-name">{HOMEPAGE_PIECE_LABELS[piece]}</p>}</div>
-    <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={() => setDestination(null)}><h2 id="hp-leave-title">Save your homepage changes?</h2><p>Your changes have not been saved yet.</p>{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" onClick={() => setDestination(null)}>Keep editing</button><button className="hp-button" onClick={async () => { await editor.clearRecovery(); setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
+    <dialog ref={dialog} className="hp-leave-dialog" aria-labelledby="hp-leave-title" onCancel={() => setDestination(null)}><h2 id="hp-leave-title">Save your homepage changes?</h2><p>Your changes have not been saved yet.</p>{destination && <HomepageNotifications {...notificationProps} inModal />}<div><button className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict} onClick={async () => { if (await editor.save()) { setDestination(null); if (destination) router.push(destination); } }}>Save and continue</button><button className="hp-button" onClick={() => setDestination(null)}>Keep editing</button><button className="hp-button" onClick={async () => { if (!await editor.discardUnsavedUploads()) return; await editor.clearRecovery(); setDestination(null); if (destination) router.push(destination); }}>Leave without saving</button></div></dialog>
   </div>;
 }
