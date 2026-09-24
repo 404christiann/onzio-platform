@@ -1,5 +1,31 @@
 # Onzio Platform Handoff
 
+## Homepage editor mobile navigation fix — 2026-09-24 (Codex)
+
+PR #5 is live on `main` at `561ff5c`. Christian found a real iPhone bug:
+opening the admin navigation drawer left the Homepage editor's fixed bottom
+controls above the menu. This follow-up lives on
+`codex/homepage-nav-drawer-fix` and is **not deployed**.
+
+The editor now reads the admin drawer state, clears the selected piece and any
+options panel when the drawer opens, and hides its toolbar, fixed bottom
+controls, and save feedback until the drawer closes. Draft edits remain intact.
+A timed success message pauses while hidden so it is still visible afterward.
+Changed files: `components/admin/homepage/{HomepageEditor.tsx,HomepageNotifications.tsx,homepage-editor.css}`
+and `tests/browser/homepage-editor-accessibility.spec.ts`. No migration or
+hosted data change is involved.
+
+Verification: the reported case failed before the fix and passed afterward;
+five new phone/tablet/feedback browser cases passed. The related notification
+checks passed 7/7, the complete Homepage accessibility spec passed 24/24
+before the final timer refinement, and `npm test` passed 1,573/1,573 after it.
+TypeScript, lint, and an isolated local-environment production build passed;
+client build chunks contain the local Supabase URL and no hosted project URL.
+The broad Homepage browser run passed 42/43 on its first attempt; one template
+parity case hit Chromium `ERR_ABORTED` during navigation and passed unchanged
+on an isolated rerun. No production push was made. Exact next step: review the
+fix PR, merge only with Christian's approval, then verify the live iPhone menu.
+
 ## PR #5 production migration gate passed; merge authorized — 2026-09-24 (Codex)
 
 Christian authorized merging PR #5 and chose to leave the repository docs

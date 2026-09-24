@@ -1,5 +1,21 @@
 # Homepage editor redesign — implementation plan
 
+## Live mobile navigation follow-up — 2026-09-24
+
+Status: **fixed and tested locally; awaiting review and release approval**.
+Opening the mobile admin drawer now deselects the Homepage piece, closes its
+options panel, and hides the fixed editor controls and save feedback. The draft
+is preserved; a timed success notice waits while the drawer is open. Files:
+`components/admin/homepage/{HomepageEditor.tsx,HomepageNotifications.tsx,homepage-editor.css}`
+and `tests/browser/homepage-editor-accessibility.spec.ts`.
+Verification: reported browser case red then green; five new navigation cases,
+7/7 focused navigation/notification checks, 1,573/1,573 full tests, TypeScript,
+lint, and an isolated production-mode build passed. The broad Homepage browser
+suite was 42/43 on its first run due to one Chromium navigation `ERR_ABORTED`;
+the unchanged parity case passed alone. Blocker: release approval. Exact next
+step: review the fix PR and merge only after Christian approves, then check the
+menu on the live iPhone.
+
 ## PR #5 release gate — 2026-09-24
 
 Status: **HP-00–08 complete with the accepted screen-reader waiver; production
