@@ -4,7 +4,7 @@ import { ClipboardEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
-import AdminLoading from "@/components/admin/AdminLoading";
+import PostOtpPortalReveal from "@/components/admin/PostOtpPortalReveal";
 import { expectedEmailCodeLength, extractPastedEmailCode, shouldAutoVerifyEmailCode } from "./otp-code";
 
 type LoginStep = "email" | "code" | "unknown";
@@ -22,7 +22,7 @@ const EXPECTED_CODE_LENGTH = expectedEmailCodeLength(
 const DEFAULT_BOX_COUNT = 8;
 // Floor on how long the post-submit loading state stays up. `verifyOtp` can
 // resolve in a few dozen milliseconds locally and on fast hosted connections,
-// which makes the code-card → AdminLoading crossfade imperceptible — it reads
+// which makes the code-entry → portal-reveal crossfade imperceptible — it reads
 // as a jump-cut straight to /admin rather than as a deliberate transition.
 // Racing the request against this timer guarantees the spinner is actually
 // seen, on both the success and the invalid-code path. This is the only
@@ -126,7 +126,7 @@ export default function LoginPage() {
         new Promise((resolve) => setTimeout(resolve, MIN_VERIFY_LOADING_MS)),
       ]);
       if (verificationError) throw verificationError;
-      // Deliberately leave `loading` true on success: the spinner should
+      // Deliberately leave `loading` true on success: the portal reveal should
       // stay up through the /admin navigation instead of the form fading
       // back in for the remainder of it. This unmounts with the page, or
       // clears in the catch block below if verification actually failed.
@@ -221,12 +221,17 @@ export default function LoginPage() {
           type="button"
           onClick={startOver}
           disabled={loading || resending}
+          aria-hidden={loading}
           className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#f5f5f7] px-5 text-sm font-semibold text-[#202235] transition-colors hover:bg-[#eaeaef] active:bg-[#dedee5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
         >
           Back
         </button>
 
-        <section className="mx-auto mt-8 w-full max-w-[660px] text-center sm:mt-4 lg:mt-8">
+        <section
+          aria-hidden={loading}
+          inert={loading}
+          className={`mx-auto mt-8 w-full max-w-[660px] text-center transition-opacity duration-300 motion-reduce:transition-none sm:mt-4 lg:mt-8 ${loading ? "opacity-0" : "opacity-100"}`}
+        >
           <Image
             src="/images/onzio/onzio-black-logo-no-bg-trimmed.png"
             alt="Onzio"
@@ -330,15 +335,10 @@ export default function LoginPage() {
                 </button>
               </p>
             </form>
-
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center animate-in fade-in duration-300">
-                <AdminLoading tone="brand" className="text-sm font-semibold tracking-wide" />
-              </div>
-            )}
           </div>
           {error && <p role="alert" className="mx-auto mt-6 max-w-md text-sm text-red-600">{error}</p>}
         </section>
+        {loading && <PostOtpPortalReveal />}
       </main>
     );
   }
