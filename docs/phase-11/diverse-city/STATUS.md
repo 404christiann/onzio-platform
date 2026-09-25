@@ -4,7 +4,8 @@
 
 **Package:** ad hoc public loading feature, selected Familiar Blend direction.
 
-**Status:** `in_progress` for draft PR review. Five actionable findings from
+**Status:** `in_progress` in draft PR
+[#9](https://github.com/404christiann/onzio-platform/pull/9). Five actionable findings from
 two read-only review passes were fixed: independent optional story/program
 copy reads, covered-page scroll/focus behavior, coordinated hero/menu scroll
 locks, and hidden footer links. The final read-only review has no findings.
@@ -25,10 +26,9 @@ the Mac was locked. Eleven public routes returned HTTP 200; Home, Men's
 Teams, Roster, and Schedule had no page errors or horizontal overflow at
 390px and 1440px. No production deployment.
 
-**Exact next step:** push the committed feature branch, open a draft PR,
-and complete Simulator touch acceptance
-when the Mac is unlocked. Do not merge/deploy production without Christian's
-separate approval.
+**Exact next step:** review PR #9 and its preview, then complete Simulator
+touch acceptance when the Mac is unlocked. Do not merge/deploy production
+without Christian's separate approval.
 
 ## 2026-09-24 - Header Stays replaces Clear Frame loading
 

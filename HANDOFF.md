@@ -1,6 +1,6 @@
 # Onzio Platform Handoff
 
-## Academy Header Stays review and PR preparation — 2026-09-24 (Codex)
+## Academy Header Stays draft PR #9 — 2026-09-24 (Codex)
 
 Christian accepted the Familiar Blend / Header Stays mobile preview and asked
 for a defect-first review, focused fixes, and a carefully scoped pull request.
@@ -31,9 +31,14 @@ was locked during the final check. After rebasing, eleven public routes returned
 HTTP 200; Home, Men's Teams, Roster, and Schedule had no page errors or
 horizontal overflow at 390px and 1440px. No production deployment occurred.
 
-**Exact next step:** push the committed feature branch and open a draft PR for review.
-Keep the production merge/deploy approval separate. Complete the Simulator
-touch check when the Mac is unlocked and record its result on the PR.
+**PR:** draft [#9](https://github.com/404christiann/onzio-platform/pull/9)
+from `codex/diverse-city-loading-options` into `main`. The feature branch was
+pushed; no production merge or deployment occurred. The local preview remains
+available at `http://diverse-city.localhost:3335/` for Christian's testing.
+
+**Exact next step:** review PR #9 and its preview, complete the Simulator
+touch check when the Mac is unlocked, and record that result on the PR. Keep
+the production merge/deploy approval separate.
 
 ## Academy Header Stays loading direction — 2026-09-24 (Codex)
 
