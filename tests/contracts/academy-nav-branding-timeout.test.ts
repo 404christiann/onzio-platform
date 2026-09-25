@@ -55,6 +55,11 @@ describe("academy navbar client fallbacks", () => {
     expect(navSource).toContain("return () => observer.disconnect()");
   });
 
+  it("keeps pending Programs readable against both dropdown backgrounds", () => {
+    expect(navSource).toContain('isHero ? "text-white/80" : "text-[#51667E]"');
+    expect(navSource).toContain('isHero ? "border-white/35 border-t-white" : "border-[#cad8e3] border-t-[#426c88]"');
+  });
+
   it("settles a stalled Programs dropdown and accepts a late successful response", async () => {
     const { ACADEMY_PROGRAMS_FALLBACK_MS, loadAcademyNavPrograms } = navFallbackHelpers();
     vi.useFakeTimers();

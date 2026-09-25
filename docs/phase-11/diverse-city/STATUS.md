@@ -1,5 +1,31 @@
 # Diverse City FC Status
 
+## 2026-09-25 - Header Stays final review fixes
+
+**Package:** ad hoc public loading feature, Familiar Blend / Header Stays.
+
+**Status:** `in_progress` in PR
+[#9](https://github.com/404christiann/onzio-platform/pull/9), pending a fresh
+independent review. Christian authorized merge if that review is clean.
+
+**Completed work:** Other public templates now show a neutral accessible
+route-loading state instead of a blank main area. The pending Programs label
+and spinner have readable colors on both dark hero and opaque menus.
+
+**Files changed:** `components/AcademyRouteLoadingSkeleton.tsx`,
+`components/Nav.tsx`, two focused loading contracts, `HANDOFF.md`, and this
+ledger.
+
+**Verification:** focused contracts 14/14, TypeScript, full local-only
+Supabase suite 1611/1611, production build, and diff check passed. Direct
+iPhone Simulator taps remain pending because the Mac was locked; prior
+Chromium mobile touch checks and Simulator screenshot passed.
+
+**Blockers:** none for code verification; fresh review and CI remain pending.
+
+**Exact next step:** push PR #9; request fresh read-only review. Merge only if
+the review has no actionable findings and CI passes.
+
 ## 2026-09-25 - Poster-first homepage hero
 
 **Package:** ad hoc public loading feature, Familiar Blend / Header Stays.

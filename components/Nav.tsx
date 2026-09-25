@@ -525,8 +525,8 @@ export default function Nav({
                       }}
                     >
                       {isAcademy && link.label === "Programs" && programsState === "loading" ? (
-                        <div className="flex items-center gap-2 px-5 py-4 font-nav text-xs text-[#51667E]" aria-label="Loading programs" role="status">
-                          <span className="h-3.5 w-3.5 rounded-full border-2 border-[#cad8e3] border-t-[#426c88] motion-safe:animate-spin" aria-hidden="true" />
+                        <div className={`flex items-center gap-2 px-5 py-4 font-nav text-xs ${isHero ? "text-white/80" : "text-[#51667E]"}`} aria-label="Loading programs" role="status">
+                          <span className={`h-3.5 w-3.5 rounded-full border-2 motion-safe:animate-spin ${isHero ? "border-white/35 border-t-white" : "border-[#cad8e3] border-t-[#426c88]"}`} aria-hidden="true" />
                           Loading programs…
                         </div>
                       ) : isAcademy && link.label === "Programs" && link.children.length === 0 ? (

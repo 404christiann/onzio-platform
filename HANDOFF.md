@@ -1,5 +1,28 @@
 # Onzio Platform Handoff
 
+## Academy loading PR #9 final review fixes — 2026-09-25 (Codex)
+
+The latest independent review found two public loading regressions: the
+tenant-route fallback was blank for non-academy templates, and the pending
+Programs label was hard to read against the transparent hero menu. The route
+now gives other templates a neutral, accessible page loading state, while
+academy routes retain the approved Header Stays treatment. The Programs
+label and spinner use light colors over the dark hero menu and the existing
+dark colors over the opaque menu.
+
+**Files:** `components/AcademyRouteLoadingSkeleton.tsx`, `components/Nav.tsx`,
+two focused loading contracts, `HANDOFF.md`, and the Diverse City status
+ledger.
+
+**Verification:** focused contracts 14/14, TypeScript, full local-only Supabase
+suite 1611/1611, production build, and diff check passed. Direct iPhone
+Simulator taps remain unverified because the Mac was locked; Chromium mobile
+touch checks and the Simulator screenshot passed in the prior review.
+
+**Exact next step:** push PR #9 and obtain a fresh independent read-only review.
+Christian has authorized merging this PR if that review is clean. If it finds
+an actionable issue, fix it and repeat verification and review before merging.
+
 ## Academy hero poster-first transition — 2026-09-25 (Codex)
 
 Christian asked to show the Diverse City homepage hero poster as soon as its

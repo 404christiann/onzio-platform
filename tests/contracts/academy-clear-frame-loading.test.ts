@@ -32,6 +32,12 @@ describe("academy Header Stays loading", () => {
     expect(layoutSource).toContain("<Suspense fallback={<AcademyRouteLoadingSkeleton />}>");
   });
 
+  it("keeps a visible loading state for other tenant templates", () => {
+    expect(routeSource).toContain('if (club?.presentationTemplateKey !== "academy@1") return <OtherTemplatePageLoading />');
+    expect(routeSource).toContain('aria-label="Loading page"');
+    expect(routeSource).not.toContain('if (club?.presentationTemplateKey !== "academy@1") return null');
+  });
+
   it("keeps the academy mobile menu scrollable while the homepage is covered", () => {
     expect(navSource).toContain("useAcademyPageScrollLock(isAcademy && menuOpen)");
     expect(navSource).toContain("overflow-y-auto overscroll-contain bg-white");
