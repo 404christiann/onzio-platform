@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: "list",
   use: {
-    baseURL: "http://alpha.localhost:3000",
+    baseURL: process.env.PLAT101_BASE_URL ?? "http://alpha.localhost:3000",
     browserName: "chromium",
     serviceWorkers: "block",
     trace: "retain-on-failure",

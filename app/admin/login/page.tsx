@@ -1,26 +1,24 @@
 "use client";
 
-import { FormEvent, Fragment, useEffect, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
 import Image from "@/components/ResilientImage";
-import { Button } from "@/components/ui/button";
 import AdminLoading from "@/components/admin/AdminLoading";
+import { expectedEmailCodeLength, extractPastedEmailCode, shouldAutoVerifyEmailCode } from "./otp-code";
 
 type LoginStep = "email" | "code" | "unknown";
 
 const UNKNOWN_ADDRESS_ERROR = "Signups not allowed for otp";
 const UNKNOWN_ADDRESS_INTRO = "We couldn't find an Onzio account for";
 const EMAIL_COOLDOWN_ERROR = "over_email_send_rate_limit";
-// The configured otp_length is 6 (supabase/config.toml), but production has
-// drifted from that before and currently issues 8-digit codes — silently
-// rejecting a correct code is worse than accepting whatever length the
-// server actually issues. The client therefore accepts 4-10 digits and
-// never hard-codes an exact count anywhere in submit gating. DEFAULT_BOX_COUNT
-// only controls how many boxes render before typing; it's set to production's
-// current actual length (8), not the stale config value, so pasting a real
-// code doesn't visibly grow the grid. The grid still grows to fit longer
-// codes if the length drifts again.
+// Keep the input compatible with Auth's 4-10 digit range. The configured
+// length decides when typed, pasted, or autofilled codes can auto-submit.
+// Manual Enter still supports other valid lengths if an Auth setting drifts.
+const EXPECTED_CODE_LENGTH = expectedEmailCodeLength(
+  process.env.NEXT_PUBLIC_ONZIO_EMAIL_OTP_LENGTH,
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+);
 const DEFAULT_BOX_COUNT = 8;
 // Floor on how long the post-submit loading state stays up. `verifyOtp` can
 // resolve in a few dozen milliseconds locally and on fast hosted connections,
@@ -40,8 +38,11 @@ export default function LoginPage() {
   const [codeFocused, setCodeFocused] = useState(false);
   const [step, setStep] = useState<LoginStep>("email");
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastSubmittedCode = useRef<string | null>(null);
+  const codeInput = useRef<HTMLInputElement>(null);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
 
   const boxCount = Math.max(DEFAULT_BOX_COUNT, code.length);
   const activeBoxIndex = Math.min(code.length, boxCount - 1);
@@ -57,10 +58,11 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  async function requestCode(event: FormEvent) {
-    event.preventDefault();
-    setLoading(true);
+  async function sendCode(isResend = false) {
+    if (isResend) setResending(true);
+    else setLoading(true);
     setError(null);
+    setPasteHint(null);
 
     try {
       const supabase = createClient();
@@ -74,8 +76,10 @@ export default function LoginPage() {
           return;
         }
         if (requestError.code === EMAIL_COOLDOWN_ERROR) {
-          setCode("");
-          lastSubmittedCode.current = null;
+          if (!isResend) {
+            setCode("");
+            lastSubmittedCode.current = null;
+          }
           setStep("code");
           setError(
             "A sign-in code was sent recently. Enter the code from your email—there's no need to request another.",
@@ -94,12 +98,18 @@ export default function LoginPage() {
           : "Unable to send a sign-in code",
       );
     } finally {
-      setLoading(false);
+      if (isResend) setResending(false);
+      else setLoading(false);
     }
   }
 
+  function requestCode(event: FormEvent) {
+    event.preventDefault();
+    void sendCode();
+  }
+
   async function verifyCode(candidate: string) {
-    if (candidate.length < 4 || loading) return;
+    if (candidate.length < 4 || loading || resending) return;
     if (lastSubmittedCode.current === candidate) return;
     lastSubmittedCode.current = candidate;
     setLoading(true);
@@ -134,10 +144,61 @@ export default function LoginPage() {
     void verifyCode(code);
   }
 
+  function autoVerify(candidate: string, completeValue = false) {
+    if (candidate.length < 4) return;
+    if (shouldAutoVerifyEmailCode(candidate, EXPECTED_CODE_LENGTH, completeValue)) {
+      void verifyCode(candidate);
+    }
+  }
+
+  function pasteCode(event: ClipboardEvent<HTMLInputElement>) {
+    // Read the complete clipboard value before the input's maxLength can
+    // truncate a code copied with spaces or surrounding email text.
+    event.preventDefault();
+    const pastedCode = extractPastedEmailCode(event.clipboardData.getData("text/plain"));
+    if (pastedCode) {
+      setCode(pastedCode);
+      setPasteHint(
+        EXPECTED_CODE_LENGTH !== null && pastedCode.length !== EXPECTED_CODE_LENGTH
+          ? `This sign-in expects ${EXPECTED_CODE_LENGTH} digits. Check your code, or press Enter to try it.`
+          : null,
+      );
+      setError(null);
+      autoVerify(pastedCode, true);
+    } else {
+      setPasteHint("Select just the sign-in code and paste it again.");
+    }
+  }
+
+  async function pasteFromClipboard() {
+    codeInput.current?.focus();
+    try {
+      const clipboard = await navigator.clipboard.readText();
+      const pastedCode = extractPastedEmailCode(clipboard);
+      if (!pastedCode) {
+        setPasteHint("Select just the sign-in code and paste it again.");
+        return;
+      }
+      setCode(pastedCode);
+      setError(null);
+      setPasteHint(
+        EXPECTED_CODE_LENGTH !== null && pastedCode.length !== EXPECTED_CODE_LENGTH
+          ? `This sign-in expects ${EXPECTED_CODE_LENGTH} digits. Check your code, or press Enter to try it.`
+          : null,
+      );
+      autoVerify(pastedCode, true);
+    } catch {
+      // The native input remains available for Cmd/Ctrl+V and mobile's
+      // long-press Paste menu if clipboard permission was not granted.
+      setPasteHint("Use Paste on the code field to insert your code.");
+    }
+  }
+
   function startOver() {
     setStep("email");
     setCode("");
     setError(null);
+    setPasteHint(null);
     lastSubmittedCode.current = null;
   }
 
@@ -148,8 +209,189 @@ export default function LoginPage() {
     }
     setCode("");
     setError(null);
+    setPasteHint(null);
     lastSubmittedCode.current = null;
     setStep("code");
+  }
+
+  if (step === "code") {
+    return (
+      <main className="min-h-screen bg-white px-5 pb-16 pt-7 text-[#202235] sm:px-10 sm:pt-10">
+        <button
+          type="button"
+          onClick={startOver}
+          disabled={loading || resending}
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#f5f5f7] px-5 text-sm font-semibold text-[#202235] transition-colors hover:bg-[#eaeaef] active:bg-[#dedee5] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+        >
+          Back
+        </button>
+
+        <section className="mx-auto mt-8 w-full max-w-[660px] text-center sm:mt-4 lg:mt-8">
+          <Image
+            src="/images/onzio/onzio-black-logo-no-bg-trimmed.png"
+            alt="Onzio"
+            width={352}
+            height={92}
+            priority
+            className="mx-auto mb-7 h-auto w-24 sm:mb-8 sm:w-32"
+          />
+          <h1 className="font-body text-[30px] font-semibold normal-case leading-tight tracking-[-0.05em] sm:text-[40px]">
+            Enter your code
+          </h1>
+          <p className="mx-auto mt-3 max-w-[500px] text-sm leading-6 text-[#6a6d7e] sm:text-base">
+            We sent a one-time code to{" "}
+            <span className="block break-words sm:inline">
+              <strong className="font-semibold text-[#202235]">{email.trim()}</strong>.
+            </span>
+            <br className="hidden sm:block" /> Enter it to access your Onzio admin portal.
+          </p>
+
+          <div className="relative mt-10 sm:mt-12">
+            <form
+              onSubmit={submitCode}
+              aria-hidden={loading}
+              inert={loading}
+              className={`transition-opacity duration-300 ${
+                loading ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
+            >
+              <label htmlFor="sign-in-code" className="sr-only">Sign-in code</label>
+              <div className="relative mx-auto max-w-[490px]">
+                <div aria-hidden="true" className={`flex items-center justify-center gap-1 transition-opacity sm:gap-2 ${resending ? "opacity-50" : ""}`}>
+                  {Array.from({ length: boxCount }, (_, index) => (
+                    <span
+                      key={index}
+                      data-slot="otp-digit"
+                      className={`flex min-w-0 max-w-[51px] flex-1 aspect-square items-center justify-center rounded-full text-[16px] font-semibold text-[#26283a] sm:text-[22px] ${
+                        codeFocused && index === activeBoxIndex
+                          ? "border-[1.5px] border-[#6158dc] bg-white"
+                          : "bg-[#f5f5fb]"
+                      } ${index === Math.floor(boxCount / 2) && index > 0 ? "ml-1 sm:ml-2" : ""}`}
+                    >
+                      {code[index] ?? ""}
+                    </span>
+                  ))}
+                </div>
+                <input
+                  ref={codeInput}
+                  id="sign-in-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                  pattern="[0-9]{4,10}"
+                  minLength={4}
+                  maxLength={10}
+                  value={code}
+                  disabled={loading || resending}
+                  onChange={(event) => {
+                    const nextCode = event.target.value.replace(/\D/g, "").slice(0, 10);
+                    setCode(nextCode);
+                    setError(null);
+                    setPasteHint(null);
+                    autoVerify(nextCode, nextCode.length - code.length > 1);
+                  }}
+                  onPaste={pasteCode}
+                  onFocus={() => setCodeFocused(true)}
+                  onBlur={() => setCodeFocused(false)}
+                  className="absolute inset-0 h-full w-full cursor-text bg-transparent text-transparent caret-transparent outline-none [-webkit-text-fill-color:transparent]"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void pasteFromClipboard()}
+                disabled={loading || resending}
+                className="mt-7 text-sm font-semibold text-[#6158dc] underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+              >
+                Paste code
+              </button>
+              {pasteHint && <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">{pasteHint}</p>}
+              {EXPECTED_CODE_LENGTH === null && code.length >= 4 && !loading && !pasteHint && (
+                <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">
+                  Press Enter after typing the complete code.
+                </p>
+              )}
+              {EXPECTED_CODE_LENGTH !== null && code.length > EXPECTED_CODE_LENGTH && !loading && !pasteHint && (
+                <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">
+                  This sign-in expects {EXPECTED_CODE_LENGTH} digits. Check your code, or press Enter to try it.
+                </p>
+              )}
+              <p className="mt-5 text-sm text-[#777b8d]">
+                Didn&apos;t get it?{" "}
+                <button
+                  type="button"
+                  disabled={loading || resending}
+                  onClick={() => void sendCode(true)}
+                  className="font-semibold text-[#6158dc] underline underline-offset-4 disabled:opacity-50 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+                >
+                  {resending ? "Sending…" : "Resend code"}
+                </button>
+              </p>
+            </form>
+
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center animate-in fade-in duration-300">
+                <AdminLoading tone="brand" className="text-sm font-semibold tracking-wide" />
+              </div>
+            )}
+          </div>
+          {error && <p role="alert" className="mx-auto mt-6 max-w-md text-sm text-red-600">{error}</p>}
+        </section>
+      </main>
+    );
+  }
+
+  if (step === "email") {
+    return (
+      <main aria-label="Onzio sign in" className="min-h-screen bg-white px-5 pb-16 pt-[116px] text-[#202235] sm:px-10 sm:pt-[180px]">
+        <section className="mx-auto w-full max-w-[510px] text-center">
+          <Image
+            src="/images/onzio/onzio-black-logo-no-bg-trimmed.png"
+            alt="Onzio"
+            width={352}
+            height={92}
+            priority
+            className="mx-auto h-auto w-28 sm:w-[132px]"
+          />
+          <p className="mx-auto mt-4 max-w-[460px] text-sm leading-6 text-[#6a6d7e] sm:text-base">
+            Enter the email address for your club account. We&apos;ll send you a one-time code.
+          </p>
+
+          <form onSubmit={requestCode} className="mx-auto mt-[42px] w-full max-w-[440px] text-left sm:mt-[45px]">
+            <label className="block text-sm font-semibold" htmlFor="email">Email address</label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="username"
+              autoFocus
+              required
+              placeholder="name@yourclub.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="mt-2.5 h-[54px] w-full rounded-[13px] border border-[#d7d9e4] bg-white px-4 text-base text-[#202235] outline-none focus:border-[#6158dc] focus:ring-4 focus:ring-[#6158dc]/10"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-4 min-h-[52px] w-full rounded-[13px] bg-[#6158dc] text-[15px] font-semibold text-white transition-colors hover:bg-[#5148c6] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+            >
+              {loading ? "Sending…" : "Send sign-in code"}
+            </button>
+            <button
+              type="button"
+              onClick={useExistingCode}
+              className="mx-auto mt-4 flex min-h-11 items-center justify-center px-3 text-sm font-semibold text-[#6158dc] underline underline-offset-4 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#6158dc]"
+            >
+              I already have a code
+            </button>
+          </form>
+
+          {error && <p role="alert" className="mx-auto mt-5 max-w-md text-sm text-red-600">{error}</p>}
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -158,9 +400,8 @@ export default function LoginPage() {
         {/* The real Onzio wordmark replaces the styled text lockup that used
             to stand in for it. The source PNG is a 500x500 square whose
             artwork only occupies x 76-425 / y 196-286, so the negative
-            margins below crop the surrounding transparent padding back off
-            and leave the wordmark optically flush with the heading beneath
-            it. Rendered at 132px the visible mark is ~92x24. This is the
+            margins below crop the surrounding transparent padding back off.
+            Rendered at 132px the visible mark is ~92x24. This is the
             Onzio platform's own mark and is unrelated to the per-club logo
             in the admin sidebar, which stays tenant-driven. */}
         <Image
@@ -171,189 +412,34 @@ export default function LoginPage() {
           priority
           className="-ml-[20px] -mt-[52px] -mb-[56px] max-w-none"
         />
-        {/* The email and unknown-address steps deliberately have no heading —
-            the wordmark above is the only title the email step needs, and the
-            unknown-address step's own intro paragraph ("We couldn't find an
-            Onzio account for...") already states the same thing the removed
-            heading did, so nothing is lost. Rendering nothing (rather than an
-            empty h1) also removes the heading's own 36px box and its mt-2, so
-            no dead space is left behind; the logo's negative bottom margin
-            already lands the flow cursor at the wordmark's visible baseline,
-            so the following element's own top margin becomes the whole
-            visible gap — both steps use mt-8 for that reason, matching each
-            other. Only the code step keeps a heading. */}
-        {step === "code" && (
-          <h1 className="mt-2 font-display text-3xl font-black uppercase">
-            Enter your code
-          </h1>
-        )}
-
-        {step === "unknown" ? (
-          <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
-            <p>
-              {UNKNOWN_ADDRESS_INTRO}{" "}
-              <strong className="break-all text-foreground">{email.trim()}</strong>.
-            </p>
-            <p>
-              Onzio accounts are set up by us — there&apos;s no signup. If your
-              club is new, or you&apos;re using a different address than the one
-              we set up for you, that&apos;s usually the reason.
-            </p>
-            <p>
-              Double-check the address, or email us at{" "}
-              <a
-                href="mailto:onziofutbol@gmail.com"
-                className="font-semibold text-brand underline decoration-brand/40 underline-offset-4 hover:text-foreground"
-              >
-                onziofutbol@gmail.com
-              </a>{" "}
-              and we&apos;ll sort it out.
-            </p>
-            <button
-              type="button"
-              onClick={startOver}
-              className="mt-2 w-full rounded-lg border border-border py-3 font-display text-sm font-bold uppercase tracking-widest hover:border-foreground/30"
+        <div className="mt-8 space-y-4 text-sm leading-6 text-muted-foreground">
+          <p>
+            {UNKNOWN_ADDRESS_INTRO}{" "}
+            <strong className="break-all text-foreground">{email.trim()}</strong>.
+          </p>
+          <p>
+            Onzio accounts are set up by us — there&apos;s no signup. If your
+            club is new, or you&apos;re using a different address than the one
+            we set up for you, that&apos;s usually the reason.
+          </p>
+          <p>
+            Double-check the address, or email us at{" "}
+            <a
+              href="mailto:onziofutbol@gmail.com"
+              className="font-semibold text-brand underline decoration-brand/40 underline-offset-4 hover:text-foreground"
             >
-              Try another address
-            </button>
-          </div>
-        ) : step === "code" ? (
-          /* Submitting swaps the whole code-entry card for a loading state
-             rather than only relabelling the button. Both children stay
-             mounted in the same box so the swap is a real crossfade instead
-             of a jump-cut, and the form is made inert (opacity 0,
-             pointer-events off, aria-hidden) so it is genuinely replaced
-             rather than covered by an overlay. None of the flexible-length
-             OTP logic below is touched by this — only what renders while a
-             verification is in flight. */
-          <div className="relative mt-8">
-            <form
-              onSubmit={submitCode}
-              aria-hidden={loading}
-              className={`space-y-5 transition-opacity duration-300 ${
-                loading ? "pointer-events-none opacity-0" : "opacity-100"
-              }`}
-            >
-              <p className="text-sm leading-6 text-muted-foreground">
-                We sent a sign-in code to{" "}
-                <strong className="break-all text-foreground">{email.trim()}</strong>.
-              </p>
-              <div>
-                <label
-                  className="block text-sm font-semibold"
-                  htmlFor="sign-in-code"
-                >
-                  Sign-in code
-                </label>
-                {/* One real input holds the whole code; the boxes are a purely
-                    visual layer, so autofill, paste, and non-6-digit codes all
-                    work without per-box juggling. The grid renders six boxes by
-                    default and grows to match however many digits the server's
-                    code actually has. */}
-                <div className="relative mt-2.5">
-                  <div aria-hidden="true" className="flex items-center gap-1.5 sm:gap-2">
-                    {Array.from({ length: boxCount }, (_, index) => (
-                      <Fragment key={index}>
-                        {boxCount % 2 === 0 && index === boxCount / 2 && (
-                          <span
-                            data-slot="otp-separator"
-                            className="h-0.5 w-3 shrink-0 rounded-full bg-muted-foreground/60"
-                          />
-                        )}
-                        <span
-                          data-slot="otp-digit"
-                          className={`flex h-11 min-w-0 max-w-12 flex-1 items-center justify-center rounded-lg border bg-background text-center font-mono text-xl text-foreground transition-shadow sm:h-12 ${
-                            codeFocused && index === activeBoxIndex
-                              ? "border-ring ring-[3px] ring-ring/50"
-                              : "border-input"
-                          }`}
-                        >
-                          {code[index] ?? ""}
-                        </span>
-                      </Fragment>
-                    ))}
-                  </div>
-                  <input
-                    id="sign-in-code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    required
-                    pattern="[0-9]{4,10}"
-                    minLength={4}
-                    maxLength={10}
-                    value={code}
-                    onChange={(event) =>
-                      setCode(event.target.value.replace(/\D/g, "").slice(0, 10))
-                    }
-                    onFocus={() => setCodeFocused(true)}
-                    onBlur={() => setCodeFocused(false)}
-                    className="absolute inset-0 h-full w-full cursor-text opacity-0"
-                  />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                variant="brand"
-                disabled={loading || code.length < 4}
-                className="h-auto w-full rounded-lg py-3 font-display font-black uppercase tracking-widest"
-              >
-                {loading ? "Verifying…" : "Sign in"}
-              </Button>
-              <button
-                type="button"
-                onClick={startOver}
-                className="w-full py-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                Use a different address
-              </button>
-            </form>
-
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center animate-in fade-in duration-300">
-                <AdminLoading
-                  tone="brand"
-                  className="font-display text-sm font-bold uppercase tracking-[0.25em]"
-                />
-              </div>
-            )}
-          </div>
-        ) : (
-          <form onSubmit={requestCode} className="mt-8 space-y-4">
-            <p className="text-sm leading-6 text-muted-foreground">
-              Enter the email address Onzio set up for your club. We&apos;ll send
-              a one-time code—no password required.
-            </p>
-            <label className="block text-sm font-semibold" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground outline-none focus:border-ring"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-brand py-3 font-display font-black uppercase tracking-widest text-brand-foreground disabled:opacity-50"
-            >
-              {loading ? "Sending…" : "Send sign-in code"}
-            </button>
-            <button
-              type="button"
-              onClick={useExistingCode}
-              className="w-full py-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              I already have a code
-            </button>
-          </form>
-        )}
+              onziofutbol@gmail.com
+            </a>{" "}
+            and we&apos;ll sort it out.
+          </p>
+          <button
+            type="button"
+            onClick={startOver}
+            className="mt-2 w-full rounded-lg border border-border py-3 font-display text-sm font-bold uppercase tracking-widest hover:border-foreground/30"
+          >
+            Try another address
+          </button>
+        </div>
 
         {error && (
           <p role="alert" className="mt-5 text-sm text-destructive">

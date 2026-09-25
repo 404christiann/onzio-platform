@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Onzio OTP — three refinements of A</title>
+    <style>
+      :root { --purple: #6158dc; --ink: #202235; --muted: #686d80; --lavender: #f0efff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: var(--ink); background: #f5f6fb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      button { font: inherit; cursor: default; }
+      a { color: var(--purple); }
+      .gallery { max-width: 1510px; margin: auto; padding: 52px 30px 76px; }
+      .intro { max-width: 770px; margin: 0 0 50px; }
+      .intro h1 { margin: 0 0 13px; font-size: clamp(34px, 3.4vw, 48px); line-height: 1.08; font-weight: 700; letter-spacing: -.055em; }
+      .intro p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.6; }
+      .intro .return { display: inline-block; margin-top: 17px; font-size: 14px; font-weight: 650; text-underline-offset: 4px; }
+      .option { margin: 0 0 62px; }
+      .option-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 19px; margin: 0 0 15px; }
+      .option-head h2 { margin: 0; font-size: 22px; letter-spacing: -.035em; }
+      .option-head p { margin: 0; color: var(--muted); font-size: 13px; }
+      .pair { display: grid; grid-template-columns: minmax(0, 1fr) 350px; align-items: stretch; gap: 18px; }
+      .scene { position: relative; height: 640px; overflow: hidden; border: 1px solid #e0e3ef; border-radius: 20px; background: white; box-shadow: 0 16px 50px rgba(33,39,92,.05); }
+      .scene-label { position: absolute; top: 14px; left: 16px; z-index: 4; padding: 5px 9px; border-radius: 20px; background: #eeeefb; color: #5f6376; font-size: 11px; font-weight: 650; }
+      .mobile-scene { display: flex; align-items: center; justify-content: center; padding: 15px; background: #eceefa; }
+      .phone { position: relative; width: 312px; height: 606px; overflow: hidden; border: 5px solid #202235; border-radius: 40px; background: white; box-shadow: 0 12px 34px rgba(33,39,92,.13); }
+      .status { position: relative; z-index: 2; display: flex; justify-content: space-between; height: 38px; padding: 13px 21px 0; font-size: 12px; font-weight: 720; }
+      .signal { font-size: 10px; letter-spacing: -.09em; }
+      .back { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #f0efff; color: #323151; font-size: 23px; line-height: 1; }
+      .desktop .back { position: absolute; top: 34px; left: 39px; }
+      .phone .back { position: relative; z-index: 2; margin: 16px 0 0 19px; }
+      .logo { display: block; width: 145px; height: auto; }
+      .title { margin: 0; font-size: 42px; font-weight: 690; letter-spacing: -.052em; line-height: 1.11; }
+      .copy { margin: 15px 0 0; color: var(--muted); font-size: 16px; line-height: 1.55; }
+      .address { color: var(--ink); font-weight: 650; white-space: nowrap; }
+      .code-row { display: flex; align-items: center; justify-content: center; gap: 9px; white-space: nowrap; }
+      .digit { display: flex; align-items: center; justify-content: center; width: 51px; height: 51px; flex: 0 0 auto; border-radius: 50%; background: #f5f5fc; color: #272a3f; font-size: 22px; font-weight: 600; }
+      .digit.current { border: 1.5px solid var(--purple); background: white; }
+      .digit.empty { color: transparent; }
+      .code-gap { width: 5px; flex: 0 0 auto; }
+      .paste { padding: 0; border: 0; background: transparent; color: var(--purple); font-size: 14px; font-weight: 650; }
+      .resend { margin: 0; color: #777b8d; font-size: 13px; line-height: 1.45; }
+      .resend strong { color: var(--purple); font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+      .description { margin: 13px 3px 0; color: #61677a; font-size: 14px; line-height: 1.5; }
+      .description strong { color: var(--ink); }
+
+      /* A1 keeps the open canvas and gives the brand a little more air. */
+      .air .content { max-width: 680px; margin: 145px auto 0; padding: 0 25px; text-align: center; }
+      .air .logo { width: 155px; margin: 0 auto 29px; }
+      .air .copy { max-width: 550px; margin-right: auto; margin-left: auto; }
+      .air .code-row { margin: 45px 0 29px; }
+      .air .paste { margin-bottom: 22px; }
+      .air-phone .content { padding: 27px 15px 0; text-align: center; }
+      .air-phone .logo { width: 119px; margin: 0 auto 27px; }
+      .air-phone .title { font-size: 29px; }
+      .air-phone .copy { margin-top: 14px; font-size: 13px; }
+      .air-phone .code-row { margin: 36px 0 26px; }
+      .air-phone .paste { margin-bottom: 23px; }
+
+      /* A2 uses one restrained lavender field to separate reading and entry. */
+      .field::before { position: absolute; top: -190px; left: 50%; width: 800px; height: 565px; border-radius: 0 0 50% 50%; background: var(--lavender); content: ""; transform: translateX(-50%); }
+      .field .content { position: relative; max-width: 680px; margin: 128px auto 0; padding: 0 25px; text-align: center; }
+      .field .logo { width: 145px; margin: 0 auto 28px; }
+      .field .title { font-size: 40px; }
+      .field .copy { margin-top: 14px; }
+      .field .entry { margin-top: 73px; }
+      .field .code-row { margin-bottom: 27px; }
+      .field .paste { margin-bottom: 22px; }
+      .field-phone::before { position: absolute; top: -105px; left: 50%; width: 460px; height: 425px; border-radius: 0 0 50% 50%; background: var(--lavender); content: ""; transform: translateX(-50%); }
+      .field-phone .content { position: relative; padding: 25px 15px 0; text-align: center; }
+      .field-phone .logo { width: 112px; margin: 0 auto 26px; }
+      .field-phone .title { font-size: 28px; }
+      .field-phone .copy { font-size: 13px; }
+      .field-phone .entry { margin-top: 63px; }
+      .field-phone .code-row { margin-bottom: 25px; }
+      .field-phone .paste { margin-bottom: 21px; }
+      .field .back, .field-phone .back { background: white; }
+
+      /* A3 uses a calm two-column reading order on desktop and a left edge on mobile. */
+      .editorial .content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; max-width: 900px; min-height: 390px; margin: 123px auto 0; padding: 0 24px; }
+      .editorial .message { padding-right: 43px; }
+      .editorial .logo { width: 135px; margin-bottom: 31px; }
+      .editorial .title { font-size: 40px; }
+      .editorial .copy { max-width: 330px; }
+      .editorial .entry { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; min-height: 275px; padding-left: 49px; border-left: 1px solid #e2e3f0; }
+      .editorial .code-row { gap: 7px; }
+      .editorial .digit { width: 42px; height: 47px; border-radius: 15px; font-size: 21px; }
+      .editorial .code-gap { width: 2px; }
+      .editorial .paste { margin: 26px 0 22px; }
+      .editorial-phone .content { padding: 40px 20px 0; text-align: left; }
+      .editorial-phone .logo { width: 117px; margin-bottom: 29px; }
+      .editorial-phone .title { font-size: 29px; }
+      .editorial-phone .copy { max-width: 250px; font-size: 13px; }
+      .editorial-phone .entry { margin-top: 43px; }
+      .editorial-phone .code-row { justify-content: flex-start; }
+      .editorial-phone .paste { margin: 25px 0 20px; }
+
+      .phone .code-row { gap: 5px; }
+      .phone .digit { width: 27px; height: 35px; border-radius: 17px; font-size: 16px; }
+      .phone .code-gap { width: 1px; }
+      .phone .paste { font-size: 13px; }
+      .phone .resend { font-size: 12px; }
+      .editorial-phone .digit { border-radius: 10px; }
+
+      @media (max-width: 1070px) {
+        .field::before { width: 100%; }
+      }
+      @media (max-width: 1200px) {
+        .editorial .content { display: block; max-width: 560px; margin-top: 112px; }
+        .editorial .message { padding-right: 0; }
+        .editorial .logo { margin-bottom: 24px; }
+        .editorial .title { font-size: 36px; }
+        .editorial .entry { min-height: 0; margin-top: 27px; padding: 27px 0 0; border-top: 1px solid #e2e3f0; border-left: 0; }
+        .editorial .digit { width: 40px; height: 45px; }
+        .editorial .paste { margin: 20px 0 17px; }
+      }
+      @media (max-width: 970px) {
+        .pair { grid-template-columns: 1fr; }
+        .desktop { height: 590px; }
+        .editorial .content { margin-top: 105px; }
+      }
+      @media (max-width: 610px) {
+        .gallery { padding: 30px 14px 62px; }
+        .intro { margin-bottom: 37px; }
+        .intro p { font-size: 14px; }
+        .desktop { display: none; }
+        .mobile-scene { padding: 15px 7px; }
+        .option { margin-bottom: 50px; }
+      }
+      @media (max-width: 360px) {
+        .phone .code-row { gap: 4px; }
+        .phone .digit { width: 24px; height: 33px; font-size: 15px; }
+        .phone .code-gap { width: 0; }
+        .editorial-phone .content { padding-right: 15px; padding-left: 15px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="gallery">
+      <header class="intro">
+        <h1>Three more directions for A</h1>
+        <p>Each keeps the open, buttonless code entry you selected. The black Onzio wordmark with its original green dot comes from your supplied image, and the interface keeps the admin portal purple.</p>
+        <a class="return" href="./otp-page-options.html">View the original A, B, and C</a>
+      </header>
+
+      <section class="option" aria-labelledby="a1">
+        <div class="option-head"><h2 id="a1">A1 — More air</h2><p>Centered, minimal, closest to your selected A</p></div>
+        <div class="pair">
+          <div class="scene desktop air"><span class="scene-label">Desktop</span><button class="back" aria-label="Back">←</button>
+            <div class="content"><img class="logo" src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /><h3 class="title">Enter your code</h3><p class="copy">We sent a one-time code to <span class="address">club.admin@example.com</span>.<br />Enter it to access your club workspace.</p>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit current">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+              <button class="paste">Paste code</button><p class="resend">Didn’t get the code? <strong>Resend code</strong></p></div>
+          </div>
+          <div class="scene mobile-scene"><span class="scene-label">Mobile</span><div class="phone air-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆ ◕ ▰</span></div><button class="back" aria-label="Back">←</button>
+            <div class="content"><img class="logo" src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /><h3 class="title">Enter your code</h3><p class="copy">We sent a one-time code to<br /><span class="address">club.admin@example.com</span>.</p>
+              <div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit current">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+              <button class="paste">Paste code</button><p class="resend">Didn’t get the code? <strong>Resend code</strong></p></div></div>
+          </div>
+        </div>
+        <p class="description"><strong>What changes:</strong> A slightly larger logo, a simpler message, and more space around the code.</p>
+      </section>
+
+      <section class="option" aria-labelledby="a2">
+        <div class="option-head"><h2 id="a2">A2 — Soft field</h2><p>A quiet lavender area gives the logo and message a home</p></div>
+        <div class="pair">
+          <div class="scene desktop field"><span class="scene-label">Desktop</span><button class="back" aria-label="Back">←</button>
+            <div class="content"><img class="logo" src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /><h3 class="title">Enter your code</h3><p class="copy">Your one-time code is on its way to<br /><span class="address">club.admin@example.com</span>.</p>
+              <div class="entry"><div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit current">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+                <button class="paste">Paste code</button><p class="resend">Didn’t receive it? <strong>Resend code</strong></p></div></div>
+          </div>
+          <div class="scene mobile-scene"><span class="scene-label">Mobile</span><div class="phone field-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆ ◕ ▰</span></div><button class="back" aria-label="Back">←</button>
+            <div class="content"><img class="logo" src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /><h3 class="title">Enter your code</h3><p class="copy">Your code is on its way to<br /><span class="address">club.admin@example.com</span>.</p>
+              <div class="entry"><div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit current">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+                <button class="paste">Paste code</button><p class="resend">Didn’t receive it? <strong>Resend code</strong></p></div></div></div>
+          </div>
+        </div>
+        <p class="description"><strong>What changes:</strong> A pale lavender field separates the explanation from the code while preserving the open page.</p>
+      </section>
+
+      <section class="option" aria-labelledby="a3">
+        <div class="option-head"><h2 id="a3">A3 — Editorial</h2><p>Left-aligned reading flow with the code given its own space</p></div>
+        <div class="pair">
+          <div class="scene desktop editorial"><span class="scene-label">Desktop</span><button class="back" aria-label="Back">←</button>
+            <div class="content"><div class="message"><img class="logo" src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /><h3 class="title">Enter your code</h3><p class="copy">We sent a one-time code to <span class="address">club.admin@example.com</span>. Enter it to continue.</p></div>
+              <div class="entry"><div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit current">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+                <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p></div></div>
+          </div>
+          <div class="scene mobile-scene"><span class="scene-label">Mobile</span><div class="phone editorial-phone"><div class="status"><span>9:41</span><span class="signal">▂▄▆ ◕ ▰</span></div><button class="back" aria-label="Back">←</button>
+            <div class="content"><img class="logo" src="./assets/onzio-black-logo-no-bg-trimmed.png" alt="Onzio" /><h3 class="title">Enter your code</h3><p class="copy">We sent a one-time code to <span class="address">club.admin@example.com</span>. Enter it to continue.</p>
+              <div class="entry"><div class="code-row" aria-label="Sample code entry"><span class="digit">4</span><span class="digit">8</span><span class="digit">2</span><span class="digit current">9</span><span class="code-gap"></span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span><span class="digit empty">0</span></div>
+                <button class="paste">Paste code</button><p class="resend">Didn’t get it? <strong>Resend code</strong></p></div></div></div>
+          </div>
+        </div>
+        <p class="description"><strong>What changes:</strong> Desktop splits the explanation and entry into two clear zones; mobile keeps the same left-aligned order.</p>
+      </section>
+
+      <p class="description">Design review only. The number of digits shown is illustrative; the production code length must be confirmed before removing the submit action from the real login.</p>
+    </main>
+  </body>
+</html>

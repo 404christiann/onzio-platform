@@ -22,6 +22,7 @@
     "db:types": "supabase gen types typescript --local --schema onzio > lib/database.generated.ts",
     "db:types:check": "node scripts/check-database-types.mjs",
     "db:rehearse:plat-101": "node scripts/rehearse-plat-101-rollback.mjs",
+    "auth:email:logo-check": "node --import tsx scripts/verify-auth-email-logo.ts",
     "media:cleanup": "tsx scripts/cleanup-staging-media.ts",
     "seed:homepage-media:local": "tsx scripts/seed-local-homepage-media.ts",
     "media:smoke": "tsx scripts/smoke-media-pipeline.ts",

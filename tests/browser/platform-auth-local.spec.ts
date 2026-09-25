@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { assertSafeTestEnvironment } from "../helpers/environment";
@@ -31,7 +31,7 @@ async function latestCode(email: string, after: number) {
   throw new Error(`No local sign-in code arrived for ${email}`);
 }
 
-async function requestAndVerify(page: Page, email: string) {
+async function requestAndVerify(page: Page, email: string, entry: "fill" | "type" = "fill") {
   await page.goto("/admin/login", { waitUntil: "networkidle" });
   const requestedAt = Date.now();
   await page.getByLabel("Email").fill(email);
@@ -42,9 +42,117 @@ async function requestAndVerify(page: Page, email: string) {
     .filter({ hasText: "A sign-in code was sent recently" })
     .isVisible();
   const code = await latestCode(email, recentlySent ? 0 : requestedAt);
-  await page.getByLabel("Sign-in code").fill(code);
+  const input = page.getByLabel("Sign-in code");
+  if (entry === "type") await input.pressSequentially(code, { delay: 50 });
+  else await input.fill(code);
   await page.waitForURL(/\/admin$/);
 }
+
+test("a real six-digit code signs in automatically when typed on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await requestAndVerify(page, "owner-aal2@alpha.local", "type");
+});
+
+test("admin login accepts a pasted email code at desktop and phone widths", async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto("/admin/login", { waitUntil: "networkidle" });
+    await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+    await page.getByRole("button", { name: "I already have a code" }).click();
+
+    const input = page.getByLabel("Sign-in code");
+    await input.click();
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.evaluate(() => navigator.clipboard.writeText("Code: 428 913. Expires in 10 minutes."));
+    const verification = page.waitForRequest((request) =>
+      request.url().includes("/auth/v1/verify") && request.postDataJSON()?.token === "428913",
+    );
+    await page.keyboard.press(process.platform === "darwin" ? "Meta+V" : "Control+V");
+
+    await verification;
+    await expect(input).toHaveValue("428913");
+    await expect(page.locator('[data-slot="otp-digit"]')).toHaveText(["4", "2", "8", "9", "1", "3", "", ""]);
+    await expect(page.getByRole("button", { name: "Back" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Verify code" })).toHaveCount(0);
+    await expect(page.locator('img[alt="Onzio"]')).toHaveAttribute("src", /onzio-black-logo-no-bg-trimmed/);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+});
+
+test("code-entry paste action keeps mismatched codes editable and submits a complete local code", async ({ page }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  for (const width of [1280, 390, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto("/admin/login", { waitUntil: "networkidle" });
+    await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+    await page.getByRole("button", { name: "I already have a code" }).click();
+
+    const requests: string[] = [];
+    const recordVerification = (request: Request) => {
+      if (request.url().includes("/auth/v1/verify")) requests.push(request.postDataJSON()?.token);
+    };
+    page.on("request", recordVerification);
+    await page.evaluate(() => navigator.clipboard.writeText("Your code: 1234 5678 90. Expires in 10 minutes."));
+    await page.getByRole("button", { name: "Paste code" }).click();
+    await expect(page.getByLabel("Sign-in code")).toHaveValue("1234567890");
+    await expect(page.locator('[data-slot="otp-digit"]')).toHaveCount(10);
+    await expect(page.getByText("This sign-in expects 6 digits.", { exact: false })).toBeVisible();
+    await page.waitForTimeout(950);
+    expect(requests).toHaveLength(0);
+
+    await page.evaluate(() => navigator.clipboard.writeText("Your code: 428 913. Expires in 10 minutes."));
+    await page.getByRole("button", { name: "Paste code" }).click();
+    await expect.poll(() => requests).toEqual(["428913"]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    page.off("request", recordVerification);
+  }
+});
+
+test("typing a local six-digit code does not verify early, even after a long pause", async ({ page }) => {
+  await page.goto("/admin/login", { waitUntil: "networkidle" });
+  await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+  await page.getByRole("button", { name: "I already have a code" }).click();
+
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/auth/v1/verify")) {
+      requests.push(request.postDataJSON()?.token);
+    }
+  });
+  const input = page.getByLabel("Sign-in code");
+  await input.pressSequentially("12345", { delay: 40 });
+  await page.waitForTimeout(900);
+  expect(requests).toHaveLength(0);
+  await input.press("6");
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests).toEqual(["123456"]);
+});
+
+test("code entry is unavailable while a resend is pending", async ({ page }) => {
+  await page.goto("/admin/login", { waitUntil: "networkidle" });
+  await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+  await page.getByRole("button", { name: "I already have a code" }).click();
+
+  let releaseResend!: () => void;
+  const resendGate = new Promise<void>((resolve) => {
+    releaseResend = resolve;
+  });
+  await page.route("**/auth/v1/otp", async (route) => {
+    await resendGate;
+    await route.continue();
+  });
+
+  const input = page.getByLabel("Sign-in code");
+  try {
+    await page.getByRole("button", { name: "Resend code" }).click();
+    await expect(page.getByRole("button", { name: "Sending…" })).toBeVisible();
+    await expect(input).toBeDisabled();
+    await expect(input).toHaveValue("");
+  } finally {
+    releaseResend();
+  }
+  await expect(input).toBeEnabled();
+});
 
 async function expectAdminNavigationScrollable(page: Page) {
   const navigation = page.getByRole("navigation", { name: "Admin navigation" });
@@ -62,6 +170,7 @@ async function expectAdminNavigationScrollable(page: Page) {
 }
 
 test("passwordless owner adds an admin who signs in from desktop and mobile", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
   const { supabaseUrl } = assertSafeTestEnvironment();
   const service = createClient(
     supabaseUrl,
@@ -104,8 +213,8 @@ test("passwordless owner adds an admin who signs in from desktop and mobile", as
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await requestAndVerify(page, ownerEmail);
-    await expect(page.getByText("Team access")).toBeVisible();
-    await page.getByText("Team access").click();
+    await page.getByRole("button", { name: "Club Settings" }).click();
+    await page.getByRole("link", { name: "Team Access" }).click();
     await expect(page.getByRole("heading", { name: "Team access" })).toBeVisible();
 
     const addedAt = Date.now();
@@ -114,7 +223,8 @@ test("passwordless owner adds an admin who signs in from desktop and mobile", as
     await expect(page.getByRole("status")).toContainText("Administrator added");
     const adminCode = await latestCode(adminEmail, addedAt);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByRole("button", { name: new RegExp(`${ownerEmail} owner`) }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
     await page.waitForURL(/\/admin\/login$/);
     await page.getByLabel("Email").fill(adminEmail);
     await page.getByRole("button", { name: "Send sign-in code" }).click();

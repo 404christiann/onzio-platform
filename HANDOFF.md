@@ -1,5 +1,337 @@
 # Onzio Platform Handoff
 
+## OTP review follow-up fixes — 2026-09-24
+
+Addressed the two findings from the read-only review of draft PR #7. The
+linked Vercel Production project now has the public build variable
+`NEXT_PUBLIC_ONZIO_EMAIL_OTP_LENGTH=8`, matching the hosted Auth length
+recorded in this handoff; a temporary production env pull confirmed the value.
+This affects future builds only: no app deployment or `main` push occurred.
+For environments without a known length, the code step now tells users to
+press Enter after typing the complete code.
+
+The code input is disabled and the slots dim while a resend request is in
+flight, so typed and pasted codes cannot be silently discarded. A focused
+Chromium regression held the resend request open and confirmed the input was
+disabled until it completed. Verification: TypeScript, contracts 948/948,
+architecture 21/21, local database 245/245, full Vitest 1579/1579, and the
+resend browser regression passed. Four of five combined login browser checks
+passed; the real sign-in check received an invalid OTP during that run and
+passed when rerun alone. Hosted eight-digit typed/pasted login, native phone
+paste, and a fresh hosted Auth email remain release acceptance checks.
+
+Next: review draft PR #7 checks, then validate hosted eight-digit login and
+the email after an approved deployment and Auth template sync. Do not merge or
+deploy without Christian's separate approval. Preserve concurrent portal-reveal
+work and unrelated dirty files.
+
+## Public OTP email logo published to Supabase Storage — 2026-09-24
+
+Christian approved putting the selected black Onzio wordmark in a dedicated
+public production Supabase Storage bucket. Created `onzio-branding` in the
+production project (`ioalthwsdrlzrubomrow`) and uploaded the exact approved
+19,701-byte PNG to `email/onzio-black-wordmark-v1.png` without overwriting any
+existing object. Anonymous GET returns HTTP 200, `image/png`, and bytes matching
+`public/images/onzio/onzio-black-logo-no-bg-trimmed.png` (SHA-256
+`02e6d7a41cc1fc9cdea6e9ff9377607892a652f50cff17ce38e4712723ee7a81`).
+The public URL is
+`https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-branding/email/onzio-black-wordmark-v1.png`.
+The same bucket/object was created and verified in isolated local Supabase.
+
+The checked-in Pure and quiet Auth email template and its release check now
+use that URL; the local Mailpit delivery test passes after refreshing isolated
+local Auth. Added an idempotent migration for the bucket so other environments
+can reproduce its public read and PNG-only configuration. Uploads still require
+the service role; no client write policy was added. Verification: migration
+applied locally, `npm run auth:email:logo-check` passed against the production
+URL, focused contract and Mailpit tests passed, TypeScript passed, contracts
+948/948, architecture 21/21, database 245/245, and full Vitest 1579/1579
+passed. Production bucket metadata confirms public read, PNG-only uploads, and
+a 1 MiB file limit. The production Storage object is live; the hosted
+Supabase Auth template has not been synced, and the app has not been deployed.
+Next: merge/release the checked-in template and sync it to hosted Auth, then
+inspect a fresh hosted OTP email. Keep the remaining OTP-length and real-device
+acceptance items from the section below open.
+
+## OTP review fixes and email logo release gate — 2026-09-24
+
+On `codex/otp-email-design-and-paste`, the follow-up review found two OTP
+entry failures and one email release blocker. `app/admin/login/otp-code.ts`
+now extracts one code from copied email text without joining expiry/date
+digits; ambiguous clipboard text asks the user to select the code. Typed,
+pasted, and autofilled values automatically verify only at Auth's known
+code length. Local loopback Auth defaults to its checked-in six digits.
+Hosted environments must set `NEXT_PUBLIC_ONZIO_EMAIL_OTP_LENGTH` to the
+actual Supabase Auth email OTP length (currently eight in the hosted project)
+at build time. An unknown hosted length leaves typed auto-submit disabled;
+Enter remains a manual fallback. An incomplete paste remains editable and
+does not trigger a premature verify attempt.
+
+`npm run auth:email:logo-check` now verifies that the selected Pure and quiet
+template's public black PNG URL serves HTTP 200, `image/png`, and bytes matching
+the committed asset. The live check still fails HTTP 404: the asset has not
+been deployed. Local Mailpit likewise shows a broken logo until the asset is
+public. The feature branch was pushed for review; no production deployment,
+hosted Auth template sync, or Vercel environment update has occurred. Do not
+mark the email fixed or sync hosted Auth until the logo check passes and a
+fresh hosted OTP is visually inspected.
+
+Verification after the code changes: `npx tsc --noEmit`, contract suite
+948/948, architecture suite 21/21, local database suite 245/245, full Vitest
+1579/1579, and focused local Chromium OTP browser checks 4/4 passed. The
+browser checks include a real typed six-digit mobile sign-in, native paste at
+desktop/phone widths, mismatched paste staying editable, and no early local
+verification after a pause. Hosted eight-digit end-to-end acceptance and
+Android native paste remain open. The branch was merged with current
+`origin/main` (PR #6 changes) locally, then pushed without touching `main`.
+The post-merge full suite and focused browser checks passed at the same counts.
+GitHub's compare view is available, but a draft PR could not be opened from
+this host: the local `gh` executable cannot run on its CPU, and the in-app
+GitHub browser is signed out.
+
+Next: obtain Christian's explicit production release approval, configure the
+hosted OTP-length environment to match Auth, deploy the approved app/asset,
+run `npm run auth:email:logo-check`, sync the hosted Supabase Auth template,
+then send and inspect a fresh OTP email and perform a real hosted eight-digit
+typed/pasted login on desktop and mobile. Preserve the unrelated dirty files.
+
+## Selected OTP email now uses black wordmark on white — 2026-09-24
+
+Christian requested the same black Onzio wordmark used on the admin login in
+the selected OTP email. `supabase/templates/magic_link.html` now places that
+asset directly on the white card instead of placing the white logo in a dark
+badge. Option A in `design-previews/otp-email-options.html` matches it; B and C
+remain comparison designs. The subject, code text `{{ .Token }}`, copy,
+divider, and email-only authentication flow are unchanged.
+
+The local Supabase Auth container initially served its cached old template;
+the Kong mount already matched the edited file, so only the isolated local
+Auth container was restarted. The focused Mailpit delivery test then passed,
+including the black-logo URL and absence of the dark badge. TypeScript,
+PLAT-101 contracts 25/25, full Vitest 1573/1573, and `git diff --check` pass.
+The black PNG serves locally (HTTP 200). Its future email URL at
+`https://onzio-platform.vercel.app/images/onzio/onzio-black-logo-no-bg-trimmed.png`
+currently returns HTTP 404 because this feature branch has not been deployed.
+Do not sync this template to hosted Auth until that asset is live. Hosted Auth
+and the deployed app were not changed. Next: Christian reviews the revised
+email preview, then an approved release deploys the asset before syncing and
+verifying the hosted Auth template.
+
+## Email login Option A implemented with logo in heading position — 2026-09-24
+
+Christian selected Option A for the admin email-address step, then removed its
+“Sign in to Onzio” heading and moved the black Onzio wordmark into that visual
+position on desktop and mobile. `app/admin/login/page.tsx` now renders that step
+on the same open white canvas and portal-purple system as the approved OTP
+step. It keeps the existing email request, existing-code entry, loading, and
+error behavior. The unknown-address screen and OTP step were not redesigned.
+Option A in `design-previews/email-login-options.html` reflects the selected
+logo-only layout; B and C remain comparison examples.
+
+Verification: TypeScript, targeted ESLint, PLAT-101 contracts 25/25, and full
+Vitest suite 1573/1573 pass. Local Chromium at 1440/390/320px confirmed the
+black logo loads, the removed heading is absent, the email field is visible,
+and there is no horizontal overflow. The existing-code path and Back return
+worked at each width. A real local six-digit email-code sign-in still reached
+`/admin` at 390px. The unknown-address message and Try another address return
+also worked locally. Preview remains live at
+`http://alpha.localhost:3115/admin/login`; next is Christian's visual review.
+
+## Three email-login design previews — 2026-09-24
+
+Christian requested three standalone designs for the email-address step that
+visually continue the selected OTP page. Added
+`design-previews/email-login-options.html` with desktop and mobile examples:
+A is the closest centered white-canvas continuation, B adds a quiet lavender
+header, and C separates the message from entry on desktop while stacking the
+same elements on mobile. All three use the existing black Onzio logo asset,
+portal purple `#6158dc`, and the current passwordless actions. Preview forms
+interact locally and explicitly do not send email. The production login page
+was not changed. Local Chromium confirmed three options, all logos loaded, no
+page overflow at 1440/1024/390/320px, and no clipped mobile actions. Next:
+Christian selects an option or asks for a refinement before implementation.
+
+## Admin OTP auto-verification and Back control — 2026-09-24
+
+Christian clarified that entering or pasting a complete code must start login
+without a Verify button. `app/admin/login/page.tsx` now verifies native paste,
+the Paste code action, and multi-digit OS autofill immediately. Sequential
+typing verifies after a 650ms pause once at least six digits have been entered.
+Supabase's current email OTP setting supports 6–10 digits, while Onzio's local
+Auth issues six and hosted Auth has issued eight; the pause avoids treating
+each early digit as a complete code. The input still accepts 4–10 digits and
+Enter remains a keyboard fallback. Pending timers are canceled on edits,
+resend, Back, and unmount. The top arrow has become a 44px-high light neutral
+pill labeled Back.
+
+`tests/browser/platform-auth-local.spec.ts` now asserts automatic verification
+for native desktop paste, the Paste code action at desktop and narrow mobile
+widths, typed eight-digit entry without a premature five-digit request, and a
+real six-digit local OTP typed on a 390px viewport reaching `/admin` without a
+button. Verification: TypeScript, targeted ESLint, PLAT-101 contracts 25/25,
+full Vitest suite 1573/1573, and the focused browser checks passed. The local
+preview remains on `http://alpha.localhost:3115/admin/login`. Android native
+paste acceptance and hosted eight-digit end-to-end acceptance remain open.
+
+## Option A admin OTP page implemented locally — 2026-09-24
+
+Christian selected the original open-canvas Option A for the admin login code
+step. `app/admin/login/page.tsx` now uses a centered black Onzio wordmark with
+its original green dot, sentence-case “Enter your code” heading, white canvas,
+portal purple `#6158dc`, responsive circular digit slots, back control,
+clipboard Paste action, and Resend code link. The supplied preview asset was
+copied to `public/images/onzio/onzio-black-logo-no-bg-trimmed.png` so the real
+login can serve it. The email-address and unknown-account steps remain as they
+were. The code step has one actual input for keyboard entry, desktop paste,
+mobile long-press Paste, and OS one-time-code autofill; its visual circles are
+presentation only. Loading makes the form inert and disables the back control.
+
+The large Sign in button is replaced by a compact, visible Verify code text
+action; Enter also submits. Automatic submission on an inferred final digit is
+unsafe because local Auth emits six digits, the hosted project has emitted
+eight, and the PLAT-101 contract preserves 4–10-digit entry. The clipboard
+action populates the input without prematurely verifying a possibly partial
+clipboard value. Resend requests a fresh code and preserves entered digits if
+Auth reports the cooldown.
+
+Verification: TypeScript, targeted lint, PLAT-101 contracts 25/25, complete
+Vitest suite 1573/1573, and focused Chromium OTP paste/UI tests 2/2 pass.
+Chromium screenshots at 1440px, 390px,
+and 320px showed the logo, sentence-case heading, and no page overflow. A
+separate local owner/admin browser run verified a real six-digit code could
+reach `/admin` via Verify code and Enter. The broader owner-to-admin test still
+fails afterward on its existing admin-navigation scroll assertion because the
+current collapsed sidebar does not overflow; the assertion was left intact.
+The local app used an explicitly isolated local Supabase URL and the fixture's
+`production` domain tag; no hosted Auth service or deployment was changed.
+
+Native iPhone 17 Simulator running iOS 26.5 Safari also confirmed the real
+input exposes the iOS Paste menu. Pasting the fake clipboard text
+`Code: 428 913` filled `428913` across the circles without truncation. The
+separate Paste code action surfaced Safari's Paste affordance and populated
+the circles, and the heading rendered in sentence case after a refresh.
+Android native paste remains unverified.
+
+Next: review Option A in the local login, complete Android native paste
+acceptance if a device is available, then obtain Christian's release approval
+before deployment.
+
+## Three more OTP page option A iterations — 2026-09-24
+
+Christian requested three further desktop/mobile variants of selected option A
+and supplied `/Users/christianalcala/Desktop/Onzio-logos/onzio-black-logo-no-bg.png`.
+Added `design-previews/otp-page-a-iterations.html` with A1 (airier centered
+layout), A2 (restrained lavender field), and A3 (editorial left-aligned flow).
+Each keeps the logo above the heading, the portal purple accent, and no large
+Sign in button. Copied the supplied PNG unchanged to
+`design-previews/assets/onzio-black-logo-no-bg.png` and made an alpha-only
+trimmed derivative for layout; its original green dot remains visible.
+`design-previews/otp-page-options.html` now links to the new comparison and
+uses the same supplied logo in its original A/B/C previews.
+
+Local Chromium rendered all three options at 1440px, 1024px, and 390px: all
+logos load, no page-level overflow or clipped content, and A3's tablet code
+row remains fully visible after a responsive adjustment. A2's decorative
+background is intentionally clipped by its frame. Narrow 320px widths use
+smaller code circles; Chromium confirmed that all three code rows fit there.
+The real login page is unchanged. Next: Christian selects an A variation or
+asks for refinements. Then resolve the server OTP length before implementing
+buttonless automatic verification, while preserving native paste, autofill,
+and keyboard access.
+
+## OTP page option A selected and refined — 2026-09-24
+
+Christian selected option A and requested the black Onzio wordmark directly
+above “Enter your code” on both desktop and mobile. Updated only
+`design-previews/otp-page-options.html`: the wordmark now sits centered above
+the heading in each A preview, with the back control alone at the top. B and C
+remain for comparison and B is no longer labeled recommended. Local Chromium
+confirmed the logo loads, is centered above the heading on both surfaces, and
+the 390px page has no horizontal overflow. The actual login UI is unchanged.
+Next: implement selected A after resolving how buttonless submission will know
+the real server OTP length; the current login accepts 4–10 digits because hosted
+and local Auth lengths differ. Preserve paste/autofill and keyboard access.
+
+## OTP page previews recolored to portal purple — 2026-09-24
+
+Christian requested the native purple used by the admin portal and black
+lettering for the Onzio logo. Updated only
+`design-previews/otp-page-options.html`: its accent now uses `#6158dc`, the
+purple used by the Homepage editor controls, and the existing wordmark PNG is
+rendered black via CSS directly on light surfaces. The three A/B/C layouts,
+desktop/mobile pairing, and submit-behavior proposals remain available for
+selection. The actual admin login remains unchanged. Local Chromium confirmed
+all logos load and no page-level overflow at 1440px and 390px. Next: Christian
+selects a direction and submit behavior, then implement and verify it.
+
+## OTP page design directions awaiting selection — 2026-09-24
+
+Christian supplied a mobile OTP inspiration screenshot and asked for desktop
+and mobile alternatives that retain the Onzio logo, questioning whether a
+large Sign in button is needed. Added `design-previews/otp-page-options.html`
+with three paired previews: A is an open circular layout without a submit
+button, B is a quiet card with a Continue button, and C is a stronger Onzio
+brand frame with a compact Verify code action. The examples use eight visible
+slots because the current portal begins with eight, while the real input must
+continue to accept 4–10 digits until hosted OTP length is verified and kept in
+sync. A's automatic submission cannot safely be implemented with today's
+variable-length acceptance without first resolving that boundary. B is the
+recommended low-risk behavior; C reduces visual weight while preserving an
+explicit submit. This work is **preview only**: `app/admin/login/page.tsx` is
+unchanged from commit `4155669`.
+
+Local Chromium rendered the preview at 1440px and 390px with three options,
+all logo assets loaded, and no page-level overflow. Next: Christian selects a
+direction and button behavior. Then implement only the code-entry step, retain
+the previously verified paste/autofill behavior and flexible length, and test
+desktop/mobile plus native device paste before release.
+
+## Admin sign-in email A and OTP paste implemented locally — 2026-09-24
+
+Branch: `codex/otp-email-design-and-paste`. Christian selected email option A.
+`supabase/templates/magic_link.html` now uses its light, centered layout, the
+real Onzio wordmark at the verified public PNG URL, and the copyable Supabase
+`{{ .Token }}` text. The code-only subject and auth configuration did not
+change. `app/admin/login/page.tsx` keeps the visual digit boxes but no longer
+sets the real input to `opacity-0`; transparent text leaves it available to
+native paste UI. Its paste handler reads and sanitizes the complete clipboard
+value before HTML `maxLength` can truncate a code copied with surrounding text.
+
+Regression coverage: `tests/browser/platform-auth-local.spec.ts` pastes
+`Code: 428 913` via the OS shortcut at 1280px and 390px and asserts all six
+digits and no overflow. `tests/database/platform-auth-email-code.test.ts`
+checks the real local Mailpit email for the selected copy and logo URL. Local
+Supabase was stopped and restarted with an isolated Docker configuration after
+the first test observed its cached old template; it is running again. The
+Mailpit test then passed, and browser rendering of the delivered HTML at 600px
+and 320px showed the logo and code with no overflow. The public logo URL
+returned HTTP 200 with `image/png`. TypeScript, lint, architecture 21/21,
+PLAT-101 contract 25/25, focused paste browser 1/1, local auth email 1/1,
+full suite 1573/1573, and `git diff --check` passed.
+
+The hosted Supabase email template and deployed login UI are unchanged. Native
+iOS/Android long-press paste menus have not been checked on devices. Next:
+review this branch, then obtain Christian's deployment approval before syncing
+the hosted Auth template or deploying code; verify an approved hosted email
+and device paste afterward. Preserve the unrelated dirty worktree files.
+
+## Admin sign-in email design review — 2026-09-24
+
+Branch: `codex/otp-email-design-and-paste`, created from the current checkout
+while preserving unrelated worktree changes. Added
+`design-previews/otp-email-options.html` with three reviewable designs for the
+Supabase email-code message. Each uses the checked-in Onzio wordmark and sample
+six-digit code. The live template `supabase/templates/magic_link.html`, Supabase
+configuration, and admin login UI remain unchanged pending Christian's design
+selection. Local Chromium rendered the file at 1440px and 390px: all three
+logos loaded and neither width overflowed. `git diff --check` passed.
+
+Next: Christian selects A, B, or C. Implement the selected design in the
+code-only Supabase email template with an absolute hosted logo URL, verify
+email-client rendering and local Mailpit delivery, then address OTP paste in
+the admin login UI with a focused regression test. Do not send a hosted OTP or
+push/deploy without the appropriate approval.
+
 ## PR #6 tablet-to-desktop navigation review fix — 2026-09-24 (Codex)
 
 Status: **fixed and verified locally; awaiting Christian's review and merge
