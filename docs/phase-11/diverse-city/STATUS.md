@@ -21,6 +21,13 @@ cover, errors, or horizontal overflow. Normal mobile playback reached
 `readyState` 4 and removed the poster. iPhone Simulator touch acceptance is
 still pending. No production deployment.
 
+**Mobile follow-up:** Chromium touch checks at 320, 375, 390, and 430px held
+the MP4 request open. At every width the poster, heading, and CTA were visible,
+with no page errors or horizontal overflow; opening and closing the menu
+restored scrolling. Booted iPhone 17 Simulator Safari rendered the hero as
+expected in a captured screenshot. Direct Simulator taps remain unverified
+because the Mac was locked. The temporary device proxy was stopped.
+
 **Exact next step:** Christian reviews the local preview and draft PR #9;
 complete iPhone touch acceptance before separate production merge/deploy
 approval.
