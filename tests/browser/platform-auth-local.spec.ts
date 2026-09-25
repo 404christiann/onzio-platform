@@ -128,6 +128,32 @@ test("typing a local six-digit code does not verify early, even after a long pau
   expect(requests).toEqual(["123456"]);
 });
 
+test("code entry is unavailable while a resend is pending", async ({ page }) => {
+  await page.goto("/admin/login", { waitUntil: "networkidle" });
+  await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+  await page.getByRole("button", { name: "I already have a code" }).click();
+
+  let releaseResend!: () => void;
+  const resendGate = new Promise<void>((resolve) => {
+    releaseResend = resolve;
+  });
+  await page.route("**/auth/v1/otp", async (route) => {
+    await resendGate;
+    await route.continue();
+  });
+
+  const input = page.getByLabel("Sign-in code");
+  try {
+    await page.getByRole("button", { name: "Resend code" }).click();
+    await expect(page.getByRole("button", { name: "Sending…" })).toBeVisible();
+    await expect(input).toBeDisabled();
+    await expect(input).toHaveValue("");
+  } finally {
+    releaseResend();
+  }
+  await expect(input).toBeEnabled();
+});
+
 async function expectAdminNavigationScrollable(page: Page) {
   const navigation = page.getByRole("navigation", { name: "Admin navigation" });
   await expect(navigation).toBeVisible();

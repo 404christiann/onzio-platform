@@ -1,5 +1,30 @@
 # Onzio Platform Handoff
 
+## OTP review follow-up fixes — 2026-09-24
+
+Addressed the two findings from the read-only review of draft PR #7. The
+linked Vercel Production project now has the public build variable
+`NEXT_PUBLIC_ONZIO_EMAIL_OTP_LENGTH=8`, matching the hosted Auth length
+recorded in this handoff; a temporary production env pull confirmed the value.
+This affects future builds only: no app deployment or `main` push occurred.
+For environments without a known length, the code step now tells users to
+press Enter after typing the complete code.
+
+The code input is disabled and the slots dim while a resend request is in
+flight, so typed and pasted codes cannot be silently discarded. A focused
+Chromium regression held the resend request open and confirmed the input was
+disabled until it completed. Verification: TypeScript, contracts 948/948,
+architecture 21/21, local database 245/245, full Vitest 1579/1579, and the
+resend browser regression passed. Four of five combined login browser checks
+passed; the real sign-in check received an invalid OTP during that run and
+passed when rerun alone. Hosted eight-digit typed/pasted login, native phone
+paste, and a fresh hosted Auth email remain release acceptance checks.
+
+Next: review draft PR #7 checks, then validate hosted eight-digit login and
+the email after an approved deployment and Auth template sync. Do not merge or
+deploy without Christian's separate approval. Preserve concurrent portal-reveal
+work and unrelated dirty files.
+
 ## Public OTP email logo published to Supabase Storage — 2026-09-24
 
 Christian approved putting the selected black Onzio wordmark in a dedicated

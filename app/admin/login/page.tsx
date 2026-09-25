@@ -257,7 +257,7 @@ export default function LoginPage() {
             >
               <label htmlFor="sign-in-code" className="sr-only">Sign-in code</label>
               <div className="relative mx-auto max-w-[490px]">
-                <div aria-hidden="true" className="flex items-center justify-center gap-1 sm:gap-2">
+                <div aria-hidden="true" className={`flex items-center justify-center gap-1 transition-opacity sm:gap-2 ${resending ? "opacity-50" : ""}`}>
                   {Array.from({ length: boxCount }, (_, index) => (
                     <span
                       key={index}
@@ -284,6 +284,7 @@ export default function LoginPage() {
                   minLength={4}
                   maxLength={10}
                   value={code}
+                  disabled={loading || resending}
                   onChange={(event) => {
                     const nextCode = event.target.value.replace(/\D/g, "").slice(0, 10);
                     setCode(nextCode);
@@ -307,6 +308,11 @@ export default function LoginPage() {
                 Paste code
               </button>
               {pasteHint && <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">{pasteHint}</p>}
+              {EXPECTED_CODE_LENGTH === null && code.length >= 4 && !loading && !pasteHint && (
+                <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">
+                  Press Enter after typing the complete code.
+                </p>
+              )}
               {EXPECTED_CODE_LENGTH !== null && code.length > EXPECTED_CODE_LENGTH && !loading && !pasteHint && (
                 <p role="status" className="mx-auto mt-2 max-w-xs text-xs text-[#6a6d7e]">
                   This sign-in expects {EXPECTED_CODE_LENGTH} digits. Check your code, or press Enter to try it.
