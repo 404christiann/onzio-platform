@@ -1,5 +1,30 @@
 # Diverse City FC Status
 
+## 2026-09-25 - Poster-first homepage hero
+
+**Package:** ad hoc public loading feature, Familiar Blend / Header Stays.
+
+**Status:** `in_progress` in draft PR
+[#9](https://github.com/404christiann/onzio-platform/pull/9). The homepage
+shows its bundled poster and ready hero copy while video buffers, then swaps
+to the video on playback. The failed-server hero-copy retry uses a one-second
+fallback instead of five. Other page loaders and story video are unchanged.
+
+**Files changed:** `components/{Hero,ResilientBunnyVideo}.tsx`,
+`components/academy-hero-content-load.ts`, focused loading contracts,
+`HANDOFF.md`, and this ledger.
+
+**Verification:** focused tests 12/12, TypeScript, full local-only database
+suite 1609/1609, production build, and diff check. Browser-held MP4 at
+390px and 1440px showed a loaded visible poster and hero text with no page
+cover, errors, or horizontal overflow. Normal mobile playback reached
+`readyState` 4 and removed the poster. iPhone Simulator touch acceptance is
+still pending. No production deployment.
+
+**Exact next step:** Christian reviews the local preview and draft PR #9;
+complete iPhone touch acceptance before separate production merge/deploy
+approval.
+
 ## 2026-09-25 - Header Stays PR review follow-up
 
 **Package:** ad hoc public loading feature, Familiar Blend / Header Stays.

@@ -82,19 +82,20 @@ describe("academy Header Stays loading", () => {
     expect(loadingSource).not.toContain("rounded-[5px] bg-[#c8deea]");
   });
 
-  it("holds the quiet homepage loader until its video or fallback poster is visible", () => {
+  it("reveals the homepage over a loaded poster while the video buffers", () => {
     const heroSource = readFileSync(resolve(process.cwd(), "components/Hero.tsx"), "utf8");
     const homeSource = readFileSync(resolve(process.cwd(), "components/HomePageClient.tsx"), "utf8");
     const videoSource = readFileSync(resolve(process.cwd(), "components/ResilientBunnyVideo.tsx"), "utf8");
     expect(heroSource).toContain("!editing && !academyMediaReady");
     expect(heroSource).toContain("<AcademyHeroLoadingSkeleton clubName={club.name} />");
     expect(heroSource).toContain("setAcademyMediaReady(true);");
+    expect(heroSource).toContain("showPosterUntilPlaying");
     expect(heroSource).toContain("onAcademyMediaReady?.();");
     expect(heroSource).toContain("inert={!editing && !academyMediaReady}");
     expect(homeSource).toContain("onAcademyMediaReady={() => setAcademyHeroReady(true)}");
     expect(homeSource).toContain("<div inert={covered} aria-hidden={covered}");
-    expect(videoSource).toContain("onLoadedData={markVisualReady}");
-    expect(videoSource).toContain("onPlaying={markVisualReady}");
+    expect(videoSource).toContain("showPosterUntilPlaying ? undefined : markVisualReady");
+    expect(videoSource).toContain("setPlaying(true);");
     expect(videoSource).toContain("onLoad={markVisualReady}");
     expect(videoSource).toContain("10_000");
     expect(loadingSource).toContain('"Loading " + clubName + "…"');

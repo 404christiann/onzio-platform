@@ -13,6 +13,8 @@ type Props = {
   style?: CSSProperties;
   /** Fires when a video frame or the static poster can be displayed. */
   onVisualReady?: () => void;
+  /** Keep a visible poster over the video until playback actually begins. */
+  showPosterUntilPlaying?: boolean;
 };
 
 /**
@@ -29,6 +31,7 @@ export default function ResilientBunnyVideo({
   className,
   style,
   onVisualReady,
+  showPosterUntilPlaying = false,
 }: Props) {
   const preview = useHomepagePreview();
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -40,6 +43,7 @@ export default function ResilientBunnyVideo({
   }, []);
   const editing = preview !== null && (!preview.playback || reducedMotion);
   const [failed, setFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const readyRef = useRef(false);
   const markVisualReady = () => {
@@ -75,12 +79,53 @@ export default function ResilientBunnyVideo({
   }, [failed, editing]);
 
   useEffect(() => {
-    if (!onVisualReady || editing || failed || readyRef.current) return;
-    // A stalled network request may never emit loadeddata or error. Settle to
-    // the local poster so the page can finish loading in that case.
+    if (!onVisualReady || editing || failed || (showPosterUntilPlaying ? playing : readyRef.current)) return;
+    // A stalled network request may never emit loadeddata or error. Stop
+    // waiting after this budget; poster-first heroes already show the image.
     const timeout = window.setTimeout(() => setFailed(true), 10_000);
     return () => window.clearTimeout(timeout);
-  }, [onVisualReady, editing, failed]);
+  }, [onVisualReady, editing, failed, playing, showPosterUntilPlaying]);
+
+  const video = !editing && !failed ? (
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="auto"
+      poster={posterSrc}
+      aria-label={alt}
+      className={showPosterUntilPlaying ? `${className ?? ""} absolute inset-0` : className}
+      style={style}
+      onLoadedData={showPosterUntilPlaying ? undefined : markVisualReady}
+      onPlaying={() => {
+        if (showPosterUntilPlaying) setPlaying(true);
+        markVisualReady();
+      }}
+      onError={() => setFailed(true)}
+    >
+      <source src={bunnyVideoMp4Url(guid)} type="video/mp4" />
+    </video>
+  ) : null;
+
+  if (showPosterUntilPlaying) {
+    return (
+      <div className="relative h-full w-full">
+        {video}
+        {(!playing || editing || failed) && (
+          <ResilientNativeImage
+            src={posterSrc}
+            alt={alt}
+            className={`${className ?? ""} absolute inset-0`}
+            style={style}
+            onLoad={markVisualReady}
+            onError={markVisualReady}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (editing || failed) {
     return (
@@ -95,23 +140,5 @@ export default function ResilientBunnyVideo({
     );
   }
 
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      muted
-      loop
-      playsInline
-      preload="auto"
-      poster={posterSrc}
-      aria-label={alt}
-      className={className}
-      style={style}
-      onLoadedData={markVisualReady}
-      onPlaying={markVisualReady}
-      onError={() => setFailed(true)}
-    >
-      <source src={bunnyVideoMp4Url(guid)} type="video/mp4" />
-    </video>
-  );
+  return video;
 }

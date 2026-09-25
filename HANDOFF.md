@@ -1,5 +1,34 @@
 # Onzio Platform Handoff
 
+## Academy hero poster-first transition — 2026-09-25 (Codex)
+
+Christian asked to show the Diverse City homepage hero poster as soon as its
+copy and image are ready, keeping it visible until the video actually plays.
+The academy hero now uses the bundled local poster over the video while the
+MP4 buffers. Poster load reveals the hero copy and clears the page cover;
+`playing` swaps the poster for the video. A stalled video can remain on the
+poster without holding the homepage. The separate failed-server hero-copy
+retry now releases its neutral fallback after one second instead of five;
+late tenant copy still updates. The story video and other templates retain
+their previous media behavior.
+
+**Files:** `components/{Hero,ResilientBunnyVideo}.tsx`,
+`components/academy-hero-content-load.ts`, focused loading contracts,
+`HANDOFF.md`, and the Diverse City status ledger.
+
+**Verification:** focused 12/12, TypeScript, full local-only Supabase suite
+1609/1609, production build, and diff check passed. In a fresh built preview,
+holding the MP4 request open at 390px and 1440px left the poster loaded and
+visible, hero copy visible, page cover absent, and horizontal overflow absent,
+with zero page errors. Releasing the network in a normal mobile load produced
+video `readyState` 4 and removed the poster when playback began. Mobile and
+desktop screenshots were visually inspected. iPhone Simulator touch acceptance
+remains pending; no production deployment occurred.
+
+**Exact next step:** Christian reviews the updated local preview and draft
+PR #9. Complete iPhone touch acceptance before separate production merge or
+deployment approval.
+
 ## Academy loading stall follow-up and Onzio footer link — 2026-09-25 (Codex)
 
 Christian asked for subagents to fix two defects found in an independent review

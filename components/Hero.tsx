@@ -172,6 +172,7 @@ export default function Hero({
             posterSrc={DIVERSE_CITY_HERO_VIDEO.posterSrc}
             alt={`${club.name} hero video`}
             className="h-full w-full object-cover"
+            showPosterUntilPlaying
             onVisualReady={() => {
               setAcademyMediaReady(true);
               onAcademyMediaReady?.();

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadAcademyHeroContent } from "@/components/academy-hero-content-load";
+import { ACADEMY_HERO_CONTENT_FALLBACK_MS, loadAcademyHeroContent } from "@/components/academy-hero-content-load";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -15,7 +15,7 @@ describe("academy hero retry after a failed server read", () => {
     expect(hero).toContain("fetchHomepageContent(club.id)");
   });
 
-  it("reveals the neutral hero after five seconds when the retry never settles", async () => {
+  it("reveals the neutral hero after one second when the retry never settles", async () => {
     vi.useFakeTimers();
     const callbacks = {
       onContent: vi.fn(),
@@ -27,7 +27,8 @@ describe("academy hero retry after a failed server read", () => {
 
     await Promise.resolve();
     expect(read).toHaveBeenCalledOnce();
-    await vi.advanceTimersByTimeAsync(4_999);
+    expect(ACADEMY_HERO_CONTENT_FALLBACK_MS).toBe(1_000);
+    await vi.advanceTimersByTimeAsync(999);
     expect(callbacks.onReady).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(callbacks.onReady).toHaveBeenCalledOnce();
@@ -49,7 +50,7 @@ describe("academy hero retry after a failed server read", () => {
     });
 
     await Promise.resolve();
-    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(ACADEMY_HERO_CONTENT_FALLBACK_MS);
     expect(callbacks.onReady).toHaveBeenCalledOnce();
     const tenantHero = { headline_line_one: "Diverse City FC" };
     resolveHero(tenantHero);
@@ -71,7 +72,7 @@ describe("academy hero retry after a failed server read", () => {
     });
     await vi.waitFor(() => expect(onReady).toHaveBeenCalledOnce());
     expect(onContent).toHaveBeenCalledOnce();
-    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(ACADEMY_HERO_CONTENT_FALLBACK_MS);
     expect(onReady).toHaveBeenCalledOnce();
     stop();
 
@@ -87,7 +88,7 @@ describe("academy hero retry after a failed server read", () => {
     resolveLate({ headline_line_one: "Other club" });
     await Promise.resolve();
     await Promise.resolve();
-    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(ACADEMY_HERO_CONTENT_FALLBACK_MS);
     expect(onContent).toHaveBeenCalledOnce();
     expect(onReady).toHaveBeenCalledOnce();
   });

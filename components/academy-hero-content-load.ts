@@ -3,12 +3,14 @@
  * its client retry waits. Settle the veil after a bounded wait, but retain the
  * pending read so a late tenant-specific hero can still replace neutral copy.
  */
+export const ACADEMY_HERO_CONTENT_FALLBACK_MS = 1_000;
+
 export function loadAcademyHeroContent<T>({
   read,
   onContent,
   onReady,
   onError,
-  timeoutMs = 5_000,
+  timeoutMs = ACADEMY_HERO_CONTENT_FALLBACK_MS,
 }: {
   read: () => Promise<T>;
   onContent: (content: T) => void;
