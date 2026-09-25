@@ -10,9 +10,10 @@ import ResilientBunnyVideo from "@/components/ResilientBunnyVideo";
 import { DIVERSE_CITY_HERO_VIDEO } from "@/lib/bunny-video";
 import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
-import { fetchHomepageContent } from "@/lib/queries";
+import { fetchHomepageContent, fetchHomepageHeroContent } from "@/lib/queries";
 import type { DBHomepageHeroContent } from "@/lib/db-types";
 import { AcademyHeroLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { loadAcademyHeroContent } from "@/components/academy-hero-content-load";
 
 export default function Hero({
   initialContent,
@@ -38,6 +39,7 @@ export default function Hero({
   const buttonsPiece = useHomepagePiece("hero.cta");
   const club = useClubContext();
   const branding = useClubBranding();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const usesLegacyRoseCityHero = club.slug === "rose-city";
   const ctaRef   = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
@@ -52,6 +54,19 @@ export default function Hero({
 
   useEffect(() => {
     if (editing || hasServerContent) return;
+    if (isAcademy) {
+      return loadAcademyHeroContent({
+        read: () => fetchHomepageHeroContent(club.id),
+        onContent: setHeroContent,
+        onReady: () => setHeroLoading(false),
+        onError: (error: unknown) => {
+          console.error(
+            "Hero:",
+            error instanceof Error ? error.message : "Failed to load homepage hero content",
+          );
+        },
+      });
+    }
     let cancelled = false;
     fetchHomepageContent(club.id)
       .then((content) => {
@@ -69,7 +84,7 @@ export default function Hero({
     return () => {
       cancelled = true;
     };
-  }, [club.id, hasServerContent, editing]);
+  }, [club.id, hasServerContent, editing, isAcademy]);
 
   useEffect(() => {
     if (editing || club.presentationTemplateKey === "academy@1" || hasAnimated.current) return;

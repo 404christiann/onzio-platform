@@ -10,7 +10,7 @@ import {
   resolveHomepageStorySection,
   type HomepageStoryContent,
 } from "@/lib/homepage-story-content";
-import { fetchHomepageStorySection } from "@/lib/queries";
+import { loadAcademyStoryData } from "@/components/academy-story-data";
 import { AcademyStoryLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 /**
@@ -41,20 +41,12 @@ export default function DevelopingNextGeneration({ initialStoryContent }: { init
   const story = preview ? resolveHomepageStorySection({ visible: preview.draft.story.visible, heading: preview.draft.story.heading, body_primary: preview.draft.story.bodyPrimary, body_secondary: preview.draft.story.bodySecondary, cta_label: preview.draft.story.ctaLabel }, club.name) : loadedStory;
   useEffect(() => {
     if (editing || initialStoryContent) return;
-    let active = true;
-    fetchHomepageStorySection(club.id, club.name)
-      .then((content) => {
-        if (active) setStory(content);
-      })
-      .catch((error) => {
-        console.error("DevelopingNextGeneration:", error);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    setStory(resolveHomepageStorySection(null, club.name));
+    setLoading(true);
+    return loadAcademyStoryData(club.id, club.name, {
+      onContent: setStory,
+      onSettled: () => setLoading(false),
+    });
   }, [club.id, club.name, editing, initialStoryContent]);
 
   if (!editing && loading) return <AcademyStoryLoadingSkeleton />;

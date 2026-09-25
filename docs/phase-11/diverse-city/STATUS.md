@@ -1,5 +1,32 @@
 # Diverse City FC Status
 
+## 2026-09-25 - Header Stays PR review follow-up
+
+**Package:** ad hoc public loading feature, Familiar Blend / Header Stays.
+
+**Status:** `in_progress` in draft PR
+[#9](https://github.com/404christiann/onzio-platform/pull/9). Two independently
+reviewed stall paths are fixed: a failed server hero read no longer leaves the
+entire page veiled behind a stalled client retry, and a stalled optional story
+read no longer leaves its section as a permanent loader. The shared public
+footer's Onzio wordmark now links to `https://onziofutbol.com/`.
+
+**Files changed:** `components/Hero.tsx`, `components/DevelopingNextGeneration.tsx`,
+`components/PoweredByOnzio.tsx`, new hero/story loading helpers and regression
+contracts, and two updated source contracts; `HANDOFF.md` and this ledger.
+
+**Verification:** TypeScript; contracts 978/978; architecture 21/21; local
+database 245/245; full suite 1609/1609; production build; diff check. Built
+site smoke at 390px and 1440px passed 11/11 public routes at each size with
+HTTP 200, no page errors, broken images, or horizontal overflow, and the new
+footer URL present. A browser-held story data request settled to approved
+default copy after its fallback budget. Hero server-failure behavior has
+fake-timer tests; iPhone Simulator touch behavior is still unverified. No
+production deployment.
+
+**Exact next step:** inspect draft PR #9's updated preview and complete iPhone
+touch acceptance before a separately approved production merge/deploy.
+
 ## 2026-09-24 - Header Stays review fixes and PR preparation
 
 **Package:** ad hoc public loading feature, selected Familiar Blend direction.

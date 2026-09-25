@@ -558,7 +558,7 @@ describe("editorial header nav", () => {
 });
 
 describe("editorial footer attribution", () => {
-  it("reuses the same tenant-scoped Powered by Onzio badge as the shared Diverse City footer", () => {
+  it("reuses the same public Onzio attribution link as the shared Diverse City footer", () => {
     const editorialFooter = read("components/editorial/EditorialFooter.tsx");
     const sharedFooter = read("components/Footer.tsx");
     const attribution = read("components/PoweredByOnzio.tsx");
@@ -571,7 +571,7 @@ describe("editorial footer attribution", () => {
       'import PoweredByOnzio from "@/components/PoweredByOnzio"',
     );
     expect(attribution).toContain("Powered by");
-    expect(attribution).toContain('href="/admin/login"');
+    expect(attribution).toContain('href="https://onziofutbol.com/"');
     expect(attribution).toContain('alt="Onzio"');
     expect(attribution).toContain("onzio-wordmark-white.png");
     expect(attribution).not.toMatch(/target=|rel=/);

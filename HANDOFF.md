@@ -1,5 +1,37 @@
 # Onzio Platform Handoff
 
+## Academy loading stall follow-up and Onzio footer link — 2026-09-25 (Codex)
+
+Christian asked for subagents to fix two defects found in an independent review
+of draft PR #9 and to send the footer's Onzio wordmark to
+`https://onziofutbol.com/` instead of the tenant admin login. The academy hero
+retry now reads only the hero row and releases its loading veil after five
+seconds if that request stalls. Its tenant-neutral copy and media can then
+render, while a late tenant hero response still updates the copy. The optional
+academy story read releases its section loader after 2.5 seconds to show the
+approved default story; a late stored story, including an explicit hidden
+state, still takes effect. The shared Powered by Onzio link now opens the
+public Onzio site from every public footer template.
+
+**Files:** `components/{Hero,DevelopingNextGeneration,PoweredByOnzio}.tsx`,
+`components/{academy-hero-content-load,academy-story-data}.ts`, focused
+hero/story stall contracts, and the attribution/source contracts. No admin
+flow, tenant data, or production deployment changed.
+
+**Verification:** TypeScript, 978/978 contract tests, 21/21 architecture tests,
+245/245 local-only Supabase database tests, 1609/1609 full-suite tests,
+production build, and `git diff --check` passed. A fresh built site using
+the local staging fixture returned HTTP 200 for 11 public routes at both
+390px and 1440px, with no page errors, broken images, or horizontal overflow;
+the footer wordmark pointed to the requested URL on every route. With the
+story request deliberately held open in Chromium at 390px, the approved story
+appeared and its loader was gone after the fallback wait. The hero server-fail
+path is covered by focused fake-timer regression tests; it was not forced in
+the browser. iPhone Simulator touch acceptance remains pending.
+
+**Exact next step:** inspect draft PR #9's updated preview and complete iPhone
+touch acceptance before separate production merge/deploy approval.
+
 ## Academy Header Stays draft PR #9 — 2026-09-24 (Codex)
 
 Christian accepted the Familiar Blend / Header Stays mobile preview and asked

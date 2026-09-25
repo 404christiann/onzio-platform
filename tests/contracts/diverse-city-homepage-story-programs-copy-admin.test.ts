@@ -449,7 +449,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
         `${literal} must come from admin content, not component source`,
       ).toBe(false);
     }
-    expect(story).toContain("fetchHomepageStorySection");
+    expect(source("components/academy-story-data.ts")).toContain("fetchHomepageStorySection");
     expect(story).toContain("story.bodyPrimary");
   });
 
