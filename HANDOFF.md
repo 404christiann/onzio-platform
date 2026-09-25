@@ -20,6 +20,14 @@ and desktop/390px/320px visual inspections passed in the source checkout.
 Run the production build after stopping its active dev server. No production
 deployment, hosted Auth mutation, or `main` push is part of this branch.
 
+Draft PR #8 is open from `codex/post-otp-portal-reveal` into `main`. The
+independent review-agent pass found no actionable P0–P3 issues after tracing
+OTP success/failure, navigation, and accessibility. TypeScript, targeted
+ESLint, architecture 21/21, and focused auth contracts 28/28 also passed in
+the isolated PR checkout. The PR's Vercel preview build completed and both
+reported checks passed. Next: Christian reviews the draft PR before any merge
+or release.
+
 
 ## OTP review follow-up fixes — 2026-09-24
 
