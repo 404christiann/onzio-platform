@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-const LOGO_PATH = "/images/onzio/onzio-black-logo-no-bg-trimmed.png";
-const PUBLISHED_ORIGIN = "https://onzio-platform.vercel.app";
+const LOCAL_LOGO_PATH = "/images/onzio/onzio-black-logo-no-bg-trimmed.png";
+const PUBLISHED_LOGO_URL =
+  "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-branding/email/onzio-black-wordmark-v1.png";
 
 type Options = {
   root?: string;
@@ -31,11 +32,11 @@ export async function verifyAuthEmailLogo({
   if (!src) throw new Error("OTP email template has no Onzio logo image URL");
 
   const url = new URL(src);
-  if (url.origin !== PUBLISHED_ORIGIN || url.pathname !== LOGO_PATH) {
-    throw new Error(`OTP email logo must use ${PUBLISHED_ORIGIN}${LOGO_PATH}`);
+  if (url.toString() !== PUBLISHED_LOGO_URL) {
+    throw new Error(`OTP email logo must use ${PUBLISHED_LOGO_URL}`);
   }
 
-  const local = await readFile(resolve(root, `public${LOGO_PATH}`));
+  const local = await readFile(resolve(root, `public${LOCAL_LOGO_PATH}`));
   if (local.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a") {
     throw new Error("The approved local email logo is not a PNG");
   }

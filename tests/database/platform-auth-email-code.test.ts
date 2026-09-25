@@ -74,7 +74,7 @@ describe("PLAT-101 local email-code authentication", () => {
     expect(detail.HTML).toContain(code);
     expect(detail.HTML).toContain("Sign in to Onzio");
     expect(detail.HTML).toContain(
-      "https://onzio-platform.vercel.app/images/onzio/onzio-black-logo-no-bg-trimmed.png",
+      "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-branding/email/onzio-black-wordmark-v1.png",
     );
     expect(detail.HTML).not.toContain("background:#111b15");
     expect(detail.HTML).not.toContain("href=");

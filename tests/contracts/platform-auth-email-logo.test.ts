@@ -13,7 +13,7 @@ describe("OTP email logo release gate", () => {
     );
 
     await expect(verifyAuthEmailLogo({ fetchImage })).resolves.toBe(
-      "https://onzio-platform.vercel.app/images/onzio/onzio-black-logo-no-bg-trimmed.png",
+      "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-branding/email/onzio-black-wordmark-v1.png",
     );
     expect(fetchImage).toHaveBeenCalledOnce();
   });

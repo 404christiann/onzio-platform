@@ -1,5 +1,33 @@
 # Onzio Platform Handoff
 
+## Public OTP email logo published to Supabase Storage — 2026-09-24
+
+Christian approved putting the selected black Onzio wordmark in a dedicated
+public production Supabase Storage bucket. Created `onzio-branding` in the
+production project (`ioalthwsdrlzrubomrow`) and uploaded the exact approved
+19,701-byte PNG to `email/onzio-black-wordmark-v1.png` without overwriting any
+existing object. Anonymous GET returns HTTP 200, `image/png`, and bytes matching
+`public/images/onzio/onzio-black-logo-no-bg-trimmed.png` (SHA-256
+`02e6d7a41cc1fc9cdea6e9ff9377607892a652f50cff17ce38e4712723ee7a81`).
+The public URL is
+`https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-branding/email/onzio-black-wordmark-v1.png`.
+The same bucket/object was created and verified in isolated local Supabase.
+
+The checked-in Pure and quiet Auth email template and its release check now
+use that URL; the local Mailpit delivery test passes after refreshing isolated
+local Auth. Added an idempotent migration for the bucket so other environments
+can reproduce its public read and PNG-only configuration. Uploads still require
+the service role; no client write policy was added. Verification: migration
+applied locally, `npm run auth:email:logo-check` passed against the production
+URL, focused contract and Mailpit tests passed, TypeScript passed, contracts
+948/948, architecture 21/21, database 245/245, and full Vitest 1579/1579
+passed. Production bucket metadata confirms public read, PNG-only uploads, and
+a 1 MiB file limit. The production Storage object is live; the hosted
+Supabase Auth template has not been synced, and the app has not been deployed.
+Next: merge/release the checked-in template and sync it to hosted Auth, then
+inspect a fresh hosted OTP email. Keep the remaining OTP-length and real-device
+acceptance items from the section below open.
+
 ## OTP review fixes and email logo release gate — 2026-09-24
 
 On `codex/otp-email-design-and-paste`, the follow-up review found two OTP
