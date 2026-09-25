@@ -13,6 +13,8 @@ import {
   titleLines,
 } from "@/lib/shop-kit";
 import { useClubId } from "@/components/ClubContextProvider";
+import { AcademyShopLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 // Mockup-parity homepage store feature for academy@1 (DCFC-D132 pass),
 // modeled on the sales mockup's HomeShopFeature: front/back jersey renders
@@ -23,14 +25,19 @@ export default function AcademyHomeShopFeature() {
   const sharedPiece = useHomepagePiece("shared.shop");
   const clubId = useClubId();
   const [content, setContent] = useState<ShopKitContent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const showLoading = useBoundedAcademyLoading(loading, clubId);
 
   useEffect(() => {
     fetchShopKitVariants("home", clubId)
       .then((variants) => setContent(variants.home))
       .catch((error) => {
         console.error("AcademyHomeShopFeature:", error);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [clubId]);
+
+  if (showLoading) return <AcademyShopLoadingSkeleton />;
 
   const section = content?.section;
   const photos = (content?.photos ?? []).filter(

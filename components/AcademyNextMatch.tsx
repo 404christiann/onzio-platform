@@ -1,11 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import Image from "@/components/ResilientImage";
-import { useEffect, useRef, useState } from "react";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useEffect, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
 import OpponentCrest from "@/components/OpponentCrest";
@@ -16,8 +13,9 @@ import {
   fetchLeagueStandings,
   fetchSchedule,
 } from "@/lib/queries";
+import { AcademyMatchLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
-gsap.registerPlugin(ScrollTrigger);
 
 /** Converts the stored local match date and 24-hour time into a Date. */
 function fixtureToDate(dateStr: string, timeStr: string): Date {
@@ -46,12 +44,11 @@ function formatMatchTime(timeStr: string): string {
 }
 
 export default function AcademyNextMatch() {
-  const editing = useHomepagePreview() !== null;
   const club = useClubContext();
   const { clubLogoUrl } = useClubBranding();
-  const sectionRef = useRef<HTMLElement>(null);
   const [nextFixture, setNextFixture] = useState<Fixture | null>(null);
   const [loading, setLoading] = useState(true);
+  const showLoading = useBoundedAcademyLoading(loading, club.id);
   // Both of these were hardcoded club facts even though each already had an
   // admin-editable home: the competition name is the standings section title
   // the club edits at /admin/standings, and the fallback location is the
@@ -101,25 +98,7 @@ export default function AcademyNextMatch() {
       .finally(() => setLoading(false));
   }, [club.id]);
 
-  useEffect(() => {
-    if (loading || editing) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        sectionRef.current,
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.9,
-          ease: "power2.out",
-          scrollTrigger: { trigger: sectionRef.current, start: "top 85%" },
-        },
-      );
-    }, sectionRef);
-    return () => ctx.revert();
-  }, [loading, editing]);
-
-  if (loading) return null;
+  if (showLoading) return <AcademyMatchLoadingSkeleton />;
 
   const dateLabel = nextFixture ? formatMatchDate(nextFixture.date) : "Date and time TBA";
   const timeLabel = nextFixture ? formatMatchTime(nextFixture.time) : "";
@@ -136,9 +115,7 @@ export default function AcademyNextMatch() {
 
   return (
     <section
-      ref={sectionRef}
       className="bg-white px-6 py-12 lg:px-10 lg:py-12"
-      style={{ opacity: editing ? 1 : 0 }}
     >
       <div className="mx-auto max-w-6xl">
         <div className="mb-8">

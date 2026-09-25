@@ -12,6 +12,7 @@ import { Fixture } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
 import EditorialSchedule from "@/components/editorial/EditorialSchedule";
+import { AcademyScheduleLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -121,7 +122,8 @@ function LegacySchedulePage() {
     <div style={{ backgroundColor: "var(--color-white)" }}>
 
       {/* Loading */}
-      {loading && (
+      {loading && isAcademy && <AcademyScheduleLoadingSkeleton />}
+      {loading && !isAcademy && (
         <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
           <p
             className="font-display font-black uppercase tracking-widest"

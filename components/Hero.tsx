@@ -10,11 +10,14 @@ import ResilientBunnyVideo from "@/components/ResilientBunnyVideo";
 import { DIVERSE_CITY_HERO_VIDEO } from "@/lib/bunny-video";
 import { useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { EMPTY_HOMEPAGE_HERO_CONTENT } from "@/lib/homepage-content";
-import { fetchHomepageContent } from "@/lib/queries";
+import { fetchHomepageContent, fetchHomepageHeroContent } from "@/lib/queries";
 import type { DBHomepageHeroContent } from "@/lib/db-types";
+import { AcademyHeroLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { loadAcademyHeroContent } from "@/components/academy-hero-content-load";
 
 export default function Hero({
   initialContent,
+  onAcademyMediaReady,
 }: {
   /**
    * The tenant's hero content, resolved server-side before any HTML is sent
@@ -25,6 +28,7 @@ export default function Hero({
    * starting from the tenant-neutral empty state.
    */
   initialContent: DBHomepageHeroContent | null;
+  onAcademyMediaReady?: () => void;
 }) {
   const preview = useHomepagePreview();
   const editing = preview !== null;
@@ -35,6 +39,7 @@ export default function Hero({
   const buttonsPiece = useHomepagePiece("hero.cta");
   const club = useClubContext();
   const branding = useClubBranding();
+  const isAcademy = club.presentationTemplateKey === "academy@1";
   const usesLegacyRoseCityHero = club.slug === "rose-city";
   const ctaRef   = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
@@ -42,11 +47,26 @@ export default function Hero({
   const [loadedHeroContent, setHeroContent] = useState<DBHomepageHeroContent>(
     initialContent ?? EMPTY_HOMEPAGE_HERO_CONTENT,
   );
+  const [heroLoading, setHeroLoading] = useState(initialContent === null);
+  const [academyMediaReady, setAcademyMediaReady] = useState(false);
 
   const heroContent = preview?.draft.hero ?? loadedHeroContent;
 
   useEffect(() => {
     if (editing || hasServerContent) return;
+    if (isAcademy) {
+      return loadAcademyHeroContent({
+        read: () => fetchHomepageHeroContent(club.id),
+        onContent: setHeroContent,
+        onReady: () => setHeroLoading(false),
+        onError: (error: unknown) => {
+          console.error(
+            "Hero:",
+            error instanceof Error ? error.message : "Failed to load homepage hero content",
+          );
+        },
+      });
+    }
     let cancelled = false;
     fetchHomepageContent(club.id)
       .then((content) => {
@@ -57,14 +77,17 @@ export default function Hero({
           "Hero:",
           error instanceof Error ? error.message : "Failed to load homepage hero content",
         );
+      })
+      .finally(() => {
+        if (!cancelled) setHeroLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [club.id, hasServerContent, editing]);
+  }, [club.id, hasServerContent, editing, isAcademy]);
 
   useEffect(() => {
-    if (editing || hasAnimated.current) return;
+    if (editing || club.presentationTemplateKey === "academy@1" || hasAnimated.current) return;
     hasAnimated.current = true;
 
     gsap.fromTo(
@@ -84,7 +107,11 @@ export default function Hero({
         },
       },
     );
-  }, [editing]);
+  }, [club.presentationTemplateKey, editing]);
+
+  if (!editing && heroLoading && club.presentationTemplateKey === "academy@1") {
+    return <AcademyHeroLoadingSkeleton clubName={club.name} />;
+  }
 
   if (club.presentationTemplateKey === "clubhouse@1") {
     const headlineOne = heroContent.headline_line_one.trim() || club.name;
@@ -145,10 +172,19 @@ export default function Hero({
             posterSrc={DIVERSE_CITY_HERO_VIDEO.posterSrc}
             alt={`${club.name} hero video`}
             className="h-full w-full object-cover"
+            showPosterUntilPlaying
+            onVisualReady={() => {
+              setAcademyMediaReady(true);
+              onAcademyMediaReady?.();
+            }}
           />
         </div>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#14283F] via-[#14283F]/45 to-[#14283F]/30" />
-        <div className="relative z-10 mx-auto flex h-full max-w-7xl items-end px-6 pb-12 pt-36 md:pb-8 lg:px-10">
+        <div
+          className={`relative z-10 mx-auto flex h-full max-w-7xl items-end px-6 pb-12 pt-36 md:pb-8 lg:px-10 ${!editing && !academyMediaReady ? "invisible" : ""}`}
+          inert={!editing && !academyMediaReady}
+          aria-hidden={!editing && !academyMediaReady}
+        >
           <div className="w-full min-w-0 max-w-5xl">
             {(heroContent.eyebrow.trim() || selecting) && (
               <p {...smallHeadingPiece} className="font-display mb-4 text-xs font-bold uppercase tracking-widest text-white/70">
@@ -173,7 +209,7 @@ export default function Hero({
             <div
               {...buttonsPiece} ref={ctaRef}
               className="mt-8 flex flex-col gap-3 sm:flex-row"
-              style={{ opacity: editing ? 1 : 0 }}
+              style={{ opacity: 1 }}
             >
               <Link
                 href={primaryHref}
@@ -190,6 +226,9 @@ export default function Hero({
             </div>
           </div>
         </div>
+        {!editing && !academyMediaReady && (
+          <AcademyHeroLoadingSkeleton clubName={club.name} />
+        )}
       </section>
     );
   }

@@ -14,9 +14,11 @@ import {
   DEFAULT_CLUB_LOGO_PATH,
 } from "@/lib/club-branding";
 import { fetchClubBranding } from "@/lib/queries";
+import type { ClubBranding } from "@/lib/queries";
 import { useOptionalClubContext } from "@/components/ClubContextProvider";
 
 type ClubBrandingContextValue = {
+  brandingPending: boolean;
   clubLogoPath: string;
   clubLogoUrl: string;
   inverseLogoPath: string;
@@ -31,16 +33,19 @@ const ClubBrandingContext = createContext<ClubBrandingContextValue | null>(null)
 
 export function ClubBrandingProvider({
   children,
+  initialBranding,
 }: {
   children: React.ReactNode;
+  initialBranding?: ClubBranding | null;
 }) {
   const club = useOptionalClubContext();
+  const [brandingPending, setBrandingPending] = useState(Boolean(club) && !initialBranding);
   const [logoPath, setLogoPath] = useState(
-    club ? "" : DEFAULT_CLUB_LOGO_PATH,
+    initialBranding?.logoPath ?? (club ? "" : DEFAULT_CLUB_LOGO_PATH),
   );
-  const [inverseLogoPath, setInverseLogoPath] = useState("");
+  const [inverseLogoPath, setInverseLogoPath] = useState(initialBranding?.inverseLogoPath ?? "");
   const [footerTagline, setFooterTagline] = useState(
-    DEFAULT_ACADEMY_FOOTER_TAGLINE,
+    initialBranding?.footerTagline ?? DEFAULT_ACADEMY_FOOTER_TAGLINE,
   );
 
   const refreshClubBranding = useCallback(async () => {
@@ -52,15 +57,19 @@ export function ClubBrandingProvider({
       setFooterTagline(branding.footerTagline);
     } catch (error) {
       console.error("ClubBrandingProvider:", error);
+    } finally {
+      setBrandingPending(false);
     }
   }, [club]);
 
   useEffect(() => {
+    if (initialBranding) return;
     void refreshClubBranding();
-  }, [refreshClubBranding]);
+  }, [initialBranding, refreshClubBranding]);
 
   const value = useMemo<ClubBrandingContextValue>(
     () => ({
+      brandingPending,
       clubLogoPath: logoPath,
       clubLogoUrl: clubLogoUrl(logoPath),
       inverseLogoPath,
@@ -69,7 +78,7 @@ export function ClubBrandingProvider({
       setClubLogoPath: setLogoPath,
       refreshClubBranding,
     }),
-    [footerTagline, inverseLogoPath, logoPath, refreshClubBranding],
+    [brandingPending, footerTagline, inverseLogoPath, logoPath, refreshClubBranding],
   );
 
   return (

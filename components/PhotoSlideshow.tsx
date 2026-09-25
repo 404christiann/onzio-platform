@@ -13,6 +13,8 @@ import { fetchHomepageContent } from "@/lib/queries";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import ImageFallback from "@/components/ImageFallback";
+import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,6 +33,8 @@ export default function PhotoSlideshow() {
   const [prev, setPrev] = useState<number | null>(null);
   const [paused, setPaused] = useState(false);
   const [loadedSlides, setSlides] = useState<DBHomepageSlideshowPhoto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const showLoading = useBoundedAcademyLoading(loading, clubId);
   const [orientations, setOrientations] = useState<Record<string, SlideOrientation>>({});
   const [failedSlideIds, setFailedSlideIds] = useState<Set<string>>(
     () => new Set(),
@@ -60,7 +64,8 @@ export default function PhotoSlideshow() {
         console.error("PhotoSlideshow:", error);
         setSlides([]);
         setSeasonLabel(DEFAULT_HOMEPAGE_SLIDESHOW_SETTINGS.season_label);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [clubId, editing]);
 
   // Auto-advance
@@ -105,6 +110,7 @@ export default function PhotoSlideshow() {
   }, [usesLegacyRoseCitySlideshow, visibleSlides.length, editing]);
 
   if (preview && !preview.allowedPieces.includes("photos")) return null;
+  if (!editing && showLoading && club.presentationTemplateKey === "academy@1") return <AcademySectionLoadingSkeleton />;
   if (visibleSlides.length === 0) {
     if (selecting) return <HomepageMissingPiece piece="photos">Photos · Add photo</HomepageMissingPiece>;
     if (slides.length === 0) return null;

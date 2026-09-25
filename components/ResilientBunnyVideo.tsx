@@ -11,6 +11,10 @@ type Props = {
   alt: string;
   className?: string;
   style?: CSSProperties;
+  /** Fires when a video frame or the static poster can be displayed. */
+  onVisualReady?: () => void;
+  /** Keep a visible poster over the video until playback actually begins. */
+  showPosterUntilPlaying?: boolean;
 };
 
 /**
@@ -26,6 +30,8 @@ export default function ResilientBunnyVideo({
   alt,
   className,
   style,
+  onVisualReady,
+  showPosterUntilPlaying = false,
 }: Props) {
   const preview = useHomepagePreview();
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -37,7 +43,14 @@ export default function ResilientBunnyVideo({
   }, []);
   const editing = preview !== null && (!preview.playback || reducedMotion);
   const [failed, setFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const readyRef = useRef(false);
+  const markVisualReady = () => {
+    if (readyRef.current) return;
+    readyRef.current = true;
+    onVisualReady?.();
+  };
 
   // The `autoPlay` attribute alone is not reliably honored when the element
   // mounts client-side (these sections render with `ssr: false`): the video
@@ -52,25 +65,28 @@ export default function ResilientBunnyVideo({
     if (!video) return;
     const play = () => {
       video.muted = true;
-      video.play().catch(() => {});
+      video.play().catch((error: unknown) => {
+        // Autoplay can be denied on mobile even for a muted video. In that
+        // case use the poster instead of leaving the hero veiled indefinitely.
+        if (error instanceof DOMException && error.name === "NotAllowedError") {
+          setFailed(true);
+        }
+      });
     };
     play();
     document.addEventListener("touchstart", play, { once: true });
     return () => document.removeEventListener("touchstart", play);
   }, [failed, editing]);
 
-  if (editing || failed) {
-    return (
-      <ResilientNativeImage
-        src={posterSrc}
-        alt={alt}
-        className={className}
-        style={style}
-      />
-    );
-  }
+  useEffect(() => {
+    if (!onVisualReady || editing || failed || (showPosterUntilPlaying ? playing : readyRef.current)) return;
+    // A stalled network request may never emit loadeddata or error. Stop
+    // waiting after this budget; poster-first heroes already show the image.
+    const timeout = window.setTimeout(() => setFailed(true), 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [onVisualReady, editing, failed, playing, showPosterUntilPlaying]);
 
-  return (
+  const video = !editing && !failed ? (
     <video
       ref={videoRef}
       autoPlay
@@ -80,11 +96,49 @@ export default function ResilientBunnyVideo({
       preload="auto"
       poster={posterSrc}
       aria-label={alt}
-      className={className}
+      className={showPosterUntilPlaying ? `${className ?? ""} absolute inset-0` : className}
       style={style}
+      onLoadedData={showPosterUntilPlaying ? undefined : markVisualReady}
+      onPlaying={() => {
+        if (showPosterUntilPlaying) setPlaying(true);
+        markVisualReady();
+      }}
       onError={() => setFailed(true)}
     >
       <source src={bunnyVideoMp4Url(guid)} type="video/mp4" />
     </video>
-  );
+  ) : null;
+
+  if (showPosterUntilPlaying) {
+    return (
+      <div className="relative h-full w-full">
+        {video}
+        {(!playing || editing || failed) && (
+          <ResilientNativeImage
+            src={posterSrc}
+            alt={alt}
+            className={`${className ?? ""} absolute inset-0`}
+            style={style}
+            onLoad={markVisualReady}
+            onError={markVisualReady}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (editing || failed) {
+    return (
+      <ResilientNativeImage
+        src={posterSrc}
+        alt={alt}
+        className={className}
+        style={style}
+        onLoad={markVisualReady}
+        onError={markVisualReady}
+      />
+    );
+  }
+
+  return video;
 }

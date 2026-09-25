@@ -12,6 +12,7 @@ import { Player, Staff } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
 import EditorialRoster from "@/components/editorial/EditorialRoster";
+import { AcademyRosterLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -138,7 +139,8 @@ function LegacyRosterPage() {
     <div style={{ backgroundColor: "var(--color-white)" }}>
 
       {/* Loading state */}
-      {loading && (
+      {loading && isAcademy && <AcademyRosterLoadingSkeleton />}
+      {loading && !isAcademy && (
         <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
           <p
             className="font-display font-black uppercase tracking-widest"
