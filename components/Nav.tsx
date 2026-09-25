@@ -10,6 +10,7 @@ import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { fetchPrograms, type ProgramContent } from "@/lib/queries";
+import { useAcademyPageScrollLock } from "@/components/AcademyLoadingSkeleton";
 
 const MIGRATED_LOGO_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/branding`;
@@ -155,18 +156,73 @@ function isNavItemActive(pathname: string, link: NavLink) {
   return link.children?.some((child) => pathname === child.href) ?? false;
 }
 
-export default function Nav() {
+export const ACADEMY_PROGRAMS_FALLBACK_MS = 5_000;
+
+export function loadAcademyNavPrograms(
+  load: () => Promise<ProgramContent[]>,
+  onReady: (programs: ProgramContent[]) => void,
+  onUnavailable: () => void,
+): () => void {
+  let active = true;
+  const timeout = globalThis.setTimeout(() => {
+    if (active) onUnavailable();
+  }, ACADEMY_PROGRAMS_FALLBACK_MS);
+
+  void load().then((programs) => {
+    if (!active) return;
+    globalThis.clearTimeout(timeout);
+    onReady(programs);
+  }).catch((error) => {
+    if (!active) return;
+    globalThis.clearTimeout(timeout);
+    console.error("Academy navigation programs:", error);
+    onUnavailable();
+  });
+
+  return () => {
+    active = false;
+    globalThis.clearTimeout(timeout);
+  };
+}
+
+export default function Nav({
+  initialPrograms,
+  loadingAppearance = false,
+}: {
+  initialPrograms?: ProgramContent[] | null;
+  loadingAppearance?: boolean;
+}) {
   const club = useClubContext();
-  const { clubLogoUrl } = useClubBranding();
+  const { clubLogoUrl, brandingPending } = useClubBranding();
   const preview = useHomepagePreview();
   const rewrittenPathname = usePathname();
   const pathname = preview ? "/" : rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedMobileLink, setExpandedMobileLink] = useState<string | null>(null);
-  const [academyPrograms, setAcademyPrograms] = useState<ProgramContent[]>([]);
+  const [academyPrograms, setAcademyPrograms] = useState<ProgramContent[]>(initialPrograms ?? []);
+  const [programsState, setProgramsState] = useState<"loading" | "ready" | "error">(
+    initialPrograms === undefined || initialPrograms === null ? "loading" : "ready",
+  );
   const navRef = useRef<HTMLElement>(null);
   const isAcademy = club.presentationTemplateKey === "academy@1";
+  const [pageLoading, setPageLoading] = useState(
+    isAcademy && !preview && (
+      pathname === "/" ||
+      pathname === "/club/logo" ||
+      pathname === "/shop" ||
+      /^\/programs\/[^/]+$/.test(pathname)
+    ),
+  );
+
+  useEffect(() => {
+    if (!isAcademy || preview) return;
+    const sync = () => setPageLoading(Boolean(document.querySelector("[data-academy-page-loading]")));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [isAcademy, preview]);
 
   useEffect(() => {
     const viewport = navRef.current?.ownerDocument.defaultView ?? window;
@@ -181,29 +237,28 @@ export default function Nav() {
     setExpandedMobileLink(null);
   }, [pathname]);
 
-  // academy@1's mobile menu is a full-viewport overlay (mockup parity), so
-  // lock page scroll behind it while it is open.
-  useEffect(() => {
-    if (!isAcademy) return;
-    const body = navRef.current?.ownerDocument.body ?? document.body;
-    body.style.overflow = menuOpen ? "hidden" : "";
-    return () => {
-      body.style.overflow = "";
-    };
-  }, [isAcademy, menuOpen]);
+  // The full-viewport mobile menu shares its scroll lock with the hero veil.
+  // Closing one must not unlock the page while the other still covers it.
+  useAcademyPageScrollLock(isAcademy && menuOpen);
 
   useEffect(() => {
     if (club.presentationTemplateKey !== "academy@1") {
       setAcademyPrograms([]);
       return;
     }
-    fetchPrograms(club.id)
-      .then(setAcademyPrograms)
-      .catch((error) => {
-        console.error("Academy navigation programs:", error);
+    if (initialPrograms !== undefined && initialPrograms !== null) return;
+    return loadAcademyNavPrograms(
+      () => fetchPrograms(club.id),
+      (programs) => {
+        setAcademyPrograms(programs);
+        setProgramsState("ready");
+      },
+      () => {
         setAcademyPrograms([]);
-      });
-  }, [club.id, club.presentationTemplateKey]);
+        setProgramsState("error");
+      },
+    );
+  }, [club.id, club.presentationTemplateKey, initialPrograms]);
 
   // Transparent nav only on desktop for shop (mobile shop hero is compact, not full-bleed)
   const [isMobile, setIsMobile] = useState(false);
@@ -232,8 +287,10 @@ export default function Nav() {
   // Mockup parity: an open mobile menu forces the solid light header strip
   // (mock: `transparent = usesTransparentNav && !scrolled && !open`).
   const isHero =
-    isAlwaysTransparentPage ||
-    (isDarkHeroPage && !scrolled && !(isAcademy && menuOpen));
+    !(isAcademy && (loadingAppearance || pageLoading)) &&
+    (isAlwaysTransparentPage ||
+    (isDarkHeroPage && !scrolled && !(isAcademy && menuOpen)));
+  const displayedLogoUrl = clubLogoUrl || (isAcademy && brandingPending ? "/club-logo" : "");
   const activeNavLinks = club.presentationTemplateKey === "academy@1"
     ? academyNavLinks(academyPrograms)
     : navLinks;
@@ -335,14 +392,15 @@ export default function Nav() {
         {/* Logo row */}
         <div className="flex min-w-0 flex-shrink-0 items-center gap-2 sm:gap-3">
           <Link href="/" className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center sm:h-24 sm:w-24" aria-label={`${club.name} Home`}>
-            {clubLogoUrl ? (
+            {displayedLogoUrl ? (
               <Image
-                src={clubLogoUrl}
+                src={displayedLogoUrl}
                 alt={club.name}
                 fill
                 className="object-contain transition-all duration-300"
                 sizes="(max-width: 639px) 64px, 96px"
                 priority
+                fallback={<span className="font-display text-xl font-black uppercase text-current">{club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}</span>}
                 {...imageDeliveryProps("club-logo")}
               />
             ) : (
@@ -466,7 +524,16 @@ export default function Nav() {
                           : "0 16px 32px rgba(20,20,20,0.12)",
                       }}
                     >
-                      {link.children.map((child) => {
+                      {isAcademy && link.label === "Programs" && programsState === "loading" ? (
+                        <div className="flex items-center gap-2 px-5 py-4 font-nav text-xs text-[#51667E]" aria-label="Loading programs" role="status">
+                          <span className="h-3.5 w-3.5 rounded-full border-2 border-[#cad8e3] border-t-[#426c88] motion-safe:animate-spin" aria-hidden="true" />
+                          Loading programs…
+                        </div>
+                      ) : isAcademy && link.label === "Programs" && link.children.length === 0 ? (
+                        <p className={`px-5 py-3 font-nav text-xs ${isHero ? "text-white/80" : "text-[#51667E]"}`} role="status">
+                          {programsState === "error" ? "Programs unavailable" : "No programs available"}
+                        </p>
+                      ) : link.children.map((child) => {
                         const isChildActive = pathname === child.href;
                         return (
                           <Link
@@ -499,6 +566,7 @@ export default function Nav() {
           className="md:hidden flex flex-col gap-1.5 p-2"
           onClick={() => setMenuOpen((v) => !v)}
           aria-label="Toggle menu"
+          aria-expanded={menuOpen}
         >
           <span className={`block w-6 h-0.5 transition-all duration-300 origin-center ${menuOpen ? "rotate-45 translate-y-2" : ""}`}
             style={{ backgroundColor: isHero ? "#ffffff" : "var(--color-black)" }} />
@@ -515,7 +583,7 @@ export default function Nav() {
       <div
         className={
           isAcademy
-            ? `absolute inset-x-0 top-24 h-[calc(100dvh-6rem)] overflow-hidden bg-white transition-[opacity,visibility] duration-300 sm:top-28 sm:h-[calc(100dvh-7rem)] md:hidden ${
+            ? `absolute inset-x-0 top-24 h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain bg-white transition-[opacity,visibility] duration-300 sm:top-28 sm:h-[calc(100dvh-7rem)] md:hidden ${
                 menuOpen ? "visible opacity-100" : "invisible opacity-0"
               }`
             : `md:hidden bg-white border-t border-gray-100 overflow-hidden transition-all duration-300 ${
@@ -523,7 +591,7 @@ export default function Nav() {
               }`
         }
       >
-        <ul className={isAcademy ? "flex h-full flex-col justify-center px-8 pb-16" : "flex flex-col px-8 py-6 gap-6"}>
+        <ul className={isAcademy ? "flex min-h-full flex-col justify-center px-8 pb-16" : "flex flex-col px-8 py-6 gap-6"}>
           {activeNavLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const isExpanded = expandedMobileLink === link.label;
@@ -596,7 +664,16 @@ export default function Nav() {
                       isExpanded ? "max-h-40 opacity-100 mt-3" : "max-h-0 opacity-0"
                     }`}
                   >
-                    {link.children.map((child) => {
+                    {isAcademy && link.label === "Programs" && programsState === "loading" ? (
+                      <li className="flex items-center gap-2 px-4 py-2 font-body text-sm text-[#51667E]" role="status" aria-label="Loading programs">
+                        <span className="h-3.5 w-3.5 rounded-full border-2 border-[#cad8e3] border-t-[#426c88] motion-safe:animate-spin" aria-hidden="true" />
+                        Loading programs…
+                      </li>
+                    ) : isAcademy && link.label === "Programs" && link.children.length === 0 ? (
+                      <li className="px-4 py-2 font-body text-sm text-[#51667E]" role="status">
+                        {programsState === "error" ? "Programs unavailable" : "No programs available"}
+                      </li>
+                    ) : link.children.map((child) => {
                       const isChildActive = pathname === child.href;
                       return (
                         <li key={child.href}>

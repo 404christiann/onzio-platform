@@ -9,6 +9,7 @@ import {
   type StandingsTableContent,
 } from "@/lib/standings-content";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 export default function LeagueStandingsContainer() {
   const club = useClubContext();
@@ -17,16 +18,19 @@ export default function LeagueStandingsContainer() {
     settings: DEFAULT_STANDINGS_SETTINGS,
     rows: [],
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchLeagueStandings(clubId)
       .then(setContent)
       .catch((error) => {
         console.error("LeagueStandingsContainer:", error);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [clubId]);
 
   if (club.presentationTemplateKey === "academy@1") {
+    if (loading) return <AcademySectionLoadingSkeleton />;
     return <AcademyLeagueStandingsTable settings={content.settings} rows={content.rows} />;
   }
 

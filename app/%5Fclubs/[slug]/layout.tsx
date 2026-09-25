@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -8,6 +9,9 @@ import TemplateFontScope from "@/components/TemplateFontScope";
 import EditorialShell from "@/components/editorial/EditorialShell";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
+import { loadAcademyShellBranding } from "@/lib/academy-shell-branding";
+import AcademyRouteLoadingSkeleton, { AcademyPageLoadingSkeleton } from "@/components/AcademyRouteLoadingSkeleton";
+import type { ClubContext } from "@/lib/club-context";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -45,6 +49,29 @@ export async function generateMetadata({
   };
 }
 
+async function AcademyResolvedShell({ club, children }: { club: ClubContext; children: React.ReactNode }) {
+  // Keep the first-paint crest when the request is healthy, but never hold
+  // every route behind an unbounded branding read. The provider can retry on
+  // the client when this request fails or exceeds the budget.
+  const branding = await loadAcademyShellBranding(club.id);
+
+  return (
+    <ClubBrandingProvider initialBranding={branding}>
+      {/* A page loader can visually cover the footer while leaving its links
+          reachable by keyboard. Visibility removes those links from the tab
+          order until the academy loading surface leaves the DOM. */}
+      <style>{`html:has([data-academy-page-loading]) footer { visibility: hidden; }`}</style>
+      <Nav />
+      <main>
+        <Suspense fallback={<AcademyPageLoadingSkeleton />}>
+          {children}
+        </Suspense>
+      </main>
+      <Footer />
+    </ClubBrandingProvider>
+  );
+}
+
 export default async function TenantLayout({
   children,
   params,
@@ -72,6 +99,20 @@ export default async function TenantLayout({
         <ClubBrandingProvider>
           <EditorialShell>{children}</EditorialShell>
         </ClubBrandingProvider>
+      </ClubContextProvider>
+    );
+  }
+
+  // The header remains usable while branding or page content is pending.
+  // Programs load independently inside Nav, so they never hold the page.
+  if (club.presentationTemplateKey === "academy@1") {
+    return (
+      <ClubContextProvider club={club}>
+        <TemplateFontScope templateKey={club.presentationTemplateKey}>
+          <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
+            <AcademyResolvedShell club={club}>{children}</AcademyResolvedShell>
+          </Suspense>
+        </TemplateFontScope>
       </ClubContextProvider>
     );
   }

@@ -7,7 +7,8 @@ import type { DBBehindTheRoseSection } from "@/lib/db-types";
 import { DEFAULT_BEHIND_THE_ROSE_SECTION } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,12 +17,14 @@ export default function BehindTheRose() {
   const editing = preview !== null;
   const piece = useHomepagePiece("video");
   const clubId = useClubId();
+  const club = useClubContext();
   const sectionRef = useRef<HTMLElement>(null);
   const headerRef  = useRef<HTMLDivElement>(null);
   const videoRef   = useRef<HTMLDivElement>(null);
   const [loadedContent, setContent] = useState<DBBehindTheRoseSection>(
     { ...DEFAULT_BEHIND_THE_ROSE_SECTION, visible: false },
   );
+  const [loading, setLoading] = useState(true);
 
   const content = preview ? { ...loadedContent, ...preview.draft.video, video_url: preview.videoSource } : loadedContent;
   useEffect(() => {
@@ -31,11 +34,12 @@ export default function BehindTheRose() {
       .catch((error) => {
         console.error("BehindTheRose:", error);
         setContent({ ...DEFAULT_BEHIND_THE_ROSE_SECTION, visible: false });
-      });
+      })
+      .finally(() => setLoading(false));
   }, [clubId, editing]);
 
   useEffect(() => {
-    if (editing || !content.visible) return;
+    if (editing || club.presentationTemplateKey === "academy@1" || !content.visible) return;
     const ctx = gsap.context(() => {
       gsap.fromTo(
         headerRef.current,
@@ -55,9 +59,10 @@ export default function BehindTheRose() {
       );
     }, sectionRef);
     return () => ctx.revert();
-  }, [content.visible, editing]);
+  }, [club.presentationTemplateKey, content.visible, editing]);
 
   if (preview && !preview.allowedPieces.includes("video")) return null;
+  if (!editing && loading && club.presentationTemplateKey === "academy@1") return <AcademySectionLoadingSkeleton />;
   if (!content.visible) return <HomepageMissingPiece piece="video">Video feature · Hidden from homepage</HomepageMissingPiece>;
 
   return (
@@ -67,7 +72,7 @@ export default function BehindTheRose() {
       style={{ backgroundColor: "var(--color-black)" }}
     >
       {/* Header */}
-      <div ref={headerRef} className="max-w-3xl mx-auto text-center mb-12 md:mb-16" style={{ opacity: editing ? 1 : 0 }}>
+      <div ref={headerRef} className="max-w-3xl mx-auto text-center mb-12 md:mb-16" style={{ opacity: editing || club.presentationTemplateKey === "academy@1" ? 1 : 0 }}>
         <p
           className="font-display font-bold tracking-widest uppercase mb-4"
           style={{ color: "var(--color-red)", fontSize: "clamp(0.58rem, 2.6vw, 1.3rem)", whiteSpace: "nowrap" }}
@@ -92,7 +97,7 @@ export default function BehindTheRose() {
       <div
         ref={videoRef}
         className="max-w-5xl mx-auto"
-        style={{ opacity: editing ? 1 : 0 }}
+        style={{ opacity: editing || club.presentationTemplateKey === "academy@1" ? 1 : 0 }}
       >
         {/* 16:9 aspect ratio wrapper */}
         <div

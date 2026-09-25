@@ -1,5 +1,233 @@
 # Diverse City FC Status
 
+## 2026-09-24 - Header Stays review fixes and PR preparation
+
+**Package:** ad hoc public loading feature, selected Familiar Blend direction.
+
+**Status:** `in_progress` for draft PR review. Five actionable findings from
+two read-only review passes were fixed: independent optional story/program
+copy reads, covered-page scroll/focus behavior, coordinated hero/menu scroll
+locks, and hidden footer links. The final read-only review has no findings.
+
+**Files changed:** academy homepage route and tenant layout; loading surface,
+Hero, HomePageClient, Nav, Programs Pathway and its data loader; shared scroll
+lock; focused contracts; `HANDOFF.md` and this ledger. The prior loading
+implementation remains the base of this change. Preview HTML/assets are
+excluded from the PR.
+
+**Verification:** build and full local-only Supabase suite 1601/1601 passed
+after rebasing onto `origin/main` at `0e76a5c`. Before the rebase, 18
+focused loading tests, 964 contracts, and 21 architecture tests passed.
+Chromium mobile delayed-media interaction passed for cover, footer, inert
+content, scroll lock, menu overlap, and cleanup. iPhone 17 Pro Simulator
+Safari rendered the rebuilt homepage; touch interaction is pending because
+the Mac was locked. Eleven public routes returned HTTP 200; Home, Men's
+Teams, Roster, and Schedule had no page errors or horizontal overflow at
+390px and 1440px. No production deployment.
+
+**Exact next step:** push the committed feature branch, open a draft PR,
+and complete Simulator touch acceptance
+when the Mac is unlocked. Do not merge/deploy production without Christian's
+separate approval.
+
+## 2026-09-24 - Header Stays replaces Clear Frame loading
+
+**Package:** none — ad hoc loading direction selected by Christian from
+\`diverse-city-apple-loading-options.html\`, option 2 Familiar Blend.
+
+**Status:** \`in_progress\` for Christian's visual acceptance. The academy
+public header remains functional above a white centered loader while
+branding, page content, or hero media waits. Route and section loading
+messages replace pale placeholder geometry; the homepage loader covers the
+whole viewport until video or poster readiness. The settled hero retains
+its original transparent navbar. Non-academy templates are unchanged.
+
+**Files changed:** \`app/%5Fclubs/[slug]/layout.tsx\`,
+\`components/{AcademyLoadingSkeleton,AcademyRouteLoadingSkeleton,Nav,Hero,HomePageClient}.tsx\`,
+\`lib/academy-loading-route.ts\`,
+\`tests/contracts/{academy-clear-frame-loading,academy-nav-branding-timeout}.test.ts\`,
+\`HANDOFF.md\`, and this ledger.
+
+**Verification:** focused loading tests 14/14, TypeScript, build, and diff
+check passed. Combined full suite was 1585/1587 because two
+operator-workflow DB checks timed out; those two passed on focused rerun,
+the entire database suite passed 245/245 separately, and non-database tests
+passed 1342/1342. Browser checks on built local preview found centered
+loading with real header at desktop and 390px mobile, a full-height white
+home loading surface during delayed video, real content after readiness,
+mobile menu operation during loading, no browser errors or horizontal
+overflow, and a 200 Men’s Teams page. The temporary preview was stopped
+after testing. No hosted mutation, commit, push, or deployment.
+
+**Exact next step:** Christian reviews the new loading transition on
+desktop and mobile, including client navigation, before branch packaging.
+Release remains approval-gated.
+
+## 2026-09-24 - Clear Frame stalled-read review fixes
+
+**Package:** none — ad hoc fixes for the two read-only Clear Frame review
+findings.
+
+**Status:** `in_progress` for runtime visual acceptance. Academy pages no
+longer wait for Programs hydration in the layout, and the server branding read
+has a 2.5-second fallback. The navbar and Programs dropdown each leave their
+loading shapes after five seconds when the client read remains pending; late
+successful responses still update the crest or program links.
+
+**Files changed:** `app/%5Fclubs/[slug]/layout.tsx`, `components/Nav.tsx`,
+`lib/academy-shell-branding.ts`,
+`tests/contracts/academy-programs-loading-stall.test.ts`,
+`tests/contracts/academy-nav-branding-timeout.test.ts`, `HANDOFF.md`, and
+this status ledger.
+
+**Verification:** focused 11/11, contracts 956/956, architecture 21/21,
+TypeScript, non-database suite 1342/1342, local database 245/245, full
+suite 1587/1587, build, and diff check passed. The initial database
+attempt was blocked by sandbox loopback access; the approved local-only
+rerun passed against already-running Supabase containers. The rebuilt preview
+was restarted at `http://diverse-city.localhost:3225/`. Fresh 1440px and
+390px homepage loads returned 200, rendered the navbar/Programs, cleared
+loading frames, and had no browser errors or overflow. In a browser test
+with the Programs request delayed past five seconds, the hero and navbar
+were usable and the dropdown switched to `Programs unavailable`. The
+forced branding stall was tested with fake timers but not in the browser.
+No hosted mutation, commit, push, or deployment.
+
+**Exact next step:** visually check forced branding fallback and remaining
+slow-network/reduced-motion transitions on desktop and mobile, then review
+the branch. Release remains approval-gated.
+
+## 2026-09-24 - Homepage hero skeleton held through video readiness
+
+**Package:** none — ad hoc follow-up to Christian's mobile and desktop
+homepage loading report.
+
+**Status:** `in_progress` for Christian's visual acceptance. The academy hero
+keeps the Clear Frame overlay and hides finished text until the video has a
+frame. Autoplay denial, source error, or a 10-second stall settles to the local
+poster instead of leaving a permanent skeleton. Other templates and the story
+video are unchanged.
+
+**Files changed:** `components/Hero.tsx`,
+`components/ResilientBunnyVideo.tsx`,
+`tests/contracts/academy-clear-frame-loading.test.ts`, `HANDOFF.md`, and this
+ledger.
+
+**Verification:** focused 7/7, TypeScript, contracts 949/949, architecture
+21/21, local DB 245/245, full suite 1580/1580, build, and diff check passed.
+Desktop and 390px mobile reloads of the rebuilt local preview showed the
+poster-backed frame first, with real hero text hidden. After loading, the
+video was playing at readyState 4, the skeleton cleared, and mobile overflow
+was zero. The forced-stall branch was not visually exercised. No hosted
+mutation, push, or deployment.
+
+**Exact next step:** Christian reviews
+`http://diverse-city.localhost:3225/` on mobile and desktop. Release remains
+approval-gated.
+
+## 2026-09-24 - Clear Frame extended across public pages and mobile
+
+**Package:** none — ad hoc follow-up to Christian's all-page/mobile coverage
+request.
+
+**Status:** `in_progress` for Christian's visual acceptance. Route-shaped
+Clear Frame frames now cover the academy Home, Programs/detail, Tryouts,
+Contact, Sponsors, Store, About, Roster, Fixtures, Club Logo, and registration
+surfaces. A page-only fallback handles client navigation under the resolved
+navbar. Store, Roster, and Fixtures client reads use the same frames instead
+of text loaders. Other public URLs receive a simple light frame. Non-academy
+templates retain their existing pending behavior.
+
+**Files changed:** `app/%5Fclubs/[slug]/loading.tsx`,
+`app/(public)/{roster,schedule}/page.tsx`,
+`components/{AcademyLoadingSkeleton,AcademyRouteLoadingSkeleton,AcademyShopPage}.tsx`,
+`lib/academy-loading-route.ts`,
+`tests/contracts/academy-clear-frame-loading.test.ts`, `HANDOFF.md`, and this
+ledger.
+
+**Verification:** focused 6/6, TypeScript, contracts 948/948, architecture
+21/21, local database 245/245, full suite 1579/1579, final build, and diff
+check passed. Actual local 390px browser
+captures showed direct-load Store, About, Roster, and Club Logo frames plus
+Roster-to-Fixtures client navigation. There was no horizontal overflow in
+those frames, and checked settled pages cleared their skeletons. The rebuilt
+Store frame also passed at 320px with zero overflow, a 420px image panel, and
+a settled real jersey page. The local preview is running on port 3225. No
+hosted mutation, push, or deployment.
+
+**Exact next step:** Christian reviews
+the updated local preview at `http://diverse-city.localhost:3225/` on desktop
+and mobile, including a deliberately slow connection and reduced motion.
+
+## 2026-09-24 - Program-detail Clear Frame geometry corrected locally
+
+**Package:** none — ad hoc follow-up to Christian's Men’s Teams loading screenshot.
+
+**Status:** `in_progress` for Christian's visual review. The generic non-home
+fallback that crowded three shapes at the top is replaced by a full-height
+navy, bottom-aligned program-detail frame. Programs index, other navy-intro
+pages, Store, and light interior pages now use route-matched loading geometry.
+The circular crest placeholder and static Clear Frame treatment are preserved.
+
+**Files changed:** `components/AcademyLoadingSkeleton.tsx`,
+`components/AcademyRouteLoadingSkeleton.tsx`,
+`lib/academy-loading-route.ts`,
+`tests/contracts/academy-clear-frame-loading.test.ts`, `HANDOFF.md`, and this
+status ledger.
+
+**Verification:** focused 4/4, contracts 946/946, architecture 21/21, full
+suite 1577/1577, TypeScript, build, and diff check passed. Browser captures
+from the rebuilt local preview show the Men’s Teams loading frame at desktop
+and 390px mobile, plus Programs and Store variants. The settled route returns
+200, with zero mobile horizontal overflow. No hosted mutations, push, or
+deployment.
+
+**Next step:** reload `http://diverse-city.localhost:3225/programs/upsl-mens-teams`
+for Christian's review before any release decision.
+
+## 2026-09-24 - Clear Frame first-load implementation, local acceptance pending
+
+**Package:** none — ad hoc public-site loading treatment selected by Christian
+from `diverse-city-poster-veil-variations.html` option 2.
+
+**Status:** `in_progress`. The shared `academy@1` header and homepage loading
+implementation is complete locally in the isolated
+`codex/diverse-city-loading-options` worktree. Request-scoped tenant branding
+and Programs reach first paint; static, pale-blue skeletons cover true server
+and client waits with the existing hero poster, navy veil, and no shimmer.
+Empty, hidden, and failed reads settle out of the loading state. Desktop and
+mobile navbar loading geometry is included. No publication was attempted.
+
+**Files changed:** `app/%5Fclubs/[slug]/{layout,page}.tsx`,
+`components/AcademyLoadingSkeleton.tsx`,
+`components/AcademyRouteLoadingSkeleton.tsx`, the academy/homepage components
+listed in the top `HANDOFF.md` entry, `lib/queries.ts`, new
+`tests/contracts/academy-clear-frame-loading.test.ts`, `HANDOFF.md`, and this
+ledger. The earlier design studies remain untracked in this worktree.
+
+**Verification:** TypeScript, diff check, focused 155/155 plus new 3/3
+contracts, full contracts 945/945, architecture 21/21, local DB 245/245,
+full suite 1576/1576, and local-environment production build passed. Built
+local `alpha.localhost:3225` academy fixture passed desktop/mobile UI smoke:
+header crest and Programs rendered, mobile menu worked, mobile overflow was
+zero, no error overlay/browser console errors, and skeletons cleared after
+network idle. The first sandboxed DB run could not reach loopback (`EPERM`);
+the authorized local-only rerun passed. The documented Diverse City local
+fixture was subsequently restored with an idempotent import and zero hosted
+mutations. With `ONZIO_ENVIRONMENT=staging` matching its primary domain,
+`http://diverse-city.localhost:3225/` returned 200. The in-app browser showed
+the actual club crest, four Programs links, hero, kit, match, story, and lower
+home sections, with no skeleton remaining after the page settled.
+
+**Remaining acceptance:** Christian's review and the exact slow-load and
+reduced-motion transitions have not been visually accepted. Existing academy Hero media remains a
+Diverse City video constant even for Alpha; the skeleton reuses its poster.
+
+**Exact next step:** review `http://diverse-city.localhost:3225/` and the branch
+diff, then complete desktop,
+mobile, slow-network, and reduced-motion first-load acceptance. No push,
+deployment, or PR before that review and Christian's release approval.
+
 ## 2026-08-26 - Registration live-mode deployed; owner's Stripe Connect onboarding blocked on Stripe's one-time platform profile questionnaire (pending); safeguards added
 
 **Package:** none — go-live close-out for the registration-payments

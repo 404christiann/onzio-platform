@@ -19,9 +19,11 @@ export default async function TenantHomePage({
   const onzio = (await createClient()).schema("onzio");
   const heroContent = await fetchHomepageHeroContent(club.id, onzio).catch(
     (error: unknown) => {
-      console.error("TenantHomePage:", error);
+      console.error("TenantHomePage hero:", error);
       return null;
     },
   );
+  // The optional story is loaded by DevelopingNextGeneration in its own
+  // section. A stalled story read must not hold the first homepage response.
   return <HomePageClient initialHeroContent={heroContent} />;
 }

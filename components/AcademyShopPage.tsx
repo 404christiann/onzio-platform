@@ -8,6 +8,7 @@ import {
   normalizeKitStoreNote,
 } from "@/lib/shop-kit";
 import { useClubId } from "@/components/ClubContextProvider";
+import { AcademyInteriorLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 const VIEW_LABELS = ["Front", "Back"] as const;
 
@@ -44,13 +45,7 @@ export default function AcademyShopPage() {
   }, [clubId]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[70vh] w-full items-center justify-center bg-[#F9FAFD]">
-        <p className="font-display text-base font-black uppercase tracking-widest text-[#6B7E94]">
-          Loading collection…
-        </p>
-      </div>
-    );
+    return <AcademyInteriorLoadingSkeleton shop />;
   }
 
   const section = content?.section;

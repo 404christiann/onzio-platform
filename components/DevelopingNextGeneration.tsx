@@ -11,6 +11,7 @@ import {
   type HomepageStoryContent,
 } from "@/lib/homepage-story-content";
 import { fetchHomepageStorySection } from "@/lib/queries";
+import { AcademyStoryLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 /**
  * Homepage story section for `academy@1`. Modeled on the approved sales
@@ -27,18 +28,19 @@ import { fetchHomepageStorySection } from "@/lib/queries";
  * Bunny Stream club reel stays a constant: video is outside the text-and-images
  * content boundary (DCFC-D131).
  */
-export default function DevelopingNextGeneration() {
+export default function DevelopingNextGeneration({ initialStoryContent }: { initialStoryContent?: HomepageStoryContent | null }) {
   const preview = useHomepagePreview();
   const editing = preview !== null;
   const buttonPiece = useHomepagePiece("story.cta");
   const club = useClubContext();
   const [loadedStory, setStory] = useState<HomepageStoryContent>(() =>
-    resolveHomepageStorySection(null, club.name),
+    initialStoryContent ?? resolveHomepageStorySection(null, club.name),
   );
+  const [loading, setLoading] = useState(!initialStoryContent);
 
   const story = preview ? resolveHomepageStorySection({ visible: preview.draft.story.visible, heading: preview.draft.story.heading, body_primary: preview.draft.story.bodyPrimary, body_secondary: preview.draft.story.bodySecondary, cta_label: preview.draft.story.ctaLabel }, club.name) : loadedStory;
   useEffect(() => {
-    if (editing) return;
+    if (editing || initialStoryContent) return;
     let active = true;
     fetchHomepageStorySection(club.id, club.name)
       .then((content) => {
@@ -46,12 +48,16 @@ export default function DevelopingNextGeneration() {
       })
       .catch((error) => {
         console.error("DevelopingNextGeneration:", error);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [club.id, club.name, editing]);
+  }, [club.id, club.name, editing, initialStoryContent]);
 
+  if (!editing && loading) return <AcademyStoryLoadingSkeleton />;
   if (!story.visible) return <HomepageMissingPiece piece="story.text">Your club’s story · Hidden from homepage</HomepageMissingPiece>;
 
   return (

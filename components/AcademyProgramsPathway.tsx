@@ -5,16 +5,14 @@ import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
-import {
-  fetchPrograms,
-  fetchProgramsPageContent,
-  type ProgramContent,
-} from "@/lib/queries";
+import type { ProgramContent } from "@/lib/queries";
 import {
   resolveProgramsPageContent,
   type ProgramsPageContent,
 } from "@/lib/programs-page-content";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { loadPathwayData } from "@/components/academy-pathway-data";
 
 // Mockup-parity programs-pathway homepage block for academy@1
 // (DCFC-D132 pass), modeled on the sales mockup's ProgramsFeature: photo
@@ -31,33 +29,23 @@ export default function AcademyProgramsPathway() {
   const sharedPiece = useHomepagePiece("shared.programs");
   const club = useClubContext();
   const [programs, setPrograms] = useState<ProgramContent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [content, setContent] = useState<ProgramsPageContent>(() =>
     resolveProgramsPageContent(null, club.name),
   );
 
   useEffect(() => {
-    fetchPrograms(club.id)
-      .then(setPrograms)
-      .catch((error) => {
-        console.error("AcademyProgramsPathway:", error);
-        setPrograms([]);
-      });
-  }, [club.id]);
-
-  useEffect(() => {
-    let active = true;
-    fetchProgramsPageContent(club.id, club.name)
-      .then((value) => {
-        if (active) setContent(value);
-      })
-      .catch((error) => {
-        console.error("AcademyProgramsPathway content:", error);
-      });
-    return () => {
-      active = false;
-    };
+    setLoading(true);
+    setPrograms([]);
+    setContent(resolveProgramsPageContent(null, club.name));
+    return loadPathwayData(club.id, club.name, {
+      onPrograms: setPrograms,
+      onProgramsSettled: () => setLoading(false),
+      onContent: setContent,
+    });
   }, [club.id, club.name]);
 
+  if (loading) return <AcademySectionLoadingSkeleton height="min-h-[680px]" />;
   if (programs.length === 0) return null;
 
   const featureImage =

@@ -11,6 +11,8 @@ type Props = {
   alt: string;
   className?: string;
   style?: CSSProperties;
+  /** Fires when a video frame or the static poster can be displayed. */
+  onVisualReady?: () => void;
 };
 
 /**
@@ -26,6 +28,7 @@ export default function ResilientBunnyVideo({
   alt,
   className,
   style,
+  onVisualReady,
 }: Props) {
   const preview = useHomepagePreview();
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -38,6 +41,12 @@ export default function ResilientBunnyVideo({
   const editing = preview !== null && (!preview.playback || reducedMotion);
   const [failed, setFailed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const readyRef = useRef(false);
+  const markVisualReady = () => {
+    if (readyRef.current) return;
+    readyRef.current = true;
+    onVisualReady?.();
+  };
 
   // The `autoPlay` attribute alone is not reliably honored when the element
   // mounts client-side (these sections render with `ssr: false`): the video
@@ -52,12 +61,26 @@ export default function ResilientBunnyVideo({
     if (!video) return;
     const play = () => {
       video.muted = true;
-      video.play().catch(() => {});
+      video.play().catch((error: unknown) => {
+        // Autoplay can be denied on mobile even for a muted video. In that
+        // case use the poster instead of leaving the hero veiled indefinitely.
+        if (error instanceof DOMException && error.name === "NotAllowedError") {
+          setFailed(true);
+        }
+      });
     };
     play();
     document.addEventListener("touchstart", play, { once: true });
     return () => document.removeEventListener("touchstart", play);
   }, [failed, editing]);
+
+  useEffect(() => {
+    if (!onVisualReady || editing || failed || readyRef.current) return;
+    // A stalled network request may never emit loadeddata or error. Settle to
+    // the local poster so the page can finish loading in that case.
+    const timeout = window.setTimeout(() => setFailed(true), 10_000);
+    return () => window.clearTimeout(timeout);
+  }, [onVisualReady, editing, failed]);
 
   if (editing || failed) {
     return (
@@ -66,6 +89,8 @@ export default function ResilientBunnyVideo({
         alt={alt}
         className={className}
         style={style}
+        onLoad={markVisualReady}
+        onError={markVisualReady}
       />
     );
   }
@@ -82,6 +107,8 @@ export default function ResilientBunnyVideo({
       aria-label={alt}
       className={className}
       style={style}
+      onLoadedData={markVisualReady}
+      onPlaying={markVisualReady}
       onError={() => setFailed(true)}
     >
       <source src={bunnyVideoMp4Url(guid)} type="video/mp4" />
