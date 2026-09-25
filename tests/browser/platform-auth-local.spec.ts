@@ -45,6 +45,7 @@ async function requestAndVerify(page: Page, email: string, entry: "fill" | "type
   const input = page.getByLabel("Sign-in code");
   if (entry === "type") await input.pressSequentially(code, { delay: 50 });
   else await input.fill(code);
+  await expect(page.getByTestId("post-otp-portal-reveal")).toBeVisible();
   await page.waitForURL(/\/admin$/);
 }
 
@@ -126,6 +127,42 @@ test("typing a local six-digit code does not verify early, even after a long pau
   await input.press("6");
   await expect.poll(() => requests.length).toBe(1);
   expect(requests).toEqual(["123456"]);
+});
+
+test("invalid post-OTP verification reveals an accessible portal preview and restores code entry", async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.goto("/admin/login", { waitUntil: "networkidle" });
+    await page.getByLabel("Email").fill("owner-aal2@alpha.local");
+    await page.getByRole("button", { name: "I already have a code" }).click();
+
+    const input = page.getByLabel("Sign-in code");
+    const verification = page.waitForRequest((request) =>
+      request.url().includes("/auth/v1/verify") && request.postDataJSON()?.token === "000000",
+    );
+    await input.fill("000000");
+    await verification;
+
+    const reveal = page.getByTestId("post-otp-portal-reveal");
+    await expect(reveal).toBeVisible();
+    await expect(reveal).toHaveAttribute("role", "status");
+    await expect(page.getByRole("status", { name: "Opening your dashboard" })).toBeVisible();
+    const decorativeRegions = reveal.locator('[aria-hidden="true"]');
+    expect(await decorativeRegions.count()).toBeGreaterThan(0);
+    expect(await decorativeRegions.evaluateAll((regions) => regions.every((region) =>
+      region.querySelector('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])') === null,
+    ))).toBe(true);
+    await expect(page.locator("form:has(#sign-in-code)")).toHaveAttribute("inert", "");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+
+    await expect(reveal).toHaveCount(0);
+    await expect(
+      page.getByRole("alert").filter({ hasText: "That code is invalid or expired" }),
+    ).toBeVisible();
+    await expect(input).toBeEditable();
+    await expect(input).toHaveValue("000000");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
 });
 
 test("code entry is unavailable while a resend is pending", async ({ page }) => {

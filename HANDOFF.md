@@ -1,5 +1,26 @@
 # Onzio Platform Handoff
 
+## Post-OTP Portal reveal PR — 2026-09-24
+
+Christian selected the original D Portal reveal after local review. This
+focused branch starts from merged PR #7 on `main` and replaces the small
+post-code loader with a full-viewport, generic dashboard preview and the
+shadcn/Lucide Spinner. The OTP form remains inert and hidden from assistive
+technology during verification, the existing 900 ms visibility floor remains,
+successful navigation keeps the reveal visible, and invalid codes restore the
+editable form and error. The decorative shell uses no tenant data or privileged
+calls, and its logo uses `ResilientImage`.
+
+Added an accessible loading status, reduced-motion styles, and browser
+coverage for invalid-code recovery at desktop/phone widths plus reveal
+visibility on real local OTP success. Before PR packaging, TypeScript,
+targeted ESLint, contracts 948/948, architecture 21/21, local database
+245/245, full Vitest 1579/1579, five focused local login browser checks,
+and desktop/390px/320px visual inspections passed in the source checkout.
+Run the production build after stopping its active dev server. No production
+deployment, hosted Auth mutation, or `main` push is part of this branch.
+
+
 ## OTP review follow-up fixes — 2026-09-24
 
 Addressed the two findings from the read-only review of draft PR #7. The
