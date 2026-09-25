@@ -14,6 +14,7 @@ import {
   fetchSchedule,
 } from "@/lib/queries";
 import { AcademyMatchLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 
 /** Converts the stored local match date and 24-hour time into a Date. */
@@ -47,6 +48,7 @@ export default function AcademyNextMatch() {
   const { clubLogoUrl } = useClubBranding();
   const [nextFixture, setNextFixture] = useState<Fixture | null>(null);
   const [loading, setLoading] = useState(true);
+  const showLoading = useBoundedAcademyLoading(loading, club.id);
   // Both of these were hardcoded club facts even though each already had an
   // admin-editable home: the competition name is the standings section title
   // the club edits at /admin/standings, and the fallback location is the
@@ -96,7 +98,7 @@ export default function AcademyNextMatch() {
       .finally(() => setLoading(false));
   }, [club.id]);
 
-  if (loading) return <AcademyMatchLoadingSkeleton />;
+  if (showLoading) return <AcademyMatchLoadingSkeleton />;
 
   const dateLabel = nextFixture ? formatMatchDate(nextFixture.date) : "Date and time TBA";
   const timeLabel = nextFixture ? formatMatchTime(nextFixture.time) : "";

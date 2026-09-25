@@ -8,14 +8,21 @@ Programs label was hard to read against the transparent hero menu. The route
 now gives other templates a neutral, accessible page loading state, while
 academy routes retain the approved Header Stays treatment. The Programs
 label and spinner use light colors over the dark hero menu and the existing
-dark colors over the opaque menu.
+dark colors over the opaque menu. A subsequent full-diff review found three
+more defects: optional homepage reads could leave permanent section loaders,
+the pending crest could fall back to Rose City branding, and the hidden footer
+left blank scroll space under a page loader. Optional section loaders now
+release after 2.5 seconds while accepting late data, the header shows tenant
+initials until scoped branding is ready, and the footer leaves layout during
+the loading state.
 
-**Files:** `components/AcademyRouteLoadingSkeleton.tsx`, `components/Nav.tsx`,
-two focused loading contracts, `HANDOFF.md`, and the Diverse City status
-ledger.
+**Files:** tenant layout; `components/AcademyRouteLoadingSkeleton.tsx`,
+`components/Nav.tsx`, six optional academy homepage sections,
+`components/academy-pathway-data.ts`, `lib/use-bounded-academy-loading.ts`,
+focused loading contracts, `HANDOFF.md`, and the Diverse City status ledger.
 
-**Verification:** focused contracts 14/14, TypeScript, full local-only Supabase
-suite 1611/1611, production build, and diff check passed. Direct iPhone
+**Verification:** focused contracts 19/19, TypeScript, full local-only Supabase
+suite 1612/1612, production build, and diff check passed. Direct iPhone
 Simulator taps remain unverified because the Mac was locked; Chromium mobile
 touch checks and the Simulator screenshot passed in the prior review.
 

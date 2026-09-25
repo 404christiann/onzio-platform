@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const queries = vi.hoisted(() => ({
   fetchPrograms: vi.fn(),
@@ -7,11 +7,35 @@ const queries = vi.hoisted(() => ({
 
 vi.mock("@/lib/queries", () => queries);
 
-import { loadPathwayData } from "@/components/academy-pathway-data";
+import { ACADEMY_PATHWAY_PROGRAMS_FALLBACK_MS, loadPathwayData } from "@/components/academy-pathway-data";
 
 const clubId = "11111111-1111-4111-8111-111111111111";
 
+afterEach(() => vi.useRealTimers());
+
 describe("academy homepage program pathway loading", () => {
+  it("releases a stalled list loader and still accepts a late program response", async () => {
+    vi.useFakeTimers();
+    let resolvePrograms!: (value: never[]) => void;
+    queries.fetchPrograms.mockImplementationOnce(() => new Promise((resolve) => { resolvePrograms = resolve; }));
+    queries.fetchProgramsPageContent.mockImplementationOnce(() => new Promise(() => {}));
+    const callbacks = { onPrograms: vi.fn(), onProgramsSettled: vi.fn(), onContent: vi.fn() };
+
+    const stop = loadPathwayData(clubId, "Diverse City FC", callbacks);
+    vi.advanceTimersByTime(ACADEMY_PATHWAY_PROGRAMS_FALLBACK_MS - 1);
+    expect(callbacks.onProgramsSettled).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(callbacks.onProgramsSettled).toHaveBeenCalledOnce();
+
+    const programs = [{ id: "program-1", slug: "upsl-mens-teams", displayTitle: "Men's Teams" }];
+    resolvePrograms(programs as never[]);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(callbacks.onPrograms).toHaveBeenCalledWith(programs);
+    expect(callbacks.onProgramsSettled).toHaveBeenCalledOnce();
+    stop();
+  });
+
   it("reveals ready program links while the editable copy request remains stalled", async () => {
     const programs = [{ id: "program-1", slug: "upsl-mens-teams", displayTitle: "Men's Teams" }];
     queries.fetchPrograms.mockResolvedValueOnce(programs);

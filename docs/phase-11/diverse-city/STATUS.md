@@ -10,14 +10,19 @@ independent review. Christian authorized merge if that review is clean.
 
 **Completed work:** Other public templates now show a neutral accessible
 route-loading state instead of a blank main area. The pending Programs label
-and spinner have readable colors on both dark hero and opaque menus.
+and spinner have readable colors on both dark hero and opaque menus. A
+subsequent full-diff review also found unbounded optional homepage section
+loaders, a cross-tenant crest fallback during pending branding, and blank
+footer space beneath a page loader. The loaders now release after 2.5 seconds
+and accept late data, the header shows tenant initials until scoped branding
+arrives, and the footer leaves layout while the page loader is present.
 
-**Files changed:** `components/AcademyRouteLoadingSkeleton.tsx`,
-`components/Nav.tsx`, two focused loading contracts, `HANDOFF.md`, and this
-ledger.
+**Files changed:** tenant layout; academy route loader, Nav, six optional
+homepage sections, pathway data helper, bounded-loading hook, focused loading
+contracts, `HANDOFF.md`, and this ledger.
 
-**Verification:** focused contracts 14/14, TypeScript, full local-only
-Supabase suite 1611/1611, production build, and diff check passed. Direct
+**Verification:** focused contracts 19/19, TypeScript, full local-only
+Supabase suite 1612/1612, production build, and diff check passed. Direct
 iPhone Simulator taps remain pending because the Mac was locked; prior
 Chromium mobile touch checks and Simulator screenshot passed.
 

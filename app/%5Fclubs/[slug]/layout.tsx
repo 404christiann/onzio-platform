@@ -57,10 +57,9 @@ async function AcademyResolvedShell({ club, children }: { club: ClubContext; chi
 
   return (
     <ClubBrandingProvider initialBranding={branding}>
-      {/* A page loader can visually cover the footer while leaving its links
-          reachable by keyboard. Visibility removes those links from the tab
-          order until the academy loading surface leaves the DOM. */}
-      <style>{`html:has([data-academy-page-loading]) footer { visibility: hidden; }`}</style>
+      {/* Remove the footer and its links while the page loader is present so
+          slow routes cannot scroll into a blank footer-sized area. */}
+      <style>{`html:has([data-academy-page-loading]) footer { display: none; }`}</style>
       <Nav />
       <main>
         <Suspense fallback={<AcademyPageLoadingSkeleton />}>

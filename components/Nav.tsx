@@ -193,7 +193,7 @@ export default function Nav({
   loadingAppearance?: boolean;
 }) {
   const club = useClubContext();
-  const { clubLogoUrl, brandingPending } = useClubBranding();
+  const { clubLogoUrl } = useClubBranding();
   const preview = useHomepagePreview();
   const rewrittenPathname = usePathname();
   const pathname = preview ? "/" : rewrittenPathname.replace(/^\/_clubs\/[^/]+/, "") || "/";
@@ -290,7 +290,9 @@ export default function Nav({
     !(isAcademy && (loadingAppearance || pageLoading)) &&
     (isAlwaysTransparentPage ||
     (isDarkHeroPage && !scrolled && !(isAcademy && menuOpen)));
-  const displayedLogoUrl = clubLogoUrl || (isAcademy && brandingPending ? "/club-logo" : "");
+  // The shared /club-logo route has a legacy Rose City fallback. Keep this
+  // tenant's initials visible until its scoped branding read has a real URL.
+  const displayedLogoUrl = clubLogoUrl;
   const activeNavLinks = club.presentationTemplateKey === "academy@1"
     ? academyNavLinks(academyPrograms)
     : navLinks;

@@ -41,7 +41,8 @@ afterEach(() => {
 
 describe("academy navbar client fallbacks", () => {
   it("renders real navigation immediately while branding retries", () => {
-    expect(navSource).toContain('clubLogoUrl || (isAcademy && brandingPending ? "/club-logo" : "")');
+    expect(navSource).toContain("const displayedLogoUrl = clubLogoUrl;");
+    expect(navSource).not.toContain('brandingPending ? "/club-logo"');
     expect(navSource).toContain("fallback={<span");
     expect(navSource).toContain("club.name.split(/\\s+/).map((part) => part[0]).join(\"\").slice(0, 3)");
     expect(navSource).toContain("loadingAppearance || pageLoading");

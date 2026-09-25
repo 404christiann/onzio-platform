@@ -9,6 +9,7 @@ import { fetchHomepageContent } from "@/lib/queries";
 import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -25,6 +26,7 @@ export default function BehindTheRose() {
     { ...DEFAULT_BEHIND_THE_ROSE_SECTION, visible: false },
   );
   const [loading, setLoading] = useState(true);
+  const showLoading = useBoundedAcademyLoading(loading, clubId);
 
   const content = preview ? { ...loadedContent, ...preview.draft.video, video_url: preview.videoSource } : loadedContent;
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function BehindTheRose() {
   }, [club.presentationTemplateKey, content.visible, editing]);
 
   if (preview && !preview.allowedPieces.includes("video")) return null;
-  if (!editing && loading && club.presentationTemplateKey === "academy@1") return <AcademySectionLoadingSkeleton />;
+  if (!editing && showLoading && club.presentationTemplateKey === "academy@1") return <AcademySectionLoadingSkeleton />;
   if (!content.visible) return <HomepageMissingPiece piece="video">Video feature · Hidden from homepage</HomepageMissingPiece>;
 
   return (

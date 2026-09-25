@@ -16,7 +16,7 @@ describe("academy loading footer focus", () => {
     expect(academyShell).toContain("<Nav />");
     expect(academyShell).toContain("<Footer />");
     expect(academyShell).toContain(
-      "html:has([data-academy-page-loading]) footer { visibility: hidden; }",
+      "html:has([data-academy-page-loading]) footer { display: none; }",
     );
   });
 });
