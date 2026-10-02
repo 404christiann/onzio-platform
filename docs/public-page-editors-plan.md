@@ -27,11 +27,11 @@ repository copy's staging invariant still applies.
 | ID | Status | Outcome and acceptance evidence required |
 | --- | --- | --- |
 | PPE-00 | complete | Public canvases and section selection; desktop and phone layouts, keyboard entry, page-scoped Save and recovery. Browser checks described below. |
-| PPE-01 | in_progress | About and Club Logo canvases, separate saves, ownership, and valid-page closing destination are implemented. Clubhouse and Editorial browser parity remains for final acceptance. |
+| PPE-01 | in_progress | About and Club Logo canvases, separate saves, ownership, and valid-page closing destination are implemented. Authenticated Clubhouse and Editorial browser parity passed; response-loss receipts, expected revisions, and empty crest authoring remain. |
 | PPE-02 | complete | Programs directory to detail, searchable desktop list and phone chooser, Manage programs, and atomic page-scoped Save. |
 | PPE-03 | complete | Tryouts intro/event canvas, add/reorder/edit, filled red Delete event, staged Undo, atomic Save, and photo retirement. |
 | PPE-04 | complete | Shop page and separate homepage feature, variant/media controls, page-scoped atomic Save, and disabled-store guard. |
-| PPE-05 | in_progress | Local security, database, full-suite, build, and Chromium acceptance pass. Real iOS Safari and cross-template browser matrix remain. |
+| PPE-05 | in_progress | Local security, database, full-suite, build, and cross-template Chromium checks pass. Clubhouse iOS touch passed; Editorial iOS touch and keyboard checks remain. |
 
 No package is complete until its behavior, tests, browser evidence, and
 remaining limitations are recorded here. Implement one contract area at a
@@ -79,6 +79,18 @@ time. Do not weaken existing tests to fit the redesign.
    per repository instructions before marking complete.
 
 ## Status ledger
+
+### 2026-10-02 — cross-template browser and iOS follow-up
+
+- Packages: PPE-00 remains **complete**; PPE-01 and PPE-05 remain **in_progress**. PPE-02 through PPE-04 remain **complete**.
+- Completed: authenticated local Lions `editorial@1` and temporary `clubhouse@1` About previews were compared with their public pages at 1440px and 390px. Both returned 200 with matching page copy, the expected template composition, no page errors, and no horizontal overflow. Clubhouse showed its fixed hero and sponsor ownership targets; Editorial showed only About, without a Club Logo tab. The About iframe now uses 390px Phone and 1440px Desktop CSS viewports, scaled to fit the admin canvas, so the phone heading wraps like the real page. A local browser regression taps a section and checks both viewport widths on Clubhouse and Editorial.
+- iOS Safari: on the booted iPhone 17 Simulator through the loopback device proxy, authenticated Clubhouse About and Club Logo canvases rendered; touch selection opened the fixed-heading and crest-feature bottom sheets, Done closed a sheet, and the sheet Save remained reachable above Safari's bottom controls. A later fresh Safari navigation returned to login, so Editorial touch, real keyboard focus, and a full Save on iOS remain unverified.
+- Tenant content defect fixed: a Clubhouse tenant without an About or Club Logo row could see Rose City story, crest feature, and color-card defaults in the editor, and an empty Save could publish them. Tenant-scoped normalization and Save preparation now keep absent arrays empty; the historical no-tenant Rose City defaults remain available. The local Lions Club Logo row was absent, and a fresh Chromium editor showed no Rose City text after the fix. New tenants still lack controls to add the first crest feature or color card; this is an authoring gap, not accepted completion.
+- Files changed: `components/admin/about/{AboutPageCanvas.tsx,about-editor.css}`, `app/admin/(protected)/about/page.tsx`, `lib/{about-content.ts,queries.ts,about-editor/save.ts}`, focused unit tests, `tests/browser/public-page-about-viewport.spec.ts`, its Playwright config, `tests/README.md`, this ledger, and `HANDOFF.md`.
+- Save-protocol assessment: each selected page is one server-mediated row upsert, so a successful statement is atomic and does not write the other page. A failed response keeps the draft, but there is no actor-scoped operation receipt/status lookup or expected revision. If a response is lost after commit, the editor cannot distinguish commit from rollback; another Save can repeat the write and silently overwrite a concurrent admin edit. Retired-image cleanup also cannot be recovered from a lost response. The error now asks the admin to check the live page before retrying. This is a documented acceptance limit, not equivalent to the Programs/Tryouts/Shop RPC protocol.
+- Verification: focused About/Editorial contracts 48/48; TypeScript, lint, 1001/1001 contracts, 21/21 architecture checks, and 261/261 local database tests passed. Local Supabase was reset after browser checks; the first reset failed during container recreation, and the diagnostic retry completed. The full suite passed 1656/1656, production build passed, and final TypeScript and diff checks passed. No hosted mutation, push, PR, preview, or deployment occurred.
+- Blockers: the About/Club Logo response-loss and concurrent-save protocol, empty Club Logo page authoring, and Editorial/keyboard iOS Safari checks remain. The iOS proxy sign-in worked for one Clubhouse session but a fresh navigation returned to login.
+- Exact next step: implement the selected-page revision/receipt protocol and empty Club Logo creation controls under the existing one-Save contract, then exercise response-loss, two-admin conflict, media cleanup, and an authenticated Editorial iOS Safari touch/keyboard pass. Complete final verification and review before marking PPE-01/PPE-05 complete. Seek separate approval before any push or hosted preview.
 
 ### 2026-10-02 — implementation and local acceptance
 

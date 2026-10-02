@@ -25,9 +25,9 @@ export function prepareAboutPageSave(input: {
       content: {
         ...input.about,
         hero_title: input.about.hero_title.trim() || DEFAULT_ABOUT_PAGE_CONTENT.hero_title,
-        story_paragraphs: normalizeStoryParagraphs(input.about.story_paragraphs),
+        story_paragraphs: normalizeStoryParagraphs(input.about.story_paragraphs, []),
         values_heading: input.about.values_heading.trim() || DEFAULT_ABOUT_PAGE_CONTENT.values_heading,
-        values: normalizeAboutValues(input.about.values),
+        values: normalizeAboutValues(input.about.values, []),
         closing_text: input.about.closing_text.trim(),
         closing_cta_label: input.about.closing_cta_label.trim(),
         closing_cta_href: input.academy ? "/schedule" : input.about.closing_cta_href.trim(),
@@ -39,8 +39,8 @@ export function prepareAboutPageSave(input: {
     page: "logo",
     content: {
       ...input.logo,
-      features: normalizeClubLogoFeatures(input.logo.features),
-      color_cards: normalizeClubLogoColorCards(input.logo.color_cards),
+      features: normalizeClubLogoFeatures(input.logo.features, []),
+      color_cards: normalizeClubLogoColorCards(input.logo.color_cards, []),
       updated_at: input.now,
     },
   };

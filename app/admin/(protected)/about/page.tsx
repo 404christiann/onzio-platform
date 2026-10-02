@@ -70,16 +70,16 @@ const ACADEMY_ABOUT_CLOSING_CTA_HREF = "/schedule";
 function toAboutDraft(content: DBAboutPageContent): DBAboutPageContent {
   return {
     ...content,
-    story_paragraphs: normalizeStoryParagraphs(content.story_paragraphs),
-    values: normalizeAboutValues(content.values),
+    story_paragraphs: normalizeStoryParagraphs(content.story_paragraphs, []),
+    values: normalizeAboutValues(content.values, []),
   };
 }
 
 function toLogoDraft(content: DBClubLogoPageContent): DBClubLogoPageContent {
   return {
     ...content,
-    features: normalizeClubLogoFeatures(content.features),
-    color_cards: normalizeClubLogoColorCards(content.color_cards),
+    features: normalizeClubLogoFeatures(content.features, []),
+    color_cards: normalizeClubLogoColorCards(content.color_cards, []),
   };
 }
 
@@ -419,7 +419,7 @@ export default function AdminAboutPage() {
         setError("Page saved, but an old image could not be removed. It will be retried on the next save.");
       }
     } catch (saveError: unknown) {
-      setError(saveError instanceof Error ? `Save could not be confirmed: ${saveError.message}. Your changes are still here; retry Save.` : "Save could not be confirmed. Your changes are still here; retry Save.");
+      setError(saveError instanceof Error ? `Save could not be confirmed: ${saveError.message}. Your draft is still here. Check the live page before saving again.` : "Save could not be confirmed. Your draft is still here. Check the live page before saving again.");
     } finally {
       setSaving(false);
     }

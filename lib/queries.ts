@@ -1097,8 +1097,8 @@ export async function fetchAboutClubContent(
     about: rawAbout
       ? {
           ...rawAbout,
-          story_paragraphs: normalizeStoryParagraphs(rawAbout.story_paragraphs),
-          values: normalizeAboutValues(rawAbout.values),
+          story_paragraphs: normalizeStoryParagraphs(rawAbout.story_paragraphs, clubId ? [] : undefined),
+          values: normalizeAboutValues(rawAbout.values, clubId ? [] : undefined),
         }
       : clubId
         ? EMPTY_ABOUT_PAGE_CONTENT
@@ -1106,8 +1106,8 @@ export async function fetchAboutClubContent(
     logo: rawLogo
       ? {
           ...rawLogo,
-          features: normalizeClubLogoFeatures(rawLogo.features),
-          color_cards: normalizeClubLogoColorCards(rawLogo.color_cards),
+          features: normalizeClubLogoFeatures(rawLogo.features, clubId ? [] : undefined),
+          color_cards: normalizeClubLogoColorCards(rawLogo.color_cards, clubId ? [] : undefined),
         }
       : clubId
         ? EMPTY_CLUB_LOGO_PAGE_CONTENT

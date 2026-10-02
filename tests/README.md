@@ -192,3 +192,19 @@ Playwright's cleaned output directory. Screenshots are under
 `test-results/homepage-editor-browser/`. Reduced-height browser tests prove layout
 and focus only; real iOS Safari/Android Chrome keyboard and screen-reader
 walkthroughs remain separate acceptance requirements.
+
+## Public-page About canvas viewport check
+
+With a local-only authenticated browser state (for example from the homepage
+local auth helper) and the local app on port 3110:
+
+```bash
+PAGE_EDITOR_BASE_URL=http://alpha.localhost:3110 \
+PAGE_EDITOR_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-auth.json \
+npx playwright test --config=playwright.public-page-editors.config.ts
+```
+
+The check taps a canvas section and verifies that Phone and Desktop retain real
+390px and 1440px CSS viewports even when the editor itself is narrower. The
+same command can target a synthetic Clubhouse or Editorial local tenant and its
+matching local authenticated browser state. Never commit browser auth state.

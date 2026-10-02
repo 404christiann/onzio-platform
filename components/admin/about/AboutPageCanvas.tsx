@@ -46,7 +46,22 @@ function Frame({ children, phone, selected, onSelect, host }: {
   host: string;
 }) {
   const iframe = useRef<HTMLIFrameElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+  const previewWidth = phone ? 390 : 1440;
+  const previewHeight = phone ? 780 : 850;
+  const scale = availableWidth ? Math.min(1, availableWidth / previewWidth) : 1;
+
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element) return;
+    const measure = () => setAvailableWidth(element.clientWidth);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const frame = iframe.current;
@@ -127,13 +142,21 @@ function Frame({ children, phone, selected, onSelect, host }: {
 
   return <div className="aep-browser">
     <div className="aep-browser-bar"><span aria-hidden="true">● ● ●</span><span>{host} · Public page preview</span></div>
-    <iframe
-      ref={iframe}
-      title="Public About page preview"
-      className="aep-frame"
-      data-phone={phone}
-      srcDoc="<!doctype html><html lang='en'><head></head><body></body></html>"
-    />
+    <div ref={viewport} className="aep-frame-viewport" style={{ height: previewHeight * scale }}>
+      <iframe
+        ref={iframe}
+        title="Public About page preview"
+        className="aep-frame"
+        srcDoc="<!doctype html><html lang='en'><head></head><body></body></html>"
+        style={{
+          width: previewWidth,
+          height: previewHeight,
+          left: Math.max(0, (availableWidth - previewWidth * scale) / 2),
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        }}
+      />
+    </div>
     {body && createPortal(
       <div data-about-preview="true" onClickCapture={(event) => {
         event.preventDefault();

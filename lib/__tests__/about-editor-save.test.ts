@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ABOUT_PAGE_CONTENT, DEFAULT_CLUB_LOGO_PAGE_CONTENT } from "@/lib/about-content";
+import { DEFAULT_ABOUT_PAGE_CONTENT, DEFAULT_CLUB_LOGO_PAGE_CONTENT, EMPTY_ABOUT_PAGE_CONTENT, EMPTY_CLUB_LOGO_PAGE_CONTENT } from "@/lib/about-content";
 import { prepareAboutPageSave } from "../about-editor/save";
 
 const NOW = "2026-10-02T12:00:00.000Z";
@@ -17,6 +17,20 @@ describe("About public page save scope", () => {
     expect(prepared.page).toBe("about");
     expect(prepared.content).toMatchObject({ hero_title: "Our club", closing_cta_href: "/schedule", updated_at: NOW });
     expect(prepared.content).not.toHaveProperty("annotated_image_url");
+  });
+
+  it("never publishes Rose City fallback content for a new tenant's empty page", () => {
+    const about = prepareAboutPageSave({
+      page: "about", about: EMPTY_ABOUT_PAGE_CONTENT, logo: EMPTY_CLUB_LOGO_PAGE_CONTENT,
+      academy: false, now: NOW,
+    });
+    expect(about.content).toMatchObject({ story_paragraphs: [], values: [] });
+
+    const logo = prepareAboutPageSave({
+      page: "logo", about: EMPTY_ABOUT_PAGE_CONTENT, logo: EMPTY_CLUB_LOGO_PAGE_CONTENT,
+      academy: false, now: NOW,
+    });
+    expect(logo.content).toMatchObject({ features: [], color_cards: [] });
   });
 
   it("builds only the selected Club Logo row, leaving About changes out", () => {

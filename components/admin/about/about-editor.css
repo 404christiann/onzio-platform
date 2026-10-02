@@ -8,8 +8,8 @@
 .aep-device-toggle { display:flex; gap:.35rem; }
 .aep-browser { min-width:0; padding:.75rem; }
 .aep-browser-bar { min-height:32px; display:flex; align-items:center; gap:1rem; padding:0 .75rem; border:1px solid hsl(var(--border)); border-bottom:0; border-radius:.5rem .5rem 0 0; background:hsl(var(--card)); color:hsl(var(--muted-foreground)); font-size:.69rem; }
-.aep-frame { width:100%; height:min(75dvh,850px); min-height:530px; display:block; border:1px solid hsl(var(--border)); background:#fff; }
-.aep-frame[data-phone="true"] { width:min(390px,100%); height:min(75dvh,780px); margin-inline:auto; }
+.aep-frame-viewport { position:relative; width:100%; overflow:hidden; border:1px solid hsl(var(--border)); background:#fff; }
+.aep-frame { position:absolute; top:0; display:block; border:0; background:#fff; }
 .aep-inspector { position:sticky; top:5.5rem; max-height:min(79dvh,900px); display:flex; flex-direction:column; padding:0; overflow:hidden; }
 .aep-inspector-head { flex:none; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:1rem; border-bottom:1px solid hsl(var(--border)); }
 .aep-inspector-head h2 { margin:.2rem 0 0; font-size:1.15rem; font-weight:750; }
@@ -27,7 +27,7 @@
 .aep-destination-error { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:.5rem; color:hsl(var(--destructive)); font-size:.78rem; }
 .aep-destination-error p { margin:0; }
 .aep-destination-error button { min-height:44px; border:1px solid hsl(var(--destructive)); border-radius:.5rem; padding:.45rem .7rem; font-weight:700; }
-@media(max-width:900px) { .aep-layout { grid-template-columns:minmax(0,1fr); } .aep-inspector { position:static; max-height:none; } .aep-frame { height:65dvh; } }
+@media(max-width:900px) { .aep-layout { grid-template-columns:minmax(0,1fr); } .aep-inspector { position:static; max-height:none; } }
 @media(max-width:767px) {
   .aep-root { padding-bottom:calc(75px + env(safe-area-inset-bottom)); }
   .aep-layout { display:block; }
@@ -35,7 +35,6 @@
   .aep-device-toggle button { padding:.45rem .55rem; font-size:.72rem; }
   .aep-browser { padding:.45rem; }
   .aep-browser-bar { display:none; }
-  .aep-frame,.aep-frame[data-phone="true"] { width:100%; height:65dvh; min-height:420px; }
   .aep-inspector { position:fixed; z-index:60; inset:auto 0 0; max-height:75dvh; border-radius:1rem 1rem 0 0; box-shadow:0 -12px 32px #17223a26; display:none; padding-bottom:env(safe-area-inset-bottom); }
   .aep-inspector[data-open="true"] { display:flex; }
   .aep-fields { min-height:0; }

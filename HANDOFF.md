@@ -72,6 +72,18 @@ the branch merges cleanly with refreshed `origin/main` at `a413eb6`.
 acceptance and obtain separate approval before production migration, merge or
 deployment.
 
+## Public page editors — cross-template and iOS follow-up — 2026-10-02 (Codex)
+
+On `codex/public-page-editors` in the existing managed worktree, authenticated local Editorial and Clubhouse About previews were compared with their public pages at 1440px and 390px. Both rendered the correct template copy and composition with no page errors or horizontal overflow. The About canvas now keeps real 390px Phone and 1440px Desktop CSS viewports while scaling to the admin column. A browser regression passed on both templates. On the booted iPhone 17 Simulator, Clubhouse About/Club Logo touch selection, bottom-sheet Done, and reachable Save were checked. Editorial Safari touch and keyboard checks remain unverified because a fresh device-proxy navigation returned to login.
+
+A newly discovered tenant leak in the edit draft is fixed: missing About/Club Logo rows no longer populate Rose City story, crest features, or color cards, including on Save. The historical unscoped Rose City defaults remain. A new Clubhouse tenant with no saved crest rows still cannot add its first feature or color card from the current inspector. About and Club Logo Saves remain single-row upserts without operation receipts or expected revisions; on a lost response the draft survives, but commit status cannot be reconciled and a retry can overwrite another admin's save. The UI now tells admins to check the live page before retrying. Treat this as an open contract limit.
+
+**Files:** About canvas and CSS, About editor, About normalization/query/save helpers and tests, local Playwright viewport spec/config, `tests/README.md`, and `docs/public-page-editors-plan.md`. The scoped ledger records package status and exact evidence.
+
+**Verification:** focused About/Editorial 48/48, TypeScript, lint, 1001/1001 contracts, 21/21 architecture, 261/261 local database tests, and Clubhouse/Editorial browser viewport regression passed. The temporary Lions Clubhouse switch was restored to Editorial, its test membership removed, and local Supabase reset to the checked-in synthetic baseline. The full suite passed 1656/1656, the production build passed, and final TypeScript and diff checks passed. No hosted database, push, PR, preview, or deployment was touched.
+
+**Exact next step:** finish About/Club Logo revision and response-loss receipts and empty crest authoring, then rerun the browser/media/concurrency matrix and Editorial iOS Safari touch/keyboard checks. Keep PPE-01/PPE-05 in progress until that evidence is recorded; obtain separate approval before a push or hosted preview.
+
 ## Public page editors — Programs, Tryouts, Shop, About, Club Logo — 2026-10-02 (Codex)
 
 Christian approved public-page canvases with tap-to-edit sections, one Save per public page, Programs directory-to-detail navigation, Tryouts staged Delete/Undo with a filled red/white button, separate Shop page choices, and an About button destination dropdown. The implementation is on `codex/public-page-editors`, based on `origin/main` at `a413eb6`, in the managed `public-page-editors` worktree. Three tenant-scoped migrations provide atomic saves and operation receipts for Programs, Tryouts, and Shop. About and Club Logo use a single server-mediated row upsert for the selected page; valid About destinations are checked again at the admin API. Template-fixed copy retains its current owner.
