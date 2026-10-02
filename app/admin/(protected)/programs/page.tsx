@@ -23,7 +23,10 @@ import { useSortableList, useSortableRow } from "@/components/admin/useSortableL
 import FileUpload from "@/components/admin/FileUpload";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import ScaledProgramPreview from "@/components/admin/ScaledProgramPreview";
+import ProgramCanvasFrame from "@/components/admin/ProgramCanvasFrame";
+import AcademyProgramsPage from "@/components/AcademyProgramsPage";
+import AcademyProgramDetailPage from "@/components/AcademyProgramDetailPage";
+import TemplateFontScope from "@/components/TemplateFontScope";
 import {
   SlidingPanel,
   type SlidingPanelDirection,
@@ -67,9 +70,13 @@ import {
   PROGRAMS_PAGE_LIMITS,
 } from "@/lib/programs-page-content";
 import { deriveProgramSlug } from "@/lib/slugify";
+import { resolveProgramsPageContent } from "@/lib/programs-page-content";
+import type { PublicRegistrationForm } from "@/lib/registration-public";
+import "./programs-editor.css";
 
 type MediaRole = "hero" | "detail";
 type RegistrationFormOption = Pick<DBRegistrationForm, "id" | "title" | "status">;
+type ProgramPageView = "directory" | "detail" | "manage";
 
 /**
  * The per-program editor is split into three tabs instead of one flat list of
@@ -189,12 +196,12 @@ function errorMessage(error: unknown, fallback: string): string {
 export default function AdminProgramsPage() {
   const club = useClubContext();
   const router = useRouter();
-  // editorial@1 (Lions) doesn't support the Programs module -- the nav item
-  // is already hidden in AdminShell.tsx, this blocks direct URL access too.
-  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
+  // Only academy@1 currently renders a public /programs route. The editor
+  // follows that route's actual template gate, including direct URL access.
+  const unsupportedTemplate = club.presentationTemplateKey !== "academy@1";
   useEffect(() => {
-    if (isEditorialTemplate) router.replace("/admin");
-  }, [isEditorialTemplate, router]);
+    if (unsupportedTemplate) router.replace("/admin");
+  }, [unsupportedTemplate, router]);
   // Diverse City's admins do not hand-write URL slugs; the slug is derived from
   // the navigation label the first time a program is saved and then fixed for
   // the program's lifetime. Every other template keeps the manual field.
@@ -212,6 +219,7 @@ export default function AdminProgramsPage() {
   const hidesPageCopyEditor = club.presentationTemplateKey === "academy@1";
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
   const [registrationForms, setRegistrationForms] = useState<RegistrationFormOption[]>([]);
+  const [openRegistrationForms, setOpenRegistrationForms] = useState<Record<string, PublicRegistrationForm>>({});
   const [draft, setDraft] = useState<ProgramDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -221,8 +229,10 @@ export default function AdminProgramsPage() {
   // persistProgramOrder): disables further drags so two reorders can't
   // interleave their per-row writes. The ref mirrors the state
   // synchronously for persistProgramOrder's entry guard.
-  const [reorderSaving, setReorderSaving] = useState(false);
-  const reorderInFlightRef = useRef(false);
+  const [savedManagement, setSavedManagement] = useState<Array<Pick<ProgramDraft, "id" | "updatedAt" | "sortOrder" | "status">>>([]);
+  const [managementSaving, setManagementSaving] = useState(false);
+  const [managementSaved, setManagementSaved] = useState(false);
+  const [managementError, setManagementError] = useState<string | null>(null);
   const [uploadingRole, setUploadingRole] = useState<MediaRole | null>(null);
   const [errors, setErrors] = useState<ProgramValidationErrors>({});
   const [error, setError] = useState<string | null>(null);
@@ -289,12 +299,14 @@ export default function AdminProgramsPage() {
   // only offered while the filter is empty, since a drag within a filtered
   // subset cannot unambiguously express a new position in the full list.
   const [programFilter, setProgramFilter] = useState("");
+  const [pageView, setPageView] = useState<ProgramPageView>("directory");
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
 
   const loadPrograms = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      const [{ data, error: loadError }, mediaResult, pageCopyResult, registrationFormsResult] =
+      const [{ data, error: loadError }, mediaResult, pageCopyResult, registrationFormsResult, previewFormsResult] =
         await Promise.all([
           createClient()
             .from("programs")
@@ -309,12 +321,16 @@ export default function AdminProgramsPage() {
             .from("registration_forms")
             .select("id,title,status")
             .order("title", { ascending: true }),
+          fetch("/api/admin/programs-preview-forms", { cache: "no-store" }),
         ]);
       if (loadError) throw new Error(loadError.message);
       if (mediaResult.error) throw new Error(mediaResult.error.message);
       if (pageCopyResult.error) throw new Error(pageCopyResult.error.message);
       if (registrationFormsResult.error) throw new Error(registrationFormsResult.error.message);
+      if (!previewFormsResult.ok) throw new Error("Unable to load registration previews");
+      const previewForms = await previewFormsResult.json() as { forms: Record<string, PublicRegistrationForm> };
       setRegistrationForms((registrationFormsResult.data ?? []) as RegistrationFormOption[]);
+      setOpenRegistrationForms(previewForms.forms);
       setPageCopy(
         programsPageToDraft(
           ((pageCopyResult.data ?? []) as DBProgramsPageContent[])[0] ?? null,
@@ -328,6 +344,7 @@ export default function AdminProgramsPage() {
         (grouped[row.program_id] ??= []).push(programMediaToDraft(row));
       }
       setPrograms(next);
+      setSavedManagement(next.map(({ id, updatedAt, sortOrder, status }) => ({ id, updatedAt, sortOrder, status })));
       setGalleryByProgram(grouped);
       const selected =
         next.find((program) => program.id === preferredId) ?? next[0] ?? null;
@@ -363,8 +380,16 @@ export default function AdminProgramsPage() {
   }
 
   function selectProgram(program: ProgramDraft) {
-    if (dirty && !window.confirm("Discard unsaved program changes?")) return;
-    setDraft({ ...program, highlights: [...program.highlights] });
+    if ((dirty || pageCopyDirty || managementDirty) && !window.confirm("Discard unsaved page changes?")) return;
+    if (managementDirty) {
+      setPrograms((current) => current.map((item) => {
+        const saved = savedManagement.find((entry) => entry.id === item.id);
+        return saved ? { ...item, status: saved.status, sortOrder: saved.sortOrder } : item;
+      }).sort((left, right) => left.sortOrder - right.sortOrder));
+    }
+    const saved = savedManagement.find((entry) => entry.id === program.id);
+    const selected = saved ? { ...program, status: saved.status, sortOrder: saved.sortOrder } : program;
+    setDraft({ ...selected, highlights: [...selected.highlights] });
     setGallery(program.id ? [...(galleryByProgram[program.id] ?? [])] : []);
     setRemovedGalleryIds([]);
     setErrors({});
@@ -372,6 +397,30 @@ export default function AdminProgramsPage() {
     setSaved(false);
     setDirty(false);
     selectTab("content");
+    setSelectedSection(null);
+    setPageView("detail");
+  }
+
+  function showDirectory() {
+    if (dirty && !window.confirm("Discard unsaved program changes?")) return;
+    if (dirty) discardDraftChanges();
+    setSelectedSection(null);
+    setPageView("directory");
+  }
+
+  function showManage() {
+    if (dirty && !window.confirm("Discard unsaved program changes?")) return;
+    if (dirty) discardDraftChanges();
+    setSelectedSection(null);
+    setPageView("manage");
+  }
+
+  function selectCanvasSection(section: string) {
+    setSelectedSection(section);
+    if (section === "Registration band") selectTab("registration");
+    else if (section === "Program hero" || section === "Program details" || section === "Program focus") selectTab("content");
+    else if (section === "Page heading") selectPageCopySection("pageHeader");
+    else if (section === "Closing band") selectPageCopySection("closingBand");
   }
 
   function startCreate() {
@@ -384,6 +433,8 @@ export default function AdminProgramsPage() {
     setSaved(false);
     setDirty(false);
     selectTab("content");
+    setSelectedSection("Program hero");
+    setPageView("detail");
   }
 
   /**
@@ -563,36 +614,6 @@ export default function AdminProgramsPage() {
     markDirty();
   }
 
-  /** Persists the gallery for a saved program: deletes, updates, inserts. */
-  async function saveGallery(programId: string) {
-    const client = createClient();
-    for (const removedId of removedGalleryIds) {
-      const { error: deleteError } = await client
-        .from("program_media")
-        .delete()
-        .eq("id", removedId);
-      if (deleteError) throw new Error(deleteError.message);
-    }
-    const saved: ProgramMediaDraft[] = [];
-    for (const [index, item] of gallery.entries()) {
-      const payload = buildProgramMediaMutationPayload(
-        { ...item, sortOrder: index },
-        programId,
-      );
-      const mutation = item.id
-        ? client.from("program_media").update(payload).eq("id", item.id)
-        : client.from("program_media").insert(payload);
-      const { data, error: mediaError } = await mutation.select("*").single();
-      if (mediaError || !data) {
-        throw new Error(mediaError?.message ?? "Unable to save program media");
-      }
-      saved.push(programMediaToDraft(data as DBProgramMedia));
-    }
-    setGallery(saved);
-    setRemovedGalleryIds([]);
-    setGalleryByProgram((current) => ({ ...current, [programId]: saved }));
-  }
-
   async function saveProgram() {
     if (!draft) return;
     // A slug is derived once, at creation, and never again: it is the public
@@ -623,22 +644,51 @@ export default function AdminProgramsPage() {
     setSaving(true);
     setSaved(false);
     setError(null);
+    const operationId = crypto.randomUUID();
+    const baseline = programs.find((program) => program.id === pending.id);
+    const baselineGallery = pending.id ? (galleryByProgram[pending.id] ?? []) : [];
+    const request = {
+      operationId,
+      programId: pending.id,
+      expected: {
+        programUpdatedAt: baseline?.updatedAt ?? null,
+        gallery: baselineGallery.map((item) => ({ id: item.id, updatedAt: item.updatedAt })),
+      },
+      program: buildProgramMutationPayload(pending),
+      gallery: gallery.map((item, index) => ({ id: item.id, mediaAssetId: item.mediaAssetId, alt: item.alt.trim(), sortOrder: index })),
+    };
     try {
-      const client = createClient();
-      const payload = buildProgramMutationPayload(pending);
-      const mutation = pending.id
-        ? client.from("programs").update(payload).eq("id", pending.id)
-        : client.from("programs").insert(payload);
-      const { data, error: saveError } = await mutation.select("*").single();
-      if (saveError || !data) {
-        throw new Error(saveError?.message ?? "Unable to save program");
+      let snapshot: { program?: DBProgram; gallery?: DBProgramMedia[]; operation?: { status: string; receipt?: { program: DBProgram; gallery: DBProgramMedia[] } } } | null = null;
+      let failureMessage = "Unable to save program";
+      try {
+        const response = await fetch("/api/admin/programs-page", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
+        const body = await response.json();
+        if (response.ok) snapshot = body;
+        else {
+          failureMessage = body?.error?.message ?? failureMessage;
+          if (response.status !== 500) throw new Error(failureMessage);
+        }
+      } catch (transportError) {
+        if (transportError instanceof Error && transportError.message !== "Failed to fetch" && transportError.message !== "Unable to save program") failureMessage = transportError.message;
+        else failureMessage = "The save response was interrupted. Checking whether it completed…";
       }
-      const savedDraft = programToDraft(data as DBProgram);
+      if (!snapshot) {
+        const receiptResponse = await fetch(`/api/admin/programs-page?operationId=${encodeURIComponent(operationId)}${pending.id ? `&programId=${encodeURIComponent(pending.id)}` : ""}`);
+        if (receiptResponse.ok) {
+          const receipt = await receiptResponse.json();
+          if (receipt.operation?.status === "committed") snapshot = receipt.operation.receipt;
+        }
+      }
+      if (!snapshot?.program || !Array.isArray(snapshot.gallery)) throw new Error(failureMessage);
+      const savedDraft = programToDraft(snapshot.program);
       // The mutation response is not media-hydrated the way a select is, so the
       // preview URLs already resolved for this draft are carried over.
       savedDraft.heroMediaPreviewUrl = pending.heroMediaPreviewUrl;
       savedDraft.detailMediaPreviewUrl = pending.detailMediaPreviewUrl;
-      if (savedDraft.id) await saveGallery(savedDraft.id);
+      const savedGallery = snapshot.gallery.map((row, index) => ({ ...programMediaToDraft(row), url: gallery[index]?.url ?? row.url }));
+      setGallery(savedGallery);
+      setRemovedGalleryIds([]);
+      if (savedDraft.id) setGalleryByProgram((current) => ({ ...current, [savedDraft.id!]: savedGallery }));
       setPrograms((current) => {
         const exists = current.some((program) => program.id === savedDraft.id);
         const next = exists
@@ -647,6 +697,12 @@ export default function AdminProgramsPage() {
             )
           : [...current, savedDraft];
         return next.sort((left, right) => left.sortOrder - right.sortOrder);
+      });
+      setSavedManagement((current) => {
+        const entry = { id: savedDraft.id, updatedAt: savedDraft.updatedAt, sortOrder: savedDraft.sortOrder, status: savedDraft.status };
+        return current.some((item) => item.id === savedDraft.id)
+          ? current.map((item) => item.id === savedDraft.id ? entry : item)
+          : [...current, entry];
       });
       setDraft({ ...savedDraft, highlights: [...savedDraft.highlights] });
       setDirty(false);
@@ -734,13 +790,23 @@ export default function AdminProgramsPage() {
   // its unsaved changes applied. The sibling row underneath it is built from
   // the saved list minus this program, matching what
   // app/_clubs/[slug]/programs/[programSlug]/page.tsx passes.
-  const previewProgram = programDraftToContent(
+  const previewProgramBase = programDraftToContent(
     draft ?? emptyProgramDraft(0),
     gallery,
   );
+  const linkedForm = draft?.registrationFormId
+    ? openRegistrationForms[draft.registrationFormId]
+    : null;
+  const previewProgram = {
+    ...previewProgramBase,
+    nativeRegistration: linkedForm
+      ? { form: linkedForm, label: draft?.externalCtaLabel.trim() || "Register now" }
+      : null,
+  };
   const previewOtherPrograms = programs
-    .filter((program) => program.id && program.id !== draft?.id)
+    .filter((program) => program.id && program.status === "active" && program.id !== draft?.id)
     .map((program) => programDraftToContent(program));
+  const directoryPrograms = programs.filter((program) => program.status === "active").map((program) => programDraftToContent(program));
 
   function pageCopyFieldError(field: keyof ProgramsPageDraft) {
     const message = pageCopyErrors[field];
@@ -751,66 +817,69 @@ export default function AdminProgramsPage() {
     ) : null;
   }
 
-  /**
-   * Writes a full reordered program list's `sort_order` immediately — no
-   * Save-button gating. This is the same "write immediately" contract the
-   * old Up/Down-button `reorderProgram` used (every program's `sort_order`
-   * in `next` is written, not just the moved pair), now driven by a drag
-   * handle's full new id order instead of a single-step swap. See
-   * components/admin/useSortableList.ts for the drag wrapper this feeds.
-   */
-  async function persistProgramOrder(next: ProgramDraft[]) {
-    // In-flight guard: the per-program writes below are not transactional,
-    // so a second drag firing before the first finishes would interleave
-    // its updates with the first drag's and could leave the table with a
-    // mixed order (duplicate sort_order values). The ref (not just state)
-    // makes the guard immune to a not-yet-rendered state update; the
-    // reorderSaving state additionally disables the drag sensors below.
-    if (reorderInFlightRef.current) return;
-    reorderInFlightRef.current = true;
-    setReorderSaving(true);
+  function persistProgramOrder(next: ProgramDraft[]) {
     setPrograms(next);
-    setSaved(false);
-    setError(null);
+    setManagementSaved(false);
+    setManagementError(null);
+  }
+
+  function toggleProgramVisibility(programId: string) {
+    setPrograms((current) => current.map((program) => program.id === programId
+      ? { ...program, status: program.status === "active" ? "hidden" : "active" }
+      : program));
+    setManagementSaved(false);
+    setManagementError(null);
+  }
+
+  async function saveManagement() {
+    if (!managementDirty || managementSaving) return;
+    setManagementSaving(true);
+    setManagementSaved(false);
+    setManagementError(null);
+    const operationId = crypto.randomUUID();
+    const request = {
+      operationId,
+      expected: savedManagement.map((item) => ({ id: item.id, updatedAt: item.updatedAt })),
+      programs: programs.map((item) => ({ id: item.id, sortOrder: item.sortOrder, status: item.status })),
+    };
     try {
-      const client = createClient();
-      await Promise.all(
-        next
-          .filter(
-            (program): program is ProgramDraft & { id: string } =>
-              typeof program.id === "string",
-          )
-          .map(async (program) => {
-            const { error: reorderError } = await client
-              .from("programs")
-              .update({ sort_order: program.sortOrder })
-              .eq("id", program.id);
-            if (reorderError) throw new Error(reorderError.message);
-          }),
-      );
-      setDraft((current) => {
-        if (!current?.id) return current;
-        const reordered = next.find((program) => program.id === current.id);
-        return reordered ? { ...current, sortOrder: reordered.sortOrder } : current;
-      });
-      setSaved(true);
-    } catch (reorderError) {
-      if (dirty) {
-        // loadPrograms() rebuilds draft/gallery/page-copy state from the
-        // database, which would silently discard the admin's unsaved editor
-        // changes. When a reorder fails while edits are open, keep the local
-        // state (the list order shown may not match what was persisted) and
-        // tell the admin instead of destroying their work.
-        setError(
-          `${errorMessage(reorderError, "Unable to reorder programs")} The shown order may not be saved — your unsaved program edits were kept; save them, then reload to see the saved order.`,
-        );
-      } else {
-        setError(errorMessage(reorderError, "Unable to reorder programs"));
-        await loadPrograms(draft?.id);
+      let snapshot: { programs?: DBProgram[]; operation?: { status: string; receipt?: { programs: DBProgram[] } } } | null = null;
+      let message = "Unable to save program order and visibility";
+      try {
+        const response = await fetch("/api/admin/programs-directory", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
+        const body = await response.json();
+        if (response.ok) snapshot = body;
+        else {
+          message = body?.error?.message ?? message;
+          if (response.status !== 500) throw new Error(message);
+        }
+      } catch (transportError) {
+        if (transportError instanceof Error && transportError.message !== "Failed to fetch") message = transportError.message;
       }
+      if (!snapshot) {
+        const receiptResponse = await fetch(`/api/admin/programs-directory?operationId=${encodeURIComponent(operationId)}`);
+        if (receiptResponse.ok) {
+          const receipt = await receiptResponse.json();
+          if (receipt.operation?.status === "committed") snapshot = receipt.operation.receipt;
+        }
+      }
+      if (!Array.isArray(snapshot?.programs)) throw new Error(message);
+      const rows = new Map(snapshot.programs.map((row) => [row.id, row]));
+      const next = programs.map((program) => {
+        const row = program.id ? rows.get(program.id) : undefined;
+        return row ? { ...program, status: row.status === "hidden" ? "hidden" as const : "active" as const, sortOrder: row.sort_order, updatedAt: row.updated_at } : program;
+      }).sort((left, right) => left.sortOrder - right.sortOrder);
+      setPrograms(next);
+      setSavedManagement(next.map(({ id, updatedAt, sortOrder, status }) => ({ id, updatedAt, sortOrder, status })));
+      setDraft((current) => {
+        const row = current?.id ? rows.get(current.id) : undefined;
+        return row && current ? { ...current, status: row.status === "hidden" ? "hidden" : "active", sortOrder: row.sort_order, updatedAt: row.updated_at } : current;
+      });
+      setManagementSaved(true);
+    } catch (saveError) {
+      setManagementError(errorMessage(saveError, "Unable to save program order and visibility"));
     } finally {
-      reorderInFlightRef.current = false;
-      setReorderSaving(false);
+      setManagementSaving(false);
     }
   }
 
@@ -824,7 +893,7 @@ export default function AdminProgramsPage() {
     // Guards against an id set that doesn't match the full list (should not
     // happen since drag is disabled while filtered — see canReorderPrograms).
     if (next.length !== programs.length) return;
-    void persistProgramOrder(next);
+    persistProgramOrder(next);
   }
 
   const trimmedProgramFilter = programFilter.trim().toLowerCase();
@@ -844,7 +913,11 @@ export default function AdminProgramsPage() {
   // Dragging also pauses while a previous reorder is still persisting —
   // kept separate from canReorderPrograms so the "clear the filter" hint
   // below doesn't flash during the brief in-flight window.
-  const programDragEnabled = canReorderPrograms && !reorderSaving;
+  const programDragEnabled = canReorderPrograms && !managementSaving;
+  const managementDirty = programs.some((program) => {
+    const saved = savedManagement.find((item) => item.id === program.id);
+    return !saved || saved.sortOrder !== program.sortOrder || saved.status !== program.status;
+  });
   const sortableProgramIds = filteredPrograms
     .map((program) => program.id)
     .filter((id): id is string => typeof id === "string");
@@ -870,7 +943,7 @@ export default function AdminProgramsPage() {
       ? `Save page copy (${changedPageCopySectionLabels.join(", ")})`
       : "Save page copy";
 
-  if (isEditorialTemplate) return null;
+  if (unsupportedTemplate) return null;
 
   return (
     // overflow-x-clip (not overflow-hidden): still clips the SlidingPanel's
@@ -894,6 +967,33 @@ export default function AdminProgramsPage() {
         ) : undefined}
       />
 
+      <div className="program-editor-layout">
+        <nav className="program-editor-navigation" aria-label="Program pages">
+          <div className="program-editor-navigation-desktop">
+            <h2>Program pages</h2>
+            <button type="button" aria-current={pageView === "directory" ? "page" : undefined} onClick={showDirectory}>All programs <span>/programs</span></button>
+            <input type="search" value={programFilter} onChange={(event) => setProgramFilter(event.target.value)} placeholder="Find a program" aria-label="Find a program" />
+            <div className="program-editor-navigation-list">
+              {filteredPrograms.map((program) => <button key={program.id} type="button" aria-current={pageView === "detail" && draft?.id === program.id ? "page" : undefined} onClick={() => selectProgram(program)}>
+                <strong>{program.navLabel || program.displayTitle}</strong><span>{program.status === "hidden" ? "Hidden · " : ""}/programs/{program.slug}</span>
+              </button>)}
+              {filteredPrograms.length === 0 && <p>No programs match your search.</p>}
+            </div>
+            <button type="button" aria-current={pageView === "manage" ? "page" : undefined} onClick={showManage}>Manage programs <span>Order and visibility</span></button>
+          </div>
+          <details className="program-editor-navigation-phone" key={`${pageView}-${draft?.id ?? "none"}`}>
+            <summary><span>{pageView === "directory" ? "All programs" : pageView === "manage" ? "Manage programs" : draft?.navLabel || draft?.displayTitle || "New program"}</span><span>Change page</span></summary>
+            <div className="program-editor-navigation-phone-menu">
+              <input type="search" value={programFilter} onChange={(event) => setProgramFilter(event.target.value)} placeholder="Find a program" aria-label="Find a program" />
+              <button type="button" onClick={showDirectory}>All programs</button>
+              {filteredPrograms.map((program) => <button key={program.id} type="button" onClick={() => selectProgram(program)}>{program.navLabel || program.displayTitle}{program.status === "hidden" ? " · Hidden" : ""}</button>)}
+              {filteredPrograms.length === 0 && <p>No programs match your search.</p>}
+              <button type="button" onClick={showManage}>Manage programs</button>
+            </div>
+          </details>
+        </nav>
+        <div className="program-editor-main">
+
       {error && (
         <div className="mb-5 rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 font-body text-sm text-destructive" role="alert">
           {error}
@@ -902,7 +1002,7 @@ export default function AdminProgramsPage() {
 
       {loading && !hidesPageCopyEditor && <ProgramsCopySkeleton />}
 
-      {!loading && !hidesPageCopyEditor && (
+      {!loading && !hidesPageCopyEditor && pageView === "directory" && (
         <div className="grid min-w-0 gap-6 sm:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)]">
           <AdminSectionRail
             className="self-start"
@@ -1085,8 +1185,8 @@ export default function AdminProgramsPage() {
 
       {loading && <OperationsToolbarSkeleton label="Loading program actions" />}
 
-      {!loading && draft && (
-        <AdminPageToolbar className="sticky top-16 z-10 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {!loading && draft && pageView === "detail" && (
+        <AdminPageToolbar className="program-editor-detail-toolbar z-10 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <span className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
               Editing
@@ -1153,6 +1253,18 @@ export default function AdminProgramsPage() {
 
       {loading ? (
         <ProgramsWorkspaceSkeleton label="Loading programs" />
+      ) : pageView === "directory" ? (
+        <div className="program-editor-canvas-wrap">
+          <div className="program-editor-canvas-heading"><div><h2>All programs</h2><p>Tap a program card to edit that public page.</p></div><span>Page copy managed by Onzio</span></div>
+          {managementDirty && <div className="program-editor-directory-save"><p>Program order or visibility has not been saved yet.</p><button type="button" onClick={() => void saveManagement()} disabled={managementSaving}>{managementSaving ? "Saving…" : "Save page"}</button></div>}
+          {managementError && <p className="mb-3 text-sm text-destructive" role="alert">{managementError}</p>}
+          <ProgramCanvasFrame path="/programs" onSelect={selectCanvasSection} onProgramLink={(slug) => { const found = programs.find((program) => program.slug === slug); if (found) selectProgram(found); }}>
+            <TemplateFontScope templateKey={club.presentationTemplateKey}>
+              <AcademyProgramsPage programs={directoryPrograms} clubName={club.name} content={resolveProgramsPageContent(buildProgramsPageMutationPayload(pageCopy) as Partial<DBProgramsPageContent>, club.name)} />
+            </TemplateFontScope>
+          </ProgramCanvasFrame>
+          {selectedSection && <div className="program-editor-ownership" role="status"><strong>{selectedSection}</strong>{selectedSection === "Program cards" ? <p>Select a program card to open its page. Add, order, and hide programs in Manage programs.</p> : <p>This wording is managed by Onzio for the Academy template.</p>}<button type="button" onClick={() => setSelectedSection(null)}>Done</button></div>}
+        </div>
       ) : programs.length === 0 && !draft ? (
         <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center shadow-sm">
           <h2 className="font-display text-xl font-black uppercase text-foreground">
@@ -1175,18 +1287,16 @@ export default function AdminProgramsPage() {
         </div>
       ) : (
         <div
-          className={`grid grid-cols-1 gap-6 ${
-            draft
-              ? "lg:grid-cols-[19rem_minmax(0,1fr)_22rem]"
-              : "lg:grid-cols-[19rem_minmax(0,1fr)]"
-          }`}
+          className={`grid grid-cols-1 gap-6 ${pageView === "detail" ? "lg:grid-cols-[minmax(0,1fr)_22rem]" : ""}`}
         >
+          {pageView === "manage" && (
           <aside className="min-w-0 self-start space-y-3 lg:sticky lg:top-40">
             <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
               <div className="px-3 pb-3 pt-2">
-                <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                  Program order
-                </p>
+                <h2 className="font-display text-base font-bold text-foreground">Manage programs</h2>
+                <p className="mt-1 font-body text-xs text-muted-foreground">Set the public order and visibility, then save this page.</p>
+                {managementError && <p className="mt-3 text-sm text-destructive" role="alert">{managementError}</p>}
+                {managementSaved && <p className="mt-3 text-sm text-success" role="status">Programs directory saved</p>}
                 <input
                   type="search"
                   value={programFilter}
@@ -1219,6 +1329,7 @@ export default function AdminProgramsPage() {
                           program={program}
                           isSelected={draft?.id === program.id}
                           onSelect={() => selectProgram(program)}
+                          onToggleVisibility={() => { if (program.id) toggleProgramVisibility(program.id); }}
                           dragDisabled={!programDragEnabled}
                         />
                       ))}
@@ -1227,10 +1338,9 @@ export default function AdminProgramsPage() {
                 </DndContext>
               )}
               <p className="mt-3 px-1 font-body text-[0.65rem] leading-4 text-muted-foreground">
-                Order saves as soon as you drop it — it writes{" "}
-                <code className="font-mono text-[0.62rem]">sort_order</code>{" "}
-                straight away.
+                Changes appear on your website after you save.
               </p>
+              <button type="button" onClick={() => void saveManagement()} disabled={!managementDirty || managementSaving} className="mt-4 min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-40">{managementSaving ? "Saving…" : "Save page"}</button>
             </div>
 
             {draft && (
@@ -1269,9 +1379,12 @@ export default function AdminProgramsPage() {
               </div>
             )}
           </aside>
+          )}
 
-          {draft && (
-            <section className="min-w-0 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+          {pageView === "detail" && draft && (
+            <section className="program-editor-inspector min-w-0 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6" data-selected={Boolean(selectedSection)} aria-label="Program page tools">
+              <div className="program-editor-inspector-heading"><h2>{selectedSection ?? "Select a section on the page"}</h2><div><button type="button" onClick={() => void saveProgram()} disabled={!dirty || saving || uploadingRole !== null || uploadingGallery}>Save program</button><button type="button" onClick={() => setSelectedSection(null)}>Done</button></div></div>
+              {selectedSection === "Explore other programs" ? <p className="font-body text-sm leading-6 text-muted-foreground">This section is set by the Academy template. Select another program in the page to open its editor.</p> : selectedSection ? <>
               <ProgramTabs
                 value={activeTab}
                 onChange={selectTab}
@@ -1409,12 +1522,7 @@ export default function AdminProgramsPage() {
                     <NativeSelectOption value="detail_focus">Detail focus</NativeSelectOption>
                   </NativeSelect>
                 </FormField>
-                <FormField label="Visibility">
-                  <NativeSelect value={draft.status} onChange={(event) => updateDraft("status", event.target.value as ProgramDraft["status"])}>
-                    <NativeSelectOption value="active">Active — visible publicly</NativeSelectOption>
-                    <NativeSelectOption value="hidden">Hidden — admin only</NativeSelectOption>
-                  </NativeSelect>
-                </FormField>
+                <div className="rounded-lg border border-border p-3"><span className={ADMIN_LABEL_CLASS}>Visibility</span><p className="mt-2 font-body text-sm text-muted-foreground">{draft.status === "active" ? "Active — visible publicly" : "Hidden — admin only"}. Change visibility in Manage programs.</p></div>
               </div>
               </>
               )}
@@ -1706,11 +1814,12 @@ export default function AdminProgramsPage() {
               </div>
               )}
               </SlidingPanel>
+              </> : <p className="font-body text-sm leading-6 text-muted-foreground">Tap a section in the public page to edit it. Changes appear on your website after Save.</p>}
             </section>
           )}
 
-          {draft && (
-            <aside className="min-w-0 self-start rounded-xl border border-border bg-card p-4 shadow-sm lg:sticky lg:top-40">
+          {pageView === "detail" && draft && (
+            <aside className="program-editor-detail-canvas min-w-0 self-start rounded-xl border border-border bg-card p-4 shadow-sm lg:sticky lg:top-40">
               <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 Program page preview
               </p>
@@ -1720,15 +1829,22 @@ export default function AdminProgramsPage() {
                 exactly where visitors would find it.
               </p>
               <div className="mt-4 overflow-hidden rounded-xl border border-border">
-                <ScaledProgramPreview
-                  program={previewProgram}
-                  otherPrograms={previewOtherPrograms}
-                />
+                <ProgramCanvasFrame path={`/programs/${previewProgram.slug || "new-program"}`} onSelect={selectCanvasSection} onProgramLink={(slug) => { const found = programs.find((program) => program.slug === slug); if (found) selectProgram(found); }}>
+                  <TemplateFontScope templateKey={club.presentationTemplateKey}>
+                    <AcademyProgramDetailPage program={previewProgram} otherPrograms={previewOtherPrograms} editorPreview />
+                  </TemplateFontScope>
+                </ProgramCanvasFrame>
               </div>
             </aside>
           )}
         </div>
       )}
+        {!loading && (pageView === "detail" || managementDirty) && !selectedSection && <div className="program-editor-mobile-save">
+          <span>{pageView === "detail" ? (draft?.displayTitle || "Program page") : "Programs directory"}</span>
+          <button type="button" onClick={() => void (pageView === "detail" ? saveProgram() : saveManagement())} disabled={pageView === "detail" ? !dirty || saving || uploadingRole !== null || uploadingGallery : !managementDirty || managementSaving}>{pageView === "detail" ? (saving ? "Saving…" : "Save program") : (managementSaving ? "Saving…" : "Save page")}</button>
+        </div>}
+        </div>
+      </div>
     </AdminPage>
   );
 }
@@ -1776,11 +1892,13 @@ function ProgramListRow({
   program,
   isSelected,
   onSelect,
+  onToggleVisibility,
   dragDisabled,
 }: {
   program: ProgramDraft;
   isSelected: boolean;
   onSelect: () => void;
+  onToggleVisibility: () => void;
   dragDisabled: boolean;
 }) {
   const { setNodeRef, style, attributes, listeners, isDragging } = useSortableRow(
@@ -1834,6 +1952,7 @@ function ProgramListRow({
           </span>
         </button>
       </div>
+      <button type="button" onClick={onToggleVisibility} className="mt-2 min-h-11 w-full rounded-lg border border-border px-3 py-2 text-left font-body text-xs font-semibold text-foreground hover:bg-accent">{isActive ? "Hide from website" : "Show on website"}</button>
     </div>
   );
 }

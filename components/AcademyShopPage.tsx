@@ -29,27 +29,28 @@ function splitBullet(bullet: string): { label: string; value: string } {
 // dl grid and red order CTA. Deliberately no photo strip, no dark
 // purchase-details cards, and no closing band: the mockup's page ends at
 // this section.
-export default function AcademyShopPage() {
+export default function AcademyShopPage({ editorContent }: { editorContent?: ShopKitContent }) {
   const clubId = useClubId();
   const [content, setContent] = useState<ShopKitContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState(0);
 
   useEffect(() => {
+    if (editorContent) return;
     fetchShopKitVariants("shop", clubId)
       .then((variants) => setContent(variants.home))
       .catch((error) => {
         console.error("AcademyShopPage:", error);
       })
       .finally(() => setLoading(false));
-  }, [clubId]);
+  }, [clubId, editorContent]);
 
-  if (loading) {
+  if (loading && !editorContent) {
     return <AcademyInteriorLoadingSkeleton shop />;
   }
 
-  const section = content?.section;
-  const photos = (content?.photos ?? [])
+  const section = (editorContent ?? content)?.section;
+  const photos = ((editorContent ?? content)?.photos ?? [])
     .filter((photo) => photo.url.trim().length > 0)
     .slice(0, VIEW_LABELS.length);
   if (!section || photos.length === 0) return null;
@@ -61,7 +62,7 @@ export default function AcademyShopPage() {
   return (
     <main className="bg-[#F9FAFD] pt-24 text-[#1E3653] sm:pt-28">
       <section className="mx-auto grid max-w-[1440px] lg:h-[calc(100svh-7rem)] lg:grid-cols-[1.05fr_.95fr]">
-        <div className="relative min-h-[420px] overflow-hidden bg-[#B9E3F6] sm:min-h-[520px] lg:min-h-0">
+        <div data-shop-editor-target="photos" className="relative min-h-[420px] overflow-hidden bg-[#B9E3F6] sm:min-h-[520px] lg:min-h-0">
           {photos.map((photo, index) => (
             <ResilientImage
               key={photo.id}
@@ -108,7 +109,7 @@ export default function AcademyShopPage() {
           ) : null}
         </div>
 
-        <div className="flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 lg:py-8 xl:px-20">
+        <div data-shop-editor-target="copy" className="flex flex-col justify-center px-6 py-12 sm:px-10 lg:px-14 lg:py-8 xl:px-20">
           {section.eyebrow ? (
             <p className="font-nav text-sm font-bold uppercase text-[#FF1616]">
               {section.eyebrow}
@@ -152,6 +153,7 @@ export default function AcademyShopPage() {
           ) : null}
 
           <a
+            data-shop-editor-target="cta"
             href={section.cta_link}
             className="mt-6 inline-flex w-fit bg-[#FF1616] px-8 py-4 font-nav text-sm font-bold uppercase text-white transition-colors hover:bg-[#1E3653]"
           >

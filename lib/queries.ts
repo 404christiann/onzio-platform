@@ -357,7 +357,7 @@ type LinkedRegistrationPriceRecord = RegistrationPriceRecord & {
  * empty-ID fast path means clubs that have not opted in keep their old query
  * shape and rendering behavior.
  */
-async function loadLinkedOpenRegistrationForms(
+export async function loadLinkedOpenRegistrationForms(
   rows: ReadonlyArray<{ registration_form_id?: string | null }>,
   tenantId: string,
   client: typeof supabase,

@@ -25,6 +25,8 @@ const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
 const ABOUT_ADMIN = "app/admin/(protected)/about/page.tsx";
 const ANALYTICS_ADMIN = "app/admin/(protected)/analytics/page.tsx";
 const SHOP_ADMIN = "app/admin/(protected)/shop/page.tsx";
+const SHOP_EDITOR = "components/admin/shop/ShopPageEditor.tsx";
+const SHOP_SAVE = "supabase/migrations/20261002203000_shop_page_atomic_save.sql";
 const SPONSORS_ADMIN = "app/admin/(protected)/sponsors/page.tsx";
 const CONTACT_ADMIN = "app/admin/(protected)/contact/page.tsx";
 const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
@@ -100,8 +102,13 @@ describe("editorial@1 admin surface hides", () => {
   });
 
   describe("route guards: direct URL access redirects editorial@1 to /admin", () => {
+    it("programs rejects every template without the public Programs route", () => {
+      const page = source(PROGRAMS_ADMIN);
+      expect(page).toContain('const unsupportedTemplate = club.presentationTemplateKey !== "academy@1";');
+      expect(page).toContain('if (unsupportedTemplate) router.replace("/admin");');
+      expect(page).toContain("if (unsupportedTemplate) return null;");
+    });
     for (const [name, path] of [
-      ["programs", PROGRAMS_ADMIN],
       ["analytics", ANALYTICS_ADMIN],
     ] as const) {
       it(`${name} page redirects editorial@1 and renders null while doing so`, () => {
@@ -140,27 +147,25 @@ describe("editorial@1 admin surface hides", () => {
       expect(page).toContain(
         "const hasClubLogoPage = !isAcademy && !isEditorial;",
       );
-      // The tab switcher, the blurb, and the write path all read the combined
-      // gate; no stray !isAcademy-only club-logo gate survives.
-      expect(page).toContain("{hasClubLogoPage && (");
-      expect(page).toContain("{hasClubLogoPage\n            ?");
-      expect(page).toContain(
-        'hasClubLogoPage\n          ? supabase.from("club_logo_page_content").upsert([logoPayload])\n          : Promise.resolve({ error: null }),',
-      );
+      // The page switcher is hidden and the logo Save branch remains
+      // unreachable for both templates that lack a public Club Logo page.
+      expect(page).toContain('{hasClubLogoPage && <button type="button"');
+      expect(page).toContain('(next === "logo" && !hasClubLogoPage)');
+      expect(page).toContain('prepared.page === "about"\n        ? await supabase.from("about_page_content").upsert([prepared.content])\n        : await supabase.from("club_logo_page_content").upsert([prepared.content])');
       expect(page).not.toContain("{!isAcademy && (");
-      expect(page).not.toContain("isAcademy\n          ? Promise.resolve");
     });
 
-    it("keeps the closing-CTA pin academy-only — Lions keeps its editable Button Link", () => {
+    it("keeps the closing-CTA pin academy-only — Lions gets a route dropdown", () => {
       const page = source(ABOUT_ADMIN);
       // DCFC-D007 pins academy@1's href in code. editorial@1's seeded
       // closing_cta_href is /club/about, not /schedule, so it must NOT inherit
       // the pin when the club-logo gate widened.
-      expect(page).toContain(
-        "closing_cta_href: isAcademy\n          ? ACADEMY_ABOUT_CLOSING_CTA_HREF\n          : aboutDraft.closing_cta_href.trim() || \"/schedule\",",
-      );
-      expect(page).not.toContain("closing_cta_href: hasClubLogoPage");
+      const save = source("lib/about-editor/save.ts");
+      expect(save).toContain('closing_cta_href: input.academy ? "/schedule" : input.about.closing_cta_href.trim()');
+      expect(save).not.toContain("closing_cta_href: hasClubLogoPage");
       expect(page).toContain("{isAcademy ? (");
+      expect(page).toContain('<NativeSelect\n                          aria-label="Button goes to"');
+      expect(page).not.toContain('label="Button Link"');
     });
 
     it("hides Club Logo for exactly the templates whose registry lists no club-logo route", () => {
@@ -183,15 +188,12 @@ describe("editorial@1 admin surface hides", () => {
       );
     });
 
-    it("previews the editorial About page for editorial@1 instead of the default one", () => {
-      const preview = source("components/admin/ScaledAboutPreview.tsx");
+    it("renders the editorial public About component in the interactive page canvas", () => {
+      const preview = source("components/admin/about/AboutPageCanvas.tsx");
       expect(preview).toContain(
-        'const isEditorialAbout =\n    club.presentationTemplateKey === "editorial@1" && props.variant === "about";',
+        'club.presentationTemplateKey === "editorial@1"',
       );
-      expect(preview).toContain("<EditorialAboutPage content={props.content} />");
-      // editorial.css is scoped under the template wrapper and is otherwise
-      // only imported by EditorialShell, which the admin never mounts — same
-      // wiring ScaledTryoutsPreview/ScaledShopKitPreview needed.
+      expect(preview).toContain("<EditorialAboutPage content={props.about} />");
       expect(preview).toContain('import "@/styles/editorial.css";');
       expect(preview).toContain('data-site-template="editorial"');
       expect(preview).toContain('"--club-primary": theme.primary');
@@ -199,19 +201,17 @@ describe("editorial@1 admin surface hides", () => {
       expect(preview).toContain('"--club-accent": theme.accent');
     });
 
-    it("leaves every other template's About and Club Logo preview untouched", () => {
-      const preview = source("components/admin/ScaledAboutPreview.tsx");
-      // academy@1/DCFC and the rest still fall through to the same two
-      // components as before; the logo variant gained no editorial branch.
+    it("uses the real public components for generic, Clubhouse, and Club Logo", () => {
+      const preview = source("components/admin/about/AboutPageCanvas.tsx");
       expect(preview).toContain(
-        "<AboutClubPageClient content={props.content} animate={false} />",
+        "<AboutClubPageClient content={props.about} animate={false} />",
       );
       expect(preview).toContain(
-        "<ClubLogoPageClient content={props.content} animate={false} />",
+        "<ClubLogoPageClient content={props.logo} animate={false} />",
       );
-      // Import line (twice: binding + module path) plus the single JSX use.
-      expect(count(preview, "ClubLogoPageClient")).toBe(3);
-      expect(preview).not.toMatch(/isEditorial\w*\s*&&[\s\S]{0,80}ClubLogoPageClient/);
+      expect(preview).toContain("<ClubhouseAboutPage content={props.about} sponsors={props.sponsors} />");
+      expect(preview).toContain('onClickCapture={(event) => {');
+      expect(preview).toContain('onKeyDownCapture={(event) => {');
     });
 
     it("edits the same row the public editorial page renders", () => {
@@ -221,7 +221,7 @@ describe("editorial@1 admin surface hides", () => {
       // EditorialAboutPage. A UI-only un-hide would not give the club control.
       const page = source(ABOUT_ADMIN);
       expect(page).toContain("fetchAboutClubContent(clubId)");
-      expect(page).toContain('supabase.from("about_page_content").upsert([aboutPayload])');
+      expect(page).toContain('supabase.from("about_page_content").upsert([prepared.content])');
       const publicRoute = source("app/%5Fclubs/[slug]/club/about/page.tsx");
       expect(publicRoute).toContain("fetchAboutClubContent(club.id, onzio)");
       expect(publicRoute).toContain("<EditorialAboutPage content={content.about} />");
@@ -313,139 +313,94 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
-  describe("shop admin: Photo Row and Purchase tabs hidden for editorial@1", () => {
-    it("filters both tabs out of the tab order used for slide direction", () => {
-      const page = source(SHOP_ADMIN);
-      expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
-      expect(page).toContain(
-        '(tab) => tab !== "photoStrip" && tab !== "purchase",',
-      );
-      expect(page).toContain(
-        "tabOrder.indexOf(next) > tabOrder.indexOf(current)",
-      );
-      expect(page).not.toContain("ADMIN_TAB_ORDER.indexOf(next)");
+  describe("shop admin follows each template's public page", () => {
+    it("mounts the page canvas and limits photo row and purchase tools to the generic Shop route", () => {
+      const route = source(SHOP_ADMIN);
+      const editor = source(SHOP_EDITOR);
+      expect(route).toContain("return <ShopPageEditor />;");
+      expect(editor).toContain('const showExtras = generic && surface === "shop";');
+      expect(editor).toContain('showExtras && <><ToolButton label="Edit photo row"');
+      expect(editor).toContain('showExtras && draft.photoRows[currentVariant].length > 0 && <ShopPhotoStrip');
+      expect(editor).toContain('showExtras && hasShopPurchaseDetails(publicPurchase(draft.purchase)) && <ShopPurchaseDetailsSection');
     });
 
-    it("hides the rendered tabs and the photo-row editor for editorial@1", () => {
-      const page = source(SHOP_ADMIN);
-      expect(page).toContain(
-        '(selectedSurface === "shop" &&\n                      !hidesClubhouseShopSections &&\n                      !isEditorial)',
-      );
-      expect(page).toContain(
-        '{selectedSurface === "shop" &&\n              activeTab !== "purchase" &&\n              !hidesClubhouseShopSections &&\n              !isEditorial && (',
-      );
+    it("enforces the hidden photo row and purchase sections at the database boundary", () => {
+      const editor = source(SHOP_EDITOR);
+      const save = source(SHOP_SAVE);
+      expect(editor).toContain('const generic = !isAcademy && !isClubhouse && !isEditorial;');
+      expect(save).toContain("(page_surface='home' or template in ('academy@1','clubhouse@1','editorial@1')) and (photo_rows is not null or purchase is not null)");
+      expect(source("components/ClubhouseShopPage.tsx")).not.toContain("ShopPhotoStrip");
+      expect(source("components/ClubhouseShopPage.tsx")).not.toContain("ShopPurchaseDetailsSection");
+      expect(source("components/editorial/EditorialShopPage.tsx")).not.toContain("ShopPhotoStrip");
+      expect(source("components/editorial/EditorialShopPage.tsx")).not.toContain("ShopPurchaseDetailsSection");
     });
 
-    it("leaves the kit-variant machinery untouched — Lions keeps home/away/third", () => {
-      const page = source(SHOP_ADMIN);
-      // kitVariants is still gated only by the academy@1 clubhouse-sections
-      // flag; editorial@1 must keep all three variants.
-      expect(page).toContain(
-        'const kitVariants = hidesClubhouseShopSections\n    ? KIT_VARIANTS.filter((variant) => variant.id === "home")\n    : KIT_VARIANTS;',
-      );
-      // And academy@1's own gate is unchanged.
-      expect(page).toContain(`club.${ACADEMY_GATE}`);
-    });
-  });
-
-  describe("shop admin: Home Page surface hidden for clubhouse@1 and editorial@1", () => {
-    it("filters the home surface out of the option list itself, not just the rendered tabs", () => {
-      const page = source(SHOP_ADMIN);
-      // The gate is an explicit two-template denylist. Both templates give
-      // their homepage a bespoke teaser that reads the "shop" surface, so the
-      // "home" rows are unreachable content for each of them.
-      expect(page).toContain(
-        `const hidesHomeShopSurface =\n    club.${CLUBHOUSE_GATE} || isEditorial;`,
-      );
-      expect(page).toContain(
-        'const surfaceOptions = hidesHomeShopSurface\n    ? SURFACE_OPTIONS.filter((surface) => surface.id !== "home")\n    : SURFACE_OPTIONS;',
-      );
-      // The selector renders from the filtered list, so no literal "Home Page"
-      // button can survive the filter.
-      expect(page).toContain("{surfaceOptions.map((surface) => {");
-      expect(page).not.toContain('{ id: "home" as const, label: "Home Page" }');
-      // A one-option switcher is dead UI and is hidden entirely, matching the
-      // kit-variant switcher's `kitVariants.length > 1` pattern.
-      expect(page).toContain("{surfaceOptions.length > 1 && (");
+    it("keeps all three public kit variants for Editorial and Clubhouse while Academy has Home only", () => {
+      const editor = source(SHOP_EDITOR);
+      expect(editor).toContain('const isAcademy = template === "academy@1";');
+      expect(editor).toContain('const isClubhouse = template === "clubhouse@1";');
+      expect(editor).toContain('const isEditorial = template === "editorial@1";');
+      expect(editor).toContain('const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];');
+      expect(source("components/editorial/EditorialShopPage.tsx")).toContain('const VARIANT_ORDER: ShopKitVariant[] = ["home", "away", "third"];');
+      expect(source("components/ClubhouseShopPage.tsx")).toContain('(["home", "third", "away"] as ShopKitVariant[])');
+      expect(source(SHOP_SAVE)).toContain("if (page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away')");
     });
 
-    it("derives selectedSurface so no state can point either template at the hidden surface", () => {
-      const page = source(SHOP_ADMIN);
-      // The raw state still defaults to "home" (academy@1 depends on that), but
-      // the value every downstream branch reads is derived from the filtered
-      // option list, so both hidden templates resolve to "shop" on mount and
-      // forever — the derivation is gate-agnostic, so widening the gate to
-      // clubhouse@1 needed no change here.
-      expect(page).toContain(
-        'const [surfaceChoice, setSelectedSurface] = useState<ShopKitSurface>("home");',
-      );
-      expect(page).toContain(
-        "const selectedSurface: ShopKitSurface = surfaceOptions.some(\n    (surface) => surface.id === surfaceChoice,\n  )\n    ? surfaceChoice\n    : (surfaceOptions[0]?.id ?? \"shop\");",
-      );
-      // No raw state escapes into the surface-dependent logic.
-      expect(count(page, "surfaceChoice")).toBe(3);
+    it("offers no independent Homepage shop page for Clubhouse and Editorial", () => {
+      const editor = source(SHOP_EDITOR);
+      expect(editor).toContain('const sharedWithHomepage = isClubhouse || isEditorial;');
+      expect(editor).toContain('const hasHomeFeature = !sharedWithHomepage;');
+      expect(editor).toContain('{hasHomeFeature && <button type="button" aria-current={surface === "home" ? "page" : undefined}');
+      expect(editor).toContain('Kit changes on this Shop page also update the homepage store teaser.');
+      expect(source(SHOP_SAVE)).toContain("if page_surface='home' and template in ('clubhouse@1','editorial@1') then raise exception 'PAGE_UNAVAILABLE'");
     });
 
-    it("leaves academy@1's Home Page surface completely intact", () => {
-      const page = source(SHOP_ADMIN);
-      // Both options remain in the module-level list, and academy@1 appears
-      // nowhere in the surface gate — it keeps the tab and its "home" default.
-      expect(page).toContain(
-        'const SURFACE_OPTIONS: Array<{ id: ShopKitSurface; label: string }> = [\n  { id: "home", label: "Home Page" },\n  { id: "shop", label: "Shop Page" },\n];',
-      );
-      // The surface hide must not borrow the clubhouse-sections flag: that is
-      // an academy@1 check, so reusing it would inadvertently strip the tab
-      // from every non-academy template — including cinematic@1, heritage@1
-      // and unpublished clubs, whose homepages do render the "home" surface.
-      expect(page).not.toContain(
-        "const surfaceOptions = hidesClubhouseShopSections",
-      );
-      // The home-surface write path is still reachable for academy@1.
-      expect(page).toContain(
-        "shopKitSectionId(selectedSurface, activeKitVariant)",
-      );
+    it("constrains the selected page to Shop when the homepage uses Shop data", () => {
+      const editor = source(SHOP_EDITOR);
+      expect(editor).toContain('const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>("shop");');
+      expect(editor).toContain('const surface: ShopSurface = hasHomeFeature ? surfaceChoice : "shop";');
+      expect(editor).toContain('const currentVariant: ShopVariant = surface === "home" || !variants.includes(selectedVariant) ? "home" : selectedVariant;');
+      expect(editor).toContain('const [drafts, setDrafts] = useState<Partial<Record<ShopSurface, ShopPageDraft>>>({});');
+      expect(editor).toContain('const dirty = shopDraftDirty(draft);');
     });
 
-    it("hides the surface for exactly the two templates whose homepage reads 'shop'", () => {
-      // The hide is only correct because these two templates render their own
-      // store teaser off the same rows as the /shop page.
-      expect(source("components/ClubhouseHomePage.tsx")).toContain(
-        'fetchShopKitVariants("shop", club.id)',
-      );
-      expect(source("components/editorial/EditorialHomeStore.tsx")).toContain(
-        'fetchShopKitVariants("shop", club.id)',
-      );
-      // ...while academy@1 genuinely reads the "home" surface it edits.
-      expect(source("components/AcademyHomeShopFeature.tsx")).toContain(
-        'fetchShopKitVariants("home", clubId)',
-      );
+    it("keeps Academy and generic homepage Shop features separately editable", () => {
+      const editor = source(SHOP_EDITOR);
+      expect(editor).toContain('const hasHomeFeature = !sharedWithHomepage;');
+      expect(editor).toContain('Homepage shop feature {shopDraftDirty(drafts.home) ? "•" : ""}');
+      expect(editor).toContain('surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} />');
+      expect(editor).toContain('<ShopKitSectionContainer surface={surface}');
+      expect(source("components/AcademyHomeShopFeature.tsx")).toContain('fetchShopKitVariants("home", clubId)');
+      expect(source("app/(public)/shop/page.tsx")).toContain('<ShopKitSectionContainer\n        surface="shop"');
     });
 
-    it("keeps the tab for the templates that fall through to the shared home-surface section", () => {
-      // HomePageClient special-cases editorial@1 and clubhouse@1 and returns
-      // early; every other template (academy@1 aside) falls through to the
-      // shared <ShopKitSection surface="home" /> branch. cinematic@1,
-      // heritage@1 and clubs with no published presentation (null key) all land
-      // there, so their Home Page tab must stay editable — which is why the
-      // gate names two templates instead of excluding all non-academy ones.
+    it("matches the public homepage's shared versus independent Shop data", () => {
+      expect(source("components/ClubhouseHomePage.tsx")).toContain('fetchShopKitVariants("shop", club.id)');
+      expect(source("components/editorial/EditorialHomeStore.tsx")).toContain('fetchShopKitVariants("shop", club.id)');
+      expect(source("components/AcademyHomeShopFeature.tsx")).toContain('fetchShopKitVariants("home", clubId)');
+      expect(source(SHOP_EDITOR)).toContain('const sharedWithHomepage = isClubhouse || isEditorial;');
+    });
+
+    it("keeps the generic homepage's Home kit feature for cinematic, heritage, and unpublished templates", () => {
       const home = source("components/HomePageClient.tsx");
       expect(home).toContain('<ShopKitSection surface="home" fadeImageToWhite />');
-      expect(home).toContain(
-        'if (club.presentationTemplateKey === "clubhouse@1") {',
-      );
-      expect(home).toContain(
-        'if (club.presentationTemplateKey === "editorial@1") {',
-      );
+      expect(home).toContain('if (club.presentationTemplateKey === "clubhouse@1") {');
+      expect(home).toContain('if (club.presentationTemplateKey === "editorial@1") {');
+      expect(source(SHOP_EDITOR)).toContain('const generic = !isAcademy && !isClubhouse && !isEditorial;');
+      expect(source(SHOP_EDITOR)).toContain('const hasHomeFeature = !sharedWithHomepage;');
     });
 
-    it("leaves the editorial@1-only Photo Row and Purchase hides untouched", () => {
-      const page = source(SHOP_ADMIN);
-      // Rose City's ClubhouseShopPage does render both, so those tabs must stay
-      // gated on isEditorial alone and must not pick up the new surface flag.
-      expect(page).toContain(
-        "const tabOrder = isEditorial\n    ? ADMIN_TAB_ORDER.filter(\n        (tab) => tab !== \"photoStrip\" && tab !== \"purchase\",",
-      );
-      expect(page).not.toContain("tabOrder = hidesHomeShopSurface");
+    it("shows only public sections and makes an unavailable Editorial Store read-only", () => {
+      const editor = source(SHOP_EDITOR);
+      const publicRoute = source("app/(public)/shop/page.tsx");
+      expect(publicRoute).toContain('if (!club.storeEnabled) return notFound();');
+      expect(editor).toContain('const storeUnavailable = isEditorial && !club.storeEnabled;');
+      expect(editor).toContain('if (storeUnavailable) {');
+      expect(editor).toContain('This Shop page is not currently visible on your website.');
+      expect(editor).toContain('const showExtras = generic && surface === "shop";');
+      expect(source("components/ClubhouseShopPage.tsx")).toContain('data-shop-editor-target="fixed"');
+      expect(source("components/editorial/EditorialShopPage.tsx")).toContain('data-shop-editor-target="fixed"');
+      expect(editor).toContain('This copy belongs to the website design and is managed by Onzio.');
     });
   });
 
@@ -526,7 +481,7 @@ describe("editorial@1 admin surface hides", () => {
 
   describe("tryouts admin: program association and hero image hidden for editorial@1", () => {
     it("uses the inverted gate consistently — academy@1 evaluates as before", () => {
-      const page = source(TRYOUTS_ADMIN);
+      const page = source("components/admin/tryouts/TryoutsPageEditor.tsx");
       expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
       expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
       // !isAcademy && !isEditorial is false for academy@1 exactly where the
@@ -534,16 +489,19 @@ describe("editorial@1 admin surface hides", () => {
       expect(page).toContain(
         "const showsProgramAndHeroFields = !isAcademy && !isEditorial;",
       );
-      // Both hidden blocks (program association, hero image) use the gate,
-      // and no stray !isAcademy-only render gate remains.
-      expect(count(page, "{showsProgramAndHeroFields && (")).toBe(2);
+      // Program association stays hidden where neither public template
+      // renders it. The Academy event photo now has its own public owner.
+      expect(count(page, "{showsProgramAndHeroFields &&")).toBe(1);
+      expect(page).toContain("const showsHeroImage = isAcademy;");
       expect(page).not.toContain("{!isAcademy && (");
     });
 
     it("keeps the hero upload pipeline intact for the templates that use it", () => {
-      const page = source(TRYOUTS_ADMIN);
-      expect(page).toContain("heroInput");
-      expect(page).toContain("hero_media_asset_id");
+      const page = source("components/admin/tryouts/TryoutsPageEditor.tsx");
+      expect(page).toContain("FileUpload");
+      expect(page).toContain("async function uploadHero");
+      expect(page).toContain("{showsHeroImage && <div>");
+      expect(source("lib/tryout-admin.ts")).toContain("hero_media_asset_id: draft.heroMediaAssetId");
     });
   });
 
@@ -607,7 +565,7 @@ describe("editorial@1 admin surface hides", () => {
         PROGRAMS_ADMIN,
         ABOUT_ADMIN,
         ANALYTICS_ADMIN,
-        SHOP_ADMIN,
+        SHOP_EDITOR,
         SPONSORS_ADMIN,
         CONTACT_ADMIN,
         ROSTER_ADMIN,
@@ -618,7 +576,12 @@ describe("editorial@1 admin surface hides", () => {
         const page = source(path);
         expect(page, path).toContain(path === CONTACT_ADMIN
           ? 'club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1"'
-          : EDITORIAL_GATE);
+          : path === PROGRAMS_ADMIN
+            ? 'presentationTemplateKey !== "academy@1"'
+            : path === SHOP_EDITOR
+              ? 'const isEditorial = template === "editorial@1";'
+              : EDITORIAL_GATE);
+        if (path === SHOP_EDITOR) expect(page).toContain('const template = club.presentationTemplateKey;');
         expect(page, path).not.toMatch(/club\.(id|slug)\s*===\s*["']/);
         expect(page, path).not.toMatch(/clubId\s*===\s*["']/);
       }

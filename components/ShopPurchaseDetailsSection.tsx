@@ -39,7 +39,7 @@ export default function ShopPurchaseDetailsSection({
   }, [animate]);
 
   return (
-    <div style={{ backgroundColor: "var(--color-black)" }}>
+    <div data-shop-editor-target="purchase" style={{ backgroundColor: "var(--color-black)" }}>
       <div
         ref={sectionRef}
         className="mx-auto max-w-7xl px-6 py-20 md:py-28 lg:px-10"

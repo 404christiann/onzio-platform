@@ -66,7 +66,9 @@ function FieldError({ message }: { message?: string }) {
   ) : null;
 }
 
-export default function AdminTryoutsPage() {
+// Retained temporarily as a rollback reference while the page-scoped editor
+// completes integration checks. The route now renders the new editor below.
+function LegacyAdminTryoutsPage() {
   const club = useClubContext();
   // academy@1 and editorial@1 keep this editor to the fields their public
   // pages actually show. Program association is not rendered anywhere on
@@ -932,6 +934,8 @@ export default function AdminTryoutsPage() {
     </AdminPage>
   );
 }
+
+export { default } from "@/components/admin/tryouts/TryoutsPageEditor";
 
 // Matches the "GENERAL TEMPLATES ONLY" pill the mockup shows on the
 // Program association label and the Hero image card header for templates

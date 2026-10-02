@@ -37,11 +37,16 @@ export default function AcademyTryoutsPage({
   clubName = "the club",
   contactEmail = "",
   content,
+  editor,
 }: {
   tryouts: TryoutContent[];
   clubName?: string;
   contactEmail?: string;
   content?: TryoutsPageContent;
+  editor?: {
+    selected: string | null;
+    onSelect: (target: string) => void;
+  };
 }) {
   const copy = content ?? resolveTryoutsPageContent(null);
   const hero = tryouts.find((item) => item.heroMediaUrl)?.heroMediaUrl ?? "";
@@ -70,11 +75,13 @@ export default function AcademyTryoutsPage({
           </>
         ) : null}
         <div className="mx-auto max-w-7xl">
-          <h1 className="max-w-4xl font-display text-[clamp(3.4rem,8vw,7rem)] font-black uppercase italic leading-[.9]">
+          <h1 className="relative max-w-4xl font-display text-[clamp(3.4rem,8vw,7rem)] font-black uppercase italic leading-[.9]">
             <span className="text-[#B9E3F6]">Join {clubName}</span>
+            {editor && <EditorTarget label="Page heading — Onzio managed" target="heading" editor={editor} />}
           </h1>
-          <p className="mt-8 max-w-2xl font-body text-base leading-8 text-white/75 md:text-lg">
+          <p className="relative mt-8 max-w-2xl font-body text-base leading-8 text-white/75 md:text-lg">
             {hasTryouts ? copy.introWithTryouts : copy.introNoTryouts}
+            {editor && <EditorTarget label="Edit page introduction" target="intro" editor={editor} />}
           </p>
           {!hasTryouts && email ? (
             <>
@@ -126,8 +133,9 @@ export default function AcademyTryoutsPage({
             {tryouts.map((tryout) => (
               <article
                 key={tryout.id}
-                className="overflow-hidden border border-[#1E3653]/15 bg-[#F9FAFD]"
+                className="relative overflow-hidden border border-[#1E3653]/15 bg-[#F9FAFD]"
               >
+                {editor && <EditorTarget label={`Edit ${tryout.headline || "tryout event"}`} target={`event:${tryout.id}`} editor={editor} />}
                 <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
                   {tryout.heroMediaUrl ? (
                     <div className="relative min-h-64 bg-[#1E3653] lg:min-h-full">
@@ -220,4 +228,14 @@ export default function AcademyTryoutsPage({
       )}
     </div>
   );
+}
+
+function EditorTarget({ label, target, editor }: {
+  label: string;
+  target: string;
+  editor: { selected: string | null; onSelect: (target: string) => void };
+}) {
+  return <button type="button" aria-label={label} aria-pressed={editor.selected === target}
+    onClick={() => editor.onSelect(target)}
+    className={`absolute inset-0 z-10 cursor-pointer border-2 bg-transparent transition-colors hover:border-white/75 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-white ${editor.selected === target ? "border-white" : "border-transparent"}`} />;
 }

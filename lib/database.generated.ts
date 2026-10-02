@@ -2951,6 +2951,26 @@ export type Database = {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
+      load_program_directory: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
+      load_program_page: {
+        Args: {
+          p_club_id: string
+          p_operation_id?: string
+          p_program_id?: string
+        }
+        Returns: Json
+      }
+      load_shop_page: {
+        Args: { p_club_id: string; p_operation_id?: string; p_surface: string }
+        Returns: Json
+      }
+      load_tryouts_page: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       mark_free_registration_paid: {
         Args: { p_club_id: string; p_registration_id: string }
         Returns: undefined
@@ -2997,6 +3017,22 @@ export type Database = {
         Returns: Json
       }
       save_homepage: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_program_directory: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_program_page: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_shop_page: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_tryouts_page: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

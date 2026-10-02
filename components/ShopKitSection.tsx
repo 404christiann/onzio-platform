@@ -104,6 +104,7 @@ export default function ShopKitSection({
     >
       <div className="flex flex-col md:flex-row">
         <div
+          data-shop-editor-target="photos"
           ref={imageRef}
           className="relative w-full md:w-1/2"
           style={{ opacity: animate && !editing ? 0 : 1 }}
@@ -130,6 +131,7 @@ export default function ShopKitSection({
         </div>
 
         <div
+          data-shop-editor-target="copy"
           ref={textRef}
           className="flex w-full flex-col justify-center px-6 py-12 sm:px-10 md:w-1/2 md:px-14 md:py-20 lg:px-20"
           style={{ opacity: animate && !editing ? 0 : 1 }}
@@ -204,6 +206,7 @@ export default function ShopKitSection({
 
           {ctaHref ? (
             <Link
+              data-shop-editor-target="cta"
               href={ctaHref}
               className="font-display flex items-center justify-center gap-3 px-10 py-4 text-sm font-bold uppercase tracking-widest transition-all duration-200 md:inline-flex md:w-auto"
               style={{ backgroundColor: "var(--color-red)", color: "#fff" }}
@@ -218,6 +221,7 @@ export default function ShopKitSection({
             </Link>
           ) : (
             <a
+              data-shop-editor-target="cta"
               href={section.cta_link}
               target="_blank"
               rel="noopener noreferrer"

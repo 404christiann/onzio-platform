@@ -152,6 +152,16 @@ describe("strict admin route manifest", () => {
     expect(navigationIds(context)).toEqual(editorialIds);
   });
 
+  it("shows public page editors only where their tenant public routes render", () => {
+    expect(visibleIds(OWNER_ACCESS)).toEqual(expect.arrayContaining(["programs", "tryouts"]));
+    expect(visibleIds({ ...OWNER_ACCESS, presentationTemplateKey: "editorial@1" })).toContain("tryouts");
+    for (const template of ["cinematic@1", "heritage@1", "clubhouse@1", null, "future-template@1"] as const) {
+      const ids = visibleIds({ ...OWNER_ACCESS, presentationTemplateKey: template });
+      expect(ids).not.toContain("programs");
+      expect(ids).not.toContain("tryouts");
+    }
+  });
+
   it.each([
     ["owner", "academy@1"],
     ["admin", "academy@1"],

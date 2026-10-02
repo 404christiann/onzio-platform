@@ -372,23 +372,21 @@ describe("DCFC-301 protected Programs admin surface", () => {
     expect(pageSource).toContain("selectTab(PROGRAM_FIELD_TABS[firstField])");
   });
 
-  it("renders a full-page live preview from the unsaved draft", () => {
-    expect(pageSource).toContain("ScaledProgramPreview");
-    expect(pageSource).toContain("program={previewProgram}");
-    expect(pageSource).toContain("otherPrograms={previewOtherPrograms}");
+  it("renders a selectable full public page canvas from the unsaved draft", () => {
+    expect(pageSource).toContain("ProgramCanvasFrame");
+    expect(pageSource).toContain("<AcademyProgramsPage programs={directoryPrograms}");
+    expect(pageSource).toContain("<AcademyProgramDetailPage program={previewProgram} otherPrograms={previewOtherPrograms} editorPreview");
     expect(pageSource).toContain("programDraftToContent");
 
     const previewSource = readFileSync(
-      resolve(process.cwd(), "components/admin/ScaledProgramPreview.tsx"),
+      resolve(process.cwd(), "components/admin/ProgramCanvasFrame.tsx"),
       "utf8",
     );
-    // The whole public page, through the shared scaler every other admin
-    // preview uses — not a fragment and not a second copy of the layout.
-    expect(previewSource).toContain("AcademyProgramDetailPage");
-    expect(previewSource).toContain("ScaledPagePreview");
-    // No template gate on the preview itself; the route registry decides where
-    // /programs exists.
-    expect(previewSource).not.toContain("presentationTemplateKey");
+    // The canvas is a true responsive CSS viewport with a React portal. The
+    // public components are mounted directly, so section taps select tools.
+    expect(previewSource).toContain("createPortal");
+    expect(previewSource).toContain("data-program-editor-section");
+    expect(previewSource).toContain("onProgramLink");
   });
 
   it("adds an opt-in native registration mechanism with the old CTA fallback", () => {

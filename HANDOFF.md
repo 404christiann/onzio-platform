@@ -72,6 +72,18 @@ the branch merges cleanly with refreshed `origin/main` at `a413eb6`.
 acceptance and obtain separate approval before production migration, merge or
 deployment.
 
+## Public page editors — Programs, Tryouts, Shop, About, Club Logo — 2026-10-02 (Codex)
+
+Christian approved public-page canvases with tap-to-edit sections, one Save per public page, Programs directory-to-detail navigation, Tryouts staged Delete/Undo with a filled red/white button, separate Shop page choices, and an About button destination dropdown. The implementation is on `codex/public-page-editors`, based on `origin/main` at `a413eb6`, in the managed `public-page-editors` worktree. Three tenant-scoped migrations provide atomic saves and operation receipts for Programs, Tryouts, and Shop. About and Club Logo use a single server-mediated row upsert for the selected page; valid About destinations are checked again at the admin API. Template-fixed copy retains its current owner.
+
+**Files:** `app/admin/(protected)/{programs,tryouts,shop,about}/`, `components/admin/{about,shop,tryouts}/`, `components/admin/ProgramCanvasFrame.tsx`, public page preview components, `app/api/admin/{about-destinations,programs-directory,programs-page,programs-preview-forms,shop,tryouts-page}/`, `lib/{about-editor,program-page-editor,shop-editor,tryouts-page-editor}/`, `supabase/migrations/20261002*.sql`, generated database types, contracts, and database tests. `docs/public-page-editors-plan.md` is the scoped status ledger. `AGENTS.md` was not changed.
+
+**Verification:** isolated local Supabase reset applied all migrations; TypeScript, 1001 contracts, 21 architecture checks, 261 local database tests, 1653 full-suite tests, production build, and diff check passed. The built app was checked in Chromium at 1440px and 390px for all four editors with no page errors or horizontal overflow. Programs navigation and selection, Tryouts Delete/Undo and filled red/white confirmation, Shop page switching, About Save/reload/restore, keyboard entry, Club Logo canvas/selection and Save/reload/restore on a temporary synthetic Bravo fixture, and About's valid-page dropdown were checked. A mobile Club Logo image initially covered the sheet's Save button; its footer stacking was fixed and the complete Save round trip then passed. Bravo was restored to onboarding/preview after the check.
+
+**Remaining acceptance:** run authenticated Clubhouse and Editorial browser parity and real iOS Safari touch checks. About/Club Logo do not yet have the response-loss receipt and concurrent revision behavior of the three new RPC editors; drafts remain on error. No hosted database, push, PR, preview, or production deployment was touched.
+
+**Exact next step:** review `docs/public-page-editors-plan.md` and the branch diff, complete the remaining browser matrix, then seek separate approval before any push or hosted preview.
+
 ## Academy loading PR #9 final review fixes — 2026-09-25 (Codex)
 
 The latest independent review found two public loading regressions: the
