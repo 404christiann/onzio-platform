@@ -19,7 +19,7 @@ try {
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto("http://alpha.localhost:3110/admin/login");
-  await page.getByLabel("Email", { exact: true }).fill(data.user.email);
+  await page.getByLabel("Email address", { exact: true }).fill(data.user.email);
   await page.getByRole("button", { name: "Send sign-in code" }).click();
   await page.getByRole("heading", { name: "Enter your code" }).waitFor();
   const messages = await (await fetch("http://127.0.0.1:54324/api/v1/messages")).json();
@@ -27,7 +27,6 @@ try {
   const code = message?.Subject.match(/^(\d{6})\b/)?.[1];
   if (!code) throw new Error("Local sign-in code not found.");
   await page.getByLabel("Sign-in code", { exact: true }).fill(code);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL("http://alpha.localhost:3110/admin");
   const path = `${directory}/local-auth.json`;
   await context.storageState({ path });

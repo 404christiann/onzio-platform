@@ -77,6 +77,38 @@ Phase 1 verified 229 passing legacy tests. The 2026-09-17 local full suite passe
 1,535 tests. Treat future contract failures as requirements, not harness defects;
 do not skip, weaken, or broadly mock them.
 
+## Contact section-guide editor
+
+The approved Contact editor saves `contact_profile` and `contact_page_content`
+in one tenant-scoped transaction. Focused checks cover editor ownership and
+template dispatch, revision conflicts, rollback, and operation receipts:
+
+```bash
+npx vitest run tests/contracts/diverse-city-contact-admin.test.ts tests/contracts/editorial-contact.test.ts tests/contracts/editorial-admin-surface.test.ts
+set -a && . ./.env.test && set +a && npx vitest run tests/database/contact-page-atomic-save.test.ts
+```
+
+The database test requires the checked-in `20261004224943_contact_page_editor.sql`
+migration on isolated local Supabase. Browser acceptance uses the built local
+app at `http://alpha.localhost:3110/admin/contact` and the synthetic owner
+identity from `scripts/homepage-local-auth.mjs`.
+
+Review regressions cover malformed direct RPC revisions, committed response loss,
+unknown receipts and exact retries, native dialog keyboard containment/dismissal,
+focus restoration, and phone Branding link hit testing above Save:
+
+```bash
+set -a && . ./.env.test && set +a
+node scripts/homepage-local-auth.mjs
+PAGE_EDITOR_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-auth.json npx playwright test --config=playwright.contact-editor.config.ts
+```
+
+Run against a production build with local Supabase credentials and
+`ONZIO_ENVIRONMENT=production` (the synthetic Alpha fixture uses production
+domain records). Do not run concurrently with database/browser suites using
+Alpha. Browser writes are restored in `finally`. Chromium's short-height check
+proves layout; native iOS keyboard/safe-area behavior remains unverified.
+
 ## Homepage editor redesign
 
 Status and acceptance ledger: `docs/homepage-editor-redesign-plan.md`.

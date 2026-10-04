@@ -1,5 +1,49 @@
 # Onzio Platform Handoff
 
+## Contact-only review fixes — 2026-10-04 (Codex)
+
+Christian approved the Contact section-guide editor and requested a subagent to
+fix four independent review findings, followed by a fresh review and a PR.
+The isolated `codex/contact-editor` branch starts from `origin/main` at `a413eb6`;
+earlier Programs, Tryouts, Shop, About and Club Logo changes are excluded.
+The fixes reject malformed/null revisions in the direct RPC, reconcile uncertain
+HTTP/network outcomes using the original operation, and use a native phone
+dialog with Save in normal flow, contained focus and dismissal restoration.
+
+**Files and status:** PPE-06 remains `in_progress` in
+`docs/contact-editor-plan.md` pending native-device acceptance. Contact
+editor/API/canvas/CSS, public section annotations, save contract, local migration,
+generated Contact RPC types, focused tests and docs are in scope. The existing
+local-auth helper now matches the current email label and automatic code submit.
+
+**Verification:** local Supabase was reset from this exact PR tree. TypeScript,
+lint, 982 contracts, 21 architecture checks, 259 database tests (including 14
+Contact SQL regressions), all 1627 suite tests, production build and diff check
+passed. Five browser regressions passed on this isolated build: committed 500
+and network response loss, unavailable receipt, original-ID/payload retry,
+phone focus/inertness/dismissal/restoration and Branding hit testing at 390×844
+and 390×408. Synthetic browser writes were restored; SQL cases rolled back.
+The independent read-only review of the complete Contact diff reported no findings.
+
+**Known check gap:** `db:types:check` detects a pre-existing `string | null`
+override for media-cleanup `p_actor_id` and an EOF difference. Cleanup legitimately
+passes null. New Contact RPC definitions match the local generator; this PR
+preserves the existing override. Native iOS Safari keyboard/safe-area and
+assistive-technology checks remain unverified.
+
+**Local preview:** `http://alpha.localhost:3110/admin/contact`; synthetic owner
+`owner-aal2@alpha.local`; Mailpit `http://127.0.0.1:54324`. The built server uses
+only local fixture keys, with `ONZIO_ENVIRONMENT=production` for seed domain records.
+
+**Release boundary:** hosted staging is retired under Christian's current
+instructions. Automatic Vercel deployments are disabled only for this PR branch
+because the hosted Preview database target could not be verified. No hosted
+database mutation or production deployment occurred.
+
+**Exact next step:** publish the authorized Contact-only draft PR after final
+helper/documentation review. Complete native-device acceptance and obtain
+separate approval before production migration, merge or deployment.
+
 ## Academy loading PR #9 final review fixes — 2026-09-25 (Codex)
 
 The latest independent review found two public loading regressions: the

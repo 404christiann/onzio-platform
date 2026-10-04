@@ -188,6 +188,8 @@ describe("DCFC-302 protected Contact admin surface", () => {
     resolve(process.cwd(), "app/admin/(protected)/contact/page.tsx"),
     "utf8",
   );
+  const routeSource = readFileSync(resolve(process.cwd(), "app/api/admin/contact-editor/route.ts"), "utf8");
+  const editorSource = readFileSync(resolve(process.cwd(), "components/admin/contact/ContactPageCanvas.tsx"), "utf8");
   const shellSource = readFileSync(
     resolve(process.cwd(), "lib/admin-route-manifest.ts"),
     "utf8",
@@ -210,12 +212,13 @@ describe("DCFC-302 protected Contact admin surface", () => {
     expect(shellSource).toContain('feature: "contact"');
   });
 
-  it("uses only server-mediated singleton writes at the two ownership boundaries", () => {
-    expect(pageSource).toContain('.from("contact_profile")');
-    expect(pageSource).toContain('.from("contact_page_content")');
+  it("uses a single authorized atomic save for both Contact ownership boundaries", () => {
     expect(pageSource).toContain("buildContactProfilePayload");
     expect(pageSource).toContain("buildContactPagePayload");
-    expect(pageSource).not.toContain('from("@/lib/supabase-browser")');
+    expect(pageSource).toContain('fetch("/api/admin/contact-editor"');
+    expect(routeSource).toContain('rpc("save_contact_editor"');
+    expect(routeSource).toContain("authorizeMutation");
+    expect(pageSource).not.toContain(".upsert(");
     expect(pageSource).not.toMatch(/club_id\s*:/);
   });
 
@@ -235,10 +238,18 @@ describe("DCFC-302 protected Contact admin surface", () => {
       "Loading contact content",
       "Contact content saved",
       "Unable to load contact content",
-      "Upload failed",
     ]) {
       expect(pageSource).toContain(label);
     }
+  });
+
+  it("selects real Academy and Editorial page sections with phone and desktop preview", () => {
+    expect(pageSource).toContain("Section guide");
+    expect(pageSource).toContain("ContactPageCanvas");
+    expect(editorSource).toContain("AcademyContactPage");
+    expect(editorSource).toContain("EditorialContactPage");
+    expect(editorSource).toContain("previewWidth = phone ? 390 : 1440");
+    expect(editorSource).toContain("onKeyDownCapture");
   });
 
   it("adds an explicitly entitled Contact secure-media surface", () => {

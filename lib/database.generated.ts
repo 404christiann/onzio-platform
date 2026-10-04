@@ -2943,6 +2943,10 @@ export type Database = {
         Returns: undefined
       }
       get_club_runtime_access: { Args: { p_club_id: string }; Returns: string }
+      load_contact_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       load_homepage: {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
@@ -2986,6 +2990,10 @@ export type Database = {
           p_reconciliation_enabled: boolean
           p_suspension_enabled: boolean
         }
+        Returns: Json
+      }
+      save_contact_editor: {
+        Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }
       save_homepage: {
