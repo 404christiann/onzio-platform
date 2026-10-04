@@ -12,7 +12,7 @@ isolated local Supabase and synthetic tenant data.
 
 | Package | Status | Completed work | Files | Verification | Blockers and next step |
 | --- | --- | --- | --- | --- | --- |
-| PPE-06 | in_progress | Approved section guide, real Academy/Editorial public canvas, contextual desktop/phone editing, shared-data ownership, atomic revisioned Save and actor-scoped receipts. Four reviewed defects fixed: strict revision type, uncertain-save reconciliation, reachable phone footer, modal focus. | Contact page/API, canvas/CSS, public annotations, schema/migration/types, tests/config, local auth helper, docs and branch-only deployment setting. | Exact isolated PR tree: TypeScript, lint, 982 contracts, 21 architecture checks, 259 DB tests including 14 Contact SQL regressions, 1627 full-suite tests, production build, diff check and 5 browser cases pass. Independent complete-diff review: no findings. | Native iOS Safari keyboard/safe-area and assistive-technology walkthrough remain unverified. Next: final helper/docs review, publish draft PR, then native-device acceptance before separately approved release. |
+| PPE-06 | in_progress | Approved section guide, real Academy/Editorial public canvas, contextual desktop/phone editing, shared-data ownership, atomic revisioned Save and actor-scoped receipts. Four reviewed defects fixed: strict revision type, uncertain-save reconciliation, reachable phone footer, modal focus. | Contact page/API, canvas/CSS, public annotations, schema/migration/types, tests/config, local auth helper, docs and branch-only deployment setting. | Exact isolated PR tree: TypeScript, lint, 982 contracts, 21 architecture checks, 259 DB tests including 14 Contact SQL regressions, 1627 full-suite tests, production build, diff check and 5 browser cases pass. Independent complete-diff review: no findings. | Native iOS Safari keyboard/safe-area and assistive-technology walkthrough remain unverified. Next: Christian reviews draft PR #10, then native-device acceptance before separately approved release. |
 
 ## Save contract
 
@@ -47,3 +47,10 @@ nullable `p_actor_id`, while the generator emits `string`, plus an EOF differenc
 Cleanup legitimately sends null. This PR preserves that override; the two new
 Contact RPC definitions match local generation. Native iOS acceptance remains
 open; Chromium reduced height does not prove software keyboard/safe-area behavior.
+
+## Pull request
+
+Draft [#10](https://github.com/404christiann/onzio-platform/pull/10) targets
+`main` from `codex/contact-editor`. Independent complete-diff and final
+helper/documentation reviews reported no findings. The branch merges cleanly
+with refreshed `origin/main` at `a413eb6`. No production release occurred.

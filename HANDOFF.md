@@ -40,9 +40,13 @@ instructions. Automatic Vercel deployments are disabled only for this PR branch
 because the hosted Preview database target could not be verified. No hosted
 database mutation or production deployment occurred.
 
-**Exact next step:** publish the authorized Contact-only draft PR after final
-helper/documentation review. Complete native-device acceptance and obtain
-separate approval before production migration, merge or deployment.
+**PR:** draft [#10](https://github.com/404christiann/onzio-platform/pull/10),
+`codex/contact-editor` into `main`. Both independent reviews reported no findings;
+the branch merges cleanly with refreshed `origin/main` at `a413eb6`.
+
+**Exact next step:** Christian reviews draft PR #10. Complete native-device
+acceptance and obtain separate approval before production migration, merge or
+deployment.
 
 ## Academy loading PR #9 final review fixes — 2026-09-25 (Codex)
 
