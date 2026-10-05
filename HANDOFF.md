@@ -1,5 +1,15 @@
 # Onzio Platform Handoff
 
+## Remaining public editors release branch prepared — 2026-10-05
+
+Christian authorized review/fixes for Programs, Tryouts, Shop, About and Club Logo, followed by a PR into main. The existing public-page-editors worktree now uses `codex/public-page-editors-release`, based on `origin/main` at `5b07964`. Original branch `codex/public-page-editors` and all of its commits are preserved. Only `31ac6cb` and `964e4dc` were cherry-picked, as `222f0ca` and `9ab48bf`; the older Contact commits were excluded because Contact is already shipped in main.
+
+**Integration:** preserved current main Contact editor/API/canvas, native keyboard fixes, migration `20261005003024`, tests, auth helper and Vercel settings. Editorial surface assertions now cover both main's Contact gate and the imported Programs/Shop gates. Contact release/native history and older remaining-editor evidence both remain in this handoff. The generated cleanup RPC's existing nullable `p_actor_id` override was retained alongside the added Programs/Tryouts/Shop definitions.
+
+**Verification:** TypeScript, all 1002 contract tests and diff check passed. No local database reset, browser/Simulator run, hosted operation, push or PR occurred during this integration. The untracked dependency symlink remains excluded. Prior About/Club Logo receipt/revision and empty-crest authoring gaps, and remaining native acceptance, are still open under PPE-01/PPE-05; integration does not resolve them.
+
+**Exact next step:** parent starts a fresh read-only review of this release branch against main, then coordinates the authorized fixes and local/native acceptance. Complete the remaining gates and another review before creating the user-authorized PR. Hosted staging is retired; all development/database tests use isolated local Supabase and synthetic data.
+
 ## Contact native acceptance and release readiness — 2026-10-04
 
 Christian authorized merging PR #10 after native Simulator testing and a Diverse City FC public regression check. The implementation subagent fixed the two native failures (automatic input zoom and Save hidden by the keyboard), and the fresh independent review reported no findings.

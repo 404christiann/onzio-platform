@@ -80,6 +80,16 @@ time. Do not weaken existing tests to fit the redesign.
 
 ## Status ledger
 
+
+### 2026-10-05 — remaining-editor release integration
+
+- Packages: PPE-01 and PPE-05 remain **in_progress**. Existing implementation evidence for PPE-00 and PPE-02 through PPE-04 is preserved; final release review/fixes and acceptance remain to be completed.
+- Branch: `codex/public-page-editors-release` starts from current main `5b07964`. Cherry-picked only `31ac6cb` and `964e4dc` as `222f0ca` and `9ab48bf`. Original `codex/public-page-editors` and its complete history are preserved. Contact is already released in main and its editor/native fixes/migration/tests were retained unchanged.
+- Integration files: imported remaining-editor implementation/tests/plan; conflict resolution only in `HANDOFF.md` and `tests/contracts/editorial-admin-surface.test.ts`, with main's nullable cleanup `p_actor_id` override retained in generated types. Added current integration documentation. No broad functional fixes yet.
+- Verification: TypeScript, 1002/1002 source/behavior contract tests and diff check passed. A path-specific comparison confirmed no Contact editor/API/canvas/public renderer/contract/migration/browser/database-test, auth-helper or Vercel-setting difference from main.
+- Blockers: inherited About/Club Logo response-loss/concurrent-save receipts and empty-crest authoring gaps; remaining native acceptance and the fresh independent review. No database reset, browser/Simulator, hosted action, push or PR in this integration step.
+- Exact next step: review the complete remaining-editor branch diff against main, coordinate user-authorized fixes, then isolated local/native validation and another review before the requested PR.
+
 ### 2026-10-02 — cross-template browser and iOS follow-up
 
 - Packages: PPE-00 remains **complete**; PPE-01 and PPE-05 remain **in_progress**. PPE-02 through PPE-04 remain **complete**.
