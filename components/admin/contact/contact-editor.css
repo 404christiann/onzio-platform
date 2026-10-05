@@ -60,7 +60,8 @@
   .cep-device-toggle button { padding:.45rem .55rem; font-size:.72rem; }
   .cep-browser { padding:.45rem; }
   .cep-browser-bar { display:none; }
-  .cep-mobile-dialog { position:fixed; inset:0; width:100%; max-width:none; height:100dvh; max-height:none; margin:0; padding:0; border:0; background:transparent; color:hsl(var(--foreground)); overflow:hidden; }
+  .cep-fields input,.cep-fields textarea { font-size:16px; }
+  .cep-mobile-dialog { position:fixed; inset:var(--cep-visible-top,0px) 0 auto; width:100%; max-width:none; height:var(--cep-visible-height,100dvh); max-height:none; margin:0; padding:0; border:0; background:transparent; color:hsl(var(--foreground)); overflow:hidden; }
   .cep-mobile-dialog[open] { display:flex; flex-direction:column; justify-content:flex-end; }
   .cep-mobile-dialog::backdrop { background:#17223a3d; }
   .cep-inspector { position:static; flex:0 1 auto; min-height:0; max-height:75dvh; border-radius:1rem 1rem 0 0; box-shadow:0 -12px 32px #17223a26; display:none; }

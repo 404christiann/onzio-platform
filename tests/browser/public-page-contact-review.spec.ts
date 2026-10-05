@@ -131,3 +131,52 @@ test("Contact phone sheet contains focus, restores its trigger, and keeps Brandi
   await guide.getByRole("button", { name: "Page heading", exact: true }).focus();
   await expect(guide.getByRole("button", { name: "Page heading", exact: true })).toBeFocused();
 });
+
+// This deliberately changes only visualViewport metrics. A reduced Playwright
+// viewport also shrinks layout/dvh, so it would miss the iOS keyboard defect.
+// Native software-keyboard acceptance is still a separate device check.
+test("Contact phone controls fit a shrinking and scrolling visual viewport", async ({ page }) => {
+  await page.goto("/admin/contact");
+  await page.getByRole("navigation", { name: "Contact page sections" })
+    .getByRole("button", { name: "Page heading", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Page heading", exact: true });
+  await expect(dialog).toBeVisible();
+  const layoutHeight = await page.evaluate(() => innerHeight);
+  for (const field of await dialog.locator("input,textarea").all()) {
+    expect(await field.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+  }
+  try {
+    for (const visible of [{ height: 330, top: 0 }, { height: 330, top: 85 }, { height: 460, top: 22 }]) {
+      await page.evaluate(({ height, top }) => {
+        const viewport = window.visualViewport!;
+        Object.defineProperty(viewport, "height", { configurable: true, value: height });
+        Object.defineProperty(viewport, "offsetTop", { configurable: true, value: top });
+        viewport.dispatchEvent(new Event(top ? "scroll" : "resize"));
+      }, visible);
+      expect(await page.evaluate(() => innerHeight)).toBe(layoutHeight);
+      const controls = [dialog.getByRole("button", { name: "Done", exact: true }), dialog.getByRole("button", { name: "Save page", exact: true })];
+      for (const control of controls) {
+        await expect.poll(async () => {
+          const bounds = await control.boundingBox();
+          return Boolean(bounds && bounds.y >= visible.top && bounds.y + bounds.height <= visible.top + visible.height);
+        }).toBe(true);
+        expect(await control.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+        })).toBe(true);
+      }
+      const field = dialog.getByLabel("Introduction", { exact: true });
+      await field.scrollIntoViewIfNeeded();
+      const fieldBounds = await field.boundingBox();
+      const footerBounds = await dialog.locator(".cep-mobile-save").boundingBox();
+      expect(fieldBounds!.y + fieldBounds!.height).toBeLessThanOrEqual(footerBounds!.y);
+    }
+  } finally {
+    await page.evaluate(() => {
+      const viewport = window.visualViewport!;
+      Reflect.deleteProperty(viewport, "height");
+      Reflect.deleteProperty(viewport, "offsetTop");
+      viewport.dispatchEvent(new Event("resize"));
+    });
+  }
+});

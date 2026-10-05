@@ -88,7 +88,7 @@ npx vitest run tests/contracts/diverse-city-contact-admin.test.ts tests/contract
 set -a && . ./.env.test && set +a && npx vitest run tests/database/contact-page-atomic-save.test.ts
 ```
 
-The database test requires the checked-in `20261004224943_contact_page_editor.sql`
+The database test requires the checked-in `20261005003024_contact_page_editor.sql`
 migration on isolated local Supabase. Browser acceptance uses the built local
 app at `http://alpha.localhost:3110/admin/contact` and the synthetic owner
 identity from `scripts/homepage-local-auth.mjs`.

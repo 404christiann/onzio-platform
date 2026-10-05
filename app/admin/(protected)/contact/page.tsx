@@ -116,13 +116,28 @@ function ContactEditor() {
   useEffect(() => {
     const dialog = sheetRef.current;
     if (!narrow || !sheetOpen || !dialog) return;
+    // iOS leaves the layout viewport tall when its keyboard opens. Keep the
+    // modal (and its footer in normal flow) inside the actually visible area.
+    const viewport = window.visualViewport;
+    const updateViewport = () => {
+      if (!viewport || viewport.height <= 0) return;
+      dialog.style.setProperty("--cep-visible-height", `${viewport.height}px`);
+      dialog.style.setProperty("--cep-visible-top", `${Math.max(0, viewport.offsetTop)}px`);
+    };
+    updateViewport();
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport);
     // The native modal makes the rest of the admin shell inert, contains focus,
     // and restores focus to the guide/canvas trigger when it closes.
     dialog.showModal();
     const initialFocus = dialog.querySelector<HTMLElement>("input:not(:disabled), textarea:not(:disabled), a")
       ?? dialog.querySelector<HTMLElement>("button");
     initialFocus?.focus();
-    return () => { if (dialog.open) dialog.close(); };
+    return () => {
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+      if (dialog.open) dialog.close();
+    };
   }, [narrow, sheetOpen]);
   useEffect(() => {
     if (!dirty) return;
