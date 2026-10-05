@@ -1,11 +1,27 @@
 # Public page editors — Programs, Tryouts, Shop, About
 
-Status: **in progress** on `codex/public-page-editors` from `origin/main` at `a413eb6`.
+Status: **release in progress** on `codex/public-page-editors-release` from `origin/main` at `5b07964`.
 Design concepts were reviewed and approved by Christian on 2026-10-02. The
 About closing-button destination was revised to a valid-page dropdown and
 approved. The user-provided current `AGENTS.md` instruction retires hosted
 Supabase staging; use isolated local Supabase and do not infer that the older
 repository copy's staging invariant still applies.
+
+## Final acceptance and release ledger — 2026-10-05
+
+Scope: PPE-00 through PPE-05, Programs, Tryouts, Shop, About and Club Logo. Christian explicitly authorized review/fixes, a PR into main and the release. Contact shipped in PR #10 and its editor/API/public renderer/migration/tests remain unchanged. Original checkout OTP changes and the original editor branch are preserved. Release branch is `codex/public-page-editors-release`, based on main `5b07964`.
+
+**Review and fixes:** independent full-diff review, fixes and fresh follow-up review completed with no remaining findings. Fixed exact ambiguous-save retries, availability changes after a committed receipt, publication lock ordering (281 before page locks), malformed revisions, About/Logo page isolation and durable cleanup, empty Editorial Values/Closing and first crest/color authoring. Rebuilt browser traces identified actual fixed Save-bar interception; a shared measured phone scrollport fixes it without changing iframe CSS viewports. Stable iframe identity restores focus after replacement/redecoration. About tools now have an opaque theme-aware background. Relevant source, routes, migrations, regression tests and this package ledger are updated.
+
+**Passing gates:** TypeScript, lint, production build and diff check; 1044 contract tests, 21 architecture tests, 310 database tests, 1778 full-suite tests. The 51 focused SQL tests include actual independent-session publication locks, committed receipt recovery after page availability changes and purge isolation. Full suite preceded the last UI scrollport/CSS changes; current contracts and the rebuilt browser matrix cover those changes. No assertion was deleted or weakened. Two browser locators now use the exact accessible textbox role; the Shop recovery helper reopens intentionally closed tools.
+
+**Browser evidence:** all 38 distinct cases pass across Academy (29), Cinematic (7), Editorial (3) and Clubhouse (1), including true 390/1440 CSS viewports, original phone selection/focus cases, new actual target geometry, response loss, exact retry, two-admin conflicts, real About persistence, first empty sections and Logo cleanup isolation. Academy evidence is split between 17 successful initial cases and 12 successful corrected-locator recovery cases; the preserved interrupted log is not represented as a single all-green run. Logs: `/private/tmp/onzio-editors-final-{academy-browser,recovery-browser,cinematic-browser,editorial-browser,clubhouse-browser}.log`. Eight local About public comparisons across four templates and two widths match before/after and have no horizontal overflow.
+
+**Native evidence:** authenticated iPhone 17 / iOS 26.5 Safari against loopback 3111 and synthetic local Supabase. About (Editorial), Club Logo (Clubhouse), Programs, Tryouts and Shop all received real keyboard input, saved using reachable controls above the actual software keyboard and persisted after Safari reload/navigation. About was restored through UI; Logo feature was removed and saved through UI. Shop's deliberately empty fixture initially failed the required nonempty bullet validation; adding a bullet through the software keyboard saved successfully and persisted. Program title, a disposable Tryouts event and a generated local normalized Shop photo are isolated fixtures being cleared by the final local reset. Screenshots `/private/tmp/onzio-editors-native-{about,logo,program,tryouts,shop}-keyboard.png` show actual native controls. Native CUA input recovered; the older noWindowsAvailable blocker is superseded. CUA scroll/drag did not reliably synthesize touch scrolling; lower fields were reached through native focus/autoscroll and then edited with the software keyboard. Physical-device touch scrolling and VoiceOver are unverified, not claimed as passes.
+
+**Release preparation:** verified production project `ioalthwsdrlzrubomrow`, READY rollback deployment `dpl_Az73kmJYxZKmoP3nFaL3TEVrSsLt`, completed physical backup `1876532319` and protected fresh schema/data dumps with 55 matching table/COPY sections. Four exact pending editor migrations pass an isolated linked dry-run; unrelated email-branding migration is excluded. Production content counts/fingerprints for 14 tables are unchanged. Diverse City FC baseline includes 13 routes at desktop and phone (26 records), no overflow, and 36 successful image URL checks. Preview auto-deploy is disabled for this PR branch because hosted preview DB targeting is unverified; main auto-deploy remains enabled.
+
+**Status/next step:** PPE-00 through PPE-04 complete with the above evidence; PPE-05 remains in_progress until the authorized PR, production migrations/main deployment and post-release public parity are recorded. No production mutation, push or PR has yet occurred at this entry. Refresh main, simulate the merge, open/attach PR, verify the exact pending migration package and current backup/fingerprints, apply those four migrations without seeds/roles/content writes, merge the checked PR and verify matching READY production plus public parity. Preserve the rollback deployment and backup.
 
 ## Shared contract
 
@@ -19,19 +35,19 @@ repository copy's staging invariant still applies.
   fonts, media, and ordering. Fixed content explains Onzio ownership. Shared
   content links to its existing owner and states where edits also appear.
 - Preserve authorization, tenant RLS, source-backed route/feature availability,
-  media validation, normalized direct URLs, and cleanup safety. No hosted
-  mutations or deployment are part of this branch's local implementation.
+  media validation, normalized direct URLs, and cleanup safety. Christian explicitly authorized the reviewed release into main on 2026-10-05;
+  hosted release changes follow verified backups, exact migrations and public parity.
 
 ## Packages
 
 | ID | Status | Outcome and acceptance evidence required |
 | --- | --- | --- |
 | PPE-00 | complete | Public canvases and section selection; desktop and phone layouts, keyboard entry, page-scoped Save and recovery. Browser checks described below. |
-| PPE-01 | in_progress | About/Logo expected revisions, actor receipts/exact ambiguous-save recovery, recoverable media cleanup, first value/crest/color authoring and shared mobile dialog are implemented. Focused 60/60 and 1012 source contracts pass; parent SQL/browser/native acceptance and fresh review remain. |
+| PPE-01 | complete | Selected-page revisions, actor receipts, exact retry, cleanup, empty sections and crest/color authoring; 310 DB / 1778 full / 38 cross-template browser cases and native About/Logo Save/reload accepted. See final acceptance below. |
 | PPE-02 | complete | Programs directory to detail, searchable desktop list and phone chooser, Manage programs, and atomic page-scoped Save. |
 | PPE-03 | complete | Tryouts intro/event canvas, add/reorder/edit, filled red Delete event, staged Undo, atomic Save, and photo retirement. |
 | PPE-04 | complete | Shop page and separate homepage feature, variant/media controls, page-scoped atomic Save, and disabled-store guard. |
-| PPE-05 | in_progress | Local security, database, full-suite, build, and cross-template Chromium checks pass. Clubhouse iOS touch passed; Editorial iOS touch and keyboard checks remain. |
+| PPE-05 | in_progress | Review clear; 1044 contracts, 21 architecture, 310 DB, 1778 full tests, lint/TypeScript/build and 38 browser cases pass. Native five-editor Save/reload passes; main release and post-deployment public parity remain. |
 
 No package is complete until its behavior, tests, browser evidence, and
 remaining limitations are recorded here. Implement one contract area at a
@@ -61,6 +77,38 @@ time. Do not weaken existing tests to fit the redesign.
 - Evidence: focused About + Editorial source checks **60/60**, source contracts **1012/1012**; actual public query regression protects nested Logo URL hydration and malformed legacy JSON normalization. Three PL/pgSQL CASE comparisons corrected after parent local apply diagnosed syntax. Direct SQL regressions and six real-save browser cases are written; implementation subagent did not run DB/browser/native fixtures.
 - Blockers/limits: parent local SQL migration/type generation/full-suite gates, real-save browser fixtures and native keyboard/focus/Save/Done validation, public preservation and fresh review. Chromium viewport simulation does not prove native keyboard behavior.
 - Exact next step: parent completes those acceptance gates and records evidence before package completion and authorized PR work. No commit or hosted actions by implementation subagent.
+
+### Editorial empty-section selection follow-up — 2026-10-05
+
+- Package: PPE-01 **in_progress** pending parent acceptance.
+- Fixed: About canvas now adds editor-only selectable Values/Closing targets when Editorial omits those empty sections. Public Editorial/Clubhouse/generic About renderer sources remain unchanged. About iframe selection focuses the target; closing tools restore focus to the replacement public section after authoring makes an empty section visible.
+- Files: About canvas/CSS, `tests/browser/public-page-about-save.spec.ts`, handoff/ledger/README.
+- Evidence: TypeScript passed; two browser regressions written for 1440px/390px Editorial empty values and closing, first value creation, destination selection, Save payload and focus restoration. These mock only empty snapshot/Save HTTP outcomes and do not claim persisted/native acceptance.
+- Exact next step: parent rebuilds, runs these Editorial cases separately from Cinematic Logo fixtures, then native/public acceptance and independent review. No DB/hosted/browser/Simulator run or commit by this subagent.
+
+### Removed unsaved Logo item cleanup follow-up — 2026-10-05
+
+- Package: PPE-01 **in_progress** pending final acceptance.
+- Fixed: before removing a crest feature/color draft, queue its patch/icon/color image URLs into the Logo-only cleanup candidates. Saving About preserves those candidates; Logo Save carries them in the durable actor receipt for existing reference-safe retirement.
+- Files: About admin page, upload/remove selected-page browser regression, handoff/ledger/README.
+- Evidence: TypeScript and diff check passed. Browser regression written for actual item upload/removal and About→Logo Save flow with isolated HTTP media/save outcomes; parent must execute it. No actual storage deletion/runtime acceptance claimed here.
+- Exact next step: parent rebuilds and executes the focused browser case with the Cinematic fixture, then final independent review/acceptance. No commit or DB/browser/native/hosted actions by this subagent.
+
+### Shared phone iframe focus/selection follow-up — 2026-10-05
+
+- Package: PPE-00 / PPE-05 **in_progress** for final acceptance.
+- Actual failures: Programs original phone test lost selected hero focus after Escape; Tryouts introduction click did not open tools, blocking both phone cases and recovery field lookup. Failure traces preserved by parent under `/private/tmp/onzio-editors-first-browser-failures`.
+- Fixes/files: stable preview selection markers and current-node restoration after React decoration in `lib/page-editor-focus.ts`, shared `PageEditorInspector`, Program/Tryouts frames, ScaledTryoutsPreview and optional admin-only Academy/Editorial Tryouts target IDs. No public Tryouts content/layout change.
+- Evidence: TypeScript passed; five identity/replacement/duplicate-label/detached-frame unit specifications written, original browser assertions preserved. Per parent coordination, no extra gate/browser run by implementation subagent.
+- Exact next step: parent rebuilds and reruns original Academy phone/recovery and Editorial cases, then final native/public review. Native input is presently blocked by CUA `noWindowsAvailable`; this is not accepted native evidence.
+
+### Phone preview target obstruction — 2026-10-05
+
+- Package: PPE-00 / PPE-05 **in_progress** pending rebuilt acceptance.
+- Verified cause: the second Tryouts failure trace clicked `(195, 785.81)` under the fixed Save strip on 390×844, despite a successful iframe-local hit test. Initial HTTP data had settled; the frame document did not change.
+- Fix/files: shared measured `usePageEditorScrollport.ts`, Tryouts editor wrapper/Save-strip refs, and independent first-selection outer-coordinate browser regression. The persistent Save strip and public preview CSS width/composition are preserved; original phone assertions remain unchanged.
+- Evidence: TypeScript and diff check pass. Parent owns unchanged browser reruns, recovery/native/public gates; no runtime acceptance claimed by implementation subagent. About's analogous integration is coordinated with the backend reviewer.
+- Exact next step: rebuild and rerun both unchanged Tryouts phone cases plus target geometry regression, then complete remaining release acceptance.
 
 ## PPE-01 decisions
 

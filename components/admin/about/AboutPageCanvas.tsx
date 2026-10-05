@@ -48,6 +48,7 @@ function Frame({ children, phone, selected, onSelect, host }: {
   const iframe = useRef<HTMLIFrameElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
+  const previousSelection = useRef<AboutCanvasTarget | null>(null);
   const [availableWidth, setAvailableWidth] = useState(0);
   const previewWidth = phone ? 390 : 1440;
   const previewHeight = phone ? 780 : 850;
@@ -133,9 +134,18 @@ function Frame({ children, phone, selected, onSelect, host }: {
     };
   }, [body, selected]);
 
+  useEffect(() => {
+    const previous = previousSelection.current;
+    previousSelection.current = selected;
+    // An empty authoring target may become a new public section while its
+    // inspector is open. Restore focus to that replacement when tools close.
+    if (previous && selected === null) body?.querySelector<HTMLElement>(`[data-about-editor-section="${previous}"]`)?.focus({ preventScroll: true });
+  }, [body, selected]);
+
   function selectFrom(target: EventTarget) {
     const element = (target as HTMLElement).closest<HTMLElement>("[data-about-editor-section]");
     if (!element) return false;
+    element.focus({ preventScroll: true });
     onSelect(element.dataset.aboutEditorSection as AboutCanvasTarget, Number(element.dataset.aboutEditorIndex ?? "0"));
     return true;
   }
@@ -214,7 +224,23 @@ export default function AboutPageCanvas(props: Props) {
     page = <AboutClubPageClient content={props.about} animate={false} />;
   }
 
+  // Editorial omits unpublished sections from its public composition. Keep
+  // their authoring targets in this editor so an empty page can be completed.
+  const emptyEditorialValues = props.page === "about" && club.presentationTemplateKey === "editorial@1" && props.about.values.length === 0;
+  const emptyEditorialClosing = props.page === "about" && club.presentationTemplateKey === "editorial@1" &&
+    !props.about.closing_text && !(props.about.closing_cta_label && props.about.closing_cta_href);
+
   return <Frame phone={props.phone} selected={props.selected} onSelect={props.onSelect} host={club.primaryDomain}>
-    <TemplateFontScope templateKey={club.presentationTemplateKey}>{page}</TemplateFontScope>
+    <TemplateFontScope templateKey={club.presentationTemplateKey}>
+      {page}
+      {(emptyEditorialValues || emptyEditorialClosing) && <div className="aep-empty-sections" aria-label="Unpublished page sections">
+        {emptyEditorialValues && <section data-about-editor-section="values" className="aep-empty-section">
+          <h2>Add club values</h2><p>Choose this section to add your first value.</p>
+        </section>}
+        {emptyEditorialClosing && <section data-about-editor-section="closing" className="aep-empty-section">
+          <h2>Add a closing invitation</h2><p>Choose this section to set the closing message and button destination.</p>
+        </section>}
+      </div>}
+    </TemplateFontScope>
   </Frame>;
 }

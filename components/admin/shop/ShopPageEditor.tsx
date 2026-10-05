@@ -199,7 +199,7 @@ export default function ShopPageEditor() {
     saveInFlight.current = true;
     setSaving(true); setSaveError(null); setSaved(false); setPendingSaves((current) => ({ ...current, [surface]: request }));
     try {
-      const result = await submitPageSave<ShopSnapshot>(() => fetch("/api/admin/shop", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }), `/api/admin/shop?surface=${surface}&operationId=${request.operationId}`);
+      const result = await submitPageSave<ShopSnapshot>(() => fetch("/api/admin/shop", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(pendingSaves[surface] ? { "X-Editor-Recovery": "1" } : {}) }, body: JSON.stringify(request) }), `/api/admin/shop?surface=${surface}&operationId=${request.operationId}`);
       if (result.kind === "committed") {
         setSnapshots((current) => ({ ...current, [surface]: result.snapshot }));
         setDrafts((current) => ({ ...current, [surface]: draftFromShopSnapshot(result.snapshot) }));

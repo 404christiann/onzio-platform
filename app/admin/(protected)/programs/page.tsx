@@ -679,7 +679,7 @@ export default function AdminProgramsPage() {
       gallery: gallery.map((item, index) => ({ id: item.id, mediaAssetId: item.mediaAssetId, alt: item.alt.trim(), sortOrder: index })),
     };
     try {
-      const result = await submitPageSave<SavedProgramPage>(() => fetch("/api/admin/programs-page", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }), `/api/admin/programs-page?operationId=${encodeURIComponent(request.operationId)}${request.programId ? `&programId=${encodeURIComponent(request.programId)}` : ""}`);
+      const result = await submitPageSave<SavedProgramPage>(() => fetch("/api/admin/programs-page", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(unconfirmedProgram ? { "X-Editor-Recovery": "1" } : {}) }, body: JSON.stringify(request) }), `/api/admin/programs-page?operationId=${encodeURIComponent(request.operationId)}${request.programId ? `&programId=${encodeURIComponent(request.programId)}` : ""}`);
       if (result.kind === "unconfirmed") { setUnconfirmedProgram(request); setError(result.message); return; }
       setUnconfirmedProgram(null);
       if (result.kind === "rejected") {
@@ -858,7 +858,7 @@ export default function AdminProgramsPage() {
       programs: programs.map((item) => ({ id: item.id, sortOrder: item.sortOrder, status: item.status })),
     };
     try {
-      const result = await submitPageSave<{ programs: DBProgram[] }>(() => fetch("/api/admin/programs-directory", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }), `/api/admin/programs-directory?operationId=${encodeURIComponent(request.operationId)}`);
+      const result = await submitPageSave<{ programs: DBProgram[] }>(() => fetch("/api/admin/programs-directory", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(unconfirmedManagement ? { "X-Editor-Recovery": "1" } : {}) }, body: JSON.stringify(request) }), `/api/admin/programs-directory?operationId=${encodeURIComponent(request.operationId)}`);
       if (result.kind === "unconfirmed") { setUnconfirmedManagement(request); setManagementError(result.message); return; }
       setUnconfirmedManagement(null);
       if (result.kind === "rejected") {

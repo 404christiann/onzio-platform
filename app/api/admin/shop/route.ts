@@ -32,7 +32,7 @@ function failure(code: string, status: number) {
 function databaseFailure(error: { code?: string; message?: string }) {
   if (process.env.NODE_ENV !== "production") console.error("Shop page database error", { code: error.code, message: error.message });
   const code = [error.message, error.code].find((value) => value && Object.hasOwn(messages, value)) ?? "SHOP_OPERATION_FAILED";
-  return failure(code, ["CONTENT_CHANGED", "DESIGN_CHANGED", "OPERATION_REUSED"].includes(code) ? 409 : code === "NOT_AUTHORIZED" ? 403 : code === "SHOP_OPERATION_FAILED" ? 500 : 400);
+  return failure(code, ["CONTENT_CHANGED", "DESIGN_CHANGED", "OPERATION_REUSED"].includes(code) ? 409 : code === "NOT_AUTHORIZED" ? 403 : code === "PAGE_UNAVAILABLE" ? 404 : code === "SHOP_OPERATION_FAILED" ? 500 : 400);
 }
 
 async function handle(request: Request, mutation: boolean) {
@@ -75,7 +75,8 @@ async function handle(request: Request, mutation: boolean) {
   try { club = await getClubContext({ hostname: request.headers.get("host") ?? "", userId }); }
   catch { return failure("UNKNOWN_TENANT", 404); }
   if (!club) return failure("UNKNOWN_TENANT", 404);
-  if (club.presentationTemplateKey === "editorial@1" && !club.storeEnabled) return failure("PAGE_UNAVAILABLE", 404);
+  const pageUnavailable = club.presentationTemplateKey === "editorial@1" && !club.storeEnabled
+    || surface === "home" && ["clubhouse@1", "editorial@1"].includes(club.presentationTemplateKey ?? "");
   const memberships = club.role ? [{ userId, clubId: club.id, role: club.role, status: "active" }] : [];
   try {
     if (mutation) await authorizeMutation({ club, userId, memberships, aal: "aal1", feature: "shop", payload: payload! });
@@ -83,6 +84,11 @@ async function handle(request: Request, mutation: boolean) {
   } catch (error) {
     return failure(error instanceof ContractError ? error.code : "NOT_AUTHORIZED", 403);
   }
+
+  // Recovery intent only routes the request to the actor/hash-protected RPC.
+  // It does not authorize a fresh save to an unavailable page.
+  const recovering = request.headers.get("x-editor-recovery") === "1";
+  if (pageUnavailable && (mutation ? !recovering : !operationId)) return failure("PAGE_UNAVAILABLE", 404);
 
   try {
     const onzio = supabase.schema("onzio");

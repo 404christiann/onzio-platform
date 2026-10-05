@@ -157,4 +157,33 @@ describe("Programs public-page transactions", () => {
     expect(await saveDirectory(payload)).toEqual(saved);
     await rejects(() => saveDirectory({ ...payload, operationId: randomUUID() }), "CONTENT_CHANGED");
   });
+
+  it("recovers page and directory receipts after the Programs design disappears while preserving authorization", async () => {
+    const payload = request(await load(), { display_title: "Confirmed page" });
+    const pageReceipt = await save(payload);
+    const before = await directory();
+    const directoryPayload = { operationId: randomUUID(), expected: before.programs.map((row: any) => ({ id: row.id, updatedAt: row.updated_at })),
+      programs: before.programs.map((row: any, index: number) => ({ id: row.id, sortOrder: index, status: row.status })) };
+    const directoryReceipt = await saveDirectory(directoryPayload);
+    await design("clubhouse");
+    expect((await db.query("select onzio.load_program_page($1,$2,$3) as data", [clubId, programId, payload.operationId])).rows[0].data.operation.receipt).toEqual(pageReceipt);
+    expect((await db.query("select onzio.load_program_directory($1,$2) as data", [clubId, directoryPayload.operationId])).rows[0].data.operation.receipt).toEqual(directoryReceipt);
+    expect(await save(payload)).toEqual(pageReceipt);
+    expect(await saveDirectory(directoryPayload)).toEqual(directoryReceipt);
+    await rejects(() => load(), "PAGE_UNAVAILABLE");
+    await rejects(() => directory(), "PAGE_UNAVAILABLE");
+    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    await rejects(() => saveDirectory({ ...directoryPayload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    await rejects(() => save({ ...payload, program: { ...payload.program, body: "Different" } }), "OPERATION_REUSED");
+    await rejects(() => saveDirectory({ ...directoryPayload, programs: directoryPayload.programs.map((item: any, index: number) =>
+      index === 0 ? { ...item, status: item.status === "active" ? "hidden" : "active" } : item) }), "OPERATION_REUSED");
+    await db.query("reset role");
+    await db.query("update onzio.clubs set lifecycle='archived',public_access='suspended' where id=$1", [clubId]);
+    await actor();
+    await rejects(() => db.query("select onzio.load_program_page($1,$2,$3)", [clubId, programId, payload.operationId]), "NOT_AUTHORIZED");
+    await rejects(() => db.query("select onzio.load_program_directory($1,$2)", [clubId, directoryPayload.operationId]), "NOT_AUTHORIZED");
+    await rejects(() => save(payload), "NOT_AUTHORIZED");
+    await rejects(() => saveDirectory(directoryPayload), "NOT_AUTHORIZED");
+  });
+
 });

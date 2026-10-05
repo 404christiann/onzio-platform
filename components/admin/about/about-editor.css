@@ -10,7 +10,7 @@
 .aep-browser-bar { min-height:32px; display:flex; align-items:center; gap:1rem; padding:0 .75rem; border:1px solid hsl(var(--border)); border-bottom:0; border-radius:.5rem .5rem 0 0; background:hsl(var(--card)); color:hsl(var(--muted-foreground)); font-size:.69rem; }
 .aep-frame-viewport { position:relative; width:100%; overflow:hidden; border:1px solid hsl(var(--border)); background:#fff; }
 .aep-frame { position:absolute; top:0; display:block; border:0; background:#fff; }
-.aep-inspector { position:sticky; top:5.5rem; max-height:min(79dvh,900px); display:flex; flex-direction:column; padding:0; overflow:hidden; }
+.aep-inspector { background:hsl(var(--card)); color:hsl(var(--card-foreground)); border:1px solid hsl(var(--border)); border-radius:.75rem; position:sticky; top:5.5rem; max-height:min(79dvh,900px); display:flex; flex-direction:column; padding:0; overflow:hidden; }
 .aep-inspector-head { flex:none; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:1rem; border-bottom:1px solid hsl(var(--border)); }
 .aep-inspector-head h2 { margin:.2rem 0 0; font-size:1.15rem; font-weight:750; }
 .aep-inspector-head button { min-height:44px; border:1px solid hsl(var(--border)); border-radius:.5rem; padding:.5rem .8rem; color:hsl(var(--foreground)); font-size:.8rem; font-weight:700; }
@@ -47,3 +47,9 @@
 .aep-color-choices { display:flex; flex-wrap:wrap; gap:.4rem; }
 .aep-color-choices button[aria-pressed="true"] { border-color:hsl(var(--primary)); color:hsl(var(--primary)); }
 .aep-recovery { flex:none; margin:.5rem 1rem; }
+
+/* These authoring targets live only inside the preview iframe. */
+.aep-empty-sections { display:grid; gap:1rem; padding:1.5rem; background:#f3f3f8; color:#252537; }
+.aep-empty-section { min-height:96px; padding:1.25rem; border:1px dashed #938bd8; border-radius:.65rem; background:#fff; }
+.aep-empty-section h2 { margin:0 0 .45rem; font-size:1rem; font-weight:700; }
+.aep-empty-section p { margin:0; font-size:.9rem; line-height:1.5; }

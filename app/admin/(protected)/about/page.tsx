@@ -36,6 +36,7 @@ import { loadAboutEditor, saveAboutEditor } from "@/lib/about-editor/recovery";
 import { aboutEditorSaveSchema, type AboutEditorSaveRequest, type AboutEditorSnapshot } from "@/lib/about-editor/contract";
 import { newAboutValue, newLogoFeature, newLogoColorCard, removeCollectionItem } from "@/lib/about-editor/collections";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
+import { usePageEditorScrollport } from "@/components/admin/usePageEditorScrollport";
 import { createClient } from "@/lib/admin-client";
 import "@/components/admin/about/about-editor.css";
 
@@ -168,6 +169,7 @@ export default function AdminAboutPage() {
   const [destinationError, setDestinationError] = useState<string | null>(null);
   const [destinationAttempt, setDestinationAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
+  const scrollport = usePageEditorScrollport(767, !loading);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -464,7 +466,8 @@ export default function AdminAboutPage() {
   const isLogoSection = pageChoice === "logo";
 
   return (
-    <AdminPage className="aep-root overflow-x-clip">
+    <div ref={scrollport.workspace} style={{ maxHeight: scrollport.maxHeight }} className="min-w-0 overflow-y-auto overscroll-y-contain md:overflow-visible">
+    <AdminPage className="aep-root overflow-x-clip [&>*]:shrink-0">
       <AdminSaveFeedback saving={saving} saved={saved} />
       <AdminPageHeader
         title="About"
@@ -656,6 +659,9 @@ export default function AdminAboutPage() {
                     setSelectedLogoFeature(logoDraft.features.length); setLogoDraft(current => ({ ...current, features: [...current.features, newLogoFeature()] })); markDirty("features");
                   }}>Add crest feature</button>
                   {logoDraft.features[selectedLogoFeature] && <button type="button" className="aep-collection-button" onClick={() => {
+                    const removed = logoDraft.features[selectedLogoFeature];
+                    queueReplacedUrl(removed.patch_url, "logo");
+                    queueReplacedUrl(removed.icon_url, "logo");
                     setLogoDraft(current => ({ ...current, features: removeCollectionItem(current.features, selectedLogoFeature) })); setSelectedLogoFeature(current => Math.max(0, current - 1)); markDirty("features");
                   }}>Remove crest feature</button>}
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -760,6 +766,7 @@ export default function AdminAboutPage() {
                       setLogoDraft(current => ({ ...current, color_cards: current.color_cards.map((card, index) => index === selectedLogoColor ? { ...card, label: event.target.value } : card) })); markDirty("colors");
                     }} /></Field>
                     <button type="button" className="aep-collection-button" onClick={() => {
+                      queueReplacedUrl(logoDraft.color_cards[selectedLogoColor].image_url, "logo");
                       setLogoDraft(current => ({ ...current, color_cards: removeCollectionItem(current.color_cards, selectedLogoColor) })); setSelectedLogoColor(current => Math.max(0, current - 1)); markDirty("colors");
                     }}>Remove color card</button>
                   <ImageControl
@@ -792,8 +799,9 @@ export default function AdminAboutPage() {
           </PageEditorInspector>
         </div>
       )}
-      {!loading && <div className="aep-mobile-save"><span>{dirty ? "Unsaved changes" : "All changes saved"}</span><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
+      {!loading && <div ref={scrollport.saveBar} className="aep-mobile-save"><span>{dirty ? "Unsaved changes" : "All changes saved"}</span><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
     </AdminPage>
+    </div>
   );
 }
 

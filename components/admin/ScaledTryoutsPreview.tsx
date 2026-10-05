@@ -88,7 +88,7 @@ export default function ScaledTryoutsPreview({
 
   if (isEditorial) {
     return (
-      <TryoutsPreviewFrame phone={phone} host={club.name}>
+      <TryoutsPreviewFrame phone={phone} host={club.name} onSelect={onSelect}>
         <div
           data-site-template="editorial"
           style={
@@ -111,7 +111,7 @@ export default function ScaledTryoutsPreview({
   }
 
   return (
-    <TryoutsPreviewFrame phone={phone} host={club.name}>
+    <TryoutsPreviewFrame phone={phone} host={club.name} onSelect={onSelect}>
       <AcademyTryoutsPage
         tryouts={tryouts}
         clubName={clubName}

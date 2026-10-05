@@ -8,6 +8,7 @@ type Editor = "programs" | "tryouts" | "shop";
 async function reopen(page: Page, editor: Editor) {
   if (editor === "programs") await page.frameLocator(".program-canvas-frame").getByRole("button", { name: "Edit Program hero", exact: true }).click();
   if (editor === "tryouts") await page.frameLocator("iframe").getByRole("button", { name: "Edit page introduction", exact: true }).click();
+  if (editor === "shop") await page.getByRole("button", { name: "Edit kit text", exact: true }).click();
 }
 
 test("Programs directory locks visibility and retries its original request after both transports fail", async ({ page }) => {
@@ -17,6 +18,7 @@ test("Programs directory locks visibility and retries its original request after
   await page.route("**/api/admin/programs-directory**", async (route) => {
     if (route.request().method() !== "POST") return route.abort();
     const request = route.request().postDataJSON(); submitted.push(request);
+    expect(route.request().headers()["x-editor-recovery"]).toBe(submitted.length > 1 ? "1" : undefined);
     if (submitted.length === 1) return route.abort();
     return route.fulfill({ json: { programs: baseline.programs.map((row: { id: string }) => {
       const desired = request.programs.find((item: { id: string }) => item.id === row.id);
@@ -78,7 +80,7 @@ async function prepare(page: Page, editor: Editor) {
     const baseline = await (await page.request.get("/api/admin/tryouts-page")).json();
     await page.goto("/admin/tryouts");
     await page.frameLocator("iframe").getByRole("button", { name: "Edit page introduction", exact: true }).click();
-    return { url: "/api/admin/tryouts-page", baseline, field: page.getByLabel("Intro shown when tryouts are published", { exact: true }), save: "Save page", region: "Review changes from another editor" };
+    return { url: "/api/admin/tryouts-page", baseline, field: page.getByRole("textbox", { name: "Intro shown when tryouts are published", exact: true }), save: "Save page", region: "Review changes from another editor" };
   }
   const baseline = await (await page.request.get("/api/admin/shop?surface=shop")).json();
   // Also exercise a newly authored kit when the synthetic tenant has none.
@@ -109,6 +111,7 @@ for (const editor of ["programs", "tryouts", "shop"] as const) {
         const url = new URL(route.request().url());
         if (route.request().method() === "POST") {
           const request = route.request().postDataJSON(); submitted.push(request);
+          expect(route.request().headers()["x-editor-recovery"]).toBe(submitted.length > 1 ? "1" : undefined);
           receipt = committed(editor, flow.baseline, request);
           if (submitted.length > 1) return route.fulfill({ json: receipt });
           if (failure === "committed-network-loss" || failure === "unavailable-receipt") return route.abort();

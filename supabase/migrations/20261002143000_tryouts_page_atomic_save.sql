@@ -28,6 +28,7 @@ create policy tryouts_page_receipt_insert on onzio_private.tryouts_page_save_rec
 create function onzio_private.serialize_tryouts_page_write() returns trigger
 language plpgsql security invoker set search_path='' as $$
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901282);
   return null;
 end $$;
@@ -69,18 +70,24 @@ create function onzio.load_tryouts_page(p_club_id uuid,p_operation_id uuid defau
 language plpgsql security invoker set search_path='' as $$
 declare result jsonb; receipt jsonb;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901282);
   if not onzio_private.is_club_session_fresh() or not onzio_private.is_club_member(p_club_id)
     or not exists(select 1 from onzio.clubs where id=p_club_id and lifecycle in ('active','onboarding')) then
     raise exception 'NOT_AUTHORIZED' using errcode='42501';
   end if;
-  if coalesce(onzio_private.homepage_design(p_club_id)->>'templateKey','') not in ('academy@1','editorial@1')
-    then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
-  result:=onzio_private.tryouts_page_snapshot(p_club_id);
   if p_operation_id is not null then
     if not onzio_private.can_mutate_feature(p_club_id,'tryouts') then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
     select response into receipt from onzio_private.tryouts_page_save_receipts
       where club_id=p_club_id and actor_id=auth.uid() and operation_id=p_operation_id;
+  end if;
+  -- Current page availability must not hide an actor's already committed save.
+  if receipt is null then
+    if coalesce(onzio_private.homepage_design(p_club_id)->>'templateKey','') not in ('academy@1','editorial@1')
+    then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  end if;
+  result:=onzio_private.tryouts_page_snapshot(p_club_id);
+  if p_operation_id is not null then
     result:=result||jsonb_build_object('operation',case when receipt is null
       then jsonb_build_object('status','not-committed')
       else jsonb_build_object('status','committed','receipt',receipt) end);
@@ -99,10 +106,9 @@ declare
   old_media_ids uuid[]:='{}'; retired_media_ids uuid[]:='{}';
   expected_count integer; actual_count integer;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901282);
   if not onzio_private.can_mutate_feature(p_club_id,'tryouts') then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
-  if coalesce(onzio_private.homepage_design(p_club_id)->>'templateKey','') not in ('academy@1','editorial@1')
-    then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   if jsonb_typeof(p_request) is distinct from 'object'
     or not p_request ?& array['operationId','expectedRevision','page','events','deletedIds']
     or exists(select 1 from jsonb_object_keys(p_request) k where k<>all(array['operationId','expectedRevision','page','events','deletedIds']))
@@ -126,6 +132,8 @@ begin
     if saved_hash<>request_hash then raise exception 'OPERATION_REUSED' using errcode='22023'; end if;
     return receipt;
   end if;
+  if coalesce(onzio_private.homepage_design(p_club_id)->>'templateKey','') not in ('academy@1','editorial@1')
+    then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   current_page:=onzio_private.tryouts_page_snapshot(p_club_id);
   if (current_page->>'revision') is distinct from (p_request->>'expectedRevision') then
     raise exception 'TRYOUTS_CHANGED' using errcode='PT409';

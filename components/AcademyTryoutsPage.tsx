@@ -235,7 +235,7 @@ function EditorTarget({ label, target, editor }: {
   target: string;
   editor: { selected: string | null; onSelect: (target: string) => void };
 }) {
-  return <button type="button" aria-label={label} aria-pressed={editor.selected === target}
+  return <button type="button" data-tryouts-editor-target={target} aria-label={label} aria-pressed={editor.selected === target}
     onClick={() => editor.onSelect(target)}
     className={`absolute inset-0 z-10 cursor-pointer border-2 bg-transparent transition-colors hover:border-white/75 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-white ${editor.selected === target ? "border-white" : "border-transparent"}`} />;
 }

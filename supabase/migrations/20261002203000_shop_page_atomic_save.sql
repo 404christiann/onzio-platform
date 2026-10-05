@@ -30,6 +30,7 @@ create policy shop_page_receipt_insert on onzio_private.shop_page_receipts for i
 create function onzio_private.serialize_shop_page_write() returns trigger
 language plpgsql security invoker set search_path='' as $$
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901283);
   return null;
 end $$;
@@ -106,19 +107,26 @@ create function onzio.load_shop_page(p_club_id uuid,p_surface text,p_operation_i
 language plpgsql security invoker set search_path='' as $$
 declare result jsonb; receipt jsonb;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901283);
-  if p_surface not in ('home','shop') or not onzio_private.is_club_session_fresh() or not onzio_private.is_club_member(p_club_id)
+  if p_surface is null or p_surface not in ('home','shop') or not onzio_private.is_club_session_fresh() or not onzio_private.is_club_member(p_club_id)
     or not exists(select 1 from onzio.clubs where id=p_club_id and lifecycle in ('active','onboarding')) then
     raise exception 'NOT_AUTHORIZED' using errcode='42501';
   end if;
-  if onzio_private.homepage_design(p_club_id)->>'templateKey'='editorial@1'
-    and not coalesce((select store_enabled from onzio.clubs where id=p_club_id),false) then
-    raise exception 'PAGE_UNAVAILABLE' using errcode='22023';
-  end if;
-  result:=onzio_private.shop_page_snapshot(p_club_id,p_surface);
   if p_operation_id is not null then
     if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
     select response into receipt from onzio_private.shop_page_receipts where club_id=p_club_id and actor_id=auth.uid() and surface=p_surface and operation_id=p_operation_id;
+  end if;
+  -- Current page availability must not hide an actor's already committed save.
+  if receipt is null then
+    if onzio_private.homepage_design(p_club_id)->>'templateKey'='editorial@1'
+    and not coalesce((select store_enabled from onzio.clubs where id=p_club_id),false) then
+    raise exception 'PAGE_UNAVAILABLE' using errcode='22023';
+  end if;
+  if p_surface='home' and coalesce(onzio_private.homepage_design(p_club_id)->>'templateKey','') in ('clubhouse@1','editorial@1') then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  end if;
+  result:=onzio_private.shop_page_snapshot(p_club_id,p_surface);
+  if p_operation_id is not null then
     result:=result||jsonb_build_object('operation',case when receipt is null then jsonb_build_object('status','not-committed') else jsonb_build_object('status','committed','receipt',receipt) end);
   end if;
   return result;
@@ -234,16 +242,13 @@ declare
   variants jsonb; photo_rows jsonb; purchase jsonb; variant text; product jsonb; section jsonb; photos jsonb; item jsonb;
   retired uuid[]:='{}'; removed uuid[]; key text; value jsonb;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901283);
   if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
-  if onzio_private.homepage_design(p_club_id)->>'templateKey'='editorial@1'
-    and not coalesce((select store_enabled from onzio.clubs where id=p_club_id),false) then
-    raise exception 'PAGE_UNAVAILABLE' using errcode='22023';
-  end if;
   perform onzio_private.check_shop_object(p_request,array['operationId','surface','expectedRevision','designRevision','variants','photoRows','purchase'],
     array['operationId','surface','expectedRevision','designRevision','variants']);
-  if jsonb_typeof(p_request->'operationId')<>'string' or jsonb_typeof(p_request->'surface')<>'string'
-    or jsonb_typeof(p_request->'expectedRevision')<>'string' or jsonb_typeof(p_request->'designRevision')<>'string'
+  if jsonb_typeof(p_request->'operationId') is distinct from 'string' or jsonb_typeof(p_request->'surface') is distinct from 'string'
+    or jsonb_typeof(p_request->'expectedRevision') is distinct from 'string' or jsonb_typeof(p_request->'designRevision') is distinct from 'string'
     or (p_request->>'expectedRevision')!~'^[0-9]+$' or length(p_request->>'designRevision') not between 1 and 200 then
     raise exception 'INVALID_SHOP_PAYLOAD' using errcode='22023';
   end if;
@@ -257,10 +262,14 @@ begin
     if saved_hash<>hash then raise exception 'OPERATION_REUSED' using errcode='PT409'; end if;
     return receipt;
   end if;
+  if onzio_private.homepage_design(p_club_id)->>'templateKey'='editorial@1'
+    and not coalesce((select store_enabled from onzio.clubs where id=p_club_id),false) then
+    raise exception 'PAGE_UNAVAILABLE' using errcode='22023';
+  end if;
   initial:=onzio_private.shop_page_snapshot(p_club_id,page_surface); template:=initial->>'templateKey';
-  if initial->>'designRevision'<>p_request->>'designRevision' then raise exception 'DESIGN_CHANGED' using errcode='PT409'; end if;
-  if initial->>'revision'<>p_request->>'expectedRevision' then raise exception 'CONTENT_CHANGED' using errcode='PT409'; end if;
   if page_surface='home' and template in ('clubhouse@1','editorial@1') then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  if (initial->>'designRevision') is distinct from (p_request->>'designRevision') then raise exception 'DESIGN_CHANGED' using errcode='PT409'; end if;
+  if (initial->>'revision') is distinct from (p_request->>'expectedRevision') then raise exception 'CONTENT_CHANGED' using errcode='PT409'; end if;
   variants:=p_request->'variants'; photo_rows:=p_request->'photoRows'; purchase:=p_request->'purchase';
   perform onzio_private.check_shop_object(variants,array['home','third','away']);
   if variants='{}'::jsonb and photo_rows is null and purchase is null then raise exception 'INVALID_SHOP_PAYLOAD' using errcode='22023'; end if;

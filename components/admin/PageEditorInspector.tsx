@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ComponentPropsWithoutRef } from "react";
+import { capturePageEditorFocus } from "@/lib/page-editor-focus";
 import "./page-editor-inspector.css";
 
 type Props = ComponentPropsWithoutRef<"aside"> & {
@@ -26,9 +27,7 @@ export default function PageEditorInspector({ open, onClose, label, breakpoint, 
   useEffect(() => {
     const element = dialog.current;
     if (!mobile || !open || !element) return;
-    // The selected target may live in a preview's separate document.
-    let previous = document.activeElement as HTMLElement | null;
-    if (previous instanceof HTMLIFrameElement) previous = previous.contentDocument?.activeElement as HTMLElement | null;
+    const restoreFocus = capturePageEditorFocus(document);
     const viewport = window.visualViewport;
     const update = () => {
       element.style.setProperty("--page-editor-visible-height", `${viewport?.height || window.innerHeight}px`);
@@ -40,7 +39,9 @@ export default function PageEditorInspector({ open, onClose, label, breakpoint, 
     return () => {
       viewport?.removeEventListener("resize", update); viewport?.removeEventListener("scroll", update);
       if (element.open) element.close();
-      if (previous?.isConnected) previous.focus({ preventScroll: true });
+      // Preview effects redecorate targets after this cleanup. Wait for that
+      // commit and resolve by stable identity if its original node was replaced.
+      window.requestAnimationFrame(restoreFocus);
     };
   }, [mobile, open]);
 

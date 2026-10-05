@@ -41,7 +41,7 @@ function failure(code: string, status: number) {
 }
 function databaseFailure(error: { code?: string; message?: string }) {
   const code = [error.message, error.code].find((value) => value && Object.hasOwn(messages, value)) ?? "DATABASE_OPERATION_FAILED";
-  return failure(code, ["CONTENT_CHANGED", "OPERATION_REUSED"].includes(code) ? 409 : code === "NOT_AUTHORIZED" ? 403 : code === "DATABASE_OPERATION_FAILED" ? 500 : 400);
+  return failure(code, ["CONTENT_CHANGED", "OPERATION_REUSED"].includes(code) ? 409 : code === "NOT_AUTHORIZED" ? 403 : code === "PAGE_UNAVAILABLE" ? 404 : code === "DATABASE_OPERATION_FAILED" ? 500 : 400);
 }
 function sameOrigin(request: Request) {
   const external = new URL(request.url);
@@ -71,12 +71,17 @@ async function handle(request: Request, mutation: boolean) {
   try { club = await getClubContext({ hostname: request.headers.get("host") ?? "", userId }); }
   catch { return failure("UNKNOWN_TENANT", 404); }
   if (!club) return failure("UNKNOWN_TENANT", 404);
-  if (club.presentationTemplateKey !== "academy@1") return failure("PAGE_UNAVAILABLE", 404);
+  const pageUnavailable = club.presentationTemplateKey !== "academy@1";
   const memberships = club.role ? [{ userId, clubId: club.id, role: club.role, status: "active" }] : [];
   try {
     if (mutation) await authorizeMutation({ club, userId, memberships, aal: "aal1", feature: "programs", payload: payload! });
     else await authorizeAdminAccess({ club, userId, memberships, aal: "aal1", capability: "content" });
   } catch (error) { return failure(error instanceof ContractError ? error.code : "NOT_AUTHORIZED", 403); }
+  // Recovery intent only routes the request to the actor/hash-protected RPC.
+  // It does not authorize a fresh save to an unavailable page.
+  const recovering = request.headers.get("x-editor-recovery") === "1";
+  if (pageUnavailable && (mutation ? !recovering : !operationId)) return failure("PAGE_UNAVAILABLE", 404);
+
   try {
     const onzio = supabase.schema("onzio") as unknown as { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: ProgramDirectorySnapshot | null; error: { code?: string; message?: string } | null }> };
     const result = mutation

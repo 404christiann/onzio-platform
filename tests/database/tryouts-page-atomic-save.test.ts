@@ -11,7 +11,7 @@ const fields = ["id", "program_id", "status", "eyebrow", "headline", "intro", "h
   "eligibility_copy", "what_to_expect_copy", "preparation_copy", "event_date", "location", "cost_text",
   "cta_label", "registration_href", "registration_form_id", "closed_message", "sort_order"] as const;
 
-async function actor(userId = USER_IDS.ownerAal2) {
+async function actor(userId: string = USER_IDS.ownerAal2) {
   await db.query("reset role");
   const second = Number((await db.query("select floor(extract(epoch from now()))::bigint as second")).rows[0].second);
   await db.query("select set_config('request.jwt.claims',$1,true)", [JSON.stringify({
@@ -182,6 +182,28 @@ describe("atomic Tryouts public-page save", () => {
     expect((await save(payload)).revision).toBeDefined();
     await design("clubhouse");
     await rejects(() => load(), "PAGE_UNAVAILABLE");
-    await rejects(() => save(payload), "PAGE_UNAVAILABLE");
+    // A new operation exercises the fresh Save gate; the original UUID already committed.
+    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
   });
+
+  it("recovers the actor's committed save after Tryouts becomes unavailable without allowing fresh or changed requests", async () => {
+    const payload = await request({ intro_with_tryouts: "Saved before publication", intro_no_tryouts: "Later" });
+    const receipt = await save(payload);
+    await design("clubhouse");
+    expect((await load(payload.operationId)).operation).toEqual({ status: "committed", receipt });
+    expect(await save(payload)).toEqual(receipt);
+    await rejects(() => load(), "PAGE_UNAVAILABLE");
+    await rejects(() => load(randomUUID()), "PAGE_UNAVAILABLE");
+    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    await rejects(() => save({ ...payload, page: null }), "OPERATION_REUSED");
+    await actor(USER_IDS.adminAal2);
+    await rejects(() => load(payload.operationId), "PAGE_UNAVAILABLE");
+    await actor();
+    await db.query("reset role");
+    await db.query("update onzio.clubs set lifecycle='archived',public_access='suspended' where id=$1", [clubId]);
+    await actor();
+    await rejects(() => load(payload.operationId), "NOT_AUTHORIZED");
+    await rejects(() => save(payload), "NOT_AUTHORIZED");
+  });
+
 });

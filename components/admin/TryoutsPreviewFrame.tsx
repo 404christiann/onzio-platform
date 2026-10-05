@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { markPageEditorFocusTarget } from "@/lib/page-editor-focus";
 
 /** A real responsive CSS viewport, isolated from admin styles and navigation. */
-export default function TryoutsPreviewFrame({ children, phone, host }: {
+export default function TryoutsPreviewFrame({ children, phone, host, onSelect }: {
   children: ReactNode;
   phone: boolean;
   host: string;
+  onSelect?: (target: string) => void;
 }) {
   const outer = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
@@ -82,7 +84,13 @@ export default function TryoutsPreviewFrame({ children, phone, host }: {
           transform: `scale(${scale})`, transformOrigin: "top left", border: 0 }} />
       {body && createPortal(<div data-tryouts-preview onClickCapture={(event) => {
         const target = event.target as HTMLElement;
-        target.closest<HTMLElement>("button[aria-pressed]")?.focus({ preventScroll: true });
+        const editorTarget = target.closest<HTMLElement>("[data-tryouts-editor-target]");
+        if (editorTarget?.dataset.tryoutsEditorTarget && onSelect) {
+          event.preventDefault(); event.stopPropagation();
+          markPageEditorFocusTarget(editorTarget);
+          onSelect(editorTarget.dataset.tryoutsEditorTarget);
+          return;
+        }
         if (target.closest("a,button:not([aria-pressed]),form")) {
           event.preventDefault();
           event.stopPropagation();

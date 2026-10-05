@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { markPageEditorFocusTarget } from "@/lib/page-editor-focus";
 
 /** A real, responsive public viewport. It never requests the live public URL. */
 export default function ProgramCanvasFrame({
@@ -99,13 +100,14 @@ export default function ProgramCanvasFrame({
         return;
       }
       const section = target.closest<HTMLElement>("[data-program-editor-section]");
-      if (section?.dataset.programEditorSection) { section.focus({ preventScroll: true }); onSelect(section.dataset.programEditorSection); }
+      if (section?.dataset.programEditorSection) { markPageEditorFocusTarget(section); onSelect(section.dataset.programEditorSection); }
     }} onKeyDownCapture={(event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       const target = event.target as HTMLElement;
       const section = target.closest<HTMLElement>("[data-program-editor-section]");
       if (section?.dataset.programEditorSection) {
         event.preventDefault();
+        markPageEditorFocusTarget(section);
         onSelect(section.dataset.programEditorSection);
       }
     }} onSubmitCapture={(event) => event.preventDefault()}>

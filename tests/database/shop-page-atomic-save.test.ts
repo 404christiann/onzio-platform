@@ -153,4 +153,56 @@ describe("atomic Shop page database contract", () => {
       variants: { home: { section, photos: [{ rowId: null, assetId: kitAsset, order: 0 }] } },
     }), "PAGE_UNAVAILABLE");
   });
+
+  it("recovers committed Shop receipts and exact retries after Editorial Store is disabled", async () => {
+    await design("editorial");
+    await db.query("reset role");
+    await db.query("update onzio.clubs set store_enabled=true where id=$1", [clubId]);
+    await actor();
+    const photo = await asset(), before = await load();
+    const payload = { operationId: randomUUID(), surface: "shop", expectedRevision: before.revision, designRevision: before.designRevision,
+      variants: { home: { section, photos: [{ rowId: null, assetId: photo, order: 0 }] } } };
+    const receipt = await save(payload);
+    await db.query("reset role");
+    await db.query("update onzio.clubs set store_enabled=false where id=$1", [clubId]);
+    await actor();
+    const recovered = (await db.query("select onzio.load_shop_page($1,'shop',$2) as data", [clubId, payload.operationId])).rows[0].data;
+    expect(recovered.operation).toEqual({ status: "committed", receipt });
+    expect(await save(payload)).toEqual(receipt);
+    await rejects(() => load(), "PAGE_UNAVAILABLE");
+    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    await rejects(() => save({ ...payload, variants: { home: { section: { ...section, title: "Different" }, photos: [{ rowId: null, assetId: photo, order: 0 }] } } }), "OPERATION_REUSED");
+    await db.query("reset role");
+    await db.query("update onzio.clubs set lifecycle='archived',public_access='suspended' where id=$1", [clubId]);
+    await actor();
+    await rejects(() => db.query("select onzio.load_shop_page($1,'shop',$2)", [clubId, payload.operationId]), "NOT_AUTHORIZED");
+    await rejects(() => save(payload), "NOT_AUTHORIZED");
+  });
+
+  it("recovers a Homepage Shop save after its section disappears while blocking fresh reads and writes", async () => {
+    const photo = await asset(), before = await load("home");
+    const payload = { operationId: randomUUID(), surface: "home", expectedRevision: before.revision, designRevision: before.designRevision,
+      variants: { home: { section, photos: [{ rowId: null, assetId: photo, order: 0 }] } } };
+    const receipt = await save(payload);
+    await design("clubhouse");
+    expect((await db.query("select onzio.load_shop_page($1,'home',$2) as data", [clubId, payload.operationId])).rows[0].data.operation.receipt).toEqual(receipt);
+    expect(await save(payload)).toEqual(receipt);
+    await rejects(() => load("home"), "PAGE_UNAVAILABLE");
+    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+  });
+
+  it("rejects malformed revision and design tokens without changing content or creating receipts", async () => {
+    const photo = await asset(), before = await load();
+    const payload = { operationId: randomUUID(), surface: "shop", expectedRevision: before.revision, designRevision: before.designRevision,
+      variants: { home: { section, photos: [{ rowId: null, assetId: photo, order: 0 }] } } };
+    for (const key of ["expectedRevision", "designRevision"]) {
+      for (const value of [null, false, 0, {}, [], ""]) {
+        await rejects(() => save({ ...payload, [key]: value }), "INVALID_SHOP_PAYLOAD");
+        expect(await load()).toEqual(before);
+      }
+    }
+    await db.query("reset role");
+    expect((await db.query("select count(*)::int as n from onzio_private.shop_page_receipts where operation_id=$1", [payload.operationId])).rows[0].n).toBe(0);
+  });
+
 });

@@ -91,3 +91,25 @@ test("Shop preview uses the public desktop and phone CSS breakpoints while fitti
   await page.getByRole("button", { name: "Phone", exact: true }).click();
   await expect.poll(() => page.frameLocator('iframe[title$="Shop page preview"]').locator("body").evaluate(() => innerWidth)).toBe(390);
 });
+
+test("Tryouts introduction remains above the persistent Save bar on its first selection", async ({ page }) => {
+  await page.goto("/admin/tryouts");
+  const frame = page.locator('iframe[title="Tryouts page editing preview"]');
+  const target = page.frameLocator('iframe[title="Tryouts page editing preview"]').getByRole("button", { name: "Edit page introduction", exact: true });
+  await target.scrollIntoViewIfNeeded();
+  // An iframe-local hit test cannot detect a fixed outer-page footer. Check
+  // the real outer-page coordinates as well as the resulting modal behavior.
+  await expect.poll(async () => {
+    const frameRect = await frame.boundingBox();
+    const targetRect = await target.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { y: rect.y, height: rect.height, viewportWidth: innerWidth };
+    });
+    const barRect = await page.locator("[data-tryouts-save-bar]").boundingBox();
+    if (!frameRect || !barRect) return false;
+    const centerY = frameRect.y + (targetRect.y + targetRect.height / 2) * frameRect.width / targetRect.viewportWidth;
+    return centerY < barRect.y;
+  }).toBe(true);
+  await target.click();
+  await expect(page.getByRole("dialog", { name: "Selected Tryouts section tools", exact: true })).toBeVisible();
+});

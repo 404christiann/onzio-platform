@@ -8,6 +8,7 @@ import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
+import { usePageEditorScrollport } from "@/components/admin/usePageEditorScrollport";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -110,6 +111,7 @@ function TryoutsPageEditorContent() {
     setDialogContainer(document.querySelector<HTMLElement>(".admin-theme") ?? document.body);
   }, []);
   const toolsHeading = useRef<HTMLHeadingElement>(null);
+  const scrollport = usePageEditorScrollport(1023);
   const unsavedUploads = useRef(new Set<string>());
   const mounted = useRef(false);
   const saveInFlight = useRef(false);
@@ -321,7 +323,7 @@ function TryoutsPageEditorContent() {
     saveInFlight.current = true;
     setSaving(true); setSaved(false); setError(null);
     try {
-      const result = await submitPageSave<Snapshot>(() => fetch("/api/admin/tryouts-page", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }), `/api/admin/tryouts-page?operationId=${encodeURIComponent(request.operationId)}`);
+      const result = await submitPageSave<Snapshot>(() => fetch("/api/admin/tryouts-page", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(unconfirmed ? { "X-Editor-Recovery": "1" } : {}) }, body: JSON.stringify(request) }), `/api/admin/tryouts-page?operationId=${encodeURIComponent(request.operationId)}`);
       if (result.kind === "committed") applySnapshot(result.snapshot);
       else if (result.kind === "unconfirmed") {
         saveUnconfirmed.current = true;
@@ -363,7 +365,8 @@ function TryoutsPageEditorContent() {
     buildTryoutsPageMutationPayload(pageCopy) as Partial<DBTryoutsPageContent>);
   const canEdit = !saving && !uploading && !unconfirmed;
 
-  return <AdminPage className="overflow-x-clip pb-24 lg:pb-8">
+  return <div ref={scrollport.workspace} className="min-w-0 overflow-y-auto overscroll-y-contain lg:overflow-visible" style={{ maxHeight: scrollport.maxHeight }}>
+    <AdminPage className="overflow-x-clip pb-4 lg:pb-8 [&>*]:shrink-0">
     <AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="Tap the page introduction or an event card to edit what visitors see. One Save page publishes all changes together."
       actions={<div className="flex flex-wrap gap-2">
@@ -424,7 +427,7 @@ function TryoutsPageEditorContent() {
         </> : <div className="py-14 text-center"><p className="font-display text-sm font-bold text-foreground">Tap a section to edit</p><p className="mt-2 font-body text-xs leading-5 text-muted-foreground">Select the introduction, a card, or the heading in the page preview.</p></div>}
       </PageEditorInspector>
     </div>}
-    <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"><span className="font-body text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "Tryouts page"}</span><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button></div>
+    <div ref={scrollport.saveBar} data-tryouts-save-bar className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"><span className="font-body text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "Tryouts page"}</span><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button></div>
     <AdminSaveFeedback saving={saving || uploading} saved={saved} savingLabel={uploading ? "Uploading hero image…" : "Saving Tryouts page…"} successLabel="Tryouts page saved" />
     <AlertDialog.Root open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
       <AlertDialog.Portal container={dialogContainer}>
@@ -445,7 +448,7 @@ function TryoutsPageEditorContent() {
         </AlertDialog.Viewport>
       </AlertDialog.Portal>
     </AlertDialog.Root>
-  </AdminPage>;
+  </AdminPage></div>;
 }
 
 function Field({ label, children, error }: { label: string; children: React.ReactNode; error?: string }) {

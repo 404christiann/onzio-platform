@@ -34,6 +34,7 @@ create policy program_directory_receipt_insert on onzio_private.program_director
 create function onzio_private.serialize_program_page_write() returns trigger
 language plpgsql security invoker set search_path='' as $$
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901284);
   return null;
 end $$;
@@ -87,17 +88,23 @@ create function onzio.load_program_page(p_club_id uuid,p_program_id uuid default
 language plpgsql security invoker set search_path='' as $$
 declare result jsonb; receipt jsonb;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901284);
   if not onzio_private.is_club_session_fresh() or not onzio_private.is_club_member(p_club_id)
     or not exists(select 1 from onzio.clubs where id=p_club_id and lifecycle in ('active','onboarding')) then
     raise exception 'NOT_AUTHORIZED' using errcode='42501';
   end if;
-  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
-  result:=onzio_private.program_page_snapshot(p_club_id,p_program_id);
   if p_operation_id is not null then
     if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
     select response into receipt from onzio_private.program_page_receipts
       where club_id=p_club_id and actor_id=auth.uid() and operation_id=p_operation_id;
+  end if;
+  -- Current page availability must not hide an actor's already committed save.
+  if receipt is null then
+    if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  end if;
+  result:=onzio_private.program_page_snapshot(p_club_id,p_program_id);
+  if p_operation_id is not null then
     result:=result||jsonb_build_object('operation',case when receipt is null then jsonb_build_object('status','not-committed') else jsonb_build_object('status','committed','receipt',receipt) end);
   end if;
   return result;
@@ -115,9 +122,9 @@ declare
   current_count integer; old_assets uuid[]; new_assets uuid[]; retired_assets uuid[]:='{}';
   seen_expected uuid[]:='{}';
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901284);
   if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
-  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   perform onzio_private.check_program_page_object(p_request,array['operationId','programId','expected','program','gallery'],array['operationId','programId','expected','program','gallery']);
   perform onzio_private.check_program_page_object(p_request->'expected',array['programUpdatedAt','gallery'],array['programUpdatedAt','gallery']);
   payload:=p_request->'program'; gallery:=p_request->'gallery'; expected:=p_request->'expected';
@@ -139,6 +146,7 @@ begin
     if saved_hash<>request_hash then raise exception 'OPERATION_REUSED' using errcode='PT409'; end if;
     return receipt;
   end if;
+  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   if v_program_id is null then
     if expected->'programUpdatedAt'<>'null'::jsonb or expected->'gallery'<>'[]'::jsonb then
       raise exception 'CONTENT_CHANGED' using errcode='PT409';
@@ -240,17 +248,23 @@ create function onzio.load_program_directory(p_club_id uuid,p_operation_id uuid 
 language plpgsql security invoker set search_path='' as $$
 declare result jsonb; receipt jsonb;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901284);
   if not onzio_private.is_club_session_fresh() or not onzio_private.is_club_member(p_club_id)
     or not exists(select 1 from onzio.clubs where id=p_club_id and lifecycle in ('active','onboarding')) then
     raise exception 'NOT_AUTHORIZED' using errcode='42501';
   end if;
-  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
-  result:=onzio_private.program_directory_snapshot(p_club_id);
   if p_operation_id is not null then
     if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
     select response into receipt from onzio_private.program_directory_receipts
       where club_id=p_club_id and actor_id=auth.uid() and operation_id=p_operation_id;
+  end if;
+  -- Current page availability must not hide an actor's already committed save.
+  if receipt is null then
+    if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  end if;
+  result:=onzio_private.program_directory_snapshot(p_club_id);
+  if p_operation_id is not null then
     result:=result||jsonb_build_object('operation',case when receipt is null then jsonb_build_object('status','not-committed') else jsonb_build_object('status','committed','receipt',receipt) end);
   end if;
   return result;
@@ -264,9 +278,9 @@ declare
   op uuid; saved_hash text; request_hash text; receipt jsonb; result jsonb;
   expected jsonb; desired jsonb; item jsonb; v_id uuid; ids uuid[]:='{}'; expected_ids uuid[]:='{}'; i integer:=0; current_count integer;
 begin
+  perform pg_catalog.pg_advisory_xact_lock(734901281);
   perform pg_catalog.pg_advisory_xact_lock(734901284);
   if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
-  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   perform onzio_private.check_program_page_object(p_request,array['operationId','expected','programs'],array['operationId','expected','programs']);
   expected:=p_request->'expected'; desired:=p_request->'programs';
   if jsonb_typeof(expected) is distinct from 'array' or jsonb_typeof(desired) is distinct from 'array'
@@ -284,6 +298,7 @@ begin
     if saved_hash<>request_hash then raise exception 'OPERATION_REUSED' using errcode='PT409'; end if;
     return receipt;
   end if;
+  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   perform 1 from onzio.programs where club_id=p_club_id for update;
   select count(*) into current_count from onzio.programs where club_id=p_club_id;
   if current_count<>jsonb_array_length(expected) then raise exception 'CONTENT_CHANGED' using errcode='PT409'; end if;
