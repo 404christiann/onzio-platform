@@ -56,6 +56,7 @@ export default function AboutClubPageClient({
     <div className="min-h-screen bg-white">
       <div
         ref={heroRef}
+        data-about-editor-section="hero"
         className="pt-36 pb-14 px-6 lg:px-10 max-w-7xl mx-auto"
         style={{ opacity: animate ? 0 : 1 }}
       >
@@ -70,6 +71,7 @@ export default function AboutClubPageClient({
 
       <div
         ref={storyRef}
+        data-about-editor-section="story"
         className="px-6 lg:px-10 max-w-7xl mx-auto pb-24 grid md:grid-cols-5 gap-10 md:gap-16"
         style={{ opacity: animate ? 0 : 1 }}
       >
@@ -102,7 +104,7 @@ export default function AboutClubPageClient({
         </div>}
       </div>
 
-      <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-24">
+      <div data-about-editor-section="values" className="px-6 lg:px-10 max-w-7xl mx-auto pb-24">
         <p
           className="font-display font-bold tracking-widest uppercase mb-8"
           style={{ color: "var(--color-black)", fontSize: "clamp(0.8rem, 1.3vw, 1rem)" }}
@@ -138,6 +140,7 @@ export default function AboutClubPageClient({
 
       <div
         ref={closingRef}
+        data-about-editor-section="closing"
         className="px-6 lg:px-10 max-w-7xl mx-auto pb-32 text-center"
         style={{ opacity: animate ? 0 : 1 }}
       >

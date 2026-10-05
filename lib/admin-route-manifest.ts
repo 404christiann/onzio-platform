@@ -68,6 +68,7 @@ export type AdminRouteDefinition = Readonly<{
   ownerOnly?: true;
   billingRequired?: true;
   hiddenForTemplates?: readonly string[];
+  visibleForTemplates?: readonly string[];
 }>;
 
 export type AdminVisibleRoute = Readonly<{
@@ -149,7 +150,7 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "programs",
     groupId: "website",
     feature: "programs",
-    hiddenForTemplates: [EDITORIAL_TEMPLATE],
+    visibleForTemplates: ["academy@1"],
   },
   {
     id: "tryouts",
@@ -158,6 +159,7 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "tryouts",
     groupId: "website",
     feature: "tryouts",
+    visibleForTemplates: ["academy@1", EDITORIAL_TEMPLATE],
   },
   {
     id: "shop",
@@ -400,6 +402,12 @@ export function isAdminRouteVisible(
   if (
     context.presentationTemplateKey &&
     route.hiddenForTemplates?.includes(context.presentationTemplateKey)
+  ) {
+    return false;
+  }
+  if (
+    route.visibleForTemplates &&
+    !route.visibleForTemplates.includes(context.presentationTemplateKey ?? "")
   ) {
     return false;
   }

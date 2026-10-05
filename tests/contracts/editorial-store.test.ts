@@ -78,7 +78,7 @@ describe("editorial store page", () => {
     expect(source).toContain('fetchShopKitVariants("shop", clubId)');
     expect(source).toContain('VARIANT_ORDER: ShopKitVariant[] = ["home", "away", "third"]');
     expect(source).toContain("setContent(variants)");
-    expect(source).toContain("content?.[variant]");
+    expect(source).toContain("(editorContent ?? content)?.[variant]");
   });
 
   it("reads the shop surface on the homepage too, which is why the admin hides the home surface", () => {
@@ -131,8 +131,9 @@ describe("editorial store page", () => {
     const source = stripComments(read("components/editorial/EditorialShopPage.tsx"));
     expect(source).toContain('useState<ShopKitVariant>("home")');
     expect(source).toContain(
-      "products.find((product) => product.variant === selectedVariant) ?? products[0]",
+      "products.find((product) => product.variant === (selectedEditorVariant ?? selectedVariant)) ?? products[0]",
     );
+    expect(stripComments(read("components/admin/shop/ShopPageEditor.tsx"))).toContain("selectedEditorVariant={currentVariant}");
     expect(source).toContain("selectedProduct.section.title");
     expect(source).toContain("selectedProduct.section.description");
     expect(source).toContain("selectedProduct.section.cta_link");
@@ -146,7 +147,7 @@ describe("editorial store page", () => {
   it("has a loading state, following AcademyShopPage.tsx's pattern", () => {
     const source = read("components/editorial/EditorialShopPage.tsx");
     expect(source).toContain("const [loading, setLoading] = useState(true);");
-    expect(source).toMatch(/if \(loading\) \{/);
+    expect(source).toContain("if (loading && !editorContent) {");
   });
 
   it("styles from editorial's own CSS custom properties, never AcademyShopPage.tsx's hardcoded navy/red hex values", () => {

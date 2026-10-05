@@ -1,3 +1,4 @@
+import { hydrateAboutEditorMedia } from "@/lib/about-editor/media";
 import { supabase } from "@/lib/supabase";
 import { Player, Staff, Fixture, GoalkeeperStats, FieldStats } from "@/lib/data";
 import {
@@ -357,7 +358,7 @@ type LinkedRegistrationPriceRecord = RegistrationPriceRecord & {
  * empty-ID fast path means clubs that have not opted in keep their old query
  * shape and rendering behavior.
  */
-async function loadLinkedOpenRegistrationForms(
+export async function loadLinkedOpenRegistrationForms(
   rows: ReadonlyArray<{ registration_form_id?: string | null }>,
   tenantId: string,
   client: typeof supabase,
@@ -1096,19 +1097,19 @@ export async function fetchAboutClubContent(
   return {
     about: rawAbout
       ? {
-          ...rawAbout,
-          story_paragraphs: normalizeStoryParagraphs(rawAbout.story_paragraphs),
-          values: normalizeAboutValues(rawAbout.values),
+          ...hydrateAboutEditorMedia(rawAbout),
+          story_paragraphs: normalizeStoryParagraphs(rawAbout.story_paragraphs, clubId ? [] : undefined),
+          values: normalizeAboutValues(rawAbout.values, clubId ? [] : undefined),
         }
       : clubId
         ? EMPTY_ABOUT_PAGE_CONTENT
         : DEFAULT_ABOUT_PAGE_CONTENT,
     logo: rawLogo
-      ? {
+      ? hydrateAboutEditorMedia({
           ...rawLogo,
-          features: normalizeClubLogoFeatures(rawLogo.features),
-          color_cards: normalizeClubLogoColorCards(rawLogo.color_cards),
-        }
+          features: normalizeClubLogoFeatures(rawLogo.features, clubId ? [] : undefined),
+          color_cards: normalizeClubLogoColorCards(rawLogo.color_cards, clubId ? [] : undefined),
+        })
       : clubId
         ? EMPTY_CLUB_LOGO_PAGE_CONTENT
         : DEFAULT_CLUB_LOGO_PAGE_CONTENT,

@@ -371,6 +371,10 @@ describe("Tryouts page intro copy", () => {
 
 describe("DCFC-303 protected Tryouts admin surface", () => {
   const pageSource = readFileSync(
+    resolve(process.cwd(), "components/admin/tryouts/TryoutsPageEditor.tsx"),
+    "utf8",
+  );
+  const routeSource = readFileSync(
     resolve(process.cwd(), "app/admin/(protected)/tryouts/page.tsx"),
     "utf8",
   );
@@ -397,10 +401,12 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     expect(shellSource).toContain('feature: "tryouts"');
     expect(pageSource).not.toContain("clubHasFeature");
     expect(pageSource).not.toContain("requires Pro");
+    expect(routeSource).toContain('export { default } from "@/components/admin/tryouts/TryoutsPageEditor"');
   });
 
   it("uses only server-mediated tenant-scoped persistence", () => {
-    expect(pageSource).toMatch(/createClient\(\)\s*\.from\("tryouts"\)/);
+    expect(pageSource).toContain('fetch("/api/admin/tryouts-page"');
+    expect(pageSource).not.toMatch(/createClient\(\)\s*\.from\("tryouts"\)/);
     expect(pageSource).toContain('.from("programs")');
     expect(pageSource).toContain('.order("sort_order"');
     expect(pageSource).not.toContain('from("@/lib/supabase-browser")');
@@ -420,12 +426,12 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
       "Button text",
       "External registration destination",
       "Closed message",
-      "Hero image",
-      "Create tryout",
-      "Save changes",
+      "Event photo",
+      "Add event",
+      "Save page",
       "No tryout events yet",
       "Loading tryout events",
-      "Tryout saved",
+      "Tryouts page saved",
       "Unable to load tryout events",
       "Upload failed",
     ]) {
@@ -458,10 +464,9 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     ]) {
       expect(pageSource).not.toContain(binding);
     }
-    // The event list label falls back straight to "Untitled tryout" — the
-    // eyebrow is no longer a naming source anywhere.
+    // The event card selection and tool heading use its name, never eyebrow.
     expect(pageSource).not.toContain("tryout.eyebrow");
-    expect(pageSource).toContain('{tryout.headline || "Untitled tryout"}');
+    expect(pageSource).toContain('selectedEvent?.headline || "New tryout event"');
   });
 
   it("keeps the retired columns writable so stored values survive a save", () => {
@@ -486,21 +491,20 @@ describe("DCFC-303 protected Tryouts admin surface", () => {
     expect(migrationSource).toContain("when 'tryouts' then 'tryouts'");
   });
 
-  it("edits both page-level intro paragraphs above the event list", () => {
+  it("edits both page-level intro paragraphs inside one page-scoped save", () => {
     for (const label of [
-      "Tryouts page intro",
+      "Page introduction",
       "Intro shown when tryouts are published",
       "Intro shown when none are published",
     ]) {
       expect(pageSource).toContain(label);
     }
-    // Its own save action, following the "each section saves independently"
-    // pattern the Shop and Programs editors already use.
-    expect(pageSource).toContain("Save page intro");
-    expect(pageSource).toMatch(
-      /createClient\(\)\s*\.from\("tryouts_page_content"\)/,
-    );
-    expect(pageSource).toContain("savePageCopy");
+    // Christian approved one atomic Save per public page on 2026-10-02,
+    // superseding the old separate-intro Save assertion.
+    expect(pageSource).toContain('fetch("/api/admin/tryouts-page"');
+    expect(pageSource).toContain("deletedIds: deleted.map");
+    expect(pageSource).not.toContain("Save page intro");
+    expect(pageSource).not.toMatch(/\.from\("tryouts_page_content"\)\s*\.upsert/);
     // The preview reflects the unsaved page-copy draft, not just saved rows.
     expect(pageSource).toContain("content={previewPageContent}");
   });

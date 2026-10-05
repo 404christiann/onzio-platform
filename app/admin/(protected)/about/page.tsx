@@ -8,23 +8,20 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AboutContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
-import {
-  AdminSectionRail,
-  type AdminSectionRailItem,
-} from "@/components/admin/AdminSectionRail";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import ScaledAboutPreview from "@/components/admin/ScaledAboutPreview";
+import AboutPageCanvas, { type AboutCanvasTarget } from "@/components/admin/about/AboutPageCanvas";
 import {
   SlidingPanel,
   type SlidingPanelDirection,
 } from "@/components/ui/sliding-panel";
-import type {
-  DBAboutPageContent,
-  DBClubLogoPageContent,
-} from "@/lib/db-types";
+import type { DBAboutPageContent, DBClubLogoPageContent, DBSiteSponsorLogo } from "@/lib/db-types";
+import type { SiteRouteOption } from "@/lib/site-routes";
+import { aboutPageEditableContent, prepareAboutPageSave } from "@/lib/about-editor/save";
 import {
   aboutStoragePathFromPublicUrl,
+  EMPTY_ABOUT_PAGE_CONTENT, EMPTY_CLUB_LOGO_PAGE_CONTENT,
   DEFAULT_ABOUT_PAGE_CONTENT,
   DEFAULT_CLUB_LOGO_PAGE_CONTENT,
   normalizeClubLogoColorCards,
@@ -34,22 +31,22 @@ import {
   type AboutValue,
   type ClubLogoFeature,
 } from "@/lib/about-content";
-import { fetchAboutClubContent } from "@/lib/queries";
-import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { fetchSiteSponsorLogos } from "@/lib/queries";
+import { loadAboutEditor, saveAboutEditor } from "@/lib/about-editor/recovery";
+import { aboutEditorSaveSchema, type AboutEditorSaveRequest, type AboutEditorSnapshot } from "@/lib/about-editor/contract";
+import { newAboutValue, newLogoFeature, newLogoColorCard, removeCollectionItem } from "@/lib/about-editor/collections";
+import PageEditorInspector from "@/components/admin/PageEditorInspector";
+import { usePageEditorScrollport } from "@/components/admin/usePageEditorScrollport";
 import { createClient } from "@/lib/admin-client";
+import "@/components/admin/about/about-editor.css";
 
-// The editor used to be two top-level tabs (About / Club Logo), each with
-// three sub-panels. AdminSectionRail flattens that into one rail of six
-// entries, visually grouped into two clusters ("About Club" / "Club Logo")
-// — see the rail rendering below. SectionId carries both former panel-id
-// namespaces in one flat union so a single SlidingPanel + AdminSectionRail
-// pair can drive all six.
-type SectionId = "story" | "values" | "closing" | "images" | "features" | "colors";
+type SectionId = "hero" | "story" | "values" | "closing" | "images" | "features" | "colors";
 
-const ABOUT_SECTIONS: SectionId[] = ["story", "values", "closing"];
+const ABOUT_SECTIONS: SectionId[] = ["hero", "story", "values", "closing"];
 const LOGO_SECTIONS: SectionId[] = ["images", "features", "colors"];
 const SECTION_ORDER: SectionId[] = [...ABOUT_SECTIONS, ...LOGO_SECTIONS];
 const SECTION_LABELS: Record<SectionId, string> = {
+  hero: "Page heading",
   story: "Story",
   values: "Values",
   closing: "Closing",
@@ -78,16 +75,16 @@ const ACADEMY_ABOUT_CLOSING_CTA_HREF = "/schedule";
 function toAboutDraft(content: DBAboutPageContent): DBAboutPageContent {
   return {
     ...content,
-    story_paragraphs: normalizeStoryParagraphs(content.story_paragraphs),
-    values: normalizeAboutValues(content.values),
+    story_paragraphs: normalizeStoryParagraphs(content.story_paragraphs, []),
+    values: normalizeAboutValues(content.values, []),
   };
 }
 
 function toLogoDraft(content: DBClubLogoPageContent): DBClubLogoPageContent {
   return {
     ...content,
-    features: normalizeClubLogoFeatures(content.features),
-    color_cards: normalizeClubLogoColorCards(content.color_cards),
+    features: normalizeClubLogoFeatures(content.features, []),
+    color_cards: normalizeClubLogoColorCards(content.color_cards, []),
   };
 }
 
@@ -133,6 +130,14 @@ export default function AdminAboutPage() {
   // and nothing on the editorial site links /club/logo, so its content row is
   // never read -- exactly the academy@1 situation this gate already covered.
   const hasClubLogoPage = !isAcademy && !isEditorial;
+  const [pageChoice, setPageChoice] = useState<"about" | "logo">("about");
+  const [selectedTarget, setSelectedTarget] = useState<AboutCanvasTarget | null>(null);
+  const [phonePreview, setPhonePreview] = useState(false);
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 640px)").matches) setPhonePreview(true);
+  }, []);
+  const [selectedLogoImage, setSelectedLogoImage] = useState(0);
+  const [selectedLogoColor, setSelectedLogoColor] = useState(0);
   const [activeSection, setActiveSection] = useState<SectionId>("story");
   const [sectionDirection, setSectionDirection] =
     useState<SlidingPanelDirection>(1);
@@ -152,40 +157,92 @@ export default function AdminAboutPage() {
   const [logoDraft, setLogoDraft] = useState<DBClubLogoPageContent>(
     toLogoDraft(DEFAULT_CLUB_LOGO_PAGE_CONTENT),
   );
-  const [pendingDeleteUrls, setPendingDeleteUrls] = useState<string[]>([]);
+  const [pendingDeleteUrls, setPendingDeleteUrls] = useState<{ about: string[]; logo: string[] }>({ about: [], logo: [] });
+  const [snapshots, setSnapshots] = useState<Partial<Record<"about" | "logo", AboutEditorSnapshot>>>({});
+  const [pendingOperations, setPendingOperations] = useState<Partial<Record<"about" | "logo", AboutEditorSaveRequest>>>({});
+  const [conflictedPages, setConflictedPages] = useState<Set<"about" | "logo">>(new Set());
+  const [cleanupOperations, setCleanupOperations] = useState<Partial<Record<"about" | "logo", string>>>({});
+  const draftLocked = Boolean(pendingOperations[pageChoice]) || conflictedPages.has(pageChoice);
+  const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>([]);
+  const [availableDestinations, setAvailableDestinations] = useState<SiteRouteOption[]>([]);
+  const [destinationsLoaded, setDestinationsLoaded] = useState(false);
+  const [destinationError, setDestinationError] = useState<string | null>(null);
+  const [destinationAttempt, setDestinationAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
+  const scrollport = usePageEditorScrollport(767, !loading);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  // Per-section dirty tracking is presentational-only: it drives the rail's
-  // dirty-dots. Save itself remains a single combined write (see
-  // handleSave) — this state never splits it into per-section saves. Same
-  // pattern as app/admin/(protected)/homepage/page.tsx.
+  // Section edits contribute to the dirty state of their public page.
+  // Switching pages preserves both drafts; Save writes the selected page.
   const [dirtySections, setDirtySections] = useState<Set<SectionId>>(
     new Set(),
   );
-  const dirty = dirtySections.size > 0;
+  const dirtyAbout = ABOUT_SECTIONS.some((section) => dirtySections.has(section));
+  const dirtyLogo = LOGO_SECTIONS.some((section) => dirtySections.has(section));
+  const dirty = pageChoice === "about" ? dirtyAbout : dirtyLogo;
+  const destinationAvailable = isAcademy || availableDestinations.some((option) => option.href === aboutDraft.closing_cta_href);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTargetRef = useRef<UploadTarget | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetchAboutClubContent(clubId)
-      .then(({ about, logo }) => {
-        const nextAbout = toAboutDraft(about);
-        const nextLogo = toLogoDraft(logo);
+    setLoadFailed(false);
+    Promise.all([
+      loadAboutEditor("about"),
+      hasClubLogoPage ? loadAboutEditor("logo") : Promise.resolve(null),
+      fetchSiteSponsorLogos("carousel", clubId),
+    ])
+      .then(([about, logo, nextSponsors]) => {
+        const nextAbout = toAboutDraft({ ...EMPTY_ABOUT_PAGE_CONTENT, ...about.content } as DBAboutPageContent);
+        const nextLogo = toLogoDraft({ ...EMPTY_CLUB_LOGO_PAGE_CONTENT, ...logo?.content } as DBClubLogoPageContent);
+        setSnapshots({ about, ...(logo ? { logo } : {}) });
         setAboutDraft(nextAbout);
         setLogoDraft(nextLogo);
-        setPendingDeleteUrls([]);
+        setSponsors(nextSponsors);
+        setPendingDeleteUrls({ about: [], logo: [] });
         setDirtySections(new Set());
       })
       .catch((loadError: unknown) => {
         setError(loadError instanceof Error ? loadError.message : "Failed to load about content");
+        setLoadFailed(true);
       })
       .finally(() => setLoading(false));
-  }, [clubId]);
+  }, [clubId, loadAttempt, hasClubLogoPage]);
+
+  useEffect(() => {
+    if (isAcademy) {
+      setAvailableDestinations([]);
+      setDestinationsLoaded(true);
+      setDestinationError(null);
+      return;
+    }
+    let active = true;
+    setDestinationsLoaded(false);
+    setDestinationError(null);
+    fetch("/api/admin/about-destinations", { cache: "no-store" }).then(async (response) => {
+      if (!response.ok) throw new Error("Available button destinations could not be loaded");
+      const result: unknown = await response.json();
+      if (!result || typeof result !== "object" || !("options" in result) || !Array.isArray(result.options)) {
+        throw new Error("Available button destinations could not be loaded");
+      }
+      return result.options.filter((option: unknown): option is SiteRouteOption =>
+        !!option && typeof option === "object" && "href" in option && typeof option.href === "string" &&
+        "label" in option && typeof option.label === "string",
+      );
+    }).then((options) => {
+      if (!active) return;
+      setAvailableDestinations(options);
+      setDestinationsLoaded(true);
+    }).catch((caught: unknown) => {
+      if (active) setDestinationError(caught instanceof Error ? caught.message : "Available pages could not be loaded");
+    });
+    return () => { active = false; };
+  }, [clubId, isAcademy, destinationAttempt]);
 
   function markDirty(section: SectionId) {
     setDirtySections((current) => {
@@ -197,9 +254,11 @@ export default function AdminAboutPage() {
     setSaved(false);
   }
 
-  function queueReplacedUrl(url: string) {
+  function queueReplacedUrl(url: string, page: "about" | "logo") {
     if (!aboutStoragePathFromPublicUrl(url)) return;
-    setPendingDeleteUrls((current) => current.includes(url) ? current : [...current, url]);
+    setPendingDeleteUrls((current) => current[page].includes(url)
+      ? current
+      : { ...current, [page]: [...current[page], url] });
   }
 
   function openUploader(target: UploadTarget) {
@@ -224,24 +283,24 @@ export default function AdminAboutPage() {
       );
       let dirtySection: SectionId = "story";
       if (target.kind === "aboutFeature") {
-        queueReplacedUrl(aboutDraft.feature_image_url);
+        queueReplacedUrl(aboutDraft.feature_image_url, "about");
         setAboutDraft((current) => ({ ...current, feature_image_url: nextUrl }));
         dirtySection = "story";
       }
       if (target.kind === "logoAnnotated") {
-        queueReplacedUrl(logoDraft.annotated_image_url);
+        queueReplacedUrl(logoDraft.annotated_image_url, "logo");
         setLogoDraft((current) => ({ ...current, annotated_image_url: nextUrl }));
         dirtySection = "images";
       }
       if (target.kind === "logoMap") {
-        queueReplacedUrl(logoDraft.map_image_url);
+        queueReplacedUrl(logoDraft.map_image_url, "logo");
         setLogoDraft((current) => ({ ...current, map_image_url: nextUrl }));
         dirtySection = "images";
       }
       if (target.kind === "logoColorCard") {
         const replacedUrl = logoDraft.color_cards[target.index]?.image_url;
         if (replacedUrl && aboutStoragePathFromPublicUrl(replacedUrl) !== stableColorPath) {
-          queueReplacedUrl(replacedUrl);
+          queueReplacedUrl(replacedUrl, "logo");
         }
         setLogoDraft((current) => ({
           ...current,
@@ -253,7 +312,7 @@ export default function AdminAboutPage() {
       }
       if (target.kind === "logoFeaturePatch") {
         const replacedUrl = logoDraft.features[target.index]?.patch_url;
-        if (replacedUrl) queueReplacedUrl(replacedUrl);
+        if (replacedUrl) queueReplacedUrl(replacedUrl, "logo");
         setLogoDraft((current) => ({
           ...current,
           features: current.features.map((feature, index) =>
@@ -264,7 +323,7 @@ export default function AdminAboutPage() {
       }
       if (target.kind === "logoFeatureIcon") {
         const replacedUrl = logoDraft.features[target.index]?.icon_url;
-        if (replacedUrl) queueReplacedUrl(replacedUrl);
+        if (replacedUrl) queueReplacedUrl(replacedUrl, "logo");
         setLogoDraft((current) => ({
           ...current,
           features: current.features.map((feature, index) =>
@@ -283,7 +342,7 @@ export default function AdminAboutPage() {
     }
   }
 
-  function setAboutField(field: keyof DBAboutPageContent, value: string, section: SectionId) {
+  function setAboutField<K extends keyof DBAboutPageContent>(field: K, value: DBAboutPageContent[K], section: SectionId) {
     setAboutDraft((current) => ({ ...current, [field]: value }));
     markDirty(section);
   }
@@ -316,99 +375,114 @@ export default function AdminAboutPage() {
     markDirty("features");
   }
 
-  async function handleSave() {
-    setSaving(true);
+  function selectPage(next: "about" | "logo") {
+    if (saving || uploading || next === pageChoice || (next === "logo" && !hasClubLogoPage)) return;
+    setPageChoice(next);
+    setSelectedTarget(null);
+    selectSection(next === "about" ? "story" : "images");
     setError(null);
     setSaved(false);
-
-    try {
-      const supabase = createClient();
-      const aboutPayload = {
-        ...aboutDraft,
-        hero_title: aboutDraft.hero_title.trim() || DEFAULT_ABOUT_PAGE_CONTENT.hero_title,
-        story_paragraphs: normalizeStoryParagraphs(aboutDraft.story_paragraphs),
-        values_heading: aboutDraft.values_heading.trim() || DEFAULT_ABOUT_PAGE_CONTENT.values_heading,
-        values: normalizeAboutValues(aboutDraft.values),
-        closing_text: aboutDraft.closing_text.trim(),
-        closing_cta_label: aboutDraft.closing_cta_label.trim(),
-        closing_cta_href: isAcademy
-          ? ACADEMY_ABOUT_CLOSING_CTA_HREF
-          : aboutDraft.closing_cta_href.trim() || "/schedule",
-        updated_at: new Date().toISOString(),
-      };
-      const logoPayload = {
-        ...logoDraft,
-        features: normalizeClubLogoFeatures(logoDraft.features),
-        color_cards: normalizeClubLogoColorCards(logoDraft.color_cards),
-        updated_at: new Date().toISOString(),
-      };
-
-      // academy@1 and editorial@1 sites have no /club/logo page, so their
-      // content row is never read; skipping the upsert keeps the unreachable
-      // editor from writing.
-      const [aboutResult, logoResult] = await Promise.all([
-        supabase.from("about_page_content").upsert([aboutPayload]),
-        hasClubLogoPage
-          ? supabase.from("club_logo_page_content").upsert([logoPayload])
-          : Promise.resolve({ error: null }),
-      ]);
-      const saveError = aboutResult.error ?? logoResult.error;
-      if (saveError) throw new Error(saveError.message);
-
-      await deleteStorageUrls("about-page", pendingDeleteUrls, ["content/"]);
-      setAboutDraft(aboutPayload);
-      setLogoDraft(logoPayload);
-      setPendingDeleteUrls([]);
-      setDirtySections(new Set());
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (saveError: unknown) {
-      setError(saveError instanceof Error ? saveError.message : "Save failed");
-    } finally {
-      setSaving(false);
-    }
   }
 
-  const saveDisabled = saving || uploading || !dirty;
-  const isLogoSection = LOGO_SECTIONS.includes(activeSection);
+  function selectCanvasTarget(target: AboutCanvasTarget, index: number) {
+    setSelectedTarget(target);
+    if (target === "features") setSelectedLogoFeature(index);
+    if (target === "colors") setSelectedLogoColor(index);
+    if (target === "images") setSelectedLogoImage(index);
+    if (target !== "fixed-hero" && target !== "sponsors") selectSection(target);
+  }
 
-  // Rail items are grouped into two visually-labeled clusters ("About Club"
-  // / "Club Logo") but share one flat activeSection/SlidingPanel pair — see
-  // the SectionId comment above. The Club Logo cluster (heading + rail) is
-  // wrapped in {hasClubLogoPage && (...)}, and its three items additionally
-  // carry `hidden` for defensiveness/consistency with AdminSectionRail's
-  // "never let hidden rows leak" contract, matching homepage's pattern.
-  const aboutClubItems: AdminSectionRailItem[] = ABOUT_SECTIONS.map((id) => ({
-    id,
-    label: SECTION_LABELS[id],
-    dirty: dirtySections.has(id),
-  }));
-  const clubLogoItems: AdminSectionRailItem[] = LOGO_SECTIONS.map((id) => ({
-    id,
-    label: SECTION_LABELS[id],
-    dirty: dirtySections.has(id),
-    hidden: !hasClubLogoPage,
-  }));
+  useEffect(() => {
+    if (!dirtyAbout && !dirtyLogo && Object.keys(pendingOperations).length === 0) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirtyAbout, dirtyLogo, pendingOperations]);
+
+  function acceptSnapshot(snapshot: AboutEditorSnapshot) {
+    const page = snapshot.page;
+    setSnapshots(current => ({ ...current, [page]: snapshot }));
+    if (page === "about") setAboutDraft(toAboutDraft({ ...EMPTY_ABOUT_PAGE_CONTENT, ...snapshot.content } as DBAboutPageContent));
+    else setLogoDraft(toLogoDraft({ ...EMPTY_CLUB_LOGO_PAGE_CONTENT, ...snapshot.content } as DBClubLogoPageContent));
+    setDirtySections(current => new Set([...current].filter(section => page === "about" ? !ABOUT_SECTIONS.includes(section) : !LOGO_SECTIONS.includes(section))));
+    setPendingDeleteUrls(current => ({ ...current, [page]: [] }));
+    setPendingOperations(current => { const next = { ...current }; delete next[page]; return next; });
+    setConflictedPages(current => new Set([...current].filter(value => value !== page)));
+  }
+
+  async function reloadLatestPage() {
+    if (!window.confirm("Replace this page's draft with the latest saved page? The other page's draft will stay here.")) return;
+    setSaving(true);
+    try { acceptSnapshot(await loadAboutEditor(pageChoice)); setError(null); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "Latest page could not be loaded."); }
+    finally { setSaving(false); }
+  }
+
+  async function retryCleanup() {
+    const operation = cleanupOperations[pageChoice]; if (!operation) return;
+    setSaving(true);
+    try {
+      const snapshot = await loadAboutEditor(pageChoice, operation);
+      if (snapshot.operation?.status !== "committed") throw new Error("Cleanup could not be confirmed. Try again.");
+      if (!snapshot.operation.receipt.cleanupPending) {
+        setCleanupOperations(current => { const next = { ...current }; delete next[pageChoice]; return next; }); setError(null);
+      } else setError("Page saved. Old image cleanup is still pending; retry cleanup when ready.");
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Cleanup could not be confirmed."); }
+    finally { setSaving(false); }
+  }
+
+  async function handleSave() {
+    if (saving || uploading || conflictedPages.has(pageChoice)) return;
+    const pending = pendingOperations[pageChoice];
+    if (!pending && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable)) {
+      setError("Choose a page available to this club for the closing button before saving."); return;
+    }
+    const snapshot = snapshots[pageChoice]; if (!snapshot) return;
+    setSaving(true); setError(null); setSaved(false);
+    try {
+      const prepared = prepareAboutPageSave({ page: pageChoice, about: aboutDraft, logo: logoDraft, academy: isAcademy, now: new Date().toISOString() });
+      const request = pending ?? aboutEditorSaveSchema.parse({ page: prepared.page, content: aboutPageEditableContent(prepared),
+        operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision,
+        retiredMediaUrls: pendingDeleteUrls[pageChoice] });
+      const outcome = await saveAboutEditor(request);
+      if (outcome.status === "committed") {
+        acceptSnapshot(outcome.snapshot); setSaved(true); setTimeout(() => setSaved(false), 3000);
+        if (outcome.snapshot.cleanupPending) {
+          setCleanupOperations(current => ({ ...current, [request.page]: request.operationId }));
+          setError("Page saved. Old image cleanup is pending; retry cleanup when ready.");
+        }
+      } else if (outcome.status === "uncertain") {
+        setPendingOperations(current => ({ ...current, [request.page]: outcome.request })); setError(outcome.message);
+      } else {
+        setPendingOperations(current => { const next = { ...current }; delete next[request.page]; return next; });
+        if (outcome.status === "conflict") setConflictedPages(current => new Set([...current, request.page]));
+        setError(outcome.message);
+      }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Review the page fields and try again."); }
+    finally { setSaving(false); }
+  }
+
+  const saveDisabled = saving || uploading || loadFailed || conflictedPages.has(pageChoice) || (!dirty && !pendingOperations[pageChoice]) || (!pendingOperations[pageChoice] && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable));
+  const isLogoSection = pageChoice === "logo";
 
   return (
-    <AdminPage className="overflow-x-clip">
+    <div ref={scrollport.workspace} style={{ maxHeight: scrollport.maxHeight }} className="min-w-0 overflow-y-auto overscroll-y-contain md:overflow-visible">
+    <AdminPage className="aep-root overflow-x-clip [&>*]:shrink-0">
       <AdminSaveFeedback saving={saving} saved={saved} />
       <AdminPageHeader
         title="About"
-        description={hasClubLogoPage
-            ? "Edit the About Club and Club Logo public pages."
-            : "Edit the public About page."}
+        description="Tap a section of the public page to edit it. Save changes to one page at a time."
         actions={
           !loading ? (
             <>
-              {dirty && (
+              {(dirtyAbout || dirtyLogo) && (
                 <div className="flex items-center gap-2 border-r border-border pr-3">
                   <span
                     className="h-2 w-2 flex-none rounded-full bg-warning"
                     aria-hidden="true"
                   />
                   <span className="font-body whitespace-nowrap text-sm text-muted-foreground">
-                    Unsaved changes
+                    {dirtyAbout && dirtyLogo ? "Both pages have unsaved changes" : `${dirtyAbout ? "About" : "Club Logo"} has unsaved changes`}
                   </span>
                 </div>
               )}
@@ -419,65 +493,48 @@ export default function AdminAboutPage() {
                 className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
-                {saving ? "Saving..." : uploading ? "Uploading..." : "Save About Pages"}
+                {saving ? "Saving..." : uploading ? "Uploading..." : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}
               </button>
             </>
           ) : undefined
         }
       />
 
+      <nav className="aep-page-nav" aria-label="Public page">
+        <button type="button" aria-pressed={pageChoice === "about"} onClick={() => selectPage("about")}>About page{dirtyAbout ? " •" : ""}</button>
+        {hasClubLogoPage && <button type="button" aria-pressed={pageChoice === "logo"} onClick={() => selectPage("logo")}>Club Logo page{dirtyLogo ? " •" : ""}</button>}
+      </nav>
+
       {loading ? (
         <AboutContentSkeleton hasClubLogoPage={hasClubLogoPage} />
+      ) : loadFailed ? (
+        <AdminPanel className="aep-load-error">
+          <p role="alert">{error ?? "The public page could not be loaded."}</p>
+          <button type="button" onClick={() => setLoadAttempt((current) => current + 1)}>Retry loading</button>
+        </AdminPanel>
       ) : (
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(12rem,15rem)_minmax(360px,1fr)_minmax(320px,1fr)]">
-          <div className="flex min-w-0 flex-col gap-4 self-start">
-            <div>
-              <p className={`${ADMIN_LABEL_CLASS} px-1`}>About Club</p>
-              <AdminSectionRail
-                items={aboutClubItems}
-                value={activeSection}
-                onChange={(id) => selectSection(id as SectionId)}
-              />
-            </div>
+        <div className="aep-layout">
+          <section className="aep-canvas" aria-label={`${isLogoSection ? "Club Logo" : "About"} public page canvas`}>
+            <div className="aep-canvas-top"><span>{isLogoSection ? "/club/logo" : "/club/about"}</span><div className="aep-device-toggle" aria-label="Preview size"><button type="button" aria-pressed={!phonePreview} onClick={() => setPhonePreview(false)}>Desktop</button><button type="button" aria-pressed={phonePreview} onClick={() => setPhonePreview(true)}>Phone</button></div></div>
+            <AboutPageCanvas page={pageChoice} about={aboutDraft} logo={logoDraft} sponsors={sponsors} phone={phonePreview} selected={selectedTarget} onSelect={selectCanvasTarget} />
+          </section>
 
-            {/* academy@1 and editorial@1 have no reachable /club/logo route
-                (templateRegistry lists no club-logo in defaultRoutes/
-                supportedRoutes for either), so the Club Logo editor is
-                unreachable content for both templates — same shape as
-                DCFC-D130's sponsors decision. With no items left the whole
-                cluster is hidden; every other template keeps both clusters
-                untouched. */}
-            {hasClubLogoPage && (
-            <div>
-              <p className={`${ADMIN_LABEL_CLASS} px-1`}>Club Logo</p>
-              <AdminSectionRail
-                items={clubLogoItems}
-                value={activeSection}
-                onChange={(id) => selectSection(id as SectionId)}
-              />
-            </div>
-            )}
-
-            {hasClubLogoPage && (
-            <p className="font-body rounded-xl border border-border bg-card p-3 text-xs leading-relaxed text-muted-foreground">
-              One Save changes covers both pages. Club Logo is hidden for
-              templates with no /club/logo route.
-            </p>
-            )}
-          </div>
-
-          <AdminPanel className="flex flex-col self-start p-4 sm:p-5">
+          <PageEditorInspector open={selectedTarget !== null} onClose={() => setSelectedTarget(null)} label="About section tools" breakpoint={767} className="aep-inspector" data-open={selectedTarget !== null}>
+            <div className="aep-inspector-head"><div><p className={ADMIN_LABEL_CLASS}>{isLogoSection ? "Club Logo page" : "About page"}</p><h2>{selectedTarget ? selectedTarget === "fixed-hero" ? "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "Select a section"}</h2></div>{selectedTarget && <button type="button" onClick={() => setSelectedTarget(null)}>Done</button>}</div>
+            {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">This heading is part of the Clubhouse template. Contact Onzio to change its wording.</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors →</a></div> : <fieldset disabled={saving || uploading || draftLocked} className="aep-fields">
             <SlidingPanel activeKey={activeSection} direction={sectionDirection}>
+              {activeSection === "hero" && (
+                <Field label="Page heading">
+                  <input
+                    value={aboutDraft.hero_title}
+                    onChange={(event) => setAboutField("hero_title", event.target.value, "hero")}
+                    className={ADMIN_INPUT_CLASS}
+                  />
+                </Field>
+              )}
               {activeSection === "story" && (
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_210px]">
                   <div className="space-y-3">
-                    <Field label="Page Title">
-                      <input
-                        value={aboutDraft.hero_title}
-                        onChange={(event) => setAboutField("hero_title", event.target.value, "story")}
-                        className={ADMIN_INPUT_CLASS}
-                      />
-                    </Field>
                     <Field label="Story Paragraphs" help="Each line becomes one paragraph.">
                       <Textarea
                         value={aboutDraft.story_paragraphs.join("\n")}
@@ -505,9 +562,11 @@ export default function AdminAboutPage() {
                       className={ADMIN_INPUT_CLASS}
                     />
                   </Field>
+                  <button type="button" className="aep-collection-button" disabled={aboutDraft.values.length >= 24} onClick={() => setAboutField("values", [...aboutDraft.values, newAboutValue()], "values")}>Add value</button>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {aboutDraft.values.map((value, index) => (
                       <div key={index} className="rounded-lg border border-border p-3">
+                        <button type="button" className="aep-collection-button" onClick={() => setAboutField("values", removeCollectionItem(aboutDraft.values, index), "values")}>Remove value {index + 1}</button>
                         <Field label={`Value ${index + 1} Title`}>
                           <input
                             value={value.title}
@@ -553,12 +612,23 @@ export default function AdminAboutPage() {
                         </p>
                       </Field>
                     ) : (
-                      <Field label="Button Link" flush>
-                        <input
+                      <Field label="Button Goes To" flush>
+                        <NativeSelect
+                          aria-label="Button goes to"
                           value={aboutDraft.closing_cta_href}
                           onChange={(event) => setAboutField("closing_cta_href", event.target.value, "closing")}
                           className={ADMIN_INPUT_CLASS}
-                        />
+                          disabled={!destinationsLoaded}
+                        >
+                          {!destinationAvailable && <NativeSelectOption value={aboutDraft.closing_cta_href} disabled>
+                            Current link unavailable — choose a page
+                          </NativeSelectOption>}
+                          {availableDestinations.map((option) => <NativeSelectOption key={option.href} value={option.href}>{option.label}</NativeSelectOption>)}
+                        </NativeSelect>
+                        <p className="font-body mt-1 text-xs text-muted-foreground">
+                          {destinationAvailable ? `Selected page: ${aboutDraft.closing_cta_href}` : "Choose a page available to this club before saving."}
+                        </p>
+                        {destinationError && <div className="aep-destination-error"><p role="alert">{destinationError}</p><button type="button" onClick={() => setDestinationAttempt((current) => current + 1)}>Retry pages</button></div>}
                       </Field>
                     )}
                   </div>
@@ -566,32 +636,40 @@ export default function AdminAboutPage() {
               )}
 
               {activeSection === "images" && (
-                <div className="grid gap-3 lg:grid-cols-2">
-                  <ImageControl
+                <div className="grid gap-3">
+                  {selectedLogoImage === 0 ? <ImageControl
                     label="Annotated Crest Image"
                     url={logoDraft.annotated_image_url}
                     onReplace={() => openUploader({ kind: "logoAnnotated" })}
                     disabled={uploading || saving}
                     compact
-                  />
-                  <ImageControl
+                  /> : <ImageControl
                     label="Map Image"
                     url={logoDraft.map_image_url}
                     onReplace={() => openUploader({ kind: "logoMap" })}
                     disabled={uploading || saving}
                     compact
-                  />
+                  />}
                 </div>
               )}
 
               {activeSection === "features" && (
                 <div className="space-y-3">
+                  <button type="button" className="aep-collection-button" disabled={logoDraft.features.length >= 24} onClick={() => {
+                    setSelectedLogoFeature(logoDraft.features.length); setLogoDraft(current => ({ ...current, features: [...current.features, newLogoFeature()] })); markDirty("features");
+                  }}>Add crest feature</button>
+                  {logoDraft.features[selectedLogoFeature] && <button type="button" className="aep-collection-button" onClick={() => {
+                    const removed = logoDraft.features[selectedLogoFeature];
+                    queueReplacedUrl(removed.patch_url, "logo");
+                    queueReplacedUrl(removed.icon_url, "logo");
+                    setLogoDraft(current => ({ ...current, features: removeCollectionItem(current.features, selectedLogoFeature) })); setSelectedLogoFeature(current => Math.max(0, current - 1)); markDirty("features");
+                  }}>Remove crest feature</button>}
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                     {logoDraft.features.map((feature, index) => {
                       const selected = selectedLogoFeature === index;
                       return (
                         <button
-                          key={feature.title}
+                          key={index}
                           type="button"
                           onClick={() => setSelectedLogoFeature(index)}
                           disabled={saving || uploading}
@@ -677,23 +755,30 @@ export default function AdminAboutPage() {
                     Brand Color Cards
                   </p>
                   <p className="font-body mb-3 text-xs text-muted-foreground">
-                    Six fixed slots render below the Pasadena map.
+                    Add up to six color cards below the club map.
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {logoDraft.color_cards.map((card, index) => (
-                      <ImageControl
-                        key={card.label}
-                        label={card.label}
-                        url={card.image_url}
-                        onReplace={() => openUploader({ kind: "logoColorCard", index })}
-                        disabled={uploading || saving}
-                        compact
-                      />
-                    ))}
-                  </div>
+                  <button type="button" className="aep-collection-button" disabled={logoDraft.color_cards.length >= 6} onClick={() => {
+                    setSelectedLogoColor(logoDraft.color_cards.length); setLogoDraft(current => ({ ...current, color_cards: [...current.color_cards, newLogoColorCard()] })); markDirty("colors");
+                  }}>Add color card</button>
+                  <div className="aep-color-choices">{logoDraft.color_cards.map((card, index) => <button type="button" key={index} aria-pressed={index === selectedLogoColor} onClick={() => setSelectedLogoColor(index)}>{card.label || `Color ${index + 1}`}</button>)}</div>
+                  {logoDraft.color_cards[selectedLogoColor] && <>
+                    <Field label="Color label"><input className={ADMIN_INPUT_CLASS} value={logoDraft.color_cards[selectedLogoColor].label} onChange={event => {
+                      setLogoDraft(current => ({ ...current, color_cards: current.color_cards.map((card, index) => index === selectedLogoColor ? { ...card, label: event.target.value } : card) })); markDirty("colors");
+                    }} /></Field>
+                    <button type="button" className="aep-collection-button" onClick={() => {
+                      queueReplacedUrl(logoDraft.color_cards[selectedLogoColor].image_url, "logo");
+                      setLogoDraft(current => ({ ...current, color_cards: removeCollectionItem(current.color_cards, selectedLogoColor) })); setSelectedLogoColor(current => Math.max(0, current - 1)); markDirty("colors");
+                    }}>Remove color card</button>
+                  <ImageControl
+                    label={logoDraft.color_cards[selectedLogoColor].label}
+                    url={logoDraft.color_cards[selectedLogoColor].image_url}
+                    onReplace={() => openUploader({ kind: "logoColorCard", index: selectedLogoColor })}
+                    disabled={uploading || saving}
+                    compact
+                  /></>}
                 </div>
               )}
-            </SlidingPanel>
+            </SlidingPanel></fieldset>}
 
             <input
               ref={fileRef}
@@ -708,27 +793,15 @@ export default function AdminAboutPage() {
                 Error: {error}
               </p>
             )}
-          </AdminPanel>
-
-          <AdminPanel className="overflow-hidden p-4 sm:p-5 xl:sticky xl:top-24 xl:self-start">
-            <p className="font-display mb-3 text-xs uppercase tracking-widest text-muted-foreground">
-              {isLogoSection ? "Club Logo Preview" : "About Preview"}
-            </p>
-            <p className="font-body mb-3 text-xs text-muted-foreground">
-              Desktop website view, scaled to fit. The layout stays in the
-              proportions visitors see instead of re-flowing to this panel.
-            </p>
-            <div className="overflow-hidden rounded-lg border border-border bg-white">
-              {isLogoSection ? (
-                <ScaledAboutPreview variant="logo" content={logoDraft} />
-              ) : (
-                <ScaledAboutPreview variant="about" content={aboutDraft} />
-              )}
-            </div>
-          </AdminPanel>
+            {conflictedPages.has(pageChoice) && <button type="button" className="aep-recovery" onClick={() => void reloadLatestPage()} disabled={saving}>Reload latest page</button>}
+            {cleanupOperations[pageChoice] && <button type="button" className="aep-recovery" onClick={() => void retryCleanup()} disabled={saving}>Retry image cleanup</button>}
+            <div className="aep-inspector-save"><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>
+          </PageEditorInspector>
         </div>
       )}
+      {!loading && <div ref={scrollport.saveBar} className="aep-mobile-save"><span>{dirty ? "Unsaved changes" : "All changes saved"}</span><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
     </AdminPage>
+    </div>
   );
 }
 
@@ -745,10 +818,10 @@ function Field({
 }) {
   return (
     <div className={flush ? "" : "mt-3 first:mt-0"}>
-      <label className={ADMIN_LABEL_CLASS}>
-        {label}
+      <label className="block">
+        <span className={ADMIN_LABEL_CLASS}>{label}</span>
+        {children}
       </label>
-      {children}
       {help && (
         <p className="font-body mt-1 text-xs text-muted-foreground">
           {help}

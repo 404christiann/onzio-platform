@@ -13,6 +13,8 @@ const source = (path: string) => readFileSync(resolve(root, path), "utf8");
 const CLUB_NAME = "Diverse City FC";
 
 const SHOP_ADMIN = "app/admin/(protected)/shop/page.tsx";
+const SHOP_EDITOR = "components/admin/shop/ShopPageEditor.tsx";
+const SHOP_MIGRATION = "supabase/migrations/20261002203000_shop_page_atomic_save.sql";
 const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
 const DATA_ROUTE = "app/api/admin/data/route.ts";
 const AUTHORIZE_ROUTE = "app/api/admin/media/authorize/route.ts";
@@ -54,7 +56,7 @@ describe("Diverse City admin punch list", () => {
     it("does not filter any admin mutation on club_id from the browser", () => {
       // The whole point of the fix: no client admin page may send this filter.
       // `lib/admin-client.ts` is the only browser path to /api/admin/data.
-      expect(source(SHOP_ADMIN)).not.toContain('.eq("club_id"');
+      expect(source(SHOP_EDITOR)).not.toContain('.eq("club_id"');
       expect(source(SCHEDULE_ADMIN)).not.toContain('.eq("club_id"');
     });
 
@@ -62,15 +64,10 @@ describe("Diverse City admin punch list", () => {
       // Second defect found during the same reproduction: an UPDATE matched
       // zero rows for a kit variant with no row yet (the Away kit), so photos
       // saved while the title, description, and bullets were silently dropped.
-      const shop = source(SHOP_ADMIN);
-      const section = shop.slice(shop.indexOf('.from("shop_kit_section")'));
-      expect(section.slice(0, 400)).toContain(".upsert(");
-      expect(section.slice(0, 400)).not.toContain(".update(");
-      // The conflict target the (club_id, surface, kit_variant) unique
-      // constraint backs; the route prefixes the verified club itself.
-      expect(section).toContain('onConflict: "surface,kit_variant"');
-      expect(section.slice(0, 400)).toContain("surface: selectedSurface");
-      expect(section.slice(0, 400)).toContain("kit_variant: activeKitVariant");
+      const shop = source(SHOP_MIGRATION);
+      expect(shop).toContain("insert into onzio.shop_kit_section(club_id,surface,kit_variant");
+      expect(shop).toContain("on conflict(club_id,surface,kit_variant) do update");
+      expect(source("app/api/admin/shop/route.ts")).toContain("p_club_id: club.id");
     });
   });
 
@@ -300,15 +297,14 @@ describe("Diverse City admin punch list", () => {
     });
 
     it("hides both Third and Away kit tabs for academy@1, keeping only Home", () => {
-      const shop = source(SHOP_ADMIN);
-      expect(shop).toContain(
-        'KIT_VARIANTS.filter((variant) => variant.id === "home")',
-      );
+      const shop = source(SHOP_EDITOR);
+      expect(shop).toContain('const variants: ShopVariant[] = isAcademy ? ["home"]');
+      expect(source(SHOP_MIGRATION)).toContain("(page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away')");
     });
 
     it("hides the now-single-option kit switcher instead of leaving dead UI", () => {
-      const shop = source(SHOP_ADMIN);
-      expect(shop).toContain('selectedSurface === "shop" && kitVariants.length > 1');
+      const shop = source(SHOP_EDITOR);
+      expect(shop).toContain('surface === "shop" && variants.length > 1');
     });
 
     it("still offers Third and Away for every other template", () => {

@@ -3,7 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import AcademyTryoutsPage from "@/components/AcademyTryoutsPage";
 import EditorialTryouts from "@/components/editorial/EditorialTryouts";
-import ScaledPagePreview from "@/components/admin/ScaledPagePreview";
+import TryoutsPreviewFrame from "@/components/admin/TryoutsPreviewFrame";
 import { useClubContext } from "@/components/ClubContextProvider";
 import {
   fetchClubThemeColors,
@@ -44,6 +44,9 @@ interface ScaledTryoutsPreviewProps {
   contactEmail: string;
   /** Page-level intro copy, resolved from the unsaved page-copy draft. */
   content: TryoutsPageContent;
+  phone?: boolean;
+  selected?: string | null;
+  onSelect?: (target: string) => void;
 }
 
 export default function ScaledTryoutsPreview({
@@ -51,6 +54,9 @@ export default function ScaledTryoutsPreview({
   clubName,
   contactEmail,
   content,
+  phone = false,
+  selected = null,
+  onSelect,
 }: ScaledTryoutsPreviewProps) {
   const club = useClubContext();
   const isEditorial = club.presentationTemplateKey === "editorial@1";
@@ -82,7 +88,7 @@ export default function ScaledTryoutsPreview({
 
   if (isEditorial) {
     return (
-      <ScaledPagePreview className="bg-[#F9FAFD]">
+      <TryoutsPreviewFrame phone={phone} host={club.name} onSelect={onSelect}>
         <div
           data-site-template="editorial"
           style={
@@ -97,20 +103,22 @@ export default function ScaledTryoutsPreview({
             tryouts={tryouts}
             contactEmail={contactEmail}
             content={content}
+            editor={onSelect ? { selected, onSelect } : undefined}
           />
         </div>
-      </ScaledPagePreview>
+      </TryoutsPreviewFrame>
     );
   }
 
   return (
-    <ScaledPagePreview className="bg-[#F9FAFD]">
+    <TryoutsPreviewFrame phone={phone} host={club.name} onSelect={onSelect}>
       <AcademyTryoutsPage
         tryouts={tryouts}
         clubName={clubName}
         contactEmail={contactEmail}
         content={content}
+        editor={onSelect ? { selected, onSelect } : undefined}
       />
-    </ScaledPagePreview>
+    </TryoutsPreviewFrame>
   );
 }

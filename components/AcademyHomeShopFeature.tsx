@@ -21,7 +21,7 @@ import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 // side by side on the sky #B9E3F6 panel with the fade into the page
 // ground, and the red "Buy Now"-style CTA into /shop. Copy stays
 // admin-editable through the existing home-surface shop kit section.
-export default function AcademyHomeShopFeature() {
+export default function AcademyHomeShopFeature({ editorContent }: { editorContent?: ShopKitContent }) {
   const sharedPiece = useHomepagePiece("shared.shop");
   const clubId = useClubId();
   const [content, setContent] = useState<ShopKitContent | null>(null);
@@ -29,18 +29,19 @@ export default function AcademyHomeShopFeature() {
   const showLoading = useBoundedAcademyLoading(loading, clubId);
 
   useEffect(() => {
+    if (editorContent) return;
     fetchShopKitVariants("home", clubId)
       .then((variants) => setContent(variants.home))
       .catch((error) => {
         console.error("AcademyHomeShopFeature:", error);
       })
       .finally(() => setLoading(false));
-  }, [clubId]);
+  }, [clubId, editorContent]);
 
-  if (showLoading) return <AcademyShopLoadingSkeleton />;
+  if (showLoading && !editorContent) return <AcademyShopLoadingSkeleton />;
 
-  const section = content?.section;
-  const photos = (content?.photos ?? []).filter(
+  const section = (editorContent ?? content)?.section;
+  const photos = ((editorContent ?? content)?.photos ?? []).filter(
     (photo) => photo.url.trim().length > 0,
   );
   if (!section || photos.length === 0) return null;
@@ -52,7 +53,7 @@ export default function AcademyHomeShopFeature() {
   return (
     <section {...sharedPiece} className="relative w-full overflow-hidden bg-[#F9FAFD]">
       <div className="flex flex-col md:min-h-[680px] md:flex-row">
-        <div className="relative min-h-[520px] w-full overflow-hidden bg-[#B9E3F6] md:min-h-full md:w-1/2">
+        <div data-shop-editor-target="photos" className="relative min-h-[520px] w-full overflow-hidden bg-[#B9E3F6] md:min-h-full md:w-1/2">
           {back ? (
             <>
               <div className="absolute inset-y-0 -left-[3%] w-[64%]">
@@ -99,7 +100,7 @@ export default function AcademyHomeShopFeature() {
           />
         </div>
 
-        <div className="flex w-full flex-col justify-center px-6 py-14 sm:px-10 md:w-1/2 md:px-14 md:py-20 lg:px-20">
+        <div data-shop-editor-target="copy" className="flex w-full flex-col justify-center px-6 py-14 sm:px-10 md:w-1/2 md:px-14 md:py-20 lg:px-20">
           {section.eyebrow ? (
             <p className="mb-4 font-nav text-[clamp(1rem,2vw,1.3rem)] font-bold uppercase text-[#FF1616]">
               {section.eyebrow}
@@ -137,6 +138,7 @@ export default function AcademyHomeShopFeature() {
           ) : null}
 
           <Link
+            data-shop-editor-target="cta"
             href="/shop"
             className="inline-flex w-full items-center justify-center bg-[#FF1616] px-10 py-4 font-nav text-sm font-bold uppercase text-white transition-colors hover:bg-[#D70000] md:w-fit"
           >

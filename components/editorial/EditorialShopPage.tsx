@@ -20,7 +20,11 @@ const KIT_LABELS: Record<ShopKitVariant, string> = {
  * Real-data editorial Store using a simple official-vendor handoff. The club
  * controls each product's title, description, image, and destination link.
  */
-export default function EditorialShopPage() {
+export default function EditorialShopPage({ editorContent, selectedEditorVariant, onEditorSelectKit }: {
+  editorContent?: Record<ShopKitVariant, ShopKitContent>;
+  selectedEditorVariant?: ShopKitVariant;
+  onEditorSelectKit?: (variant: ShopKitVariant) => void;
+} = {}) {
   const clubId = useClubId();
   const { identity } = useEditorialIdentity();
   const [content, setContent] = useState<Record<ShopKitVariant, ShopKitContent> | null>(null);
@@ -28,6 +32,7 @@ export default function EditorialShopPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (editorContent) return;
     let cancelled = false;
     fetchShopKitVariants("shop", clubId)
       .then((variants) => {
@@ -42,9 +47,9 @@ export default function EditorialShopPage() {
     return () => {
       cancelled = true;
     };
-  }, [clubId]);
+  }, [clubId, editorContent]);
 
-  if (loading) {
+  if (loading && !editorContent) {
     return (
       <section className="shop-state">
         <p className="eyebrow">Store</p>
@@ -54,7 +59,7 @@ export default function EditorialShopPage() {
   }
 
   const products = VARIANT_ORDER.flatMap((variant) => {
-    const variantContent = content?.[variant];
+    const variantContent = (editorContent ?? content)?.[variant];
     const section = variantContent?.section;
     if (!section) return [];
 
@@ -78,14 +83,14 @@ export default function EditorialShopPage() {
   }
 
   const selectedProduct =
-    products.find((product) => product.variant === selectedVariant) ?? products[0];
+    products.find((product) => product.variant === (selectedEditorVariant ?? selectedVariant)) ?? products[0];
   const productHref = selectedProduct.section.cta_link.trim() || "#store-product";
   const collectionName =
     identity?.shortName?.replace(/\s+FC$/i, "").trim() || "Club";
 
   return (
     <main className="store-page">
-      <header className="store-heading">
+      <header data-shop-editor-target="fixed" className="store-heading">
         <span className="store-collection-label">
           Official {collectionName} collection
         </span>
@@ -104,7 +109,10 @@ export default function EditorialShopPage() {
               role="tab"
               aria-selected={selectedProduct.variant === product.variant}
               aria-controls="store-product"
-              onClick={() => setSelectedVariant(product.variant)}
+              onClick={() => {
+                setSelectedVariant(product.variant);
+                onEditorSelectKit?.(product.variant);
+              }}
             >
               {KIT_LABELS[product.variant]}
             </button>
@@ -118,7 +126,7 @@ export default function EditorialShopPage() {
         role="tabpanel"
         aria-live="polite"
       >
-        <div className="store-product-visual">
+        <div data-shop-editor-target="photos" className="store-product-visual">
           <div className="store-product-image">
             {selectedProduct.photos.length > 1 ? (
               // key={variant} remounts on a kit-tab switch, so the slideshow
@@ -144,13 +152,14 @@ export default function EditorialShopPage() {
           </div>
         </div>
 
-        <div className="store-product-details">
+        <div data-shop-editor-target="copy" className="store-product-details">
           <h2>{selectedProduct.section.title}</h2>
           <p className="store-product-description">
             {selectedProduct.section.description}
           </p>
           <div className="store-product-action">
             <a
+              data-shop-editor-target="cta"
               className="store-vendor-button"
               href={productHref}
               target="_blank"

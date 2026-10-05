@@ -15,7 +15,8 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "codex/contact-editor": false
+      "codex/contact-editor": false,
+      "codex/public-page-editors-release": false
     }
   }
 }

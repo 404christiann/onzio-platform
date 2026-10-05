@@ -20,12 +20,14 @@ export default function ShopKitSectionContainer({
   surface,
   selectedVariant,
   onVariantChange,
+  editorContent,
 }: {
   headingTag?: "h1" | "h2";
   fadeImageToWhite?: boolean;
   surface: ShopKitSurface;
   selectedVariant?: ShopKitVariant;
   onVariantChange?: (variant: ShopKitVariant) => void;
+  editorContent?: Record<ShopKitVariant, ShopKitContent>;
 }) {
   const clubId = useClubId();
   const [contentByVariant, setContentByVariant] =
@@ -35,6 +37,7 @@ export default function ShopKitSectionContainer({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (editorContent) return;
     setLoading(true);
     fetchShopKitVariants(surface, clubId)
       .then(setContentByVariant)
@@ -42,9 +45,9 @@ export default function ShopKitSectionContainer({
         console.error("ShopKitSection:", error);
       })
       .finally(() => setLoading(false));
-  }, [clubId, surface]);
+  }, [clubId, surface, editorContent]);
 
-  if (loading) {
+  if (loading && !editorContent) {
     return (
       <div
         className="flex w-full items-center justify-center"
@@ -61,10 +64,10 @@ export default function ShopKitSectionContainer({
   }
 
   const content =
-    contentByVariant?.[activeVariant]?.section &&
-    contentByVariant[activeVariant].photos.length > 0
-      ? contentByVariant[activeVariant]
-      : contentByVariant?.home;
+    (editorContent ?? contentByVariant)?.[activeVariant]?.section &&
+    (editorContent ?? contentByVariant)![activeVariant].photos.length > 0
+      ? (editorContent ?? contentByVariant)![activeVariant]
+      : (editorContent ?? contentByVariant)?.home;
 
   if (!content?.section || content.photos.length === 0) return null;
 
@@ -75,6 +78,7 @@ export default function ShopKitSectionContainer({
       section={content.section}
       photos={content.photos}
       headingTag={headingTag}
+      animate={!editorContent}
       fadeImageToWhite={fadeImageToWhite}
       ctaHref={surface === "home" ? "/shop" : undefined}
       variantTabs={showVariantTabs ? (

@@ -28,7 +28,21 @@ function productName(product: KitProduct) {
         : "White Jersey");
 }
 
-export default function ClubhouseShopPage() {
+function productsFromContent(contentByVariant: Record<ShopKitVariant, ShopKitContent>): KitProduct[] {
+  return (["home", "third", "away"] as ShopKitVariant[])
+    .map((variant) => {
+      const content = contentByVariant[variant];
+      const imageUrl = content.photos[0]?.url;
+      if (!content.section || !imageUrl) return null;
+      return { variant, content, imageUrl };
+    })
+    .filter((product): product is KitProduct => product !== null);
+}
+
+export default function ClubhouseShopPage({ editorContent, onEditorSelectKit }: {
+  editorContent?: Record<ShopKitVariant, ShopKitContent>;
+  onEditorSelectKit?: (variant: ShopKitVariant) => void;
+} = {}) {
   const club = useClubContext();
   const [products, setProducts] = useState<KitProduct[]>([]);
   const [selected, setSelected] = useState<KitProduct | null>(null);
@@ -37,19 +51,12 @@ export default function ClubhouseShopPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (editorContent) return;
     let cancelled = false;
     fetchShopKitVariants("shop", club.id)
       .then((contentByVariant) => {
         if (cancelled) return;
-        const nextProducts = (["home", "third", "away"] as ShopKitVariant[])
-          .map((variant) => {
-            const content = contentByVariant[variant];
-            const imageUrl = content.photos[0]?.url;
-            if (!content.section || !imageUrl) return null;
-            return { variant, content, imageUrl };
-          })
-          .filter((product): product is KitProduct => product !== null);
-        setProducts(nextProducts);
+        setProducts(productsFromContent(contentByVariant));
       })
       .catch((caught: unknown) => {
         if (!cancelled) {
@@ -62,7 +69,7 @@ export default function ClubhouseShopPage() {
     return () => {
       cancelled = true;
     };
-  }, [club.id]);
+  }, [club.id, editorContent]);
 
   useEffect(() => {
     if (!selected) return;
@@ -78,12 +85,13 @@ export default function ClubhouseShopPage() {
     };
   }, [selected]);
 
-  const featured = products[0] ?? null;
+  const visibleProducts = editorContent ? productsFromContent(editorContent) : products;
+  const featured = visibleProducts[0] ?? null;
 
   return (
     <main className="clubhouse-route-page clubhouse-store-page">
       <section className="clubhouse-store-campaign">
-        <div className="clubhouse-store-campaign-copy">
+        <div data-shop-editor-target="fixed" className="clubhouse-store-campaign-copy">
           <span className="clubhouse-eyebrow">Official 2026 collection</span>
           <h1>
             Made for the match.
@@ -98,11 +106,12 @@ export default function ClubhouseShopPage() {
 
         {featured && (
           <button
+            data-shop-editor-target="photos"
             type="button"
             className="clubhouse-store-featured-product"
             onClick={() => {
-              setSelectedSize(null);
-              setSelected(featured);
+              if (onEditorSelectKit) onEditorSelectKit(featured.variant);
+              else { setSelectedSize(null); setSelected(featured); }
             }}
             aria-label={`View ${productName(featured)} details`}
           >
@@ -128,27 +137,28 @@ export default function ClubhouseShopPage() {
       </section>
 
       <section className="clubhouse-store-catalog" aria-labelledby="clubhouse-store-collection-title">
-        <header className="clubhouse-store-catalog-head">
+        <header data-shop-editor-target="fixed" className="clubhouse-store-catalog-head">
           <div>
             <span className="clubhouse-eyebrow">First-team kits</span>
             <h2 id="clubhouse-store-collection-title">Choose your colors.</h2>
           </div>
-          <p>{products.length} official jerseys · 2026 season</p>
+          <p>{visibleProducts.length} official jerseys · 2026 season</p>
         </header>
 
-        {loading && <div className="clubhouse-route-state">Loading collection...</div>}
-        {error && !loading && <div className="clubhouse-route-state">Store unavailable.</div>}
-        {!loading && !error && (
+        {loading && !editorContent && <div className="clubhouse-route-state">Loading collection...</div>}
+        {error && !loading && !editorContent && <div className="clubhouse-route-state">Store unavailable.</div>}
+        {(!loading || editorContent) && (!error || editorContent) && (
           <div className="clubhouse-store-product-grid">
-            {products.map((product, index) => (
+            {visibleProducts.map((product, index) => (
               <button
+                data-shop-editor-target="kit"
                 type="button"
                 key={product.variant}
                 className="clubhouse-store-product-card"
                 data-kit={index + 1}
                 onClick={() => {
-                  setSelectedSize(null);
-                  setSelected(product);
+                  if (onEditorSelectKit) onEditorSelectKit(product.variant);
+                  else { setSelectedSize(null); setSelected(product); }
                 }}
               >
                 <span className="clubhouse-store-product-type">

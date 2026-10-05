@@ -16,6 +16,7 @@ import type { ProgramContent } from "@/lib/queries";
 /** One row of a program's ordered gallery, as edited in /admin/programs. */
 export type ProgramMediaDraft = {
   id: string | null;
+  updatedAt?: string;
   url: string;
   mediaAssetId: string | null;
   alt: string;
@@ -24,6 +25,7 @@ export type ProgramMediaDraft = {
 
 export type ProgramDraft = {
   id: string | null;
+  updatedAt?: string;
   slug: string;
   navLabel: string;
   displayTitle: string;
@@ -126,6 +128,7 @@ export function programToDraft(row: AdminProgramRow): ProgramDraft {
   const registration = resolveProgramRegistration(row);
   return {
     id: row.id,
+    updatedAt: row.updated_at,
     slug: row.slug,
     navLabel: row.nav_label,
     displayTitle: row.display_title,
@@ -156,6 +159,7 @@ export function programToDraft(row: AdminProgramRow): ProgramDraft {
 export function programMediaToDraft(row: DBProgramMedia): ProgramMediaDraft {
   return {
     id: row.id,
+    updatedAt: row.updated_at,
     url: row.url,
     mediaAssetId: row.media_asset_id,
     alt: row.alt,

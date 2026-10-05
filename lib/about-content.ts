@@ -176,8 +176,13 @@ export const EMPTY_CLUB_LOGO_PAGE_CONTENT: DBClubLogoPageContent = {
   updated_at: "",
 };
 
-export function normalizeAboutValues(value: unknown): AboutValue[] {
-  if (!Array.isArray(value)) return DEFAULT_ABOUT_PAGE_CONTENT.values;
+// Public legacy rendering keeps its historical default. Tenant-scoped editors
+// pass an empty fallback so another club never receives Rose City copy.
+export function normalizeAboutValues(
+  value: unknown,
+  fallback: AboutValue[] = DEFAULT_ABOUT_PAGE_CONTENT.values,
+): AboutValue[] {
+  if (!Array.isArray(value)) return fallback;
   const values = value
     .map((item) => {
       if (!item || typeof item !== "object") return null;
@@ -188,25 +193,33 @@ export function normalizeAboutValues(value: unknown): AboutValue[] {
       };
     })
     .filter((item): item is AboutValue => Boolean(item && item.title.trim()));
-  return values.length > 0 ? values : DEFAULT_ABOUT_PAGE_CONTENT.values;
+  return values.length > 0 ? values : fallback;
 }
 
-export function normalizeStoryParagraphs(value: unknown): string[] {
-  if (!Array.isArray(value)) return DEFAULT_ABOUT_PAGE_CONTENT.story_paragraphs;
+export function normalizeStoryParagraphs(
+  value: unknown,
+  fallback: string[] = DEFAULT_ABOUT_PAGE_CONTENT.story_paragraphs,
+): string[] {
+  if (!Array.isArray(value)) return fallback;
   const paragraphs = value
     .filter((paragraph): paragraph is string => typeof paragraph === "string")
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
-  return paragraphs.length > 0 ? paragraphs : DEFAULT_ABOUT_PAGE_CONTENT.story_paragraphs;
+  return paragraphs.length > 0 ? paragraphs : fallback;
 }
 
-export function normalizeClubLogoFeatures(value: unknown): ClubLogoFeature[] {
-  if (!Array.isArray(value)) return DEFAULT_CLUB_LOGO_FEATURES;
+export function normalizeClubLogoFeatures(
+  value: unknown,
+  fallbackFeatures: ClubLogoFeature[] = DEFAULT_CLUB_LOGO_FEATURES,
+): ClubLogoFeature[] {
+  if (!Array.isArray(value)) return fallbackFeatures;
   const features = value
     .map((item, index) => {
       if (!item || typeof item !== "object") return null;
       const record = item as Record<string, unknown>;
-      const fallback = DEFAULT_CLUB_LOGO_FEATURES[index] ?? DEFAULT_CLUB_LOGO_FEATURES[0];
+      const fallback = fallbackFeatures[index] ?? {
+        title: "", icon_url: "", icon_size: 70, icon_scale: 1, patch_url: "", description: "",
+      };
       return {
         title: typeof record.title === "string" ? record.title : fallback.title,
         icon_url: typeof record.icon_url === "string" ? record.icon_url : fallback.icon_url,
@@ -218,12 +231,16 @@ export function normalizeClubLogoFeatures(value: unknown): ClubLogoFeature[] {
       };
     })
     .filter((item): item is ClubLogoFeature => Boolean(item));
-  return features.length > 0 ? features : DEFAULT_CLUB_LOGO_FEATURES;
+  return features.length > 0 ? features : fallbackFeatures;
 }
 
-export function normalizeClubLogoColorCards(value: unknown): ClubLogoColorCard[] {
-  if (!Array.isArray(value)) return DEFAULT_CLUB_LOGO_COLOR_CARDS;
-  const cards = DEFAULT_CLUB_LOGO_COLOR_CARDS.map((fallback, index) => {
+export function normalizeClubLogoColorCards(
+  value: unknown,
+  fallbackCards: ClubLogoColorCard[] = DEFAULT_CLUB_LOGO_COLOR_CARDS,
+): ClubLogoColorCard[] {
+  if (!Array.isArray(value)) return fallbackCards;
+  return Array.from({ length: Math.min(6, Math.max(value.length, fallbackCards.length)) }, (_, index) => {
+    const fallback = fallbackCards[index] ?? { label: "", image_url: "" };
     const item = value[index];
     if (!item || typeof item !== "object") return fallback;
     const record = item as Record<string, unknown>;
@@ -236,7 +253,6 @@ export function normalizeClubLogoColorCards(value: unknown): ClubLogoColorCard[]
         : fallback.image_url,
     };
   });
-  return cards;
 }
 
 export function aboutStoragePathFromPublicUrl(url: string): string | null {

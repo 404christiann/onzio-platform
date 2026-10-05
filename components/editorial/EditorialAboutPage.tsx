@@ -15,12 +15,13 @@ export default function EditorialAboutPage({
 
   return (
     <div className="interior club-page">
-      <header className="interior-hero">
+      <header data-about-editor-section="hero" className="interior-hero">
         <h1>{content.hero_title}</h1>
         <span className="head-rule" aria-hidden="true" />
       </header>
 
       <section
+        data-about-editor-section="story"
         className={`manifesto${content.feature_image_url ? "" : " manifesto-single"}`}
       >
         <div className="manifesto-copy">
@@ -43,7 +44,7 @@ export default function EditorialAboutPage({
       </section>
 
       {content.values.length > 0 ? (
-        <section className="value-section">
+        <section data-about-editor-section="values" className="value-section">
           <p className="eyebrow">{content.values_heading}</p>
           <div className="value-grid">
             {content.values.map((value, index) => (
@@ -59,7 +60,7 @@ export default function EditorialAboutPage({
 
       {content.closing_text ||
       (content.closing_cta_label && content.closing_cta_href) ? (
-        <section className="about-closing">
+        <section data-about-editor-section="closing" className="about-closing">
           {content.closing_text ? <p>{content.closing_text}</p> : null}
           {content.closing_cta_label && content.closing_cta_href ? (
             <Link href={content.closing_cta_href}>

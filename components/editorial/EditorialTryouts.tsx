@@ -46,10 +46,12 @@ export default function EditorialTryouts({
   tryouts,
   contactEmail = "",
   content,
+  editor,
 }: {
   tryouts: TryoutContent[];
   contactEmail?: string;
   content: TryoutsPageContent;
+  editor?: { selected: string | null; onSelect: (target: string) => void };
 }) {
   const club = useClubContext();
   const hasTryouts = tryouts.length > 0;
@@ -59,9 +61,10 @@ export default function EditorialTryouts({
     <div className="interior tryouts-page">
       <header className="interior-hero">
         <span className="eyebrow">Join the club</span>
-        <h1>Join {club.name}</h1>
-        <p className="tryouts-intro">
+        <h1 className="relative">Join {club.name}{editor && <EditorTarget label="Page heading — Onzio managed" target="heading" editor={editor} />}</h1>
+        <p className="tryouts-intro relative">
           {hasTryouts ? content.introWithTryouts : content.introNoTryouts}
+          {editor && <EditorTarget label="Edit page introduction" target="intro" editor={editor} />}
         </p>
         {!hasTryouts && email ? (
           <a className="tryouts-hero-cta" href={`mailto:${email}`}>
@@ -76,7 +79,8 @@ export default function EditorialTryouts({
           <h2>Upcoming opportunities</h2>
           <div className="tryout-events-list">
             {tryouts.map((tryout) => (
-              <article className="tryout-event-card" key={tryout.id}>
+              <article className="tryout-event-card relative" key={tryout.id}>
+                {editor && <EditorTarget label={`Edit ${tryout.headline || "tryout event"}`} target={`event:${tryout.id}`} editor={editor} />}
                 <div className="tryout-event-head">
                   <h3>{tryout.headline || "Tryout opportunity"}</h3>
                   <span
@@ -156,4 +160,14 @@ export default function EditorialTryouts({
       )}
     </div>
   );
+}
+
+function EditorTarget({ label, target, editor }: {
+  label: string;
+  target: string;
+  editor: { selected: string | null; onSelect: (target: string) => void };
+}) {
+  return <button type="button" data-tryouts-editor-target={target} aria-label={label} aria-pressed={editor.selected === target}
+    onClick={() => editor.onSelect(target)}
+    className={`absolute inset-0 z-10 cursor-pointer border-2 bg-transparent transition-colors hover:border-current/50 focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-2 ${editor.selected === target ? "border-current" : "border-transparent"}`} />;
 }

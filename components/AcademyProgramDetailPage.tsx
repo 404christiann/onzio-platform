@@ -43,9 +43,11 @@ function isExternal(href: string): boolean {
 export default function AcademyProgramDetailPage({
   program,
   otherPrograms = [],
+  editorPreview = false,
 }: {
   program: ProgramContent;
   otherPrograms?: ProgramContent[];
+  editorPreview?: boolean;
 }) {
   const usesStatementBand = program.layoutVariant === "statement_band";
   const programName = program.navLabel || program.displayTitle;
@@ -62,7 +64,7 @@ export default function AcademyProgramDetailPage({
 
   return (
     <div className="bg-[#F9FAFD]">
-      <section className="relative min-h-[100svh] overflow-hidden bg-[#1E3653]">
+      <section data-program-editor-section="Program hero" className="relative min-h-[100svh] overflow-hidden bg-[#1E3653]">
         {program.heroMediaUrl ? (
           <ResilientImage
             src={program.heroMediaUrl}
@@ -97,12 +99,14 @@ export default function AcademyProgramDetailPage({
         </div>
       </section>
 
+      {!showsRegistrationSection && editorPreview && <button type="button" data-program-editor-section="Registration band" className="block min-h-20 w-full border-y border-dashed border-[#1E3653]/30 bg-[#EDF2F7] px-6 py-5 text-left font-body text-sm font-semibold text-[#1E3653]">Add registration band</button>}
       {showsRegistrationSection ? (
         // No lg:min-h-[calc(100svh-7rem)] here: it forced near-full-viewport
         // height while content is only ~560px tall, leaving dead space below
         // that stacked with "Explore other programs."'s own top padding.
         // Centering the content was rejected — it just splits the same gap.
         <section
+          data-program-editor-section="Registration band"
           id="register"
           className="scroll-mt-24 bg-[#F9FAFD] px-6 py-12 sm:py-14 lg:scroll-mt-28 lg:px-10 lg:py-10"
         >
@@ -170,7 +174,7 @@ export default function AcademyProgramDetailPage({
       {usesStatementBand &&
       !registration.enabled &&
       program.highlights.length > 0 ? (
-        <section className="bg-[#1E3653] px-6 pb-20 pt-24 lg:px-10 lg:pb-24 lg:pt-28">
+        <section data-program-editor-section="Program focus" className="bg-[#1E3653] px-6 pb-20 pt-24 lg:px-10 lg:pb-24 lg:pt-28">
           <ul className="mx-auto grid max-w-7xl divide-y divide-white/20 lg:grid-cols-[1fr_1.15fr_1fr] lg:items-center lg:divide-x lg:divide-y-0">
             {program.highlights.map((highlight) => (
               <li
@@ -185,10 +189,11 @@ export default function AcademyProgramDetailPage({
           </ul>
         </section>
       ) : null}
+      {usesStatementBand && !registration.enabled && program.highlights.length === 0 && editorPreview && <button type="button" data-program-editor-section="Program focus" className="block min-h-20 w-full border-y border-dashed border-[#1E3653]/30 bg-[#EDF2F7] px-6 py-5 text-left font-body text-sm font-semibold text-[#1E3653]">Add program highlights</button>}
 
       {!usesStatementBand && !registration.enabled ? (
         <>
-          <section className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:px-10 lg:py-24">
+          <section data-program-editor-section="Program details" className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:px-10 lg:py-24">
             <div className="relative aspect-[4/3] overflow-hidden bg-[#1E3653]">
               {(program.detailMediaUrl || program.heroMediaUrl) ? (
                 <ResilientImage
@@ -220,7 +225,7 @@ export default function AcademyProgramDetailPage({
           </section>
 
           {program.highlights.length > 0 ? (
-            <section className="bg-[#B9E3F6] px-6 py-16 lg:px-10 lg:py-20">
+            <section data-program-editor-section="Program focus" className="bg-[#B9E3F6] px-6 py-16 lg:px-10 lg:py-20">
               <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.8fr_1.2fr]">
                 <div>
                   <p className="font-display text-sm font-bold uppercase text-[#FF1616]">
@@ -255,7 +260,7 @@ export default function AcademyProgramDetailPage({
           with the same border-t/pt-5 idiom used elsewhere in academy@1
           (registration band above, AcademyProgramsPage, AcademyNextMatch).
           Top padding tightened since the divider now does that job. */}
-      <section className="px-6 pb-16 pt-10 lg:px-10 lg:pb-24 lg:pt-12">
+      <section data-program-editor-section="Explore other programs" className="px-6 pb-16 pt-10 lg:px-10 lg:pb-24 lg:pt-12">
         <div className="mx-auto max-w-7xl border-t border-[#1E3653]/15 pt-5">
           <div className="grid gap-8 lg:grid-cols-2 lg:items-end">
             <h2 className="font-display text-[clamp(2.5rem,5vw,5rem)] font-black uppercase italic leading-[.9] text-[#1E3653]">

@@ -21,7 +21,7 @@ export default function ShopPhotoStrip({ photos }: ShopPhotoStripProps) {
   if (mode === "hidden") return null;
 
   return (
-    <section className="w-full" style={{ backgroundColor: "var(--color-white)" }}>
+    <section data-shop-editor-target="photoRows" className="w-full" style={{ backgroundColor: "var(--color-white)" }}>
       <div className="grid grid-cols-6 px-4 md:hidden">
         {photos.map((photo, i) => (
           <div

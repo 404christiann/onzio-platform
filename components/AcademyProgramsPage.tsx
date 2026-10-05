@@ -30,7 +30,7 @@ export default function AcademyProgramsPage({
 
   return (
     <div className="bg-[#F9FAFD]">
-      <section className="bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
+      <section data-program-editor-section="Page heading" className="bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
         <div className="mx-auto max-w-7xl">
           {copy.heroEyebrow ? (
             <p className="font-display text-sm font-bold uppercase text-[#B9E3F6]">
@@ -54,7 +54,7 @@ export default function AcademyProgramsPage({
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section data-program-editor-section="Program cards" className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
         {programs.length === 0 ? (
           <div className="bg-[#EDF2F7] p-8 sm:p-12">
             <h2 className="font-display text-3xl font-black uppercase italic text-[#1E3653]">
@@ -116,7 +116,7 @@ export default function AcademyProgramsPage({
       </section>
 
       {programs.length > 0 && (
-        <section className="bg-[#B9E3F6] px-6 py-20 lg:px-10 lg:py-24">
+        <section data-program-editor-section="Closing band" className="bg-[#B9E3F6] px-6 py-20 lg:px-10 lg:py-24">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-end">
             <h2 className="font-display text-[2.35rem] font-black uppercase italic leading-[.9] text-[#1E3653] sm:text-[3rem] lg:text-[5rem]">
               {copy.closingHeadingLineOne}

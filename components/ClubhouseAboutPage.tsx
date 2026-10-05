@@ -15,7 +15,7 @@ export default function ClubhouseAboutPage({
 
   return (
     <div className="clubhouse-route-page clubhouse-about-page">
-      <header className="clubhouse-route-hero clubhouse-about-hero">
+      <header data-about-editor-section="fixed-hero" className="clubhouse-route-hero clubhouse-about-hero">
         <div>
           <p className="clubhouse-eyebrow">Our club</p>
           <h1>
@@ -26,7 +26,7 @@ export default function ClubhouseAboutPage({
         </div>
       </header>
 
-      <section className="clubhouse-about-manifesto">
+      <section data-about-editor-section="story" className="clubhouse-about-manifesto">
         <span className="clubhouse-about-story-mark">{storyMark}</span>
         <div className="clubhouse-about-story">
           {paragraphs.map((paragraph) => (
@@ -36,7 +36,7 @@ export default function ClubhouseAboutPage({
         <blockquote>{mission}</blockquote>
       </section>
 
-      <section className="clubhouse-about-proof">
+      <section data-about-editor-section="values" className="clubhouse-about-proof">
         <div className="clubhouse-about-proof-copy">
           <p className="clubhouse-eyebrow">{content.values_heading}</p>
           <h2>{content.hero_title}</h2>
@@ -63,7 +63,7 @@ export default function ClubhouseAboutPage({
         )}
       </section>
 
-      <section className="clubhouse-about-partners">
+      <section data-about-editor-section="sponsors" className="clubhouse-about-partners">
         <p className="clubhouse-eyebrow">Proud partners</p>
         <div>
           {sponsors.map((sponsor) => (
@@ -72,7 +72,7 @@ export default function ClubhouseAboutPage({
         </div>
       </section>
 
-      <section className="clubhouse-about-cta">
+      <section data-about-editor-section="closing" className="clubhouse-about-cta">
         <p>{content.closing_text}</p>
         {content.closing_cta_label && content.closing_cta_href && (
           <Link href={content.closing_cta_href}>{content.closing_cta_label}</Link>
