@@ -1,5 +1,77 @@
 # Onzio Platform Handoff
 
+## Contact native acceptance and release readiness — 2026-10-04
+
+Christian authorized merging PR #10 after native Simulator testing and a Diverse City FC public regression check. The implementation subagent fixed the two native failures (automatic input zoom and Save hidden by the keyboard), and the fresh independent review reported no findings.
+
+**Native acceptance:** iPhone 17 / iOS 26.5 Simulator Safari on the loopback device proxy, using synthetic local Alpha data. Opening fields no longer zooms/clips Done; Save and Done remain visible above the actual software keyboard. An on-screen keyboard edit saved successfully, persisted after closing/reloading, and was restored through Save. Contact details and Social links open correctly; Done closes with the keyboard open, and the Branding link opens Branding without footer overlap. Local profile/page content matches the pre-test baseline excluding normal updated timestamps. Screenshot: `/private/tmp/onzio-contact-ios-keyboard.png`. This is native keyboard/safe-area evidence, not physical-device or screen-reader acceptance; the repository's existing screen-reader waiver remains a waiver, not a pass.
+
+**Final checks:** TypeScript, 982 contracts, 21 architecture checks, 259 local database tests, all 1627 suite tests, production build and diff check passed. All six browser regressions passed, including the visual-viewport-only shrinking/offset regression. No production credentials were used in tests.
+
+**Public preservation:** all 13 observed Diverse City FC public routes rendered at 1440×900 and 390×844 with no error page or horizontal overflow; all 36 observed image URLs returned HTTP 200 with image content types. Academy and Editorial Contact renderer sources exactly match main after removing the three editor-only section attributes. Baseline artifacts: `/private/tmp/onzio-dcfc-before.json`, `/private/tmp/onzio-dcfc-assets-before.json`.
+
+**Production migration:** exact checked-in Contact SQL applied to verified Onzio production `ioalthwsdrlzrubomrow`. The MCP-generated version is `20261005003024`; the local file was renamed to that authoritative version without changing SQL. A direct history rewrite was rejected by automatic approval review; no hosted history repair was performed. Both private tables have RLS, exposed RPCs are invoker/empty-search-path/authenticated-only, and all four revision/serialization triggers are enabled. Existing contact/profile/social data counts and fingerprints are unchanged. The unrelated pending email-branding migration was not applied.
+
+**Backups and rollback:** completed physical backup `1867060607` (2026-10-04T11:14:18.729Z), plus fresh mode-600 logical schema/data dumps in mode-700 `/private/tmp/onzio-pr10-production-backup/`; all 53 table/COPY sections and terminators match, with SHA-256 receipts in `verification.json`. Current production rollback candidate: `dpl_5D9QhtV5P1CnYn5rWafn6NkAcEjF`, main `a413eb6`.
+
+**PPE-06 status:** in_progress for release completion; implementation and requested native/public pre-merge checks pass. Exact next step: commit/push final iOS fixes and migration-name alignment, verify the final PR head merges cleanly with refreshed main, merge the authorized PR, wait for the matching production deployment to be READY, then compare all 13 live public routes and image assets against the baseline. Record the deployment receipt and final status.
+
+## Contact native keyboard fixes pending acceptance — 2026-10-04
+
+The iPhone 17 / iOS 26.5 Simulator Safari check found two Contact phone defects: sub-16px input text triggered automatic zoom, and the real software keyboard hid Save despite the short Chromium viewport test passing. The phone fields now use 16px text and the open modal follows `visualViewport.height`/`offsetTop` resize and scroll events. Its footer stays in normal flow above the keyboard while the inspector body shrinks and scrolls. Desktop design, canvas and public pages are unchanged.
+
+**Files:** Contact editor effect, phone CSS, one viewport-only browser regression, and the PPE-06 ledger. The new regression leaves layout viewport height unchanged while reducing/moving only visualViewport, and checks field text size, Done/Save bounds/hit testing and scrolling Introduction above Save. TypeScript, 78/78 focused Contact/Editorial contracts and the local production build passed; native acceptance and the six browser cases on the rebuilt app remain the parent's next step. The implementation subagent did not touch Simulator, mutate Alpha, restart the server, stage, commit or push.
+
+**Exact next step:** parent restarts the rebuilt local app and checks the real software keyboard and safe-area behavior on iOS, then reruns focused browser checks and independent review. Christian has authorized merge once native Contact acceptance and Diverse City public regressions are clean. PPE-06 stays in progress until that evidence is recorded.
+
+## Contact-only review fixes — 2026-10-04 (Codex)
+
+Christian approved the Contact section-guide editor and requested a subagent to
+fix four independent review findings, followed by a fresh review and a PR.
+The isolated `codex/contact-editor` branch starts from `origin/main` at `a413eb6`;
+earlier Programs, Tryouts, Shop, About and Club Logo changes are excluded.
+The fixes reject malformed/null revisions in the direct RPC, reconcile uncertain
+HTTP/network outcomes using the original operation, and use a native phone
+dialog with Save in normal flow, contained focus and dismissal restoration.
+
+**Files and status:** PPE-06 remains `in_progress` in
+`docs/contact-editor-plan.md` pending native-device acceptance. Contact
+editor/API/canvas/CSS, public section annotations, save contract, local migration,
+generated Contact RPC types, focused tests and docs are in scope. The existing
+local-auth helper now matches the current email label and automatic code submit.
+
+**Verification:** local Supabase was reset from this exact PR tree. TypeScript,
+lint, 982 contracts, 21 architecture checks, 259 database tests (including 14
+Contact SQL regressions), all 1627 suite tests, production build and diff check
+passed. Five browser regressions passed on this isolated build: committed 500
+and network response loss, unavailable receipt, original-ID/payload retry,
+phone focus/inertness/dismissal/restoration and Branding hit testing at 390×844
+and 390×408. Synthetic browser writes were restored; SQL cases rolled back.
+The independent read-only review of the complete Contact diff reported no findings.
+
+**Known check gap:** `db:types:check` detects a pre-existing `string | null`
+override for media-cleanup `p_actor_id` and an EOF difference. Cleanup legitimately
+passes null. New Contact RPC definitions match the local generator; this PR
+preserves the existing override. Native iOS Safari keyboard/safe-area and
+assistive-technology checks remain unverified.
+
+**Local preview:** `http://alpha.localhost:3110/admin/contact`; synthetic owner
+`owner-aal2@alpha.local`; Mailpit `http://127.0.0.1:54324`. The built server uses
+only local fixture keys, with `ONZIO_ENVIRONMENT=production` for seed domain records.
+
+**Release boundary:** hosted staging is retired under Christian's current
+instructions. Automatic Vercel deployments are disabled only for this PR branch
+because the hosted Preview database target could not be verified. No hosted
+database mutation or production deployment occurred.
+
+**PR:** draft [#10](https://github.com/404christiann/onzio-platform/pull/10),
+`codex/contact-editor` into `main`. Both independent reviews reported no findings;
+the branch merges cleanly with refreshed `origin/main` at `a413eb6`.
+
+**Exact next step:** Christian reviews draft PR #10. Complete native-device
+acceptance and obtain separate approval before production migration, merge or
+deployment.
+
 ## Academy loading PR #9 final review fixes — 2026-09-25 (Codex)
 
 The latest independent review found two public loading regressions: the

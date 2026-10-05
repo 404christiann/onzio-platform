@@ -470,15 +470,16 @@ describe("editorial@1 admin surface hides", () => {
     });
   });
 
-  describe("contact admin: hero-image field hidden for editorial@1", () => {
-    it("extends the academy gate with OR — academy@1 branch unchanged", () => {
+  describe("contact admin: supported templates keep the fixed hero treatment", () => {
+    it("renders a real Contact canvas for academy and editorial without a dead image upload", () => {
       const page = source(CONTACT_ADMIN);
-      expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
-      expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
-      expect(page).toContain(
-        "const hidesHeroImageField = isAcademy || isEditorial;",
-      );
-      expect(page).toContain("{!hidesHeroImageField && (");
+      const canvas = source("components/admin/contact/ContactPageCanvas.tsx");
+      expect(page).toContain('club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1"');
+      expect(page).toContain("<ContactPageCanvas content={content}");
+      expect(canvas).toContain("<AcademyContactPage content={content}");
+      expect(canvas).toContain("<EditorialContactPage content={content}");
+      expect(page).not.toContain('type="file"');
+      expect(page).not.toContain("Upload hero image");
     });
   });
 
@@ -615,7 +616,9 @@ describe("editorial@1 admin surface hides", () => {
         STANDINGS_ADMIN,
       ]) {
         const page = source(path);
-        expect(page, path).toContain(EDITORIAL_GATE);
+        expect(page, path).toContain(path === CONTACT_ADMIN
+          ? 'club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1"'
+          : EDITORIAL_GATE);
         expect(page, path).not.toMatch(/club\.(id|slug)\s*===\s*["']/);
         expect(page, path).not.toMatch(/clubId\s*===\s*["']/);
       }

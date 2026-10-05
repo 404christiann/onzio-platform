@@ -12,5 +12,10 @@
       "path": "/api/cron/registration-expiry",
       "schedule": "0 11 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "codex/contact-editor": false
+    }
+  }
 }

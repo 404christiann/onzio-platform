@@ -38,7 +38,7 @@ export default function AcademyContactPage({
 
   return (
     <div className="bg-[#F9FAFD]">
-      <section className="relative isolate overflow-hidden bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
+      <section data-contact-editor-section="hero" className="relative isolate overflow-hidden bg-[#1E3653] px-6 pb-20 pt-40 text-white lg:px-10 lg:pb-28">
         {page?.heroMediaUrl ? (
           <>
             <ResilientImage
@@ -75,7 +75,7 @@ export default function AcademyContactPage({
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section data-contact-editor-section="details" className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
         {details.length > 0 ? (
           <div className="grid gap-px overflow-hidden bg-[#1E3653]/15 md:grid-cols-3">
             {details.map((detail) => (
@@ -101,7 +101,7 @@ export default function AcademyContactPage({
         ) : null}
 
         {content.socialLinks.length > 0 ? (
-          <div className="mt-14">
+          <div data-contact-editor-section="social" className="mt-14">
             <p className="font-display text-xs font-bold uppercase text-[#1E3653]/45">
               Follow Along
             </p>

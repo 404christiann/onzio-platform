@@ -91,7 +91,7 @@ export default function EditorialContactPage({
 
   return (
     <div className="interior contact-page">
-      <header className="interior-hero">
+      <header data-contact-editor-section="hero" className="interior-hero">
         <span className="eyebrow">{page?.eyebrow || "Contact"}</span>
         <h1>{page?.headline || `Talk to ${club.name}`}</h1>
         {page?.intro ? <p className="contact-intro">{page.intro}</p> : null}
@@ -103,7 +103,7 @@ export default function EditorialContactPage({
       </header>
 
       {details.length > 0 ? (
-        <section className="contact-details">
+        <section data-contact-editor-section="details" className="contact-details">
           <span className="eyebrow">Get in touch</span>
           <div className="contact-details-grid">
             {details.map((detail) => (
@@ -121,7 +121,7 @@ export default function EditorialContactPage({
       ) : null}
 
       {content.socialLinks.length > 0 ? (
-        <section className="contact-social">
+        <section data-contact-editor-section="social" className="contact-social">
           <h2 className="eyebrow">Follow along</h2>
           <div className="contact-social-links">
             {content.socialLinks.map((link) => (
