@@ -45,3 +45,13 @@ export function prepareAboutPageSave(input: {
     },
   };
 }
+
+/** Strip legacy row metadata before sending the selected page to the server. */
+export function aboutPageEditableContent(prepared: AboutPageSave) {
+  if (prepared.page === "about") {
+    const { hero_title, story_paragraphs, feature_image_url, values_heading, values, closing_text, closing_cta_label, closing_cta_href } = prepared.content;
+    return { hero_title, story_paragraphs, feature_image_url, values_heading, values, closing_text, closing_cta_label, closing_cta_href };
+  }
+  const { annotated_image_url, map_image_url, features, color_cards } = prepared.content;
+  return { annotated_image_url, map_image_url, features, color_cards };
+}

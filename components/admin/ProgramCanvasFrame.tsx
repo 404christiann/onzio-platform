@@ -99,7 +99,7 @@ export default function ProgramCanvasFrame({
         return;
       }
       const section = target.closest<HTMLElement>("[data-program-editor-section]");
-      if (section?.dataset.programEditorSection) onSelect(section.dataset.programEditorSection);
+      if (section?.dataset.programEditorSection) { section.focus({ preventScroll: true }); onSelect(section.dataset.programEditorSection); }
     }} onKeyDownCapture={(event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       const target = event.target as HTMLElement;

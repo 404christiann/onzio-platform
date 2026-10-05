@@ -4,6 +4,7 @@ import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
+import { resolveMediaReferences } from "@/lib/media-assets";
 import { retirePublishedMedia } from "@/lib/media-processing";
 import { programPageSaveRequestSchema, type ProgramPageSnapshot } from "@/lib/program-page-editor/contract";
 import { createClient } from "@/lib/supabase-server";
@@ -83,11 +84,27 @@ async function handle(request: Request, mutation: boolean) {
       : await onzio.rpc("load_program_page", { p_club_id: club.id, p_program_id: programId, p_operation_id: operationId });
     if (result.error) return databaseFailure(result.error);
     if (!result.data) return failure("DATABASE_OPERATION_FAILED", 500);
-    if (mutation) {
-      const retired = Array.isArray(result.data.retiredMediaAssetIds) ? result.data.retiredMediaAssetIds : [];
-      delete result.data.retiredMediaAssetIds;
+    const committed = mutation ? result.data : result.data.operation?.status === "committed"
+      ? result.data.operation.receipt : undefined;
+    if (committed) {
+      const retired = Array.isArray(committed.retiredMediaAssetIds) ? committed.retiredMediaAssetIds : [];
+      delete committed.retiredMediaAssetIds;
       await Promise.all(retired.map((assetId) => retirePublishedMedia({ clubId: club.id, actorId: userId, assetId })
         .catch((error) => { console.error("program media cleanup failed", { clubId: club.id, assetId, error }); })));
+    }
+    // Hydrate the exact current/receipt rows, preserving each revision baseline.
+    for (const snapshot of [result.data, ...(committed && committed !== result.data ? [committed] : [])]) {
+      if (snapshot.program) {
+        [snapshot.program] = await resolveMediaReferences(
+          [snapshot.program], club.id,
+          [{ assetId: "hero_media_asset_id", url: "hero_media_url" }, { assetId: "detail_media_asset_id", url: "detail_media_url" }],
+          onzio as unknown as Parameters<typeof resolveMediaReferences>[3],
+        );
+      }
+      snapshot.gallery = await resolveMediaReferences(
+        snapshot.gallery, club.id, [{ assetId: "media_asset_id", url: "url" }],
+        onzio as unknown as Parameters<typeof resolveMediaReferences>[3],
+      );
     }
     return NextResponse.json(result.data, { headers: { "Cache-Control": "no-store" } });
   } catch {

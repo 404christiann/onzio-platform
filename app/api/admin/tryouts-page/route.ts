@@ -100,13 +100,23 @@ async function handle(request: Request, mutation: boolean) {
     }
     // Use the same public form hydration as the live route. Include all open
     // club forms so an unsaved change of linked form previews immediately.
-    const { data: openFormIds, error: formsError } = await onzio.from("registration_forms")
-      .select("id").eq("club_id", club.id).eq("status", "open").limit(500);
-    if (formsError) return databaseFailure(formsError);
-    const nativeForms = await loadLinkedOpenRegistrationForms(
-      (openFormIds ?? []).map((form) => ({ registration_form_id: form.id })),
-      club.id, onzio as Parameters<typeof loadLinkedOpenRegistrationForms>[2]);
-    data.registrationForms = Object.fromEntries(nativeForms);
+    try {
+      const { data: openFormIds, error: formsError } = await onzio.from("registration_forms")
+        .select("id").eq("club_id", club.id).eq("status", "open").limit(500);
+      if (formsError) throw new Error(formsError.message);
+      const nativeForms = await loadLinkedOpenRegistrationForms(
+        (openFormIds ?? []).map((form) => ({ registration_form_id: form.id })),
+        club.id, onzio as Parameters<typeof loadLinkedOpenRegistrationForms>[2]);
+      data.registrationForms = Object.fromEntries(nativeForms);
+    } catch (error) {
+      // Preview enrichment cannot turn a confirmed transaction into a failed
+      // Save. Omit the property so the editor retains its loaded form previews.
+      // An initial load still fails instead of accepting an incomplete preview.
+      if (!committed) throw error;
+      if (process.env.NODE_ENV !== "production") console.error("Tryouts registration preview refresh failed", {
+        clubId: club.id, message: error instanceof Error ? error.message : "Preview unavailable",
+      });
+    }
     return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") console.error("Tryouts page load error", error);

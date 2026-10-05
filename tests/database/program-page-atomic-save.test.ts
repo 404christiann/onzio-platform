@@ -124,6 +124,29 @@ describe("Programs public-page transactions", () => {
     expect((await load()).program.body).toBe("First save");
   });
 
+  it("saves the root homepage as a valid Program CTA destination", async () => {
+    const before = await load();
+    const result = await save(request(before, { external_cta_label: "Club home", external_cta_href: "/" }));
+    expect(result.program.external_cta_href).toBe("/");
+    expect((await load()).program.external_cta_href).toBe("/");
+  });
+
+  it("rejects all Programs RPCs when the tenant has no presentation document", async () => {
+    const before = await load();
+    const emptyClubId = randomUUID();
+    await db.query("reset role");
+    await db.query("insert into onzio.clubs(id,slug,name,kind,lifecycle,public_access) values($1,$2,'No design test','test','active','live')",
+      [emptyClubId, `no-design-${emptyClubId}`]);
+    await db.query("insert into onzio.club_members(club_id,user_id,role,status) values($1,$2,'owner','active')", [emptyClubId, USER_IDS.ownerAal2]);
+    await actor();
+    const createRequest = { ...request(before), programId: null, expected: { programUpdatedAt: null, gallery: [] } };
+    const directoryRequest = { operationId: randomUUID(), expected: [], programs: [] };
+    await rejects(() => db.query("select onzio.load_program_page($1)", [emptyClubId]), "PAGE_UNAVAILABLE");
+    await rejects(() => db.query("select onzio.save_program_page($1,$2::jsonb)", [emptyClubId, JSON.stringify(createRequest)]), "PAGE_UNAVAILABLE");
+    await rejects(() => db.query("select onzio.load_program_directory($1)", [emptyClubId]), "PAGE_UNAVAILABLE");
+    await rejects(() => db.query("select onzio.save_program_directory($1,$2::jsonb)", [emptyClubId, JSON.stringify(directoryRequest)]), "PAGE_UNAVAILABLE");
+  });
+
   it("stages public order and visibility under one directory Save and rejects a stale list", async () => {
     const before = await directory();
     const expected = before.programs.map((row: any) => ({ id: row.id, updatedAt: row.updated_at }));

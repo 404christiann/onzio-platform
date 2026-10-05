@@ -201,7 +201,7 @@ export default function AboutPageCanvas(props: Props) {
 
   let page: ReactNode;
   if (props.page === "logo") {
-    page = <ClubLogoPageClient content={props.logo} animate={false} />;
+    page = <ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />;
   } else if (club.presentationTemplateKey === "editorial@1") {
     page = <div data-site-template="editorial" style={{
       "--club-primary": theme.primary,

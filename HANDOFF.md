@@ -1,5 +1,29 @@
 # Onzio Platform Handoff
 
+## Remaining editor fixes ready for final acceptance — 2026-10-05
+
+Programs, Tryouts, Shop, About and Club Logo release fixes are implemented on `codex/public-page-editors-release`. Independent reviews identified and corrected save-recovery/request-locking/conflict gaps, malformed Tryouts revisions, Program destination/template checks, receipt media retirement/hydration, empty About/crest authoring, true Shop CSS viewports and native phone-dialog boundaries/focus. New About revisions/receipts also received independent SQL review, including design serialization, post-design-change recovery, purge cascades, canonical media URLs, published destinations and legacy JSON compatibility. Shipped Contact remains preserved.
+
+**Parent evidence so far:** latest local-only migration reset and production build passed; public Diverse City baseline is clean for 13 routes at desktop/phone and 36 image URLs. Generated About RPC types match local generation with the existing nullable cleanup actor override. New `about-page-concurrent-save.test.ts` exercises independent design-availability serialization and private-record purge; its initial test transaction-boundary/immutable-fixture cleanup errors were corrected and the clean local rerun is pending. The original About migration CASE parser error was fixed before a successful local reset. These initial failures are not release acceptance.
+
+**Release preparation:** no open editor PR existed. PR branch auto-deploy is disabled because hosted Preview database targeting remains unverified. Verified current production project, READY rollback deployment `dpl_Az73kmJYxZKmoP3nFaL3TEVrSsLt` at main `5b07964`, completed physical backup `1876532319`, and protected fresh schema/data dumps with 55 matching table/COPY sections in `/private/tmp/onzio-editors-production-backup`. No production mutation or branch push has occurred.
+
+**Exact next step:** fresh independent full-diff review, local SQL/full-suite/browser/native acceptance and fixes; update PPE-01/PPE-05 evidence, then the user-authorized PR into main and conditional release with migration/public-preservation checks. Original checkout dirty work and original public-page-editors branch are preserved.
+
+## PPE-01 About and Club Logo review fixes — 2026-10-05
+
+**Status: in progress.** Implemented independent selected-page revisions and authenticated invoker load/save RPCs, actor-scoped durable receipts, exact UUID/payload retries after ambiguous network/500 responses, locked unresolved/conflicted drafts, explicit latest-page reload, and receipt-backed reference-safe image cleanup retries. About, Logo, legacy row writers and presentation changes serialize in the existing Homepage lock order. New private tables cascade during tenant purge. Receipt recovery remains available after a design no longer publishes Logo.
+
+**Authoring/UI:** empty About values, crest features and color cards now have Add/Remove controls; empty Logo canvas sections remain selectable. About uses the shared phone dialog inspector with visualViewport sizing, focus containment/restoration and 16px controls. Desktop composition and existing public template gates remain.
+
+**Media:** SQL resolves tenant-owned published About assets and drops caller origins before storing canonical storage paths, including nested Logo JSON. The API and the About-only public query hydrate these paths from the configured Supabase origin after legacy normalization; unchanged legacy media remain supported. Cleanup candidates and old persisted asset IDs stay in the durable receipt, and queued deletion failures expose Retry image cleanup.
+
+**Files:** `app/admin/(protected)/about/page.tsx`, `app/api/admin/about-editor/route.ts`, `lib/about-editor/{contract,recovery,collections,media,save}.ts`, About canvas/CSS, `components/ClubLogoPageClient.tsx`, About-only `lib/queries.ts` hydration, CLI-generated `supabase/migrations/20261005160543_about_page_editor_receipts.sql`, focused unit/public query/source/SQL/browser regressions, this handoff and PPE ledger. Shared modal files and remaining-editor changes are owned by the coordinated frontend/backend reviewers.
+
+**Verification performed by implementation subagent:** 60/60 focused About recovery/schema/save/public-query and Editorial source checks; 1012/1012 source contracts. The actual public `fetchAboutClubContent` regression asserts nested canonical images have the configured origin and malformed legacy collections normalize safely. Parent local apply found PL/pgSQL CASE comparison syntax; all three expressions were parenthesized before its retry. DB/browser/native acceptance is owned by the parent and remains pending in this entry; no claim that Chromium proves a native software keyboard.
+
+**Exact next step:** parent runs local migration/reset, generated types, direct SQL race/purge tests, six real-save About browser cases against synthetic Cinematic data (published Schedule, valid closing destination, empty collections), native keyboard/Done/Save/focus acceptance and public preservation checks; rerun independent review before committing/PR. No hosted action, push, PR, commit, fixture reset or Simulator/browser run by this subagent.
+
 ## Remaining public editors release branch prepared — 2026-10-05
 
 Christian authorized review/fixes for Programs, Tryouts, Shop, About and Club Logo, followed by a PR into main. The existing public-page-editors worktree now uses `codex/public-page-editors-release`, based on `origin/main` at `5b07964`. Original branch `codex/public-page-editors` and all of its commits are preserved. Only `31ac6cb` and `964e4dc` were cherry-picked, as `222f0ca` and `9ab48bf`; the older Contact commits were excluded because Contact is already shipped in main.

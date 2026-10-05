@@ -82,6 +82,7 @@ export default function TryoutsPreviewFrame({ children, phone, host }: {
           transform: `scale(${scale})`, transformOrigin: "top left", border: 0 }} />
       {body && createPortal(<div data-tryouts-preview onClickCapture={(event) => {
         const target = event.target as HTMLElement;
+        target.closest<HTMLElement>("button[aria-pressed]")?.focus({ preventScroll: true });
         if (target.closest("a,button:not([aria-pressed]),form")) {
           event.preventDefault();
           event.stopPropagation();

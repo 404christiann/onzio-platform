@@ -111,6 +111,7 @@ begin
     or jsonb_typeof(p_request->'deletedIds') is distinct from 'array'
     or jsonb_array_length(p_request->'events')>500
     or jsonb_array_length(p_request->'deletedIds')>500
+    or jsonb_typeof(p_request->'expectedRevision') is distinct from 'string'
     or (p_request->>'expectedRevision')!~'^[0-9]+$'
     or char_length(p_request->>'expectedRevision')>20 then
     raise exception 'INVALID_TRYOUTS_PAYLOAD' using errcode='22023';
@@ -126,7 +127,7 @@ begin
     return receipt;
   end if;
   current_page:=onzio_private.tryouts_page_snapshot(p_club_id);
-  if current_page->>'revision'<>p_request->>'expectedRevision' then
+  if (current_page->>'revision') is distinct from (p_request->>'expectedRevision') then
     raise exception 'TRYOUTS_CHANGED' using errcode='PT409';
   end if;
   intro:=p_request->'page';

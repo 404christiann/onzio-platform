@@ -35,10 +35,15 @@
   .aep-device-toggle button { padding:.45rem .55rem; font-size:.72rem; }
   .aep-browser { padding:.45rem; }
   .aep-browser-bar { display:none; }
-  .aep-inspector { position:fixed; z-index:60; inset:auto 0 0; max-height:75dvh; border-radius:1rem 1rem 0 0; box-shadow:0 -12px 32px #17223a26; display:none; padding-bottom:env(safe-area-inset-bottom); }
+  .aep-inspector { position:static; min-height:0; max-height:min(75dvh,100%); border-radius:1rem 1rem 0 0; box-shadow:0 -12px 32px #17223a26; display:flex; padding-bottom:env(safe-area-inset-bottom); }
   .aep-inspector[data-open="true"] { display:flex; }
   .aep-fields { min-height:0; }
   .aep-mobile-save { position:fixed; z-index:50; inset:auto 0 0; display:flex; align-items:center; gap:.8rem; padding:.65rem .85rem calc(.65rem + env(safe-area-inset-bottom)); border-top:1px solid hsl(var(--border)); background:hsl(var(--card)); }
   .aep-mobile-save span { min-width:0; flex:1; color:hsl(var(--muted-foreground)); font-size:.76rem; }
   .aep-mobile-save button { width:auto; white-space:nowrap; }
 }
+
+.aep-collection-button,.aep-color-choices button,.aep-recovery { min-height:44px; border:1px solid hsl(var(--border)); border-radius:.5rem; padding:.5rem .75rem; margin:.3rem 0; font-size:.8rem; font-weight:700; }
+.aep-color-choices { display:flex; flex-wrap:wrap; gap:.4rem; }
+.aep-color-choices button[aria-pressed="true"] { border-color:hsl(var(--primary)); color:hsl(var(--primary)); }
+.aep-recovery { flex:none; margin:.5rem 1rem; }

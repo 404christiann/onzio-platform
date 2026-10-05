@@ -95,6 +95,21 @@ export function toShopSaveRequest(snapshot: ShopSnapshot, draft: ShopPageDraft, 
   };
 }
 
+/** Preserve draft content while refreshing references removed by another save. */
+export function rebaseShopDraft(draft: ShopPageDraft, snapshot: ShopSnapshot): ShopPageDraft {
+  const fresh = draftFromShopSnapshot(snapshot);
+  const photos = (desired: ShopPhoto[], current: ShopPhoto[]) => desired.map((photo) => {
+    if (current.some((item) => item.rowId === photo.rowId)) return photo;
+    // Published assets can be re-added safely without a stale photo row ID.
+    return photo.assetId ? { ...photo, rowId: current.find((item) => item.assetId === photo.assetId)?.rowId ?? null } : photo;
+  });
+  return {
+    ...draft,
+    variants: Object.fromEntries(SHOP_VARIANTS.map((variant) => [variant, { ...draft.variants[variant], photos: photos(draft.variants[variant].photos, fresh.variants[variant].photos) }])) as ShopPageDraft["variants"],
+    photoRows: Object.fromEntries(SHOP_VARIANTS.map((variant) => [variant, photos(draft.photoRows[variant], fresh.photoRows[variant])])) as ShopPageDraft["photoRows"],
+  };
+}
+
 export function publicKit(section: ShopSection, photos: ShopPhoto[], surface: "home" | "shop", variant: ShopKitVariant): {
   section: DBShopKitSection;
   photos: DBShopKitPhoto[];

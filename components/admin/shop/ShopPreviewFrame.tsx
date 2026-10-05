@@ -11,7 +11,31 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect }: {
   onSelect: (target: string) => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(390);
   const [body, setBody] = useState<HTMLElement | null>(null);
+  const previewWidth = phone ? 390 : 1440;
+  const previewHeight = phone ? 844 : 900;
+  const scale = Math.min(1, availableWidth / previewWidth);
+
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element) return;
+    const update = () => setAvailableWidth(element.clientWidth);
+    update(); const observer = new ResizeObserver(update); observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!body) return;
+    const decorate = () => body.querySelectorAll<HTMLElement>("[data-shop-editor-target]").forEach((target) => {
+      target.tabIndex = 0;
+      if (!target.matches("a,button")) target.setAttribute("role", "button");
+      target.setAttribute("aria-label", `Edit ${target.dataset.shopEditorTarget}`);
+    });
+    decorate(); const observer = new MutationObserver(decorate); observer.observe(body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [body]);
 
   useEffect(() => {
     const iframe = frame.current;
@@ -61,12 +85,13 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect }: {
         <div className="flex min-h-9 items-center gap-3 bg-slate-100 px-3 text-xs text-slate-500">
           <span aria-hidden="true">● ● ●</span><span className="truncate">{host} · Editing preview</span>
         </div>
-        <iframe
+        <div ref={viewport} className="relative w-full overflow-hidden" style={{ height: previewHeight * scale }}><iframe
           ref={frame}
           title={phone ? "Phone Shop page preview" : "Desktop Shop page preview"}
-          className="block h-[640px] w-full border-0 bg-white sm:h-[760px]"
+          className="absolute left-0 top-0 block border-0 bg-white"
+          style={{ width: previewWidth, height: previewHeight, transform: `scale(${scale})`, transformOrigin: "top left" }}
           srcDoc="<!doctype html><html lang='en'><head></head><body><div id='shop-preview-loading' role='status' style='padding:24px;color:#64748b;font:14px system-ui,sans-serif'>Preparing page preview…</div></body></html>"
-        />
+        /></div>
         {body && createPortal(
           <div
             ref={(node) => node?.ownerDocument.getElementById("shop-preview-loading")?.remove()}
@@ -74,13 +99,18 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect }: {
             onClickCapture={(event) => {
               const target = event.target as HTMLElement;
               const hotspot = target.closest<HTMLElement>("[data-shop-editor-target]");
-              if (hotspot) onSelect(hotspot.dataset.shopEditorTarget ?? "copy");
+              if (hotspot) { hotspot.focus({ preventScroll: true }); onSelect(hotspot.dataset.shopEditorTarget ?? "copy"); }
               // The preview must never send fans to checkout or navigate the
               // admin away. Product tab and Front/Back controls still work.
               if (target.closest("a")) {
                 event.preventDefault();
                 event.stopPropagation();
               }
+            }}
+            onKeyDownCapture={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              const hotspot = (event.target as HTMLElement).closest<HTMLElement>("[data-shop-editor-target]");
+              if (hotspot) { event.preventDefault(); event.stopPropagation(); onSelect(hotspot.dataset.shopEditorTarget ?? "copy"); }
             }}
             onSubmitCapture={(event) => event.preventDefault()}
           >

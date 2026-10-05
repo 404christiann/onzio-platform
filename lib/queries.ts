@@ -1,3 +1,4 @@
+import { hydrateAboutEditorMedia } from "@/lib/about-editor/media";
 import { supabase } from "@/lib/supabase";
 import { Player, Staff, Fixture, GoalkeeperStats, FieldStats } from "@/lib/data";
 import {
@@ -1096,7 +1097,7 @@ export async function fetchAboutClubContent(
   return {
     about: rawAbout
       ? {
-          ...rawAbout,
+          ...hydrateAboutEditorMedia(rawAbout),
           story_paragraphs: normalizeStoryParagraphs(rawAbout.story_paragraphs, clubId ? [] : undefined),
           values: normalizeAboutValues(rawAbout.values, clubId ? [] : undefined),
         }
@@ -1104,11 +1105,11 @@ export async function fetchAboutClubContent(
         ? EMPTY_ABOUT_PAGE_CONTENT
         : DEFAULT_ABOUT_PAGE_CONTENT,
     logo: rawLogo
-      ? {
+      ? hydrateAboutEditorMedia({
           ...rawLogo,
           features: normalizeClubLogoFeatures(rawLogo.features, clubId ? [] : undefined),
           color_cards: normalizeClubLogoColorCards(rawLogo.color_cards, clubId ? [] : undefined),
-        }
+        })
       : clubId
         ? EMPTY_CLUB_LOGO_PAGE_CONTENT
         : DEFAULT_CLUB_LOGO_PAGE_CONTENT,

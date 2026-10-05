@@ -1,0 +1,8 @@
+.page-editor-mobile-dialog{position:fixed;inset:var(--page-editor-visible-top,0px) 0 auto;width:100%;max-width:none;height:var(--page-editor-visible-height,100dvh);max-height:none;margin:0;padding:0;border:0;background:transparent;color:hsl(var(--foreground));overflow:hidden}
+.page-editor-mobile-dialog[open]{display:flex;flex-direction:column;justify-content:flex-end}
+.page-editor-mobile-dialog::backdrop{background:#17223a3d}
+.page-editor-mobile-dialog .page-editor-phone-inspector{position:static!important;inset:auto!important;display:flex;flex-direction:column;flex:0 1 auto;min-height:0;max-height:100%;overflow:hidden}
+.page-editor-phone-inspector>fieldset{flex:1 1 auto;min-height:0;overflow:auto;border:0}
+.page-editor-phone-inspector>div,.page-editor-phone-inspector>button,.page-editor-phone-inspector>p{flex:none}
+.page-editor-phone-inspector>div.sticky{position:static}
+.page-editor-mobile-dialog input,.page-editor-mobile-dialog textarea,.page-editor-mobile-dialog select{font-size:16px!important}

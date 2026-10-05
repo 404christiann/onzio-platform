@@ -18,9 +18,10 @@ import {
 } from "@/components/ui/sliding-panel";
 import type { DBAboutPageContent, DBClubLogoPageContent, DBSiteSponsorLogo } from "@/lib/db-types";
 import type { SiteRouteOption } from "@/lib/site-routes";
-import { prepareAboutPageSave } from "@/lib/about-editor/save";
+import { aboutPageEditableContent, prepareAboutPageSave } from "@/lib/about-editor/save";
 import {
   aboutStoragePathFromPublicUrl,
+  EMPTY_ABOUT_PAGE_CONTENT, EMPTY_CLUB_LOGO_PAGE_CONTENT,
   DEFAULT_ABOUT_PAGE_CONTENT,
   DEFAULT_CLUB_LOGO_PAGE_CONTENT,
   normalizeClubLogoColorCards,
@@ -30,8 +31,11 @@ import {
   type AboutValue,
   type ClubLogoFeature,
 } from "@/lib/about-content";
-import { fetchAboutClubContent, fetchSiteSponsorLogos } from "@/lib/queries";
-import { deleteStorageUrls } from "@/lib/storage-cleanup";
+import { fetchSiteSponsorLogos } from "@/lib/queries";
+import { loadAboutEditor, saveAboutEditor } from "@/lib/about-editor/recovery";
+import { aboutEditorSaveSchema, type AboutEditorSaveRequest, type AboutEditorSnapshot } from "@/lib/about-editor/contract";
+import { newAboutValue, newLogoFeature, newLogoColorCard, removeCollectionItem } from "@/lib/about-editor/collections";
+import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { createClient } from "@/lib/admin-client";
 import "@/components/admin/about/about-editor.css";
 
@@ -153,6 +157,11 @@ export default function AdminAboutPage() {
     toLogoDraft(DEFAULT_CLUB_LOGO_PAGE_CONTENT),
   );
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<{ about: string[]; logo: string[] }>({ about: [], logo: [] });
+  const [snapshots, setSnapshots] = useState<Partial<Record<"about" | "logo", AboutEditorSnapshot>>>({});
+  const [pendingOperations, setPendingOperations] = useState<Partial<Record<"about" | "logo", AboutEditorSaveRequest>>>({});
+  const [conflictedPages, setConflictedPages] = useState<Set<"about" | "logo">>(new Set());
+  const [cleanupOperations, setCleanupOperations] = useState<Partial<Record<"about" | "logo", string>>>({});
+  const draftLocked = Boolean(pendingOperations[pageChoice]) || conflictedPages.has(pageChoice);
   const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>([]);
   const [availableDestinations, setAvailableDestinations] = useState<SiteRouteOption[]>([]);
   const [destinationsLoaded, setDestinationsLoaded] = useState(false);
@@ -182,12 +191,14 @@ export default function AdminAboutPage() {
     setError(null);
     setLoadFailed(false);
     Promise.all([
-      fetchAboutClubContent(clubId),
+      loadAboutEditor("about"),
+      hasClubLogoPage ? loadAboutEditor("logo") : Promise.resolve(null),
       fetchSiteSponsorLogos("carousel", clubId),
     ])
-      .then(([{ about, logo }, nextSponsors]) => {
-        const nextAbout = toAboutDraft(about);
-        const nextLogo = toLogoDraft(logo);
+      .then(([about, logo, nextSponsors]) => {
+        const nextAbout = toAboutDraft({ ...EMPTY_ABOUT_PAGE_CONTENT, ...about.content } as DBAboutPageContent);
+        const nextLogo = toLogoDraft({ ...EMPTY_CLUB_LOGO_PAGE_CONTENT, ...logo?.content } as DBClubLogoPageContent);
+        setSnapshots({ about, ...(logo ? { logo } : {}) });
         setAboutDraft(nextAbout);
         setLogoDraft(nextLogo);
         setSponsors(nextSponsors);
@@ -199,7 +210,7 @@ export default function AdminAboutPage() {
         setLoadFailed(true);
       })
       .finally(() => setLoading(false));
-  }, [clubId, loadAttempt]);
+  }, [clubId, loadAttempt, hasClubLogoPage]);
 
   useEffect(() => {
     if (isAcademy) {
@@ -329,7 +340,7 @@ export default function AdminAboutPage() {
     }
   }
 
-  function setAboutField(field: keyof DBAboutPageContent, value: string, section: SectionId) {
+  function setAboutField<K extends keyof DBAboutPageContent>(field: K, value: DBAboutPageContent[K], section: SectionId) {
     setAboutDraft((current) => ({ ...current, [field]: value }));
     markDirty(section);
   }
@@ -379,53 +390,77 @@ export default function AdminAboutPage() {
     if (target !== "fixed-hero" && target !== "sponsors") selectSection(target);
   }
 
-  async function handleSave() {
-    if (pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable)) {
-      setError("Choose a page available to this club for the closing button before saving.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    setSaved(false);
+  useEffect(() => {
+    if (!dirtyAbout && !dirtyLogo && Object.keys(pendingOperations).length === 0) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirtyAbout, dirtyLogo, pendingOperations]);
 
-    try {
-      const supabase = createClient();
-      const prepared = prepareAboutPageSave({
-        page: pageChoice,
-        about: aboutDraft,
-        logo: logoDraft,
-        academy: isAcademy,
-        now: new Date().toISOString(),
-      });
-      // Each public page is one tenant-owned row. This is one mutation for
-      // the selected page; the other page's draft and unsaved state survive.
-      const result = prepared.page === "about"
-        ? await supabase.from("about_page_content").upsert([prepared.content])
-        : await supabase.from("club_logo_page_content").upsert([prepared.content]);
-      if (result.error) throw new Error(result.error.message);
-
-      if (prepared.page === "about") setAboutDraft(prepared.content);
-      else setLogoDraft(prepared.content);
-      setDirtySections((current) => new Set([...current].filter((section) =>
-        pageChoice === "about" ? !ABOUT_SECTIONS.includes(section) : !LOGO_SECTIONS.includes(section),
-      )));
-      const retireUrls = pendingDeleteUrls[pageChoice];
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-      try {
-        await deleteStorageUrls("about-page", retireUrls, ["content/"]);
-        setPendingDeleteUrls((current) => ({ ...current, [pageChoice]: [] }));
-      } catch {
-        setError("Page saved, but an old image could not be removed. It will be retried on the next save.");
-      }
-    } catch (saveError: unknown) {
-      setError(saveError instanceof Error ? `Save could not be confirmed: ${saveError.message}. Your draft is still here. Check the live page before saving again.` : "Save could not be confirmed. Your draft is still here. Check the live page before saving again.");
-    } finally {
-      setSaving(false);
-    }
+  function acceptSnapshot(snapshot: AboutEditorSnapshot) {
+    const page = snapshot.page;
+    setSnapshots(current => ({ ...current, [page]: snapshot }));
+    if (page === "about") setAboutDraft(toAboutDraft({ ...EMPTY_ABOUT_PAGE_CONTENT, ...snapshot.content } as DBAboutPageContent));
+    else setLogoDraft(toLogoDraft({ ...EMPTY_CLUB_LOGO_PAGE_CONTENT, ...snapshot.content } as DBClubLogoPageContent));
+    setDirtySections(current => new Set([...current].filter(section => page === "about" ? !ABOUT_SECTIONS.includes(section) : !LOGO_SECTIONS.includes(section))));
+    setPendingDeleteUrls(current => ({ ...current, [page]: [] }));
+    setPendingOperations(current => { const next = { ...current }; delete next[page]; return next; });
+    setConflictedPages(current => new Set([...current].filter(value => value !== page)));
   }
 
-  const saveDisabled = saving || uploading || loadFailed || !dirty || (pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable));
+  async function reloadLatestPage() {
+    if (!window.confirm("Replace this page's draft with the latest saved page? The other page's draft will stay here.")) return;
+    setSaving(true);
+    try { acceptSnapshot(await loadAboutEditor(pageChoice)); setError(null); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "Latest page could not be loaded."); }
+    finally { setSaving(false); }
+  }
+
+  async function retryCleanup() {
+    const operation = cleanupOperations[pageChoice]; if (!operation) return;
+    setSaving(true);
+    try {
+      const snapshot = await loadAboutEditor(pageChoice, operation);
+      if (snapshot.operation?.status !== "committed") throw new Error("Cleanup could not be confirmed. Try again.");
+      if (!snapshot.operation.receipt.cleanupPending) {
+        setCleanupOperations(current => { const next = { ...current }; delete next[pageChoice]; return next; }); setError(null);
+      } else setError("Page saved. Old image cleanup is still pending; retry cleanup when ready.");
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Cleanup could not be confirmed."); }
+    finally { setSaving(false); }
+  }
+
+  async function handleSave() {
+    if (saving || uploading || conflictedPages.has(pageChoice)) return;
+    const pending = pendingOperations[pageChoice];
+    if (!pending && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable)) {
+      setError("Choose a page available to this club for the closing button before saving."); return;
+    }
+    const snapshot = snapshots[pageChoice]; if (!snapshot) return;
+    setSaving(true); setError(null); setSaved(false);
+    try {
+      const prepared = prepareAboutPageSave({ page: pageChoice, about: aboutDraft, logo: logoDraft, academy: isAcademy, now: new Date().toISOString() });
+      const request = pending ?? aboutEditorSaveSchema.parse({ page: prepared.page, content: aboutPageEditableContent(prepared),
+        operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision,
+        retiredMediaUrls: pendingDeleteUrls[pageChoice] });
+      const outcome = await saveAboutEditor(request);
+      if (outcome.status === "committed") {
+        acceptSnapshot(outcome.snapshot); setSaved(true); setTimeout(() => setSaved(false), 3000);
+        if (outcome.snapshot.cleanupPending) {
+          setCleanupOperations(current => ({ ...current, [request.page]: request.operationId }));
+          setError("Page saved. Old image cleanup is pending; retry cleanup when ready.");
+        }
+      } else if (outcome.status === "uncertain") {
+        setPendingOperations(current => ({ ...current, [request.page]: outcome.request })); setError(outcome.message);
+      } else {
+        setPendingOperations(current => { const next = { ...current }; delete next[request.page]; return next; });
+        if (outcome.status === "conflict") setConflictedPages(current => new Set([...current, request.page]));
+        setError(outcome.message);
+      }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Review the page fields and try again."); }
+    finally { setSaving(false); }
+  }
+
+  const saveDisabled = saving || uploading || loadFailed || conflictedPages.has(pageChoice) || (!dirty && !pendingOperations[pageChoice]) || (!pendingOperations[pageChoice] && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable));
   const isLogoSection = pageChoice === "logo";
 
   return (
@@ -455,7 +490,7 @@ export default function AdminAboutPage() {
                 className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
-                {saving ? "Saving..." : uploading ? "Uploading..." : `Save ${isLogoSection ? "Club Logo" : "About"}`}
+                {saving ? "Saving..." : uploading ? "Uploading..." : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}
               </button>
             </>
           ) : undefined
@@ -481,9 +516,9 @@ export default function AdminAboutPage() {
             <AboutPageCanvas page={pageChoice} about={aboutDraft} logo={logoDraft} sponsors={sponsors} phone={phonePreview} selected={selectedTarget} onSelect={selectCanvasTarget} />
           </section>
 
-          <AdminPanel className="aep-inspector" data-open={selectedTarget !== null}>
+          <PageEditorInspector open={selectedTarget !== null} onClose={() => setSelectedTarget(null)} label="About section tools" breakpoint={767} className="aep-inspector" data-open={selectedTarget !== null}>
             <div className="aep-inspector-head"><div><p className={ADMIN_LABEL_CLASS}>{isLogoSection ? "Club Logo page" : "About page"}</p><h2>{selectedTarget ? selectedTarget === "fixed-hero" ? "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "Select a section"}</h2></div>{selectedTarget && <button type="button" onClick={() => setSelectedTarget(null)}>Done</button>}</div>
-            {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">This heading is part of the Clubhouse template. Contact Onzio to change its wording.</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors →</a></div> : <fieldset disabled={saving} className="aep-fields">
+            {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">This heading is part of the Clubhouse template. Contact Onzio to change its wording.</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors →</a></div> : <fieldset disabled={saving || uploading || draftLocked} className="aep-fields">
             <SlidingPanel activeKey={activeSection} direction={sectionDirection}>
               {activeSection === "hero" && (
                 <Field label="Page heading">
@@ -524,9 +559,11 @@ export default function AdminAboutPage() {
                       className={ADMIN_INPUT_CLASS}
                     />
                   </Field>
+                  <button type="button" className="aep-collection-button" disabled={aboutDraft.values.length >= 24} onClick={() => setAboutField("values", [...aboutDraft.values, newAboutValue()], "values")}>Add value</button>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {aboutDraft.values.map((value, index) => (
                       <div key={index} className="rounded-lg border border-border p-3">
+                        <button type="button" className="aep-collection-button" onClick={() => setAboutField("values", removeCollectionItem(aboutDraft.values, index), "values")}>Remove value {index + 1}</button>
                         <Field label={`Value ${index + 1} Title`}>
                           <input
                             value={value.title}
@@ -615,12 +652,18 @@ export default function AdminAboutPage() {
 
               {activeSection === "features" && (
                 <div className="space-y-3">
+                  <button type="button" className="aep-collection-button" disabled={logoDraft.features.length >= 24} onClick={() => {
+                    setSelectedLogoFeature(logoDraft.features.length); setLogoDraft(current => ({ ...current, features: [...current.features, newLogoFeature()] })); markDirty("features");
+                  }}>Add crest feature</button>
+                  {logoDraft.features[selectedLogoFeature] && <button type="button" className="aep-collection-button" onClick={() => {
+                    setLogoDraft(current => ({ ...current, features: removeCollectionItem(current.features, selectedLogoFeature) })); setSelectedLogoFeature(current => Math.max(0, current - 1)); markDirty("features");
+                  }}>Remove crest feature</button>}
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                     {logoDraft.features.map((feature, index) => {
                       const selected = selectedLogoFeature === index;
                       return (
                         <button
-                          key={feature.title}
+                          key={index}
                           type="button"
                           onClick={() => setSelectedLogoFeature(index)}
                           disabled={saving || uploading}
@@ -706,15 +749,26 @@ export default function AdminAboutPage() {
                     Brand Color Cards
                   </p>
                   <p className="font-body mb-3 text-xs text-muted-foreground">
-                    Six fixed slots render below the Pasadena map.
+                    Add up to six color cards below the club map.
                   </p>
-                  {logoDraft.color_cards[selectedLogoColor] && <ImageControl
+                  <button type="button" className="aep-collection-button" disabled={logoDraft.color_cards.length >= 6} onClick={() => {
+                    setSelectedLogoColor(logoDraft.color_cards.length); setLogoDraft(current => ({ ...current, color_cards: [...current.color_cards, newLogoColorCard()] })); markDirty("colors");
+                  }}>Add color card</button>
+                  <div className="aep-color-choices">{logoDraft.color_cards.map((card, index) => <button type="button" key={index} aria-pressed={index === selectedLogoColor} onClick={() => setSelectedLogoColor(index)}>{card.label || `Color ${index + 1}`}</button>)}</div>
+                  {logoDraft.color_cards[selectedLogoColor] && <>
+                    <Field label="Color label"><input className={ADMIN_INPUT_CLASS} value={logoDraft.color_cards[selectedLogoColor].label} onChange={event => {
+                      setLogoDraft(current => ({ ...current, color_cards: current.color_cards.map((card, index) => index === selectedLogoColor ? { ...card, label: event.target.value } : card) })); markDirty("colors");
+                    }} /></Field>
+                    <button type="button" className="aep-collection-button" onClick={() => {
+                      setLogoDraft(current => ({ ...current, color_cards: removeCollectionItem(current.color_cards, selectedLogoColor) })); setSelectedLogoColor(current => Math.max(0, current - 1)); markDirty("colors");
+                    }}>Remove color card</button>
+                  <ImageControl
                     label={logoDraft.color_cards[selectedLogoColor].label}
                     url={logoDraft.color_cards[selectedLogoColor].image_url}
                     onReplace={() => openUploader({ kind: "logoColorCard", index: selectedLogoColor })}
                     disabled={uploading || saving}
                     compact
-                  />}
+                  /></>}
                 </div>
               )}
             </SlidingPanel></fieldset>}
@@ -732,11 +786,13 @@ export default function AdminAboutPage() {
                 Error: {error}
               </p>
             )}
-            <div className="aep-inspector-save"><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>
-          </AdminPanel>
+            {conflictedPages.has(pageChoice) && <button type="button" className="aep-recovery" onClick={() => void reloadLatestPage()} disabled={saving}>Reload latest page</button>}
+            {cleanupOperations[pageChoice] && <button type="button" className="aep-recovery" onClick={() => void retryCleanup()} disabled={saving}>Retry image cleanup</button>}
+            <div className="aep-inspector-save"><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>
+          </PageEditorInspector>
         </div>
       )}
-      {!loading && <div className="aep-mobile-save"><span>{dirty ? "Unsaved changes" : "All changes saved"}</span><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
+      {!loading && <div className="aep-mobile-save"><span>{dirty ? "Unsaved changes" : "All changes saved"}</span><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>}
     </AdminPage>
   );
 }

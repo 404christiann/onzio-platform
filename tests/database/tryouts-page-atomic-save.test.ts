@@ -162,6 +162,20 @@ describe("atomic Tryouts public-page save", () => {
     await rejects(() => save(payload, CLUB_IDS.bravo), "NOT_AUTHORIZED");
   });
 
+  it("rejects malformed direct RPC revisions without writing content or receipts", async () => {
+    const baseline = await load();
+    const payload = await request(null);
+    for (const expectedRevision of [null, 0, true, {}, [], "", "unknown", "0".repeat(21)]) {
+      await rejects(() => save({ ...payload, expectedRevision }), "INVALID_TRYOUTS_PAYLOAD");
+      expect(await load()).toEqual(baseline);
+      expect((await load(payload.operationId)).operation).toEqual({ status: "not-committed" });
+    }
+    const missingRevision: Record<string, unknown> = { ...payload };
+    delete missingRevision.expectedRevision;
+    await rejects(() => save(missingRevision), "INVALID_TRYOUTS_PAYLOAD");
+    expect(await load()).toEqual(baseline);
+  });
+
   it("rejects load and Save after switching to a design without a public Tryouts page", async () => {
     await design("editorial");
     const payload = await request(null);

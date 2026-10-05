@@ -15,9 +15,11 @@ const PATCH_SCALE = 1.1;
 export default function ClubLogoPageClient({
   content,
   animate = true,
+  editorEmptySections = false,
 }: {
   content: DBClubLogoPageContent;
   animate?: boolean;
+  editorEmptySections?: boolean;
 }) {
   const club = useClubContext();
   const diagramRef = useRef<HTMLDivElement>(null);
@@ -95,9 +97,10 @@ export default function ClubLogoPageClient({
       </div>
 
       <div ref={rowsRef} className="max-w-2xl mx-auto px-6 pb-10 flex flex-col gap-10">
+        {editorEmptySections && content.features.length === 0 && <div data-about-editor-section="features" className="rounded-lg border border-white/30 p-6 text-white">Add the first crest feature</div>}
         {content.features.map((feature, index) => (
           <div
-            key={feature.title}
+            key={index}
             data-about-editor-section="features"
             data-about-editor-index={index}
             className="flex items-center gap-5 sm:gap-6"
@@ -176,8 +179,9 @@ export default function ClubLogoPageClient({
         className="mx-auto grid max-w-3xl grid-cols-3 gap-x-5 gap-y-4 px-3 pb-32 sm:px-6 md:gap-x-8"
         style={{ opacity: animate ? 0 : 1 }}
       >
+        {editorEmptySections && content.color_cards.length === 0 && <div data-about-editor-section="colors" className="col-span-3 rounded-lg border border-white/30 p-6 text-white">Add the first color card</div>}
         {content.color_cards.map((card, index) => (
-          <div key={card.label} data-about-editor-section="colors" data-about-editor-index={index} className="relative w-full" style={{ aspectRatio: "334 / 214" }}>
+          <div key={index} data-about-editor-section="colors" data-about-editor-index={index} className="relative w-full" style={{ aspectRatio: "334 / 214" }}>
             <Image
               src={card.image_url}
               alt={`${card.label} brand color`}

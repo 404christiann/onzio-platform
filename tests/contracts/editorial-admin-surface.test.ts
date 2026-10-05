@@ -151,7 +151,9 @@ describe("editorial@1 admin surface hides", () => {
       // unreachable for both templates that lack a public Club Logo page.
       expect(page).toContain('{hasClubLogoPage && <button type="button"');
       expect(page).toContain('(next === "logo" && !hasClubLogoPage)');
-      expect(page).toContain('prepared.page === "about"\n        ? await supabase.from("about_page_content").upsert([prepared.content])\n        : await supabase.from("club_logo_page_content").upsert([prepared.content])');
+      expect(page).toContain("await saveAboutEditor(request)");
+      expect(page).not.toContain('supabase.from("about_page_content").upsert');
+      expect(source("app/api/admin/about-editor/route.ts")).toContain('rpc("save_about_editor"');
       expect(page).not.toContain("{!isAcademy && (");
     });
 
@@ -207,7 +209,7 @@ describe("editorial@1 admin surface hides", () => {
         "<AboutClubPageClient content={props.about} animate={false} />",
       );
       expect(preview).toContain(
-        "<ClubLogoPageClient content={props.logo} animate={false} />",
+        "<ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />",
       );
       expect(preview).toContain("<ClubhouseAboutPage content={props.about} sponsors={props.sponsors} />");
       expect(preview).toContain('onClickCapture={(event) => {');
@@ -220,8 +222,9 @@ describe("editorial@1 admin surface hides", () => {
       // and the public editorial route feeds the very same fetch into
       // EditorialAboutPage. A UI-only un-hide would not give the club control.
       const page = source(ABOUT_ADMIN);
-      expect(page).toContain("fetchAboutClubContent(clubId)");
-      expect(page).toContain('supabase.from("about_page_content").upsert([prepared.content])');
+      expect(page).toContain('loadAboutEditor("about")');
+      expect(page).toContain("await saveAboutEditor(request)");
+      expect(source("supabase/migrations/20261005160543_about_page_editor_receipts.sql")).toContain("insert into onzio.about_page_content");
       const publicRoute = source("app/%5Fclubs/[slug]/club/about/page.tsx");
       expect(publicRoute).toContain("fetchAboutClubContent(club.id, onzio)");
       expect(publicRoute).toContain("<EditorialAboutPage content={content.about} />");

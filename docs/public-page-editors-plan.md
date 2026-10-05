@@ -27,7 +27,7 @@ repository copy's staging invariant still applies.
 | ID | Status | Outcome and acceptance evidence required |
 | --- | --- | --- |
 | PPE-00 | complete | Public canvases and section selection; desktop and phone layouts, keyboard entry, page-scoped Save and recovery. Browser checks described below. |
-| PPE-01 | in_progress | About and Club Logo canvases, separate saves, ownership, and valid-page closing destination are implemented. Authenticated Clubhouse and Editorial browser parity passed; response-loss receipts, expected revisions, and empty crest authoring remain. |
+| PPE-01 | in_progress | About/Logo expected revisions, actor receipts/exact ambiguous-save recovery, recoverable media cleanup, first value/crest/color authoring and shared mobile dialog are implemented. Focused 60/60 and 1012 source contracts pass; parent SQL/browser/native acceptance and fresh review remain. |
 | PPE-02 | complete | Programs directory to detail, searchable desktop list and phone chooser, Manage programs, and atomic page-scoped Save. |
 | PPE-03 | complete | Tryouts intro/event canvas, add/reorder/edit, filled red Delete event, staged Undo, atomic Save, and photo retirement. |
 | PPE-04 | complete | Shop page and separate homepage feature, variant/media controls, page-scoped atomic Save, and disabled-store guard. |
@@ -51,6 +51,16 @@ time. Do not weaken existing tests to fit the redesign.
 - Accepted visual/interaction artifacts are in the task's
   `design-plans/` directory: Programs navigation, Tryouts, Shop page choices,
   and About page canvas plans and HTML concepts.
+
+## PPE-01 review fixes — 2026-10-05
+
+- Status: **in_progress**; implementation complete, acceptance pending.
+- Completed: selected-page About/Logo RPC snapshots, independent revisions including legacy writes, actor receipts and original operation retries after network/500 ambiguity; explicit conflict reload; shared phone dialog; Add/Remove for first About values, crest features and color cards; selectable empty Logo sections; durable reference-safe media cleanup retries.
+- Security fixes: receipt recovery precedes current page availability, design/store/content serialize with lock281 then290, tenant purge cascades the new private tables, SQL checks exact published/supported closing destinations, all newly resolved top/nested media persist canonical tenant storage paths with trusted-origin API/public hydration.
+- Files: About page/API, `lib/about-editor/*`, About canvas/CSS, `components/ClubLogoPageClient.tsx`, About-only `lib/queries.ts`, CLI-generated migration `20261005160543_about_page_editor_receipts.sql`, unit/public query/source/direct SQL/browser regressions, `HANDOFF.md` and this ledger.
+- Evidence: focused About + Editorial source checks **60/60**, source contracts **1012/1012**; actual public query regression protects nested Logo URL hydration and malformed legacy JSON normalization. Three PL/pgSQL CASE comparisons corrected after parent local apply diagnosed syntax. Direct SQL regressions and six real-save browser cases are written; implementation subagent did not run DB/browser/native fixtures.
+- Blockers/limits: parent local SQL migration/type generation/full-suite gates, real-save browser fixtures and native keyboard/focus/Save/Done validation, public preservation and fresh review. Chromium viewport simulation does not prove native keyboard behavior.
+- Exact next step: parent completes those acceptance gates and records evidence before package completion and authorized PR work. No commit or hosted actions by implementation subagent.
 
 ## PPE-01 decisions
 

@@ -98,9 +98,11 @@ async function handle(request: Request, mutation: boolean) {
     if (result.error) return databaseFailure(result.error);
     if (!result.data) return failure("SHOP_OPERATION_FAILED", 500);
     const snapshot = result.data as ShopSnapshot & { retiredMediaAssetIds?: unknown };
-    if (mutation) {
-      const retired = Array.isArray(snapshot.retiredMediaAssetIds) ? snapshot.retiredMediaAssetIds : [];
-      delete snapshot.retiredMediaAssetIds;
+    const committed = mutation ? snapshot : snapshot.operation?.status === "committed"
+      ? snapshot.operation.receipt as ShopSnapshot & { retiredMediaAssetIds?: unknown } : undefined;
+    if (committed) {
+      const retired = Array.isArray(committed.retiredMediaAssetIds) ? committed.retiredMediaAssetIds : [];
+      delete committed.retiredMediaAssetIds;
       await Promise.all(retired.map((assetId) => retirePublishedMedia({ clubId: club.id, actorId: userId, assetId: String(assetId) })
         .catch((error) => { console.error("Shop photo cleanup failed", { clubId: club.id, assetId, error }); })));
     }

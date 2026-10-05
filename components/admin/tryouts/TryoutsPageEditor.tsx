@@ -7,6 +7,8 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
+import PageEditorInspector from "@/components/admin/PageEditorInspector";
+import { submitPageSave } from "@/lib/page-editor-save";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useClubContext } from "@/components/ClubContextProvider";
@@ -198,9 +200,6 @@ function TryoutsPageEditorContent() {
     };
   }, [dirty]);
   useEffect(() => {
-    if (selected) toolsHeading.current?.focus();
-  }, [selected]);
-  useEffect(() => {
     if (!saved) return;
     const timeout = window.setTimeout(() => setSaved(false), 3500);
     return () => window.clearTimeout(timeout);
@@ -211,32 +210,32 @@ function TryoutsPageEditorContent() {
   const editor = { selected, onSelect: setSelected };
 
   function changePage<K extends keyof TryoutsPageDraft>(field: K, value: TryoutsPageDraft[K]) {
-    if (unconfirmed) return;
+    if (saveInFlight.current || unconfirmed) return;
     setPageCopy((current) => ({ ...current, [field]: value }));
     setPageErrors((current) => ({ ...current, [field]: undefined }));
     setPageDirty(true);
     setDirty(true); setSaved(false); setError(null);
   }
   function changeEvent<K extends keyof TryoutDraft>(field: K, value: TryoutDraft[K]) {
-    if (!selectedEvent || unconfirmed) return;
+    if (!selectedEvent || saveInFlight.current || unconfirmed) return;
     setEvents((current) => current.map((event) => event.clientKey === selectedEvent.clientKey ? { ...event, [field]: value } : event));
     setEventErrors((current) => ({ ...current, [selectedEvent.clientKey]: { ...current[selectedEvent.clientKey], [field]: undefined } }));
     setDirty(true); setSaved(false); setError(null);
   }
   function addEvent() {
-    if (unconfirmed) return;
+    if (saveInFlight.current || unconfirmed) return;
     const clientKey = crypto.randomUUID();
     setEvents((current) => [...current, { ...emptyTryoutDraft(current.length), clientKey }]);
     setSelected(`event:${clientKey}`);
     setDirty(true); setSaved(false); setError(null);
   }
   function reorder(index: number, delta: -1 | 1) {
-    if (unconfirmed) return;
+    if (saveInFlight.current || unconfirmed) return;
     setEvents((current) => moveTryout(current, index, delta) as EventDraft[]);
     setDirty(true); setSaved(false); setError(null);
   }
   function stageDelete(event: EventDraft) {
-    if (unconfirmed) return;
+    if (saveInFlight.current || unconfirmed) return;
     const index = events.findIndex((item) => item.clientKey === event.clientKey);
     setEvents((current) => ordered(current.filter((item) => item.clientKey !== event.clientKey)));
     setDeleted((current) => [...current, { event, index }]);
@@ -244,7 +243,7 @@ function TryoutsPageEditorContent() {
     setDirty(true); setSaved(false); setError(null);
   }
   function undoDelete() {
-    if (unconfirmed) return;
+    if (saveInFlight.current || unconfirmed) return;
     const last = deleted.at(-1);
     if (!last) return;
     setEvents((rows) => ordered([...rows.slice(0, last.index), last.event, ...rows.slice(last.index)]));
@@ -254,7 +253,7 @@ function TryoutsPageEditorContent() {
   }
   async function uploadHero(files: FileList | null) {
     const file = files?.[0];
-    if (!file || !selectedEvent || unconfirmed) return;
+    if (!file || !selectedEvent || saveInFlight.current || unconfirmed) return;
     setUploading(true); setError(null);
     try {
       const client = createClient();
@@ -282,11 +281,15 @@ function TryoutsPageEditorContent() {
       if (retained.has(assetId)) unsavedUploads.current.delete(assetId);
       else void retireUnsavedUpload(assetId);
     }
-    setEvents(snapshot.events.map(fromSnapshot));
+    setEvents(snapshot.events.map((row) => {
+      const next = fromSnapshot(row);
+      if (!next.heroMediaPreviewUrl && next.heroMediaAssetId) next.heroMediaPreviewUrl = events.find((event) => event.heroMediaAssetId === next.heroMediaAssetId)?.heroMediaPreviewUrl ?? "";
+      return next;
+    }));
     setPageCopy(tryoutsPageToDraft(snapshot.page));
     setPageDirty(false);
     setRevision(snapshot.revision);
-    setNativeForms(snapshot.registrationForms ?? {});
+    if (snapshot.registrationForms) setNativeForms(snapshot.registrationForms);
     setDeleted([]); setSelected(null);
     setPageErrors({}); setEventErrors({});
     setDirty(false); setSaved(true); setError(null); setUnconfirmed(null);
@@ -295,7 +298,7 @@ function TryoutsPageEditorContent() {
   }
 
   async function savePage() {
-    if ((!dirty && !unconfirmed) || saving || uploading || conflictSnapshot) return;
+    if ((!dirty && !unconfirmed) || saveInFlight.current || saving || uploading || conflictSnapshot) return;
     if (!unconfirmed) {
       const copyErrors = validateTryoutsPageDraft(pageCopy);
       const rowErrors = Object.fromEntries(events.map((event) => [event.clientKey, validateTryoutDraft(event)]));
@@ -318,33 +321,39 @@ function TryoutsPageEditorContent() {
     saveInFlight.current = true;
     setSaving(true); setSaved(false); setError(null);
     try {
-      const response = await fetch("/api/admin/tryouts-page", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
-      });
-      const body = await response.json() as Snapshot & { error?: { message?: string; code?: string } };
-      if (!response.ok) {
-        if (response.status === 409 && body.error?.code === "TRYOUTS_CHANGED") {
-          setError(body.error.message ?? "The public page changed. Review the latest version before saving.");
-          try { setConflictSnapshot(await getSnapshot()); }
-          catch { setError("The Tryouts page changed. Your draft is safe, but the latest page could not be loaded. Try again shortly."); }
-        } else setError(body.error?.message ?? "Unable to save Tryouts page");
-        saveUnconfirmed.current = false;
-        setUnconfirmed(null);
-        return;
-      }
-      applySnapshot(body);
-    } catch {
-      try {
-        const check = await getSnapshot(request.operationId);
-        if (check.operation?.status === "committed" && check.operation.receipt) applySnapshot(check);
-        else { saveUnconfirmed.current = false; setUnconfirmed(null); setError("Save did not finish. Your changes are still here; try Save page again."); }
-      } catch {
+      const result = await submitPageSave<Snapshot>(() => fetch("/api/admin/tryouts-page", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }), `/api/admin/tryouts-page?operationId=${encodeURIComponent(request.operationId)}`);
+      if (result.kind === "committed") applySnapshot(result.snapshot);
+      else if (result.kind === "unconfirmed") {
         saveUnconfirmed.current = true;
         setUnconfirmed(request);
-        setError("Save status is unknown. Retry the exact save to confirm it. Your draft is locked until then.");
+        setError(result.message);
+      } else {
+        saveUnconfirmed.current = false;
+        setUnconfirmed(null);
+        setError(result.message);
+        if (result.status === 409 && result.code === "TRYOUTS_CHANGED") {
+          setSelected(null);
+          try { setConflictSnapshot(await getSnapshot()); }
+          catch { setError("The Tryouts page changed. Your draft is safe, but the latest page could not be loaded. Try Save again shortly."); }
+        }
       }
     } finally { saveInFlight.current = false; setSaving(false); }
+  }
+
+  function keepDraftAfterConflict() {
+    if (!conflictSnapshot) return;
+    const latestIds = new Set(conflictSnapshot.events.map((event) => event.id));
+    const draftIds = new Set(events.map((event) => event.id));
+    const removedIds = new Set(deleted.map(({ event }) => event.id));
+    setEvents(ordered([
+      ...events.map((event) => event.id && !latestIds.has(event.id) ? { ...event, id: null } : event),
+      ...conflictSnapshot.events.filter((event) => !draftIds.has(event.id) && !removedIds.has(event.id)).map(fromSnapshot),
+    ]));
+    setDeleted((current) => current.filter(({ event }) => !event.id || latestIds.has(event.id)));
+    setRevision(conflictSnapshot.revision);
+    if (conflictSnapshot.registrationForms) setNativeForms(conflictSnapshot.registrationForms);
+    setConflictSnapshot(null);
+    setError("Your draft is ready to save over the reviewed page. Events added elsewhere are preserved. Select Save page to continue.");
   }
 
   const previewTryouts = events.map((event) => mapTryout(tryoutDraftToRow({
@@ -359,7 +368,7 @@ function TryoutsPageEditorContent() {
       description="Tap the page introduction or an event card to edit what visitors see. One Save page publishes all changes together."
       actions={<div className="flex flex-wrap gap-2">
         <button type="button" onClick={addEvent} disabled={!canEdit || loading} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 font-display text-xs font-bold uppercase text-foreground hover:bg-accent disabled:opacity-40"><Plus size={16} />Add event</button>
-        <button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-display text-xs font-bold uppercase text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : "Save page"}</button>
+        <button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-display text-xs font-bold uppercase text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button>
       </div>} />
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
       <p className="font-body text-xs text-muted-foreground">Your public <strong className="text-foreground">/tryouts</strong> page · {events.length} {events.length === 1 ? "event" : "events"}{dirty ? " · Unsaved changes" : ""}</p>
@@ -373,7 +382,7 @@ function TryoutsPageEditorContent() {
       <p className="font-semibold text-foreground">Review the latest saved page</p>
       <p className="mt-1 text-muted-foreground">Your draft is still in the canvas. The saved page now has {conflictSnapshot.events.length} {conflictSnapshot.events.length === 1 ? "event" : "events"}: {conflictSnapshot.events.map((event) => event.headline || "Untitled event").join(", ") || "none"}.</p>
       <p className="mt-2 text-xs text-muted-foreground">Saved introduction with events: {conflictSnapshot.page.intro_with_tryouts || "template default"}</p>
-      <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => setConfirmation({ kind: "discard" })} className="min-h-11 rounded-lg border border-border px-4 font-semibold">Use latest saved page</button><button type="button" onClick={() => { setRevision(conflictSnapshot.revision); setConflictSnapshot(null); setError("Your draft is ready to save over the reviewed page. Select Save page to continue."); }} className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-primary-foreground">Keep my draft</button></div>
+      <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => setConfirmation({ kind: "discard" })} className="min-h-11 rounded-lg border border-border px-4 font-semibold">Use latest saved page</button><button type="button" onClick={keepDraftAfterConflict} className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-primary-foreground">Keep my draft</button></div>
     </div>}
     {deleted.length > 0 && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-3 font-body text-sm"><span>{deleted.length === 1 ? `${deleted[0].event.headline || "Event"} will be deleted` : `${deleted.length} events will be deleted`} when you Save page.</span><button type="button" onClick={undoDelete} disabled={!canEdit} className="min-h-11 rounded-lg border border-border px-4 font-semibold text-foreground disabled:opacity-40">Undo</button></div>}
     {loading ? <div role="status" className="rounded-xl border border-border bg-card p-10 font-body text-sm text-muted-foreground">Loading tryout events…</div> :
@@ -383,12 +392,13 @@ function TryoutsPageEditorContent() {
           content={previewPageContent} phone={phone} selected={selected} onSelect={editor.onSelect} />
         {events.length === 0 && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border bg-card px-5 py-4"><div><p className="font-display text-sm font-bold text-foreground">No tryout events yet</p><p className="font-body text-xs text-muted-foreground">The public page shows the no-events introduction.</p></div><button type="button" onClick={addEvent} disabled={!canEdit} className="min-h-11 rounded-lg border border-border px-4 font-body text-sm font-semibold disabled:opacity-40">Add event</button></div>}
       </div>
-      <aside className={`${selected ? "fixed inset-x-0 bottom-0 z-40 max-h-[78dvh] overflow-y-auto rounded-t-2xl border-t border-border bg-card shadow-xl lg:sticky lg:inset-auto lg:top-28 lg:max-h-[calc(100dvh-8rem)] lg:rounded-xl lg:border" : "hidden lg:block"} min-w-0 self-start p-5`} aria-label="Selected section tools">
+      <PageEditorInspector open={Boolean(selected)} onClose={() => setSelected(null)} label="Selected Tryouts section tools" breakpoint={1023} className={`${selected ? "rounded-t-2xl border-t border-border bg-card shadow-xl lg:sticky lg:top-28 lg:max-h-[calc(100dvh-8rem)] lg:rounded-xl lg:border" : "hidden lg:block"} min-w-0 self-start p-5`}>
         {selected ? <>
           <div className="mb-5 flex items-start justify-between gap-3 border-b border-border pb-4">
             <div><p className="font-body text-xs text-muted-foreground">Public Tryouts page</p><h2 ref={toolsHeading} tabIndex={-1} className="mt-1 font-display text-lg font-black uppercase text-foreground">{selected === "intro" ? "Page introduction" : selected === "heading" ? "Page heading" : selectedEvent?.headline || "New tryout event"}</h2></div>
             <button type="button" onClick={() => setSelected(null)} aria-label="Done editing section" className="inline-flex size-11 items-center justify-center rounded-lg border border-border text-foreground hover:bg-accent"><X size={18} /></button>
           </div>
+          {error && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
           {selected === "heading" ? <p className="font-body text-sm leading-6 text-muted-foreground">The heading follows your website design and club name. Onzio manages this text.</p> :
           selected === "intro" ? <fieldset disabled={!canEdit} className="space-y-5 disabled:opacity-60"><p className="font-body text-xs leading-5 text-muted-foreground">The page shows one introduction when events are listed and the other when none are announced.</p>
             <Field label="Intro shown when tryouts are published" error={pageErrors.introWithTryouts}><Textarea value={pageCopy.introWithTryouts} onChange={(event) => changePage("introWithTryouts", event.target.value)} maxLength={TRYOUTS_PAGE_LIMITS.introWithTryouts} className="min-h-28" /></Field>
@@ -407,14 +417,14 @@ function TryoutsPageEditorContent() {
             {showsHeroImage && <div><span className={ADMIN_LABEL_CLASS}>Event photo</span><FileUpload label="Upload event photo" accept="image/jpeg,image/png,image/webp" onUpload={(files) => void uploadHero(files)} uploading={uploading} previewUrl={selectedEvent.heroMediaPreviewUrl || null} onRemove={selectedEvent.heroMediaAssetId ? () => { const assetId = selectedEvent.heroMediaAssetId; changeEvent("heroMediaAssetId",null); changeEvent("heroMediaPreviewUrl",""); if (assetId && unsavedUploads.current.has(assetId)) void retireUnsavedUpload(assetId); } : undefined} disabled={!canEdit} /></div>}
             {showsHeroImage && <p className="font-body text-xs text-muted-foreground">The first event with a photo also supplies the Academy page hero.</p>}
             <div className="flex gap-2 border-t border-border pt-4"><button type="button" onClick={() => reorder(events.findIndex((event) => event.clientKey === selectedEvent.clientKey), -1)} disabled={events[0]?.clientKey === selectedEvent.clientKey} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-border text-sm disabled:opacity-30"><ArrowUp size={16} />Move up</button><button type="button" onClick={() => reorder(events.findIndex((event) => event.clientKey === selectedEvent.clientKey), 1)} disabled={events.at(-1)?.clientKey === selectedEvent.clientKey} className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-border text-sm disabled:opacity-30"><ArrowDown size={16} />Move down</button></div>
-            <button type="button" onClick={() => setConfirmation({ kind: "delete", event: selectedEvent })} className="min-h-11 w-full rounded-lg bg-destructive px-4 font-display text-xs font-bold uppercase text-destructive-foreground hover:bg-destructive/90">Delete event</button>
+            <button type="button" onClick={() => { setSelected(null); setConfirmation({ kind: "delete", event: selectedEvent }); }} className="min-h-11 w-full rounded-lg bg-destructive px-4 font-display text-xs font-bold uppercase text-destructive-foreground hover:bg-destructive/90">Delete event</button>
             <p className="font-body text-xs text-muted-foreground">Deletion is staged. Undo before Save page to keep the event.</p>
           </fieldset> : null}
-          <div className="sticky bottom-0 mt-6 flex gap-2 border-t border-border bg-card pt-4 lg:hidden"><button type="button" onClick={() => setSelected(null)} className="min-h-11 flex-1 rounded-lg border border-border font-body text-sm font-semibold">Done</button><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 flex-1 rounded-lg bg-primary font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">Save page</button></div>
+          <div className="sticky bottom-0 mt-6 flex gap-2 border-t border-border bg-card pt-4 lg:hidden"><button type="button" onClick={() => setSelected(null)} className="min-h-11 flex-1 rounded-lg border border-border font-body text-sm font-semibold">Done</button><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 flex-1 rounded-lg bg-primary font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button></div>
         </> : <div className="py-14 text-center"><p className="font-display text-sm font-bold text-foreground">Tap a section to edit</p><p className="mt-2 font-body text-xs leading-5 text-muted-foreground">Select the introduction, a card, or the heading in the page preview.</p></div>}
-      </aside>
+      </PageEditorInspector>
     </div>}
-    <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"><span className="font-body text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "Tryouts page"}</span><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : "Save page"}</button></div>
+    <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"><span className="font-body text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "Tryouts page"}</span><button type="button" onClick={() => void savePage()} disabled={saving || uploading || Boolean(conflictSnapshot) || (!dirty && !unconfirmed)} className="min-h-11 rounded-lg bg-primary px-5 font-body text-sm font-semibold text-primary-foreground disabled:opacity-40">{saving ? "Saving…" : unconfirmed ? "Confirm save" : "Save page"}</button></div>
     <AdminSaveFeedback saving={saving || uploading} saved={saved} savingLabel={uploading ? "Uploading hero image…" : "Saving Tryouts page…"} successLabel="Tryouts page saved" />
     <AlertDialog.Root open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
       <AlertDialog.Portal container={dialogContainer}>

@@ -4,9 +4,19 @@ import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
+import { resolveMediaReferences } from "@/lib/media-assets";
 import { createClient } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
+
+type ProgramDirectorySnapshot = {
+  programs: Record<string, unknown>[];
+  operation?: { status: "not-committed" } | { status: "committed"; receipt: ProgramDirectorySnapshot };
+};
+const programMediaReferences = [
+  { assetId: "hero_media_asset_id", url: "hero_media_url" },
+  { assetId: "detail_media_asset_id", url: "detail_media_url" },
+];
 
 const uuid = z.string().uuid();
 const requestSchema = z.object({
@@ -68,12 +78,21 @@ async function handle(request: Request, mutation: boolean) {
     else await authorizeAdminAccess({ club, userId, memberships, aal: "aal1", capability: "content" });
   } catch (error) { return failure(error instanceof ContractError ? error.code : "NOT_AUTHORIZED", 403); }
   try {
-    const onzio = supabase.schema("onzio") as unknown as { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: Record<string, unknown> | null; error: { code?: string; message?: string } | null }> };
+    const onzio = supabase.schema("onzio") as unknown as { rpc: (name: string, args: Record<string, unknown>) => PromiseLike<{ data: ProgramDirectorySnapshot | null; error: { code?: string; message?: string } | null }> };
     const result = mutation
       ? await onzio.rpc("save_program_directory", { p_club_id: club.id, p_request: payload! })
       : await onzio.rpc("load_program_directory", { p_club_id: club.id, p_operation_id: operationId });
     if (result.error) return databaseFailure(result.error);
     if (!result.data) return failure("DATABASE_OPERATION_FAILED", 500);
+    const receipt = result.data.operation?.status === "committed" ? result.data.operation.receipt : undefined;
+    // Hydrate the RPC snapshots themselves so current rows and an older receipt
+    // keep their own content and concurrency baselines.
+    for (const snapshot of [result.data, ...(receipt ? [receipt] : [])]) {
+      snapshot.programs = await resolveMediaReferences(
+        snapshot.programs, club.id, programMediaReferences,
+        onzio as unknown as Parameters<typeof resolveMediaReferences>[3],
+      );
+    }
     return NextResponse.json(result.data, { headers: { "Cache-Control": "no-store" } });
   } catch { return failure("DATABASE_OPERATION_FAILED", 500); }
 }

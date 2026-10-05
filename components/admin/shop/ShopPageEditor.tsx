@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AcademyHomeShopFeature from "@/components/AcademyHomeShopFeature";
 import AcademyShopPage from "@/components/AcademyShopPage";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
@@ -15,12 +15,14 @@ import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/Admin
 import FileUpload from "@/components/admin/FileUpload";
 import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
+import PageEditorInspector from "@/components/admin/PageEditorInspector";
+import { submitPageSave } from "@/lib/page-editor-save";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type { ShopKitContent } from "@/lib/queries";
 import { hasShopPurchaseDetails } from "@/lib/shop-purchase-details";
 import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
-import { draftFromShopSnapshot, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
+import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 import "@/styles/editorial.css";
 
 const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };
@@ -70,6 +72,8 @@ export default function ShopPageEditor() {
   const [selectedVariant, setSelectedVariant] = useState<ShopVariant>("home");
   const [target, setTarget] = useState<Target | null>(null);
   const [phone, setPhone] = useState(false);
+  const saveInFlight = useRef(false);
+  const [conflicts, setConflicts] = useState<Partial<Record<ShopSurface, ShopSnapshot>>>({});
   const [pendingSaves, setPendingSaves] = useState<Partial<Record<ShopSurface, ReturnType<typeof toShopSaveRequest>>>>({});
 
   useEffect(() => {
@@ -83,6 +87,8 @@ export default function ShopPageEditor() {
   const currentVariant: ShopVariant = surface === "home" || !variants.includes(selectedVariant) ? "home" : selectedVariant;
   const currentKit = draft?.variants[currentVariant];
   const dirty = shopDraftDirty(draft);
+  const locked = saving || Boolean(pendingSaves[surface]);
+  const conflict = conflicts[surface];
   const anyDirty = shopDraftDirty(drafts.home) || shopDraftDirty(drafts.shop);
 
   useEffect(() => {
@@ -93,7 +99,7 @@ export default function ShopPageEditor() {
   }, [anyDirty]);
 
   useEffect(() => {
-    setSnapshots({}); setDrafts({}); setTarget(null); setLoadError(null); setSaveError(null);
+    setSnapshots({}); setDrafts({}); setPendingSaves({}); setConflicts({}); setTarget(null); setLoadError(null); setSaveError(null);
   }, [club.id]);
 
   useEffect(() => {
@@ -116,13 +122,13 @@ export default function ShopPageEditor() {
   }, [surface, snapshots, storeUnavailable]);
 
   function editDraft(update: (draft: ShopPageDraft) => ShopPageDraft) {
+    if (saveInFlight.current || pendingSaves[surface]) return;
     setDrafts((current) => {
       const page = current[surface];
       return page ? { ...current, [surface]: update(page) } : current;
     });
     setSaved(false);
     setSaveError(null);
-    setPendingSaves((current) => ({ ...current, [surface]: undefined }));
   }
 
   function setSectionField<K extends keyof ShopSection>(field: K, value: ShopSection[K]) {
@@ -145,7 +151,7 @@ export default function ShopPageEditor() {
   }
 
   async function uploadPhotos(files: FileList | null, strip: boolean) {
-    if (!files?.length || !draft) return;
+    if (!files?.length || !draft || saveInFlight.current || pendingSaves[surface]) return;
     const current = strip ? draft.photoRows[currentVariant] : draft.variants[currentVariant].photos;
     const allowed = Array.from(files).slice(0, Math.max(0, 6 - current.length));
     if (!allowed.length) return;
@@ -170,6 +176,7 @@ export default function ShopPageEditor() {
   }
 
   async function removePhoto(photo: ShopPhoto, strip: boolean) {
+    if (saveInFlight.current || pendingSaves[surface]) return;
     const current = strip ? draft?.photoRows[currentVariant] : draft?.variants[currentVariant].photos;
     if (!current) return;
     const next = current.filter((item) => item !== photo);
@@ -185,38 +192,42 @@ export default function ShopPageEditor() {
   }
 
   async function savePage() {
-    if (!draft || !snapshot || !dirty || saving || uploading) return;
+    if (!draft || !snapshot || (!dirty && !pendingSaves[surface]) || saveInFlight.current || uploading || conflict) return;
     const request = pendingSaves[surface] ?? toShopSaveRequest(snapshot, draft, crypto.randomUUID());
     const parsed = shopSaveRequestSchema.safeParse(request);
     if (!parsed.success) { setSaveError(parsed.error.issues[0]?.message ?? "Check the fields on this page."); return; }
+    saveInFlight.current = true;
     setSaving(true); setSaveError(null); setSaved(false); setPendingSaves((current) => ({ ...current, [surface]: request }));
     try {
-      const response = await fetch("/api/admin/shop", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) });
-      const result = await response.json();
-      if (!response.ok) {
-        if (response.status === 409) setPendingSaves((current) => ({ ...current, [surface]: undefined }));
-        throw new Error(result.error?.message ?? "Could not save this page.");
-      }
-      const fresh = result as ShopSnapshot;
-      setSnapshots((current) => ({ ...current, [surface]: fresh }));
-      setDrafts((current) => ({ ...current, [surface]: draftFromShopSnapshot(fresh) }));
-      setPendingSaves((current) => ({ ...current, [surface]: undefined })); setSaved(true);
-    } catch (error) {
-      // A lost response can happen after commit. Ask for this actor's exact
-      // receipt before leaving a draft in an uncertain state.
-      try {
-        const status = await fetch(`/api/admin/shop?surface=${surface}&operationId=${request.operationId}`, { credentials: "same-origin" });
-        const result = await status.json() as ShopSnapshot;
-        if (status.ok && result.operation?.status === "committed") {
-          const fresh = result.operation.receipt;
-          setSnapshots((current) => ({ ...current, [surface]: fresh }));
-          setDrafts((current) => ({ ...current, [surface]: draftFromShopSnapshot(fresh) }));
-          setPendingSaves((current) => ({ ...current, [surface]: undefined })); setSaved(true); return;
+      const result = await submitPageSave<ShopSnapshot>(() => fetch("/api/admin/shop", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request) }), `/api/admin/shop?surface=${surface}&operationId=${request.operationId}`);
+      if (result.kind === "committed") {
+        setSnapshots((current) => ({ ...current, [surface]: result.snapshot }));
+        setDrafts((current) => ({ ...current, [surface]: draftFromShopSnapshot(result.snapshot) }));
+        setPendingSaves((current) => ({ ...current, [surface]: undefined })); setSaved(true);
+      } else if (result.kind === "unconfirmed") setSaveError(result.message);
+      else {
+        setPendingSaves((current) => ({ ...current, [surface]: undefined }));
+        setSaveError(result.message);
+        if (result.status === 409 && result.code === "CONTENT_CHANGED") {
+          setTarget(null);
+          try {
+            const response = await fetch(`/api/admin/shop?surface=${surface}`, { credentials: "same-origin", cache: "no-store" });
+            const latest = await response.json();
+            if (!response.ok) throw new Error("Could not load the latest Shop page.");
+            setConflicts((current) => ({ ...current, [surface]: latest as ShopSnapshot }));
+          } catch { setSaveError("The Shop page changed. Your draft is still here. Try Save again to load the latest version."); }
         }
-        if (status.ok && result.operation?.status === "not-committed") setPendingSaves((current) => ({ ...current, [surface]: undefined }));
-      } catch { /* Preserve the exact request for an explicit retry. */ }
-      setSaveError(error instanceof Error ? error.message : "Save could not be confirmed. Your changes are still here.");
-    } finally { setSaving(false); }
+      }
+    } finally { saveInFlight.current = false; setSaving(false); }
+  }
+
+  function resolveConflict(keepDraft: boolean) {
+    if (!conflict) return;
+    if (!keepDraft && !window.confirm("Discard your Shop draft and use the latest saved page?")) return;
+    setSnapshots((current) => ({ ...current, [surface]: conflict }));
+    setDrafts((current) => ({ ...current, [surface]: keepDraft && current[surface] ? rebaseShopDraft(current[surface], conflict) : draftFromShopSnapshot(conflict) }));
+    setConflicts((current) => ({ ...current, [surface]: undefined }));
+    setSaveError(keepDraft ? "Your draft is ready to save over the reviewed page." : null);
   }
 
   const content = useMemo(() => draft ? allKitContent(draft, surface) : null, [draft, surface]);
@@ -237,14 +248,15 @@ export default function ShopPageEditor() {
       <div className="mt-5 space-y-4">
         <AdminPanel className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" aria-label="Public page">
-            <button type="button" aria-current={surface === "shop" ? "page" : undefined} onClick={() => { setSurfaceChoice("shop"); setTarget(null); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "shop" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Shop page {shopDraftDirty(drafts.shop) ? "•" : ""}</button>
-            {hasHomeFeature && <button type="button" aria-current={surface === "home" ? "page" : undefined} onClick={() => { setSurfaceChoice("home"); setTarget(null); setSelectedVariant("home"); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "home" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Homepage shop feature {shopDraftDirty(drafts.home) ? "•" : ""}</button>}
+            <button type="button" aria-current={surface === "shop" ? "page" : undefined} disabled={saving} onClick={() => { setSurfaceChoice("shop"); setTarget(null); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "shop" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Shop page {shopDraftDirty(drafts.shop) ? "•" : ""}</button>
+            {hasHomeFeature && <button type="button" aria-current={surface === "home" ? "page" : undefined} disabled={saving} onClick={() => { setSurfaceChoice("home"); setTarget(null); setSelectedVariant("home"); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "home" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Homepage shop feature {shopDraftDirty(drafts.home) ? "•" : ""}</button>}
           </div>
-          <button type="button" disabled={!dirty || saving || uploading || !snapshot} onClick={() => void savePage()} className="min-h-11 rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : uploading ? "Uploading…" : "Save page"}</button>
+          <button type="button" disabled={(!dirty && !pendingSaves[surface]) || saving || uploading || !snapshot || Boolean(conflict)} onClick={() => void savePage()} className="min-h-11 rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : uploading ? "Uploading…" : pendingSaves[surface] ? "Confirm save" : "Save page"}</button>
         </AdminPanel>
         {sharedWithHomepage && <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">Kit changes on this Shop page also update the homepage store teaser.</p>}
         {saved && <p role="status" className="text-sm font-medium text-green-700">This page was saved.</p>}
         {(saveError || loadError) && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{saveError ?? loadError}</p>}
+        {conflict && <div role="region" aria-label="Review latest Shop page" className="rounded-lg border border-border bg-card p-4 text-sm"><p>Another editor saved this page. Your draft is still here. Latest kit: {conflict.sections.find((section) => section.kit_variant === currentVariant)?.title || "Untitled"}.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className="min-h-11 rounded-lg border border-border px-3" onClick={() => resolveConflict(true)}>Keep my draft</button><button type="button" className="min-h-11 rounded-lg border border-border px-3" onClick={() => resolveConflict(false)}>Use latest saved page</button></div></div>}
         {!draft || !snapshot || !content ? <AdminPanel className="p-8 text-center text-sm text-muted-foreground">Loading the public page…</AdminPanel> : (
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_350px]">
             <div className="min-w-0 space-y-3">
@@ -285,9 +297,10 @@ export default function ShopPageEditor() {
                 </TemplateFontScope>}
               </ShopPreviewFrame>
             </div>
-            <aside className={`min-w-0 ${target ? "fixed inset-x-0 bottom-0 z-50 max-h-[72svh] overflow-y-auto rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:z-auto xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`} aria-label="Selected Shop section tools">
+            <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
               {target ? <>
                 <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
+                <fieldset disabled={locked} className="min-w-0">
                 {target === "fixed" ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">This copy belongs to the website design and is managed by Onzio.</p> : null}
                 {(target === "copy" || target === "kit" || target === "cta") && currentKit && <>
                   {isClubhouse ? <p className="mb-3 text-xs text-muted-foreground">The Shop and homepage use this kit name and its first photo. Campaign copy, price, sizes, and checkout are managed by Onzio.</p> : isEditorial ? <p className="mb-3 text-xs text-muted-foreground">The Shop and homepage use this kit. The page introduction and button text are managed by Onzio.</p> : null}
@@ -316,9 +329,11 @@ export default function ShopPageEditor() {
                   <TextField label="Button text" value={draft.purchase.cta_label} onChange={(value) => updatePurchase("cta_label", value)} />
                   <TextField label="Button link" type="url" value={draft.purchase.cta_link} onChange={(value) => updatePurchase("cta_link", value)} />
                 </div>}
-                <button type="button" disabled={!dirty || saving || uploading} onClick={() => void savePage()} className="mt-5 min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : "Save page"}</button>
+                </fieldset>
+                {saveError && <p role="alert" className="mt-3 text-sm text-destructive">{saveError}</p>}
+                <button type="button" disabled={(!dirty && !pendingSaves[surface]) || saving || uploading || Boolean(conflict)} onClick={() => void savePage()} className="mt-5 min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : pendingSaves[surface] ? "Confirm save" : "Save page"}</button>
               </> : <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Tap a section in the public page to edit it.</div>}
-            </aside>
+            </PageEditorInspector>
           </div>
         )}
       </div>

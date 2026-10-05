@@ -208,3 +208,10 @@ The check taps a canvas section and verifies that Phone and Desktop retain real
 390px and 1440px CSS viewports even when the editor itself is narrower. The
 same command can target a synthetic Clubhouse or Editorial local tenant and its
 matching local authenticated browser state. Never commit browser auth state.
+
+### About and Club Logo editor review regressions (PPE-01)
+
+- Pure recovery/schema/authoring/public hydration: `npx vitest run lib/__tests__/about-editor-save.test.ts lib/__tests__/about-editor-recovery.test.ts lib/__tests__/about-editor-public-query.test.ts`.
+- Local SQL: `tests/database/about-page-atomic-save.test.ts` covers independent page revisions, actor receipts, lost-response replay, malformed revisions/nested JSON, legacy/concurrent writer protection, design changes, retired media IDs, tenant isolation and forged nested-origin canonicalization. Parent-owned `about-page-concurrent-save.test.ts` adds separate-connection design races and purge cascades.
+- Real-save browser: `tests/browser/public-page-about-save.spec.ts` in `playwright.public-page-editors.config.ts` covers commit-before-network/500 response loss, unavailable/noncommitted receipts with exact retry, concurrent conflict reload and first values/crest/colors with selected-page draft preservation. Run against isolated synthetic Cinematic Alpha with Schedule published, `/schedule` closing destination and empty values/features/color cards; each test restores content using a fresh revision. Local authenticated `PAGE_EDITOR_STORAGE_STATE` is required.
+- The shared phone inspector visual viewport/browser checks complement separate native iOS software-keyboard acceptance; browser metrics alone do not establish native keyboard behavior.

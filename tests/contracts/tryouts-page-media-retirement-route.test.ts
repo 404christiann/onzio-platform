@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   authorizeAdminAccess: vi.fn(), authorizeMutation: vi.fn(), createClient: vi.fn(),
   getClubContext: vi.fn(), requireFreshClubSession: vi.fn(),
   retirePublishedMedia: vi.fn(), resolveMediaReferences: vi.fn(),
-  loadLinkedOpenRegistrationForms: vi.fn(), rpc: vi.fn(), schema: vi.fn(),
+  loadLinkedOpenRegistrationForms: vi.fn(), rpc: vi.fn(), schema: vi.fn(), formsResult: vi.fn(),
 }));
 vi.mock("@/lib/authorization", () => ({ authorizeAdminAccess: mocks.authorizeAdminAccess, authorizeMutation: mocks.authorizeMutation }));
 vi.mock("@/lib/auth-session", () => ({ requireFreshClubSession: mocks.requireFreshClubSession }));
@@ -36,7 +36,8 @@ beforeEach(() => {
   mocks.retirePublishedMedia.mockResolvedValue({ status: "retired" });
   mocks.resolveMediaReferences.mockImplementation(async (events: unknown) => events);
   mocks.loadLinkedOpenRegistrationForms.mockResolvedValue(new Map());
-  const forms = { select: () => ({ eq: () => ({ eq: () => ({ limit: async () => ({ data: [], error: null }) }) }) }) };
+  mocks.formsResult.mockResolvedValue({ data: [], error: null });
+  const forms = { select: () => ({ eq: () => ({ eq: () => ({ limit: mocks.formsResult }) }) }) };
   mocks.schema.mockReturnValue({ rpc: mocks.rpc, from: () => forms });
   mocks.createClient.mockResolvedValue({ schema: mocks.schema });
   mocks.rpc.mockResolvedValue({ data: snapshot(), error: null });
@@ -69,6 +70,42 @@ describe("Tryouts event photo retirement", () => {
     expect(response.status).toBe(200);
     expect(mocks.retirePublishedMedia).toHaveBeenCalledExactlyOnceWith({ clubId, actorId: userId, assetId });
     expect((await response.json()).operation.receipt.retiredMediaAssetIds).toBeUndefined();
+  });
+
+  it.each(["query", "hydration"])("keeps a confirmed Save successful if form %s fails", async (failure) => {
+    if (failure === "query") mocks.formsResult.mockResolvedValue({ data: null, error: { message: "temporary read failure" } });
+    else mocks.loadLinkedOpenRegistrationForms.mockRejectedValue(new Error("temporary hydration failure"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { POST } = await import("@/app/api/admin/tryouts-page/route");
+      const response = await POST(request("POST", payload()));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(snapshot());
+      expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("save_tryouts_page", { p_club_id: clubId, p_request: payload() });
+    } finally { log.mockRestore(); }
+  });
+
+  it("returns a committed receipt even if registration previews cannot refresh", async () => {
+    mocks.rpc.mockResolvedValue({ data: { ...snapshot(), operation: { status: "committed", receipt: snapshot() } }, error: null });
+    mocks.formsResult.mockResolvedValue({ data: null, error: { message: "temporary read failure" } });
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { GET } = await import("@/app/api/admin/tryouts-page/route");
+      const response = await GET(request("GET", undefined, operationId));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ ...snapshot(), operation: { status: "committed", receipt: snapshot() } });
+    } finally { log.mockRestore(); }
+  });
+
+  it("rejects an incomplete initial load if registration previews are unavailable", async () => {
+    mocks.formsResult.mockResolvedValue({ data: null, error: { message: "temporary read failure" } });
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const { GET } = await import("@/app/api/admin/tryouts-page/route");
+      const response = await GET(request("GET"));
+      expect(response.status).toBe(500);
+      expect(await response.json()).toMatchObject({ error: { code: "DATABASE_OPERATION_FAILED" } });
+    } finally { log.mockRestore(); }
   });
 
   it("keeps the Save successful if physical cleanup fails", async () => {

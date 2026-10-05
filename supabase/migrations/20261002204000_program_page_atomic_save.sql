@@ -92,7 +92,7 @@ begin
     or not exists(select 1 from onzio.clubs where id=p_club_id and lifecycle in ('active','onboarding')) then
     raise exception 'NOT_AUTHORIZED' using errcode='42501';
   end if;
-  if onzio_private.homepage_design(p_club_id)->>'templateKey'<>'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   result:=onzio_private.program_page_snapshot(p_club_id,p_program_id);
   if p_operation_id is not null then
     if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
@@ -117,7 +117,7 @@ declare
 begin
   perform pg_catalog.pg_advisory_xact_lock(734901284);
   if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
-  if onzio_private.homepage_design(p_club_id)->>'templateKey'<>'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   perform onzio_private.check_program_page_object(p_request,array['operationId','programId','expected','program','gallery'],array['operationId','programId','expected','program','gallery']);
   perform onzio_private.check_program_page_object(p_request->'expected',array['programUpdatedAt','gallery'],array['programUpdatedAt','gallery']);
   payload:=p_request->'program'; gallery:=p_request->'gallery'; expected:=p_request->'expected';
@@ -169,7 +169,7 @@ begin
     or row_value.layout_variant not in ('statement_band','detail_focus')
     or jsonb_typeof(payload->'highlights')<>'array' or jsonb_array_length(payload->'highlights')>200
     or exists(select 1 from jsonb_array_elements(payload->'highlights') v where jsonb_typeof(v)<>'string' or char_length(v#>>'{}')>320)
-    or (row_value.external_cta_href<>'' and row_value.external_cta_href!~*'^(https?://[^[:space:]]+|mailto:[^[:space:]]+|/[^/].*)$') then
+    or (row_value.external_cta_href not in ('','/') and row_value.external_cta_href!~*'^(https?://[^[:space:]]+|mailto:[^[:space:]]+|/[^/].*)$') then
     raise exception 'INVALID_PROGRAM_PAGE_PAYLOAD' using errcode='22023';
   end if;
   -- Existing public URLs stay stable; order and visibility belong to Manage.
@@ -245,7 +245,7 @@ begin
     or not exists(select 1 from onzio.clubs where id=p_club_id and lifecycle in ('active','onboarding')) then
     raise exception 'NOT_AUTHORIZED' using errcode='42501';
   end if;
-  if onzio_private.homepage_design(p_club_id)->>'templateKey'<>'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   result:=onzio_private.program_directory_snapshot(p_club_id);
   if p_operation_id is not null then
     if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
@@ -266,7 +266,7 @@ declare
 begin
   perform pg_catalog.pg_advisory_xact_lock(734901284);
   if not onzio_private.can_mutate_content(p_club_id) then raise exception 'NOT_AUTHORIZED' using errcode='42501'; end if;
-  if onzio_private.homepage_design(p_club_id)->>'templateKey'<>'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
+  if (onzio_private.homepage_design(p_club_id)->>'templateKey') is distinct from 'academy@1' then raise exception 'PAGE_UNAVAILABLE' using errcode='22023'; end if;
   perform onzio_private.check_program_page_object(p_request,array['operationId','expected','programs'],array['operationId','expected','programs']);
   expected:=p_request->'expected'; desired:=p_request->'programs';
   if jsonb_typeof(expected) is distinct from 'array' or jsonb_typeof(desired) is distinct from 'array'
