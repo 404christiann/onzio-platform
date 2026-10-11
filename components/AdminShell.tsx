@@ -1,31 +1,33 @@
 "use client";
 
 import {
-  BarChart3,
-  BookOpenText,
-  CalendarCheck2,
-  CalendarDays,
-  CalendarRange,
+  IconDashboard,
+  IconHomepage,
+  IconPrograms,
+  IconTryouts,
+  IconShop,
+  IconAbout,
+  IconSponsors,
+  IconContact,
+  IconSeasons,
+  IconRoster,
+  IconSchedule,
+  IconMatchStats,
+  IconSeasonStats,
+  IconStandings,
+  IconRegistrations,
+  IconAnalytics,
+  IconBranding,
+  IconTeamAccess,
+  IconPayments,
+  IconGroupWebsite,
+  IconGroupCompetition,
+  IconGroupClubSettings,
   ChevronDown,
-  CircleHelp,
-  ClipboardList,
-  ClipboardPenLine,
-  CreditCard,
-  Gauge,
-  Globe2,
-  Handshake,
-  House,
-  Mail,
   Menu,
-  Palette,
-  Settings2,
-  ShoppingBag,
-  Trophy,
-  UserCog,
-  Users,
   X,
-  type LucideIcon,
-} from "lucide-react";
+  type AdminIconComponent
+} from "@/components/admin/icons";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -68,32 +70,32 @@ import {
 } from "@/lib/admin-route-manifest";
 import { createClient } from "@/lib/supabase-browser";
 
-const ROUTE_ICONS: Record<AdminRouteIconKey, LucideIcon> = {
-  dashboard: Gauge,
-  homepage: House,
-  programs: BookOpenText,
-  tryouts: CalendarCheck2,
-  shop: ShoppingBag,
-  about: CircleHelp,
-  sponsors: Handshake,
-  contact: Mail,
-  seasons: CalendarRange,
-  roster: Users,
-  schedule: CalendarDays,
-  "match-stats": BarChart3,
-  "season-stats": ClipboardList,
-  standings: Trophy,
-  registrations: ClipboardPenLine,
-  analytics: BarChart3,
-  branding: Palette,
-  "team-access": UserCog,
-  payments: CreditCard,
+const ROUTE_ICONS: Record<AdminRouteIconKey, AdminIconComponent> = {
+  "dashboard": IconDashboard,
+  "homepage": IconHomepage,
+  "programs": IconPrograms,
+  "tryouts": IconTryouts,
+  "shop": IconShop,
+  "about": IconAbout,
+  "sponsors": IconSponsors,
+  "contact": IconContact,
+  "seasons": IconSeasons,
+  "roster": IconRoster,
+  "schedule": IconSchedule,
+  "match-stats": IconMatchStats,
+  "season-stats": IconSeasonStats,
+  "standings": IconStandings,
+  "registrations": IconRegistrations,
+  "analytics": IconAnalytics,
+  "branding": IconBranding,
+  "team-access": IconTeamAccess,
+  "payments": IconPayments,
 };
 
-const GROUP_ICONS: Record<AdminGroupIconKey, LucideIcon> = {
-  website: Globe2,
-  competition: Trophy,
-  "club-settings": Settings2,
+const GROUP_ICONS: Record<AdminGroupIconKey, AdminIconComponent> = {
+  "website": IconGroupWebsite,
+  "competition": IconGroupCompetition,
+  "club-settings": IconGroupClubSettings,
 };
 
 function isPathActive(pathname: string, href: string) {
@@ -221,7 +223,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           render={<Link href={route.href} />}
           onClick={() => closeSidebar(false)}
           isActive={active}
-          className="h-10 gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-accent-foreground"
+          className="h-10 gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-accent-foreground [&>svg]:size-6"
         >
           <Icon
             className={active ? "text-primary" : "text-sidebar-foreground/45"}
@@ -303,7 +305,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     onClick={() =>
                       setOpenGroupKey((previous) => (previous === entry.id ? null : entry.id))
                     }
-                    className="h-10 w-full gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    className="h-10 w-full gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring [&>svg:first-child]:size-6"
                   >
                     <GroupIcon className="text-sidebar-foreground/45" aria-hidden="true" />
                     <span className="whitespace-nowrap text-left">{entry.label}</span>

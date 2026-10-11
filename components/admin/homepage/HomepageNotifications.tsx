@@ -1,5 +1,7 @@
 "use client";
 
+import { Check, X, AlertTriangle } from "@/components/admin/icons";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type NotificationError = { message: string } | null;
@@ -116,7 +118,7 @@ export default function HomepageNotifications({
       onFocusCapture={onHold}
       onBlurCapture={onRelease}
     >
-      <span className="hp-notification-icon" aria-hidden="true">{icon}</span>
+      <span className="hp-notification-icon" aria-hidden="true">{kind === "saving" ? icon : kind === "success" ? <Check size={14} /> : kind === "warning" ? <AlertTriangle size={14} /> : <X size={14} />}</span>
       <p>{text}</p>
       <div className="hp-notification-actions">
         {actionable && kind === "error" && onRetry ? <button type="button" className="hp-notification-action" onClick={onRetry}>Try saving again</button> : null}

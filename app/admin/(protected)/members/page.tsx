@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "@/components/admin/icons";
+
 import { FormEvent, useEffect, useState } from "react";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
@@ -341,7 +343,7 @@ export default function MembersPage() {
               "rounded-lg border-warning/30 bg-warning/10 px-4 py-3 text-warning",
           )}
         >
-          {message.tone === "success" ? `✓ ${message.text}` : message.text}
+          {message.tone === "success" ? <><Check width="14" height="14" className="mr-1 inline-block align-middle" />{message.text}</> : message.text}
         </p>
       )}
     </AdminPage>

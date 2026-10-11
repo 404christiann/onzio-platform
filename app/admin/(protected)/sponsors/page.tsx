@@ -1,11 +1,13 @@
 "use client";
 
+import { X, ChevronLeft, ChevronRight, AlertTriangle } from "@/components/admin/icons";
+
 import { useClubContext } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+
 import { SponsorsContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
@@ -440,9 +442,7 @@ export default function AdminSponsorsPage() {
                       className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       aria-label={`Remove sponsor logo ${index + 1}`}
                     >
-                      <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-                        <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                      </svg>
+                      <X width="9" height="9" />
                     </button>
                   </div>
                   <input
@@ -468,14 +468,14 @@ export default function AdminSponsorsPage() {
                       disabled={index === 0}
                       onClick={() => moveLogo(index, -1)}
                     >
-                      ←
+                      <ChevronLeft width="14" height="14" />
                     </OrderButton>
                     <OrderButton
                       label={`Move sponsor logo ${index + 1} right`}
                       disabled={index === draftLogos.length - 1}
                       onClick={() => moveLogo(index, 1)}
                     >
-                      →
+                      <ChevronRight width="14" height="14" />
                     </OrderButton>
                   </div>
                 </div>

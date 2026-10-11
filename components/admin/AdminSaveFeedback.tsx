@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "@/components/admin/icons";
+
 interface AdminSaveFeedbackProps {
   saving: boolean;
   saved: boolean;
@@ -52,16 +54,7 @@ export default function AdminSaveFeedback({
         className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success/15 text-success"
         aria-hidden="true"
       >
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-          <path
-            d="M3 7.2l2.45 2.45L11 4.5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="[stroke-dasharray:16] [stroke-dashoffset:16] animate-[admin-save-feedback-check_280ms_ease-out_80ms_forwards] motion-reduce:animate-none motion-reduce:[stroke-dashoffset:0]"
-          />
-        </svg>
+        <Check width="13" height="13" />
       </span>
       <span className="whitespace-nowrap">{successLabel}</span>
     </div>

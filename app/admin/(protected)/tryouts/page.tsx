@@ -1,7 +1,9 @@
 "use client";
 
+import { IconCaretDown as AdminSelectChevron, MoreVertical } from "@/components/admin/icons";
+
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MoreVertical } from "lucide-react";
+
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import {
@@ -792,7 +794,7 @@ function LegacyAdminTryoutsPage() {
                         <input className={ADMIN_INPUT_CLASS} value={draft.headline} onChange={(event) => updateDraft("headline", event.target.value)} maxLength={80} placeholder="Spring evaluation" />
                       </Field>
                       <Field label="Status">
-                        <NativeSelect value={draft.status} onChange={(event) => updateDraft("status", event.target.value as TryoutDraft["status"])}>
+                        <NativeSelect chevronIcon={AdminSelectChevron} value={draft.status} onChange={(event) => updateDraft("status", event.target.value as TryoutDraft["status"])}>
                           <NativeSelectOption value="upcoming">Upcoming — details can be TBA</NativeSelectOption>
                           <NativeSelectOption value="open">Open — registration may be shown</NativeSelectOption>
                           <NativeSelectOption value="closed">Closed — registration is hidden</NativeSelectOption>
@@ -801,7 +803,7 @@ function LegacyAdminTryoutsPage() {
                       {showsProgramAndHeroFields && (
                         <div className="sm:col-span-2">
                           <Field label="Program association" badge={<TemplateOnlyBadge />}>
-                            <NativeSelect value={draft.programId ?? ""} onChange={(event) => updateDraft("programId", event.target.value || null)}>
+                            <NativeSelect chevronIcon={AdminSelectChevron} value={draft.programId ?? ""} onChange={(event) => updateDraft("programId", event.target.value || null)}>
                               <NativeSelectOption value="">General club tryout</NativeSelectOption>
                               {programs.map((program) => <NativeSelectOption key={program.id} value={program.id}>{program.display_title}</NativeSelectOption>)}
                             </NativeSelect>
@@ -846,7 +848,7 @@ function LegacyAdminTryoutsPage() {
                     <div className="mt-7 grid gap-5 border-t border-border pt-7 sm:grid-cols-2">
                       <div className="sm:col-span-2">
                         <Field label="Onzio registration form">
-                          <NativeSelect value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
+                          <NativeSelect chevronIcon={AdminSelectChevron} value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
                             <NativeSelectOption value="">No native form — use the destination below</NativeSelectOption>
                             {registrationForms.map((form) => (
                               <NativeSelectOption key={form.id} value={form.id}>{form.title} — {form.status}</NativeSelectOption>

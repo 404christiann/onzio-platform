@@ -1,5 +1,13 @@
 # Onzio Platform Handoff
 
+## Admin icon refresh — approved implementation, 2026-10-11
+
+`ADMIN-ICONS-01` implemented on `codex/admin-icon-refresh` in the managed admin-icon-preview worktree following Christian's 47-role approval. Exact selections are in `components/admin/icons/approved-selection.json`; approved medium/outline/round glyphs use currentColor, route/group boxes are 24px, Sponsors retains the original Lucide stroke. Protected shell/dashboard/header/editor utilities are updated. Shared NativeSelect injects admin glyphs explicitly and retains default public/auth markup; Calendar changes are instance-scoped. No layout/auth/tenant/API/data/dependency changes. Four registration actions (Publish/Stop/Copy/Archive), data charts/content flags and saving spinner geometry deliberately retain current drawings.
+
+Verification: 1,049 contracts, 21 architecture, 310 isolated-local database, and 1,783 full-suite tests passed; TypeScript, lint, build, narrow final schedule/consumer checks, source harness build and diff check passed. No existing assertions weakened. Build has the existing Supabase Edge Runtime `process.version` warning. Parent independently checked all asset/role geometry, exact Sponsors SSR and unchanged shared default markup. Parent CUA checked desktop and phone light/dark actual-source shell, all groups, 24px glyphs, overflow, drawer focus/scroll, search, panel and navigation. Data/provider boundaries in the review harness are synthetic; editor persistence/native iOS are not claimed.
+
+Audit and final source list: `docs/admin-icon-refresh-audit.md`. Local source harness: http://127.0.0.1:3187/implemented.html?theme=light&route=%2Fadmin%2Fprograms&drawer=open . Final cached build and lint after the last schedule plus cleanup also passed. Christian approved commit and PR creation on 2026-10-11. Local preview artifacts are excluded from the commit, and `vercel.json` disables automatic previews for this branch. Exact next step: publish the requested PR for review; coordinate icon ownership with the Guided redesign before any merge. No merge or deployment is authorized.
+
 ## Remaining public editors — final acceptance, 2026-10-05
 
 Scope: PPE-00 through PPE-05, Programs, Tryouts, Shop, About and Club Logo. Christian explicitly authorized review/fixes, a PR into main and the release. Contact shipped in PR #10 and its editor/API/public renderer/migration/tests remain unchanged. Original checkout OTP changes and the original editor branch are preserved. Release branch is `codex/public-page-editors-release`, based on main `5b07964`.
