@@ -86,7 +86,7 @@ test("Match Stats keeps its selector skeleton until matches arrive and ignores a
   await expect(page.getByRole("status", { name: "Loading match stats", exact: true })).toBeVisible();
   await expect(page.locator('[data-slot="stat-input"]')).toHaveCount(0);
   await matchSelect.selectOption(MATCH_B);
-  await expect(page.locator('[data-slot="stat-input"]').nth(1)).toHaveValue("8");
+  await expect(page.getByRole("spinbutton", { name: "Loading Fixture Player: goals", exact: true })).toHaveValue("8");
   const lateResponse = page.waitForResponse((response) => {
     if (!response.url().endsWith("/api/admin/data")) return false;
     const request = response.request().postDataJSON() as ReadRequest;
@@ -96,7 +96,7 @@ test("Match Stats keeps its selector skeleton until matches arrive and ignores a
   await (await lateResponse).finished();
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(page.getByRole("status", { name: "Loading match stats", exact: true })).toHaveCount(0);
-  await expect(page.locator('[data-slot="stat-input"]').nth(1)).toHaveValue("8");
+  await expect(page.getByRole("spinbutton", { name: "Loading Fixture Player: goals", exact: true })).toHaveValue("8");
   await expect(page.getByRole("button", { name: "Save All Stats" })).toBeDisabled();
 });
 
@@ -118,7 +118,7 @@ test("Season Stats keeps old totals hidden while a new season loads and ignores 
   await firstRequested.wait;
   await expect(page.getByRole("status", { name: "Loading season stats", exact: true })).toBeVisible();
   await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(SEASON_B);
-  await expect(page.locator('[data-slot="stat-input"]').first()).toHaveValue("8");
+  await expect(page.getByRole("spinbutton", { name: "Loading Fixture Player: goals", exact: true })).toHaveValue("8");
   const lateResponse = page.waitForResponse((response) => {
     if (!response.url().endsWith("/api/admin/data")) return false;
     const request = response.request().postDataJSON() as ReadRequest;
@@ -128,7 +128,7 @@ test("Season Stats keeps old totals hidden while a new season loads and ignores 
   await (await lateResponse).finished();
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect(page.getByRole("status", { name: "Loading season stats", exact: true })).toHaveCount(0);
-  await expect(page.locator('[data-slot="stat-input"]').first()).toHaveValue("8");
+  await expect(page.getByRole("spinbutton", { name: "Loading Fixture Player: goals", exact: true })).toHaveValue("8");
   await expect(page.getByRole("button", { name: "Save All", exact: true })).toBeDisabled();
 });
 
@@ -162,4 +162,30 @@ test("failed schedule reads end loading and keep Add Match unavailable", async (
   await expect(page.getByRole("status", { name: "Loading schedule", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add Match", exact: false })).toBeDisabled();
   await expect(page.getByText("No matches yet", { exact: true })).toHaveCount(0);
+});
+
+test("phone player workspace reveals the editor and returns to search after selecting from a long roster", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const roster = Array.from({ length: 35 }, (_, index) => ({
+    id: `30000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+    name: `Roster Player ${String(index + 1).padStart(2, "0")}`,
+    number: index + 1, position: "Forward", active: true,
+  }));
+  await fixtureReads(page, async request => request.table === "players" ? roster : undefined);
+  await page.goto("/admin/season-stats");
+  await page.getByRole("button", { name: "Select Roster Player 35", exact: true }).click();
+  const back = page.getByRole("button", { name: "All players", exact: true });
+  await expect(back).toBeVisible();
+  const box = (await back.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(72);
+  expect(box.y + box.height).toBeLessThan(400);
+  const goals = page.getByRole("spinbutton", { name: "Roster Player 35: goals", exact: true });
+  await goals.fill("9");
+  await back.click();
+  const search = page.getByRole("searchbox", { name: "Search players", exact: true });
+  await expect(search).toBeVisible();
+  expect((await search.boundingBox())!.y).toBeGreaterThanOrEqual(72);
+  await search.fill("35");
+  await page.getByRole("button", { name: "Select Roster Player 35", exact: true }).click();
+  await expect(goals).toHaveValue("9");
 });

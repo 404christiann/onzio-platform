@@ -107,6 +107,12 @@ async function fixtures() {
   return { seasonId, playerId, matchId: matchIds[2], rowName, formTitle, formId, suffix, seasonLabel, clubKind, billingState, restore };
 }
 
+async function selectStatsPlayer(page: Page, name: string) {
+  const back = page.getByRole("button", { name: "All players", exact: true });
+  if (await back.isVisible()) await back.click();
+  await page.getByRole("button", { name: `Select ${name}`, exact: true }).click();
+}
+
 async function setTheme(page: Page, theme: "light" | "dark") {
   const toggle = page.getByRole("button", { name: `Switch to ${theme} theme`, exact: true });
   if (await toggle.count()) await toggle.click();
@@ -128,6 +134,7 @@ for (const width of [390, 1440]) {
       await expect(page.getByText(`${fixture.seasonLabel} Season`, { exact: true })).toBeVisible();
       await page.goto("/admin/season-stats");
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
+      await selectStatsPlayer(page, fixture.rowName);
       const seasonGoals = page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true });
       await expect(seasonGoals).toHaveValue("1");
       expect((await seasonGoals.boundingBox())!.height).toBeGreaterThanOrEqual(44);
@@ -137,7 +144,10 @@ for (const width of [390, 1440]) {
       await expect(page.getByRole("button", { name: "Save All", exact: true })).toBeDisabled();
       await page.reload();
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
+      await selectStatsPlayer(page, fixture.rowName);
       await expect(seasonGoals).toHaveValue("9");
+      const allPlayers = page.getByRole("button", { name: "All players", exact: true });
+      if (await allPlayers.isVisible()) await allPlayers.click();
       const group = page.locator('button[aria-controls="season-stats-forward"]');
       await group.click();
       await expect(group).toHaveAttribute("aria-expanded", "false");
@@ -152,6 +162,7 @@ for (const width of [390, 1440]) {
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
       await expect(page.getByRole("combobox", { name: "Match", exact: true })).toBeEnabled();
       await page.getByRole("combobox", { name: "Match", exact: true }).selectOption(fixture.matchId);
+      await selectStatsPlayer(page, fixture.rowName);
       const matchGoals = page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true });
       await expect(matchGoals).toHaveValue("3");
       await matchGoals.fill("8");
@@ -162,6 +173,7 @@ for (const width of [390, 1440]) {
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
       await expect(page.getByRole("combobox", { name: "Match", exact: true })).toBeEnabled();
       await page.getByRole("combobox", { name: "Match", exact: true }).selectOption(fixture.matchId);
+      await selectStatsPlayer(page, fixture.rowName);
       await expect(matchGoals).toHaveValue("8");
 
       await page.goto("/admin/analytics");
@@ -221,11 +233,13 @@ for (const width of [390, 1440]) {
             await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
             await expect(page.getByRole("combobox", { name: "Match", exact: true })).toBeEnabled();
             await page.getByRole("combobox", { name: "Match", exact: true }).selectOption(fixture.matchId);
+            await selectStatsPlayer(page, fixture.rowName);
             await expect(page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true })).toHaveValue("8");
           }
           if (route === "seasons") await expect(page.getByText(`${fixture.seasonLabel} Season`, { exact: true })).toBeVisible();
           if (route === "season-stats") {
             await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
+            await selectStatsPlayer(page, fixture.rowName);
             await expect(page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true })).toHaveValue("9");
           }
           if (route === "standings") await expect(page.getByRole("textbox", { name: "Team name", exact: true })).toHaveValue(`Guided QA team ${fixture.suffix}`);

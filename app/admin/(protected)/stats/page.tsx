@@ -1,24 +1,25 @@
 "use client";
 
-import { ChevronDown, IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
+import { IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
 
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useRouter } from "next/navigation";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import { AdminStatsGroupsSkeleton } from "@/components/admin/AdminCompetitionSkeletons";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPageToolbar } from "@/components/admin/AdminPage";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import SeasonSelect from "@/components/admin/SeasonSelect";
-import StatInput from "@/components/admin/StatInput";
+import { StatsWorkspace } from "@/components/admin/stats/StatsWorkspace";
+import { StatsSaveBar } from "@/components/admin/stats/StatsSaveBar";
+import { StatsScopeSwitchDialog } from "@/components/admin/stats/StatsScopeSwitchDialog";
+import type { StatsFieldGroup, StatsPlayer, StatsValue } from "@/components/admin/stats/types";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
-import { cn } from "@/lib/utils";
 
 // ── Types ─────────────────────────────────────
 
@@ -31,12 +32,8 @@ type Match = {
   season_id: string;
 };
 
-type Player = {
-  id: string;
-  number: number;
-  name: string;
-  position: "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
-};
+type Player = StatsPlayer;
+type PendingScope = { kind: "season"; id: string } | { kind: "match"; id: string | null };
 
 type FieldRow = {
   starts: boolean;
@@ -107,12 +104,13 @@ export default function StatsPage() {
   const [players, setPlayers]     = useState<Player[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
   const [stats, setStats]         = useState<StatsMap>({});
-  // Per-position-group dirty tracking, mirroring the Homepage admin page's
-  // dirtySections pattern: a Set of dirty group ids, tagged by each field
-  // change handler, with overall-dirty derived as set.size > 0. Save remains
-  // a single action for the whole match (see handleSave) — this state never
-  // splits it into per-group saves, it only drives the per-group indicator.
-  const [dirtyGroups, setDirtyGroups] = useState<Set<Player["position"]>>(new Set());
+  const [baselineStats, setBaselineStats] = useState<StatsMap>({});
+  const [pendingScope, setPendingScope] = useState<PendingScope | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveLock = useRef(false);
+  const dirtyPlayerIds = useMemo(() => new Set(players.filter(player => JSON.stringify(stats[player.id]) !== JSON.stringify(baselineStats[player.id])).map(player => player.id)), [players, stats, baselineStats]);
+  // Position indicators describe the draft; saving remains one whole-match action.
+  const dirtyGroups = useMemo(() => new Set(players.filter(player => dirtyPlayerIds.has(player.id)).map(player => player.position)), [players, dirtyPlayerIds]);
   const hasChanges = dirtyGroups.size > 0;
   const [loading, setLoading]     = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -160,7 +158,6 @@ export default function StatsPage() {
     let cancelled = false;
     setError(null);
     setPlayersLoadFailed(false);
-    setDirtyGroups(new Set());
     const supabase = createClient();
     Promise.all([
       supabase.from("players").select("id, number, name, position").order("number"),
@@ -207,6 +204,7 @@ export default function StatsPage() {
     if (!selectedMatch || !matchBelongsToSeason || playersPending) {
       setStatsLoadFailed(false);
       setStats({});
+      setBaselineStats({});
       setLoading(false);
       setLoadedMatchId(null);
       return;
@@ -215,6 +213,7 @@ export default function StatsPage() {
       setStatsLoadFailed(false);
       setLoadedMatchId(selectedMatch);
       setStats({});
+      setBaselineStats({});
       setLoading(false);
       return;
     }
@@ -222,8 +221,8 @@ export default function StatsPage() {
     setLoading(true);
     setStatsLoadFailed(false);
     setStats({});
+    setBaselineStats({});
     setSaved(false);
-    setDirtyGroups(new Set());
     setError(null);
 
     const supabase = createClient();
@@ -280,6 +279,7 @@ export default function StatsPage() {
       });
 
       setStats(map);
+      setBaselineStats(map);
       setLoading(false);
     }).catch((loadError: unknown) => {
       if (cancelled) return;
@@ -291,67 +291,89 @@ export default function StatsPage() {
     return () => { cancelled = true; };
   }, [selectedMatch, players, matchBelongsToSeason, playersPending]);
 
-  // Tag a position group as having unsaved edits.
-  function markGroupDirty(position: Player["position"]) {
-    setDirtyGroups((current) => {
-      if (current.has(position)) return current;
-      const next = new Set(current);
-      next.add(position);
-      return next;
-    });
+  // Selection, search and collapsed groups never change this page-owned draft.
+  function updateStat(playerId: string, field: string, value: StatsValue) {
+    if (saving || saveLock.current || !statsReady) return;
+    setSaved(false);
+    setStats(previous => ({ ...previous, [playerId]: { ...previous[playerId], [field]: value } }));
   }
 
-  // Update a single field in a player's stat row
-  function updateStat(
-    playerId: string,
-    field: string,
-    value: number | boolean
-  ) {
-    const player = players.find((p) => p.id === playerId);
-    if (player) markGroupDirty(player.position);
-    setStats((prev) => ({
-      ...prev,
-      [playerId]: { ...prev[playerId], [field]: value },
-    }));
-  }
+  useEffect(() => {
+    if (!hasChanges) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasChanges]);
+  useEffect(() => () => { if (savedTimer.current) clearTimeout(savedTimer.current); }, []);
 
-  // Save all stats
-  async function handleSave() {
-    if (!statsReady || saving || !selectedMatch || !hasChanges) return;
+  async function handleSave(): Promise<boolean> {
+    if (!statsReady || saving || saveLock.current || !selectedMatch || !hasChanges) return false;
+    saveLock.current = true;
     setSaving(true);
     setError(null);
-
-    const supabase = createClient();
-    const fieldRows: Record<string, unknown>[] = [];
-    const gkRows:    Record<string, unknown>[] = [];
-
-    players.forEach((p) => {
-      const row = stats[p.id];
-      if (!row) return;
-      if (p.position === "Goalkeeper" && isGKRow(row)) {
-        gkRows.push({ player_id: p.id, match_id: selectedMatch, ...row });
-      } else if (!isGKRow(row)) {
-        fieldRows.push({ player_id: p.id, match_id: selectedMatch, ...row });
+    try {
+      const supabase = createClient();
+      const fieldRows: Record<string, unknown>[] = [];
+      const gkRows: Record<string, unknown>[] = [];
+      players.forEach((p) => {
+        const row = stats[p.id];
+        if (!row) return;
+        if (p.position === "Goalkeeper" && isGKRow(row)) {
+          gkRows.push({ player_id: p.id, match_id: selectedMatch, ...row });
+        } else if (!isGKRow(row)) {
+          fieldRows.push({ player_id: p.id, match_id: selectedMatch, ...row });
+        }
+      });
+      const [{ error: fe }, { error: ge }] = await Promise.all([
+        fieldRows.length > 0
+          ? supabase.from("player_match_stats").upsert(fieldRows, { onConflict: "player_id,match_id" })
+          : Promise.resolve({ error: null }),
+        gkRows.length > 0
+          ? supabase.from("goalkeeper_match_stats").upsert(gkRows, { onConflict: "player_id,match_id" })
+          : Promise.resolve({ error: null }),
+      ]);
+      if (fe || ge) {
+        setError(fe?.message ?? ge?.message ?? "Unknown error");
+        return false;
       }
-    });
-
-    const [{ error: fe }, { error: ge }] = await Promise.all([
-      fieldRows.length > 0
-        ? supabase.from("player_match_stats").upsert(fieldRows, { onConflict: "player_id,match_id" })
-        : Promise.resolve({ error: null }),
-      gkRows.length > 0
-        ? supabase.from("goalkeeper_match_stats").upsert(gkRows, { onConflict: "player_id,match_id" })
-        : Promise.resolve({ error: null }),
-    ]);
-
-    if (fe || ge) {
-      setError(fe?.message ?? ge?.message ?? "Unknown error");
-    } else {
-      setDirtyGroups(new Set());
+      setBaselineStats(stats);
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => setSaved(false), 3000);
+      return true;
+    } catch (saveError: unknown) {
+      setError(saveError instanceof Error ? saveError.message : "Failed to save match stats. Your changes are still here.");
+      return false;
+    } finally {
+      saveLock.current = false;
+      setSaving(false);
     }
-    setSaving(false);
+  }
+
+  function applyScope(next: PendingScope) {
+    setError(null);
+    setSaved(false);
+    setStats({});
+    setBaselineStats({});
+    setLoadedMatchId(null);
+    if (next.kind === "season") {
+      setSelectedSeasonId(next.id);
+      setSelectedMatch(null);
+    } else setSelectedMatch(next.id);
+    setPendingScope(null);
+  }
+  function requestScope(next: PendingScope) {
+    if (saving || saveLock.current) return;
+    if (next.kind === "season" ? next.id === selectedSeasonId : next.id === selectedMatch) return;
+    if (hasChanges) setPendingScope(next);
+    else applyScope(next);
+  }
+  function discardAndSwitch() {
+    if (pendingScope && !saving && !saveLock.current) applyScope(pendingScope);
+  }
+  async function saveAndSwitch() {
+    const next = pendingScope;
+    if (next && await handleSave()) applyScope(next);
   }
 
   const selectedMatchData = matches.find((m) => m.id === selectedMatch);
@@ -359,312 +381,69 @@ export default function StatsPage() {
 
   if (isEditorialTemplate) return null;
 
+  const matchLabel = selectedMatchData ? `${selectedMatchData.date} · ${selectedMatchData.home ? "vs" : "@"} ${selectedMatchData.opponent}` : "this match";
+
   return (
-    <AdminPage className="max-w-5xl">
+    <AdminPage className="max-w-6xl">
       <AdminSaveFeedback saving={saving} saved={saved} />
-
-      <AdminPageHeader
-        title="Match Stats"
-        description="Select a match to enter or update player statistics."
-      />
-
-      {/* Match selector — Save All Stats + the unsaved-changes pill live in this
-          same pinned toolbar row (far right), never below the position groups. */}
+      <AdminPageHeader title="Match Stats" description="Every player. Everything from this match." />
       <AdminPageToolbar className="items-stretch sm:items-end">
         <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-end">
-          <SeasonSelect
-            seasons={seasons}
-            loading={seasonsLoading}
-            value={selectedSeasonId}
-            onChange={(seasonId) => {
-              setSelectedSeasonId(seasonId);
-              setSelectedMatch(null);
-              setDirtyGroups(new Set());
-              setSaved(false);
-            }}
-            label="Season"
-            disabled={seasonsLoading || saving}
-            className="w-full"
-          />
+          <SeasonSelect seasons={seasons} loading={seasonsLoading} value={selectedSeasonId}
+            onChange={seasonId => requestScope({ kind: "season", id: seasonId })}
+            label="Season" disabled={seasonsLoading || saving} className="w-full" />
           <label className="block min-w-0 flex-1 font-body text-sm font-medium text-foreground">
             <span className="mb-2 block">Match</span>
-            {matchesLoading ? (
-              <AdminSkeletonRegion label="Loading matches"><Skeleton className="h-10 w-full" /></AdminSkeletonRegion>
-            ) : <NativeSelect chevronIcon={AdminSelectChevron}
-              className={ADMIN_INPUT_CLASS}
-              value={matchBelongsToSeason ? selectedMatch ?? "" : ""}
-              onChange={(e) => {
-                setSelectedMatch(e.target.value || null);
-                setLoadedMatchId(null);
-                setDirtyGroups(new Set());
-              }}
-              disabled={saving || playersPending || playersLoadFailed || Boolean(matchesError) || !selectedSeasonId}
-            >
-              <NativeSelectOption value="">— Select a match —</NativeSelectOption>
-              {seasonMatches
-                .slice()
-                .sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime())
-                .map((m) => (
-                  <NativeSelectOption key={m.id} value={m.id.toString()}>
-                    {m.date} · {m.home ? "vs" : "@"} {m.opponent}
-                  </NativeSelectOption>
-                ))}
-            </NativeSelect>}
+            {matchesLoading ? <AdminSkeletonRegion label="Loading matches"><Skeleton className="h-10 w-full" /></AdminSkeletonRegion> :
+              <NativeSelect chevronIcon={AdminSelectChevron} className={ADMIN_INPUT_CLASS}
+                value={matchBelongsToSeason ? selectedMatch ?? "" : ""}
+                onChange={event => requestScope({ kind: "match", id: event.target.value || null })}
+                disabled={saving || playersPending || playersLoadFailed || Boolean(matchesError) || !selectedSeasonId}>
+                <NativeSelectOption value="">— Select a match —</NativeSelectOption>
+                {seasonMatches.slice().sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime()).map(match =>
+                  <NativeSelectOption key={match.id} value={match.id.toString()}>{match.date} · {match.home ? "vs" : "@"} {match.opponent}</NativeSelectOption>)}
+              </NativeSelect>}
           </label>
         </div>
-
-        <div className="flex flex-none flex-wrap items-center justify-end gap-3">
-          {hasChanges && (
-            <span className="rounded-full bg-warning/10 px-3 py-1.5 font-body text-xs font-semibold text-warning">
-              Unsaved changes
-            </span>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={saving || !statsReady || !hasChanges || !selectedMatch}
-            className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap rounded-xl bg-primary px-6 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-opacity duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {saving && <AdminLoadingDots className="mr-2" />}
-            {saving ? "Saving…" : "Save All Stats"}
-          </button>
-        </div>
       </AdminPageToolbar>
-
-      {!seasonsLoading && !matchesLoading && !matchesError && !error && selectedSeasonId && seasonMatches.length === 0 && (
-        <p className="font-body text-sm text-muted-foreground">
-          No matches are assigned to this season.
-        </p>
-      )}
-
-      {/* Stats form */}
-      {statsReady && (
-        <>
-          {/* Match label */}
-          {selectedMatchData && (
-            <div className="mb-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="font-body text-xs text-muted-foreground">
-                {selectedMatchData.date} · {selectedMatchData.home ? "vs" : "@"} {selectedMatchData.opponent}
-              </span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-          )}
-
-          {/* Player rows by position group */}
-          {POSITIONS.map((pos) => {
-            const group = players.filter((p) => p.position === pos);
-            if (group.length === 0) return null;
-            const isGK = pos === "Goalkeeper";
-
-            return (
-              <PositionGroup
-                key={pos}
-                pos={pos}
-                group={group}
-                isGK={isGK}
-                stats={stats}
-                updateStat={updateStat}
-                dirty={dirtyGroups.has(pos)}
-              />
-            );
-          })}
-
-        </>
-      )}
-
-      {(error || matchesError) && <p role="alert" className="font-body text-sm text-destructive">Error: {error || matchesError}</p>}
+      {!seasonsLoading && !matchesLoading && !matchesError && !error && selectedSeasonId && seasonMatches.length === 0 &&
+        <p className="font-body text-sm text-muted-foreground">No matches are assigned to this season.</p>}
+      {statsReady && players.length > 0 && <StatsWorkspace key={selectedMatch} players={players} values={stats}
+        dirtyPlayerIds={dirtyPlayerIds} groupsForPlayer={matchFieldGroups} onChange={updateStat} disabled={saving}
+        positionGroupIdPrefix="match-stats" contextLabel={matchLabel} description="Enter this player’s statistics for the selected match." />}
+      {(error || matchesError) && pendingScope === null && <p role="alert" className="font-body text-sm text-destructive">Error: {error || matchesError}</p>}
       {statsReady && !error && players.length === 0 && <p className="font-body text-sm text-muted-foreground">No players are assigned to this season.</p>}
-      {statsPending && (
-        <AdminStatsGroupsSkeleton
-          label="Loading match stats"
-          groups={playersPending ? undefined : POSITIONS.map((position) => players.filter((player) => player.position === position).length).filter(Boolean)}
-        />
-      )}
+      {statsPending && <AdminStatsGroupsSkeleton label="Loading match stats"
+        groups={playersPending ? undefined : POSITIONS.map(position => players.filter(player => player.position === position).length).filter(Boolean)} />}
+      <StatsSaveBar label="Save All Stats" saving={saving} disabled={saving || !statsReady || !hasChanges || !selectedMatch}
+        dirtyCount={dirtyPlayerIds.size} onSave={() => void handleSave()} contextLabel={selectedMatchData ? `All player stats for ${matchLabel}.` : "Select a match to enter player stats."} />
+      <StatsScopeSwitchDialog open={pendingScope !== null} currentLabel={matchLabel} busy={saving} error={error}
+        onCancel={() => setPendingScope(null)} onDiscard={discardAndSwitch} onSaveAndSwitch={() => void saveAndSwitch()} />
     </AdminPage>
   );
 }
 
-// ── Collapsible position group ────────────────
-
-// Zero/untouched stat values render in the muted-foreground token so fields
-// the user has actually entered stand out visually. `--muted-foreground` is
-// an existing .admin-theme token (see styles/globals.css) — no new color.
-function zeroValueClass(value: number): string | undefined {
-  return value === 0 ? "text-muted-foreground" : undefined;
-}
-
-function PositionGroup({
-  pos,
-  group,
-  isGK,
-  stats,
-  updateStat,
-  dirty,
-}: {
-  pos: string;
-  group: Player[];
-  isGK: boolean;
-  stats: StatsMap;
-  updateStat: (playerId: string, field: string, value: number | boolean) => void;
-  dirty: boolean;
-}) {
-  const [open, setOpen] = useState(true);
-
-  const fieldHeaders = ["#", "Name", "Start", "Mins", "Goals", "Ast", "Tackles", "OFF", "F", "FS", "Y", "R"];
-  const gkHeaders    = ["#", "Name", "Start", "Mins", "GA", "Saves", "CS", "Y", "R"];
-  const headers = isGK ? gkHeaders : fieldHeaders;
-
-  // Grid template: number col, name col, then stat cols
-  const gridCols = isGK
-    ? "48px 1fr 60px 72px 60px 60px 60px 52px 52px"
-    : "48px 1fr 60px 72px 60px 60px 72px 56px 56px 56px 52px 52px";
-
-  return (
-    <div className="mb-4 rounded-2xl overflow-hidden border border-border">
-      {/* Position header / toggle */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-controls={`match-stats-${pos.toLowerCase()}`}
-        className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-full flex items-center justify-between bg-card px-4 py-3 transition-colors duration-150 hover:bg-accent/60"
-      >
-        <span className="flex items-center gap-2">
-          <span
-            className="font-body font-semibold text-foreground/90"
-            style={{ fontSize: "1.1rem" }}
-          >
-            {pos}s &nbsp;
-            <span className="font-normal text-muted-foreground/60">
-              {group.length}
-            </span>
-          </span>
-          {dirty && (
-            <span
-              aria-label="Unsaved changes"
-              title="Unsaved changes"
-              className="h-1.5 w-1.5 flex-none rounded-full bg-warning"
-            />
-          )}
-        </span>
-        <ChevronDown
-          width="18"
-          height="18"
-          className="text-muted-foreground/60 motion-reduce:!transition-none"
-          style={{
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.25s ease",
-          }}
-         />
-      </button>
-
-      {/* Animated content */}
-      <div
-        className="motion-reduce:!transition-none"
-        style={{
-          display: "grid",
-          gridTemplateRows: open ? "1fr" : "0fr",
-          transition: "grid-template-rows 0.25s ease",
-        }}
-      >
-        <div id={`match-stats-${pos.toLowerCase()}`} inert={!open} style={{ overflow: "hidden" }}>
-          {/* Horizontally scrollable wrapper */}
-          <div role="region" aria-label={`${pos} match statistics, scroll for all columns`} tabIndex={0} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            <div style={{ minWidth: isGK ? 800 : 1040 }}>
-          {/* Column headers */}
-          <div
-            className="grid gap-2 border-b border-border bg-muted/40 px-4 py-2"
-            style={{ gridTemplateColumns: gridCols }}
-          >
-            {headers.map((h) => (
-              <span
-                key={h}
-                className="font-body font-semibold text-center text-foreground/90"
-                style={{
-                  fontSize: "0.8rem",
-                }}
-              >
-                {h}
-              </span>
-            ))}
-          </div>
-
-          {/* Player rows */}
-          {group.map((p, i) => {
-            const row = stats[p.id];
-            if (!row) return null;
-
-            return (
-              <div
-                key={p.id}
-                className={cn(
-                  "grid gap-2 items-center px-4 py-2 transition-colors hover:bg-accent/40",
-                  i % 2 === 1 && "bg-muted/20",
-                  i < group.length - 1 && "border-b border-border/40",
-                )}
-                style={{ gridTemplateColumns: gridCols }}
-              >
-                {/* # */}
-                <span
-                  className="font-body font-semibold text-center text-muted-foreground/70"
-                  style={{ fontSize: "1rem" }}
-                >
-                  {p.number}
-                </span>
-
-                {/* Name */}
-                <span
-                  className="font-body truncate text-foreground/85"
-                  style={{ fontSize: "1rem" }}
-                >
-                  {p.name}
-                </span>
-
-                {/* Start checkbox */}
-                <label className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
-                  <input
-                    type="checkbox"
-                    checked={row.starts}
-                    onChange={(e) => updateStat(p.id, "starts", e.target.checked)}
-                    aria-label={`${p.name}: started the match`}
-                    className="h-5 w-5 cursor-pointer rounded accent-primary"
-                  />
-                </label>
-
-                {/* Mins */}
-                <StatInput
-                  aria-label={`${p.name}: minutes`}
-                  value={row.mins}
-                  onChange={(v) => updateStat(p.id, "mins", v)}
-                  className={zeroValueClass(row.mins)}
-                />
-
-                {isGK && isGKRow(row) ? (
-                  <>
-                    <StatInput aria-label={`${p.name}: goals against`} value={row.goals_against} onChange={(v) => updateStat(p.id, "goals_against", v)} className={zeroValueClass(row.goals_against)} />
-                    <StatInput aria-label={`${p.name}: saves`} value={row.saves}         onChange={(v) => updateStat(p.id, "saves", v)} className={zeroValueClass(row.saves)} />
-                    <StatInput aria-label={`${p.name}: clean sheets`} value={row.clean_sheets}  onChange={(v) => updateStat(p.id, "clean_sheets", v)} className={zeroValueClass(row.clean_sheets)} />
-                    <StatInput aria-label={`${p.name}: yellow cards`} value={row.yellow}        onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
-                    <StatInput aria-label={`${p.name}: red cards`} value={row.red}           onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
-                  </>
-                ) : !isGKRow(row) ? (
-                  <>
-                    <StatInput aria-label={`${p.name}: goals`} value={row.goals}          onChange={(v) => updateStat(p.id, "goals", v)} className={zeroValueClass(row.goals)} />
-                    <StatInput aria-label={`${p.name}: assists`} value={row.assists}         onChange={(v) => updateStat(p.id, "assists", v)} className={zeroValueClass(row.assists)} />
-                    <StatInput aria-label={`${p.name}: tackles`} value={row.tackles}         onChange={(v) => updateStat(p.id, "tackles", v)} className={zeroValueClass(row.tackles)} />
-                    <StatInput aria-label={`${p.name}: offsides`} value={row.offsides}        onChange={(v) => updateStat(p.id, "offsides", v)} className={zeroValueClass(row.offsides)} />
-                    <StatInput aria-label={`${p.name}: fouls`} value={row.fouls}           onChange={(v) => updateStat(p.id, "fouls", v)} className={zeroValueClass(row.fouls)} />
-                    <StatInput aria-label={`${p.name}: fouls suffered`} value={row.fouls_suffered}  onChange={(v) => updateStat(p.id, "fouls_suffered", v)} className={zeroValueClass(row.fouls_suffered)} />
-                    <StatInput aria-label={`${p.name}: yellow cards`} value={row.yellow}          onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
-                    <StatInput aria-label={`${p.name}: red cards`} value={row.red}             onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
-                  </>
-                ) : null}
-              </div>
-            );
-          })}
-            </div> {/* end minWidth wrapper */}
-          </div> {/* end overflow-x scroll */}
-        </div>
-      </div>
-    </div>
-  );
+function matchFieldGroups(player: StatsPlayer): StatsFieldGroup[] {
+  const time: StatsFieldGroup = { id: "time", label: "Playing time", fields: [
+    { key: "starts", label: "Started the match", ariaLabel: "started the match", kind: "boolean", hint: "In the starting lineup" },
+    { key: "mins", label: "Minutes played", ariaLabel: "minutes", max: 300, hint: "0–300 minutes, including extra time" },
+  ] };
+  const discipline: StatsFieldGroup = { id: "discipline", label: "Discipline", fields: [
+    { key: "yellow", label: "Yellow cards", ariaLabel: "yellow cards" },
+    { key: "red", label: "Red cards", ariaLabel: "red cards" },
+  ] };
+  if (player.position === "Goalkeeper") return [time, { id: "keeper", label: "Goalkeeping", fields: [
+    { key: "goals_against", label: "Goals conceded", ariaLabel: "goals against", hint: "Goals allowed" },
+    { key: "saves", label: "Saves", ariaLabel: "saves", hint: "Shots stopped" },
+    { key: "clean_sheets", label: "Clean sheets", ariaLabel: "clean sheets", hint: "Match with no goals conceded" },
+  ] }, discipline];
+  return [time, { id: "attack", label: "Goals & assists", fields: [
+    { key: "goals", label: "Goals", ariaLabel: "goals", hint: "Scored this match" },
+    { key: "assists", label: "Assists", ariaLabel: "assists", hint: "Goals you helped create" },
+  ] }, { id: "defending", label: "Defending", fields: [
+    { key: "tackles", label: "Tackles", ariaLabel: "tackles" },
+    { key: "offsides", label: "Offsides", ariaLabel: "offsides" },
+    { key: "fouls", label: "Fouls committed", ariaLabel: "fouls" },
+    { key: "fouls_suffered", label: "Fouls suffered", ariaLabel: "fouls suffered", hint: "Fouls won by this player" },
+  ] }, discipline];
 }
