@@ -1,44 +1,59 @@
-## 2026-10-11 — Guided admin redesign implementation checkpoint
+## 2026-10-11 — Guided admin redesign implemented; local review ready
 
-Work is isolated in `codex/admin-guided-redesign` at the attached worktree
+All 19 protected admin destinations use the approved Guided direction on
+`codex/admin-guided-redesign` in the attached isolated worktree
 `/Users/christianalcala/.codex/worktrees/admin-guided-redesign/onzio-platform`.
-Christian approved the plan and explicitly requested subagent implementation.
-The original dirty OTP checkout has not been changed by this task.
+Christian approved the plan and explicitly authorized subagent implementation.
+Final application source is `9a001c1`; approved icon source `48f9f69`/main
+`c10bea3` is integrated locally through `640e57e` and `dab7b95`. This task
+preserved the original dirty OTP checkout and did not publish the Guided branch.
 
-Shared Guided chrome and all 19 protected page owners are implemented.
-The inventory records the complete fields, actions, template and role gates.
-Independent review cleared the retained handlers/data/security behavior and
-resolved safe-area, sticky-offset and software-keyboard findings. Staff retains
-its independent panel width and in-body actions; Player/Match retain fixed
-actions. Native Safari revealed a time-input width issue; a scoped min/max width
-guard is added and awaits rebuilt native verification.
+Independent source review cleared preserved fields, handlers, role/template
+gates, APIs, authentication, RLS, billing and media boundaries. Reviewed fixes
+cover safe areas, search height, actual visualViewport focus/action visibility,
+Safari native Time sizing and About inspector scrolling. Staff retains its
+independent default width/in-body actions; Player/Match retain fixed actions.
+The About div scroll boundary preserves its disabled fieldset and handlers;
+the unchanged Logo upload/cleanup-queue assertion now passes after rebuild.
 
-Final pre-icon build, TypeScript, lint and diff checks passed. Rebuilt UI checks:
-12/12 pass (focus, themes, 320/390/1024/1440px, safe areas, keyboard shrink/pan).
-Existing Homepage prior-failure reruns: 5/5 pass, including real save. The earlier
-39/45 Homepage pass includes real media and recovery coverage. The sixth failure,
-strict Cinematic phone CTA offset 627/628px, is reproduced in the unchanged HEAD
-production baseline; its assertions remain unchanged. Required generated-type
-check also fails identically on unchanged HEAD (actor nullable type drift); no
-schema/type regeneration was introduced by this UI work.
+Frozen-source final `npm test`: **187 files / 1,783 tests passed**. TypeScript,
+lint and production build pass. Earlier integrated contract/architecture/local
+DB/legacy checks passed. Guided UI: 14 distinct passes across the 13/14 run and
+unchanged strict Staff-width rerun. Real browser persistence: 10 distinct
+Player/Staff/Match add/edit/save/reload passes. Management: 2 cases with 32 loaded
+screens; owner/admin access: 4 cases, 44 assertions, 20 screens. Existing public
+editor evidence: Programs/Tryouts/Shop28, Contact6, Homepage44 distinct and
+Cinematic About8 distinct; final unchanged About3 rerun passes. Full details
+and separate-run qualifications are in `docs/admin-guided-redesign-verification.md`.
 
-Native iPhone Simulator Safari verifies focused Player Name and Match Competition
-plus Save/Cancel above the software keyboard, actual keyboard entry and Cancel
-return. This is simulator evidence, not physical touch or phone VoiceOver proof.
+Actual iOS Simulator Safari passed Player, Match and Homepage Save with the
+software keyboard visible, local DB/API verification and Safari reload with
+persisted values. Native Time fits adjacent fields and its picker opens.
+Original Player/Match rows were restored exactly; original Homepage hero content
+was restored through its real API with revision/receipt history legitimately
+advancing. Other browser fixture helpers restored their captured originals.
+All testing uses isolated synthetic local Supabase; no hosted/provider actions.
 
-The icon chat now has approved implementation commit `48f9f69`, PR #12, under its
-own review/merge authorization. This Guided task may integrate that exact approved
-dependency locally per its plan. Its local database suite is running: Guided
-writing browser suites are paused to avoid fixture interference. Persistence test
-authoring found a role-button selector mismatch; only the new helper is corrected,
-with existing assertions untouched and fixtures restored.
+Local comparison: `http://127.0.0.1:8768/review.html`; selects all 19 pages,
+desktop/phone, light/dark and Before/Guided/Compare. Evidence and native proof
+are ignored under `design-previews/admin-guided-redesign/evidence/`; auth state
+stays outside Git. Actual app is `http://alpha.localhost:3110/admin`;
+immutable baseline41bfb00 is port3191. Reproduction is in the preview README.
 
-Next: integrate the approved icon dependency while preserving Guided edits; rebuild;
-verify native time width; run serial persistence/management/public-editor/loading
-and final complete suite; capture matching 19-route phone/desktop light/dark gallery;
-finalize package evidence. Keep acceptance in progress until native/role gaps are
-recorded. No push, remote merge, PR creation, deployment or hosted mutation is
-authorized/performed by this Guided task.
+Release acceptance remains **in_progress**. Physical-phone touch/scroll/paste
+and VoiceOver are not established by Simulator. Two Editorial-specific About
+cases were not invoked on the Cinematic fixture. Remaining runtime lifecycle,
+upload/confirmation and error/empty cases are explicit in the scoped ledger.
+Known unchanged-baseline issues: generated actor-ID type drift; one-pixel
+Homepage CTA offset; Contact loading mocks omit the actual editor endpoint
+(baseline desktop case reproduced, other three baseline viewport cases not run).
+Existing assertions were not weakened. Resolve those separately and record
+remaining acceptance before requesting explicit release approval.
+
+Next: review the implemented local comparison, complete the ledger's remaining
+acceptance and decide on release. No Guided push, PR, remote merge, deployment
+or hosted mutation is authorized or performed. Historical notes below are
+retained as checkpoints; this section and the scoped ledger are current.
 
 
 # Onzio Platform Handoff
