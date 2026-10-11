@@ -47,3 +47,39 @@ See `docs/admin-guided-redesign-inventory.md` for preserved fields/actions and
 evidence, known baseline failures and remaining acceptance work. The scoped
 plan ledger remains authoritative for incomplete acceptance. This preview does
 not authorize publishing or deploying the redesign.
+
+## Season Stats — three interactive directions
+
+Open `http://127.0.0.1:8768/season-stats-directions.html` on the same preview
+server. Christian requested three alternatives to improve Season Stats entry
+and presentation, including phone layouts. This standalone HTML changes no
+application route, API, database or fixture.
+
+- **A — Player workspace:** select a player and edit all grouped totals. Desktop
+  uses a player list beside the editor; phone uses a list/detail flow with Back
+  and a persistent Save/Review bar. Recommended for less technical staff.
+- **B — Guided update:** one player and a small group of fields per step,
+  followed by review. Goalkeepers get their own field groups. The player
+  selector remains visible on phone and repeated headings are reduced.
+- **C — Team worksheet:** update one category across the team. Desktop uses
+  a short table; phone chooses one full-name stat and uses readable player rows.
+  Goalkeeping categories include only goalkeepers; outfield categories exclude them.
+
+Choose Desktop, Phone or Both and Light/Dark. Try search, player/metric selection,
+whole-number typing, 44px phone increment/decrement controls, review and saving.
+The sample Meadow FC roster is fictional. Saves affect only the in-memory demo;
+changing a direction/preview recreates its sample data. Season switching protects
+unsaved changes inside a demo and uses separate synthetic season totals.
+
+Every original field remains represented: ten outfield totals and seven
+keeper totals, including playing time and discipline. Totals remain manual and
+separate from Match Stats. No match-derived totals, import, autosave or backend
+change is implied by these options. Application implementation waits for the
+selected direction and a scoped plan.
+
+Prototype acceptance: 18 desktop/phone/theme cases (3 options × 1440/390/320px ×
+light/dark), number entry, review and demo save, field/goalkeeper completeness,
+unique input IDs, initially visible Save bar, zero document overflow/page errors
+and 44px phone button targets. Local evidence is ignored under
+`evidence/season-stats-options/`; report is `report.json`. This is browser layout
+and interaction evidence, not native software-keyboard/physical-phone acceptance.

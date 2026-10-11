@@ -1,3 +1,28 @@
+## 2026-10-11 — Season Stats direction prototypes; portal unchanged
+
+Christian requested three Apple-style alternatives for Season Stats data entry
+and appearance, then explicitly added mobile-friendly acceptance. Built isolated
+`design-previews/admin-guided-redesign/season-stats-directions.html` on the existing
+Guided branch/preview server. Open `http://127.0.0.1:8768/season-stats-directions.html`.
+A is player list/detail, B is guided category steps, C is team category entry
+with one-stat phone rows. Desktop/Phone/Both and light/dark controls are included.
+All ten outfield and seven goalkeeper fields remain manual season totals;
+fictional Meadow FC data and in-memory demo saves never touch the portal/DB.
+
+Prototype browser verification: 18 cases at1440/390/320px in both themes; edits,
+review/save feedback, all field/keeper controls, unique IDs, initial Save-bar
+visibility, no document overflow/page errors, and 44px phone button targets.
+Evidence/report lives under ignored preview `evidence/season-stats-options/`;
+full check log `/private/tmp/season-stats-options-check.log`. Native keyboard and
+physical-device behavior are not established by these prototypes. Existing app
+source9a001c1 and its completed prior verification remain untouched; full app
+suites were not rerun for this isolated HTML/documentation work.
+
+Next: Christian selects a direction or combination, then scope the actual
+Season Stats implementation with existing field/save/template contracts. This
+turn authorizes preview iteration, not a deployed portal replacement.
+
+
 ## 2026-10-11 — Guided admin redesign implemented; local review ready
 
 All 19 protected admin destinations use the approved Guided direction on
