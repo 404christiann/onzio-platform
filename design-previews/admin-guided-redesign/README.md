@@ -104,3 +104,27 @@ The two stats routes in `review.html` were refreshed as eight Before/Guided pair
 against baseline 41bfb00 with the same held synthetic review fixture. Other 17
 routes retain their prior 9a001c1 captures. Current stats evidence is under ignored
 `evidence/player-workspace/`; native images are in its `native/` directory.
+
+
+## Combined Stats navigation directions
+
+Open `http://127.0.0.1:8768/stats-combined-directions.html`.
+
+- A Simple switch: compact Match stats / Season stats segmented tabs at the top.
+- B Explained tabs: larger two-line tabs explaining one game versus whole season.
+- C Player first: the same two views live inside the selected player's workspace.
+
+One Stats navigation item is shown in each sketch. Desktop/Phone/Both and
+light/dark controls are available. Search by name or shirt number, choose a
+player, edit fields and try the unsaved-edit switch dialog. All existing ten
+outfield/seven goalkeeper fields are represented. Season totals remain manual
+and separate from match stats; demo saves are in-memory only.
+
+Verification: nine browser cases (each direction at 1440px light, 390px dark,
+320px light) cover mode switching, independent values, Cancel/Save & switch,
+roster/detail/search, field completeness, no overflow, Save visibility and 16px
+inputs. Three final 320px geometry checks verify 44px stepper targets, full Save
+labels and Back below the sticky header; C also verifies discard and arrow keys.
+Reports are ignored under `evidence/combined-stats-directions/`. Physical/native
+keyboard acceptance is not established. Application implementation awaits
+Christian's selection; this artifact changes only the preview and documentation.

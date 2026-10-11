@@ -1,3 +1,31 @@
+## Current: Combined Stats navigation sketches — 2026-10-11
+
+Christian approved the implemented workspace visually and requested three HTML
+sketches before combining Match Stats and Season Stats into one Stats page.
+Built `design-previews/admin-guided-redesign/stats-combined-directions.html`:
+A Simple switch (recommended), B Explained tabs, C Player first. Each uses one
+Stats navigation item, explicit Match stats / Season stats labels, named season
+and match context, and distinct Save labels. Desktop/phone and light/dark review
+controls are included. Fictional Meadow FC data stays in memory; no API requests,
+database fixtures, application routes, fields, navigation or contracts changed.
+
+Verified nine behavioral/layout cases: A/B/C at 1440px light, 390px dark and
+320px light. Both modes, independent totals, numeric Season starts/boolean Match
+starts, all ten outfield/seven goalkeeper fields, player/back/search navigation,
+Cancel and Save & switch retention, no overflow, visible Save and 16px inputs
+passed. Final small-phone refinements passed three additional 320px checks:
+44px stepper targets, full Save label, and Back below the sticky header. C also
+passed Discard changes and arrow-key switching. Physical/native keyboard testing
+is not established for these isolated prototypes; no release readiness claim.
+Reports: ignored `evidence/combined-stats-directions/`. Preview server serves
+only the static review folder on loopback port 8768. `git diff --check` passes.
+
+Open `http://127.0.0.1:8768/stats-combined-directions.html`. Scoped package
+GUIDED-STATS-COMBINED-DIRECTIONS is complete (preview only). Application source
+remains `baa66c1`; no push/deployment or original-checkout mutation. Next: Christian
+selects A/B/C or a combination, then scope actual route/navigation consolidation
+with historical links, template/role visibility, drafts and save contracts intact.
+
 ## Current: Season and Match Stats Player workspace implemented — 2026-10-11
 
 Christian approved A and requested the same workspace for Match Stats. Both

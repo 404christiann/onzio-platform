@@ -418,3 +418,20 @@ Safari evidence, documentation and local delivery. No backend/schema/auth or
 public-facing edits are in scope. Physical phone touch and screen-reader
 acceptance remains distinct from browser and Simulator evidence. No remote
 publication is authorized.
+
+
+## Combined Stats navigation exploration — 2026-10-11
+
+Christian requested one Stats navigation item with an in-page Match/Season
+switch, and three HTML sketches before any application implementation. The
+existing Player workspace is the visual baseline. A uses compact segmented
+tabs, B uses explanatory two-line tabs, C places the switch with the selected
+player. All retain explicit editing context, independent manual Season totals,
+all fields, per-scope draft protection and clear Save labels.
+
+| Package | Status | Completed work | Files changed | Verification | Blockers/dependencies | Exact next step |
+| --- | --- | --- | --- | --- | --- | --- |
+| GUIDED-STATS-COMBINED-DIRECTIONS | complete (preview only) | Three interactive responsive HTML sketches with one Stats navigation item and clear Match/Season labels | stats-combined-directions.html; preview README; this ledger; HANDOFF | Nine browser behavior/layout cases at 1440/390/320px across light/dark; three final 320px geometry checks; C discard/arrow-key check; diff check; screenshot proof | Application consolidation awaits direction selection; native/physical acceptance not established by prototypes | Christian selects a direction; scope actual shared page/navigation with old-route compatibility, template/role gates, drafts and save contracts intact |
+
+No application source, data, routes, navigation contracts or architecture changed.
+This package authorizes local sketch delivery only.
