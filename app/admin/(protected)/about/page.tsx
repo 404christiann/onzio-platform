@@ -523,7 +523,7 @@ export default function AdminAboutPage() {
 
           <PageEditorInspector open={selectedTarget !== null} onClose={() => setSelectedTarget(null)} label="About section tools" breakpoint={767} className="aep-inspector" data-open={selectedTarget !== null}>
             <div className="aep-inspector-head"><div><p className={ADMIN_LABEL_CLASS}>{isLogoSection ? "Club Logo page" : "About page"}</p><h2>{selectedTarget ? selectedTarget === "fixed-hero" ? "Clubhouse heading" : selectedTarget === "sponsors" ? "Proud partners" : SECTION_LABELS[activeSection] : "Select a section"}</h2></div>{selectedTarget && <button type="button" onClick={() => setSelectedTarget(null)}>Done</button>}</div>
-            {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">This heading is part of the Clubhouse template. Contact Onzio to change its wording.</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors <AdminLinkArrow size={12} className="inline-block align-middle" /></a></div> : <fieldset disabled={saving || uploading || draftLocked} className="aep-fields">
+            {selectedTarget === null ? <p className="aep-empty">Tap a section in the public page to open its tools.</p> : selectedTarget === "fixed-hero" ? <p className="aep-ownership">This heading is part of the Clubhouse template. Contact Onzio to change its wording.</p> : selectedTarget === "sponsors" ? <div className="aep-ownership"><p>These partners are shared content, managed in Sponsors.</p><a href="/admin/sponsors">Open Sponsors <AdminLinkArrow size={12} className="inline-block align-middle" /></a></div> : <div className="aep-field-scrollport"><fieldset disabled={saving || uploading || draftLocked} className="aep-fields">
             <SlidingPanel activeKey={activeSection} direction={sectionDirection}>
               {activeSection === "hero" && (
                 <Field label="Page heading">
@@ -781,7 +781,7 @@ export default function AdminAboutPage() {
                   /></>}
                 </div>
               )}
-            </SlidingPanel></fieldset>}
+            </SlidingPanel></fieldset></div>}
 
             <input
               ref={fileRef}

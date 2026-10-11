@@ -957,7 +957,7 @@ function MatchForm({
               type="time"
               value={form.time}
               onChange={(e) => set("time", e.target.value)}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11 min-w-0 max-w-full")}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11 min-w-0 max-w-full box-border appearance-none")}
               required
             />
           </Field>

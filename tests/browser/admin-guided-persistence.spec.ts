@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+test.use({ actionTimeout: 15_000 });
+
 const ALPHA = "11111111-1111-4111-8111-111111111111";
 const PLAYER = "55555555-5555-4555-8555-555555555551";
 type Fixture = Record<string, unknown> & { id: string; club_id: string };
@@ -169,7 +171,7 @@ type FixtureSnapshot = Record<(typeof fixtureTables)[number], Fixture[]>;
 async function captureFixtures(db: Client): Promise<FixtureSnapshot> {
   const captured = {} as FixtureSnapshot;
   for (const table of fixtureTables) {
-    const result = await db.query<{ row: Fixture }>(`select to_jsonb(r) as row from onzio.${table} r where club_id=$1 order by id`, [ALPHA]);
+    const result = await db.query<{ row: Fixture }>(`select to_jsonb(r) as row from onzio.${table} r where club_id=$1 order by to_jsonb(r)::text`, [ALPHA]);
     captured[table] = result.rows.map(result => result.row);
   }
   return captured;
@@ -233,8 +235,8 @@ for (const width of [390, 1440]) {
           await dialog.locator("#player-number").fill("88");
           await dialog.locator("#player-position").selectOption("Forward");
           await dialog.locator("#player-nationality").click();
-          await dialog.getByRole("textbox", { name: "Search nationalities", exact: true }).fill("United States");
-          await dialog.getByRole("option", { name: /United States/ }).click();
+          await dialog.getByRole("textbox", { name: "Search nationalities", exact: true }).fill("American");
+          await dialog.getByRole("option", { name: /American/ }).click();
           await dialog.locator("#player-height").fill("5'10\"");
           await dialog.locator("#player-weight").fill("165 lbs");
           await dialog.locator("#player-age").fill("22");
@@ -263,7 +265,7 @@ for (const width of [390, 1440]) {
         expect(created).toHaveLength(1);
         expect(created[0].club_id).toBe(ALPHA);
         if (kind === "players") {
-          const stats = await db.query("select id from onzio.player_season_stats where club_id=$1 and player_id=$2", [ALPHA, created[0].id]);
+          const stats = await db.query("select player_id from onzio.player_season_stats where club_id=$1 and player_id=$2", [ALPHA, created[0].id]);
           expect(stats.rows).toHaveLength(1);
         }
         await page.reload();

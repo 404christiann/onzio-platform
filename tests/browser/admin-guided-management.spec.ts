@@ -3,6 +3,7 @@ import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { expect, test, type Page } from "@playwright/test";
+import { resolvePaymentsUiState } from "../../lib/stripe-subscription-state";
 
 const clubId = "11111111-1111-4111-8111-111111111111";
 const artifactDirectory = "/private/tmp/onzio-guided-management";
@@ -39,6 +40,26 @@ async function fixtures() {
   const rowName = `Guided QA Forward ${suffix}`;
   const formTitle = `Guided QA form ${suffix}`;
   const seasonLabel = `Guided QA 2025 ${suffix}`;
+  // Read billing readiness without mutating or invoking a Stripe action. Local
+  // contract suites may leave Alpha as either a test club or an active customer.
+  const [club, subscription] = await Promise.all([
+    client.from("clubs").select("kind").eq("id", clubId).single(),
+    client.from("club_subscriptions").select("stripe_customer_id,stripe_subscription_id,status,cancel_at_period_end,paid_through,grace_ends_at").eq("club_id", clubId).maybeSingle(),
+  ]);
+  await checkResult(club);
+  await checkResult(subscription);
+  const clubKind = club.data!.kind as "customer" | "demo" | "test";
+  const billingState = resolvePaymentsUiState(subscription.data ? {
+    stripe_customer_id: subscription.data.stripe_customer_id,
+    stripe_subscription_id: subscription.data.stripe_subscription_id,
+    status: subscription.data.status,
+    cancel_at_period_end: subscription.data.cancel_at_period_end,
+    current_period_end: subscription.data.paid_through,
+    grace_ends_at: subscription.data.grace_ends_at,
+  } : null);
+  if (!["no_subscription", "active", "active_canceling"].includes(billingState.state)) {
+    throw new Error(`Synthetic Alpha management readiness requires preview or active billing, got ${billingState.state}.`);
+  }
   const original = await snapshot();
   await mkdir(artifactDirectory, { recursive: true, mode: 0o700 });
   const originalPath = `${artifactDirectory}/original-${suffix}.json`;
@@ -83,7 +104,7 @@ async function fixtures() {
       waiver_accepted_at: new Date().toISOString(), status_token_hash: randomUUID().replaceAll("-", "").repeat(2), submitted_at: new Date(Date.now() - index * 60_000).toISOString(),
     }))));
   } catch (error) { await restore(); throw error; }
-  return { seasonId, playerId, matchId: matchIds[2], rowName, formTitle, formId, suffix, seasonLabel, restore };
+  return { seasonId, playerId, matchId: matchIds[2], rowName, formTitle, formId, suffix, seasonLabel, clubKind, billingState, restore };
 }
 
 async function setTheme(page: Page, theme: "light" | "dark") {
@@ -222,7 +243,19 @@ for (const width of [390, 1440]) {
             await expect(page.getByText("You · owner", { exact: true })).toBeVisible();
             await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
           }
-          if (route === "payments") await expect(page.getByText("This test club does not require a paid subscription.", { exact: true })).toBeVisible();
+          if (route === "payments") {
+            const payments = page.getByRole("main");
+            if (fixture.billingState.state === "no_subscription") {
+              if (fixture.clubKind === "customer") {
+                await expect(payments.getByRole("button", { name: "Start subscription", exact: true })).toBeVisible();
+              } else {
+                await expect(payments.getByText(`This ${fixture.clubKind} club does not require a paid subscription.`, { exact: true })).toBeVisible();
+              }
+            } else {
+              await expect(payments.getByText("Current period", { exact: true })).toBeVisible();
+              await expect(payments.getByRole("button", { name: "Manage billing", exact: true })).toBeVisible();
+            }
+          }
           await expect(page.locator('[role="status"][aria-label^="Loading"]')).toHaveCount(0);
           expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
           await page.screenshot({ path: `${artifactDirectory}/${width}-${theme}-${route}.png`, fullPage: true });

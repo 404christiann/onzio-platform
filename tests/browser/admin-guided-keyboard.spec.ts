@@ -88,3 +88,26 @@ for (const kind of ["player", "match", "staff"] as const) {
     await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   });
 }
+
+// Native Safari sizes an appearance:auto time control as content-box even with
+// border-box declared. Keep the native type/picker while making the authored
+// field obey its container; actual WebKit picker behavior is checked separately.
+for (const width of [320, 390]) {
+  test(`${width}px: time retains its native value without overflowing the match field`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/admin/schedule");
+    await page.getByRole("button", { name: "Add match", exact: true }).click();
+    const field = page.getByRole("dialog").locator("#match-time");
+    await expect(field).toHaveAttribute("type", "time");
+    await expect(field).toHaveCSS("appearance", "none");
+    await expect(field).toHaveCSS("box-sizing", "border-box");
+    await field.fill("18:30");
+    await expect(field).toHaveValue("18:30");
+    expect(await field.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      const parent = element.parentElement!.getBoundingClientRect();
+      return bounds.left >= parent.left && bounds.right <= parent.right + 1 && (element as HTMLInputElement).validity.valid;
+    })).toBe(true);
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+  });
+}

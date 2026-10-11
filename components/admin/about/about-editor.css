@@ -16,7 +16,9 @@
 .aep-inspector-head button { min-height:44px; border:1px solid hsl(var(--border)); border-radius:1rem; padding:.5rem .8rem; color:hsl(var(--foreground)); font-size:.875rem; font-weight:500; }
 .aep-empty,.aep-ownership { margin:0; padding:1rem; color:hsl(var(--muted-foreground)); font-size:.875rem; line-height:1.5; }
 .aep-ownership a { display:inline-flex; align-items:center; min-height:44px; margin-top:.7rem; border:1px solid hsl(var(--primary)); border-radius:1rem; padding:.5rem .8rem; color:hsl(var(--primary)); font-weight:600; }
-.aep-fields { min-width:0; margin:0; padding:1rem; border:0; overflow:auto; }
+/* Fieldsets have an anonymous content box; use a real flex scroll boundary. */
+.aep-inspector > .aep-field-scrollport { min-height:0; flex:1 1 auto; overflow:auto; }
+.aep-fields { min-width:0; margin:0; padding:1rem; border:0; overflow:visible; }
 .aep-inspector-save { position:relative; z-index:2; flex:none; margin-top:auto; border-top:1px solid hsl(var(--border)); padding:.8rem 1rem; background:hsl(var(--card)); }
 .aep-inspector-save button,.aep-mobile-save button { min-height:44px; width:100%; border-radius:1rem; background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); padding:.6rem 1rem; font-size:.875rem; font-weight:600; }
 .aep-inspector-save button:disabled,.aep-mobile-save button:disabled { opacity:.48; cursor:not-allowed; }
