@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LogOut, UserRound } from "lucide-react";
+import { ChevronDown, LogOut, UserRound } from "@/components/admin/icons";
 import { useEffect, useRef, useState } from "react";
 
 export function AdminAccountMenu({

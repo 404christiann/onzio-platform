@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/components/admin/icons";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useSidebar } from "@/components/ui/sidebar";
 import HomePageClient from "@/components/HomePageClient";

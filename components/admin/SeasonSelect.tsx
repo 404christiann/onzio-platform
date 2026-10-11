@@ -1,3 +1,4 @@
+import { IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,7 +39,7 @@ export default function SeasonSelect({
   }
 
   const select = (
-    <NativeSelect
+    <NativeSelect chevronIcon={AdminSelectChevron}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled}

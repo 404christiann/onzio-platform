@@ -1,5 +1,14 @@
 "use client";
 
+import {
+  IconCaretDown as AdminSelectChevron,
+  ChevronDownIcon,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search
+} from "@/components/admin/icons";
+
 import Image from "@/components/ResilientImage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
@@ -17,7 +26,7 @@ import { useSeasons } from "@/lib/use-seasons";
 import { carrySponsorFromLatestMatch } from "@/lib/match-sponsor";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, Search } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { Calendar } from "@/components/ui/calendar";
@@ -292,7 +301,6 @@ export default function SchedulePage() {
     });
   }, [carrySponsor, matches, selectedSeasonId]);
 
-
   function flash() {
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -556,7 +564,7 @@ export default function SchedulePage() {
             disabled={!matchesReady || seasonsLoading || saving || !selectedSeasonId}
             className="flex-shrink-0 rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-50"
           >
-            + Add Match
+            <Plus width={14} height={14} className="mr-1 inline-block align-middle" /> Add Match
           </button>
         </div>}
       />
@@ -880,7 +888,7 @@ function MatchForm({
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field id="match-season" label="Season" required>
-            <NativeSelect
+            <NativeSelect chevronIcon={AdminSelectChevron}
               id="match-season"
               value={form.season_id}
               onChange={(e) => set("season_id", e.target.value)}
@@ -897,7 +905,7 @@ function MatchForm({
           </Field>
 
           <Field id="match-home-away" label="Home or away" required>
-            <NativeSelect
+            <NativeSelect chevronIcon={AdminSelectChevron}
               id="match-home-away"
               value={form.home ? "home" : "away"}
               onChange={(e) => set("home", e.target.value === "home")}
@@ -923,6 +931,12 @@ function MatchForm({
               <PopoverPositioner align="start">
                 <PopoverContent className="w-auto p-0">
                   <Calendar
+                    components={{
+                      Chevron: ({ className, orientation, ...props }) => {
+                        const Icon = orientation === "left" ? ChevronLeft : orientation === "right" ? ChevronRight : ChevronDownIcon;
+                        return <Icon className={cn("size-4", className)} {...props} />;
+                      },
+                    }}
                     mode="single"
                     selected={parseDateInput(form.date)}
                     captionLayout="dropdown"

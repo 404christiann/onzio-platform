@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { AlertTriangle, Lock } from "lucide-react";
+import { AlertTriangle, Lock } from "@/components/admin/icons";
 import { animate, motion, useReducedMotion } from "motion/react";
 
 import { Button } from "@/components/ui/button";

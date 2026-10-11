@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronDown, IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
+
 import { useClubContext } from "@/components/ClubContextProvider";
 import { useRouter } from "next/navigation";
 
@@ -387,7 +389,7 @@ export default function StatsPage() {
             <span className="mb-2 block">Match</span>
             {matchesLoading ? (
               <AdminSkeletonRegion label="Loading matches"><Skeleton className="h-10 w-full" /></AdminSkeletonRegion>
-            ) : <NativeSelect
+            ) : <NativeSelect chevronIcon={AdminSelectChevron}
               value={matchBelongsToSeason ? selectedMatch ?? "" : ""}
               onChange={(e) => {
                 setSelectedMatch(e.target.value || null);
@@ -465,7 +467,6 @@ export default function StatsPage() {
             );
           })}
 
-
         </>
       )}
 
@@ -541,19 +542,16 @@ function PositionGroup({
             />
           )}
         </span>
-        <svg
+        <ChevronDown
           width="18"
           height="18"
-          viewBox="0 0 24 24"
-          fill="none"
+
           className="text-muted-foreground/60"
           style={{
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 0.25s ease",
           }}
-        >
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+         />
       </button>
 
       {/* Animated content */}
