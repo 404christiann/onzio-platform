@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Plus,
   Archive,
   AlertCircle,
   Check,
@@ -11,8 +12,8 @@ import {
   Radio,
   Search,
   Square,
-  Trash2,
-} from "lucide-react";
+  Trash2
+} from "@/components/admin/icons";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import { AdminTabs } from "@/components/admin/AdminTabs";
@@ -1165,7 +1166,7 @@ export default function RegistrationsAdminPage() {
                     })
                   }
                 >
-                  + Add question
+                  <Plus aria-hidden="true" className="inline-block size-3.5 align-middle" /> Add question
                 </button>
               </div>
               <div className="flex flex-col gap-5 p-5">

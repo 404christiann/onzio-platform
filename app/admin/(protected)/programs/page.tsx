@@ -1,10 +1,18 @@
 "use client";
 
+import {
+  X as AdminRemoveIcon,
+  ChevronUp as AdminOrderUp,
+  ChevronDown as AdminOrderDown,
+  IconCaretDown as AdminSelectChevron,
+  GripVertical
+} from "@/components/admin/icons";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
-import { GripVertical } from "lucide-react";
+
 import ResilientImage from "@/components/ResilientImage";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
@@ -312,7 +320,6 @@ export default function AdminProgramsPage() {
   const [programConflict, setProgramConflict] = useState<SavedProgramPage | null>(null);
   const [managementConflict, setManagementConflict] = useState<DBProgram[] | null>(null);
   const editorLocked = saving || managementSaving || Boolean(unconfirmedProgram || unconfirmedManagement);
-
 
   const loadPrograms = useCallback(async (preferredId?: string | null) => {
     setLoading(true);
@@ -1536,9 +1543,9 @@ export default function AdminProgramsPage() {
                           maxLength={320}
                           aria-label={`Highlight ${index + 1}`}
                         />
-                        <button type="button" onClick={() => reorderHighlight(index, -1)} disabled={index === 0} className="min-h-11 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} up`}>↑</button>
-                        <button type="button" onClick={() => reorderHighlight(index, 1)} disabled={index === draft.highlights.length - 1} className="min-h-11 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} down`}>↓</button>
-                        <button type="button" onClick={() => removeHighlight(index)} className="min-h-11 rounded-lg border border-destructive/15 px-3 py-2.5 text-sm text-destructive/70" aria-label={`Remove highlight ${index + 1}`}>×</button>
+                        <button type="button" onClick={() => reorderHighlight(index, -1)} disabled={index === 0} className="min-h-11 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} up`}><AdminOrderUp size={14} className="inline-block align-middle" /></button>
+                        <button type="button" onClick={() => reorderHighlight(index, 1)} disabled={index === draft.highlights.length - 1} className="min-h-11 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} down`}><AdminOrderDown size={14} className="inline-block align-middle" /></button>
+                        <button type="button" onClick={() => removeHighlight(index)} className="min-h-11 rounded-lg border border-destructive/15 px-3 py-2.5 text-sm text-destructive/70" aria-label={`Remove highlight ${index + 1}`}><AdminRemoveIcon size={14} className="inline-block align-middle" /></button>
                       </div>
                     ))}
                   </div>
@@ -1547,7 +1554,7 @@ export default function AdminProgramsPage() {
 
               <div className="mt-7 grid gap-5 border-t border-border pt-7 sm:grid-cols-2">
                 <FormField label="Layout variant">
-                  <NativeSelect value={draft.layoutVariant} onChange={(event) => updateDraft("layoutVariant", event.target.value as ProgramDraft["layoutVariant"])}>
+                  <NativeSelect chevronIcon={AdminSelectChevron} value={draft.layoutVariant} onChange={(event) => updateDraft("layoutVariant", event.target.value as ProgramDraft["layoutVariant"])}>
                     <NativeSelectOption value="statement_band">Statement band</NativeSelectOption>
                     <NativeSelectOption value="detail_focus">Detail focus</NativeSelectOption>
                   </NativeSelect>
@@ -1625,7 +1632,7 @@ export default function AdminProgramsPage() {
 
                   <div className="mt-5">
                     <FormField label="Onzio registration form">
-                      <NativeSelect value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
+                      <NativeSelect chevronIcon={AdminSelectChevron} value={draft.registrationFormId ?? ""} onChange={(event) => updateDraft("registrationFormId", event.target.value || null)}>
                         <NativeSelectOption value="">No native form — use the button link below</NativeSelectOption>
                         {registrationForms.map((form) => (
                           <NativeSelectOption key={form.id} value={form.id}>{form.title} — {form.status}</NativeSelectOption>
@@ -1816,7 +1823,7 @@ export default function AdminProgramsPage() {
                               className="min-h-11 flex-1 rounded-md border border-border py-1.5 font-body text-sm normal-case text-muted-foreground transition hover:bg-accent disabled:opacity-20"
                               aria-label={`Move gallery image ${index + 1} up`}
                             >
-                              ↑
+                              <AdminOrderUp size={14} className="inline-block align-middle" />
                             </button>
                             <button
                               type="button"
@@ -1825,7 +1832,7 @@ export default function AdminProgramsPage() {
                               className="min-h-11 flex-1 rounded-md border border-border py-1.5 font-body text-sm normal-case text-muted-foreground transition hover:bg-accent disabled:opacity-20"
                               aria-label={`Move gallery image ${index + 1} down`}
                             >
-                              ↓
+                              <AdminOrderDown size={14} className="inline-block align-middle" />
                             </button>
                             <button
                               type="button"

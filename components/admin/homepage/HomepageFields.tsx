@@ -1,5 +1,7 @@
 "use client";
 
+import { IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
+
 import { useState } from "react";
 import { defaultHomepageStoryContent } from "@/lib/homepage-story-content";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -75,7 +77,7 @@ function RouteField({ label, id, value, disabled, programs, onChange }: {
 }) {
   return (
     <Field label={label} id={id}>
-      <NativeSelect id={id} className={selectClass} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
+      <NativeSelect chevronIcon={AdminSelectChevron} id={id} className={selectClass} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
         {siteRouteOptionsWithFallback(programs, value).map((option) => (
           <NativeSelectOption key={`${id}-${option.href}`} value={option.href}>{option.label}</NativeSelectOption>
         ))}

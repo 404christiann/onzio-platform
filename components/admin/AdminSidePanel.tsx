@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X } from "@/components/admin/icons";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import guided from "@/components/admin/AdminGuided.module.css";

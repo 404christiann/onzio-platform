@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Upload, X } from "lucide-react";
+import { Upload, X } from "@/components/admin/icons";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import ResilientImage from "@/components/ResilientImage";
 import { cn } from "@/lib/utils";

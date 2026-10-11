@@ -1,10 +1,18 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
+
+import {
+  IconCaretDown as AdminSelectChevron,
+  ChevronDown,
+  X,
+  Search,
+  Check,
+  Plus
+} from "@/components/admin/icons";
+/* eslint-disable @next/next/no-img-element */
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
 import { useCallback, useEffect, useMemo, useState, useRef, useId } from "react";
-import { Plus, Search } from "lucide-react";
 import guided from "@/components/admin/AdminGuided.module.css";
 import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -112,7 +120,6 @@ async function uploadPhoto(file: File, bucket: string, folder: string): Promise<
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }
-
 
 // ── Main component ────────────────────────────
 
@@ -573,7 +580,7 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
           </div>
           <div className="flex flex-none items-center gap-2.5">
             <span className="whitespace-nowrap font-body text-sm text-muted-foreground">Showing</span>
-            <NativeSelect
+            <NativeSelect chevronIcon={AdminSelectChevron}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               aria-label="Filter players by status"
@@ -757,11 +764,9 @@ function PlayerPositionGroup({
           {pos}s{" "}
           <span className="ml-1.5 text-sm font-normal text-muted-foreground">{group.length}</span>
         </span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+        <ChevronDown width="18" height="18"
           className={cn("text-muted-foreground/60", guided.positionCaret)}
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }} />
       </button>
 
       {/* Animated content */}
@@ -1039,7 +1044,7 @@ function StaffTab({ addRequest }: { addRequest: number }) {
 
         <div className="flex flex-none items-center gap-2.5 self-start">
           <span className="whitespace-nowrap font-body text-sm text-muted-foreground">Showing</span>
-          <NativeSelect
+          <NativeSelect chevronIcon={AdminSelectChevron}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
             aria-label="Filter staff by status"
@@ -1175,7 +1180,6 @@ function StaffTab({ addRequest }: { addRequest: number }) {
   );
 }
 
-
 // ── Season Stats Panel ────────────────────────
 
 function SeasonStatsPanel({ playerId, position }: { playerId: string; position: Position }) {
@@ -1262,7 +1266,7 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
           Season Stats
         </label>
         {/* Season picker */}
-        <NativeSelect
+        <NativeSelect chevronIcon={AdminSelectChevron}
           value={selectedId}
           onChange={(e) => handleSeasonChange(e.target.value)}
           className="min-h-11 px-3 py-2 pr-8 text-base"
@@ -1431,9 +1435,7 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
                 aria-label={`Delete action photo ${index + 1}`}
             >
                 <span className="flex size-7 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-transform group-hover:scale-105">
-                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                    <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                  </svg>
+                  <X width="8" height="8" aria-hidden="true" />
                 </span>
             </button>
           </div>
@@ -1531,7 +1533,7 @@ function PlayerFormFields({
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <PlayerField id="player-position" label="Position" required>
-            <NativeSelect id="player-position" required value={form.position} onChange={(e) => set("position", e.target.value)}>
+            <NativeSelect chevronIcon={AdminSelectChevron} id="player-position" required value={form.position} onChange={(e) => set("position", e.target.value)}>
               {POSITIONS.map(p => <NativeSelectOption key={p} value={p}>{p}</NativeSelectOption>)}
             </NativeSelect>
           </PlayerField>
@@ -1571,7 +1573,7 @@ function PlayerFormFields({
               onChange={(e) => set("hometown", e.target.value)} className={ADMIN_INPUT_CLASS} />
           </PlayerField>
           <PlayerField id="player-foot" label="Preferred foot">
-            <NativeSelect id="player-foot" value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)}>
+            <NativeSelect chevronIcon={AdminSelectChevron} id="player-foot" value={form.foot ?? ""} onChange={(e) => set("foot", e.target.value)}>
               <NativeSelectOption value="">Select a foot</NativeSelectOption>
               <NativeSelectOption value="Right">Right</NativeSelectOption>
               <NativeSelectOption value="Left">Left</NativeSelectOption>
@@ -1782,19 +1784,16 @@ function NationalitySelect({
         ) : (
           <span className="font-body text-sm text-muted-foreground/60">Select nationality…</span>
         )}
-        <svg
+        <ChevronDown
           width="16"
           height="16"
-          viewBox="0 0 24 24"
-          fill="none"
+
           aria-hidden="true"
           className={cn(
             "ml-auto flex-shrink-0 text-muted-foreground transition-transform duration-150",
             open && "rotate-180",
           )}
-        >
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+         />
       </button>
 
       {/* Dropdown. The search row and the option list are flex siblings inside
@@ -1805,17 +1804,13 @@ function NationalitySelect({
           {/* Search header */}
           <div className="flex-shrink-0 border-b border-border bg-card p-2">
             <div className="flex items-center gap-2 rounded-lg border border-input bg-input/30 px-2.5 py-2 focus-within:border-ring focus-within:bg-input/50">
-              <svg
+              <Search
                 width="14"
                 height="14"
-                viewBox="0 0 24 24"
-                fill="none"
+
                 aria-hidden="true"
                 className="flex-shrink-0 text-muted-foreground"
-              >
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
-                <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+               />
               <input
                 autoFocus
                 type="text"
@@ -1852,16 +1847,13 @@ function NationalitySelect({
                     <span className="text-lg leading-none">{n.flag}</span>
                     <span className="truncate font-body text-sm text-foreground">{n.label}</span>
                     {isSelected && (
-                      <svg
+                      <Check
                         width="16"
                         height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
+
                         aria-hidden="true"
                         className="ml-auto flex-shrink-0 text-primary"
-                      >
-                        <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                       />
                     )}
                   </button>
                 );

@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronRight as AdminLinkArrow } from "@/components/admin/icons";
+
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -242,7 +244,7 @@ function ContactEditor() {
               </>}
             </fieldset>
             {selected === "details" && <p className="cep-ownership">These are canonical club contact details. Changes also appear wherever your website uses them.</p>}
-            {selected === "social" && <div className="cep-ownership"><strong>Social links are managed in Branding.</strong><br />The Contact page and footer use the same destinations.<br /><Link href="/admin/branding">Edit social links in Branding →</Link></div>}
+            {selected === "social" && <div className="cep-ownership"><strong>Social links are managed in Branding.</strong><br />The Contact page and footer use the same destinations.<br /><Link href="/admin/branding">Edit social links in Branding <AdminLinkArrow size={12} className="inline-block align-middle" /></Link></div>}
           </div>
   </>;
 

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  X as AdminRemoveIcon,
+  ChevronUp as AdminOrderUp,
+  ChevronDown as AdminOrderDown
+} from "@/components/admin/icons";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import AcademyHomeShopFeature from "@/components/AcademyHomeShopFeature";
 import AcademyShopPage from "@/components/AcademyShopPage";
@@ -362,9 +368,9 @@ function PhotoEditor({ photos, label, uploading, onUpload, onRemove, onChange }:
     {photos.map((photo, index) => <div key={photo.rowId ?? photo.assetId ?? index} className="flex items-center gap-2 rounded-lg border border-border p-2">
       <ResilientImage src={photo.url} alt={`${label} ${index + 1}`} width={56} height={56} className="h-14 w-14 rounded-md object-cover" />
       <span className="flex-1 text-xs">Photo {index + 1}</span>
-      <button type="button" aria-label={`Move ${label} photo ${index + 1} up`} disabled={uploading || index === 0} onClick={() => { const next = [...photos]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; onChange(orderPhotos(next)); }} className="min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40">↑</button>
-      <button type="button" aria-label={`Move ${label} photo ${index + 1} down`} disabled={uploading || index === photos.length - 1} onClick={() => { const next = [...photos]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; onChange(orderPhotos(next)); }} className="min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40">↓</button>
-      <button type="button" aria-label={`Remove ${label} photo ${index + 1}`} disabled={uploading} onClick={() => onRemove(photo)} className="min-h-11 min-w-11 rounded-md bg-destructive font-semibold text-destructive-foreground disabled:opacity-40">×</button>
+      <button type="button" aria-label={`Move ${label} photo ${index + 1} up`} disabled={uploading || index === 0} onClick={() => { const next = [...photos]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; onChange(orderPhotos(next)); }} className="min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40"><AdminOrderUp size={14} className="inline-block align-middle" /></button>
+      <button type="button" aria-label={`Move ${label} photo ${index + 1} down`} disabled={uploading || index === photos.length - 1} onClick={() => { const next = [...photos]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; onChange(orderPhotos(next)); }} className="min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40"><AdminOrderDown size={14} className="inline-block align-middle" /></button>
+      <button type="button" aria-label={`Remove ${label} photo ${index + 1}`} disabled={uploading} onClick={() => onRemove(photo)} className="min-h-11 min-w-11 rounded-md bg-destructive font-semibold text-destructive-foreground disabled:opacity-40"><AdminRemoveIcon size={14} className="inline-block align-middle" /></button>
     </div>)}
     <FileUpload label={`Add ${label} photos`} accept="image/*" multiple onUpload={onUpload} uploading={uploading} disabled={photos.length >= 6} />
     {label === "kit" && photos.length === 0 && <p className="text-xs text-destructive">Add at least one photo before saving this kit.</p>}

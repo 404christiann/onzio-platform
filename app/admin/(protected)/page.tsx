@@ -1,11 +1,11 @@
 import {
-  CalendarDays,
   ChevronRight,
-  ClipboardPenLine,
-  CreditCard,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+  IconSchedule,
+  IconRegistrations,
+  IconPayments,
+  IconRoster,
+  type AdminIconComponent
+} from "@/components/admin/icons";
 import Link from "next/link";
 import { Suspense } from "react";
 import { headers } from "next/headers";
@@ -28,11 +28,11 @@ import {
 } from "@/lib/admin-route-manifest";
 import { createClient } from "@/lib/supabase-server";
 
-const ACTION_ICONS: Record<AdminQuickActionId, LucideIcon> = {
-  registrations: ClipboardPenLine,
-  "manage-roster": Users,
-  "manage-schedule": CalendarDays,
-  payments: CreditCard,
+const ACTION_ICONS: Record<AdminQuickActionId, AdminIconComponent> = {
+  registrations: IconRegistrations,
+  "manage-roster": IconRoster,
+  "manage-schedule": IconSchedule,
+  payments: IconPayments,
 };
 
 function formatDate(date: string) {

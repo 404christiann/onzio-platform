@@ -4,8 +4,9 @@ import { cn } from "@/lib/utils";
 
 function NativeSelect({
   className,
+  chevronIcon: Chevron = ChevronDown,
   ...props
-}: React.ComponentProps<"select">) {
+}: React.ComponentProps<"select"> & { chevronIcon?: React.ComponentType<React.SVGProps<SVGSVGElement>> }) {
   return (
     <div data-slot="native-select-wrapper" className="relative">
       <select
@@ -16,7 +17,7 @@ function NativeSelect({
         )}
         {...props}
       />
-      <ChevronDown
+      <Chevron
         aria-hidden="true"
         data-slot="native-select-icon"
         className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"

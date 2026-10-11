@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import guided from "@/components/admin/AdminGuided.module.css";
-import { Search, X } from "lucide-react";
+import { Search, X } from "@/components/admin/icons";
 import {
   useCallback,
   useEffect,
