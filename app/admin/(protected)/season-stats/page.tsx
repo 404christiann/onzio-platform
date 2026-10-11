@@ -246,7 +246,7 @@ export default function SeasonStatsPage() {
           <button
             onClick={handleSave}
             disabled={saving || statsPending || !hasChanges || !selectedSeasonId}
-            className="rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving && <AdminLoadingDots className="mr-2" />}
             {saving ? "Saving…" : "Save All"}
@@ -283,7 +283,7 @@ export default function SeasonStatsPage() {
           <AdminPageToolbar className="items-start sm:items-center">
             <div className="flex flex-wrap items-center gap-3">
               {hasChanges && (
-                <span className="inline-flex items-center gap-2 self-start whitespace-nowrap rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
+                <span className="inline-flex items-center gap-2 self-start whitespace-nowrap rounded-full bg-warning/10 px-3 py-1.5 font-body text-xs font-semibold text-warning">
                   <span className="h-1.5 w-1.5 flex-none rounded-full bg-warning" aria-hidden="true" />
                   Unsaved changes
                 </span>
@@ -344,29 +344,31 @@ function SeasonStatsPositionGroup({
     : "48px 1fr 64px 64px 72px 56px 56px 56px 64px 52px 52px 72px";
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border">
+    <div className="rounded-2xl overflow-hidden border border-border">
       {/* Position header */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between bg-card px-4 py-3 transition-colors hover:bg-accent/60"
+        aria-expanded={open}
+        aria-controls={`season-stats-${pos.toLowerCase()}`}
+        className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-full flex items-center justify-between bg-card px-4 py-3 transition-colors hover:bg-accent/60"
       >
-        <span className="font-display font-black uppercase tracking-widest text-foreground/90" style={{ fontSize: "1.1rem" }}>
+        <span className="font-body font-semibold text-foreground/90" style={{ fontSize: "1.1rem" }}>
           {pos}s{" "}
           <span className="font-normal text-muted-foreground/60">{group.length}</span>
         </span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-          className="text-muted-foreground/60"
+          className="text-muted-foreground/60 motion-reduce:!transition-none"
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}>
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {/* Animated content */}
-      <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
-        <div style={{ overflow: "hidden" }}>
+      <div className="motion-reduce:!transition-none" style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
+        <div id={`season-stats-${pos.toLowerCase()}`} inert={!open} style={{ overflow: "hidden" }}>
           {/* Horizontally scrollable on mobile */}
-          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            <div style={{ minWidth: 600 }}>
+          <div role="region" aria-label={`${pos} season statistics, scroll for all columns`} tabIndex={0} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div style={{ minWidth: isGKPos ? 800 : 1040 }}>
 
               {/* Column headers */}
               <div
@@ -376,8 +378,8 @@ function SeasonStatsPositionGroup({
                 {headers.map((h) => (
                   <span
                     key={h}
-                    className="font-display font-bold uppercase text-center text-foreground/90"
-                    style={{ fontSize: "0.75rem", letterSpacing: "0.08em" }}
+                    className="font-body font-semibold text-center text-foreground/90"
+                    style={{ fontSize: "0.8rem" }}
                   >
                     {h}
                   </span>
@@ -400,7 +402,7 @@ function SeasonStatsPositionGroup({
                     style={{ gridTemplateColumns: gridCols }}
                   >
                     {/* # */}
-                    <span className="font-display font-bold text-center text-muted-foreground/70" style={{ fontSize: "1rem" }}>
+                    <span className="font-body font-semibold text-center text-muted-foreground/70" style={{ fontSize: "1rem" }}>
                       {p.number}
                     </span>
 
@@ -412,26 +414,26 @@ function SeasonStatsPositionGroup({
                     {/* Stat inputs */}
                     {isGKPos && isGK(s) ? (
                       <>
-                        <SeasonStatValueInput value={s.goals_against} onChange={(v) => updateStat(p.id, "goals_against", v)} />
-                        <SeasonStatValueInput value={s.saves}         onChange={(v) => updateStat(p.id, "saves", v)} />
-                        <SeasonStatValueInput value={s.clean_sheets}  onChange={(v) => updateStat(p.id, "clean_sheets", v)} />
-                        <SeasonStatValueInput value={s.starts}        onChange={(v) => updateStat(p.id, "starts", v)} />
-                        <SeasonStatValueInput value={s.yellow}        onChange={(v) => updateStat(p.id, "yellow", v)} />
-                        <SeasonStatValueInput value={s.red}           onChange={(v) => updateStat(p.id, "red", v)} />
-                        <SeasonStatValueInput value={s.mins}          onChange={(v) => updateStat(p.id, "mins", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: goals against`} value={s.goals_against} onChange={(v) => updateStat(p.id, "goals_against", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: saves`} value={s.saves}         onChange={(v) => updateStat(p.id, "saves", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: clean sheets`} value={s.clean_sheets}  onChange={(v) => updateStat(p.id, "clean_sheets", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: starts`} value={s.starts}        onChange={(v) => updateStat(p.id, "starts", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: yellow cards`} value={s.yellow}        onChange={(v) => updateStat(p.id, "yellow", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: red cards`} value={s.red}           onChange={(v) => updateStat(p.id, "red", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: minutes`} value={s.mins}          onChange={(v) => updateStat(p.id, "mins", v)} />
                       </>
                     ) : !isGK(s) ? (
                       <>
-                        <SeasonStatValueInput value={s.goals}          onChange={(v) => updateStat(p.id, "goals", v)} />
-                        <SeasonStatValueInput value={s.assists}         onChange={(v) => updateStat(p.id, "assists", v)} />
-                        <SeasonStatValueInput value={s.tackles}         onChange={(v) => updateStat(p.id, "tackles", v)} />
-                        <SeasonStatValueInput value={s.offsides}        onChange={(v) => updateStat(p.id, "offsides", v)} />
-                        <SeasonStatValueInput value={s.fouls}           onChange={(v) => updateStat(p.id, "fouls", v)} />
-                        <SeasonStatValueInput value={s.fouls_suffered}  onChange={(v) => updateStat(p.id, "fouls_suffered", v)} />
-                        <SeasonStatValueInput value={s.starts}          onChange={(v) => updateStat(p.id, "starts", v)} />
-                        <SeasonStatValueInput value={s.yellow}          onChange={(v) => updateStat(p.id, "yellow", v)} />
-                        <SeasonStatValueInput value={s.red}             onChange={(v) => updateStat(p.id, "red", v)} />
-                        <SeasonStatValueInput value={s.mins}            onChange={(v) => updateStat(p.id, "mins", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: goals`} value={s.goals}          onChange={(v) => updateStat(p.id, "goals", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: assists`} value={s.assists}         onChange={(v) => updateStat(p.id, "assists", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: tackles`} value={s.tackles}         onChange={(v) => updateStat(p.id, "tackles", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: offsides`} value={s.offsides}        onChange={(v) => updateStat(p.id, "offsides", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: fouls`} value={s.fouls}           onChange={(v) => updateStat(p.id, "fouls", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: fouls suffered`} value={s.fouls_suffered}  onChange={(v) => updateStat(p.id, "fouls_suffered", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: starts`} value={s.starts}          onChange={(v) => updateStat(p.id, "starts", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: yellow cards`} value={s.yellow}          onChange={(v) => updateStat(p.id, "yellow", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: red cards`} value={s.red}             onChange={(v) => updateStat(p.id, "red", v)} />
+                        <SeasonStatValueInput ariaLabel={`${p.name}: minutes`} value={s.mins}            onChange={(v) => updateStat(p.id, "mins", v)} />
                       </>
                     ) : null}
                   </div>
@@ -452,21 +454,24 @@ function SeasonStatsPositionGroup({
 // full-strength so they stand out, while untouched zero fields recede to a
 // muted tone. Values already render bold via `StatInput`'s own styling;
 // this only layers on tabular figures and the zero-value de-emphasis.
-// Scoped to this page via `className` (not `StatInput.tsx` itself) so
-// Match Stats' input styling is untouched.
+// The zero-value tone is scoped to this page. Shared input geometry stays
+// consistent with Match Stats and every original field remains available.
 
 function SeasonStatValueInput({
+  ariaLabel,
   value,
   onChange,
 }: {
+  ariaLabel: string;
   value: number;
   onChange: (v: number) => void;
 }) {
   return (
     <StatInput
+      aria-label={ariaLabel}
       value={value}
       onChange={onChange}
-      className={cn("tabular-nums", value === 0 && "text-muted-foreground/40")}
+      className={cn("tabular-nums", value === 0 && "text-muted-foreground")}
     />
   );
 }

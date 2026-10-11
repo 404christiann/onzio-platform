@@ -76,7 +76,7 @@ export default function ScaledPagePreview({
   }, [width]);
 
   return (
-    <div ref={frameRef} className={`w-full overflow-hidden ${className}`}>
+    <div ref={frameRef} data-admin-public-preview className={`w-full overflow-hidden ${className}`}>
       <div style={{ height: scaledHeight || undefined, overflow: "hidden" }}>
         <div
           ref={canvasRef}

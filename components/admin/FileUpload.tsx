@@ -248,7 +248,7 @@ function FileUpload({
         <div
           data-slot="file-upload-preview"
           className={cn(
-            "flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors",
+            "grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors sm:flex",
             dragActive && "border-ring bg-accent/40",
           )}
         >
@@ -269,33 +269,35 @@ function FileUpload({
               {fileMeta ? formatBytes(fileMeta.size) : "Uploaded"}
             </p>
           </div>
-          <button
-            type="button"
-            data-slot="file-upload-replace"
-            onClick={openBrowser}
-            disabled={disabled}
-            className={cn(
-              "shrink-0 rounded-lg border border-input bg-background px-3 font-body text-xs font-medium text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
-              compact ? "min-h-11 py-2.5" : "py-2",
-            )}
-          >
-            Replace
-          </button>
-          {onRemove && (
+          <div className="col-span-2 flex items-center justify-end gap-2 sm:ml-auto">
             <button
               type="button"
-              data-slot="file-upload-remove"
-              onClick={onRemove}
+              data-slot="file-upload-replace"
+              onClick={openBrowser}
               disabled={disabled}
-              aria-label="Remove uploaded file"
-            className={cn(
-              "flex shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-destructive focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
-              compact ? "size-11" : "size-8",
-            )}
+              className={cn(
+                "shrink-0 rounded-lg border border-input bg-background px-3 font-body text-sm font-medium text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
+                "min-h-11 py-2.5",
+              )}
             >
-              <X className="size-4" />
+              Replace
             </button>
-          )}
+            {onRemove && (
+              <button
+                type="button"
+                data-slot="file-upload-remove"
+                onClick={onRemove}
+                disabled={disabled}
+                aria-label="Remove uploaded file"
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-destructive focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
+                "size-11",
+              )}
+              >
+                <X className="size-4" />
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <>
@@ -346,7 +348,7 @@ function FileUpload({
               data-slot="file-upload-remove"
               onClick={onRemove}
               disabled={disabled}
-              className="mt-2 font-body text-xs text-muted-foreground outline-none transition-colors hover:text-destructive focus-visible:underline disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-2 min-h-11 px-2 font-body text-sm text-muted-foreground outline-none transition-colors hover:text-destructive focus-visible:underline disabled:cursor-not-allowed disabled:opacity-50"
             >
               Remove current file
             </button>

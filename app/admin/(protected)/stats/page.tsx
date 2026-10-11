@@ -9,6 +9,7 @@ import { AdminStatsGroupsSkeleton } from "@/components/admin/AdminCompetitionSke
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import { AdminPage, AdminPageHeader, AdminPageToolbar } from "@/components/admin/AdminPage";
+import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import StatInput from "@/components/admin/StatInput";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -383,11 +384,12 @@ export default function StatsPage() {
             disabled={seasonsLoading || saving}
             className="w-full"
           />
-          <label className="block min-w-0 flex-1 font-display text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          <label className="block min-w-0 flex-1 font-body text-sm font-medium text-foreground">
             <span className="mb-2 block">Match</span>
             {matchesLoading ? (
               <AdminSkeletonRegion label="Loading matches"><Skeleton className="h-10 w-full" /></AdminSkeletonRegion>
             ) : <NativeSelect
+              className={ADMIN_INPUT_CLASS}
               value={matchBelongsToSeason ? selectedMatch ?? "" : ""}
               onChange={(e) => {
                 setSelectedMatch(e.target.value || null);
@@ -411,14 +413,14 @@ export default function StatsPage() {
 
         <div className="flex flex-none flex-wrap items-center justify-end gap-3">
           {hasChanges && (
-            <span className="rounded-full bg-warning/10 px-3 py-1.5 font-display text-[0.65rem] font-bold uppercase tracking-wider text-warning">
+            <span className="rounded-full bg-warning/10 px-3 py-1.5 font-body text-xs font-semibold text-warning">
               Unsaved changes
             </span>
           )}
           <button
             onClick={handleSave}
             disabled={saving || !statsReady || !hasChanges || !selectedMatch}
-            className="whitespace-nowrap rounded-lg bg-primary px-6 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap rounded-xl bg-primary px-6 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-opacity duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {saving && <AdminLoadingDots className="mr-2" />}
             {saving ? "Saving…" : "Save All Stats"}
@@ -439,7 +441,7 @@ export default function StatsPage() {
           {selectedMatchData && (
             <div className="mb-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
-              <span className="font-display text-xs tracking-widest uppercase text-muted-foreground">
+              <span className="font-body text-xs text-muted-foreground">
                 {selectedMatchData.date} · {selectedMatchData.home ? "vs" : "@"} {selectedMatchData.opponent}
               </span>
               <div className="h-px flex-1 bg-border" />
@@ -517,15 +519,17 @@ function PositionGroup({
     : "48px 1fr 60px 72px 60px 60px 72px 56px 56px 56px 52px 52px";
 
   return (
-    <div className="mb-4 rounded-xl overflow-hidden border border-border">
+    <div className="mb-4 rounded-2xl overflow-hidden border border-border">
       {/* Position header / toggle */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between bg-card px-4 py-3 transition-colors duration-150 hover:bg-accent/60"
+        aria-expanded={open}
+        aria-controls={`match-stats-${pos.toLowerCase()}`}
+        className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-full flex items-center justify-between bg-card px-4 py-3 transition-colors duration-150 hover:bg-accent/60"
       >
         <span className="flex items-center gap-2">
           <span
-            className="font-display font-black uppercase tracking-widest text-foreground/90"
+            className="font-body font-semibold text-foreground/90"
             style={{ fontSize: "1.1rem" }}
           >
             {pos}s &nbsp;
@@ -546,7 +550,7 @@ function PositionGroup({
           height="18"
           viewBox="0 0 24 24"
           fill="none"
-          className="text-muted-foreground/60"
+          className="text-muted-foreground/60 motion-reduce:!transition-none"
           style={{
             transform: open ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 0.25s ease",
@@ -558,16 +562,17 @@ function PositionGroup({
 
       {/* Animated content */}
       <div
+        className="motion-reduce:!transition-none"
         style={{
           display: "grid",
           gridTemplateRows: open ? "1fr" : "0fr",
           transition: "grid-template-rows 0.25s ease",
         }}
       >
-        <div style={{ overflow: "hidden" }}>
+        <div id={`match-stats-${pos.toLowerCase()}`} inert={!open} style={{ overflow: "hidden" }}>
           {/* Horizontally scrollable wrapper */}
-          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            <div style={{ minWidth: 600 }}>
+          <div role="region" aria-label={`${pos} match statistics, scroll for all columns`} tabIndex={0} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <div style={{ minWidth: isGK ? 800 : 1040 }}>
           {/* Column headers */}
           <div
             className="grid gap-2 border-b border-border bg-muted/40 px-4 py-2"
@@ -576,10 +581,9 @@ function PositionGroup({
             {headers.map((h) => (
               <span
                 key={h}
-                className="font-display font-bold uppercase text-center text-foreground/90"
+                className="font-body font-semibold text-center text-foreground/90"
                 style={{
-                  fontSize: "0.75rem",
-                  letterSpacing: "0.08em",
+                  fontSize: "0.8rem",
                 }}
               >
                 {h}
@@ -604,7 +608,7 @@ function PositionGroup({
               >
                 {/* # */}
                 <span
-                  className="font-display font-bold text-center text-muted-foreground/70"
+                  className="font-body font-semibold text-center text-muted-foreground/70"
                   style={{ fontSize: "1rem" }}
                 >
                   {p.number}
@@ -619,17 +623,19 @@ function PositionGroup({
                 </span>
 
                 {/* Start checkbox */}
-                <div className="flex justify-center">
+                <label className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center">
                   <input
                     type="checkbox"
                     checked={row.starts}
                     onChange={(e) => updateStat(p.id, "starts", e.target.checked)}
+                    aria-label={`${p.name}: started the match`}
                     className="h-5 w-5 cursor-pointer rounded accent-primary"
                   />
-                </div>
+                </label>
 
                 {/* Mins */}
                 <StatInput
+                  aria-label={`${p.name}: minutes`}
                   value={row.mins}
                   onChange={(v) => updateStat(p.id, "mins", v)}
                   className={zeroValueClass(row.mins)}
@@ -637,22 +643,22 @@ function PositionGroup({
 
                 {isGK && isGKRow(row) ? (
                   <>
-                    <StatInput value={row.goals_against} onChange={(v) => updateStat(p.id, "goals_against", v)} className={zeroValueClass(row.goals_against)} />
-                    <StatInput value={row.saves}         onChange={(v) => updateStat(p.id, "saves", v)} className={zeroValueClass(row.saves)} />
-                    <StatInput value={row.clean_sheets}  onChange={(v) => updateStat(p.id, "clean_sheets", v)} className={zeroValueClass(row.clean_sheets)} />
-                    <StatInput value={row.yellow}        onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
-                    <StatInput value={row.red}           onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
+                    <StatInput aria-label={`${p.name}: goals against`} value={row.goals_against} onChange={(v) => updateStat(p.id, "goals_against", v)} className={zeroValueClass(row.goals_against)} />
+                    <StatInput aria-label={`${p.name}: saves`} value={row.saves}         onChange={(v) => updateStat(p.id, "saves", v)} className={zeroValueClass(row.saves)} />
+                    <StatInput aria-label={`${p.name}: clean sheets`} value={row.clean_sheets}  onChange={(v) => updateStat(p.id, "clean_sheets", v)} className={zeroValueClass(row.clean_sheets)} />
+                    <StatInput aria-label={`${p.name}: yellow cards`} value={row.yellow}        onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
+                    <StatInput aria-label={`${p.name}: red cards`} value={row.red}           onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
                   </>
                 ) : !isGKRow(row) ? (
                   <>
-                    <StatInput value={row.goals}          onChange={(v) => updateStat(p.id, "goals", v)} className={zeroValueClass(row.goals)} />
-                    <StatInput value={row.assists}         onChange={(v) => updateStat(p.id, "assists", v)} className={zeroValueClass(row.assists)} />
-                    <StatInput value={row.tackles}         onChange={(v) => updateStat(p.id, "tackles", v)} className={zeroValueClass(row.tackles)} />
-                    <StatInput value={row.offsides}        onChange={(v) => updateStat(p.id, "offsides", v)} className={zeroValueClass(row.offsides)} />
-                    <StatInput value={row.fouls}           onChange={(v) => updateStat(p.id, "fouls", v)} className={zeroValueClass(row.fouls)} />
-                    <StatInput value={row.fouls_suffered}  onChange={(v) => updateStat(p.id, "fouls_suffered", v)} className={zeroValueClass(row.fouls_suffered)} />
-                    <StatInput value={row.yellow}          onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
-                    <StatInput value={row.red}             onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
+                    <StatInput aria-label={`${p.name}: goals`} value={row.goals}          onChange={(v) => updateStat(p.id, "goals", v)} className={zeroValueClass(row.goals)} />
+                    <StatInput aria-label={`${p.name}: assists`} value={row.assists}         onChange={(v) => updateStat(p.id, "assists", v)} className={zeroValueClass(row.assists)} />
+                    <StatInput aria-label={`${p.name}: tackles`} value={row.tackles}         onChange={(v) => updateStat(p.id, "tackles", v)} className={zeroValueClass(row.tackles)} />
+                    <StatInput aria-label={`${p.name}: offsides`} value={row.offsides}        onChange={(v) => updateStat(p.id, "offsides", v)} className={zeroValueClass(row.offsides)} />
+                    <StatInput aria-label={`${p.name}: fouls`} value={row.fouls}           onChange={(v) => updateStat(p.id, "fouls", v)} className={zeroValueClass(row.fouls)} />
+                    <StatInput aria-label={`${p.name}: fouls suffered`} value={row.fouls_suffered}  onChange={(v) => updateStat(p.id, "fouls_suffered", v)} className={zeroValueClass(row.fouls_suffered)} />
+                    <StatInput aria-label={`${p.name}: yellow cards`} value={row.yellow}          onChange={(v) => updateStat(p.id, "yellow", v)} className={zeroValueClass(row.yellow)} />
+                    <StatInput aria-label={`${p.name}: red cards`} value={row.red}             onChange={(v) => updateStat(p.id, "red", v)} className={zeroValueClass(row.red)} />
                   </>
                 ) : null}
               </div>

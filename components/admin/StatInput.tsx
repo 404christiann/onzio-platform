@@ -23,7 +23,7 @@ function StatInput({ value, onChange, className, style, ...props }: StatInputPro
       onChange={(e) => onChange(Math.max(0, Number(e.target.value)))}
       data-slot="stat-input"
       className={cn(
-        "justify-self-center rounded-lg border border-input bg-background px-0.5 py-1.5 text-center font-display text-base font-bold text-foreground outline-none transition-shadow [appearance:textfield] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        "min-h-11 min-w-11 justify-self-center rounded-xl border border-input bg-background px-0.5 py-1.5 text-center font-body text-base font-semibold text-foreground outline-none transition-shadow [appearance:textfield] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 aria-invalid:border-destructive aria-invalid:ring-destructive/20 disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         className
       )}
       style={{

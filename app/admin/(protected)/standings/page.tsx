@@ -33,21 +33,19 @@ type DraftRow = DBLeagueStandingRow & {
 };
 
 const fieldClass =
-  "w-full rounded-lg border border-input bg-background px-3 py-2.5 font-body text-sm text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "min-h-11 w-full rounded-xl border border-input bg-card px-3 py-2.5 font-body text-base text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 const statLabelClass =
-  "font-display text-[0.62rem] font-bold uppercase tracking-widest text-muted-foreground";
+  "font-body text-xs font-semibold text-muted-foreground";
 
-// Small uppercase eyebrow label used for the "Teams" / "Homepage preview"
-// panel headers — matches the tracked-caps convention used across the other
-// admin pages (roster, schedule, tryouts, ...).
+// Quiet section labels for the Teams and Homepage preview groups.
 const eyebrowLabelClass =
-  "font-display text-xs font-black uppercase tracking-widest text-muted-foreground";
+  "font-body text-xs font-semibold text-muted-foreground";
 
 // Sentence-case panel title used for "Table heading" / "Two rules worth
 // knowing" — distinct from the tracked-caps eyebrow above, matching the
 // mockup's own distinction between the two label styles.
-const panelTitleClass = "font-display text-sm font-bold text-foreground";
+const panelTitleClass = "font-body text-sm font-semibold text-foreground";
 
 function createDraftRow(index: number): DraftRow {
   return {
@@ -382,7 +380,7 @@ export default function AdminStandingsPage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={loading || loadFailed || saving || uploading || !dirty}
-              className="font-display rounded-lg bg-primary px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-body rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
               {saving ? "Saving..." : uploading ? "Uploading..." : "Save Standings"}
@@ -394,7 +392,7 @@ export default function AdminStandingsPage() {
       {error && (
         <p
           role="alert"
-          className="font-body rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          className="font-body rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
         >
           {error}
         </p>
@@ -489,7 +487,7 @@ export default function AdminStandingsPage() {
               <button
                 type="button"
                 onClick={addRow}
-                className="font-display ml-auto rounded-md bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground transition-colors hover:bg-primary/90"
+                className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-body ml-auto rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Add Team
               </button>
@@ -507,7 +505,7 @@ export default function AdminStandingsPage() {
                 the true clipping boundary, which stops that leak; plain
                 `overflow-x-auto`/`overflow-hidden`/`overflow-x-clip` on this
                 div or `min-w-0` on it were all verified live NOT to fix it. */}
-            <div className="overflow-x-auto [contain:paint]">
+            <div role="region" aria-label="Teams and standings, scroll for all columns" tabIndex={0} className="overflow-x-auto [contain:paint] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
               <table className="w-full min-w-[900px] border-collapse text-left text-sm">
                 <thead className="border-b border-border bg-muted/40">
                   <tr>
@@ -555,7 +553,7 @@ export default function AdminStandingsPage() {
                         row.is_club && "border-l-4 border-l-primary bg-primary/5",
                       )}
                     >
-                      <td className="px-2 py-3 text-center font-display text-xs font-bold tabular-nums text-muted-foreground">
+                      <td className="px-2 py-3 text-center font-body text-xs font-semibold tabular-nums text-muted-foreground">
                         {standingsRank.get(row.id) ?? "–"}
                       </td>
                       <td className="px-2 py-3">
@@ -563,7 +561,7 @@ export default function AdminStandingsPage() {
                           {row.logo_url ? (
                             <Image src={row.logo_url} alt="" fill sizes="40px" className="object-contain" />
                           ) : (
-                            <span className="font-display grid h-full w-full place-items-center text-[0.6rem] font-black uppercase text-muted-foreground">
+                            <span className="font-body grid h-full w-full place-items-center text-[0.6rem] font-semibold text-muted-foreground">
                               {row.team_abbreviation || teamAbbreviation(row.team_name)}
                             </span>
                           )}
@@ -579,12 +577,12 @@ export default function AdminStandingsPage() {
                             className={fieldClass}
                           />
                           {row.is_club && (
-                            <span className="flex-none rounded-full bg-primary/10 px-2.5 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-primary">
+                            <span className="flex-none rounded-full bg-primary/10 px-2.5 py-1 font-body text-[0.6rem] font-semibold text-primary">
                               Our row
                             </span>
                           )}
                         </div>
-                        <label className="mt-2 flex items-center gap-1.5 font-body text-xs text-muted-foreground">
+                        <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-1.5 font-body text-xs text-muted-foreground">
                           <input
                             type="checkbox"
                             checked={row.is_club}
@@ -599,7 +597,7 @@ export default function AdminStandingsPage() {
                           onChange={(event) => updateRow(row.id, "team_abbreviation", event.target.value)}
                           placeholder="ABC"
                           aria-label="Team abbreviation"
-                          className={`${fieldClass} px-2 py-1.5 text-center font-display font-bold uppercase`}
+                          className={`${fieldClass} px-2 py-1.5 text-center font-body font-semibold uppercase`}
                         />
                       </td>
                       <td className="px-1 py-3">
@@ -649,7 +647,7 @@ export default function AdminStandingsPage() {
                       <td className="px-2 py-3">
                         <div className="flex flex-col items-end gap-1.5">
                           {row.is_club ? (
-                            <span className="font-display rounded-md border border-border px-3 py-2 text-xs uppercase tracking-widest text-muted-foreground/50">
+                            <span className="font-body flex min-h-11 items-center rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground">
                               Logo locked
                             </span>
                           ) : (
@@ -658,7 +656,7 @@ export default function AdminStandingsPage() {
                                 type="button"
                                 onClick={() => openLogoUpload(index)}
                                 disabled={uploading}
-                                className="font-display rounded-md border border-border px-3 py-2 text-xs uppercase tracking-widest text-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:text-muted-foreground/40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
+                                className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-body rounded-lg border border-border px-3 py-2 text-xs text-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:text-muted-foreground/40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/40"
                               >
                                 {row.logo_url ? "Replace Logo" : "Upload Logo"}
                               </button>
@@ -667,7 +665,7 @@ export default function AdminStandingsPage() {
                                   type="button"
                                   onClick={() => removeLogo(index)}
                                   disabled={uploading}
-                                  className="font-display rounded-md border border-destructive/45 px-3 py-2 text-xs uppercase tracking-widest text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/40 disabled:hover:bg-transparent"
+                                  className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-body rounded-lg border border-destructive/45 px-3 py-2 text-xs text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground/40 disabled:hover:bg-transparent"
                                 >
                                   Remove Logo
                                 </button>
@@ -677,7 +675,7 @@ export default function AdminStandingsPage() {
                           <button
                             type="button"
                             onClick={() => removeRow(row.id)}
-                            className="font-display rounded-md px-3 py-2 text-xs uppercase tracking-widest text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring font-body rounded-lg px-3 py-2 text-xs text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
                           >
                             Remove team
                           </button>
@@ -703,7 +701,7 @@ export default function AdminStandingsPage() {
               <div className="border-b border-border px-5 py-3.5">
                 <h2 className={eyebrowLabelClass}>Homepage preview</h2>
               </div>
-              <div className="p-5">
+              <div data-admin-public-preview className="p-5">
                 {/* previewRows is only ever empty for the templates excluded
                     from the sample fallback above (academy@1, editorial@1);
                     templates that still get DEFAULT_STANDINGS_ROWS always
@@ -769,7 +767,7 @@ function TableNumberField({
         onChange(Number(event.target.value))
       }
       className={cn(
-        "w-full rounded-lg border border-input bg-background px-2 py-1.5 text-center font-display text-sm font-bold tabular-nums text-foreground outline-none transition-shadow [appearance:textfield] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        "min-h-11 w-full rounded-xl border border-input bg-card px-2 py-1.5 text-center font-body text-sm font-semibold tabular-nums text-foreground outline-none transition-shadow [appearance:textfield] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         emphasize && "border-primary/50 ring-2 ring-primary/15",
       )}
     />

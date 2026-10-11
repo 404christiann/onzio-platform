@@ -3,6 +3,8 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
+import guided from "@/components/admin/AdminGuided.module.css";
+
 import { cn } from "@/lib/utils";
 import {
   SlidingPanel,
@@ -59,6 +61,7 @@ export function AdminSidePanel({
   className,
 }: AdminSidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const scrollContentRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -67,6 +70,61 @@ export function AdminSidePanel({
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    // iOS leaves the layout viewport/dvh tall while its software keyboard
+    // reduces the visual viewport. Keep the entire panel (including optional
+    // fixed actions) inside that visible area without moving or stealing focus.
+    const viewport = window.visualViewport;
+    let visibilityFrame: number | undefined;
+    const update = () => {
+      panel.style.setProperty(
+        "--admin-panel-visible-height",
+        String(viewport?.height || window.innerHeight) + "px",
+      );
+      panel.style.setProperty(
+        "--admin-panel-visible-top",
+        String(Math.max(0, viewport?.offsetTop || 0)) + "px",
+      );
+      if (visibilityFrame !== undefined) cancelAnimationFrame(visibilityFrame);
+      visibilityFrame = requestAnimationFrame(() => {
+        visibilityFrame = undefined;
+        const content = scrollContentRef.current;
+        const focused = document.activeElement;
+        if (
+          !content ||
+          !(focused instanceof HTMLElement) ||
+          !content.contains(focused) ||
+          !focused.matches("input, textarea, select, [contenteditable='true']")
+        ) return;
+        // Wait for the viewport-sized panel to lay out, then move only its
+        // scrolling body. Safari's earlier focus scroll may have used the old
+        // height; scrollIntoView could also pan the page/visual viewport.
+        const bodyBounds = content.getBoundingClientRect();
+        const fieldBounds = focused.getBoundingClientRect();
+        const visibleTop = bodyBounds.top + 8;
+        const visibleBottom = bodyBounds.bottom - 8;
+        if (fieldBounds.top < visibleTop) {
+          content.scrollTop += fieldBounds.top - visibleTop;
+        } else if (fieldBounds.bottom > visibleBottom) {
+          content.scrollTop += fieldBounds.bottom - visibleBottom;
+        }
+      });
+    };
+    update();
+    viewport?.addEventListener("resize", update);
+    viewport?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => {
+      if (visibilityFrame !== undefined) cancelAnimationFrame(visibilityFrame);
+      viewport?.removeEventListener("resize", update);
+      viewport?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
     };
   }, [open]);
 
@@ -106,14 +164,15 @@ export function AdminSidePanel({
         tabIndex={-1}
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-border bg-card text-card-foreground shadow-xl outline-none",
+          guided.sidePanel,
           className,
         )}
       >
-        <div className="flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-4 [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))] [padding-top:max(1rem,env(safe-area-inset-top))]">
+        <div className={cn("flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-4 [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))] [padding-top:max(1rem,env(safe-area-inset-top))]", guided.sidePanelHeader)}>
           <div className="min-w-0">
-            <h2 className="truncate text-base font-semibold text-foreground">{title}</h2>
+            <h2 className="text-xl font-semibold leading-6 text-foreground">{title}</h2>
             {description && (
-              <p className="mt-1 truncate text-sm text-muted-foreground">{description}</p>
+              <p className="mt-2 text-sm leading-5 text-muted-foreground">{description}</p>
             )}
           </div>
           <button
@@ -125,12 +184,13 @@ export function AdminSidePanel({
             <X className="size-5" aria-hidden="true" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div ref={scrollContentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <SlidingPanel
             activeKey={activeKey}
             direction={direction}
             className={cn(
               "p-5 [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))]",
+              guided.sidePanelContent,
               contentClassName,
             )}
           >
@@ -138,7 +198,7 @@ export function AdminSidePanel({
           </SlidingPanel>
         </div>
         {footer && (
-          <div className="flex-none border-t border-border bg-card px-5 py-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))] [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))]">
+          <div className={"flex-none border-t border-border bg-card px-5 py-4 [padding-bottom:max(1rem,env(safe-area-inset-bottom))] [padding-left:max(1.25rem,env(safe-area-inset-left))] [padding-right:max(1.25rem,env(safe-area-inset-right))] " + guided.sidePanelFooter}>
             {footer}
           </div>
         )}

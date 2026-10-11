@@ -980,13 +980,13 @@ export default function AdminProgramsPage() {
       <AdminPageHeader
         eyebrow="Public website"
         title="Programs"
-        description="Manage program pages, their order, media, highlights, visibility, and registration destinations."
+        description="Choose a program to edit its page, photos, and registration details."
         actions={!hidesProgramCreation ? (
           <button
             type="button"
             onClick={startCreate}
             disabled={loading}
-            className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 rounded-lg bg-primary px-5 py-3 font-body text-sm font-semibold normal-case tracking-normal text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
           >
             Create program
           </button>
@@ -1039,7 +1039,7 @@ export default function AdminProgramsPage() {
 
           <AdminPanel className="self-start p-4 sm:p-5">
             <div className="mb-5">
-              <h2 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
+              <h2 className="font-body text-sm font-semibold normal-case tracking-normal text-foreground">
                 Programs page copy
               </h2>
               <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
@@ -1194,7 +1194,7 @@ export default function AdminProgramsPage() {
                 type="button"
                 onClick={() => void savePageCopy()}
                 disabled={pageCopySaving || !pageCopyDirty}
-                className="rounded-lg bg-primary px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
+                className="min-h-11 rounded-lg bg-primary px-6 py-3 font-body text-sm font-semibold normal-case tracking-normal text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
               >
                 {pageCopySaving && <AdminLoadingDots className="mr-2" />}
                 {pageCopySaving ? "Saving…" : pageCopySaveLabel}
@@ -1214,14 +1214,14 @@ export default function AdminProgramsPage() {
       {!loading && draft && pageView === "detail" && (
         <AdminPageToolbar className="program-editor-detail-toolbar z-10 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <span className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="font-body text-xs font-semibold normal-case tracking-normal text-muted-foreground">
               Editing
             </span>
-            <span className="truncate font-display text-base font-black uppercase text-foreground">
+            <span className="truncate font-body text-base font-semibold normal-case text-foreground">
               {draft.id ? draft.displayTitle || "Untitled program" : "New program"}
             </span>
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-body text-xs font-semibold normal-case tracking-normal ${
                 draft.status === "active"
                   ? "bg-success/10 text-success"
                   : "bg-muted text-muted-foreground"
@@ -1250,7 +1250,7 @@ export default function AdminProgramsPage() {
               type="button"
               onClick={discardDraftChanges}
               disabled={!dirty || editorLocked}
-              className="rounded-lg border border-border px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-35"
+              className="min-h-11 rounded-lg border border-border px-4 py-2.5 font-body text-sm font-semibold normal-case tracking-normal text-muted-foreground transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-35"
             >
               Discard
             </button>
@@ -1260,7 +1260,7 @@ export default function AdminProgramsPage() {
               disabled={
                 saving || uploadingRole !== null || uploadingGallery || (!dirty && !unconfirmedProgram) || Boolean(programConflict)
               }
-              className="rounded-lg bg-primary px-6 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
+              className="min-h-11 rounded-lg bg-primary px-6 py-3 font-body text-sm font-semibold normal-case tracking-normal text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
             >
               {(saving || uploadingRole !== null || uploadingGallery) && (
                 <AdminLoadingDots className="mr-2" />
@@ -1295,7 +1295,7 @@ export default function AdminProgramsPage() {
         </div>
       ) : programs.length === 0 && !draft ? (
         <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center shadow-sm">
-          <h2 className="font-display text-xl font-black uppercase text-foreground">
+          <h2 className="font-body text-xl font-semibold normal-case text-foreground">
             No programs yet
           </h2>
           <p className="mx-auto mt-2 max-w-md font-body text-sm leading-6 text-muted-foreground">
@@ -1307,7 +1307,7 @@ export default function AdminProgramsPage() {
             <button
               type="button"
               onClick={startCreate}
-              className="mt-6 rounded-lg border border-border px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-foreground transition hover:bg-accent"
+              className="min-h-11 mt-6 rounded-lg border border-border px-5 py-3 font-body text-sm font-semibold normal-case tracking-normal text-foreground transition hover:bg-accent"
             >
               Create program
             </button>
@@ -1321,7 +1321,7 @@ export default function AdminProgramsPage() {
           <aside className="min-w-0 self-start space-y-3 lg:sticky lg:top-40">
             <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
               <div className="px-3 pb-3 pt-2">
-                <h2 className="font-display text-base font-bold text-foreground">Manage programs</h2>
+                <h2 className="font-body text-base font-semibold text-foreground">Manage programs</h2>
                 <p className="mt-1 font-body text-xs text-muted-foreground">Set the public order and visibility, then save this page.</p>
                 {managementError && <p className="mt-3 text-sm text-destructive" role="alert">{managementError}</p>}
                 {managementSaved && <p className="mt-3 text-sm text-success" role="status">Programs directory saved</p>}
@@ -1334,7 +1334,7 @@ export default function AdminProgramsPage() {
                   className={`${ADMIN_INPUT_CLASS} mt-2`}
                 />
                 {!canReorderPrograms && (
-                  <p className="mt-2 font-body text-[0.65rem] leading-4 text-muted-foreground">
+                  <p className="mt-2 font-body text-xs leading-4 text-muted-foreground">
                     Clear the filter to drag and reorder.
                   </p>
                 )}
@@ -1366,15 +1366,15 @@ export default function AdminProgramsPage() {
                   </SortableContext>
                 </DndContext>
               )}
-              <p className="mt-3 px-1 font-body text-[0.65rem] leading-4 text-muted-foreground">
+              <p className="mt-3 px-1 font-body text-xs leading-4 text-muted-foreground">
                 Changes appear on your website after you save.
               </p>
-              <button type="button" onClick={() => void saveManagement()} disabled={(!managementDirty && !unconfirmedManagement) || managementSaving || Boolean(managementConflict)} className="mt-4 min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-display text-xs font-bold uppercase tracking-wider text-primary-foreground disabled:opacity-40">{managementSaving ? "Saving…" : unconfirmedManagement ? "Confirm save" : "Save page"}</button>
+              <button type="button" onClick={() => void saveManagement()} disabled={(!managementDirty && !unconfirmedManagement) || managementSaving || Boolean(managementConflict)} className="mt-4 min-h-11 w-full rounded-lg bg-primary px-4 py-2.5 font-body text-sm font-semibold normal-case tracking-normal text-primary-foreground disabled:opacity-40">{managementSaving ? "Saving…" : unconfirmedManagement ? "Confirm save" : "Save page"}</button>
             </div>
 
             {draft && (
               <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="font-body text-xs font-semibold normal-case tracking-normal text-muted-foreground">
                   This program
                 </p>
                 <dl className="mt-3 space-y-2">
@@ -1504,7 +1504,7 @@ export default function AdminProgramsPage() {
               <div className="mt-7 border-t border-border pt-7">
                 <div className="mb-4 flex items-center justify-between gap-4">
                   <div>
-                    <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
+                    <h3 className="font-body text-sm font-semibold normal-case tracking-normal text-foreground">
                       Highlights
                     </h3>
                     <p className="mt-1 font-body text-xs text-muted-foreground">
@@ -1515,7 +1515,7 @@ export default function AdminProgramsPage() {
                     type="button"
                     onClick={addHighlight}
                     disabled={draft.highlights.length >= 200}
-                    className="rounded-lg border border-border px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:opacity-30"
+                    className="min-h-11 rounded-lg border border-border px-3 py-2 font-body text-sm font-semibold normal-case tracking-normal text-muted-foreground transition hover:bg-accent disabled:opacity-30"
                   >
                     Add highlight
                   </button>
@@ -1536,9 +1536,9 @@ export default function AdminProgramsPage() {
                           maxLength={320}
                           aria-label={`Highlight ${index + 1}`}
                         />
-                        <button type="button" onClick={() => reorderHighlight(index, -1)} disabled={index === 0} className="rounded-lg border border-border px-3 py-2.5 text-xs text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} up`}>↑</button>
-                        <button type="button" onClick={() => reorderHighlight(index, 1)} disabled={index === draft.highlights.length - 1} className="rounded-lg border border-border px-3 py-2.5 text-xs text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} down`}>↓</button>
-                        <button type="button" onClick={() => removeHighlight(index)} className="rounded-lg border border-destructive/15 px-3 py-2.5 text-xs text-destructive/70" aria-label={`Remove highlight ${index + 1}`}>×</button>
+                        <button type="button" onClick={() => reorderHighlight(index, -1)} disabled={index === 0} className="min-h-11 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} up`}>↑</button>
+                        <button type="button" onClick={() => reorderHighlight(index, 1)} disabled={index === draft.highlights.length - 1} className="min-h-11 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground disabled:opacity-20" aria-label={`Move highlight ${index + 1} down`}>↓</button>
+                        <button type="button" onClick={() => removeHighlight(index)} className="min-h-11 rounded-lg border border-destructive/15 px-3 py-2.5 text-sm text-destructive/70" aria-label={`Remove highlight ${index + 1}`}>×</button>
                       </div>
                     ))}
                   </div>
@@ -1593,7 +1593,7 @@ export default function AdminProgramsPage() {
               {activeTab === "registration" && (
               <div className="mt-6 space-y-6">
                 <AdminPanel as="div">
-                  <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
+                  <h3 className="font-body text-sm font-semibold normal-case tracking-normal text-foreground">
                     Registration destination
                   </h3>
                   <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
@@ -1613,7 +1613,7 @@ export default function AdminProgramsPage() {
                       }
                     />
                     <span>
-                      <span className="block font-display text-xs font-bold uppercase tracking-[0.16em] text-foreground">
+                      <span className="block font-body text-xs font-semibold normal-case tracking-normal text-foreground">
                         Show the registration section on this program page
                       </span>
                       <span className="mt-1 block font-body text-xs text-muted-foreground">
@@ -1650,7 +1650,7 @@ export default function AdminProgramsPage() {
                 </AdminPanel>
 
                 <AdminPanel as="div">
-                  <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
+                  <h3 className="font-body text-sm font-semibold normal-case tracking-normal text-foreground">
                     Registration band copy
                   </h3>
                   <p className="mt-1 max-w-2xl font-body text-xs leading-5 text-muted-foreground">
@@ -1740,7 +1740,7 @@ export default function AdminProgramsPage() {
                 <AdminPanel as="div">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                      <h3 className="font-display text-sm font-black uppercase tracking-wider text-foreground">
+                      <h3 className="font-body text-sm font-semibold normal-case tracking-normal text-foreground">
                         Registration image gallery
                       </h3>
                       <p className="mt-1 max-w-xl font-body text-xs leading-5 text-muted-foreground">
@@ -1756,7 +1756,7 @@ export default function AdminProgramsPage() {
                         uploadingGallery ||
                         gallery.length >= PROGRAM_MEDIA_LIMITS.items
                       }
-                      className="rounded-lg border border-border px-3 py-2 font-display text-xs font-bold uppercase tracking-wider text-muted-foreground transition hover:bg-accent disabled:opacity-30"
+                      className="min-h-11 rounded-lg border border-border px-3 py-2 font-body text-sm font-semibold normal-case tracking-normal text-muted-foreground transition hover:bg-accent disabled:opacity-30"
                     >
                       {uploadingGallery && <AdminLoadingDots className="mr-2" />}
                       {uploadingGallery ? "Uploading…" : "Add image"}
@@ -1794,7 +1794,7 @@ export default function AdminProgramsPage() {
                                 className="object-cover"
                               />
                             ) : null}
-                            <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-display text-[0.6rem] font-bold uppercase tracking-wider text-white">
+                            <span className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 font-body text-xs font-semibold normal-case tracking-normal text-white">
                               {index + 1}
                             </span>
                           </div>
@@ -1813,7 +1813,7 @@ export default function AdminProgramsPage() {
                               type="button"
                               onClick={() => reorderGallery(index, -1)}
                               disabled={index === 0}
-                              className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
+                              className="min-h-11 flex-1 rounded-md border border-border py-1.5 font-body text-sm normal-case text-muted-foreground transition hover:bg-accent disabled:opacity-20"
                               aria-label={`Move gallery image ${index + 1} up`}
                             >
                               ↑
@@ -1822,7 +1822,7 @@ export default function AdminProgramsPage() {
                               type="button"
                               onClick={() => reorderGallery(index, 1)}
                               disabled={index === gallery.length - 1}
-                              className="flex-1 rounded-md border border-border py-1.5 font-display text-xs uppercase text-muted-foreground transition hover:bg-accent disabled:opacity-20"
+                              className="min-h-11 flex-1 rounded-md border border-border py-1.5 font-body text-sm normal-case text-muted-foreground transition hover:bg-accent disabled:opacity-20"
                               aria-label={`Move gallery image ${index + 1} down`}
                             >
                               ↓
@@ -1830,7 +1830,7 @@ export default function AdminProgramsPage() {
                             <button
                               type="button"
                               onClick={() => removeGalleryImage(index)}
-                              className="rounded-md border border-destructive/15 px-3 py-1.5 font-display text-xs uppercase text-destructive/70"
+                              className="min-h-11 rounded-md border border-destructive/15 px-3 py-1.5 font-body text-sm normal-case text-destructive/70"
                               aria-label={`Remove gallery image ${index + 1}`}
                             >
                               Remove
@@ -1850,7 +1850,7 @@ export default function AdminProgramsPage() {
 
           {pageView === "detail" && draft && (
             <aside className="program-editor-detail-canvas min-w-0 self-start rounded-xl border border-border bg-card p-4 shadow-sm lg:sticky lg:top-40">
-              <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="font-body text-xs font-semibold normal-case tracking-normal text-muted-foreground">
                 Program page preview
               </p>
               <p className="mt-1 font-body text-xs leading-5 text-muted-foreground">
@@ -1913,7 +1913,7 @@ function ThisProgramStat({
   return (
     <div className="flex items-center justify-between gap-3 font-body text-xs">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={`font-bold ${toneClass}`}>{value}</dd>
+      <dd className={`font-semibold ${toneClass}`}>{value}</dd>
     </div>
   );
 }
@@ -1954,7 +1954,7 @@ function ProgramListRow({
           disabled={dragDisabled}
           aria-label={`Reorder ${program.displayTitle || "program"}`}
           title={dragDisabled ? "Clear the filter to reorder" : "Drag to reorder"}
-          className="mt-1.5 flex h-8 w-6 flex-none cursor-grab items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
+          className="mt-1.5 flex size-11 flex-none cursor-grab items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-30"
         >
           <GripVertical className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -1962,16 +1962,16 @@ function ProgramListRow({
           type="button"
           onClick={onSelect}
           disabled={editingDisabled}
-          className="w-full min-w-0 rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-ring/60"
+          className="min-h-11 w-full min-w-0 rounded-lg px-2 py-2 text-left focus:outline-none focus:ring-2 focus:ring-ring/60"
         >
-          <span className="block truncate font-display text-sm font-bold uppercase tracking-wide text-foreground">
+          <span className="block truncate font-body text-sm font-semibold normal-case tracking-normal text-foreground">
             {program.displayTitle || "Untitled program"}
           </span>
           <span className="mt-1 block truncate font-body text-xs text-muted-foreground">
             /programs/{program.slug}
           </span>
           <span
-            className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-display text-[0.65rem] font-bold uppercase tracking-wider ${
+            className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-body text-xs font-semibold normal-case tracking-normal ${
               isActive ? "bg-success/10 text-success" : "bg-card text-muted-foreground"
             }`}
           >
@@ -1985,7 +1985,7 @@ function ProgramListRow({
           </span>
         </button>
       </div>
-      <button type="button" onClick={onToggleVisibility} disabled={editingDisabled} className="mt-2 min-h-11 w-full rounded-lg border border-border px-3 py-2 text-left font-body text-xs font-semibold text-foreground hover:bg-accent">{isActive ? "Hide from website" : "Show on website"}</button>
+      <button type="button" onClick={onToggleVisibility} disabled={editingDisabled} className="mt-2 min-h-11 w-full rounded-lg border border-border px-3 py-2 text-left font-body text-sm font-semibold text-foreground hover:bg-accent">{isActive ? "Hide from website" : "Show on website"}</button>
     </div>
   );
 }
@@ -2010,7 +2010,7 @@ function ProgramTabs({
             onClick={() => onChange(tab.id)}
             disabled={disabled}
             aria-pressed={selected}
-            className={`font-display rounded-md px-3 py-2 text-[0.68rem] uppercase tracking-widest transition-colors disabled:cursor-not-allowed ${
+            className={`min-h-11 font-body rounded-md px-3 py-2 text-sm normal-case tracking-normal transition-colors disabled:cursor-not-allowed ${
               selected ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-background"
             }`}
           >

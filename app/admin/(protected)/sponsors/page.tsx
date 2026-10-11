@@ -357,7 +357,7 @@ export default function AdminSponsorsPage() {
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saveDisabled}
-                className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-lg bg-primary px-5 py-3 font-body text-sm font-semibold normal-case tracking-normal text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving && <AdminLoadingDots className="mr-2" />}
                 {saving ? "Saving…" : `Save ${placement === "carousel" ? "Carousel" : "Footer"} Logos`}
@@ -396,7 +396,7 @@ export default function AdminSponsorsPage() {
           <AdminPanel className="p-4 sm:p-5">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+                <p className="font-body text-xs normal-case tracking-normal text-muted-foreground">
                   {placement === "carousel" ? "Homepage Carousel Logos" : "Footer Logos"}
                 </p>
                 <p className="font-body mt-1 text-xs text-muted-foreground">
@@ -405,7 +405,7 @@ export default function AdminSponsorsPage() {
                     : "Static sponsor logos shown in the website footer."}
                 </p>
               </div>
-              <span className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+              <span className="font-body text-xs normal-case tracking-normal text-muted-foreground">
                 {draftLogos.length}/{limit}
               </span>
             </div>
@@ -437,10 +437,10 @@ export default function AdminSponsorsPage() {
                     <button
                       type="button"
                       onClick={() => void removeLogo(index)}
-                      className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-100 transition-opacity sm:h-6 sm:w-6 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                      className="absolute right-1 top-1 flex size-11 items-center justify-center rounded-full bg-destructive text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       aria-label={`Remove sponsor logo ${index + 1}`}
                     >
-                      <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                      <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
                         <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                       </svg>
                     </button>
@@ -508,11 +508,12 @@ export default function AdminSponsorsPage() {
           </AdminPanel>
 
           <AdminPanel className="overflow-hidden p-4 sm:p-5">
-            <p className="font-display mb-4 text-xs uppercase tracking-widest text-muted-foreground">
+            <p className="font-body mb-4 text-xs normal-case tracking-normal text-muted-foreground">
               {placement === "carousel" ? "Carousel Preview" : "Footer Preview"}
             </p>
 
             <SlidingPanel activeKey={placement} direction={placementDirection}>
+            <div data-admin-public-preview>
             {placement === "carousel" ? (
               <SponsorCarousel sponsors={previewLogos} compact />
             ) : (
@@ -540,6 +541,7 @@ export default function AdminSponsorsPage() {
                 </div>
               </div>
             )}
+            </div>
             </SlidingPanel>
           </AdminPanel>
           </div>
@@ -566,7 +568,7 @@ function OrderButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex h-7 flex-1 items-center justify-center rounded-md bg-muted text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex min-h-11 flex-1 items-center justify-center rounded-md bg-muted text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
     >
       {children}
     </button>

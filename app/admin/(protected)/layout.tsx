@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
@@ -10,6 +11,15 @@ import {
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
 import { createClient } from "@/lib/supabase-server";
+
+// App-like viewport behavior is protected-only; public and OTP pages retain
+// their existing browser presentation. Zoom remains available.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+};
 
 export default async function ProtectedLayout({
   children,

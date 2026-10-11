@@ -26,12 +26,12 @@ export default function SeasonSelect({
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
-          <span className="font-display tracking-widest uppercase text-muted-foreground" style={{ fontSize: "0.8rem" }}>
+          <span className="font-body text-sm font-medium text-foreground">
             {label}
           </span>
         )}
         <AdminSkeletonRegion label="Loading seasons" className={className}>
-          <Skeleton className="h-10 w-full min-w-36 rounded-lg" />
+          <Skeleton className="h-11 w-full min-w-36 rounded-xl" />
         </AdminSkeletonRegion>
       </div>
     );
@@ -42,7 +42,7 @@ export default function SeasonSelect({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       disabled={disabled}
-      className={className}
+      className={`min-h-11 rounded-xl text-base ${className}`}
     >
       {seasons.length === 0 && (
         <NativeSelectOption value="">No seasons available</NativeSelectOption>
@@ -60,8 +60,7 @@ export default function SeasonSelect({
   return (
     <label className="flex flex-col gap-1.5">
       <span
-        className="font-display tracking-widest uppercase text-muted-foreground"
-        style={{ fontSize: "0.8rem" }}
+        className="font-body text-sm font-medium text-foreground"
       >
         {label}
       </span>

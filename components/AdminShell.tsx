@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import guided from "@/components/admin/AdminGuided.module.css";
 import { usePathname, useRouter } from "next/navigation";
 import {
   useCallback,
@@ -221,7 +222,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           render={<Link href={route.href} />}
           onClick={() => closeSidebar(false)}
           isActive={active}
-          className="h-10 gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-accent-foreground"
+          className="h-11 gap-3 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
         >
           <Icon
             className={active ? "text-primary" : "text-sidebar-foreground/45"}
@@ -237,11 +238,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <SidebarProvider
       open={sidebarOpen}
       onOpenChange={handleSidebarOpenChange}
-      className="admin-portal bg-background text-foreground"
-      style={{ "--sidebar-width": "280px" } as React.CSSProperties}
+      className={`admin-portal bg-background text-foreground ${guided.portal}`}
+      style={{ "--sidebar-width": "264px" } as React.CSSProperties}
     >
       <Sidebar id="admin-sidebar" className="border-r border-sidebar-border bg-sidebar">
-        <SidebarHeader className="flex-row items-center gap-3 border-b border-sidebar-border px-5 py-5">
+        <SidebarHeader className={`flex-row items-center gap-3 border-b border-sidebar-border px-5 py-5 ${guided.sidebarHeader}`}>
           {clubLogoUrl ? (
             <Image
               src={clubLogoUrl}
@@ -266,7 +267,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <button
             type="button"
             onClick={() => closeSidebar(true)}
-            className="rounded-lg p-2 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring lg:hidden"
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring lg:hidden"
             aria-label="Close admin navigation"
           >
             <X className="size-4" aria-hidden="true" />
@@ -274,7 +275,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </SidebarHeader>
 
         <SidebarContent
-          className="admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y gap-1 px-3 py-4"
+          className={"admin-nav-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y gap-1 px-3 py-4 " + guided.sidebarContent}
           style={{ WebkitOverflowScrolling: "touch", scrollbarGutter: "stable" }}
           aria-label="Admin navigation"
           tabIndex={0}
@@ -303,7 +304,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                     onClick={() =>
                       setOpenGroupKey((previous) => (previous === entry.id ? null : entry.id))
                     }
-                    className="h-10 w-full gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                    className="h-11 w-full gap-3 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
                   >
                     <GroupIcon className="text-sidebar-foreground/45" aria-hidden="true" />
                     <span className="whitespace-nowrap text-left">{entry.label}</span>
@@ -329,8 +330,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </SidebarContent>
 
         <SidebarFooter
-          className="border-t border-sidebar-border px-5 py-4"
-          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          className={"border-t border-sidebar-border px-5 py-4 " + guided.sidebarFooter}
+          style={{ paddingBottom: "max(1rem, var(--admin-safe-area-bottom))" }}
         >
           <div className="flex items-baseline gap-1.5 text-xs text-sidebar-foreground/45">
             <span>Powered by</span>
@@ -357,12 +358,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       </Sidebar>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex min-h-16 items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur sm:gap-3 sm:px-6 lg:px-8">
+        <header className={`sticky top-0 z-20 flex min-h-[72px] items-center gap-2 border-b border-border bg-background/95 px-4 backdrop-blur sm:gap-3 sm:px-6 lg:px-8 ${guided.shellHeader}`}>
           <button
             ref={menuTriggerRef}
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
             aria-label="Open admin navigation"
             aria-controls="admin-sidebar"
             aria-expanded={sidebarOpen}
@@ -379,7 +380,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <AdminAccountMenu email={userEmail} role={club.role} onSignOut={handleSignOut} />
         </header>
 
-        <main className="min-w-0 flex-1 overflow-x-clip bg-muted/30 p-4 sm:p-6 lg:p-8">
+        <main className={"min-w-0 flex-1 overflow-x-clip bg-background p-4 sm:p-6 lg:p-8 " + guided.shellMain}>
           {club.kind === "customer" && club.publicAccess === "grace" ? (
             <div className="mx-auto mb-6 max-w-7xl rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
               Billing needs attention. Content editing remains available during the grace period.

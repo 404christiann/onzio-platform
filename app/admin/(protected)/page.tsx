@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  ChevronRight,
   ClipboardPenLine,
   CreditCard,
   Users,
@@ -11,12 +12,13 @@ import { headers } from "next/headers";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AdminRegistrationMixChart } from "@/components/admin/AdminRegistrationMixChart";
-import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
+import { AdminPage, AdminPanel } from "@/components/admin/AdminPage";
 import {
   loadAdminDashboardData,
   type DashboardEvent,
   type DashboardSection,
 } from "@/lib/admin-dashboard-data";
+import guided from "@/components/admin/AdminGuided.module.css";
 import { REGISTRATION_MIX_COLORS } from "@/lib/admin-dashboard-mix";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
@@ -73,7 +75,23 @@ export default function AdminDashboard() {
 function DashboardSkeleton() {
   return (
     <AdminPage>
-      <AdminPageHeader title="Dashboard" description="Club operations overview" />
+      <DashboardIntro />
+
+      <section aria-label="Quick Actions" className={guided.taskSection}>
+        <h2 className={guided.taskHeading}>Quick Actions</h2>
+        <AdminSkeletonRegion label="Loading quick actions" className={guided.taskList}>
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className={guided.taskRow}>
+              <Skeleton className="size-11 shrink-0 rounded-xl" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-24 max-w-full" />
+                <Skeleton className="h-3 w-32 max-w-full" />
+              </div>
+            </div>
+          ))}
+        </AdminSkeletonRegion>
+      </section>
+
       <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {["Active Players", "Active Staff", "Season Matches", "Paid Registrations"].map((label) => (
           <AdminPanel key={label} className="p-4 sm:p-5">
@@ -83,20 +101,6 @@ function DashboardSkeleton() {
             </AdminSkeletonRegion>
           </AdminPanel>
         ))}
-      </section>
-      <section aria-label="Quick Actions">
-        <h2 className="mb-3 text-sm font-semibold normal-case text-foreground">Quick Actions</h2>
-        <AdminSkeletonRegion label="Loading quick actions" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm">
-              <Skeleton className="size-9 shrink-0 rounded-lg" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-4 w-24 max-w-full" />
-                <Skeleton className="h-3 w-32 max-w-full" />
-              </div>
-            </div>
-          ))}
-        </AdminSkeletonRegion>
       </section>
       <div className="grid gap-6 xl:grid-cols-2">
         <DashboardPanel title="Registration Forms">
@@ -123,6 +127,16 @@ function DashboardSkeleton() {
         </AdminSkeletonRegion>
       </DashboardPanel>
     </AdminPage>
+  );
+}
+
+function DashboardIntro({ clubName }: { clubName?: string }) {
+  return (
+    <header className={guided.dashboardIntro}>
+      <p className="!mt-0 !text-xs font-medium">Dashboard</p>
+      <h1 className="mt-3 normal-case text-foreground">What would you like to do?</h1>
+      <p>{clubName ? `A few simple ways to keep ${clubName} moving.` : "A few simple ways to look after your club."}</p>
+    </header>
   );
 }
 
@@ -178,28 +192,14 @@ async function AdminDashboardContent() {
 
   return (
     <AdminPage>
-      <AdminPageHeader
-        title="Dashboard"
-        description={
-          data.activeSeasonLabel
-            ? `${data.activeSeasonLabel} season overview`
-            : "Club operations overview"
-        }
-      />
+      <DashboardIntro clubName={club.name} />
 
-      <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <MetricCard label="Active Players" section={data.players} />
-        <MetricCard label="Active Staff" section={data.staff} />
-        <MetricCard label="Season Matches" section={data.seasonMatches} />
-        <MetricCard label="Paid Registrations" section={data.paidRegistrations} />
-      </section>
-
-      <section aria-labelledby="quick-actions-heading">
-        <h2 id="quick-actions-heading" className="mb-3 text-sm font-semibold normal-case text-foreground">
+      <section aria-labelledby="quick-actions-heading" className={guided.taskSection}>
+        <h2 id="quick-actions-heading" className={guided.taskHeading}>
           Quick Actions
         </h2>
         {quickActions.length ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className={guided.taskList}>
             {quickActions.map((action) => {
               const Icon = ACTION_ICONS[action.id];
               return (
@@ -207,19 +207,20 @@ async function AdminDashboardContent() {
                   key={action.id}
                   href={action.href}
                   title={action.description}
-                  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={guided.taskRow}
                 >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon className="size-4" aria-hidden="true" />
+                  <span className={guided.taskIcon}>
+                    <Icon className="size-5" aria-hidden="true" />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-card-foreground">
+                  <span className={guided.taskCopy}>
+                    <span className={guided.taskLabel}>
                       {action.label}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
+                    <span className={guided.taskDescription}>
                       {action.description}
                     </span>
                   </span>
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground/60" aria-hidden="true" />
                 </Link>
               );
             })}
@@ -227,6 +228,16 @@ async function AdminDashboardContent() {
         ) : (
           <EmptyState message="Quick actions are unavailable while content changes are paused." />
         )}
+      </section>
+
+      {data.activeSeasonLabel ? (
+        <p className="-mb-3 text-sm font-medium text-muted-foreground">{data.activeSeasonLabel} season overview</p>
+      ) : null}
+      <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <MetricCard label="Active Players" section={data.players} />
+        <MetricCard label="Active Staff" section={data.staff} />
+        <MetricCard label="Season Matches" section={data.seasonMatches} />
+        <MetricCard label="Paid Registrations" section={data.paidRegistrations} />
       </section>
 
       <div className="grid gap-6 xl:grid-cols-2">
@@ -332,7 +343,7 @@ function MetricCard({ label, section }: { label: string; section: DashboardSecti
     <AdminPanel className="p-4 sm:p-5">
       <p className="text-sm text-muted-foreground">{label}</p>
       {section.status === "ready" ? (
-        <p className="mt-3 text-[32px] font-bold leading-none tracking-tight tabular-nums text-card-foreground">
+        <p className="mt-3 text-[32px] font-semibold leading-none tracking-tight tabular-nums text-card-foreground">
           {section.data.toLocaleString()}
         </p>
       ) : (
@@ -365,7 +376,7 @@ function DashboardPanel({
           {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
         </div>
         {actionHref && actionLabel ? (
-          <Link href={actionHref} className="shrink-0 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Link href={actionHref} className="inline-flex min-h-11 shrink-0 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {actionLabel}
           </Link>
         ) : null}
@@ -385,13 +396,13 @@ function EventRow({ event }: { event: DashboardEvent }) {
         <p className="text-lg font-semibold leading-5 text-card-foreground">{Number(event.date.slice(-2))}</p>
       </div>
       <div className="min-w-0 flex-1 py-0.5">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium text-card-foreground" title={event.title}>{event.title}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="min-w-0 break-words text-sm font-medium text-card-foreground" title={event.title}>{event.title}</p>
           <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-primary">
             {event.kind}
           </span>
         </div>
-        <p className="mt-1 truncate text-xs text-muted-foreground">
+        <p className="mt-1 break-words text-sm leading-5 text-muted-foreground">
           {[formatTime(event.time), event.detail].filter(Boolean).join(" · ")}
         </p>
       </div>

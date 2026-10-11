@@ -3,8 +3,9 @@
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, useId } from "react";
 import { Plus, Search } from "lucide-react";
+import guided from "@/components/admin/AdminGuided.module.css";
 import AdminLoading, { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import {
@@ -152,7 +153,7 @@ export default function RosterPage() {
         <div
           role="tablist"
           aria-label="Roster sections"
-          className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:w-72"
+          className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1 sm:w-72"
         >
           {ROSTER_TAB_ORDER.map((rosterTab) => (
             <button
@@ -185,9 +186,9 @@ export default function RosterPage() {
                 });
               }}
               className={cn(
-                "min-h-11 rounded-md px-4 py-2 font-display text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "min-h-11 rounded-lg px-4 py-2 font-body text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 tab === rosterTab
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
@@ -198,7 +199,7 @@ export default function RosterPage() {
         <button
           type="button"
           onClick={requestAdd}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-auto"
         >
           <Plus className="size-4" aria-hidden="true" />
           {tab === "players" ? "Add player" : "Add staff"}
@@ -545,7 +546,7 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
               onClick={() => setPositionFilter("All")}
               aria-pressed={positionFilter === "All"}
               className={cn(
-                "inline-flex h-[34px] flex-none items-center rounded-full px-3 font-display text-xs font-semibold transition-colors",
+                "inline-flex min-h-11 flex-none items-center rounded-full px-3.5 font-body text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 positionFilter === "All"
                   ? "bg-foreground text-background"
                   : "border border-border bg-card text-muted-foreground hover:bg-accent",
@@ -560,7 +561,7 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
                 onClick={() => setPositionFilter(pos)}
                 aria-pressed={positionFilter === pos}
                 className={cn(
-                  "inline-flex h-[34px] flex-none items-center rounded-full px-3 font-display text-xs font-semibold transition-colors",
+                  "inline-flex min-h-11 flex-none items-center rounded-full px-3.5 font-body text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   positionFilter === pos
                     ? "bg-foreground text-background"
                     : "border border-border bg-card text-muted-foreground hover:bg-accent",
@@ -576,7 +577,7 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               aria-label="Filter players by status"
-              className="w-auto min-w-[9.5rem] py-2 text-sm"
+              className="min-h-11 w-auto min-w-[9.5rem] rounded-xl py-2 text-base"
             >
               <NativeSelectOption value="all">All players</NativeSelectOption>
               <NativeSelectOption value="active">Active only</NativeSelectOption>
@@ -619,7 +620,7 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
       <AdminSidePanel
         open={panelOpen}
         onClose={closePanel}
-        title={editingId ? `Edit ${editForm.name || "Player"}` : "New Player"}
+        title={editingId ? `Edit ${editForm.name || "player"}` : "New player"}
         description={editingId ? `#${editForm.number || "—"} · ${editForm.position}` : "Add a player to the roster."}
         activeKey={panelKey}
         direction={panelDirection}
@@ -739,29 +740,33 @@ function PlayerPositionGroup({
   startEdit: (p: Player) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const groupId = useId();
   const { clubLogoUrl } = useClubBranding();
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border">
+    <div className={cn("rounded-xl overflow-hidden border border-border", guided.listGroup)}>
       {/* Position header */}
       <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={groupId}
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between bg-card px-4 py-3 transition-colors hover:bg-accent/60"
+        className="flex min-h-14 w-full items-center justify-between bg-card px-5 py-3.5 text-left transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
-        <span className="font-display font-black uppercase tracking-widest text-foreground/90" style={{ fontSize: "1.15rem" }}>
+        <span className="font-body text-base font-semibold text-foreground">
           {pos}s{" "}
-          <span className="font-normal text-muted-foreground/60">{group.length}</span>
+          <span className="ml-1.5 text-sm font-normal text-muted-foreground">{group.length}</span>
         </span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-          className="text-muted-foreground/60"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}>
+          className={cn("text-muted-foreground/60", guided.positionCaret)}
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {/* Animated content */}
-      <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr", transition: "grid-template-rows 0.25s ease" }}>
-        <div style={{ overflow: "hidden" }}>
+      <div className={guided.positionContent} style={{ gridTemplateRows: open ? "1fr" : "0fr" }}>
+        <div id={groupId} inert={!open} aria-hidden={!open} style={{ overflow: "hidden" }}>
           <div className="flex flex-col">
             {group.map((p) => {
               const isEditing = editingId === p.id;
@@ -775,14 +780,14 @@ function PlayerPositionGroup({
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); startEdit(p); }
                   }}
                   className={cn(
-                    "flex cursor-pointer items-center gap-3 border-t border-border/40 px-4 py-2.5 transition-colors",
+                    "flex min-h-[72px] cursor-pointer items-center gap-3 border-t border-border/60 px-4 py-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                     p.active ? "bg-card hover:bg-accent/40" : "bg-background opacity-60 hover:opacity-80",
                     isEditing && "bg-accent/50 ring-1 ring-inset ring-primary/40",
                   )}>
                   <span className="w-7 flex-none text-right font-display text-sm font-bold text-muted-foreground">
                     {String(p.number).padStart(2, "0")}
                   </span>
-                  <div className="relative h-9 w-9 flex-none overflow-hidden rounded-full bg-muted">
+                  <div className="relative size-10 flex-none overflow-hidden rounded-full bg-muted">
                     <ResilientNativeImage
                       src={getRosterImageSrc(p.photo_url, clubLogoUrl)}
                       alt={p.name}
@@ -790,7 +795,7 @@ function PlayerPositionGroup({
                       className={`w-full h-full ${isRosterPlaceholderLogo(p.photo_url) ? "object-contain" : "object-cover"}`}
                     />
                   </div>
-                  <span className="min-w-0 flex-1 truncate font-display text-sm font-bold text-foreground">
+                  <span className="min-w-0 flex-1 break-words font-body text-[15px] font-semibold leading-5 text-foreground">
                     {p.name}
                   </span>
                   <span className="hidden w-32 flex-none truncate font-body text-xs text-muted-foreground sm:block">
@@ -802,13 +807,13 @@ function PlayerPositionGroup({
                       <span className="hidden sm:inline">Active</span>
                     </span>
                   ) : (
-                    <span className="inline-flex flex-none rounded bg-muted/60 px-1.5 py-0.5 font-display text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span className="inline-flex flex-none rounded bg-muted/60 px-1.5 py-0.5 font-body text-xs font-medium text-muted-foreground">
                       Inactive
                     </span>
                   )}
                   <span
                     className={cn(
-                      "w-14 flex-none text-right font-display text-xs font-semibold uppercase tracking-wide",
+                      "w-14 flex-none text-right font-body text-sm font-medium",
                       isEditing ? "text-primary" : "text-muted-foreground",
                     )}
                   >
@@ -1038,7 +1043,7 @@ function StaffTab({ addRequest }: { addRequest: number }) {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
             aria-label="Filter staff by status"
-            className="w-auto min-w-[9.5rem] py-2 text-sm"
+            className="min-h-11 w-auto min-w-[9.5rem] rounded-xl py-2 text-base"
           >
             <NativeSelectOption value="all">All staff</NativeSelectOption>
             <NativeSelectOption value="active">Active only</NativeSelectOption>
@@ -1060,9 +1065,9 @@ function StaffTab({ addRequest }: { addRequest: number }) {
           <p className="font-body text-sm text-muted-foreground">Try a different name, role, or status.</p>
         </AdminPanel>
       ) : (
-        <div className="flex flex-col overflow-hidden rounded-xl border border-border">
+        <div className={cn("flex flex-col overflow-hidden rounded-xl border border-border", guided.listGroup)}>
           <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
-            <span className="font-display text-xs font-bold uppercase tracking-[0.14em] text-foreground">Staff</span>
+            <span className="font-body text-sm font-semibold text-foreground">Staff</span>
             <span className="font-body text-xs text-muted-foreground">{filtered.length}</span>
             <span className="ml-auto font-body text-xs text-muted-foreground">Sorted by name</span>
           </div>
@@ -1078,12 +1083,12 @@ function StaffTab({ addRequest }: { addRequest: number }) {
                   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEditPanel(s); }
                 }}
                 className={cn(
-                  "flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors",
+                  "flex min-h-[72px] cursor-pointer items-center gap-3 px-4 py-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                   index > 0 && "border-t border-border/40",
                   s.active ? "bg-card hover:bg-accent/40" : "bg-background opacity-60 hover:opacity-80",
                   isEditing && "bg-accent/50 ring-1 ring-inset ring-primary/40",
                 )}>
-                <div className="relative h-9 w-9 flex-none overflow-hidden rounded-full bg-muted">
+                <div className="relative size-10 flex-none overflow-hidden rounded-full bg-muted">
                   <ResilientNativeImage
                     src={getRosterImageSrc(s.photo_url, clubLogoUrl)}
                     alt={s.name}
@@ -1091,8 +1096,9 @@ function StaffTab({ addRequest }: { addRequest: number }) {
                     className={`w-full h-full ${isRosterPlaceholderLogo(s.photo_url) ? "object-contain" : "object-cover"}`}
                   />
                 </div>
-                <span className="min-w-0 flex-1 truncate font-display text-sm font-bold text-foreground">
+                <span className="min-w-0 flex-1 break-words font-body text-[15px] font-semibold leading-5 text-foreground">
                   {s.name}
+                  <span className="mt-1 block text-sm font-normal text-muted-foreground sm:hidden">{s.role}</span>
                 </span>
                 <span className="hidden w-44 flex-none truncate font-body text-xs text-muted-foreground sm:block">
                   {s.role}
@@ -1103,13 +1109,13 @@ function StaffTab({ addRequest }: { addRequest: number }) {
                     <span className="hidden sm:inline">Active</span>
                   </span>
                 ) : (
-                  <span className="inline-flex flex-none rounded bg-muted/60 px-1.5 py-0.5 font-display text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="inline-flex flex-none rounded bg-muted/60 px-1.5 py-0.5 font-body text-xs font-medium text-muted-foreground">
                     Inactive
                   </span>
                 )}
                 <span
                   className={cn(
-                    "w-14 flex-none text-right font-display text-xs font-semibold uppercase tracking-wide",
+                    "w-14 flex-none text-right font-body text-sm font-medium",
                     isEditing ? "text-primary" : "text-muted-foreground",
                   )}
                 >
@@ -1124,7 +1130,7 @@ function StaffTab({ addRequest }: { addRequest: number }) {
       <AdminSidePanel
         open={panelOpen}
         onClose={closePanel}
-        title={editingId ? `Edit ${editForm.name || "Staff Member"}` : "New Staff Member"}
+        title={editingId ? `Edit ${editForm.name || "staff member"}` : "New staff member"}
         description={editingId ? editForm.role : "Add a staff member to the roster."}
         activeKey={panelKey}
         direction={panelDirection}
@@ -1136,14 +1142,14 @@ function StaffTab({ addRequest }: { addRequest: number }) {
           onPhotoChange={panelOnPhotoChange}
         />
         {error && <p className="mt-4 font-body text-sm text-destructive">Error: {error}</p>}
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           {editingStaff && (
             <button
               type="button"
               onClick={handlePanelToggleActive}
               disabled={saving}
               className={cn(
-                "rounded-lg border px-4 py-2 font-display text-xs font-black uppercase tracking-widest disabled:opacity-60",
+                "min-h-11 rounded-xl border px-4 py-2.5 font-body text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
                 editingStaff.active
                   ? "border-destructive/20 bg-destructive/10 text-destructive/80 hover:bg-destructive/20"
                   : "border-success/20 bg-success/10 text-success/80 hover:bg-success/20",
@@ -1152,15 +1158,15 @@ function StaffTab({ addRequest }: { addRequest: number }) {
               {editingStaff.active ? "Deactivate" : "Activate"}
             </button>
           )}
-          <div className="ml-auto flex gap-3">
+          <div className="ml-auto flex flex-wrap gap-3">
             <button onClick={closePanel}
-              className="px-6 py-2 rounded-lg font-display font-black uppercase tracking-widest text-xs border border-border bg-card text-muted-foreground hover:bg-accent">
+              className="min-h-11 rounded-xl border border-border bg-card px-4 py-2.5 font-body text-sm font-medium text-muted-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               Cancel
             </button>
             <button onClick={editingId ? handleSaveEdit : handleAdd} disabled={saving}
-              className="rounded-lg bg-primary px-6 py-2 font-display text-xs font-black uppercase tracking-widest text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
+              className="min-h-11 rounded-xl bg-primary px-4 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60">
               {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : editingId ? "Save" : "Save Staff Member"}
+              {saving ? "Saving…" : editingId ? "Save" : "Save staff member"}
             </button>
           </div>
         </div>
@@ -1252,14 +1258,14 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
       />
       <div className="mb-3 h-px bg-border" />
       <div className="flex items-center justify-between mb-3">
-        <label className="font-display text-xs tracking-widest uppercase text-muted-foreground">
+        <label className="font-body text-sm font-medium text-muted-foreground">
           Season Stats
         </label>
         {/* Season picker */}
         <NativeSelect
           value={selectedId}
           onChange={(e) => handleSeasonChange(e.target.value)}
-          className="px-2 py-1 pr-8 text-xs"
+          className="min-h-11 px-3 py-2 pr-8 text-base"
         >
           {seasons.map((s) => (
             <NativeSelectOption key={s.id} value={s.id}>
@@ -1305,10 +1311,10 @@ function SeasonStatsPanel({ playerId, position }: { playerId: string; position: 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-lg bg-primary px-5 py-2 font-display text-xs font-black uppercase tracking-widest text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              className="min-h-11 rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
             >
               {saving && <AdminLoadingDots className="mr-2" />}
-              {saving ? "Saving…" : "Save Stats"}
+              {saving ? "Saving…" : "Save stats"}
             </button>
           </div>
         </>
@@ -1327,10 +1333,11 @@ function StatField({
 }) {
   return (
     <div>
-      <label className="block font-display text-xs tracking-widest uppercase mb-1 text-muted-foreground" style={{ fontSize: "0.6rem" }}>
+      <label htmlFor={`roster-stat-${field}`} className="mb-2 block font-body text-sm font-medium text-foreground">
         {label}
       </label>
       <input
+        id={`roster-stat-${field}`}
         type="number"
         min={0}
         value={stats[field] ?? 0}
@@ -1402,7 +1409,7 @@ function ActionPhotosPanel({ playerId }: { playerId: string }) {
   }
 
   return (
-    <section className="space-y-4" aria-labelledby="action-photos-heading">
+    <section className={cn("space-y-4", guided.formSection)} aria-labelledby="action-photos-heading">
       <FormSectionHeading id="action-photos-heading" title="Action photos" />
 
       {error && <p className="font-body text-xs mb-2 text-destructive">{error}</p>}
@@ -1492,7 +1499,7 @@ function PlayerFormFields({
 
   return (
     <div className="space-y-8">
-      <section className="space-y-4" aria-labelledby="basic-information-heading">
+      <section className={cn("space-y-4", guided.formSection)} aria-labelledby="basic-information-heading">
         <div>
           <FormSectionHeading id="basic-information-heading" title="Basic information" />
           <p className="mt-1.5 font-body text-xs text-muted-foreground">Required fields are marked with *.</p>
@@ -1542,7 +1549,7 @@ function PlayerFormFields({
         </PlayerField>
       </section>
 
-      <section className="space-y-4" aria-labelledby="player-details-heading">
+      <section className={cn("space-y-4", guided.formSection)} aria-labelledby="player-details-heading">
         <FormSectionHeading id="player-details-heading" title="Player details" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <PlayerField id="player-height" label="Height" required>
@@ -1601,7 +1608,7 @@ function PlayerFormFields({
         </button>
       </section>
 
-      <section className="space-y-4" aria-labelledby="player-background-heading">
+      <section className={cn("space-y-4", guided.formSection)} aria-labelledby="player-background-heading">
         <FormSectionHeading id="player-background-heading" title="Background" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <PlayerField id="player-school" label="School">
@@ -1685,30 +1692,31 @@ function StaffFormFields({
 
       {/* Fields */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[104px_minmax(0,1fr)]">
-        <Field label="Initials" required>
-          <input type="text" placeholder="e.g. JS" maxLength={3} value={form.initials}
+        <Field id="staff-initials" label="Initials" required>
+          <input id="staff-initials" type="text" placeholder="e.g. JS" maxLength={3} value={form.initials}
             onChange={(e) => set("initials", e.target.value.toUpperCase())} className={ADMIN_INPUT_CLASS} />
         </Field>
-        <Field label="Name" required>
-          <input type="text" placeholder="e.g. John Smith" value={form.name}
+        <Field id="staff-name" label="Name" required>
+          <input id="staff-name" type="text" placeholder="e.g. John Smith" value={form.name}
             onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Role" required>
-          <input type="text" placeholder="e.g. Head Coach" value={form.role}
+        <Field id="staff-role" label="Role" required>
+          <input id="staff-role" type="text" placeholder="e.g. Head Coach" value={form.role}
             onChange={(e) => set("role", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
-        <Field label="Hometown" required>
-          <input type="text" placeholder="e.g. Portland, OR" value={form.hometown}
+        <Field id="staff-hometown" label="Hometown" required>
+          <input id="staff-hometown" type="text" placeholder="e.g. Portland, OR" value={form.hometown}
             onChange={(e) => set("hometown", e.target.value)} className={ADMIN_INPUT_CLASS} />
         </Field>
       </div>
-      <Field label="Nationality">
-        <NationalitySelect value={form.nationality} onChange={(v) => set("nationality", v)} />
+      <Field id="staff-nationality" label="Nationality">
+        <NationalitySelect id="staff-nationality" value={form.nationality} onChange={(v) => set("nationality", v)} />
       </Field>
-      <Field label="Bio (optional)">
+      <Field id="staff-bio" label="Bio (optional)">
         <Textarea
+          id="staff-bio"
           placeholder="Short bio about this staff member…"
           value={form.bio}
           onChange={(e) => set("bio", e.target.value)}
@@ -1793,7 +1801,7 @@ function NationalitySelect({
           a clipped, height-capped panel, so the search header stays pinned
           while only the options scroll. */}
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 flex max-h-64 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/40">
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 flex max-h-64 flex-col overflow-hidden rounded-xl border border-border bg-card shadow-xl">
           {/* Search header */}
           <div className="flex-shrink-0 border-b border-border bg-card p-2">
             <div className="flex items-center gap-2 rounded-lg border border-input bg-input/30 px-2.5 py-2 focus-within:border-ring focus-within:bg-input/50">
@@ -1837,7 +1845,7 @@ function NationalitySelect({
                     aria-selected={isSelected}
                     onClick={() => { onChange(n.label); setOpen(false); setSearch(""); }}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+                      "flex min-h-11 w-full items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-left transition-colors",
                       isSelected ? "bg-primary/10" : "hover:bg-accent",
                     )}
                   >
@@ -1921,10 +1929,10 @@ function PlayerField({
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ id, label, required, children }: { id: string; label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className={ADMIN_LABEL_CLASS}>
+      <label htmlFor={id} className={ADMIN_LABEL_CLASS}>
         {label}{required && <span className="ml-1 text-destructive">*</span>}
       </label>
       {children}
@@ -1936,7 +1944,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 function FormSectionHeading({ id, title }: { id?: string; title: string }) {
   return (
     <div className="flex items-center gap-3">
-      <h3 id={id} className="font-display text-sm font-semibold normal-case text-foreground">
+      <h3 id={id} className="font-body text-base font-semibold normal-case text-foreground">
         {title}
       </h3>
       <span className="h-px flex-1 bg-border" aria-hidden="true" />

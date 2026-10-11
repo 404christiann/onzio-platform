@@ -46,37 +46,37 @@
    preview panels continue to opt into the dark token set below. */
 .admin-theme[data-admin-theme="light"],
 .admin-theme[data-admin-theme="light"] > .dark {
-  --background: 220 33% 98%;
-  --foreground: 222 47% 11%;
+  --background: 240 11% 97%;
+  --foreground: 220 9% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 220 9% 14%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --primary: 231 74% 59%;
+  --popover-foreground: 220 9% 14%;
+  --primary: 211 100% 42%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 23% 96%;
-  --secondary-foreground: 222 39% 17%;
-  --muted: 220 23% 96%;
-  --muted-foreground: 220 9% 46%;
-  --accent: 220 18% 94%;
-  --accent-foreground: 222 39% 17%;
+  --secondary: 240 8% 94%;
+  --secondary-foreground: 220 9% 18%;
+  --muted: 240 8% 94%;
+  --muted-foreground: 220 5% 40%;
+  --accent: 220 10% 92%;
+  --accent-foreground: 220 9% 18%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --brand: 231 74% 59%;
+  --brand: 211 100% 42%;
   --brand-foreground: 0 0% 100%;
   --success: 158 64% 36%;
   --success-foreground: 0 0% 100%;
   --warning: 35 92% 44%;
   --warning-foreground: 0 0% 100%;
-  --border: 220 18% 88%;
-  --input: 220 18% 88%;
-  --ring: 231 74% 59%;
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 222 47% 11%;
-  --sidebar-border: 220 18% 88%;
-  --sidebar-accent: 220 23% 95%;
-  --sidebar-accent-foreground: 222 39% 17%;
-  --sidebar-ring: 231 74% 59%;
+  --border: 220 10% 88%;
+  --input: 220 10% 88%;
+  --ring: 211 100% 42%;
+  --sidebar: 220 14% 94%;
+  --sidebar-foreground: 220 9% 14%;
+  --sidebar-border: 220 10% 88%;
+  --sidebar-accent: 220 10% 90%;
+  --sidebar-accent-foreground: 220 9% 18%;
+  --sidebar-ring: 211 100% 42%;
   color-scheme: light;
 }
 
@@ -119,6 +119,33 @@ main.dark {
   --sidebar-accent-foreground: 210 40% 98%;
   --sidebar-ring: 230 86% 70%;
   color-scheme: dark;
+}
+
+/* Guided palette for protected dark mode; login keeps its existing values. */
+.admin-theme[data-admin-theme="dark"] {
+  --background: 240 5% 7%;
+  --foreground: 220 10% 94%;
+  --card: 240 4% 12%;
+  --card-foreground: 220 10% 94%;
+  --popover: 240 4% 14%;
+  --popover-foreground: 220 10% 94%;
+  --primary: 211 100% 70%;
+  --primary-foreground: 220 20% 10%;
+  --brand: 211 100% 70%;
+  --brand-foreground: 220 20% 10%;
+  --secondary: 240 4% 17%;
+  --muted: 240 4% 17%;
+  --muted-foreground: 220 6% 68%;
+  --accent: 240 4% 20%;
+  --border: 240 4% 23%;
+  --input: 240 4% 25%;
+  --ring: 211 100% 70%;
+  --sidebar: 240 4% 10%;
+  --sidebar-foreground: 220 10% 94%;
+  --sidebar-border: 240 4% 21%;
+  --sidebar-accent: 240 4% 20%;
+  --sidebar-accent-foreground: 220 10% 94%;
+  --sidebar-ring: 211 100% 70%;
 }
 
 .admin-theme {

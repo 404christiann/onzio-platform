@@ -1,5 +1,6 @@
 "use client";
 
+import guided from "@/components/admin/AdminGuided.module.css";
 import Image from "@/components/ResilientImage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
@@ -62,7 +63,7 @@ function ScheduleListSkeleton() {
   return (
     <AdminSkeletonRegion className="flex flex-col gap-4" label="Loading schedule">
       {Array.from({ length: 2 }, (_, groupIndex) => (
-        <div key={groupIndex} className="overflow-hidden rounded-xl border border-border bg-card">
+        <div key={groupIndex} className={cn("overflow-hidden rounded-xl border border-border bg-card", guided.listGroup)}>
           <div className="border-b border-border bg-muted/40 px-4 py-2.5">
             <Skeleton className="h-3.5 w-24" />
           </div>
@@ -548,15 +549,15 @@ export default function SchedulePage() {
             loading={seasonsLoading}
             value={selectedSeasonId}
             onChange={setSelectedSeasonId}
-            label="View Season"
+            label="View season"
             disabled={seasonsLoading || saving}
           />
           <button
             onClick={openAddPanel}
             disabled={!matchesReady || seasonsLoading || saving || !selectedSeasonId}
-            className="flex-shrink-0 rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-50"
+            className="min-h-11 flex-shrink-0 rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
-            + Add Match
+            + Add match
           </button>
         </div>}
       />
@@ -604,7 +605,7 @@ export default function SchedulePage() {
                 aria-pressed={resultFilter === value}
                 disabled={loading || seasonsLoading}
                 className={cn(
-                  "min-h-9 flex-none rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "min-h-11 flex-none rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   resultFilter === value
                     ? "bg-card text-primary shadow-sm"
                     : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
@@ -643,9 +644,9 @@ export default function SchedulePage() {
       ) : (
         <div className="flex flex-col gap-4">
           {monthGroups.map(([month, monthMatches]) => (
-            <div key={month} className="overflow-hidden rounded-xl border border-border bg-card">
+            <div key={month} className={cn("overflow-hidden rounded-xl border border-border bg-card", guided.listGroup)}>
               <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
-                <span className="font-display text-xs font-black uppercase tracking-widest text-foreground">
+                <span className="font-body text-sm font-semibold text-foreground">
                   {month}
                 </span>
                 <span className="font-body text-xs text-muted-foreground">
@@ -676,7 +677,7 @@ export default function SchedulePage() {
                     <button
                       onClick={() => openEditPanel(m)}
                       className={cn(
-                        "flex-none rounded-lg px-3 py-1.5 font-body text-xs font-medium transition-colors",
+                        "min-h-11 flex-none rounded-xl px-3 py-2.5 font-body text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         isEditing
                           ? "bg-primary text-primary-foreground"
                           : "border border-border bg-card text-foreground hover:bg-accent",
@@ -705,16 +706,16 @@ export default function SchedulePage() {
                       )}
                     >
                       {/* Mobile: stacked card */}
-                      <div className="flex items-center gap-3 px-4 py-3 sm:hidden">
+                      <div className="flex items-center gap-3 px-4 py-4 sm:hidden">
                         <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={36} />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate font-display text-sm font-black uppercase text-foreground">
+                            <span className="break-words font-body text-[15px] font-semibold leading-5 text-foreground">
                               {m.home ? "vs" : "@"} {m.opponent}
                             </span>
                             <span
                               className={cn(
-                                "flex-none rounded px-1.5 py-0.5 font-display text-[0.65rem] font-bold uppercase tracking-wider",
+                                "flex-none rounded-full px-2 py-0.5 font-body text-xs font-medium",
                                 m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
                               )}
                             >
@@ -732,7 +733,7 @@ export default function SchedulePage() {
                       </div>
 
                       {/* Desktop: table row — date/time, crest, opponent, result, venue, actions */}
-                      <div className="hidden grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] items-center gap-4 px-4 py-3 sm:grid">
+                      <div className="hidden grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] items-center gap-4 px-4 py-4 sm:grid">
                         <div className="flex flex-col gap-0.5">
                           <span className={cn("font-display text-sm font-semibold", isEditing ? "text-primary" : "text-foreground")}>
                             {formatRowDate(m.date)}
@@ -742,12 +743,12 @@ export default function SchedulePage() {
                         <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={34} />
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate font-display text-sm font-black uppercase text-foreground">
+                            <span className="break-words font-body text-[15px] font-semibold leading-5 text-foreground">
                               {m.home ? "vs" : "@"} {m.opponent}
                             </span>
                             <span
                               className={cn(
-                                "flex-none rounded px-1.5 py-0.5 font-display text-[0.65rem] font-bold uppercase tracking-wider",
+                                "flex-none rounded-full px-2 py-0.5 font-body text-xs font-medium",
                                 m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
                               )}
                             >
@@ -774,7 +775,7 @@ export default function SchedulePage() {
       <AdminSidePanel
         open={panelOpen}
         onClose={closePanel}
-        title={editingId ? `${editForm.home ? "vs" : "@"} ${editForm.opponent || "Opponent"}` : "New Match"}
+        title={editingId ? `${editForm.home ? "vs" : "@"} ${editForm.opponent || "Opponent"}` : "New match"}
         description={
           editingId
             ? [formatShortDate(editForm.date), formatTime12h(editForm.time)].filter(Boolean).join(" · ") || "No date"
@@ -942,7 +943,7 @@ function MatchForm({
               type="time"
               value={form.time}
               onChange={(e) => set("time", e.target.value)}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11 min-w-0 max-w-full")}
               required
             />
           </Field>
@@ -1358,7 +1359,7 @@ function Field({
       </label>
       {children}
       {help && (
-        <p id={`${id}-help`} className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground">
+        <p id={`${id}-help`} className="mt-1.5 font-body text-sm leading-relaxed text-muted-foreground">
           {help}
         </p>
       )}
@@ -1378,16 +1379,16 @@ function MatchFormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4" aria-labelledby={id}>
+    <section className={cn("space-y-4", guided.formSection)} aria-labelledby={id}>
       <div>
         <div className="flex items-center gap-3">
-          <h3 id={id} className="font-display text-sm font-semibold normal-case text-foreground">
+          <h3 id={id} className="font-body text-base font-semibold normal-case text-foreground">
             {title}
           </h3>
           <span className="h-px flex-1 bg-border" aria-hidden="true" />
         </div>
         {description && (
-          <p className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1.5 font-body text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         )}

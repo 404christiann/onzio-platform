@@ -25,7 +25,7 @@ function PaymentsSkeleton() {
   return (
     <AdminPage className="max-w-4xl">
       <AdminPageHeader title="Payments" description="Subscription and billing." />
-      <section className="rounded-xl border border-border bg-card p-5 text-card-foreground sm:p-7">
+      <section className="rounded-2xl border border-border bg-card p-5 text-card-foreground sm:p-7">
         <AdminSkeletonRegion label="Loading subscription details" className="space-y-6">
           <div className="flex items-center justify-between gap-4">
             <Skeleton className="h-6 w-36" />
@@ -37,7 +37,7 @@ function PaymentsSkeleton() {
             <Skeleton className="h-4 w-56 max-w-full" />
           </div>
           <div className="border-t border-border pt-5">
-            <Skeleton className="h-10 w-full rounded-lg sm:w-44" />
+            <Skeleton className="h-10 w-full rounded-xl sm:w-44" />
           </div>
         </AdminSkeletonRegion>
       </section>

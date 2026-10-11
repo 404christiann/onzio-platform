@@ -490,7 +490,7 @@ export default function AdminAboutPage() {
                 type="button"
                 onClick={() => void handleSave()}
                 disabled={saveDisabled}
-                className="rounded-lg bg-primary px-5 py-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-lg bg-primary px-5 py-3 font-body text-sm font-semibold normal-case tracking-normal text-primary-foreground transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {(saving || uploading) && <AdminLoadingDots className="mr-2" />}
                 {saving ? "Saving..." : uploading ? "Uploading..." : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}
@@ -562,11 +562,11 @@ export default function AdminAboutPage() {
                       className={ADMIN_INPUT_CLASS}
                     />
                   </Field>
-                  <button type="button" className="aep-collection-button" disabled={aboutDraft.values.length >= 24} onClick={() => setAboutField("values", [...aboutDraft.values, newAboutValue()], "values")}>Add value</button>
+                  <button type="button" className="min-h-11 aep-collection-button" disabled={aboutDraft.values.length >= 24} onClick={() => setAboutField("values", [...aboutDraft.values, newAboutValue()], "values")}>Add value</button>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {aboutDraft.values.map((value, index) => (
                       <div key={index} className="rounded-lg border border-border p-3">
-                        <button type="button" className="aep-collection-button" onClick={() => setAboutField("values", removeCollectionItem(aboutDraft.values, index), "values")}>Remove value {index + 1}</button>
+                        <button type="button" className="min-h-11 aep-collection-button" onClick={() => setAboutField("values", removeCollectionItem(aboutDraft.values, index), "values")}>Remove value {index + 1}</button>
                         <Field label={`Value ${index + 1} Title`}>
                           <input
                             value={value.title}
@@ -655,10 +655,10 @@ export default function AdminAboutPage() {
 
               {activeSection === "features" && (
                 <div className="space-y-3">
-                  <button type="button" className="aep-collection-button" disabled={logoDraft.features.length >= 24} onClick={() => {
+                  <button type="button" className="min-h-11 aep-collection-button" disabled={logoDraft.features.length >= 24} onClick={() => {
                     setSelectedLogoFeature(logoDraft.features.length); setLogoDraft(current => ({ ...current, features: [...current.features, newLogoFeature()] })); markDirty("features");
                   }}>Add crest feature</button>
-                  {logoDraft.features[selectedLogoFeature] && <button type="button" className="aep-collection-button" onClick={() => {
+                  {logoDraft.features[selectedLogoFeature] && <button type="button" className="min-h-11 aep-collection-button" onClick={() => {
                     const removed = logoDraft.features[selectedLogoFeature];
                     queueReplacedUrl(removed.patch_url, "logo");
                     queueReplacedUrl(removed.icon_url, "logo");
@@ -673,7 +673,7 @@ export default function AdminAboutPage() {
                           type="button"
                           onClick={() => setSelectedLogoFeature(index)}
                           disabled={saving || uploading}
-                          className={`font-display rounded-md border px-2 py-2 text-[0.65rem] uppercase tracking-widest transition-colors ${
+                          className={`min-h-11 font-body rounded-md border px-2 py-2 text-sm normal-case tracking-normal transition-colors ${
                             selected
                               ? "border-foreground bg-foreground text-background"
                               : "border-border bg-card text-muted-foreground"
@@ -751,13 +751,13 @@ export default function AdminAboutPage() {
 
               {activeSection === "colors" && (
                 <div className="rounded-lg border border-border p-3">
-                  <p className="font-display text-xs uppercase tracking-widest text-muted-foreground">
+                  <p className="font-body text-xs normal-case tracking-normal text-muted-foreground">
                     Brand Color Cards
                   </p>
                   <p className="font-body mb-3 text-xs text-muted-foreground">
                     Add up to six color cards below the club map.
                   </p>
-                  <button type="button" className="aep-collection-button" disabled={logoDraft.color_cards.length >= 6} onClick={() => {
+                  <button type="button" className="min-h-11 aep-collection-button" disabled={logoDraft.color_cards.length >= 6} onClick={() => {
                     setSelectedLogoColor(logoDraft.color_cards.length); setLogoDraft(current => ({ ...current, color_cards: [...current.color_cards, newLogoColorCard()] })); markDirty("colors");
                   }}>Add color card</button>
                   <div className="aep-color-choices">{logoDraft.color_cards.map((card, index) => <button type="button" key={index} aria-pressed={index === selectedLogoColor} onClick={() => setSelectedLogoColor(index)}>{card.label || `Color ${index + 1}`}</button>)}</div>
@@ -765,7 +765,7 @@ export default function AdminAboutPage() {
                     <Field label="Color label"><input className={ADMIN_INPUT_CLASS} value={logoDraft.color_cards[selectedLogoColor].label} onChange={event => {
                       setLogoDraft(current => ({ ...current, color_cards: current.color_cards.map((card, index) => index === selectedLogoColor ? { ...card, label: event.target.value } : card) })); markDirty("colors");
                     }} /></Field>
-                    <button type="button" className="aep-collection-button" onClick={() => {
+                    <button type="button" className="min-h-11 aep-collection-button" onClick={() => {
                       queueReplacedUrl(logoDraft.color_cards[selectedLogoColor].image_url, "logo");
                       setLogoDraft(current => ({ ...current, color_cards: removeCollectionItem(current.color_cards, selectedLogoColor) })); setSelectedLogoColor(current => Math.max(0, current - 1)); markDirty("colors");
                     }}>Remove color card</button>
@@ -793,8 +793,8 @@ export default function AdminAboutPage() {
                 Error: {error}
               </p>
             )}
-            {conflictedPages.has(pageChoice) && <button type="button" className="aep-recovery" onClick={() => void reloadLatestPage()} disabled={saving}>Reload latest page</button>}
-            {cleanupOperations[pageChoice] && <button type="button" className="aep-recovery" onClick={() => void retryCleanup()} disabled={saving}>Retry image cleanup</button>}
+            {conflictedPages.has(pageChoice) && <button type="button" className="min-h-11 aep-recovery" onClick={() => void reloadLatestPage()} disabled={saving}>Reload latest page</button>}
+            {cleanupOperations[pageChoice] && <button type="button" className="min-h-11 aep-recovery" onClick={() => void retryCleanup()} disabled={saving}>Retry image cleanup</button>}
             <div className="aep-inspector-save"><button type="button" onClick={() => void handleSave()} disabled={saveDisabled}>{saving ? "Saving…" : pendingOperations[pageChoice] ? "Retry exact save" : `Save ${isLogoSection ? "Club Logo" : "About"}`}</button></div>
           </PageEditorInspector>
         </div>
@@ -846,7 +846,7 @@ function ImageControl({
 }) {
   return (
     <div>
-      <p className="font-display mb-1 text-xs uppercase tracking-widest text-muted-foreground">
+      <p className="font-body mb-1 text-xs normal-case tracking-normal text-muted-foreground">
         {label}
       </p>
       <div className={compact
@@ -861,7 +861,7 @@ function ImageControl({
             <Image src={url} alt={label} fill sizes={compact ? "210px" : "84px"} className="object-contain" />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-muted">
-              <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+              <span className="font-body text-xs font-semibold normal-case tracking-normal text-muted-foreground">
                 No image
               </span>
             </div>
@@ -878,7 +878,7 @@ function ImageControl({
             type="button"
             onClick={onReplace}
             disabled={disabled}
-            className="font-display mt-2 w-full max-w-full rounded-md bg-card px-2 py-2 text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
+            className="min-h-11 font-body mt-2 w-full max-w-full rounded-md bg-card px-2 py-2 text-sm font-semibold normal-case tracking-normal text-muted-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
           >
             Replace
           </button>

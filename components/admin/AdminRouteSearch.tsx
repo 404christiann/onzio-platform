@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import guided from "@/components/admin/AdminGuided.module.css";
 import { Search, X } from "lucide-react";
 import {
   useCallback,
@@ -101,7 +102,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex h-10 w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-background px-3 text-left text-sm text-muted-foreground shadow-sm transition hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-11 w-full min-w-0 items-center gap-2 rounded-lg border border-border bg-background px-3 text-left text-sm text-muted-foreground shadow-sm transition hover:border-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Search className="size-4 shrink-0" aria-hidden="true" />
         <span className="min-w-0 flex-1 truncate">Search admin pages</span>
@@ -122,7 +123,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
             role="dialog"
             aria-modal="true"
             aria-label="Search admin pages"
-            className="fixed left-4 right-4 top-20 z-50 mx-auto max-w-xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl sm:absolute sm:left-0 sm:right-auto sm:top-12 sm:w-[28rem]"
+            className={"fixed left-4 right-4 top-20 z-50 mx-auto max-w-xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl sm:absolute sm:left-0 sm:right-auto sm:top-12 sm:w-[28rem] " + guided.routeDialog}
           >
             <div className="flex items-center gap-2 border-b border-border px-4">
               <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -137,12 +138,12 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
                 aria-expanded={open}
                 aria-controls="admin-route-search-results"
                 aria-activedescendant={results.length ? `admin-search-result-${activeIndex}` : undefined}
-                className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
               />
               <button
                 type="button"
                 onClick={() => close()}
-                className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Close route search"
               >
                 <X className="size-4" aria-hidden="true" />
@@ -152,7 +153,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
             <p className="sr-only" aria-live="polite">
               {results.length} {results.length === 1 ? "result" : "results"}
             </p>
-            <div id="admin-route-search-results" role="listbox" className="max-h-80 overflow-y-auto p-2">
+            <div id="admin-route-search-results" role="listbox" className={"max-h-80 overflow-y-auto p-2 " + guided.routeResults}>
               {results.length ? (
                 results.map((route, index) => (
                   <Link
@@ -163,7 +164,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
                     aria-selected={index === activeIndex}
                     onMouseEnter={() => setActiveIndex(index)}
                     onClick={() => close(false)}
-                    className="flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 text-sm outline-none transition hover:bg-accent aria-selected:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex min-h-11 items-center justify-between gap-4 rounded-lg px-3 py-2.5 text-sm outline-none transition hover:bg-accent aria-selected:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <span className="font-medium text-foreground">{route.label}</span>
                     {route.groupLabel ? (
