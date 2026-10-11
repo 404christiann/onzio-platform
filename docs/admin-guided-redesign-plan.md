@@ -383,13 +383,38 @@ completion without its listed evidence.
 | GUIDED-06 | in_progress | Registrations, Team Access, Payments presentation implemented; preserved signatures/currency/CSV/clipboard and authorization | Registrations/members/payments; PaymentStatusCard | 2 management cases; owner/admin4 cases44 assertions20screens; paid/refund filters, signatures, real copy/CSV; full authorization/database contracts | No membership mutation or provider action attempted; lifecycle/native acceptance remains | Verify remaining synthetic lifecycle/error/native states without live billing or membership actions |
 | GUIDED-07 | in_progress | All19 routes implemented; exact approved icons integrated; independent findings resolved; final local source/build/test evidence and comparison gallery delivered | Final source9a001c1; verification document; preview artifacts; this ledger; HANDOFF | Final187 files1783 tests; TypeScript/lint/build/diff; Guided14 distinct; native3 save/reload flows;152 matched captures; independent review | Physical touch/paste/VoiceOver; documented baseline loading/type/parity failures; unrecorded acceptance above | Review local gallery, complete remaining acceptance and obtain explicit release authorization before remote publication |
 
-| GUIDED-STATS-DIRECTIONS | complete (preview only) | Three isolated Apple-style Season Stats entry/display directions with distinct desktop/phone behavior; all existing stat fields represented; fictional in-memory demo | season-stats-directions.html; preview README; HANDOFF |18 browser cases at1440/390/320px in light/dark: fields/keepers, edit/review/save, unique IDs, initial Save bar, no overflow/errors, 44px phone button targets | Actual portal direction not selected; native acceptance not established | Christian selects A/B/C or a combination; scope the actual page change without altering manual totals or authoritative contracts |
+| GUIDED-STATS-DIRECTIONS | complete (preview only) | Three isolated Apple-style Season Stats entry/display directions with distinct desktop/phone behavior; all existing stat fields represented; fictional in-memory demo | season-stats-directions.html; preview README; HANDOFF |18 browser cases at1440/390/320px in light/dark: fields/keepers, edit/review/save, unique IDs, initial Save bar, no overflow/errors, 44px phone button targets | Christian approved A, Player workspace; prototype-only evidence does not establish application acceptance | Review the implemented Season/Match workspace and complete physical-phone acceptance |
 
 ## Approved implementation and delivery boundary
 
 Christian approved Guided and explicitly requested subagent implementation on
 2026-10-11. All 19 protected page owners are implemented on the isolated branch.
-Final application source is `9a001c1`, including approved icons and reviewed
-Safari Time/About scrolling fixes. The comparison HTML and verification document
+Original Guided source was `9a001c1`, including approved icons and reviewed
+Safari Time/About scrolling fixes. The selected Season and Match Player workspace
+iteration is implemented at `baa66c1`; its current evidence is recorded in
+`docs/admin-stats-workspace-verification.md`. The comparison HTML and verification document
 record the completed automated/local-native evidence and remaining acceptance.
 No Guided push, PR creation, remote merge, deployment or hosted mutation occurred.
+
+
+## Approved Player workspace iteration — 2026-10-11
+
+Christian selected direction A and requested Season Stats followed by Match Stats,
+with mobile usability as an acceptance condition. Scope is the two protected
+pages and shared, locally scoped stats workspace components. The desktop roster
+sits beside the selected player; phones use roster → player → All players. Keep
+all existing stat keys, numeric Season starts, boolean Match starts, cohort rules,
+loading/error barriers, manual Season totals and grouped save payloads. Context
+changes must offer Save & switch, Discard changes or Cancel when drafts exist.
+Search, player selection and collapsed groups must retain drafts.
+
+| Package | Status | Completed work | Files changed | Verification | Blockers/dependencies | Exact next step |
+| --- | --- | --- | --- | --- | --- | --- |
+| GUIDED-STATS-SEASON | in_progress (implementation complete) | Approved A implemented with grouped roster, phone detail/back, all 17 fields, draft tracking and guarded season switch | Season page; scoped stats components; browser regressions | Source baa66c1; full 1,783 passes; workspace 4/management 2/loading 5 cases; 20 layout cases; native Season keyboard Save/reload; exact fixture cleanup | Physical phone touch/paste and screen-reader release acceptance remains | Review actual-app gallery; finish physical phone walkthrough before publication |
+| GUIDED-STATS-MATCH | in_progress (implementation complete) | Shared workspace adapted; boolean starter switch, all 17 fields, guarded Match/Season switches and existing 300-minute bound | Match page; scoped stats components; browser regressions | Source baa66c1; full 1,783 passes; workspace 4/management 2/loading 5 cases; 20 layout cases; native Match keyboard Save/reload and false starter persistence | Physical phone touch/paste and screen-reader release acceptance remains | Review actual-app gallery; finish physical phone walkthrough before publication |
+
+Root owns serialized synthetic fixtures, regression tests, fresh build, native
+Safari evidence, documentation and local delivery. No backend/schema/auth or
+public-facing edits are in scope. Physical phone touch and screen-reader
+acceptance remains distinct from browser and Simulator evidence. No remote
+publication is authorized.

@@ -1,3 +1,28 @@
+## Current: Season and Match Stats Player workspace implemented — 2026-10-11
+
+Christian approved A and requested the same workspace for Match Stats. Both
+are implemented at source `baa66c1` on `codex/admin-guided-redesign` in the managed
+Guided worktree. Desktop has roster/editor together; phones have player list,
+full grouped fields, All players, persistent Save and guarded context changes.
+All stat/cohort/load/save/template contracts remain intact. Match minutes now
+show/enforce the existing 0–300 range; Season totals remain unrestricted/manual.
+
+Final TypeScript/lint/build pass; all 187 files / 1,783 tests pass; workspace 4,
+management 2 and loading 5 browser cases pass. Actual-app 20 editor/theme/size
+captures and 12 phone roster captures pass. Native iPhone 17/iOS 26.5 Simulator
+Season and Match numeric-keyboard Save/reload passed, including boolean starter
+persistence. Original fixture tables restored exactly. Independent review cleared.
+See `docs/admin-stats-workspace-verification.md` for exact evidence and limits.
+
+Review: `http://127.0.0.1:8768/stats-workspace-review.html` (actual-app captures,
+fictional review players). Existing `review.html` refreshes only the two stats
+routes against the same held fixture/baseline; other 17 route images retain prior
+9a001c1 evidence. Local build 3110, static preview 8768 and device proxy 3111 remain.
+Original checkout and concurrent OTP/icon work were untouched. No hosted changes,
+push, PR, merge or deployment occurred. Release packages remain in progress for
+physical touch/paste and phone screen-reader acceptance; next step is that
+walkthrough plus explicit publication authorization.
+
 ## 2026-10-11 — Season Stats direction prototypes; portal unchanged
 
 Christian requested three Apple-style alternatives for Season Stats data entry

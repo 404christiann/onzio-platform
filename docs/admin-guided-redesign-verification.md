@@ -1,3 +1,7 @@
+> Historical full Guided verification at 9a001c1. Season and Match Stats now use
+> the approved Player workspace at baa66c1; see
+> `docs/admin-stats-workspace-verification.md` for their current evidence.
+
 # Guided admin redesign — verification
 
 Prepared 2026-10-11. **Acceptance remains in progress.** Root must finish the gallery and final diff record before committing this document. Frozen-source implementation checks below are complete; physical-device acceptance remains outside the recorded evidence. Local implementation does not authorize publication or production changes.

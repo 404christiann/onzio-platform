@@ -74,8 +74,8 @@ unsaved changes inside a demo and uses separate synthetic season totals.
 Every original field remains represented: ten outfield totals and seven
 keeper totals, including playing time and discipline. Totals remain manual and
 separate from Match Stats. No match-derived totals, import, autosave or backend
-change is implied by these options. Application implementation waits for the
-selected direction and a scoped plan.
+change is implied by these options. Christian selected A; the actual Season and Match Stats pages are now
+implemented. The directions below remain the historical prototype evidence.
 
 Prototype acceptance: 18 desktop/phone/theme cases (3 options × 1440/390/320px ×
 light/dark), number entry, review and demo save, field/goalkeeper completeness,
@@ -83,3 +83,24 @@ unique input IDs, initially visible Save bar, zero document overflow/page errors
 and 44px phone button targets. Local evidence is ignored under
 `evidence/season-stats-options/`; report is `report.json`. This is browser layout
 and interaction evidence, not native software-keyboard/physical-phone acceptance.
+
+
+## Implemented Player workspace
+
+Open `http://127.0.0.1:8768/stats-workspace-review.html` for the actual application
+captures at source baa66c1: Season/Match, desktop/phone, light/dark, and phone
+list/editor. Fictional review players are clearly labeled; this page reviews
+screenshots and links to the local portal. It does not edit application data.
+
+Current evidence: complete 1,783 tests, TypeScript/lint/build, workspace 4,
+management 2 and loading 5 browser checks; 20 editor captures at 1440/390/320/1024
+and 844×390 in both themes, plus 12 mobile roster captures. Native Safari on
+Simulator verified numeric keyboard Save/reload for both pages and boolean
+starter persistence. All original local fixture snapshots were restored exactly.
+Physical phone touch/paste and screen-reader release acceptance remains open.
+See `docs/admin-stats-workspace-verification.md` for commands, paths and limits.
+
+The two stats routes in `review.html` were refreshed as eight Before/Guided pairs
+against baseline 41bfb00 with the same held synthetic review fixture. Other 17
+routes retain their prior 9a001c1 captures. Current stats evidence is under ignored
+`evidence/player-workspace/`; native images are in its `native/` directory.
