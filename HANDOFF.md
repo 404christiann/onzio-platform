@@ -1,3 +1,30 @@
+## Current: Simple switch implemented and verified locally — 2026-10-11
+
+Christian approved A and requested implementation followed by notification
+before the broader next step. Source `84f46fe` on `codex/admin-guided-redesign`
+combines Match/Season into one Stats navigation/search entry and shared page.
+Old Season Stats links redirect to `/admin/stats?view=season`. Season, player,
+phone detail/list and match selection survive tab switches; unsaved changes and
+failed saves remain protected. Season totals remain manual and independent.
+Editorial/access gates, all stat fields/cohorts/payloads and other navigation
+rules remain intact. No API/schema/auth/RLS/public-page changes.
+
+Independent review cleared after stale-baseline/navigation-lock/focus fixes.
+Final TypeScript/lint/build pass; 187 files / 1,784 tests pass; Stats browser 7,
+management 2, loading 5 pass. Actual-app 20 view/size/theme capture cases pass.
+Synthetic fixture cleanup restores original seven full local tables exactly;
+management/workspace fixture assertions remain strict. Full evidence and exact
+limits: `docs/admin-stats-simple-switch-verification.md`.
+
+Review: `http://127.0.0.1:8768/stats-simple-switch-review.html`. Local build 3110
+and static review 8768 remain available. Physical phone touch/paste and screen-reader
+release acceptance remains open; no new native-hardware claim. Scoped package
+GUIDED-STATS-COMBINED is in_progress (implementation complete; release QA open).
+Original dirty checkout and concurrent OTP/icon work were untouched. No push,
+PR, remote merge, deployment or hosted mutation. Next: notify Christian that this
+local scoped implementation is ready, then await his broader implementation scope;
+complete physical acceptance before any explicitly authorized release.
+
 ## Current: Combined Stats navigation sketches — 2026-10-11
 
 Christian approved the implemented workspace visually and requested three HTML

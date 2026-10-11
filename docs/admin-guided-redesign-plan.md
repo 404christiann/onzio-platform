@@ -435,3 +435,20 @@ all fields, per-scope draft protection and clear Save labels.
 
 No application source, data, routes, navigation contracts or architecture changed.
 This package authorizes local sketch delivery only.
+
+
+## Approved Simple switch implementation — 2026-10-11
+
+Christian selected A and requested implementation before the broader next step.
+One Stats navigation/search destination opens the combined page; Match stats and
+Season stats share context and retain their independent editors/saves. Legacy
+Season Stats links redirect to the Season tab. Explicitly approved consolidation
+changes canonical destinations from 19 to 18, preserving all other navigation
+order and access decisions. Architecture and backend contracts are unchanged.
+
+| Package | Status | Completed work | Files changed | Verification | Blockers/dependencies | Exact next step |
+| --- | --- | --- | --- | --- | --- | --- |
+| GUIDED-STATS-COMBINED | in_progress (implementation complete) | Approved A shared page/navigation; preserved season/player/phone-detail/match context; guarded view changes; pending-route lock; keyboard focus; legacy alias | Stats routes; scoped stats parent/editors/workspace/types/CSS; route manifest; strict navigation and browser regressions; review HTML; verification doc; HANDOFF | Source `84f46fe`; final 187 files/1,784 tests; TypeScript/lint/build; Stats 7 / management 2 / loading 5 browser passes; 20 actual layout cases; exact local fixture restoration; independent review clear | Physical touch/paste/phone screen-reader release acceptance remains; broader scope/publication awaits explicit instruction | Notify Christian this local scope is ready, review current gallery, await broader next-step scope and complete physical acceptance before release |
+
+Evidence: `docs/admin-stats-simple-switch-verification.md`. No push, PR, merge,
+deployment or hosted mutation was performed.

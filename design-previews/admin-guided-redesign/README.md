@@ -128,3 +128,18 @@ labels and Back below the sticky header; C also verifies discard and arrow keys.
 Reports are ignored under `evidence/combined-stats-directions/`. Physical/native
 keyboard acceptance is not established. Application implementation awaits
 Christian's selection; this artifact changes only the preview and documentation.
+
+
+## Implemented Simple switch
+
+Christian selected A. Open
+`http://127.0.0.1:8768/stats-simple-switch-review.html` for actual local-app
+captures at source `84f46fe`, with fictional review players. One Stats destination
+contains Match stats / Season stats tabs, shared context and distinct Save labels.
+The older combined directions remain isolated historical sketches.
+
+Final evidence: full 1,784 tests, TypeScript/lint/build, Stats 7 / management 2 / loading 5
+browser cases, 20 actual view/viewport/theme capture checks and exact fixture
+restoration. Details and remaining physical/native acceptance limits are in
+`docs/admin-stats-simple-switch-verification.md`. Images/report are local and
+ignored under `evidence/combined-stats-implemented/`. No remote publication.

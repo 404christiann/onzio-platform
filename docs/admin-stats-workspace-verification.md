@@ -1,3 +1,7 @@
+> Historical two-page workspace evidence at `baa66c1`. The approved Simple
+> switch now combines both views at `84f46fe`; current evidence is recorded in
+> `docs/admin-stats-simple-switch-verification.md`.
+
 # Season and Match Stats Player workspace verification
 
 Prepared 2026-10-11. Local implementation is complete at application source
