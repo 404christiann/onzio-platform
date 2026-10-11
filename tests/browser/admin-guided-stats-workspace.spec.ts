@@ -60,8 +60,11 @@ async function fixtures() {
 
 async function selectPlayer(page: Page, name: string) {
   const back = page.getByRole("button", { name: "All players", exact: true });
-  if (await back.isVisible()) await back.click();
   const search = page.getByRole("searchbox", { name: "Search players", exact: true });
+  // The combined page retains phone detail selection through scope reloads.
+  // Wait for the workspace before choosing its list/back navigation path.
+  await expect.poll(async () => await back.isVisible() || await search.isVisible()).toBe(true);
+  if (await back.isVisible()) await back.click();
   await expect(search).toBeVisible();
   await search.fill("");
   await page.getByRole("button", { name: `Select ${name}`, exact: true }).click();
@@ -117,7 +120,7 @@ for (const width of [320, 390, 1440]) {
     try {
       for (const route of ["season-stats", "stats"]) {
         const match = route === "stats";
-        const saveLabel = match ? "Save All Stats" : "Save All";
+        const saveLabel = match ? "Save match stats" : "Save season totals";
         await page.goto(`/admin/${route}`);
         await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonIds[0]);
         if (match) {
@@ -247,4 +250,112 @@ test("phone scope changes: cancel/discard/save, failed save retains context and 
       }
     }
   } finally { await fixture.restore(); }
+});
+
+for (const width of [320, 1440]) {
+  test(`${width}px combined Stats: legacy link, one navigation item, shared selection, guarded tabs and independent persistence`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await page.setViewportSize({ width, height: 844 });
+    const fixture = await fixtures();
+    try {
+      await page.goto("/admin/season-stats");
+      await expect(page).toHaveURL(/\/admin\/stats\?view=season$/);
+      await expect(page.getByRole("heading", { name: "Stats", exact: true })).toBeVisible();
+      const seasonTab = page.getByRole("tab", { name: "Season stats", exact: true });
+      const matchTab = page.getByRole("tab", { name: "Match stats", exact: true });
+      await expect(seasonTab).toHaveAttribute("aria-selected", "true");
+      await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonIds[0]);
+      await selectPlayer(page, fixture.names[0]);
+      const goals = page.getByRole("spinbutton", { name: `${fixture.names[0]}: goals`, exact: true });
+      await goals.fill("17");
+      await matchTab.click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(seasonTab).toHaveAttribute("aria-selected", "true");
+      await expect(matchTab).toBeFocused();
+      await expect(goals).toHaveValue("17");
+      await page.route("**/api/admin/data", async route => {
+        if (route.request().postDataJSON().operation === "upsert") return route.fulfill({ json: { data: null, error: { message: "Tab switch save failure" }, count: null } });
+        return route.continue();
+      });
+      await matchTab.click();
+      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+      await expect(page.getByRole("dialog").getByRole("alert")).toHaveText("Tab switch save failure");
+      await expect(seasonTab).toHaveAttribute("aria-selected", "true");
+      await expect(goals).toHaveValue("17");
+      await page.unroute("**/api/admin/data");
+      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+      await expect(matchTab).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByRole("combobox", { name: "Season", exact: true })).toHaveValue(fixture.seasonIds[0]);
+      const matches = page.getByRole("combobox", { name: "Match", exact: true });
+      await expect(matches).toBeEnabled();
+      await matches.selectOption(fixture.matchIds[0]);
+      // The selected player and phone detail view survive a tab switch.
+      await expect(goals).toHaveValue("3");
+      await expect(page.getByRole("checkbox", { name: `${fixture.names[0]}: started the match`, exact: true })).toBeVisible();
+      await checkRow("player_season_stats", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 17 });
+      await goals.fill("9");
+      await seasonTab.click();
+      await page.getByRole("button", { name: "Discard changes", exact: true }).click();
+      await expect(goals).toHaveValue("17");
+      await expect(page.getByRole("spinbutton", { name: `${fixture.names[0]}: starts`, exact: true })).toBeVisible();
+      await matchTab.click();
+      await expect(matches).toHaveValue(fixture.matchIds[0]);
+      await expect(goals).toHaveValue("3");
+      await goals.fill("23");
+      await seasonTab.click();
+      await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+      await expect(goals).toHaveValue("17");
+      await checkRow("player_match_stats", fixture.playerIds[0], "match_id", fixture.matchIds[0], { goals: 23 });
+      await checkRow("player_season_stats", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 17 });
+      await seasonTab.press("ArrowLeft");
+      await expect(matchTab).toHaveAttribute("aria-selected", "true");
+      await expect(matchTab).toBeFocused();
+      await expect(matches).toHaveValue(fixture.matchIds[0]);
+      await expect(goals).toHaveValue("23");
+      for (const theme of ["light", "dark"] as const) {
+        await setTheme(page, theme);
+        await verifyViewport(page, "Save match stats");
+        expect((await matchTab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        expect((await seasonTab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      }
+      if (width < 900) await page.getByRole("button", { name: "Open admin navigation", exact: true }).click();
+      const navigation = page.locator("#admin-sidebar");
+      await expect(navigation.getByRole("link", { name: "Stats", exact: true })).toHaveCount(1);
+      await expect(navigation.getByRole("link", { name: "Match Stats", exact: true })).toHaveCount(0);
+      await expect(navigation.getByRole("link", { name: "Season Stats", exact: true })).toHaveCount(0);
+    } finally { await fixture.restore(); }
+  });
+}
+
+test("Season Save & switch keeps newly saved values clean and blocks edits while the next view waits", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const fixture = await fixtures();
+  let release!: () => void;
+  const wait = new Promise<void>(resolve => { release = resolve; });
+  let intercepted = false;
+  try {
+    await page.goto("/admin/stats?view=season");
+    await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonIds[0]);
+    await selectPlayer(page, fixture.names[0]);
+    const goals = page.getByRole("spinbutton", { name: `${fixture.names[0]}: goals`, exact: true });
+    await goals.fill("33");
+    await page.route(url => url.pathname === "/admin/stats" && url.searchParams.get("view") === "match" && url.searchParams.has("_rsc"), async route => {
+      intercepted = true;
+      await wait;
+      await route.continue();
+    });
+    await page.getByRole("tab", { name: "Match stats", exact: true }).click();
+    await page.getByRole("button", { name: "Save & switch", exact: true }).click();
+    await expect.poll(() => intercepted).toBe(true);
+    await expect(goals).toHaveValue("33");
+    await expect(goals).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Save season totals", exact: true })).toBeDisabled();
+    await expect(page.getByRole("tab", { name: "Match stats", exact: true })).toBeDisabled();
+    await checkRow("player_season_stats", fixture.playerIds[0], "season_id", fixture.seasonIds[0], { goals: 33 });
+    release();
+    await expect(page.getByRole("tab", { name: "Match stats", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Season stats", exact: true })).toBeEnabled();
+  } finally { release(); await fixture.restore(); }
 });

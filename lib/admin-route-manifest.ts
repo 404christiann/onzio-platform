@@ -27,7 +27,6 @@ export type AdminRouteId =
   | "roster"
   | "schedule"
   | "match-stats"
-  | "season-stats"
   | "standings"
   | "registrations"
   | "analytics"
@@ -213,17 +212,9 @@ export const ADMIN_ROUTE_MANIFEST = [
   },
   {
     id: "match-stats",
-    label: "Match Stats",
+    label: "Stats",
     href: "/admin/stats",
     iconKey: "match-stats",
-    groupId: "competition",
-    hiddenForTemplates: [EDITORIAL_TEMPLATE],
-  },
-  {
-    id: "season-stats",
-    label: "Season Stats",
-    href: "/admin/season-stats",
-    iconKey: "season-stats",
     groupId: "competition",
     hiddenForTemplates: [EDITORIAL_TEMPLATE],
   },
@@ -302,7 +293,6 @@ export const ADMIN_NAVIGATION_MANIFEST = [
       "roster",
       "schedule",
       "match-stats",
-      "season-stats",
       "standings",
     ],
   },
@@ -361,8 +351,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
-  "match-stats": ["competition", "match stats", "game statistics"],
-  "season-stats": ["competition", "season stats", "player statistics"],
+  "match-stats": ["competition", "stats", "match stats", "season stats", "season totals", "game statistics", "player statistics"],
   standings: ["competition", "standings", "table"],
   registrations: ["registrations", "forms", "registrants"],
   analytics: ["analytics", "insights", "performance", "charts"],

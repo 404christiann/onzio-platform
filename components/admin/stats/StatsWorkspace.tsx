@@ -16,19 +16,25 @@ export type StatsWorkspaceProps = {
   contextLabel: string;
   description: string;
   disabled?: boolean;
+  selectedPlayerId?: string | null;
+  showPlayerDetail?: boolean;
+  onShowPlayerDetailChange?: (show: boolean) => void;
+  onSelectedPlayerChange?: (id: string) => void;
 };
 
 /** Selection and filtering only change the view; drafts remain owned by the page. */
-export function StatsWorkspace({ players, values, dirtyPlayerIds, groupsForPlayer, onChange, positionGroupIdPrefix, contextLabel, description, disabled = false }: StatsWorkspaceProps) {
+export function StatsWorkspace({ players, values, dirtyPlayerIds, groupsForPlayer, onChange, positionGroupIdPrefix, contextLabel, description, disabled = false, selectedPlayerId, onSelectedPlayerChange, showPlayerDetail, onShowPlayerDetailChange }: StatsWorkspaceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showDetail, setShowDetail] = useState(false);
+  const [localShowDetail, setLocalShowDetail] = useState(Boolean(selectedPlayerId));
+  const showDetail = showPlayerDetail ?? localShowDetail;
+  const setShowDetail = onShowPlayerDetailChange ?? setLocalShowDetail;
   const [query, setQuery] = useState("");
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const searchId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const fields = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
-  const selected = players.find(player => player.id === selectedId) ?? players[0];
+  const selected = players.find(player => player.id === (selectedPlayerId === undefined ? selectedId : selectedPlayerId)) ?? players[0];
   const matching = players.filter(player => `${player.name} ${player.number} ${player.position}`.toLowerCase().includes(query.trim().toLowerCase()));
 
   useEffect(() => {
@@ -68,7 +74,9 @@ export function StatsWorkspace({ players, values, dirtyPlayerIds, groupsForPlaye
   }, []);
 
   function selectPlayer(id: string) {
-    setSelectedId(id); setShowDetail(true);
+    if (onSelectedPlayerChange) onSelectedPlayerChange(id);
+    else setSelectedId(id);
+    setShowDetail(true);
     if (fields.current) fields.current.scrollTop = 0;
     requestAnimationFrame(() => {
       if (window.matchMedia("(max-width:900px)").matches) root.current?.querySelector<HTMLElement>("[data-stats-detail]")?.scrollIntoView({ block: "start", behavior: "instant" });

@@ -139,9 +139,9 @@ for (const width of [390, 1440]) {
       await expect(seasonGoals).toHaveValue("1");
       expect((await seasonGoals.boundingBox())!.height).toBeGreaterThanOrEqual(44);
       await seasonGoals.fill("9");
-      await page.getByRole("button", { name: "Save All", exact: true }).click();
+      await page.getByRole("button", { name: "Save season totals", exact: true }).click();
       await expect(page.getByRole("status")).toHaveText("Saved successfully");
-      await expect(page.getByRole("button", { name: "Save All", exact: true })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Save season totals", exact: true })).toBeDisabled();
       await page.reload();
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
       await selectStatsPlayer(page, fixture.rowName);
@@ -166,9 +166,9 @@ for (const width of [390, 1440]) {
       const matchGoals = page.getByRole("spinbutton", { name: `${fixture.rowName}: goals`, exact: true });
       await expect(matchGoals).toHaveValue("3");
       await matchGoals.fill("8");
-      await page.getByRole("button", { name: "Save All Stats", exact: true }).click();
+      await page.getByRole("button", { name: "Save match stats", exact: true }).click();
       await expect(page.getByRole("status")).toHaveText("Saved successfully");
-      await expect(page.getByRole("button", { name: "Save All Stats", exact: true })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Save match stats", exact: true })).toBeDisabled();
       await page.reload();
       await page.getByRole("combobox", { name: "Season", exact: true }).selectOption(fixture.seasonId);
       await expect(page.getByRole("combobox", { name: "Match", exact: true })).toBeEnabled();
