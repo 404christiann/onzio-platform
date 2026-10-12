@@ -224,7 +224,28 @@ export default function AdminStandingsPage() {
     markDirty();
   }
 
+  async function retryLoad() {
+    if (loading || saving) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const fresh = await fetchLeagueStandings(clubId, { strict: true });
+      setSettings(fresh.settings);
+      setRows(fresh.rows.map((row) => ({ ...row })));
+      setOriginalRows(fresh.rows);
+      setPendingDeleteUrls([]);
+      setDirty(false);
+      setLoadFailed(false);
+    } catch (loadError: unknown) {
+      setLoadFailed(true);
+      setError(loadError instanceof Error ? loadError.message : "Failed to load standings");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSave() {
+    if (loading || loadFailed || saving || uploading || !dirty) return;
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -306,7 +327,18 @@ export default function AdminStandingsPage() {
 
       await deleteStorageUrls("standings", pendingDeleteUrls, ["teams/"]);
 
-      const fresh = await fetchLeagueStandings(clubId, { strict: true });
+      let fresh: Awaited<ReturnType<typeof fetchLeagueStandings>>;
+      try {
+        fresh = await fetchLeagueStandings(clubId, { strict: true });
+      } catch {
+        // The writes committed. Recover with a read before allowing another
+        // mutation, so temporary row IDs cannot cause duplicate inserts.
+        setPendingDeleteUrls([]);
+        setDirty(false);
+        setLoadFailed(true);
+        setError("Your standings were saved, but the latest table could not be loaded. Retry loading before editing.");
+        return;
+      }
       setSettings(fresh.settings);
       setRows(fresh.rows.map((row) => ({ ...row })));
       setOriginalRows(fresh.rows);
@@ -396,6 +428,17 @@ export default function AdminStandingsPage() {
         >
           {error}
         </p>
+      )}
+
+      {loadFailed && (
+        <button
+          type="button"
+          onClick={() => void retryLoad()}
+          disabled={loading || saving}
+          className="min-h-11 self-start rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        >
+          {loading ? "Loading…" : "Retry loading"}
+        </button>
       )}
 
       {loading ? (

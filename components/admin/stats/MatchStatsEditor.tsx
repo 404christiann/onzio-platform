@@ -353,7 +353,10 @@ export function MatchStatsEditor({ seasonState, selectedPlayerId, onSelectedPlay
     else applyScope(next);
   }
   function discardAndSwitch() {
-    if (pendingScope && !saving && !saveLock.current) applyScope(pendingScope);
+    if (pendingScope && !saving && !saveLock.current) {
+      setStats(baselineStats);
+      applyScope(pendingScope);
+    }
   }
   async function saveAndSwitch() {
     const next = pendingScope;
