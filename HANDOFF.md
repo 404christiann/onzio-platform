@@ -1,3 +1,9 @@
+## 2026-10-12 — Formatting approved; release PR preparation
+
+Christian explicitly approved the generated-file formatting exception and requested a release PR. Added `.gitattributes` for only `lib/database.generated.ts` with `whitespace=-blank-at-eof`; other whitespace rules and exact generation remain intact. Exact local generated types, whole-branch whitespace validation, architecture 21 and cron contracts 12 pass. Application source/build and previously accepted 1,791 tests/72 visual checks/iPhone feedback are unchanged.
+
+Added this branch to the existing `vercel.json` automatic-preview disable list. Hosted staging is retired; PR publication does not authorize a hosted preview or production release. The current main base is c10bea3. Next: publish the reviewed branch, open/attach the ready-for-review PR, verify GitHub conflict/check state and record its URL. Production merge/deployment still requires explicit release approval. The earlier EOF rejection is resolved by Christian's explicit authorization; it is no longer a blocker.
+
 ## 2026-10-12 — Portal local/physical acceptance complete; release decisions open
 
 Christian authorized full portal review/remaining QA with subagents. Work remains in the managed `codex/admin-guided-redesign` worktree; the original OTP checkout is untouched. Frozen build 8 passes the complete 189-file/1,791-test suite in 50.17 seconds and final TypeScript/lint/build/exact generation. Recorded standalone database 31/310, contracts 107/1,051 and architecture 3/21 groups also pass and are included in that final suite.

@@ -1,6 +1,6 @@
 # Admin portal release QA — 2026-10-12
 
-Status: local technical and physical iPhone acceptance complete; release remains in progress for canonical generated-file EOF handling and explicit publication approval. The authorized local full-portal review and automated QA are complete on `codex/admin-guided-redesign`; the original OTP checkout is preserved. Frozen build 8 passes its build, complete 189-file/1,791-test suite, TypeScript/lint, exact generation and fresh 72-case visual matrix. Christian has now reported that the portal looks good and seems to be working on his physical iPhone. He separately confirmed that input paste and VoiceOver both worked. These are user-reported physical acceptance results; device model/iOS and specific physical save/upload actions are not inferred.
+Status: local technical and physical iPhone acceptance complete. Christian approved the canonical generated-file EOF exception and requested a release PR; production publication approval remains open. The authorized local full-portal review and automated QA are complete on `codex/admin-guided-redesign`; the original OTP checkout is preserved. Frozen build 8 passes its build, complete 189-file/1,791-test suite, TypeScript/lint, exact generation and fresh 72-case visual matrix. Christian has now reported that the portal looks good and seems to be working on his physical iPhone. He separately confirmed that input paste and VoiceOver both worked. These are user-reported physical acceptance results; device model/iOS and specific physical save/upload actions are not inferred.
 
 ## Frozen source and integration provenance
 
@@ -63,10 +63,13 @@ A transient admin `PRIMARY_DOMAIN_REQUIRED` result came from restarting the loca
 
 No production/hosted mutation, provider action, push, PR, merge or deployment occurred.
 
-## Remaining input and release gates
+## Release preparation — approved formatting exception
 
-1. Generator-owned EOF formatting. Exact local Supabase output ends with a blank line, so the source commit's `git show --check 882384f` retains the sole `lib/database.generated.ts:3179` canonical EOF diagnostic. After the source commit, a clean working-tree documentation diff does not waive that recorded diagnostic. Automatic approval review rejected a one-file whitespace exception as loosening validation without explicit approval. No exception, exclusion or Git override was applied. Do not strip canonical output or weaken the exact checker; this formatting decision remains open.
-2. Publication authorization. Obtain Christian's explicit release approval after the EOF decision; local technical and scoped physical acceptance are complete. Main pushes auto-deploy; local QA scope does not authorize publication. Provider/payment actions remain deferred; if live provider acceptance is required for the release decision, scope and authorize it separately rather than treating fenced local checks as provider evidence.
+Christian explicitly authorized retaining the generator-owned trailing blank line and opening a PR. `.gitattributes` exempts only `lib/database.generated.ts` from `blank-at-eof`; other whitespace checks and the exact type-generation contract remain unchanged. `git check-attr` confirms that one file's value and leaves `components/AdminShell.tsx` unspecified. Whole-branch `git diff --check origin/main` passes, exact local generated types pass, architecture 21 and unchanged cron contracts 12 pass. Logs: `/private/tmp/onzio-pr-types-check.log`, `/private/tmp/onzio-pr-architecture.log`, `/private/tmp/onzio-pr-cron-contracts.log`.
+
+`vercel.json` adds `codex/admin-guided-redesign: false` to the existing automatic-preview branch list. Hosted staging is retired; opening this PR must not create a hosted preview against an unverified database. Production branch deployment settings and cron definitions are unchanged.
+
+Only explicit production release approval remains. PR branch publication is authorized; main merge/deployment and live provider/payment actions are not. Record the created PR, current head/base, GitHub mergeability and check state before the final handoff. No new runtime changes invalidate the recorded code/browser/physical QA evidence.
 
 ## Physical iPhone acceptance
 
@@ -74,4 +77,4 @@ Christian's direct general report is “Looks good, seems. to working fin. .” 
 
 The walkthrough used the approved exact-peer route `http://192.168.1.133:3114/admin`, restricted to phone `192.168.1.132`, with the synthetic owner and normal email-code flow. Its renewed bounded window was 16:25–16:55 UTC (9:25–9:55 a.m. America/Los_Angeles). The final build 8 authentication/API bridge passed without external hosts/JavaScript errors; provider routes were blocked. Earlier interrupted/transient checks were superseded without an auth bypass. Earlier rejected LAN-wide proxy/credential-copy alternatives were not applied and are historical, not an unresolved access blocker. No new physical QA-record mutation is established by the user's feedback, and none is claimed.
 
-Exact next step: resolve the canonical EOF decision without bypassing automatic review, then request explicit publication approval. The local technical review and scoped physical acceptance are complete; publication is not authorized. Any required live provider acceptance needs separate scope/authorization. The completed local review/documentation is saved without publication. Keep `GUIDED-RELEASE-QA` in progress for the EOF decision and publication approval only.
+Exact next step: publish and attach the requested release PR, verify its mergeability/checks, then obtain explicit production release approval. The local technical review and scoped physical acceptance are complete; publication is not authorized. Any required live provider acceptance needs separate scope/authorization. The completed local review/documentation is saved without publication. `GUIDED-RELEASE-QA` local acceptance is complete; release readiness is tracked under `GUIDED-RELEASE-PR`.
