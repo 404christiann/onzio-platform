@@ -472,3 +472,11 @@ Christian explicitly approved the scoped generator EOF exception and requested a
 | Package | Status | Completed work | Files changed | Verification | Blockers | Exact next step |
 | --- | --- | --- | --- | --- | --- | --- |
 | GUIDED-RELEASE-PR | in_progress | Approved generated-file EOF exception; branch-only automatic-preview guard; release evidence prepared | .gitattributes; vercel.json; HANDOFF; QA report; this ledger | Exact generated types; whole-branch whitespace; architecture21; cron12 pass. Prior runtime/full/browser/iPhone evidence unchanged | PR publication/check-state capture underway; production release approval pending | Publish branch, open/attach PR, record head/base and GitHub mergeability/check state; obtain explicit production release approval |
+
+
+## Release PR acceptance — 2026-10-12
+
+| Package | Status | Completed work | Files changed | Verification | Remaining release gate | Exact next step |
+| --- | --- | --- | --- | --- | --- | --- |
+| GUIDED-RELEASE-QA | complete | Local technical/physical QA accepted; canonical EOF exception explicitly approved and applied | .gitattributes; QA source/evidence documented above | Full1791, build/TypeScript/lint/exact generation; browser/visual72; iPhone/paste/VoiceOver; final whitespace/architecture21/cron12 | Production publication is a separate action | Review PR #13 |
+| GUIDED-RELEASE-PR | complete | Published feature branch; opened/attached ready-for-review PR #13; branch-only automatic-preview guard; release limits documented | vercel.json; .gitattributes; HANDOFF; QA report; this ledger | PR head88672d9/basec10bea3 reports MERGEABLE/CLEAN; statusCheckRollup empty (no remote CI pass); non-mutating merge-tree and whole-branch whitespace pass; runtime QA unchanged | Explicit production merge/deployment approval and release-time backup safeguards | Christian reviews https://github.com/404christiann/onzio-platform/pull/13; after approval refresh base/checks, satisfy release safeguards, merge and verify production |

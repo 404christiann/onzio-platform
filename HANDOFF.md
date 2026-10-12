@@ -1,3 +1,9 @@
+## 2026-10-12 — Release PR #13 open and ready for review
+
+Christian approved the generated-file whitespace exception and requested this PR: https://github.com/404christiann/onzio-platform/pull/13. The branch is published and the PR is attached to the chat, open/non-draft against main. At head 88672d9/base c10bea3, GitHub reports MERGEABLE/CLEAN with an empty statusCheckRollup; no remote CI pass is claimed. The repository's only workflow is scheduled/manual public-media smoke, not PR-triggered CI. The branch-specific Vercel preview guard is committed; no preview, production merge/deployment, hosted database mutation or live provider action was performed.
+
+The approved single-file whitespace attribute passes whole-branch diff checks while exact local generated types still match. Architecture21 and cron12 pass; prior full1,791/build/TypeScript/lint/browser72 and user-reported iPhone/paste/VoiceOver acceptance remain valid because runtime source is unchanged. Non-mutating merge-tree passes. GUIDED-RELEASE-QA and GUIDED-RELEASE-PR acceptance are complete. Next: Christian reviews PR #13 and explicitly authorizes a production release; at that time refresh base/checks, satisfy required production backup/release safeguards, merge and verify the live portal. Original OTP checkout remains untouched.
+
 ## 2026-10-12 — Formatting approved; release PR preparation
 
 Christian explicitly approved the generated-file formatting exception and requested a release PR. Added `.gitattributes` for only `lib/database.generated.ts` with `whitespace=-blank-at-eof`; other whitespace rules and exact generation remain intact. Exact local generated types, whole-branch whitespace validation, architecture 21 and cron contracts 12 pass. Application source/build and previously accepted 1,791 tests/72 visual checks/iPhone feedback are unchanged.
