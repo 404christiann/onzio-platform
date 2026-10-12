@@ -143,3 +143,22 @@ browser cases, 20 actual view/viewport/theme capture checks and exact fixture
 restoration. Details and remaining physical/native acceptance limits are in
 `docs/admin-stats-simple-switch-verification.md`. Images/report are local and
 ignored under `evidence/combined-stats-implemented/`. No remote publication.
+
+## Full portal release QA review
+
+`portal-release-review.html` contains the verified 18-page review with Desktop/Phone
+and light/dark selectors. The 72 actual application captures come from frozen
+source `882384f`, build `WTlAeANSzUCRXBiW7dUSu`; all layout/scoped accessibility
+cases passed. Captures and a source/build manifest remain ignored under
+`evidence/portal-release-qa/`.
+
+App browser review controls were verified, and Christian confirmed the general
+physical iPhone review plus input paste and VoiceOver. These reported hardware
+results are distinct from the screenshots and native Simulator evidence.
+The gallery identifies synthetic Alpha FC data and the 2026-10-12 QA source;
+payment connections are disabled for this local review. Missing seed media is
+not media-upload acceptance. Detailed evidence and the canonical generated EOF
+and publication decisions are in `docs/admin-portal-release-qa.md`.
+
+Open `http://127.0.0.1:8768/portal-release-review.html`. The historical `review.html`
+remains available for its original before/after evidence. No remote publication.
