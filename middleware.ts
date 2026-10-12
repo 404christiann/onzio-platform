@@ -229,8 +229,14 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname !== "/admin/login" &&
     request.nextUrl.pathname !== "/admin/auth/callback"
   ) {
+    const target = request.nextUrl.clone();
+    // Next may normalize this origin to localhost during local serving. Keep
+    // the already verified tenant host so billing recovery stays in this club.
+    target.hostname = hostname;
+    target.pathname = "/admin/payments";
+    target.search = "";
     return applyTenantRobotsPolicy(
-      NextResponse.redirect(new URL("/admin/payments", request.url), 303),
+      NextResponse.redirect(target, 303),
     );
   }
 

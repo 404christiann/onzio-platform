@@ -1,0 +1,3 @@
+# Supabase CLI owns this file, including its generated final blank line.
+# Keep all other whitespace checks and exact schema generation intact.
+lib/database.generated.ts whitespace=-blank-at-eof

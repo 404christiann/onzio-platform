@@ -13,7 +13,7 @@ const DAY_MS = 86_400_000;
 const GRACE_DAYS = Math.round(GRACE_MS / DAY_MS);
 
 const CARD_SHELL =
-  "rounded-xl border bg-card p-5 text-card-foreground sm:p-7";
+  "rounded-2xl border bg-card p-6 text-card-foreground shadow-sm sm:p-8";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -85,7 +85,7 @@ function AnimatedAmount({ value, decimals }: { value: number; decimals: number }
 function PriceDisplay({ label, animated }: { label: string; animated: boolean }) {
   const parsed = parsePriceLabel(label);
   return (
-    <p className="font-display text-5xl font-black leading-none text-foreground">
+    <p className="font-body text-4xl font-semibold leading-tight tracking-tight sm:text-5xl text-foreground">
       {parsed ? (
         <>
           {parsed.prefix}
@@ -298,7 +298,7 @@ export function PaymentStatusCard({
             Private preview
           </Badge>
           {clubKind !== "customer" ? (
-            <p className="mt-5 rounded-lg border border-border bg-background/40 px-4 py-3 font-body text-sm text-muted-foreground">
+            <p className="mt-5 rounded-xl border border-border bg-background/40 px-4 py-3 font-body text-sm text-muted-foreground">
               This {clubKind} club does not require a paid subscription.
             </p>
           ) : (
@@ -312,7 +312,7 @@ export function PaymentStatusCard({
                 endpoint="/api/stripe/checkout"
                 fallbackMessage={`We couldn't start checkout. Nothing was charged — try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
               >
-                <Button type="submit" size="lg" className="w-full sm:w-auto">
+                <Button type="submit" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto">
                   Start subscription
                 </Button>
               </BillingActionForm>
@@ -331,7 +331,7 @@ export function PaymentStatusCard({
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="font-body text-xs font-semibold text-muted-foreground">
               Current period
             </p>
             {renewsIn !== null && (
@@ -358,7 +358,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="w-full sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
             >
               Manage billing
             </Button>
@@ -371,7 +371,7 @@ export function PaymentStatusCard({
       return (
         <section className={cn(CARD_SHELL, "border-border")}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="font-body text-xs font-semibold text-muted-foreground">
               Current period
             </p>
             <Badge className="bg-muted text-muted-foreground">
@@ -391,7 +391,7 @@ export function PaymentStatusCard({
           >
             {`${clubName}'s Onzio subscription`}
           </p>
-          <p className="mt-4 rounded-lg border border-border bg-background/40 px-4 py-3 font-body text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-4 rounded-xl border border-border bg-background/40 px-4 py-3 font-body text-sm leading-relaxed text-muted-foreground">
             Your subscription is scheduled to end on{" "}
             {formatDate(uiState.periodEndsAt)}. Self-serve cancellation changes
             are disabled — contact Onzio if this should be changed.
@@ -401,7 +401,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="w-full sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
             >
               Manage billing
             </Button>
@@ -417,7 +417,7 @@ export function PaymentStatusCard({
       return (
         <section className={cn(CARD_SHELL, "border-2 border-warning")}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="inline-flex items-center gap-2 font-display text-xs font-black uppercase tracking-[0.16em] text-warning">
+            <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-warning">
               <AlertTriangle className="size-4" aria-hidden="true" />
               Payment overdue
             </p>
@@ -451,7 +451,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="w-full border-warning/50 text-warning hover:bg-warning/10 hover:text-warning sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 border-warning/50 text-warning hover:bg-warning/10 hover:text-warning sm:w-auto"
             >
               Update payment method
             </Button>
@@ -476,7 +476,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="w-full sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
             >
               Manage billing
             </Button>

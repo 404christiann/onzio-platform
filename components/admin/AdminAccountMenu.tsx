@@ -1,5 +1,6 @@
 "use client";
 
+import guided from "@/components/admin/AdminGuided.module.css";
 import { ChevronDown, LogOut, UserRound } from "@/components/admin/icons";
 import { useEffect, useRef, useState } from "react";
 
@@ -44,9 +45,10 @@ export function AdminAccountMenu({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
+        aria-label={`Account menu, ${email ?? "Admin account"} ${role ?? "member"}`}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-10 items-center gap-2 rounded-lg px-1.5 text-left transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2"
+        className="flex h-11 items-center gap-2 rounded-lg px-1.5 text-left transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2"
       >
         <span className="flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
           {initials || <UserRound className="size-4" aria-hidden="true" />}
@@ -63,7 +65,7 @@ export function AdminAccountMenu({
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-border bg-popover p-2 text-popover-foreground shadow-xl"
+          className={"absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-border bg-popover p-2 text-popover-foreground shadow-xl " + guided.accountPopover}
         >
           <div className="border-b border-border px-3 py-2.5">
             <p className="truncate text-sm font-medium text-foreground">{email ?? "Admin account"}</p>
@@ -73,7 +75,7 @@ export function AdminAccountMenu({
             type="button"
             role="menuitem"
             onClick={() => void onSignOut()}
-            className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-foreground transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-1 flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-foreground transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <LogOut className="size-4 text-muted-foreground" aria-hidden="true" />
             Sign out

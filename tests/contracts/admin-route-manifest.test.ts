@@ -36,12 +36,12 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(19);
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(18);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      19,
+      18,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      19,
+      18,
     );
   });
 
@@ -73,7 +73,6 @@ describe("strict admin route manifest", () => {
           "roster",
           "schedule",
           "match-stats",
-          "season-stats",
           "standings",
         ],
       },
@@ -88,6 +87,15 @@ describe("strict admin route manifest", () => {
       },
       { type: "link", routeId: "payments" },
     ]);
+  });
+
+  it("presents one Stats destination searchable by match and season terminology", () => {
+    const stats = getVisibleAdminRoutes(OWNER_ACCESS).filter(route => route.href === "/admin/stats");
+    expect(stats).toHaveLength(1);
+    expect(stats[0]).toMatchObject({ id: "match-stats", label: "Stats", groupId: "competition" });
+    expect(stats[0].searchKeywords).toEqual(expect.arrayContaining(["match stats", "season stats", "season totals"]));
+    expect(getVisibleAdminRoutes(OWNER_ACCESS).some(route => route.href === "/admin/season-stats")).toBe(false);
+    expect(navigationIds(OWNER_ACCESS).filter(id => id === "match-stats")).toHaveLength(1);
   });
 
   it("keeps feature metadata dormant on only the existing three routes", () => {
@@ -131,7 +139,7 @@ describe("strict admin route manifest", () => {
     ).not.toContain("payments");
   });
 
-  it("hides exactly four routes for editorial and keeps Registrations visible", () => {
+  it("hides exactly three canonical routes for editorial and keeps Registrations visible", () => {
     const context = {
       ...OWNER_ACCESS,
       presentationTemplateKey: "editorial@1",
@@ -144,7 +152,6 @@ describe("strict admin route manifest", () => {
     expect(hiddenIds).toEqual([
       "programs",
       "match-stats",
-      "season-stats",
       "analytics",
     ]);
     expect(editorialIds).toContain("registrations");

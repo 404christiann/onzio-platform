@@ -82,7 +82,7 @@ export default function ShopPreviewFrame({ children, host, phone, onSelect }: {
   return (
     <div className="min-w-0 rounded-xl border border-border bg-white p-2 sm:p-3">
       <div className={`mx-auto overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm ${phone ? "max-w-[390px]" : "w-full"}`}>
-        <div className="flex min-h-9 items-center gap-3 bg-slate-100 px-3 text-xs text-slate-500">
+        <div className="flex min-h-9 items-center gap-3 bg-slate-100 px-3 text-xs text-slate-600">
           <span aria-hidden="true">● ● ●</span><span className="truncate">{host} · Editing preview</span>
         </div>
         <div ref={viewport} className="relative w-full overflow-hidden" style={{ height: previewHeight * scale }}><iframe

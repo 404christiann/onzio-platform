@@ -1,5 +1,6 @@
 "use client";
 
+import guided from "@/components/admin/AdminGuided.module.css";
 import {
   IconCaretDown as AdminSelectChevron,
   ChevronDownIcon,
@@ -15,6 +16,7 @@ import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminPage, AdminPageHeader, AdminPageToolbar, AdminPanel } from "@/components/admin/AdminPage";
 import { AdminSidePanel } from "@/components/admin/AdminSidePanel";
+import { AdminModal } from "@/components/admin/AdminModal";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -71,7 +73,7 @@ function ScheduleListSkeleton() {
   return (
     <AdminSkeletonRegion className="flex flex-col gap-4" label="Loading schedule">
       {Array.from({ length: 2 }, (_, groupIndex) => (
-        <div key={groupIndex} className="overflow-hidden rounded-xl border border-border bg-card">
+        <div key={groupIndex} className={cn("overflow-hidden rounded-xl border border-border bg-card", guided.listGroup)}>
           <div className="border-b border-border bg-muted/40 px-4 py-2.5">
             <Skeleton className="h-3.5 w-24" />
           </div>
@@ -184,6 +186,13 @@ function formatTime12h(timeValue: string): string {
   return `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`;
 }
 
+const LOGO_FILE_GUIDANCE = "Choose a PNG or WebP logo.";
+
+function logoUploadErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.includes("UNSUPPORTED_MEDIA_TYPE")) return LOGO_FILE_GUIDANCE;
+  return error instanceof Error ? error.message : "Upload failed";
+}
+
 async function uploadPhoto(file: File, bucket: string, folder: string): Promise<string> {
   const supabase = createClient();
   const extension = file.name.split(".").pop() ?? "jpg";
@@ -254,6 +263,8 @@ export default function SchedulePage() {
   const [addForm, setAddForm]       = useState<FormState>(emptyForm());
   const [saving, setSaving]         = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const [error, setError]           = useState<string | null>(null);
   const [saved, setSaved]           = useState(false);
 
@@ -476,12 +487,18 @@ export default function SchedulePage() {
   async function handleDelete(id: string) {
     setDeletingId(id);
     setError(null);
-    const supabase = createClient();
-    const { error: e } = await supabase.from("matches").delete().eq("id", id);
-    if (e) { setError(e.message); setDeletingId(null); return; }
-    setMatches((prev) => prev.filter((m) => m.id !== id));
-    setDeletingId(null);
-    if (editingId === id) closePanel();
+    try {
+      const supabase = createClient();
+      const { error: e } = await supabase.from("matches").delete().eq("id", id);
+      if (e) { setError(e.message); return; }
+      setMatches((prev) => prev.filter((m) => m.id !== id));
+      setConfirmDeleteOpen(false);
+      if (editingId === id) closePanel();
+    } catch {
+      setError("This match could not be deleted. Check the connection and try again.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   // ── Render ───────────────────────────────────
@@ -556,15 +573,15 @@ export default function SchedulePage() {
             loading={seasonsLoading}
             value={selectedSeasonId}
             onChange={setSelectedSeasonId}
-            label="View Season"
+            label="View season"
             disabled={seasonsLoading || saving}
           />
           <button
             onClick={openAddPanel}
             disabled={!matchesReady || seasonsLoading || saving || !selectedSeasonId}
-            className="flex-shrink-0 rounded-lg bg-primary px-5 py-2.5 font-display text-sm font-bold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-50"
+            className="min-h-11 flex-shrink-0 rounded-xl bg-primary px-5 py-2.5 font-body text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
-            <Plus width={14} height={14} className="mr-1 inline-block align-middle" /> Add Match
+            <Plus width={14} height={14} className="mr-1 inline-block align-middle" /> Add match
           </button>
         </div>}
       />
@@ -612,7 +629,7 @@ export default function SchedulePage() {
                 aria-pressed={resultFilter === value}
                 disabled={loading || seasonsLoading}
                 className={cn(
-                  "min-h-9 flex-none rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  "min-h-11 flex-none rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   resultFilter === value
                     ? "bg-card text-primary shadow-sm"
                     : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
@@ -651,9 +668,9 @@ export default function SchedulePage() {
       ) : (
         <div className="flex flex-col gap-4">
           {monthGroups.map(([month, monthMatches]) => (
-            <div key={month} className="overflow-hidden rounded-xl border border-border bg-card">
+            <div key={month} className={cn("overflow-hidden rounded-xl border border-border bg-card", guided.listGroup)}>
               <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
-                <span className="font-display text-xs font-black uppercase tracking-widest text-foreground">
+                <span className="font-body text-sm font-semibold text-foreground">
                   {month}
                 </span>
                 <span className="font-body text-xs text-muted-foreground">
@@ -684,7 +701,7 @@ export default function SchedulePage() {
                     <button
                       onClick={() => openEditPanel(m)}
                       className={cn(
-                        "flex-none rounded-lg px-3 py-1.5 font-body text-xs font-medium transition-colors",
+                        "min-h-11 flex-none rounded-xl px-3 py-2.5 font-body text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         isEditing
                           ? "bg-primary text-primary-foreground"
                           : "border border-border bg-card text-foreground hover:bg-accent",
@@ -713,16 +730,16 @@ export default function SchedulePage() {
                       )}
                     >
                       {/* Mobile: stacked card */}
-                      <div className="flex items-center gap-3 px-4 py-3 sm:hidden">
+                      <div className="flex items-center gap-3 px-4 py-4 sm:hidden">
                         <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={36} />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate font-display text-sm font-black uppercase text-foreground">
+                            <span className="break-words font-body text-[15px] font-semibold leading-5 text-foreground">
                               {m.home ? "vs" : "@"} {m.opponent}
                             </span>
                             <span
                               className={cn(
-                                "flex-none rounded px-1.5 py-0.5 font-display text-[0.65rem] font-bold uppercase tracking-wider",
+                                "flex-none rounded-full px-2 py-0.5 font-body text-xs font-medium",
                                 m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
                               )}
                             >
@@ -740,7 +757,7 @@ export default function SchedulePage() {
                       </div>
 
                       {/* Desktop: table row — date/time, crest, opponent, result, venue, actions */}
-                      <div className="hidden grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] items-center gap-4 px-4 py-3 sm:grid">
+                      <div className="hidden grid-cols-[5.5rem_2.5rem_minmax(0,1.9fr)_7rem_minmax(0,1fr)_6rem] items-center gap-4 px-4 py-4 sm:grid">
                         <div className="flex flex-col gap-0.5">
                           <span className={cn("font-display text-sm font-semibold", isEditing ? "text-primary" : "text-foreground")}>
                             {formatRowDate(m.date)}
@@ -750,12 +767,12 @@ export default function SchedulePage() {
                         <OpponentCrest name={m.opponent} logoUrl={m.opponent_logo_url} size={34} />
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="truncate font-display text-sm font-black uppercase text-foreground">
+                            <span className="break-words font-body text-[15px] font-semibold leading-5 text-foreground">
                               {m.home ? "vs" : "@"} {m.opponent}
                             </span>
                             <span
                               className={cn(
-                                "flex-none rounded px-1.5 py-0.5 font-display text-[0.65rem] font-bold uppercase tracking-wider",
+                                "flex-none rounded-full px-2 py-0.5 font-body text-xs font-medium",
                                 m.home ? "bg-success/15 text-success" : "bg-muted text-muted-foreground",
                               )}
                             >
@@ -782,7 +799,7 @@ export default function SchedulePage() {
       <AdminSidePanel
         open={panelOpen}
         onClose={closePanel}
-        title={editingId ? `${editForm.home ? "vs" : "@"} ${editForm.opponent || "Opponent"}` : "New Match"}
+        title={editingId ? `${editForm.home ? "vs" : "@"} ${editForm.opponent || "Opponent"}` : "New match"}
         description={
           editingId
             ? [formatShortDate(editForm.date), formatTime12h(editForm.time)].filter(Boolean).join(" · ") || "No date"
@@ -793,6 +810,31 @@ export default function SchedulePage() {
         className="max-w-2xl"
         footer={
           <div className="space-y-3">
+      <AdminModal
+        open={confirmDeleteOpen && editingId !== null}
+        onClose={() => { if (!deletingId) setConfirmDeleteOpen(false); }}
+        initialFocus={deleteCancelRef}
+        aria-labelledby="delete-match-title"
+        backdropClassName="fixed inset-0 z-[200] bg-background/80 backdrop-blur-sm"
+        className="fixed left-1/2 top-1/2 z-[201] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl"
+      >
+        <h2 id="delete-match-title" className="break-words text-xl font-semibold text-foreground">Delete this match?</h2>
+        <p className="mt-3 break-words text-sm leading-relaxed text-muted-foreground">
+          {editForm.home ? "vs" : "@"} {editForm.opponent || "Opponent"}
+          {editForm.date ? ` · ${formatShortDate(editForm.date)}` : ""}
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">This removes the match from your schedule. This cannot be undone.</p>
+        {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button ref={deleteCancelRef} type="button" disabled={Boolean(deletingId)}
+            onClick={() => setConfirmDeleteOpen(false)}
+            className="min-h-11 flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">Cancel</button>
+          <button type="button" disabled={Boolean(deletingId)}
+            onClick={() => { if (editingId && !deletingId) void handleDelete(editingId); }}
+            className="min-h-11 flex-1 rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{deletingId ? "Deleting…" : "Delete match"}</button>
+        </div>
+      </AdminModal>
+
             {error && (
               <p role="alert" className="font-body text-sm text-destructive">
                 {error}
@@ -802,7 +844,7 @@ export default function SchedulePage() {
               {editingId && (
                 <button
                   type="button"
-                  onClick={() => handleDelete(editingId)}
+                  onClick={() => { setError(null); setConfirmDeleteOpen(true); }}
                   disabled={deletingId === editingId}
                   className="min-h-11 w-full rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
@@ -956,7 +998,7 @@ function MatchForm({
               type="time"
               value={form.time}
               onChange={(e) => set("time", e.target.value)}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11 min-w-0 max-w-full box-border appearance-none")}
               required
             />
           </Field>
@@ -1211,12 +1253,17 @@ function OpponentLogoUpload({
 
   async function handleFile(file: File | null) {
     if (!file) return;
+    if (file.type !== "image/png" && file.type !== "image/webp") {
+      setError(LOGO_FILE_GUIDANCE);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
       await onUploaded(await uploadPhoto(file, "opponent-logos", "match-opponents"));
     } catch (uploadError: unknown) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      setError(logoUploadErrorMessage(uploadError));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -1245,11 +1292,13 @@ function OpponentLogoUpload({
           Remove
         </button>
       )}
+      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
       <input
         id={inputId}
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/png,image/webp"
+        aria-describedby={`${inputId}-format-hint`}
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
@@ -1279,12 +1328,17 @@ function SponsorLogoUpload({
 
   async function handleFile(file: File | null) {
     if (!file) return;
+    if (file.type !== "image/png" && file.type !== "image/webp") {
+      setError(LOGO_FILE_GUIDANCE);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
       await onUploaded(await uploadPhoto(file, "sponsors", "match-sponsors"));
     } catch (uploadError: unknown) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      setError(logoUploadErrorMessage(uploadError));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -1329,11 +1383,13 @@ function SponsorLogoUpload({
           Remove
         </button>
       )}
+      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
       <input
         id={inputId}
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/png,image/webp"
+        aria-describedby={`${inputId}-format-hint`}
         className="hidden"
         onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
       />
@@ -1372,7 +1428,7 @@ function Field({
       </label>
       {children}
       {help && (
-        <p id={`${id}-help`} className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground">
+        <p id={`${id}-help`} className="mt-1.5 font-body text-sm leading-relaxed text-muted-foreground">
           {help}
         </p>
       )}
@@ -1392,16 +1448,16 @@ function MatchFormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4" aria-labelledby={id}>
+    <section className={cn("space-y-4", guided.formSection)} aria-labelledby={id}>
       <div>
         <div className="flex items-center gap-3">
-          <h3 id={id} className="font-display text-sm font-semibold normal-case text-foreground">
+          <h3 id={id} className="font-body text-base font-semibold normal-case text-foreground">
             {title}
           </h3>
           <span className="h-px flex-1 bg-border" aria-hidden="true" />
         </div>
         {description && (
-          <p className="mt-1.5 font-body text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1.5 font-body text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         )}

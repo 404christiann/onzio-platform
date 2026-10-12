@@ -319,7 +319,7 @@ export default function BrandingPage() {
 
       <AdminPageHeader
         title="Branding"
-        description="Manage the club crest used across the public website and admin portal. Clubs can also carry an inverse crest for dark presentation surfaces."
+        description="Update your club logo and footer links. Your logo appears across the website and admin portal."
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.8fr)]">
@@ -328,11 +328,11 @@ export default function BrandingPage() {
           aria-labelledby="club-logo-heading"
         >
           <div className="mb-6">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-brand">
-              Club Identity
+            <p className="font-body text-xs font-semibold normal-case tracking-normal text-primary">
+              Club identity
             </p>
-            <h2 id="club-logo-heading" className="mt-2 font-display text-2xl font-black uppercase text-foreground">
-              Main Club Logo
+            <h2 id="club-logo-heading" className="mt-2 font-body text-2xl font-semibold normal-case text-foreground">
+              Main club logo
             </h2>
             <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
               For the cleanest result, use a square PNG with a transparent background. PNG, JPG, and WebP files up to 5 MB are accepted.
@@ -353,14 +353,14 @@ export default function BrandingPage() {
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+                    <span className="font-body text-xs font-semibold normal-case tracking-normal text-muted-foreground">
                       No logo
                     </span>
                   </div>
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-display text-lg font-black uppercase text-foreground">
+                <p className="font-body text-lg font-semibold normal-case text-foreground">
                   {logoFile ? "New logo selected" : "Current logo"}
                 </p>
                 <p className="mt-1 truncate font-body text-xs text-muted-foreground">
@@ -370,9 +370,9 @@ export default function BrandingPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={saving}
-                  className="mt-4 rounded-lg border border-border bg-card px-5 py-2.5 font-display text-sm font-black uppercase tracking-widest text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-11 mt-4 rounded-lg border border-border bg-card px-5 py-2.5 font-body text-sm font-semibold normal-case tracking-normal text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {logoFile ? "Choose Different Image" : "Choose New Logo"}
+                  {logoFile ? "Choose different image" : "Choose new logo"}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -399,10 +399,10 @@ export default function BrandingPage() {
             type="button"
             onClick={saveLogo}
             disabled={!logoFile || saving}
-            className="mt-3 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-brand-foreground transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
+            className="min-h-11 mt-3 w-full rounded-lg bg-primary px-6 py-4 font-body text-lg font-semibold normal-case tracking-normal text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
             {saving && <AdminLoadingDots className="mr-2" />}
-            {saving ? "Saving…" : "Save New Club Logo"}
+            {saving ? "Saving…" : "Save new club logo"}
           </button>
         </AdminPanel>
 
@@ -414,7 +414,7 @@ export default function BrandingPage() {
                   <Image src={previewUrl} alt="Logo on a light background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+                    <span className="font-body text-xs font-semibold normal-case tracking-normal text-muted-foreground">
                       No logo
                     </span>
                   </div>
@@ -427,7 +427,7 @@ export default function BrandingPage() {
                   <Image src={inverseLogoUrl || previewUrl} alt="Logo on a dark background" fill sizes="180px" className="object-contain" unoptimized={Boolean(localPreviewUrl)} />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <span className="font-display text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
+                    <span className="font-body text-xs font-semibold normal-case tracking-normal text-muted-foreground">
                       No logo
                     </span>
                   </div>
@@ -437,7 +437,7 @@ export default function BrandingPage() {
           </div>
 
           <AdminPanel as="div" className="p-5">
-            <h2 className="font-display text-lg font-black uppercase text-foreground">Where it updates</h2>
+            <h2 className="font-body text-lg font-semibold normal-case text-foreground">Where it updates</h2>
             <ul className="mt-4 space-y-3 font-body text-sm text-muted-foreground">
               {["Website navigation", "Website footer", "Next match card", "Admin login and menu", "Players without a photo", "Browser tab icon"].map((location) => (
                 <li key={location} className="flex items-center gap-3">
@@ -457,11 +457,11 @@ export default function BrandingPage() {
           aria-labelledby="footer-social-heading"
         >
           <div className="mb-6">
-            <p className="font-display text-xs font-black uppercase tracking-[0.16em] text-brand">
+            <p className="font-body text-xs font-semibold normal-case tracking-normal text-primary">
               Footer
             </p>
-            <h2 id="footer-social-heading" className="mt-2 font-display text-2xl font-black uppercase text-foreground">
-              Tagline and Social Links
+            <h2 id="footer-social-heading" className="mt-2 font-body text-2xl font-semibold normal-case text-foreground">
+              Tagline and social links
             </h2>
             <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
               Edit the club tagline beside the crest and the URLs used by the social icons in the public website footer.
@@ -557,10 +557,10 @@ export default function BrandingPage() {
             type="button"
             onClick={saveSocialLinks}
             disabled={savingSocialLinks}
-            className="mt-6 w-full rounded-lg bg-brand px-6 py-4 font-display text-lg font-black uppercase tracking-widest text-brand-foreground transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-35"
+            className="min-h-11 mt-6 w-full rounded-lg bg-primary px-6 py-4 font-body text-lg font-semibold normal-case tracking-normal text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-35"
           >
             {savingSocialLinks && <AdminLoadingDots className="mr-2" />}
-            {savingSocialLinks ? "Saving…" : "Save Footer"}
+            {savingSocialLinks ? "Saving…" : "Save footer"}
           </button>
         </AdminPanel>
       </div>

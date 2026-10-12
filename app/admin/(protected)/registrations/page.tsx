@@ -97,9 +97,9 @@ type Draft = {
   prices: Price[];
 };
 const input =
-  "block w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
+  "block min-h-11 w-full rounded-xl border border-input bg-card px-3.5 py-2.5 text-base text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
 const button =
-  "inline-flex min-h-11 items-center justify-center gap-x-2 rounded-lg px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex min-h-11 items-center justify-center gap-x-2 rounded-xl px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
 const types: RegistrationFieldType[] = [
   "short_text",
   "long_text",
@@ -631,7 +631,7 @@ export default function RegistrationsAdminPage() {
           title="Registrations"
           description="Build forms, collect required consent, and keep a paid roster for each program."
           actions={<>
-            <div className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5">
+            <div className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-card px-3.5">
               <span className="text-xs font-semibold text-muted-foreground">Club payment account</span>
               <AdminSkeletonRegion label="Loading payment account status"><Skeleton className="h-6 w-24 rounded-full" /></AdminSkeletonRegion>
             </div>
@@ -649,12 +649,12 @@ export default function RegistrationsAdminPage() {
         description="Build forms, collect required consent, and keep a paid roster for each program."
         actions={
           <>
-            <div className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-card px-3.5">
+            <div className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-card px-3.5">
               <span className="text-xs font-semibold text-muted-foreground">
                 Club payment account
               </span>
               <span
-                className={`rounded-full px-2.5 py-1 text-xs font-bold ${connect?.chargesEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${connect?.chargesEnabled ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}
               >
                 {connect?.chargesEnabled ? "Charges enabled" : "Not ready"}
               </span>
@@ -681,7 +681,7 @@ export default function RegistrationsAdminPage() {
         <p
           role="status"
           aria-live="polite"
-          className="rounded-lg border border-border bg-card p-3 text-sm text-card-foreground shadow-sm"
+          className="rounded-xl border border-border bg-card p-3 text-sm text-card-foreground shadow-sm"
         >
           {message}
         </p>
@@ -689,16 +689,16 @@ export default function RegistrationsAdminPage() {
       {!connect?.chargesEnabled && (
         <AdminPanel className="overflow-hidden p-0 sm:p-0">
           <div className="flex items-center gap-3 border-b border-border p-4">
-            <span className="grid size-9 flex-none place-items-center rounded-lg bg-foreground text-xs font-bold text-background">
+            <span className="grid size-9 flex-none place-items-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
               S
             </span>
             <div>
-              <p className="font-display text-sm font-bold uppercase">
+              <p className="font-body text-sm font-semibold">
                 Club payment account
               </p>
               <p className="text-xs text-muted-foreground">Payments by Stripe</p>
             </div>
-            <span className="ml-auto inline-flex items-center gap-x-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-bold text-warning">
+            <span className="ml-auto inline-flex items-center gap-x-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
               Not ready
             </span>
           </div>
@@ -750,14 +750,14 @@ export default function RegistrationsAdminPage() {
       <div className="grid min-w-0 gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-24">
           <div
-            className="inline-flex w-full rounded-lg border border-border bg-muted/50 p-1"
+            className="inline-flex w-full rounded-xl border border-border bg-muted/50 p-1"
             aria-label="Registration form views"
           >
             <button
               type="button"
               aria-pressed={formView === "active"}
               onClick={() => setFormView("active")}
-              className={`min-h-11 flex-1 rounded-md px-3 text-sm font-semibold transition ${
+              className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-11 flex-1 rounded-lg px-3 text-sm font-semibold transition ${
                 formView === "active"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -769,7 +769,7 @@ export default function RegistrationsAdminPage() {
               type="button"
               aria-pressed={formView === "archived"}
               onClick={() => setFormView("archived")}
-              className={`min-h-11 flex-1 rounded-md px-3 text-sm font-semibold transition ${
+              className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-11 flex-1 rounded-lg px-3 text-sm font-semibold transition ${
                 formView === "archived"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -779,7 +779,7 @@ export default function RegistrationsAdminPage() {
             </button>
           </div>
           {visibleForms.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border px-5 py-8 text-center">
+            <div className="rounded-2xl border border-dashed border-border px-5 py-8 text-center">
               <p className="font-semibold text-foreground">
                 {formView === "archived"
                   ? "No archived forms."
@@ -811,7 +811,7 @@ export default function RegistrationsAdminPage() {
                 return (
                   <article
                     key={form.id}
-                    className={`min-w-0 rounded-xl border border-l-4 bg-background p-3.5 shadow-sm transition ${
+                    className={`min-w-0 rounded-2xl border border-l-4 bg-card p-4 transition ${
                       selected
                         ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                         : form.archived_at
@@ -826,7 +826,7 @@ export default function RegistrationsAdminPage() {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => void edit(form)}
-                        className="min-h-11 min-w-0 flex-1 rounded-md text-left focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="min-h-11 min-w-0 flex-1 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-primary"
                       >
                         <span className="block truncate font-semibold text-foreground">
                           {form.title}
@@ -836,7 +836,7 @@ export default function RegistrationsAdminPage() {
                         </span>
                       </button>
                       <span
-                        className={`inline-flex shrink-0 items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+                        className={`inline-flex shrink-0 items-center gap-x-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
                           status === "Live"
                               ? "bg-success/10 text-success"
                             : status === "Archived"
@@ -914,7 +914,7 @@ export default function RegistrationsAdminPage() {
                       </div>
                     )}
                     {confirmDeleteId === form.id && (
-                      <div className="mt-3 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+                      <div className="mt-3 rounded-xl border border-destructive/25 bg-destructive/10 p-3">
                         <p className="text-sm text-destructive">
                           Permanently delete this empty form? This cannot be undone.
                         </p>
@@ -947,7 +947,7 @@ export default function RegistrationsAdminPage() {
         <div className="flex min-w-0 flex-col gap-4">
           <AdminPanel className="flex flex-wrap items-center gap-4 p-4">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="text-xs font-semibold text-muted-foreground">
                 {draft.id ? "Selected form" : "Creating form"}
               </p>
               <p className="mt-0.5 truncate text-lg font-semibold text-foreground">
@@ -955,7 +955,7 @@ export default function RegistrationsAdminPage() {
               </p>
             </div>
             {draft.id && draft.archivedAt && (
-              <span className="inline-flex items-center gap-x-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+              <span className="inline-flex items-center gap-x-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                 <Archive aria-hidden="true" className="size-3.5" />
                 Archived
               </span>
@@ -976,13 +976,13 @@ export default function RegistrationsAdminPage() {
           </AdminPanel>
 
           {draft.archivedAt && (
-            <p className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+            <p className="rounded-xl border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
               Archived forms are read-only. Registrant data and CSV export
               remain available below.
             </p>
           )}
           {!draft.archivedAt && draft.status === "open" && (
-            <div className="flex flex-col items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 sm:flex-row sm:items-center">
+            <div className="flex flex-col items-start gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4 sm:flex-row sm:items-center">
               <span
                 aria-hidden="true"
                 className="mt-1.5 hidden size-2 flex-none rounded-full bg-warning sm:block"
@@ -1019,7 +1019,7 @@ export default function RegistrationsAdminPage() {
           >
             <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border px-5 py-4">
-                <h3 className="font-display text-base font-bold uppercase">
+                <h3 className="font-body text-base font-semibold">
                   Basics
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -1042,7 +1042,7 @@ export default function RegistrationsAdminPage() {
                   <div className="block text-sm font-medium">
                     Public link
                     {draft.id && selectedFormRow ? (
-                      <div className="mt-1 flex min-h-11 items-center gap-2 rounded-lg border border-input bg-muted/50 px-3 py-2.5">
+                      <div className="mt-1 flex min-h-11 items-center gap-2 rounded-xl border border-input bg-muted/50 px-3 py-2.5">
                         <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
                           {registrationPublicUrl({
                             currentOrigin: window.location.origin,
@@ -1053,13 +1053,13 @@ export default function RegistrationsAdminPage() {
                         <button
                           type="button"
                           onClick={() => void copyLink(selectedFormRow)}
-                          className="flex-none text-xs font-semibold text-primary hover:underline"
+                          className="min-h-11 flex-none rounded-lg px-2 text-sm font-semibold text-primary hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           Copy
                         </button>
                       </div>
                     ) : (
-                      <p className="mt-1 flex min-h-11 items-center rounded-lg border border-dashed border-border px-3 text-xs text-muted-foreground">
+                      <p className="mt-1 flex min-h-11 items-center rounded-xl border border-dashed border-border px-3 text-xs text-muted-foreground">
                         Available after you save the form.
                       </p>
                     )}
@@ -1078,7 +1078,7 @@ export default function RegistrationsAdminPage() {
                 </label>
                 <fieldset
                   disabled={!canEditStructure || saving}
-                  className="rounded-xl border border-border p-4 disabled:opacity-60"
+                  className="rounded-2xl border border-border p-4 disabled:opacity-60"
                 >
                   <legend className="px-1 text-sm font-semibold">
                     Participant mode
@@ -1103,7 +1103,7 @@ export default function RegistrationsAdminPage() {
                     ] as const).map((option) => (
                       <label
                         key={option.value}
-                        className="flex cursor-pointer gap-3 rounded-lg border border-border p-3 has-[:checked]:border-primary/70 has-[:checked]:bg-primary/10"
+                        className="flex cursor-pointer gap-3 rounded-xl border border-border p-3 has-[:checked]:border-primary/70 has-[:checked]:bg-primary/10"
                       >
                         <input
                           type="radio"
@@ -1137,7 +1137,7 @@ export default function RegistrationsAdminPage() {
 
             <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
-                <h3 className="font-display text-base font-bold uppercase">
+                <h3 className="font-body text-base font-semibold">
                   Questions
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -1171,14 +1171,14 @@ export default function RegistrationsAdminPage() {
               </div>
               <div className="flex flex-col gap-5 p-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <p className="text-xs font-semibold text-muted-foreground">
                     Required core fields
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {core.map((field) => (
                       <span
                         key={field.field_key}
-                        className="inline-flex items-center gap-x-2 rounded-lg bg-muted/50 px-3 py-2 text-xs font-medium text-foreground"
+                        className="inline-flex items-center gap-x-2 rounded-xl bg-muted/50 px-3 py-2 text-xs font-medium text-foreground"
                       >
                         {field.label}
                         <span className="font-mono text-[11px] text-muted-foreground">
@@ -1192,131 +1192,146 @@ export default function RegistrationsAdminPage() {
                   disabled={!canEditStructure || saving}
                   className="flex flex-col gap-3 border-t border-border pt-5 disabled:opacity-60"
                 >
-                  <legend className="mb-1 px-0 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <legend className="mb-1 px-0 text-xs font-semibold text-muted-foreground">
                     Your questions
                   </legend>
                   {draft.custom.map((field, index) => (
                     <div
                       key={index}
-                      className="rounded-xl border border-border p-4"
+                      className="rounded-2xl border border-border p-4"
                     >
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <input
-                          className={input}
-                          placeholder="Label"
-                          value={field.label}
-                          onChange={(event) =>
-                            setDraft({
-                              ...draft,
-                              custom: draft.custom.map((item, i) =>
-                                i === index
-                                  ? { ...item, label: event.target.value }
-                                  : item,
-                              ),
-                            })
-                          }
-                        />
-                        <input
-                          className={input}
-                          placeholder="field_key"
-                          value={field.field_key}
-                          onChange={(event) =>
-                            setDraft({
-                              ...draft,
-                              custom: draft.custom.map((item, i) =>
-                                i === index
-                                  ? {
-                                      ...item,
-                                      field_key: event.target.value
-                                        .toLowerCase()
-                                        .replace(/[^a-z0-9_]/g, ""),
-                                    }
-                                  : item,
-                              ),
-                            })
-                          }
-                        />
-                        <select
-                          className={input}
-                          value={field.field_type}
-                          onChange={(event) =>
-                            setDraft({
-                              ...draft,
-                              custom: draft.custom.map((item, i) =>
-                                i === index
-                                  ? {
-                                      ...item,
-                                      field_type: event.target
-                                        .value as RegistrationFieldType,
-                                      options: [],
-                                    }
-                                  : item,
-                              ),
-                            })
-                          }
-                        >
-                          {types.map((type) => (
-                            <option
-                              key={type}
-                              value={type}
-                              className="bg-popover"
-                            >
-                              {type.replaceAll("_", " ")}
+                        <label className="block text-sm font-medium">
+                          <span className="mb-2 block">Question</span>
+                          <input
+                            className={input}
+                            placeholder="Label"
+                            value={field.label}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                custom: draft.custom.map((item, i) =>
+                                  i === index
+                                    ? { ...item, label: event.target.value }
+                                    : item,
+                                ),
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="block text-sm font-medium">
+                          <span className="mb-2 block">Question key</span>
+                          <input
+                            className={input}
+                            placeholder="field_key"
+                            value={field.field_key}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                custom: draft.custom.map((item, i) =>
+                                  i === index
+                                    ? {
+                                        ...item,
+                                        field_key: event.target.value
+                                          .toLowerCase()
+                                          .replace(/[^a-z0-9_]/g, ""),
+                                      }
+                                    : item,
+                                ),
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="block text-sm font-medium">
+                          <span className="mb-2 block">Answer type</span>
+                          <select
+                            className={input}
+                            value={field.field_type}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                custom: draft.custom.map((item, i) =>
+                                  i === index
+                                    ? {
+                                        ...item,
+                                        field_type: event.target
+                                          .value as RegistrationFieldType,
+                                        options: [],
+                                      }
+                                    : item,
+                                ),
+                              })
+                            }
+                          >
+                            {types.map((type) => (
+                              <option
+                                key={type}
+                                value={type}
+                                className="bg-popover"
+                              >
+                                {type.replaceAll("_", " ")}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block text-sm font-medium">
+                          <span className="mb-2 block">Ask this question to</span>
+                          <select
+                            className={input}
+                            aria-label="Participant branch"
+                            value={field.participant_scope}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                custom: draft.custom.map((item, i) =>
+                                  i === index
+                                    ? {
+                                        ...item,
+                                        participant_scope: event.target
+                                          .value as RegistrationParticipantScope,
+                                      }
+                                    : item,
+                                ),
+                              })
+                            }
+                          >
+                            <option value="all" className="bg-popover">
+                              Both branches
                             </option>
-                          ))}
-                        </select>
-                        <select
-                          className={input}
-                          aria-label="Participant branch"
-                          value={field.participant_scope}
-                          onChange={(event) =>
-                            setDraft({
-                              ...draft,
-                              custom: draft.custom.map((item, i) =>
-                                i === index
-                                  ? {
-                                      ...item,
-                                      participant_scope: event.target
-                                        .value as RegistrationParticipantScope,
-                                    }
-                                  : item,
-                              ),
-                            })
-                          }
-                        >
-                          <option value="all" className="bg-popover">
-                            Both branches
-                          </option>
-                          <option value="minor" className="bg-popover">
-                            Minors only
-                          </option>
-                          <option value="adult" className="bg-popover">
-                            Adults only
-                          </option>
-                        </select>
+                            <option value="minor" className="bg-popover">
+                              Minors only
+                            </option>
+                            <option value="adult" className="bg-popover">
+                              Adults only
+                            </option>
+                          </select>
+                        </label>
                       </div>
                       {field.field_type === "dropdown" && (
-                        <input
-                          className={`${input} mt-3`}
-                          placeholder="Option 1, Option 2"
-                          value={field.options.join(", ")}
-                          onChange={(event) =>
-                            setDraft({
-                              ...draft,
-                              custom: draft.custom.map((item, i) =>
-                                i === index
-                                  ? {
-                                      ...item,
-                                      options: event.target.value.split(","),
-                                    }
-                                  : item,
-                              ),
-                            })
-                          }
-                        />
+                        <label className="mt-3 block text-sm font-medium">
+                          <span className="mb-2 block">Choices, separated by commas</span>
+                          <input
+                            className={input}
+                            placeholder="Option 1, Option 2"
+                            value={field.options.join(", ")}
+                            onChange={(event) =>
+                              setDraft({
+                                ...draft,
+                                custom: draft.custom.map((item, i) =>
+                                  i === index
+                                    ? {
+                                        ...item,
+                                        options: event.target.value.split(","),
+                                      }
+                                    : item,
+                                ),
+                              })
+                            }
+                          />
+                        </label>
                       )}
                       <div className="mt-3 flex justify-between">
-                        <label className="text-sm text-muted-foreground">
+                        <label className="flex min-h-11 cursor-pointer items-center text-sm text-muted-foreground">
                           <input
                             className="mr-2 accent-primary"
                             type="checkbox"
@@ -1335,7 +1350,7 @@ export default function RegistrationsAdminPage() {
                           Required
                         </label>
                         <button
-                          className="text-sm text-destructive"
+                          className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring text-sm text-destructive"
                           onClick={() =>
                             setDraft({
                               ...draft,
@@ -1354,7 +1369,7 @@ export default function RegistrationsAdminPage() {
 
             <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
-                <h3 className="font-display text-base font-bold uppercase">
+                <h3 className="font-body text-base font-semibold">
                   Price options
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -1389,9 +1404,11 @@ export default function RegistrationsAdminPage() {
               >
                 {draft.prices.map((price, index) => (
                   <div
-                    className="grid min-w-0 gap-3 rounded-xl border border-border p-3 sm:grid-cols-[minmax(0,1fr)_150px_auto_auto] sm:items-center sm:border-0 sm:p-0"
+                    className="grid min-w-0 gap-3 rounded-2xl border border-border p-3 sm:grid-cols-[minmax(0,1fr)_150px_auto_auto] sm:items-center sm:border-0 sm:p-0"
                     key={price.id ?? index}
                   >
+                    <label className="block text-sm font-medium">
+                      <span className="mb-2 block">Price name</span>
                     <input
                       className={input}
                       placeholder="Registration fee"
@@ -1407,7 +1424,10 @@ export default function RegistrationsAdminPage() {
                         })
                       }
                     />
-                    <label className="relative block">
+                    </label>
+                    <label className="block text-sm font-medium">
+                      <span className="mb-2 block">Amount in dollars</span>
+                      <span className="relative block">
                       <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-semibold text-muted-foreground">
                         $
                       </span>
@@ -1446,6 +1466,7 @@ export default function RegistrationsAdminPage() {
                           });
                         }}
                       />
+                      </span>
                     </label>
                     <label className="flex min-h-11 items-center text-sm text-muted-foreground">
                       <input
@@ -1483,7 +1504,7 @@ export default function RegistrationsAdminPage() {
 
             <AdminPanel className="overflow-hidden p-0 sm:p-0">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-5 py-4">
-                <h3 className="font-display text-base font-bold uppercase">
+                <h3 className="font-body text-base font-semibold">
                   Waiver and consent
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -1493,7 +1514,7 @@ export default function RegistrationsAdminPage() {
                   type="button"
                   onClick={() => setWaiverExpanded((value) => !value)}
                   aria-expanded={waiverExpanded}
-                  className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                  className="ml-auto inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {waiverExpanded ? "Collapse" : "Expand"}
                   {waiverExpanded ? (
@@ -1507,6 +1528,7 @@ export default function RegistrationsAdminPage() {
                 <div className="p-5">
                   <textarea
                     disabled={saving}
+                    aria-label="Waiver and consent"
                     aria-describedby="registration-waiver-guidance"
                     className={`${input} min-h-64`}
                     value={draft.waiver}
@@ -1516,7 +1538,7 @@ export default function RegistrationsAdminPage() {
                   />
                   <p
                     id="registration-waiver-guidance"
-                    className="mt-2 rounded-lg border border-warning/25 bg-warning/10 px-3 py-2.5 text-sm leading-relaxed text-warning"
+                    className="mt-2 rounded-xl border border-warning/25 bg-warning/10 px-3 py-2.5 text-sm leading-relaxed text-warning"
                   >
                     {REGISTRATION_WAIVER_LEGAL_HINT}
                   </p>
@@ -1548,39 +1570,39 @@ export default function RegistrationsAdminPage() {
             className="flex flex-col gap-4"
           >
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold text-muted-foreground">
                   Paid
                 </p>
-                <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+                <p className="mt-1.5 text-2xl font-semibold tabular-nums text-foreground">
                   {paidCount}
                 </p>
               </div>
-              <div className="rounded-xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold text-muted-foreground">
                   Collected
                 </p>
-                <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+                <p className="mt-1.5 text-2xl font-semibold tabular-nums text-foreground">
                   {formatRegistrationUsd(collectedCents)}
                 </p>
               </div>
-              <div className="rounded-xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold text-muted-foreground">
                   Refunded
                 </p>
-                <p className="mt-1.5 text-2xl font-bold tabular-nums text-foreground">
+                <p className="mt-1.5 text-2xl font-semibold tabular-nums text-foreground">
                   {refundedCount}
                 </p>
               </div>
               <div
-                className={`rounded-xl border p-4 ${
+                className={`rounded-2xl border p-4 ${
                   recoveryCount > 0
                     ? "border-destructive/30 bg-destructive/10"
                     : "border-border bg-card"
                 }`}
               >
                 <p
-                  className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                  className={`text-xs font-semibold   ${
                     recoveryCount > 0
                       ? "text-destructive"
                       : "text-muted-foreground"
@@ -1589,7 +1611,7 @@ export default function RegistrationsAdminPage() {
                   Needs review
                 </p>
                 <p
-                  className={`mt-1.5 text-2xl font-bold tabular-nums ${
+                  className={`mt-1.5 text-2xl font-semibold tabular-nums ${
                     recoveryCount > 0 ? "text-destructive" : "text-foreground"
                   }`}
                 >
@@ -1627,11 +1649,11 @@ export default function RegistrationsAdminPage() {
                     type="button"
                     aria-pressed={rosterFilter === filter.id}
                     onClick={() => setRosterFilter(filter.id)}
-                    className={`inline-flex min-h-9 items-center rounded-full border px-3 text-xs font-semibold transition ${
+                    className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full border px-3 text-xs font-semibold transition ${
                       rosterFilter === filter.id
                         ? filter.id === "review"
                           ? "border-destructive bg-destructive text-destructive-foreground"
-                          : "border-foreground bg-foreground text-background"
+                          : "border-primary bg-primary text-primary-foreground"
                         : filter.id === "review"
                           ? "border-destructive/30 text-destructive hover:bg-destructive/10"
                           : "border-border text-muted-foreground hover:text-foreground"
@@ -1665,9 +1687,9 @@ export default function RegistrationsAdminPage() {
                     return (
                       <details
                         key={entry.id}
-                        className="group min-w-0 rounded-xl border border-border bg-background open:border-primary/30"
+                        className="group min-w-0 rounded-2xl border border-border bg-background open:border-primary/30"
                       >
-                        <summary className="flex min-h-14 cursor-pointer list-none items-start justify-between gap-3 rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary [&::-webkit-details-marker]:hidden">
+                        <summary className="flex min-h-14 cursor-pointer list-none items-start justify-between gap-3 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary [&::-webkit-details-marker]:hidden">
                           <span className="min-w-0">
                             <span className="block truncate font-semibold text-foreground">
                               {registrationName(entry)}
@@ -1679,7 +1701,7 @@ export default function RegistrationsAdminPage() {
                             </span>
                           </span>
                           <span
-                            className={`inline-flex shrink-0 items-center gap-x-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                            className={`inline-flex shrink-0 items-center gap-x-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                               recovery
                                 ? "bg-destructive/10 text-destructive"
                                 : entry.status === "paid"
@@ -1699,7 +1721,7 @@ export default function RegistrationsAdminPage() {
                         </summary>
                         <div className="border-t border-border px-4 py-4">
                           {recovery && (
-                            <p className="mb-4 rounded-lg border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
+                            <p className="mb-4 rounded-xl border border-destructive/25 bg-destructive/10 p-3 text-sm text-destructive">
                               Payment completion needs manual review before this
                               record is treated as confirmed.
                             </p>
@@ -1707,7 +1729,7 @@ export default function RegistrationsAdminPage() {
                           <dl className="space-y-3">
                             {answerRows(entry).map((answer) => (
                               <div key={answer.key} className="min-w-0">
-                                <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                                <dt className="text-xs font-semibold text-muted-foreground">
                                   {answer.label}
                                 </dt>
                                 <dd className="mt-1 break-words text-sm text-foreground">
@@ -1718,7 +1740,7 @@ export default function RegistrationsAdminPage() {
                               </div>
                             ))}
                             <div>
-                              <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                              <dt className="text-xs font-semibold text-muted-foreground">
                                 Email
                               </dt>
                               <dd className="mt-1 break-all text-sm text-foreground">
@@ -1726,7 +1748,7 @@ export default function RegistrationsAdminPage() {
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                              <dt className="text-xs font-semibold text-muted-foreground">
                                 Price paid
                               </dt>
                               <dd className="mt-1 text-sm text-foreground">
@@ -1746,7 +1768,7 @@ export default function RegistrationsAdminPage() {
                 <div className="px-4 pb-4">
                 <div className="mt-5 hidden md:block">
                   <table className="w-full table-fixed text-left text-sm">
-                    <thead className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
+                    <thead className="border-b border-border text-xs text-muted-foreground">
                       <tr>
                         <th className="w-[26%] px-3 py-3">Registrant</th>
                         <th className="w-[24%] px-3 py-3">Email</th>
@@ -1764,7 +1786,7 @@ export default function RegistrationsAdminPage() {
                           <td className="px-3 py-3 align-top">
                             <span className="flex min-w-0 items-center gap-2">
                               <span
-                                className={`inline-flex flex-none items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                className={`inline-flex flex-none items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                                   entry.payment_recovery_required
                                     ? "bg-destructive/10 text-destructive"
                                     : entry.status === "paid"

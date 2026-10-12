@@ -49,8 +49,8 @@ const CLUBHOUSE_GATE = 'presentationTemplateKey === "clubhouse@1"';
  * academy@1 and the default templates.
  */
 describe("editorial@1 admin surface hides", () => {
-  describe("nav: Programs, Analytics, Match Stats, Season Stats dropped for editorial@1 only", () => {
-    it("filters exactly the four dead hrefs behind the editorial template check", () => {
+  describe("nav: Programs, Analytics and combined Stats dropped for editorial@1 only", () => {
+    it("filters exactly the three dead canonical hrefs behind the editorial template check", () => {
       const context: AdminRouteAccessContext = {
         role: "owner",
         presentationTemplateKey: "editorial@1",
@@ -60,7 +60,7 @@ describe("editorial@1 admin surface hides", () => {
       const hidden = ADMIN_ROUTE_MANIFEST.map((route) => route.id).filter(
         (id) => !getVisibleAdminRoutes(context).some((route) => route.id === id),
       );
-      expect(hidden).toEqual(["programs", "match-stats", "season-stats", "analytics"]);
+      expect(hidden).toEqual(["programs", "match-stats", "analytics"]);
     });
 
     it("keeps /admin/about in the nav — editorial@1 really does have an About page", () => {

@@ -6,3 +6,12 @@
 .page-editor-phone-inspector>div,.page-editor-phone-inspector>button,.page-editor-phone-inspector>p{flex:none}
 .page-editor-phone-inspector>div.sticky{position:static}
 .page-editor-mobile-dialog input,.page-editor-mobile-dialog textarea,.page-editor-mobile-dialog select{font-size:16px!important}
+
+/* Keep the native dialog and visual-viewport geometry; soften its tool surface. */
+.page-editor-mobile-dialog .page-editor-phone-inspector { border-radius:20px 20px 0 0; }
+.page-editor-phone-inspector button { touch-action:manipulation; }
+
+/* Full-width phone surfaces protect their controls; iframe canvases remain outside. */
+.page-editor-mobile-dialog .shop-page-inspector { padding-left:max(1rem,env(safe-area-inset-left,0px)); padding-right:max(1rem,env(safe-area-inset-right,0px)); }
+.page-editor-mobile-dialog .tryouts-page-inspector,.page-editor-mobile-dialog .program-editor-inspector { padding-left:max(1.25rem,env(safe-area-inset-left,0px)); padding-right:max(1.25rem,env(safe-area-inset-right,0px)); }
+@media(min-width:640px) { .page-editor-mobile-dialog .program-editor-inspector { padding-left:max(1.5rem,env(safe-area-inset-left,0px)); padding-right:max(1.5rem,env(safe-area-inset-right,0px)); } }

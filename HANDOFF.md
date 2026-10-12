@@ -1,4 +1,437 @@
+## 2026-10-12 — Approved release prerequisites satisfied; ready to merge PR #13
+
+Christian explicitly approved the previously requested prerequisite actions. Fresh private onzio/onzio_private backups completed under /private/tmp/onzio-pr13-production-backup with directory700/files600; all63 schema tables/COPY sections/terminators match and SHA-256 receipts are saved. Today's completed physical backup1943570699 and READY rollback deployment dpl_2VfUXDHYWSef5VfKTqVX3zE68iPr remain available. Structural/hash verification only; no production restore attempted. The approved push applied only20260925012119_public_email_branding_bucket.sql without seeds; readback matches49/49 migrations and identical existing public/PNG/1MB bucket settings. The earlier auto-review data-export rejection is resolved by Christian's specific approval; no outstanding authorization blocker remains.
+
+Runtime source c8c960a and all prior review/test gates are unchanged. Basec10bea3 remains ancestor; exact PR source/evidence head17aebb4 is MERGEABLE/CLEAN with empty configured checks; branch whitespace/non-mutating merge simulation pass. This preparation changes documentation only. Complete preparation, private receipt paths and public/admin baselines: docs/admin-portal-production-release.md. GUIDED-PRODUCTION-RELEASE remains in_progress until merge/READY deployment/post-release acceptance are recorded. Exact next step: publish preparation evidence, refresh/check exact PR head, perform the already-approved merge and verify its matching READY production deployment/public/protected-login behavior. Preserve original dirty OTP checkout; no content or provider mutations are authorized by the release acceptance itself.
+
+## 2026-10-12 — PR #13 merge approved; production prerequisites awaiting separate approval
+
+Christian explicitly approved merging PR #13. Refreshed main remains c10bea3; reviewed PR head17aebb4 is unchanged, open/non-draft, MERGEABLE/CLEAN with no status checks configured. Whole-branch whitespace and non-mutating merge-tree pass. Runtime gates and independent No findings review remain recorded in docs/admin-portal-pr-review.md. Current production is READY deployment dpl_2VfUXDHYWSef5VfKTqVX3zE68iPr; the Vercel connector's scope403 was resolved through the authenticated CLI for the same exact team/project. Supabase production ioalthwsdrlzrubomrow is ACTIVE_HEALTHY; completed physical backup1943570699 is dated2026-10-12T11:16:53.306Z, physical backups enabled/PITR disabled.
+
+Mandatory isolated linked migration readback finds48 applied of49 checked-in migrations, with only pre-existing20260925012119_public_email_branding_bucket.sql unapplied. The non-mutating include-all dry run would apply exactly that file; PR #13 introduces no migration changes. It creates/updates the public PNG-only onzio-branding bucket, max1MB. Read-only bucket inspection confirms those exact settings already exist in production; applying it would preserve configuration and record its missing migration history. The narrow existing branding contracts pass. CLAUDE.md46–58 requires every checked-in migration applied before any production deploy; prior historical editor releases explicitly excluded this migration, but that history does not waive the current gate. Original/local worktree database target is unchanged; production CLI linkage is isolated in /private/tmp/onzio-pr13-release-link.
+
+Automatic approval review rejected the fresh production schema/data export to /private/tmp/onzio-pr13-production-backup: merging alone did not explicitly authorize exporting potentially sensitive tenant data to local files. The rejected command did not run; no export, production migration, merge or deployment occurred. Requested specific approval for mode700 directory/mode600 onzio/onzio_private schema/data backups plus the exact dry-run-verified branding migration, then merge. Private non-sensitive receipt: /private/tmp/onzio-pr13-release-preflight.json. Public pre-release baseline /private/tmp/onzio-pr13-public-before.json: Diverse City home/roster/schedule200; Lions public equivalents already404 (cause unverified, not attributed to this unmerged PR); both domains' protected admin/Stats/Standings redirect to normal login200 without tenant errors. Curl normal TLS verification supersedes Python's local certificate-store failure. No authenticated production UI/persistence result is claimed. GUIDED-PRODUCTION-RELEASE is in_progress, blocked on that scoped human approval. Exact next step: after explicit approval take/verify backups, apply only that migration without seeds, read back the bucket and matching49/49 ledger, refresh/check the exact PR head, merge and verify its READY production deployment/public/auth behavior. Do not export or mutate while approval is pending; retain rollback deployment and original dirty OTP checkout.
+
+## 2026-10-12 — PR #13 review rounds complete; awaiting Christian's merge OK
+
+Christian requested the review-agent skill as a read-only subagent, fixes and repeated review, and explicitly retained the final OK before merge. Round 1 found one P2: Match discard retained the edited baseline/unload warning during delayed tab navigation. Fresh-context round 2 cleared that fix and found another P2: successful Standings insertion followed by a failed strict refresh could be saved again as a duplicate. Root fixed both, added regressions that failed before each fix, and ran a third complete merge-base review: No findings. Source/test commit c8c960ac64afce3c8ccb2422d00c98cfb1fd93d3 is published to codex/admin-guided-redesign; its final build ID is 26UE0JzwxYguDfsx5RF-E. Current source fixes are MatchStatsEditor discard baseline restoration and Standings read-only post-save recovery with mutation guards/persistent-ID reconciliation. Two additive browser specs cover both widths and rows/settings failures. No existing assertions, APIs, schemas or security boundaries were changed.
+
+Final source gates: all 8 new browser regressions, existing phone Competition2, Standings contracts8, complete189 files/1,791 tests (76.01s), production build, sequential post-build TypeScript and whole-project lint pass. All7 distinct existing Stats persistence/scope cases pass across the first run and unchanged affected rerun; strict original seven-table restoration remains. Initial fixture-readiness timeout and the generated-file TypeScript/build overlap are documented and superseded by unchanged/sequential passing checks. Full-diff review provenance, red/green evidence, log paths and physical/provider/capture limits: docs/admin-portal-pr-review.md. Prior build-8 screenshots/iPhone/paste/VoiceOver retain their earlier provenance; no new hardware result is claimed for the recovery button. GUIDED-PR-REVIEW acceptance is complete; review documentation and QA/plan ledgers are updated.
+
+Refreshed origin/main/merge base is c10bea3f54442f31e4bdf7e3f68456e6c278de65; source merge-tree exits0 with tree005dcff25791b6941d8ef91bf9faa197b8aa5607; whole-branch whitespace passes with the previously approved canonical EOF attribute. GitHub at source headc8c960a/basec10bea3 reports MERGEABLE/CLEAN, open/non-draft, empty statusCheckRollup (no remote CI pass). Subsequent evidence-only commits do not alter the reviewed source. PR: https://github.com/404christiann/onzio-platform/pull/13. Original dirty OTP checkout remains untouched; feature-branch preview guard remains. No merge, production deployment, hosted database mutation or live provider action. Exact next step: Christian reviews the two fixes and latest No findings report, then gives explicit OK before any merge; at release time refresh base/checks and satisfy production backup/release safeguards before merging and verifying the live portal.
+
+## 2026-10-12 — Release PR #13 open and ready for review
+
+Christian approved the generated-file whitespace exception and requested this PR: https://github.com/404christiann/onzio-platform/pull/13. The branch is published and the PR is attached to the chat, open/non-draft against main. At head 88672d9/base c10bea3, GitHub reports MERGEABLE/CLEAN with an empty statusCheckRollup; no remote CI pass is claimed. The repository's only workflow is scheduled/manual public-media smoke, not PR-triggered CI. The branch-specific Vercel preview guard is committed; no preview, production merge/deployment, hosted database mutation or live provider action was performed.
+
+The approved single-file whitespace attribute passes whole-branch diff checks while exact local generated types still match. Architecture21 and cron12 pass; prior full1,791/build/TypeScript/lint/browser72 and user-reported iPhone/paste/VoiceOver acceptance remain valid because runtime source is unchanged. Non-mutating merge-tree passes. GUIDED-RELEASE-QA and GUIDED-RELEASE-PR acceptance are complete. Next: Christian reviews PR #13 and explicitly authorizes a production release; at that time refresh base/checks, satisfy required production backup/release safeguards, merge and verify the live portal. Original OTP checkout remains untouched.
+
+## 2026-10-12 — Formatting approved; release PR preparation
+
+Christian explicitly approved the generated-file formatting exception and requested a release PR. Added `.gitattributes` for only `lib/database.generated.ts` with `whitespace=-blank-at-eof`; other whitespace rules and exact generation remain intact. Exact local generated types, whole-branch whitespace validation, architecture 21 and cron contracts 12 pass. Application source/build and previously accepted 1,791 tests/72 visual checks/iPhone feedback are unchanged.
+
+Added this branch to the existing `vercel.json` automatic-preview disable list. Hosted staging is retired; PR publication does not authorize a hosted preview or production release. The current main base is c10bea3. Next: publish the reviewed branch, open/attach the ready-for-review PR, verify GitHub conflict/check state and record its URL. Production merge/deployment still requires explicit release approval. The earlier EOF rejection is resolved by Christian's explicit authorization; it is no longer a blocker.
+
+## 2026-10-12 — Portal local/physical acceptance complete; release decisions open
+
+Christian authorized full portal review/remaining QA with subagents. Work remains in the managed `codex/admin-guided-redesign` worktree; the original OTP checkout is untouched. Frozen build 8 passes the complete 189-file/1,791-test suite in 50.17 seconds and final TypeScript/lint/build/exact generation. Recorded standalone database 31/310, contracts 107/1,051 and architecture 3/21 groups also pass and are included in that final suite.
+
+Verified local fixes cover modal containment/focus/restoration and inert closed navigation/previews, strict Standings reads, Contact/Shop/Tryouts loaders, enlarged text/contrast, account names, Homepage public parity, Match confirmation/network recovery/PNG-WebP guidance, verified-host suspended billing redirects and exact generated types. Website 94, states 8, pilot 6 and Team Access 2 distinct browser passes are recorded with original-row restoration and normal media retirement. All 13 final build 6 modal cases pass in 96 seconds, including the corrected desktop-to-tablet search position. Its fresh matrix passes 70/72, with only the light Seasons Active badge contrast at 4.3:1 failing both viewports. Narrow badge and clipped-sidebar-fallback corrections are in frozen build 8; its full required gates and final fresh 72-case matrix pass (18 routes × desktop/phone × light/dark), with stable build ID, HTTP 200/no overflow/scoped axe violations/JS errors/main alerts/external hosts/unexpected requests. Shared-component React review cleared. Application/test source is local commit 882384f2531d64fb719e1c3b86fc5c12ed3891a2 (34 files), identical to build 8 ID WTlAeANSzUCRXBiW7dUSu; the gallery contains all 72 actual captures and app review controls were verified, with proof /private/tmp/onzio-portal-review-proof.png; final review documentation is saved. The missing fixture logo is an absent Storage object, not an application URL regression; working/public logo behavior is preserved. See `docs/admin-portal-release-qa.md` for files, log paths and exact limits.
+
+The temporary admin PRIMARY_DOMAIN_REQUIRED result was a local server environment mismatch, fixed by explicit ONZIO_ENVIRONMENT=production against localhost:54321 matching Alpha's synthetic domain records; no domain was missing or changed and no database restoration was required. The approved exact-peer iPhone route `http://192.168.1.133:3114/admin` serves only the named phone 192.168.1.132 within a 30-minute window. Fresh normal build 8 phone-origin authentication passed: OTP request 200, ordinary email-code sign-in, Stats reload, cookie alias and 16 API requests without external hosts/JS errors; provider routes return 503. Earlier transient/interrupted checks are superseded without auth bypass/source change. The renewed window expires at 16:55 UTC / 9:55 a.m. local; Christian was told to resume the physical walkthrough. Christian reported that it looks good and seems to work on his physical iPhone; general visual/usability acceptance is recorded. Christian separately answered the specific input-paste/VoiceOver question “Yes, both worked”; both are user-reported physical passes and the scoped hardware gate is closed. No device model/iOS, exact screen-reader coverage or specific physical persistence/upload behavior is inferred; automated persistence evidence remains separate.
+
+Earlier broad proxy/credential-copy alternatives were rejected and never applied; the safer exact-peer route was approved, so access is not an unresolved blocker. Canonical generated EOF remains the sole source-commit git show --check 882384f diagnostic; clean documentation working-tree diffs do not waive it; automatic review rejected the scoped whitespace exception and no bypass/exclusion was applied. Publication approval remains open. No hosted/provider/release action occurred. Fetched origin/main c10bea3f54442f31e4bdf7e3f68456e6c278de65 is still an ancestor; non-mutating merge-tree exits 0 (tree 0876a06cd55da537d4aab8d87a51b5676d878c9b), with no remote publication. Axe incomplete items require human review; decorative preview/iframe exclusions and fenced registration Connect status are qualified in the QA report. Seeded missing logo media is not media-upload evidence; pilot uploads are separately verified. Local technical and scoped physical acceptance are complete. Next: resolve the canonical EOF decision and obtain explicit release authorization; those are the only remaining gates for GUIDED-RELEASE-QA. Any required live provider acceptance must be scoped/authorized separately; fenced local checks do not establish it.
+
+## Current: Simple switch implemented and verified locally — 2026-10-11
+
+Christian approved A and requested implementation followed by notification
+before the broader next step. Source `84f46fe` on `codex/admin-guided-redesign`
+combines Match/Season into one Stats navigation/search entry and shared page.
+Old Season Stats links redirect to `/admin/stats?view=season`. Season, player,
+phone detail/list and match selection survive tab switches; unsaved changes and
+failed saves remain protected. Season totals remain manual and independent.
+Editorial/access gates, all stat fields/cohorts/payloads and other navigation
+rules remain intact. No API/schema/auth/RLS/public-page changes.
+
+Independent review cleared after stale-baseline/navigation-lock/focus fixes.
+Final TypeScript/lint/build pass; 187 files / 1,784 tests pass; Stats browser 7,
+management 2, loading 5 pass. Actual-app 20 view/size/theme capture cases pass.
+Synthetic fixture cleanup restores original seven full local tables exactly;
+management/workspace fixture assertions remain strict. Full evidence and exact
+limits: `docs/admin-stats-simple-switch-verification.md`.
+
+Review: `http://127.0.0.1:8768/stats-simple-switch-review.html`. Local build 3110
+and static review 8768 remain available. Physical phone touch/paste and screen-reader
+release acceptance remains open; no new native-hardware claim. Scoped package
+GUIDED-STATS-COMBINED is in_progress (implementation complete; release QA open).
+Original dirty checkout and concurrent OTP/icon work were untouched. No push,
+PR, remote merge, deployment or hosted mutation. Next: notify Christian that this
+local scoped implementation is ready, then await his broader implementation scope;
+complete physical acceptance before any explicitly authorized release.
+
+## Current: Combined Stats navigation sketches — 2026-10-11
+
+Christian approved the implemented workspace visually and requested three HTML
+sketches before combining Match Stats and Season Stats into one Stats page.
+Built `design-previews/admin-guided-redesign/stats-combined-directions.html`:
+A Simple switch (recommended), B Explained tabs, C Player first. Each uses one
+Stats navigation item, explicit Match stats / Season stats labels, named season
+and match context, and distinct Save labels. Desktop/phone and light/dark review
+controls are included. Fictional Meadow FC data stays in memory; no API requests,
+database fixtures, application routes, fields, navigation or contracts changed.
+
+Verified nine behavioral/layout cases: A/B/C at 1440px light, 390px dark and
+320px light. Both modes, independent totals, numeric Season starts/boolean Match
+starts, all ten outfield/seven goalkeeper fields, player/back/search navigation,
+Cancel and Save & switch retention, no overflow, visible Save and 16px inputs
+passed. Final small-phone refinements passed three additional 320px checks:
+44px stepper targets, full Save label, and Back below the sticky header. C also
+passed Discard changes and arrow-key switching. Physical/native keyboard testing
+is not established for these isolated prototypes; no release readiness claim.
+Reports: ignored `evidence/combined-stats-directions/`. Preview server serves
+only the static review folder on loopback port 8768. `git diff --check` passes.
+
+Open `http://127.0.0.1:8768/stats-combined-directions.html`. Scoped package
+GUIDED-STATS-COMBINED-DIRECTIONS is complete (preview only). Application source
+remains `baa66c1`; no push/deployment or original-checkout mutation. Next: Christian
+selects A/B/C or a combination, then scope actual route/navigation consolidation
+with historical links, template/role visibility, drafts and save contracts intact.
+
+## Current: Season and Match Stats Player workspace implemented — 2026-10-11
+
+Christian approved A and requested the same workspace for Match Stats. Both
+are implemented at source `baa66c1` on `codex/admin-guided-redesign` in the managed
+Guided worktree. Desktop has roster/editor together; phones have player list,
+full grouped fields, All players, persistent Save and guarded context changes.
+All stat/cohort/load/save/template contracts remain intact. Match minutes now
+show/enforce the existing 0–300 range; Season totals remain unrestricted/manual.
+
+Final TypeScript/lint/build pass; all 187 files / 1,783 tests pass; workspace 4,
+management 2 and loading 5 browser cases pass. Actual-app 20 editor/theme/size
+captures and 12 phone roster captures pass. Native iPhone 17/iOS 26.5 Simulator
+Season and Match numeric-keyboard Save/reload passed, including boolean starter
+persistence. Original fixture tables restored exactly. Independent review cleared.
+See `docs/admin-stats-workspace-verification.md` for exact evidence and limits.
+
+Review: `http://127.0.0.1:8768/stats-workspace-review.html` (actual-app captures,
+fictional review players). Existing `review.html` refreshes only the two stats
+routes against the same held fixture/baseline; other 17 route images retain prior
+9a001c1 evidence. Local build 3110, static preview 8768 and device proxy 3111 remain.
+Original checkout and concurrent OTP/icon work were untouched. No hosted changes,
+push, PR, merge or deployment occurred. Release packages remain in progress for
+physical touch/paste and phone screen-reader acceptance; next step is that
+walkthrough plus explicit publication authorization.
+
+## 2026-10-11 — Season Stats direction prototypes; portal unchanged
+
+Christian requested three Apple-style alternatives for Season Stats data entry
+and appearance, then explicitly added mobile-friendly acceptance. Built isolated
+`design-previews/admin-guided-redesign/season-stats-directions.html` on the existing
+Guided branch/preview server. Open `http://127.0.0.1:8768/season-stats-directions.html`.
+A is player list/detail, B is guided category steps, C is team category entry
+with one-stat phone rows. Desktop/Phone/Both and light/dark controls are included.
+All ten outfield and seven goalkeeper fields remain manual season totals;
+fictional Meadow FC data and in-memory demo saves never touch the portal/DB.
+
+Prototype browser verification: 18 cases at1440/390/320px in both themes; edits,
+review/save feedback, all field/keeper controls, unique IDs, initial Save-bar
+visibility, no document overflow/page errors, and 44px phone button targets.
+Evidence/report lives under ignored preview `evidence/season-stats-options/`;
+full check log `/private/tmp/season-stats-options-check.log`. Native keyboard and
+physical-device behavior are not established by these prototypes. Existing app
+source9a001c1 and its completed prior verification remain untouched; full app
+suites were not rerun for this isolated HTML/documentation work.
+
+Next: Christian selects a direction or combination, then scope the actual
+Season Stats implementation with existing field/save/template contracts. This
+turn authorizes preview iteration, not a deployed portal replacement.
+
+
+## 2026-10-11 — Guided admin redesign implemented; local review ready
+
+All 19 protected admin destinations use the approved Guided direction on
+`codex/admin-guided-redesign` in the attached isolated worktree
+`/Users/christianalcala/.codex/worktrees/admin-guided-redesign/onzio-platform`.
+Christian approved the plan and explicitly authorized subagent implementation.
+Final application source is `9a001c1`; approved icon source `48f9f69`/main
+`c10bea3` is integrated locally through `640e57e` and `dab7b95`. This task
+preserved the original dirty OTP checkout and did not publish the Guided branch.
+
+Independent source review cleared preserved fields, handlers, role/template
+gates, APIs, authentication, RLS, billing and media boundaries. Reviewed fixes
+cover safe areas, search height, actual visualViewport focus/action visibility,
+Safari native Time sizing and About inspector scrolling. Staff retains its
+independent default width/in-body actions; Player/Match retain fixed actions.
+The About div scroll boundary preserves its disabled fieldset and handlers;
+the unchanged Logo upload/cleanup-queue assertion now passes after rebuild.
+
+Frozen-source final `npm test`: **187 files / 1,783 tests passed**. TypeScript,
+lint and production build pass. Earlier integrated contract/architecture/local
+DB/legacy checks passed. Guided UI: 14 distinct passes across the 13/14 run and
+unchanged strict Staff-width rerun. Real browser persistence: 10 distinct
+Player/Staff/Match add/edit/save/reload passes. Management: 2 cases with 32 loaded
+screens; owner/admin access: 4 cases, 44 assertions, 20 screens. Existing public
+editor evidence: Programs/Tryouts/Shop28, Contact6, Homepage44 distinct and
+Cinematic About8 distinct; final unchanged About3 rerun passes. Full details
+and separate-run qualifications are in `docs/admin-guided-redesign-verification.md`.
+
+Actual iOS Simulator Safari passed Player, Match and Homepage Save with the
+software keyboard visible, local DB/API verification and Safari reload with
+persisted values. Native Time fits adjacent fields and its picker opens.
+Original Player/Match rows were restored exactly; original Homepage hero content
+was restored through its real API with revision/receipt history legitimately
+advancing. Other browser fixture helpers restored their captured originals.
+All testing uses isolated synthetic local Supabase; no hosted/provider actions.
+
+Local comparison: `http://127.0.0.1:8768/review.html`; selects all 19 pages,
+desktop/phone, light/dark and Before/Guided/Compare. Evidence and native proof
+are ignored under `design-previews/admin-guided-redesign/evidence/`; auth state
+stays outside Git. Actual app is `http://alpha.localhost:3110/admin`;
+immutable baseline41bfb00 is port3191. Reproduction is in the preview README.
+
+Release acceptance remains **in_progress**. Physical-phone touch/scroll/paste
+and VoiceOver are not established by Simulator. Two Editorial-specific About
+cases were not invoked on the Cinematic fixture. Remaining runtime lifecycle,
+upload/confirmation and error/empty cases are explicit in the scoped ledger.
+Known unchanged-baseline issues: generated actor-ID type drift; one-pixel
+Homepage CTA offset; Contact loading mocks omit the actual editor endpoint
+(baseline desktop case reproduced, other three baseline viewport cases not run).
+Existing assertions were not weakened. Resolve those separately and record
+remaining acceptance before requesting explicit release approval.
+
+Next: review the implemented local comparison, complete the ledger's remaining
+acceptance and decide on release. No Guided push, PR, remote merge, deployment
+or hosted mutation is authorized or performed. Historical notes below are
+retained as checkpoints; this section and the scoped ledger are current.
+
+
 # Onzio Platform Handoff
+
+## Player/Match actions and focused fields above iOS software keyboard — 2026-10-11
+
+Root's actual iPhone 17 Safari software-keyboard check showed Player Save/Cancel
+below the visible keyboard boundary. The HEAD AdminSidePanel already used full
+100dvh without visualViewport tracking. The first fix kept Save/Cancel visible,
+but root's native retest then found the focused Name input obscured after the
+scrolling body shrank. That first native retest does not establish acceptance.
+
+Subagent guided_foundation added a local viewport effect in
+components/admin/AdminSidePanel.tsx, matching the existing PageEditorInspector
+height/top approach. While open, the panel measures visualViewport.height/
+offsetTop and listens to viewport resize/scroll plus window resize. Panel-local
+CSS variables in components/admin/AdminGuided.module.css override only panel
+top, height and max-height. Player/Match keep their fixed footer/scroll regions
+and opt-in widths; Staff keeps its narrow default and in-body actions.
+
+The follow-up waits one animation frame after viewport changes, measures the
+focused input/textarea/select/editable against the panel scroll body, and
+adjusts only that body's scrollTop when necessary with an 8px breathing margin.
+It does not move focus or invoke page-scrolling scrollIntoView. Each viewport
+update cancels the preceding pending frame; closing cancels the frame and
+removes all viewport/window listeners. Mutation/upload/confirmation behavior
+and iframe/canvas geometry remain unchanged.
+
+New tests/browser/admin-guided-keyboard.spec.ts supplies three read-only browser
+regressions: Player/Match/Staff visual-viewport shrink and pan with unchanged
+layout height, reachable action geometry, focus preservation and cancel/reopen
+restoration. Follow-up assertions require the focused field within scroll-body
+bounds before and after shrink/pan and visible while accepting text. Simulation
+is explicitly not native software-keyboard evidence. After the follow-up, four
+unchanged mobile/theme/player/match contract files pass 28 tests; git diff
+--check passes. No existing assertion was weakened.
+
+Source is frozen. Root owns rebuilding the follow-up source, rerunning the
+strengthened browser regressions, and native Player/Match text-entry and
+Save/Cancel verification. GUIDED-01/03/07 remain in_progress until acceptance,
+integrated checks and re-review are recorded. No fixture/database write,
+hosted mutation, commit, push or deployment occurred.
+
+## Landscape search verification used stale build — 2026-10-11
+
+The 844x390 safe-area browser assertion remained unchanged and exposed a stale
+compiled stylesheet: AdminGuided.module.css was saved at 17:47:54Z, after
+.next/BUILD_ID at 17:47:12Z. Compiled CSS still restricted search max-height
+rules to <=639px; current source applies them at all widths. Local production
+inspection confirmed maxHeight:none/results320px and bottom464.5.
+
+Read-only verification applied the exact current source declarations into a
+temporary browser style tag: dialog max-height254px, results182px, actual
+height241px/bottom326.5 against safe bottom366. No fixture/content mutation or
+test weakening occurred. This confirms the current rules' geometry only; it
+does not represent a rebuilt production-browser pass. No additional application
+source change was necessary. Root owns rebuild/restart and rerunning unchanged
+safe-area assertions, final gates and re-review. Current source is frozen.
+
+## Guided protected safe-area review fix — 2026-10-11
+
+Independent review found that protected viewportFit=cover required horizontal
+inset protection in the outer chrome. Subagent guided_foundation added inherited
+protected --admin-safe-area-{top,right,bottom,left} values and
+--admin-shell-header-height (72px plus top inset). Shell header/main preserve
+their 16/24/32px responsive padding and take the larger safe inset; mobile
+Sidebar header/content/footer protect both edges. Main bottom padding, Staff
+scroll-body padding and player/match fixed actions respect the bottom inset.
+Phone route-search dialog uses safe viewport offsets and the actual shell
+header height; account popover width is bounded by the safe viewport.
+AdminSidePanel header/body/footer keep all existing width/scroll/contract
+classes. No iframe/canvas internal geometry or public/auth style changed.
+
+Exact files: components/admin/AdminGuided.module.css, components/AdminShell.tsx,
+components/admin/AdminRouteSearch.tsx, AdminAccountMenu.tsx, AdminSidePanel.tsx;
+new tests/browser/admin-guided-safe-area.spec.ts. The Website owner receives the
+header/inset variables for its separately owned fixed Save bars and Programs
+sticky offset. New read-only browser cases exercise actual control geometry at
+390/844px using synthetic inset variables; this does not claim native evidence.
+
+Post-fix evidence: six unchanged narrow shell/mobile/control/theme/player/match
+contract files pass 45 tests; git diff --check passes. Root owns the rebuilt
+browser run, integrated gates and re-review. Earlier full-suite/build/browser
+evidence predates this fix and must not be substituted for post-fix evidence.
+GUIDED-01/07 remain in_progress pending root acceptance. No fixture/database
+write, hosted mutation, commit, push or deployment occurred.
+
+## Guided Roster/Staff and Schedule pilot source — 2026-10-11
+
+Subagent `guided_foundation` implemented GUIDED-03 presentation in
+`app/admin/(protected)/{roster,schedule}/page.tsx`, shared
+`components/admin/{FileUpload,SeasonSelect}.tsx`, and additions to
+`components/admin/AdminGuided.module.css`. Player/Staff and month-grouped match
+rows are roomier, normal-case and calm; player and match editors retain every
+semantic field group and now use bounded grouped surfaces. Position/result
+filters, match Edit, Staff in-body actions, seasons and upload replacement/
+removal are at least 44px. Upload preview actions occupy their own phone row
+without squeezing the filename/thumbnail; desktop remains inline. Staff retains
+its independent narrow default and actions in the scrolling body. Player/match
+opt-in wider panels and fixed footer actions remain exactly as contracted.
+
+Two accessibility issues discovered during the pilot were corrected: collapsed
+Roster position groups now expose expanded/control relationships and make their
+closed player rows inert/aria-hidden; previously unconnected Staff and inline
+season-stat labels now refer to their actual controls. Root has the exact
+browser regression request (collapse a group then tab, Staff Name/Role by label).
+The retained collapse motion now respects reduced motion. No field, status/
+confirmation action, media upload/cleanup, mutation or template predicate was
+removed or changed. Existing icon imports/drawings stay until the icon chat's
+approved integration.
+
+Evidence: four unchanged strict contract files pass 91 tests (player editor,
+match editor, Diverse City punch-list, Editorial surfaces). Diff check passes.
+Root owns the final shared TypeScript gate after concurrent source freeze;
+intermediate runs reported concurrent Website/test-config changes and no pilot
+source errors. The Website comparison issue is already corrected by its owner;
+root was notified of the test-config `reducedMotion` placement. Do not represent
+these intermediate shared gates as passing. Root confirmed unchanged HEAD
+baseline 186 files/1778 tests passing in
+`/private/tmp/onzio-guided-baseline-tests.log`.
+
+GUIDED-03 remains in_progress pending root's real add/edit/save/reload/upload,
+confirmation and collapsed-group keyboard evidence; physical touch and screen-
+reader acceptance remain open. No test assertion change, fixture/database write,
+commit, push, deployment or hosted mutation by this subagent. Exact next step:
+root verifies the complete pilot flows and runs the integrated TypeScript gate
+after source freeze, then carries these patterns to remaining management pages.
+
+## Guided foundation and Dashboard implementation — 2026-10-11
+
+Subagent `guided_foundation` implemented GUIDED-01/02 source in the managed
+`codex/admin-guided-redesign` worktree only. Protected chrome now uses system
+fonts, neutral light/dark surfaces and blue actions; shared grouped forms,
+labels, tabs and panels are quieter and readable. Shell/search/theme/account
+controls are at least 44px. Protected-only viewport settings keep zoom enabled
+and opt into safe-area/keyboard resizing; sticky chrome accounts for the top
+safe area. Public/root/OTP viewport and login dark palette are unchanged.
+
+Dashboard leads with a centered task question and large explanatory rows from
+the existing authorized Quick Actions manifest. All existing KPI, registration,
+fixture/event, chart and semantic-table modules remain below them. Data loader,
+paid pagination, access predicates, query-error semantics and Chart.js lifecycle
+are unchanged. No fictional prototype counts/content entered runtime source.
+
+Exact source files: `components/admin/AdminGuided.module.css`,
+`styles/globals.css`, `components/AdminShell.tsx`,
+`components/admin/{AdminPage,AdminTabs,AdminSidePanel,AdminRouteSearch,
+AdminThemeToggle,AdminAccountMenu,ScaledPagePreview}.tsx`,
+`components/admin/form-styles.ts`, `app/admin/(protected)/layout.tsx`, and
+`app/admin/(protected)/page.tsx`. The module excludes template font scopes and
+marked same-document public previews; ScaledPagePreview adds that boundary and
+restores public body-font inheritance. Iframe canvases do not contain the
+Guided portal class. Existing icon drawings/imports remain for the icon chat.
+
+Verification: `npx tsc --noEmit` passes; `git diff --check` passes. Eleven narrow
+contract files pass 142 tests: admin sidebar groups/mobile navigation/shell
+controls/route manifest/theme/Dashboard/player editor/match editor/punch-list/
+Editorial surfaces/analytics theme. No test source or assertion was changed.
+Root's unchanged-HEAD baseline full-suite log finished flushing and confirms
+186 files/1778 tests pass: `/private/tmp/onzio-guided-baseline-tests.log`. Root verified refreshed main equals base 41bfb00 and
+prepared matching dependencies plus loopback-only local Supabase demo/test
+configuration (API 54321, inbox 54324). This subagent made no fixture/database
+write, auth action, commit, push, deployment or hosted mutation.
+
+GUIDED-00/01/02 remain in_progress: root owns full route/action inventory,
+matching before/after browser screenshots, theme/font/focus/access acceptance,
+local fixture scheduling, icon integration and independent review. Native touch,
+keyboard and screen-reader acceptance is open. Exact next step: root inspects
+the real shell/Dashboard first checkpoint, records browser evidence, then
+assigns the bounded Roster/Staff/Schedule package using the shared foundation.
+
+## Guided redesign implementation approved — 2026-10-11
+
+Christian approved the saved Guided plan and explicitly requested implementation
+subagents. GUIDED-PLAN is complete; GUIDED-00 through GUIDED-02 have been assigned
+to `guided_foundation` in this isolated branch. Root owns local browser/database
+fixture scheduling and later independent review. Current main still matches the
+base `41bfb00`. Dependencies match the source lockfile and are linked; ignored
+local environments use loopback Supabase demo keys and inert Stripe test fixtures.
+The icon chat is still preview-only and now adding a picker for every icon; its
+final assets are a dependency at integration. No production release is authorized.
+
+
+## Guided admin redesign plan ready for review — 2026-10-11
+
+Christian selected B — Guided, requested a dedicated branch, and asked for an
+implementation plan before subagent delegation. The plan is
+`docs/admin-guided-redesign-plan.md`; package ledger GUIDED-PLAN is in_progress
+(awaiting plan review), and GUIDED-00 through GUIDED-07 are planned. No
+implementation or subagent has started for this redesign.
+
+This managed worktree is on `codex/admin-guided-redesign`, based on refreshed
+main `41bfb009089bb2b67ff048c71d1a3c6fac11578c`. The original checkout remains on
+its OTP branch with its dirty work untouched. The exact approved A/B HTML is
+archived at `design-previews/admin-guided-redesign/directions.html`; select B.
+The reference README records standalone server/reset behavior. Only the plan,
+this handoff entry, and isolated reference/README were added or updated here.
+
+The plan covers all 19 protected club-admin routes, starting with shared
+Guided chrome and the real Dashboard. It preserves existing metrics/charts,
+fields, navigation/search/account/theme, template visibility, public rendering,
+page-scoped save/recovery/receipts, authorization, billing, and media behavior.
+The prototype's fictional data and abbreviated forms are not production scope.
+Session-supplied instructions retire hosted Supabase staging even though this
+base's historic AGENTS/architecture wording still mentions it: use isolated
+local synthetic fixtures and do not fall back to production credentials.
+
+Read the icon chat (thread `01a12be7-63ae-74f3-ba33-e8f5f7c44f75`, local) during
+planning. It owns icon assets/mappings/module on `codex/admin-icon-refresh`;
+current preview iterations cover Dashboard/Programs alternatives and larger,
+heavier icons. Christian clarified heavier icons, labels unchanged. Final icon
+choices/application implementation are still pending. Guided consumes the
+approved module and intentionally reconciles shared-file overlaps; it does not
+rewrite icon ownership or message the other chat without authorization.
+
+Planning verification: inspected the exact branch source, relevant existing
+contract assertions and editor/browser entry points; verified branch/base,
+reference checksums/inline JavaScript syntax, and documentation whitespace.
+No application tests/build were run for this planning-only work. There is no
+claim of implementation or native-device acceptance. No commit, push,
+deployment, database/provider action, or production mutation occurred.
+
+Exact next step: Christian reviews this plan. After approval, record approval
+and delegate GUIDED-00 through GUIDED-02 to a bounded implementation subagent
+in this worktree, using the full preserved-contract list and local-only
+verification setup. Root owns icon/base coordination, fixture scheduling,
+independent review, remaining packages, and acceptance evidence. Production
+release requires a separate explicit decision.
+
 
 ## Admin icon refresh — approved implementation, 2026-10-11
 
@@ -13859,3 +14292,223 @@ errors on either.
   (all database work against local Supabase only). This phase's changes
   were committed locally to `claude/lions-editorial-rebuild`; not pushed to
   any remote.
+
+
+## GUIDED-04 — Website tools and Branding presentation, 2026-10-11
+
+Implementation by `guided_page_inventory` is source-complete; acceptance remains
+**in_progress** until root-owned browser/public-preview/native verification.
+Only the isolated Guided worktree was edited. Twelve presentation owners changed:
+Programs page and its existing `programs-editor.css`; About, Sponsors and Branding
+pages; `AdminSectionRail`; scoped About, Contact and Homepage CSS;
+`page-editor-inspector.css`; active Shop and Tryouts editor components.
+The Homepage/Contact route/components inherit these styles and foundation owners;
+the legacy Tryouts rollback route body and all public components remain untouched.
+
+The pass makes local controls readable and sentence-case, preserves grouped
+editing and actual program navigation, enlarges tool/drag/reorder/removal targets
+to 44px, uses admin blue tokens for Homepage/Branding actions, and retains
+quiet theme-aware feedback. Sponsors same-document previews now carry
+`data-admin-public-preview`; their carousel/footer typography remains outside
+Guided chrome. About's iframe authoring rules match HEAD byte-for-byte.
+No save/recovery/receipt logic, field IDs/data predicates, API/schema, iframe
+sizing, visualViewport handling, or measured phone scrollport was changed.
+Existing browser-bound About field names remain exact (for example Button Text).
+
+Verification: final 14 focused pure contract files passed, 266 tests (2026-10-11
+10:38 run, 5.49s); TypeScript `npx tsc --noEmit --incremental false` passed
+before final presentation-only copy/drag sizing changes; root owns final
+integrated TypeScript. `git diff --check` passed. A source AST audit compared
+non-class code literals with HEAD and passed, allowing only explicit sentence-case
+Branding action copy and description/svg presentation attributes; About iframe
+authoring CSS also passed byte equality. An earlier helper briefly modified
+two Shop class conditions; diff review caught them, source was restored from
+HEAD, conditions were corrected and checks rerun. No assertion was weakened.
+No browser/database fixture writes, commits, pushes, or hosted actions occurred.
+
+Exact next step: root checks all website canvases at desktop/phone light/dark,
+public-preview font/geometry parity, keyboard-open Save/Done, real save/reload,
+media, response-loss/retry/conflict/recovery, program/page switching, and staged
+Tryouts Delete/Undo. Record native touch/screen-reader evidence separately and
+keep GUIDED-04 in progress until its accepted matrix is recorded.
+
+
+## Guided remaining management presentation — 2026-10-11
+
+Subagent `guided_management` implemented GUIDED-05/06 source only in the
+managed `codex/admin-guided-redesign` worktree. Owned files are
+`app/admin/(protected)/{seasons,stats,season-stats,standings,analytics,
+registrations,members,payments}/page.tsx`, `components/admin/StatInput.tsx`,
+and `components/admin/payments/PaymentStatusCard.tsx`. Source is frozen for
+root browser verification and independent review.
+
+Presentation now follows the shared Guided foundation: calm rounded groups,
+normal-case labels and system figures, 44px buttons/filter/stat targets and
+visible keyboard focus. Competition grids retain every original value and
+handler, with player/field accessible names, named keyboard-scrollable regions,
+44px Started checkbox labels, aria-linked expanders, inert closed content and
+reduced-motion collapse. Their minimum content widths retain readable player
+names while exposing all columns through horizontal scrolling. Standings adds
+`data-admin-public-preview` around its existing real public-renderer components;
+public table sources and assets remain unchanged. Registrations preserves its
+native mobile disclosures and desktop table, dollar parser/formatter, statuses,
+signatures, waiver, CSV and copy-link behavior; custom questions and prices have
+persistent visible labels. Team Access rows stack on phone; billing actions and
+all factual lifecycle/error messages are preserved. Existing Chart.js creation,
+theme dependencies and exact instance cleanup, queries and mutations remain
+unchanged. No shared foundation, Roster/Schedule, website-editor, API, contract,
+schema, icon asset, OTP or source-checkout file was edited by this agent.
+
+Verification: 9 narrow pure contract files pass 102 tests: admin analytics theme,
+registrations admin UI, admin billing lockdown, Editorial admin surface,
+PLAT-102 billing model, platform auth, registration admin route/export route/
+route auth. Scoped no-cache lint passes with no warnings/errors; TypeScript JSX
+parser reports zero diagnostics in all 10 owned files; `git diff --check` passes.
+The first delegated whole-project TypeScript run found the then-current root
+Playwright config's unsupported top-level reducedMotion property; root corrected
+it and owns the final integrated TypeScript run, so this section makes no new
+whole-project type-check pass claim. No fixture/database/browser mutation,
+commit, push, deployment, hosted or production action occurred.
+
+GUIDED-05/06 remain in_progress until root records desktop/phone/light/dark,
+full-data/filter/chart/save, registration copy/export/disclosure, owner/admin/
+lifecycle and local test-billing acceptance. Native keyboard/touch/VoiceOver
+and final approved icon integration remain open. Exact next step: root runs
+its scheduled integrated local browser/TypeScript gates against this frozen
+source, resolves independent-review findings and updates the acceptance ledger.
+
+
+## GUIDED-04 — Safe-area review follow-up, 2026-10-11
+
+Independent review identified Programs phone navigation overlapping the protected
+header on devices with a top inset, plus unsafe horizontal padding in viewport-wide
+phone controls after `viewport-fit=cover`. Corrected phone navigation and desktop
+detail-toolbar top to `calc(72px + env(safe-area-inset-top,0px))`. Programs,
+Homepage, About, Contact and Tryouts fixed Save bars now use max(existing side
+padding, safe-area left/right). Homepage phone sheet contents/footer and
+About/Contact inspector inner controls receive the same protection. The shared
+phone inspector stylesheet targets named Shop/Tryouts/Programs classes with
+their existing padding, retaining About's zero-padding outer container.
+Tryouts confirmation viewport is also protected horizontally.
+
+Eight focused contracts passed, 123 tests after this fix; AST non-class literal
+audit confirms unchanged logic, and About iframe authoring CSS remains byte-equal
+to HEAD. Diff check passes. No public iframe sizing, visualViewport JS, Save logic,
+API/schema, fixture, or test assertion changed. Root owns integrated rebuild and
+independent geometry re-review; GUIDED-04 remains in_progress pending its full
+browser/native acceptance matrix.
+
+
+## GUIDED-04 — Homepage geometry and source inventory, 2026-10-11
+
+Restored the Homepage desktop heading from 34px to its original 28px, retaining
+Guided font weight/system typography. The 7.2px line-height difference matches
+root's observed 7px focus scroll; public iframe and viewport calculations are
+unchanged. Two focused Homepage route/capability contracts pass 20/20; diff check
+passes. Root owns the rebuilt browser assertion and final acceptance.
+
+Added docs/admin-guided-redesign-inventory.md: all 19 manifest routes, fields,
+actions, template/role gates, active delegated owners, public scopes and the
+Staff default-width/no-fixed-footer exception. TypeScript AST audit finds all
+audited event expressions and control inventories retained; field semantics
+match except 12 additive Roster IDs for existing label/control associations.
+This establishes source parity with stated limits, not runtime save proof.
+
+Added tests/browser/admin-guided-persistence.spec.ts with four real Player/Match
+edit-save/reload checks at 390px and 1440px. It guards Alpha and loopback PostgreSQL,
+checks the admin-data response and persisted row, and cleans up via UI plus
+exact local-row restoration; a unique valid Match fixture is reused or a
+disposable local Match is removed. Syntax parsing passes; execution is pending
+root's serialized fixture/build readiness. Browser screenshots are also held
+until root's baseline template suite finishes/restores. A capture launched
+before the hold message was immediately interrupted without screenshots or
+fixture writes. GUIDED-04 remains in_progress pending root's runtime/native
+acceptance; no commit, push, deployment, hosted mutation or test weakening.
+
+
+## GUIDED-05/06 — Local management browser evidence, 2026-10-11
+
+The implementation source above remains frozen. Added
+`tests/browser/admin-guided-management.spec.ts`: two real Chromium cases at
+390px and 1440px against existing production-mode `http://alpha.localhost:3110`
+using the root-provided local owner auth state. It rejects other tenant
+hostnames and non-loopback Supabase targets. Each case snapshots all existing
+rows in 12 competition/registration tables, creates only disposable synthetic
+fixtures, and restores/deletes those fixtures in finally. Both cases assert
+exact original row contents including timestamps after cleanup. No memberships,
+real payment transactions, Stripe, hosted or production data were mutated.
+
+Both cases passed (18.0s phone, 26.4s desktop; 46.2s total). Verified historical
+season selection and goals save/reload (1 to 9), match selection and goals
+save/reload (3 to 8), 44px statistic inputs, inert closed groups and keyboard
+focus exclusion, Forward/player filters, and both Chart.js light/dark redraws.
+Registration checks cover actual clipboard contents and tenant-host link,
+12.50 dollar formatting, paid/refunded/search filters, native phone detail
+disclosure and captured-signature status, and real downloaded CSV containing
+both registrants and currency. All eight owned routes were captured at both
+widths and themes with visible headings and no document horizontal overflow.
+Visual inspection found that some preliminary captures can include loading
+skeletons; the new test capture loop is now strengthened to wait for each
+route's actual data/content and select the populated synthetic season/form/player.
+That capture-readiness refinement awaits root's rebuilt run. Owner Team
+Access/Payments render evidence is read-only.
+
+Log: `/private/tmp/onzio-guided-management-browser.log`. The 32 preliminary screenshot
+artifacts are `/private/tmp/onzio-guided-management/{390,1440}-{light,dark}-{route}.png`.
+The new test follows the existing ws boundary cast to globalThis.WebSocket;
+root owns integrated TypeScript. During test authoring, fixture-required fields
+and implicit-select label lookup were corrected in this new test only; no
+existing test assertion was changed. A stuck authoring run was interrupted and
+its originals separately restored/verified before the successful rerun.
+
+GUIDED-05/06 remain in_progress: required native touch/keyboard/VoiceOver,
+admin-role browser visibility and lifecycle/local test-billing acceptance are
+still root-owned. This browser evidence uses emulation and synthetic local
+fixtures; it does not claim physical-device or real billing acceptance. Root
+may rebuild now; no browser/database run remains active. No commit, push or
+deployment occurred.
+
+
+## Guided persistence pilot coverage extension, 2026-10-11
+
+Extended the new admin-guided-persistence.spec.ts from four edit checks to ten
+checks across 390px/1440px: Player and Match Edit/Save/Reload, Player/Staff/Match
+Add/Save/Reload, plus Staff Edit/Save/Reload within each Staff creation test.
+Creation uses real required controls (including nationality and calendar),
+real admin-data POST responses and persisted local rows. Player creation also
+checks its real season-stat seed. No mocked mutation success is used.
+
+Cleanup captures unique new IDs even after uncertain browser response, refuses
+to remove original IDs, deletes only captured new parents and their dependent
+rows, and checks exact original snapshots of players, staff, matches, photos
+and all four player/goalkeeper stat tables. Existing edit checks restore via
+UI with exact loopback-only row restoration. Corrected the new test's Match
+date assertion to read the existing calendar button label, not an input value.
+Inventory now records this scope and explicitly leaves runtime evidence open.
+Syntax/diff checks and npx tsc --noEmit --incremental false pass. No browser/database
+execution occurred while root's fixture-management suite is active. Exact next
+step: root releases the rebuilt server/fixture hold, run this suite serially,
+verify cleanup, then capture the all-route baseline matrix after browser writes.
+
+
+## Guided persistence pilot first runtime / shared-fixture hold, 2026-10-11
+
+Initial local run: one passed (390px Match edit/save/reload), one failed before
+mutation (390px Player helper selected native button instead of the existing
+Roster div with role=button), one interrupted before mutation at the same
+1440px Player locator, seven not run. Trace confirms a test-selector issue;
+corrected only the new helper to accessible role buttons, retaining assertions
+and all application source. The passed Match test's finally removed its
+disposable fixture; bounded read-only PostgreSQL check confirms zero Player
+markers and zero disposable/marked Matches left behind. Log:
+/private/tmp/onzio-guided-persistence-final.log.
+
+Root reports the separately authorized icon task is planning a full local test
+run against shared synthetic fixtures. All runtime work is held again until
+root explicitly releases it. Prepared /private/tmp/onzio-guided-matrix-capture.mjs
+with original port/name/routes/theme arguments and route-width-theme filenames,
+all 19 routes, main/skeleton completion, every visible public iframe's content
+and fonts, two animation frames, separate theme reports, and explicit readiness
+failures. Syntax check passes; no screenshots are claimed from this helper yet.
+Next: serial corrected persistence10, management2, public-page phone/recovery,
+Contact, loading after shared fixture release, then baseline captures.

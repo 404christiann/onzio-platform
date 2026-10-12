@@ -19,6 +19,7 @@ import ShopPurchaseDetailsSection from "@/components/ShopPurchaseDetailsSection"
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
+import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
@@ -257,13 +258,13 @@ export default function ShopPageEditor() {
             <button type="button" aria-current={surface === "shop" ? "page" : undefined} disabled={saving} onClick={() => { setSurfaceChoice("shop"); setTarget(null); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "shop" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Shop page {shopDraftDirty(drafts.shop) ? "•" : ""}</button>
             {hasHomeFeature && <button type="button" aria-current={surface === "home" ? "page" : undefined} disabled={saving} onClick={() => { setSurfaceChoice("home"); setTarget(null); setSelectedVariant("home"); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "home" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Homepage shop feature {shopDraftDirty(drafts.home) ? "•" : ""}</button>}
           </div>
-          <button type="button" disabled={(!dirty && !pendingSaves[surface]) || saving || uploading || !snapshot || Boolean(conflict)} onClick={() => void savePage()} className="min-h-11 rounded-lg bg-primary px-5 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : uploading ? "Uploading…" : pendingSaves[surface] ? "Confirm save" : "Save page"}</button>
+          <button type="button" disabled={(!dirty && !pendingSaves[surface]) || saving || uploading || !snapshot || Boolean(conflict)} onClick={() => void savePage()} className="min-h-11 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : uploading ? "Uploading…" : pendingSaves[surface] ? "Confirm save" : "Save page"}</button>
         </AdminPanel>
         {sharedWithHomepage && <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">Kit changes on this Shop page also update the homepage store teaser.</p>}
-        {saved && <p role="status" className="text-sm font-medium text-green-700">This page was saved.</p>}
+        {saved && <p role="status" className="text-sm font-medium text-success">This page was saved.</p>}
         {(saveError || loadError) && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{saveError ?? loadError}</p>}
         {conflict && <div role="region" aria-label="Review latest Shop page" className="rounded-lg border border-border bg-card p-4 text-sm"><p>Another editor saved this page. Your draft is still here. Latest kit: {conflict.sections.find((section) => section.kit_variant === currentVariant)?.title || "Untitled"}.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className="min-h-11 rounded-lg border border-border px-3" onClick={() => resolveConflict(true)}>Keep my draft</button><button type="button" className="min-h-11 rounded-lg border border-border px-3" onClick={() => resolveConflict(false)}>Use latest saved page</button></div></div>}
-        {!draft || !snapshot || !content ? <AdminPanel className="p-8 text-center text-sm text-muted-foreground">Loading the public page…</AdminPanel> : (
+        {!draft || !snapshot || !content ? <ShopContentSkeleton sectionCount={variants.length} /> : (
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_350px]">
             <div className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -272,13 +273,13 @@ export default function ShopPageEditor() {
                   <p className="text-xs text-muted-foreground">{surface === "shop" ? "/shop" : "/"} · Changes appear publicly after Save</p>
                 </div>
                 <div className="flex gap-1 rounded-lg bg-muted p-1" aria-label="Preview size">
-                  <button type="button" aria-pressed={!phone} onClick={() => setPhone(false)} className={`min-h-10 rounded-md px-3 text-xs font-semibold ${!phone ? "bg-background shadow-sm" : ""}`}>Desktop</button>
-                  <button type="button" aria-pressed={phone} onClick={() => setPhone(true)} className={`min-h-10 rounded-md px-3 text-xs font-semibold ${phone ? "bg-background shadow-sm" : ""}`}>Phone</button>
+                  <button type="button" aria-pressed={!phone} onClick={() => setPhone(false)} className={`min-h-11 rounded-md px-3 text-sm font-semibold ${!phone ? "bg-background shadow-sm" : ""}`}>Desktop</button>
+                  <button type="button" aria-pressed={phone} onClick={() => setPhone(true)} className={`min-h-11 rounded-md px-3 text-sm font-semibold ${phone ? "bg-background shadow-sm" : ""}`}>Phone</button>
                 </div>
               </div>
               {surface === "shop" && variants.length > 1 && <div className="flex flex-wrap items-center gap-2" aria-label="Edit kit">
                 <span className="text-xs font-medium text-muted-foreground">Kit</span>
-                {variants.map((variant) => <button key={variant} type="button" aria-pressed={currentVariant === variant} onClick={() => { setSelectedVariant(variant); setTarget("copy"); }} className={`min-h-11 rounded-lg border px-3 text-xs font-semibold ${currentVariant === variant ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>{KIT_LABELS[variant]}{draft.changedVariants.includes(variant) ? " •" : ""}</button>)}
+                {variants.map((variant) => <button key={variant} type="button" aria-pressed={currentVariant === variant} onClick={() => { setSelectedVariant(variant); setTarget("copy"); }} className={`min-h-11 rounded-lg border px-3 text-sm font-semibold ${currentVariant === variant ? "border-primary bg-primary/10 text-primary" : "border-border"}`}>{KIT_LABELS[variant]}{draft.changedVariants.includes(variant) ? " •" : ""}</button>)}
               </div>}
               <div className="flex flex-wrap gap-2" aria-label="Page editing tools">
                 <ToolButton label="Edit kit text" onClick={() => setTarget("copy")} />
@@ -303,7 +304,7 @@ export default function ShopPageEditor() {
                 </TemplateFontScope>}
               </ShopPreviewFrame>
             </div>
-            <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
+            <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`shop-page-inspector min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
               {target ? <>
                 <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
                 <fieldset disabled={locked} className="min-w-0">
@@ -328,7 +329,7 @@ export default function ShopPageEditor() {
                 {target === "photoRows" && showExtras && <PhotoEditor photos={draft.photoRows[currentVariant]} label="photo row" uploading={uploading} onUpload={(files) => void uploadPhotos(files, true)} onRemove={(photo) => void removePhoto(photo, true)} onChange={setRowPhotos} />}
                 {target === "purchase" && showExtras && <div className="space-y-3">
                   <TextField label="Section heading" value={draft.purchase.heading} onChange={(value) => updatePurchase("heading", value)} />
-                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => <TextField key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />)}<button type="button" className="min-h-11 text-xs font-semibold text-destructive" onClick={() => updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index))}>Remove card</button></div>)}
+                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => <TextField key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />)}<button type="button" className="min-h-11 text-sm font-semibold text-destructive" onClick={() => updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index))}>Remove card</button></div>)}
                   {draft.purchase.cards.length < 4 && <ToolButton label="Add detail card" onClick={() => updatePurchase("cards", [...draft.purchase.cards, { label: "", title: "", body: "" }])} />}
                   <TextField label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => updatePurchase("cta_eyebrow", value)} />
                   <TextAreaField label="Footer text" value={draft.purchase.cta_text} onChange={(value) => updatePurchase("cta_text", value)} />
@@ -337,7 +338,7 @@ export default function ShopPageEditor() {
                 </div>}
                 </fieldset>
                 {saveError && <p role="alert" className="mt-3 text-sm text-destructive">{saveError}</p>}
-                <button type="button" disabled={(!dirty && !pendingSaves[surface]) || saving || uploading || Boolean(conflict)} onClick={() => void savePage()} className="mt-5 min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : pendingSaves[surface] ? "Confirm save" : "Save page"}</button>
+                <button type="button" disabled={(!dirty && !pendingSaves[surface]) || saving || uploading || Boolean(conflict)} onClick={() => void savePage()} className="mt-5 min-h-11 w-full rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50">{saving ? "Saving…" : pendingSaves[surface] ? "Confirm save" : "Save page"}</button>
               </> : <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Tap a section in the public page to edit it.</div>}
             </PageEditorInspector>
           </div>
@@ -348,7 +349,7 @@ export default function ShopPageEditor() {
 }
 
 function ToolButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="min-h-11 rounded-lg border border-border bg-background px-3 text-xs font-semibold hover:bg-muted">{label}</button>;
+  return <button type="button" onClick={onClick} className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm font-semibold hover:bg-muted">{label}</button>;
 }
 
 function TextField({ label, value, onChange, type = "text", help }: { label: string; value: string; onChange: (value: string) => void; type?: string; help?: string }) {
@@ -370,7 +371,7 @@ function PhotoEditor({ photos, label, uploading, onUpload, onRemove, onChange }:
       <span className="flex-1 text-xs">Photo {index + 1}</span>
       <button type="button" aria-label={`Move ${label} photo ${index + 1} up`} disabled={uploading || index === 0} onClick={() => { const next = [...photos]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; onChange(orderPhotos(next)); }} className="min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40"><AdminOrderUp size={14} className="inline-block align-middle" /></button>
       <button type="button" aria-label={`Move ${label} photo ${index + 1} down`} disabled={uploading || index === photos.length - 1} onClick={() => { const next = [...photos]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; onChange(orderPhotos(next)); }} className="min-h-11 min-w-11 rounded-md border border-border disabled:opacity-40"><AdminOrderDown size={14} className="inline-block align-middle" /></button>
-      <button type="button" aria-label={`Remove ${label} photo ${index + 1}`} disabled={uploading} onClick={() => onRemove(photo)} className="min-h-11 min-w-11 rounded-md bg-destructive font-bold text-destructive-foreground disabled:opacity-40"><AdminRemoveIcon size={14} className="inline-block align-middle" /></button>
+      <button type="button" aria-label={`Remove ${label} photo ${index + 1}`} disabled={uploading} onClick={() => onRemove(photo)} className="min-h-11 min-w-11 rounded-md bg-destructive font-semibold text-destructive-foreground disabled:opacity-40"><AdminRemoveIcon size={14} className="inline-block align-middle" /></button>
     </div>)}
     <FileUpload label={`Add ${label} photos`} accept="image/*" multiple onUpload={onUpload} uploading={uploading} disabled={photos.length >= 6} />
     {label === "kit" && photos.length === 0 && <p className="text-xs text-destructive">Add at least one photo before saving this kit.</p>}

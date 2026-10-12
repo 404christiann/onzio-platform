@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin portal — local QA review</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#24262a;background:#f5f5f7}*{box-sizing:border-box}body{margin:0}header{padding:28px max(20px,calc((100vw - 1440px)/2));background:#fff;border-bottom:1px solid #dedee3}h1{font-size:28px;letter-spacing:-.03em;margin:0 0 8px;text-wrap:balance}p{margin:0;color:#60626a;line-height:1.5;text-wrap:pretty}.metadata{margin-top:12px;font-size:13px}.controls{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}label{display:grid;gap:5px;font-size:13px;font-weight:600}select{min-height:44px;max-width:100%;border:1px solid #d3d4da;border-radius:10px;padding:0 36px 0 12px;background:#fff;color:#24262a;font:inherit;font-size:16px}select:focus-visible,a:focus-visible{outline:3px solid #0071e3;outline-offset:3px}main{padding:24px;max-width:1520px;margin:auto}.caption{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}.caption strong{font-size:18px}.links{display:flex;flex-wrap:wrap;gap:20px}.caption a{display:inline-flex;align-items:center;min-height:44px;color:#0061c4;font-size:14px}.canvas{border:1px solid #d9d9df;border-radius:14px;background:#fff;overflow:hidden;margin:auto;max-width:1440px;box-shadow:0 8px 32px #24262a09}.canvas.phone{max-width:390px}img{display:block;width:100%;height:auto}.capture-message{padding:28px;text-align:center;min-height:150px;display:grid;place-content:center;gap:8px}.capture-message strong{font-size:16px}.note{max-width:900px;margin:24px auto 0;font-size:13px;text-align:center}[hidden]{display:none!important}@media(max-width:750px){header{padding:22px 20px}main{padding:20px}.controls{gap:10px}.caption{align-items:flex-start}.caption strong{font-size:16px}.links{gap:14px}}@media(max-width:360px){main{padding:16px}.controls label{min-width:0;flex:1 1 120px}.controls label:first-child{flex-basis:100%}}
+</style>
+</head>
+<body>
+<header>
+<h1>Admin portal. Ready for your review.</h1>
+<p>Actual local application screenshots across 18 pages, using synthetic Alpha FC test data.</p>
+<p class="metadata">QA source 882384f · 72 layout checks passed · <time datetime="2026-10-12">October 12, 2026</time> · iPhone review, paste and VoiceOver confirmed</p>
+<div class="controls">
+<label for="route">Page<select id="route"></select></label>
+<label for="screen">Screen<select id="screen"><option value="1440">Desktop</option><option value="390">Phone</option></select></label>
+<label for="theme">Theme<select id="theme"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+</div>
+</header>
+<main>
+<div class="caption"><strong id="caption"></strong><div class="links"><a id="full" target="_blank" rel="noopener">Open full capture</a><a id="portal" target="_blank" rel="noopener">Open local portal</a></div></div>
+<div id="canvas" class="canvas">
+<div id="captureMessage" class="capture-message" role="status" aria-live="polite"><strong id="messageTitle">Loading capture…</strong><p id="messageDetail"></p></div>
+<img id="capture" alt="" hidden>
+</div>
+<p class="note">These images show the built portal, rather than a mockup. The Phone option shows the phone layout; it does not establish physical-device touch, paste or screen-reader acceptance. Christian confirms that the portal works well on iPhone, including paste and VoiceOver. Payment connections are disabled for this local review. Release approval remains pending.</p>
+</main>
+<script>
+const pages=[['dashboard','Dashboard'],['homepage','Homepage'],['programs','Programs'],['tryouts','Tryouts'],['shop','Shop'],['about','About'],['sponsors','Sponsors'],['contact','Contact'],['seasons','Seasons'],['roster','Roster'],['schedule','Schedule'],['stats','Stats'],['standings','Standings'],['registrations','Registrations'],['analytics','Analytics'],['branding','Branding'],['members','Team Access'],['payments','Payments']];
+const route=document.getElementById('route'),screen=document.getElementById('screen'),theme=document.getElementById('theme'),canvas=document.getElementById('canvas'),message=document.getElementById('captureMessage');
+let generation=0;
+pages.forEach(([key,label])=>route.add(new Option(label,key)));
+function render(){
+ const key=route.value,label=pages.find(page=>page[0]===key)[1],phone=screen.value==='390',appearance=theme.value,token=++generation;
+ const path=`evidence/portal-release-qa/${key}-${screen.value}-${appearance}.png`;
+ document.getElementById('caption').textContent=`${label} · ${phone?'Phone':'Desktop'} · ${appearance==='light'?'Light':'Dark'}`;
+ document.getElementById('full').href=path;
+ document.getElementById('portal').href=`http://alpha.localhost:3110/admin${key==='dashboard'?'':'/'+key}`;
+ canvas.classList.toggle('phone',phone);
+ const current=document.getElementById('capture'),image=new Image();
+ image.id='capture';image.alt=`${label}, actual local app, ${phone?'phone':'desktop'}, ${appearance} theme`;image.hidden=true;
+ current.replaceWith(image);message.hidden=false;
+ document.getElementById('messageTitle').textContent='Loading capture…';document.getElementById('messageDetail').textContent='';
+ image.onload=()=>{if(token!==generation)return;message.hidden=true;image.hidden=false;};
+ image.onerror=()=>{if(token!==generation)return;image.hidden=true;message.hidden=false;document.getElementById('messageTitle').textContent='This capture is not available yet.';document.getElementById('messageDetail').textContent='The review is prepared. Captures are added after final source verification.';};
+ image.src=path;
+}
+[route,screen,theme].forEach(control=>control.addEventListener('change',render));render();
+</script>
+</body>
+</html>

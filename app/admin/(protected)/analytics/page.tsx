@@ -292,7 +292,7 @@ export default function AnalyticsPage() {
           <button
             type="button"
             onClick={() => setLoadAttempt((attempt) => attempt + 1)}
-            className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
+            className="min-h-11 mt-5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none"
           >
             Try again
           </button>
@@ -342,7 +342,7 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div
-          className="flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-muted/60 p-1"
+          className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-border bg-muted/60 p-1"
           role="group"
           aria-label="Filter players by position"
         >
@@ -352,7 +352,7 @@ export default function AnalyticsPage() {
               type="button"
               onClick={() => setPosFilter(position)}
               aria-pressed={posFilter === position}
-              className={`min-h-9 flex-none rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none ${
+              className={`min-h-11 flex-none rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none ${
                 posFilter === position
                   ? "bg-card text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
@@ -373,7 +373,7 @@ export default function AnalyticsPage() {
                 {filtered.length} in this view
               </p>
             </div>
-            <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
+            <span className="rounded-lg bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
               {posFilter}
             </span>
           </div>
@@ -388,7 +388,7 @@ export default function AnalyticsPage() {
                   type="button"
                   onClick={() => p.id && setSelectedId(p.id)}
                   aria-pressed={active}
-                  className={`flex min-h-14 w-44 flex-none items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none xl:w-full ${
+                  className={`flex min-h-14 w-44 flex-none items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card motion-reduce:transition-none xl:w-full ${
                     active
                       ? "border-primary/40 bg-primary/10"
                       : "border-transparent bg-transparent hover:border-border hover:bg-accent"
@@ -436,7 +436,7 @@ export default function AnalyticsPage() {
             })}
           </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm leading-6 text-muted-foreground">
+            <p className="rounded-xl border border-dashed border-border px-4 py-6 text-sm leading-6 text-muted-foreground">
               No {posFilter.toLowerCase()} players are available for this
               season.
             </p>
@@ -593,7 +593,7 @@ function PlayerDashboard({
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <AdminPanel className="flex items-center gap-4 sm:gap-5">
-        <div className="h-16 w-16 flex-none overflow-hidden rounded-xl border border-primary/30 bg-primary/10 sm:h-20 sm:w-20">
+        <div className="h-16 w-16 flex-none overflow-hidden rounded-2xl border border-primary/30 bg-primary/10 sm:h-20 sm:w-20">
           {player.image ? (
             <ResilientNativeImage
               src={player.image}
@@ -620,7 +620,7 @@ function PlayerDashboard({
             {player.position} · {seasonLabel} season
           </p>
         </div>
-        <span className="flex-none rounded-lg border border-border bg-muted/70 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-foreground">
+        <span className="flex-none rounded-xl border border-border bg-muted/70 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-foreground">
           #{player.number}
         </span>
       </AdminPanel>
@@ -628,10 +628,10 @@ function PlayerDashboard({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <AdminPanel key={k.label} className="p-4 sm:p-5">
-            <p className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+            <p className="font-body text-2xl font-semibold tabular-nums tracking-tight text-foreground">
               {k.value.toLocaleString()}
             </p>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            <p className="mt-2 text-xs font-semibold text-muted-foreground">
               {k.label}
             </p>
             <p className={`mt-2 text-xs leading-5 ${DELTA_TONE_CLASSES[deltaTone(k.delta)]}`}>
@@ -679,16 +679,16 @@ function PlayerDashboard({
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-[auto_auto_minmax(0,1fr)] sm:items-center">
-          <div className="flex items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
+          <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-3 py-2.5">
             <span className="h-3 w-2.5 flex-none rounded-[2px] bg-warning" />
-            <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+            <span className="font-body text-lg font-semibold tabular-nums text-foreground">
               {stats.yellow}
             </span>
             <span className="text-xs font-medium text-muted-foreground">Yellow</span>
           </div>
-          <div className="flex items-center gap-3 rounded-lg bg-muted/60 px-3 py-2.5">
+          <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-3 py-2.5">
             <span className="h-3 w-2.5 flex-none rounded-[2px] bg-destructive" />
-            <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+            <span className="font-body text-lg font-semibold tabular-nums text-foreground">
               {stats.red}
             </span>
             <span className="text-xs font-medium text-muted-foreground">Red</span>
@@ -994,7 +994,7 @@ function TrendLine({
           </p>
         </div>
         {data.length > 0 && !loading && (
-          <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+          <span className="rounded-lg bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
             {data.length} match{data.length !== 1 ? "es" : ""}
           </span>
         )}
@@ -1002,7 +1002,7 @@ function TrendLine({
       <div className="relative h-48">
         {loading ? (
           <AdminSkeletonRegion label="Loading match trends" className="h-full">
-            <Skeleton className="h-48 w-full rounded-lg" />
+            <Skeleton className="h-48 w-full rounded-xl" />
           </AdminSkeletonRegion>
         ) : data.length < 2 ? (
           <div className="flex items-center justify-center h-full">

@@ -124,7 +124,7 @@ export function AdminSectionRail({
             <span className="flex items-center justify-between gap-2">
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate">{item.label}</span>
+                  <span className="break-words">{item.label}</span>
                   {item.dirty && (
                     <span
                       aria-label="Unsaved changes"
@@ -153,7 +153,7 @@ export function AdminSectionRail({
               )}
             </span>
             {item.tag && (
-              <span className="font-display w-fit rounded-full bg-muted px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-muted-foreground">
+              <span className="font-body w-fit rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold normal-case tracking-normal text-muted-foreground">
                 {item.tag}
               </span>
             )}

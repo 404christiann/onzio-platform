@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 
+import guided from "@/components/admin/AdminGuided.module.css";
+
 import { cn } from "@/lib/utils";
 
 /**
@@ -110,6 +112,7 @@ export function AdminTabs({
       aria-label={label}
       className={cn(
         "inline-flex w-full rounded-lg border border-border bg-muted/50 p-1 sm:w-auto",
+        guided.tabs,
         className,
       )}
     >

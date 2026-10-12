@@ -274,12 +274,12 @@ export default function MembersPage() {
               className={ADMIN_INPUT_CLASS}
             />
           </div>
-          <button className="rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <button className="min-h-11 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             Send access code
           </button>
         </div>
       </form>
-      <p className="mt-4 rounded-lg border border-border bg-background/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-4 rounded-xl border border-border bg-background/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
         Adding an administrator emails them a sign-in code. They get full
         content access to this club — everything except billing and
         ownership.
@@ -291,26 +291,26 @@ export default function MembersPage() {
           Current administrators · {totalAdminCount}
         </h2>
         {showOwnerRow && (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
+            <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
               <AvatarChip email={ownerEmail} variant="owner" />
               <div className="min-w-0">
                 <span className="block min-w-0 truncate text-sm">
                   {ownerEmail ?? "Loading…"}
                 </span>
-                <span className="mt-1 inline-block text-xs font-semibold uppercase tracking-wide text-primary">
+                <span className="mt-1 inline-block text-xs font-semibold text-primary">
                   You · owner
                 </span>
               </div>
             </div>
-            <span className="flex-none whitespace-nowrap rounded-full border border-border px-3 py-1.5 text-right text-xs text-muted-foreground">
+            <span className="max-w-full flex-none break-words whitespace-normal rounded-full border border-border px-3 py-1.5 text-right text-xs text-muted-foreground">
               Contact Onzio to transfer
             </span>
           </div>
         )}
         {admins.map((admin) => (
-          <div key={admin.userId} className="flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex min-w-0 items-center gap-3">
+          <div key={admin.userId} className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
+            <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
               <AvatarChip email={admin.email} variant="admin" />
               <div className="min-w-0">
                 <span className="block min-w-0 truncate text-sm">{admin.email}</span>
@@ -322,7 +322,7 @@ export default function MembersPage() {
             <button
               type="button"
               onClick={() => void remove(admin.userId)}
-              className="flex-none rounded-lg border border-destructive/30 px-3 py-2 text-xs font-bold uppercase text-destructive"
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-11 flex-none rounded-xl border border-destructive/30 px-4 py-2 text-sm font-semibold text-destructive"
             >
               Remove
             </button>
@@ -338,9 +338,9 @@ export default function MembersPage() {
             message.tone === "success" &&
               "inline-flex items-center gap-1.5 rounded-full border-success/30 bg-success/10 px-4 py-2 font-medium text-success",
             message.tone === "destructive" &&
-              "rounded-lg border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive",
+              "rounded-xl border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive",
             message.tone === "warning" &&
-              "rounded-lg border-warning/30 bg-warning/10 px-4 py-3 text-warning",
+              "rounded-xl border-warning/30 bg-warning/10 px-4 py-3 text-warning",
           )}
         >
           {message.tone === "success" ? <><Check width="14" height="14" className="mr-1 inline-block align-middle" />{message.text}</> : message.text}
