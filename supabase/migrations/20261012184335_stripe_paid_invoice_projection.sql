@@ -157,4 +157,3 @@ grant execute on function onzio_private.apply_stripe_projection(
   text, text, timestamptz, text, uuid, text, text, text, text,
   boolean, timestamptz, timestamptz, text, text
 ) to service_role;
-
