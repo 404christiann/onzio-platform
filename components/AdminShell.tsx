@@ -389,7 +389,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         <main className={"min-w-0 flex-1 overflow-x-clip bg-background p-4 sm:p-6 lg:p-8 " + guided.shellMain}>
           {club.kind === "customer" && club.publicAccess === "grace" ? (
-            <div className="mx-auto mb-6 max-w-7xl rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+            <div className="mx-auto mb-6 max-w-7xl rounded-lg border border-billing-warning bg-billing-warning-soft px-4 py-3 text-sm text-billing-warning-foreground">
               Billing needs attention. Content editing remains available during the grace period.
               {isBillingAuthorized ? (
                 <>

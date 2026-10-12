@@ -1,3 +1,24 @@
+## 2026-10-12 — Yellow billing warning follow-up
+
+`BILLING-YELLOW-01` is in_progress: requested yellow palette implemented in
+the existing billing warning banner, failed/grace cards, progress indicator,
+and billing action buttons. Dedicated admin billing tokens keep other warning
+surfaces unchanged. Files: `components/AdminShell.tsx`,
+`components/admin/payments/PaymentStatusCard.tsx`, `styles/globals.css`, and
+`tailwind.config.ts`. Final TypeScript, lint, and whitespace checks pass.
+Final synthetic desktop/phone captures pass in both themes across failed,
+grace, and recovered states (12 captures), with inline payment error handling,
+no browser errors or overflow, and fixture restoration verified. The isolated
+full suite passes 1813/1813 across 192 files. No native-device result is claimed.
+The first suite run had two lifecycle assertions collide with concurrent
+synthetic browser fixture mutations; fixtures were restored before the rerun.
+Christian explicitly approved deploying this yellow result on 2026-10-12.
+The restricted backup checksums and existing READY rollback deployment were
+verified, and refreshed main is the unchanged reviewed base. No hosted billing
+or data changes are required. Exact next step: push the accepted styling,
+verify its matching READY production deployment and live owner billing warning.
+Preserve the dirty original OTP checkout.
+
 ## 2026-10-12 — Billing failure correction released and verified
 
 `BILLING-FAILED-01` is complete under explicit production approval. The accepted

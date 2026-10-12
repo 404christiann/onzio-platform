@@ -57,3 +57,28 @@ retain their original provenance. No new native-device result is claimed.
 
 **Blockers/exact next step:** none for this package. Preserve the original dirty
 OTP checkout and the private backup/rollback evidence.
+
+## BILLING-YELLOW-01 — Requested visual follow-up
+
+**Status:** in_progress; local implementation and verification complete,
+production publication explicitly approved on 2026-10-12.
+
+Replaces the brown billing warning treatment with bright yellow borders and
+progress, pale yellow banner/button fills, and readable neutral text in both
+admin themes. Layout, billing state, and payment actions are preserved. Files:
+`components/AdminShell.tsx`, `components/admin/payments/PaymentStatusCard.tsx`,
+`styles/globals.css`, `tailwind.config.ts`. TypeScript, lint, and whitespace
+checks pass. Final synthetic browser acceptance passes 12 desktop/phone captures
+across both themes and failed/grace/recovered states, with no overflow or browser
+errors, friendly inline payment errors, and restored local fixtures. No native
+device acceptance is claimed. The isolated full suite passes 1813/1813 across
+192 files. The first run's two
+lifecycle assertions overlapped the synthetic browser mutation; its fixtures
+were restored before rerunning. No tests were changed.
+
+Verified restricted backup checksum parity and the existing READY rollback
+deployment before release. Refreshed main matches the reviewed implementation
+base. No hosted billing or data changes are required for the styling.
+
+**Exact next step:** push the approved styling, verify its matching READY
+production deployment and the live owner billing warning.

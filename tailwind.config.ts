@@ -28,6 +28,11 @@ const config: Config = {
       // the brand aliases above, and public club-site templates never
       // reference them.
       colors: {
+        "billing-warning": {
+          DEFAULT: "hsl(var(--billing-warning) / <alpha-value>)",
+          soft: "hsl(var(--billing-warning-soft))",
+          foreground: "hsl(var(--billing-warning-foreground))",
+        },
         white: "rgb(var(--tw-white-rgb) / <alpha-value>)",
         black: "rgb(var(--tw-black-rgb) / <alpha-value>)",
         green: {

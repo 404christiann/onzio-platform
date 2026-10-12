@@ -411,8 +411,8 @@ export function PaymentStatusCard({
 
     case "payment_failed":
       return (
-        <section className={cn(CARD_SHELL, "border-2 border-warning")}>
-          <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-warning">
+        <section className={cn(CARD_SHELL, "border-2 border-billing-warning")}>
+          <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-foreground">
             <AlertTriangle className="size-4" aria-hidden="true" />
             Payment failed
           </p>
@@ -422,7 +422,7 @@ export function PaymentStatusCard({
             <SupportEmailLink />.
           </p>
           <PortalForm>
-            <Button type="submit" variant="outline" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full border-warning/50 text-warning hover:bg-warning/10 hover:text-warning sm:px-6 sm:w-auto">
+            <Button type="submit" variant="outline" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full border-billing-warning bg-billing-warning-soft text-billing-warning-foreground hover:bg-billing-warning hover:text-billing-warning-foreground sm:px-6 sm:w-auto">
               Resolve payment
             </Button>
           </PortalForm>
@@ -435,9 +435,9 @@ export function PaymentStatusCard({
         Math.max(0, (uiState.daysRemaining / GRACE_DAYS) * 100),
       );
       return (
-        <section className={cn(CARD_SHELL, "border-2 border-warning")}>
+        <section className={cn(CARD_SHELL, "border-2 border-billing-warning")}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-warning">
+            <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-foreground">
               <AlertTriangle className="size-4" aria-hidden="true" />
               Payment overdue
             </p>
@@ -454,7 +454,7 @@ export function PaymentStatusCard({
             </div>
             <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full bg-warning"
+                className="h-full rounded-full bg-billing-warning"
                 style={{ width: `${percentLeft}%` }}
               />
             </div>
@@ -472,7 +472,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 border-warning/50 text-warning hover:bg-warning/10 hover:text-warning sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 border-billing-warning bg-billing-warning-soft text-billing-warning-foreground hover:bg-billing-warning hover:text-billing-warning-foreground sm:w-auto"
             >
               Update payment method
             </Button>
