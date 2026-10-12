@@ -488,3 +488,15 @@ Christian requested a read-only `review-agent` subagent, fixes for its findings 
 | Package | Status | Completed work | Files changed | Verification | Remaining release gate | Exact next step |
 | --- | --- | --- | --- | --- | --- | --- |
 | GUIDED-PR-REVIEW | complete | Three read-only review rounds; both P2 defects corrected; new regressions and durable evidence | MatchStatsEditor; Standings page; two additive browser specs; review/QA reports; HANDOFF; this ledger | Source c8c960a, build26UE0JzwxYguDfsx5RF-E: new regressions8, existing Competition2, Standings contracts8, complete189/1791; existing Stats7 distinct with unchanged affected rerun; build/TypeScript/lint/whitespace pass; non-mutating merge simulation passes; latest full-diff review No findings | Christian explicitly retains merge approval; production backup/release safeguards apply at release time | Christian reviews PR #13 fixes and evidence, then gives explicit OK; refresh base/checks and satisfy release safeguards before any merge/deployment |
+
+## 2026-10-12 — Approved merge; production preflight
+
+| Package | Status | Completed work | Files changed | Verification | Blockers | Exact next step |
+| --- | --- | --- | --- | --- | --- | --- |
+| GUIDED-PRODUCTION-RELEASE | in_progress | Explicit merge approval; refreshed unchanged main/PR; verified READY rollback deployment and today's completed physical backup; isolated linked production ledger and exact migration dry run | HANDOFF; this ledger (local documentation only) | PR17aebb4/basec10bea3 MERGEABLE/CLEAN; whitespace/merge-tree pass; production ACTIVE_HEALTHY; physical backup1943570699 completed; 48/49 applied, exact dry run identifies only existing branding-bucket migration | Auto-review rejected sensitive local backup export without specific payload/destination approval; exact backup + migration approval requested and pending | After specific approval take/verify private backups, apply/read back the one migration and49/49 ledger, refresh exact head and merge; verify matching READY production and public/auth behavior |
+
+## 2026-10-12 — Specific prerequisites approved and verified
+
+| Package | Status | Completed work | Files changed | Verification | Blockers | Exact next step |
+| --- | --- | --- | --- | --- | --- | --- |
+| GUIDED-PRODUCTION-RELEASE | in_progress | Explicit prerequisite approval; protected fresh logical backups; exact approved branding migration applied with no seeds; unchanged bucket readback; retained rollback deployment | Production-release report; HANDOFF; this ledger (documentation only) | Backup63 tables/COPY sections/terminators match, SHA-256/modes700/600; completed physical1943570699; migration49/49; existing public/PNG/1MB bucket identical; reviewed runtimec8c960a unchanged, merge-tree/whitespace/PR MERGEABLE/CLEAN | None; merge/deployment acceptance remains to be performed | Publish preparation evidence, merge exact checked PR head, verify matching READY production and public/protected-login baselines, then record completion |
