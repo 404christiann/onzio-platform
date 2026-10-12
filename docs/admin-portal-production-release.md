@@ -1,6 +1,6 @@
 # Guided admin portal production release — 2026-10-12
 
-PR: [#13](https://github.com/404christiann/onzio-platform/pull/13). Christian explicitly approved merge and separately approved the private production backup export and exact pre-existing branding-bucket migration. All pre-merge prerequisites are satisfied; merge and production verification are the next steps.
+PR: [#13](https://github.com/404christiann/onzio-platform/pull/13). Christian explicitly approved merge and separately approved the private production backup export and exact pre-existing branding-bucket migration. All prerequisites are satisfied. PR #13 merged at2026-10-12T18:01:32Z as `1938a7eda09a76b023364ea9f1d7214ceaade062`; exact checked branch head was `bc262b3dbe046d09b4a3354e59648bf44f0d072f`. Its matching main/production deployment `dpl_4hbSWo7FB1upzKqqPYtAtdwSn2Rh` is **READY** at `https://onzio-platform-7v7xdvurw-404christianns-projects.vercel.app`. The default alias and both custom domains resolve to this deployment; all12 scoped public/protected-login checks match the pre-release baseline. Release acceptance is complete within the limits below.
 
 ## Release preparation
 
@@ -18,6 +18,12 @@ PR: [#13](https://github.com/404christiann/onzio-platform/pull/13). Christian ex
 
 No authenticated production content mutation, payment/provider action, production seed or new physical-device claim is included. The earlier accepted iPhone/paste/VoiceOver and build-8 gallery retain their original provenance. Original dirty OTP checkout is preserved. Keep rollback deployment and private backup receipts for recovery.
 
-## Exact next step
+## Production acceptance
 
-Publish the documentation-only preparation, refresh/check the exact PR head, merge without altering reviewed runtime source, then verify the matching READY production deployment, public baseline and protected-admin login behavior. Record merge SHA/deployment/result here and in HANDOFF/`GUIDED-PRODUCTION-RELEASE`. Any live authenticated editor mutation needs its own explicit test scope; local persistence evidence remains recorded in the review report.
+- GitHub reports PR #13 MERGED at `2026-10-12T18:01:32Z`, merge commit `1938a7eda09a76b023364ea9f1d7214ceaade062`, exact branch head `bc262b3dbe046d09b4a3354e59648bf44f0d072f`. Main runtime source is byte-identical to the reviewed/tested source. No remote PR CI pass is claimed; the repository has no PR test workflow.
+- Vercel metadata identifies that exact GitHub SHA, refmain and targetproduction. Deployment `dpl_4hbSWo7FB1upzKqqPYtAtdwSn2Rh` is READY. `onzio-platform.vercel.app`, `www.diversecityfc.com` and `columbuslionsfc.com` resolve to it; its nine aliases are retained. Receipts: `/private/tmp/onzio-pr13-{deployments,deployment-inspect,live-alias,dcfc-alias,lions-alias}.json`.
+- All12 post-release probes match their baseline at `2026-10-12T18:04:17Z`. Diverse City home/roster/schedule200, both domains' admin/Season/Standings redirect to normal login200, no tenant errors. Lions' three existing public404 responses are unchanged; cause unverified. Receipt: `/private/tmp/onzio-pr13-public-after.json`.
+- The first scoped scan returned zero records. The final15-minute scan after the probes contains two expected `AUTHENTICATION_REQUIRED` guard entries, one per signed-out GET/admin probe, both response307 to normal login; zero unexpected application errors. Classification: `/private/tmp/onzio-pr13-runtime-error-classification.json`; private receipt `/private/tmp/onzio-pr13-runtime-errors-final.jsonl` and command log. This is a point-in-time scan, not continuous monitoring. No authenticated production editing/persistence/OTP send, live provider or new hardware acceptance is inferred.
+- Final release documentation changes only HANDOFF, this report and the scoped plan ledger. It is published on the retained feature branch with automatic deployment disabled; it does not trigger another main deployment or alter released runtime source.
+
+`GUIDED-PRODUCTION-RELEASE` is complete. Next: use the live portal normally and retain the rollback/private backup receipts. Any new production editor mutation testing or unrelated Lions public-site investigation needs its own scope.
