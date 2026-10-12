@@ -1,5 +1,29 @@
 # Diverse City FC Status
 
+## 2026-10-12 - Subscription payment-state correction
+
+**Agent/package:** Codex, `BILLING-FAILED-01`. **Status:** `complete`.
+
+**Completed work:** explicitly approved production release and audited
+canonical reconciliation of the affected projection. Subscription identity,
+immutable history, existing grace access and unrelated tenant records are
+preserved. Stripe access was read-only.
+
+**Files changed:** webhook, paid-through resolver, event routing, payment UI
+state/card, six regressions, the billing migration, Vitest render support,
+handoff and `docs/billing-failed-payment-fix.md`; this ledger.
+
+**Verification:** full1813, contracts1059, architecture21, DB311, build,
+TypeScript/lint, DB types and six local desktop/phone captures pass. Restricted
+backups, exact one-migration dry-run/apply,50/50 production ledger and service-only
+grants were verified. Exact main deployment reached READY on existing aliases.
+Authenticated owner billing UI, public availability, protected login and the
+exact deployment error scan passed. Detailed tenant financial evidence remains
+in restricted private receipts rather than the current public status notes.
+
+**Blockers/exact next step:** none. Complete generic release evidence:
+`docs/billing-failed-payment-fix.md`.
+
 ## 2026-09-25 - Header Stays final review fixes
 
 **Package:** ad hoc public loading feature, Familiar Blend / Header Stays.

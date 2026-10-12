@@ -1,25 +1,17 @@
-## 2026-10-12 — Failed subscription payment fix locally accepted; live release pending
+## 2026-10-12 — Billing failure correction released and verified
 
-`BILLING-FAILED-01` is in_progress in the attached `billing-failed-payment`
-worktree based on current main `1938a7e`; original dirty OTP checkout is
-preserved. Read-only production checks confirm Diverse City's applied failed
-payment is `past_due`, but the webhook incorrectly recorded the next unpaid
-period as paid-through; the portal therefore displayed a successful renewal.
-The implementation now rebuilds paid coverage from canonical paid recurring
-invoices, corrects grace deadlines transactionally and shows a clear failure
-instead of renewal. Focused pure/render/signed-webhook tests43, billing DB8,
-all contracts1,059, architecture21 and DB311 pass. Final complete suite is
-1,813/1,813 across192 files; final build, TypeScript/lint and DB-type parity
-pass. Six real local browser captures at1440px/390px verify failure, grace and
-recovery, zero overflow/page errors, the grace banner and inline Portal500
-handling; synthetic Alpha billing/kind/access restored. One unchanged local
-email-auth session timing failure was superseded by its passing focused retry
-and passing full rerun. Complete scope, changed files,
-evidence and release boundary: `docs/billing-failed-payment-fix.md`.
-No hosted writes or release. Exact next step: review the accepted local fix and
-obtain explicit production release/canonical reconciliation approval with
-verified backups. Production invoice-history retrieval requires refreshed
-Stripe access; never substitute synthetic regression dates for live evidence.
+`BILLING-FAILED-01` is complete under explicit production approval. The accepted
+runtime fix and one approved migration are deployed, with50/50 migration
+parity, verified restricted backups and service-only projection grants. A
+guarded audited maintenance transaction reconciled the affected existing
+projection to canonical Stripe paid-invoice evidence; subscription identity and
+previous immutable events are preserved, and other tenant records are unchanged.
+Existing owner-session live UI, public availability, protected login and the
+exact deployment error scan were verified. Full1813/build/local desktop-phone
+acceptance remains valid. Final completion notes are documentation-only.
+Detailed tenant financial evidence remains private. Scope and acceptance:
+`docs/billing-failed-payment-fix.md`. Original dirty OTP checkout is preserved.
+Blockers/required next step: none.
 
 ## 2026-10-12 — Approved release prerequisites satisfied; ready to merge PR #13
 
