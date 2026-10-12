@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminModal } from "@/components/admin/AdminModal";
 import Link from "next/link";
 import guided from "@/components/admin/AdminGuided.module.css";
 import { Search, X } from "@/components/admin/icons";
@@ -9,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 
 export type AdminSearchRoute = {
@@ -25,13 +27,10 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const close = useCallback((restoreFocus = true) => {
+  const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setActiveIndex(0);
-    if (restoreFocus) {
-      requestAnimationFrame(() => triggerRef.current?.focus());
-    }
   }, []);
 
   useEffect(() => {
@@ -44,11 +43,6 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open]);
 
   const results = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -67,15 +61,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
-      // Escape must only close the topmost overlay — this search dialog.
-      // Otherwise the same keydown also reaches the document-level Escape
-      // listener in AdminSidePanel, so pressing Escape with ⌘K search open
-      // over an edit side panel would close both and silently drop the
-      // panel's unsaved form state. stopPropagation alone is not enough:
-      // React delegates events on `document` in the App Router — the same
-      // node AdminSidePanel listens on — and stopPropagation never stops
-      // other listeners on the same node, so the native event needs
-      // stopImmediatePropagation too.
+      // Close only search when it is opened over an unsaved edit panel.
       event.stopPropagation();
       event.nativeEvent.stopImmediatePropagation();
       close();
@@ -111,19 +97,13 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
         </kbd>
       </button>
 
-      {open ? (
-        <>
-          <button
-            type="button"
-            aria-label="Close route search"
-            className="fixed inset-0 z-40 cursor-default bg-foreground/10 backdrop-blur-[1px]"
-            onClick={() => close()}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
+      <AdminModal open={open} onClose={close} initialFocus={inputRef}
             aria-label="Search admin pages"
-            className={"fixed left-4 right-4 top-20 z-50 mx-auto max-w-xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl sm:absolute sm:left-0 sm:right-auto sm:top-12 sm:w-[28rem] " + guided.routeDialog}
+            style={{
+              "--admin-search-left": `${triggerRef.current?.getBoundingClientRect().left ?? 16}px`,
+              "--admin-search-top": `${(triggerRef.current?.getBoundingClientRect().top ?? 32) + 48}px`,
+            } as CSSProperties}
+            className={"fixed left-4 right-4 top-20 z-50 mx-auto max-w-xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl sm:left-[var(--admin-search-left)] sm:right-auto sm:top-[var(--admin-search-top)] sm:w-[28rem] " + guided.routeDialog}
           >
             <div className="flex items-center gap-2 border-b border-border px-4">
               <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -132,6 +112,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={handleKeyDown}
+                aria-label="Search pages and actions"
                 placeholder="Search pages and actions…"
                 role="combobox"
                 aria-autocomplete="list"
@@ -163,7 +144,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
                     role="option"
                     aria-selected={index === activeIndex}
                     onMouseEnter={() => setActiveIndex(index)}
-                    onClick={() => close(false)}
+                    onClick={close}
                     className="flex min-h-11 items-center justify-between gap-4 rounded-lg px-3 py-2.5 text-sm outline-none transition hover:bg-accent aria-selected:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <span className="font-medium text-foreground">{route.label}</span>
@@ -178,9 +159,7 @@ export function AdminRouteSearch({ routes }: { routes: readonly AdminSearchRoute
                 </div>
               )}
             </div>
-          </div>
-        </>
-      ) : null}
+      </AdminModal>
     </div>
   );
 }

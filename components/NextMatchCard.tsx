@@ -95,6 +95,12 @@ export default function NextMatchCard() {
           duration: 0.9,
           ease: "power2.out",
           scrollTrigger: { trigger: sectionRef.current, start: "top 85%" },
+          onComplete: () => {
+            // A completed identity transform changes the offset-parent chain.
+            // Clear it so the public section and static preview share the same
+            // final geometry without changing the entrance animation.
+            if (sectionRef.current) gsap.set(sectionRef.current, { clearProps: "transform" });
+          },
         },
       );
     }, sectionRef);

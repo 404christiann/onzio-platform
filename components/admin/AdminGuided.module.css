@@ -87,6 +87,13 @@
 
 @media (min-width: 640px) {
   .portal { --admin-shell-inline-padding: 1.5rem; }
+
+  /* A portaled search can stay open while the sidebar breakpoint changes.
+     Clamp its saved trigger position to the current viewport on every resize. */
+  .routeDialog {
+    left: clamp(max(1rem, var(--admin-safe-area-left)), var(--admin-search-left), calc(100vw - 28rem - max(1rem, var(--admin-safe-area-right))));
+    max-width: calc(100vw - max(1rem, var(--admin-safe-area-left)) - max(1rem, var(--admin-safe-area-right)));
+  }
 }
 
 @media (min-width: 1024px) {

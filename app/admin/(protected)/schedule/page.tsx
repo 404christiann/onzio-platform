@@ -16,6 +16,7 @@ import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { AdminPage, AdminPageHeader, AdminPageToolbar, AdminPanel } from "@/components/admin/AdminPage";
 import { AdminSidePanel } from "@/components/admin/AdminSidePanel";
+import { AdminModal } from "@/components/admin/AdminModal";
 import SeasonSelect from "@/components/admin/SeasonSelect";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -185,6 +186,13 @@ function formatTime12h(timeValue: string): string {
   return `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`;
 }
 
+const LOGO_FILE_GUIDANCE = "Choose a PNG or WebP logo.";
+
+function logoUploadErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.includes("UNSUPPORTED_MEDIA_TYPE")) return LOGO_FILE_GUIDANCE;
+  return error instanceof Error ? error.message : "Upload failed";
+}
+
 async function uploadPhoto(file: File, bucket: string, folder: string): Promise<string> {
   const supabase = createClient();
   const extension = file.name.split(".").pop() ?? "jpg";
@@ -255,6 +263,8 @@ export default function SchedulePage() {
   const [addForm, setAddForm]       = useState<FormState>(emptyForm());
   const [saving, setSaving]         = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const deleteCancelRef = useRef<HTMLButtonElement>(null);
   const [error, setError]           = useState<string | null>(null);
   const [saved, setSaved]           = useState(false);
 
@@ -477,12 +487,18 @@ export default function SchedulePage() {
   async function handleDelete(id: string) {
     setDeletingId(id);
     setError(null);
-    const supabase = createClient();
-    const { error: e } = await supabase.from("matches").delete().eq("id", id);
-    if (e) { setError(e.message); setDeletingId(null); return; }
-    setMatches((prev) => prev.filter((m) => m.id !== id));
-    setDeletingId(null);
-    if (editingId === id) closePanel();
+    try {
+      const supabase = createClient();
+      const { error: e } = await supabase.from("matches").delete().eq("id", id);
+      if (e) { setError(e.message); return; }
+      setMatches((prev) => prev.filter((m) => m.id !== id));
+      setConfirmDeleteOpen(false);
+      if (editingId === id) closePanel();
+    } catch {
+      setError("This match could not be deleted. Check the connection and try again.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   // ── Render ───────────────────────────────────
@@ -794,6 +810,31 @@ export default function SchedulePage() {
         className="max-w-2xl"
         footer={
           <div className="space-y-3">
+      <AdminModal
+        open={confirmDeleteOpen && editingId !== null}
+        onClose={() => { if (!deletingId) setConfirmDeleteOpen(false); }}
+        initialFocus={deleteCancelRef}
+        aria-labelledby="delete-match-title"
+        backdropClassName="fixed inset-0 z-[200] bg-background/80 backdrop-blur-sm"
+        className="fixed left-1/2 top-1/2 z-[201] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl"
+      >
+        <h2 id="delete-match-title" className="break-words text-xl font-semibold text-foreground">Delete this match?</h2>
+        <p className="mt-3 break-words text-sm leading-relaxed text-muted-foreground">
+          {editForm.home ? "vs" : "@"} {editForm.opponent || "Opponent"}
+          {editForm.date ? ` · ${formatShortDate(editForm.date)}` : ""}
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">This removes the match from your schedule. This cannot be undone.</p>
+        {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button ref={deleteCancelRef} type="button" disabled={Boolean(deletingId)}
+            onClick={() => setConfirmDeleteOpen(false)}
+            className="min-h-11 flex-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">Cancel</button>
+          <button type="button" disabled={Boolean(deletingId)}
+            onClick={() => { if (editingId && !deletingId) void handleDelete(editingId); }}
+            className="min-h-11 flex-1 rounded-xl bg-destructive px-4 py-2.5 text-sm font-semibold text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{deletingId ? "Deleting…" : "Delete match"}</button>
+        </div>
+      </AdminModal>
+
             {error && (
               <p role="alert" className="font-body text-sm text-destructive">
                 {error}
@@ -803,7 +844,7 @@ export default function SchedulePage() {
               {editingId && (
                 <button
                   type="button"
-                  onClick={() => handleDelete(editingId)}
+                  onClick={() => { setError(null); setConfirmDeleteOpen(true); }}
                   disabled={deletingId === editingId}
                   className="min-h-11 w-full rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-2.5 font-body text-sm font-semibold text-destructive transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
@@ -1212,12 +1253,17 @@ function OpponentLogoUpload({
 
   async function handleFile(file: File | null) {
     if (!file) return;
+    if (file.type !== "image/png" && file.type !== "image/webp") {
+      setError(LOGO_FILE_GUIDANCE);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
       await onUploaded(await uploadPhoto(file, "opponent-logos", "match-opponents"));
     } catch (uploadError: unknown) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      setError(logoUploadErrorMessage(uploadError));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -1246,11 +1292,13 @@ function OpponentLogoUpload({
           Remove
         </button>
       )}
+      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
       <input
         id={inputId}
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/png,image/webp"
+        aria-describedby={`${inputId}-format-hint`}
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
@@ -1280,12 +1328,17 @@ function SponsorLogoUpload({
 
   async function handleFile(file: File | null) {
     if (!file) return;
+    if (file.type !== "image/png" && file.type !== "image/webp") {
+      setError(LOGO_FILE_GUIDANCE);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
       await onUploaded(await uploadPhoto(file, "sponsors", "match-sponsors"));
     } catch (uploadError: unknown) {
-      setError(uploadError instanceof Error ? uploadError.message : "Upload failed");
+      setError(logoUploadErrorMessage(uploadError));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -1330,11 +1383,13 @@ function SponsorLogoUpload({
           Remove
         </button>
       )}
+      <p id={`${inputId}-format-hint`} className="w-full font-body text-xs text-muted-foreground">PNG or WebP</p>
       <input
         id={inputId}
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/png,image/webp"
+        aria-describedby={`${inputId}-format-hint`}
         className="hidden"
         onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
       />

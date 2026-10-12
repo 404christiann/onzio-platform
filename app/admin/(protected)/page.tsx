@@ -95,7 +95,7 @@ function DashboardSkeleton() {
       <section aria-label="Club statistics" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {["Active Players", "Active Staff", "Season Matches", "Paid Registrations"].map((label) => (
           <AdminPanel key={label} className="p-4 sm:p-5">
-            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="break-words text-sm text-muted-foreground">{label}</p>
             <AdminSkeletonRegion label={`Loading ${label.toLowerCase()}`} className="mt-3">
               <Skeleton className="h-8 w-16" />
             </AdminSkeletonRegion>
@@ -341,7 +341,7 @@ async function AdminDashboardContent() {
 function MetricCard({ label, section }: { label: string; section: DashboardSection<number> }) {
   return (
     <AdminPanel className="p-4 sm:p-5">
-      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="break-words text-sm text-muted-foreground">{label}</p>
       {section.status === "ready" ? (
         <p className="mt-3 text-[32px] font-semibold leading-none tracking-tight tabular-nums text-card-foreground">
           {section.data.toLocaleString()}
@@ -368,9 +368,9 @@ function DashboardPanel({
 }) {
   return (
     <AdminPanel aria-labelledby={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`}>
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h2 id={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`} className="text-sm font-semibold normal-case text-foreground">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-auto">
+          <h2 id={`${title.toLowerCase().replace(/[^a-z]+/g, "-")}-heading`} className="break-words text-sm font-semibold normal-case text-foreground">
             {title}
           </h2>
           {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}

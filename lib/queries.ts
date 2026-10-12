@@ -1141,7 +1141,10 @@ export async function fetchSiteSponsorLogos(
 }
 
 /** Fetches the DB-backed league standings table for the homepage. */
-export async function fetchLeagueStandings(clubId?: string): Promise<StandingsTableContent> {
+export async function fetchLeagueStandings(
+  clubId?: string,
+  options: { strict?: boolean } = {},
+): Promise<StandingsTableContent> {
   const tenantId = requireClubId(clubId);
   const tenantScoped = Boolean(clubId);
   const [settingsResult, rowsResult] = await Promise.all([
@@ -1159,6 +1162,10 @@ export async function fetchLeagueStandings(clubId?: string): Promise<StandingsTa
 
   if (settingsResult.error || rowsResult.error) {
     const message = settingsResult.error?.message ?? rowsResult.error?.message;
+    // Admin authoring must distinguish failed reads from a genuinely empty
+    // table, or a later Save can replace content the owner never loaded.
+    // Public and legacy callers retain their existing safe fallback.
+    if (options.strict) throw new Error(message ?? "Failed to load standings");
     console.error("fetchLeagueStandings:", message);
     return {
       settings: clubId ? DEFAULT_STANDINGS_SETTINGS : normalizeStandingsSettings(null),

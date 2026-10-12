@@ -81,6 +81,7 @@ export default function ScaledPagePreview({
         <div
           ref={canvasRef}
           aria-hidden="true"
+          inert
           style={{
             width,
             transform: `scale(${scale})`,

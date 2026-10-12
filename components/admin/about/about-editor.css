@@ -1,10 +1,10 @@
 .aep-root { max-width: 96rem; }
 .aep-page-nav { display:flex; flex-wrap:wrap; gap:.5rem; border-bottom:1px solid hsl(var(--border)); padding-bottom:.75rem; }
 .aep-page-nav button,.aep-device-toggle button { min-height:44px; border:1px solid hsl(var(--border)); border-radius:1rem; background:hsl(var(--card)); color:hsl(var(--muted-foreground)); padding:.55rem .85rem; font-size:.875rem; font-weight:500; }
-.aep-page-nav button[aria-pressed="true"],.aep-device-toggle button[aria-pressed="true"] { border-color:hsl(var(--primary)); background:hsl(var(--primary) / .1); color:hsl(var(--primary)); }
+.aep-page-nav button[aria-pressed="true"],.aep-device-toggle button[aria-pressed="true"] { border-color:hsl(var(--primary)); background:hsl(var(--primary) / .1); color:hsl(var(--admin-selected-foreground, var(--primary))); }
 .aep-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(290px,350px); gap:1rem; align-items:start; min-width:0; }
 .aep-canvas { min-width:0; border:1px solid hsl(var(--border)); border-radius:1rem; background:hsl(var(--muted) / .6); overflow:hidden; }
-.aep-canvas-top { min-height:56px; display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.45rem .8rem; border-bottom:1px solid hsl(var(--border)); color:hsl(var(--muted-foreground)); font-size:.8125rem; font-weight:500; }
+.aep-canvas-top { min-height:56px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem; padding:.45rem .8rem; border-bottom:1px solid hsl(var(--border)); color:hsl(var(--muted-foreground)); font-size:.8125rem; font-weight:500; }
 .aep-device-toggle { display:flex; gap:.35rem; }
 .aep-browser { min-width:0; padding:.75rem; }
 .aep-browser-bar { min-height:32px; display:flex; align-items:center; gap:1rem; padding:0 .75rem; border:1px solid hsl(var(--border)); border-bottom:0; border-radius:1rem .5rem 0 0; background:hsl(var(--card)); color:hsl(var(--muted-foreground)); font-size:.8125rem; }

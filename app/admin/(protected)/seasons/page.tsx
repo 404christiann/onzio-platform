@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminModal } from "@/components/admin/AdminModal";
 import { useEffect, useState } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
@@ -235,9 +236,10 @@ export default function SeasonsPage() {
         savingLabel="Updating seasons…"
         successLabel="Season changes saved"
       />
-      {showCreateConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm" style={{ zIndex: 200 }} onClick={() => setShowCreateConfirm(false)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="create-season-title" className="mx-4 w-full max-w-sm rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl" onClick={(event) => event.stopPropagation()}>
+      <AdminModal open={showCreateConfirm} onClose={() => setShowCreateConfirm(false)}
+          aria-labelledby="create-season-title"
+          backdropClassName="fixed inset-0 z-[200] bg-background/80 backdrop-blur-sm"
+          className="fixed left-1/2 top-1/2 z-[201] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-border bg-card p-6 text-card-foreground shadow-xl">
             <h2 id="create-season-title" className="font-body font-semibold text-foreground mb-2" style={{ fontSize: "1.4rem" }}>Create {nextLabel} Season?</h2>
             <p className="font-body text-sm leading-relaxed mb-1 text-muted-foreground">This will:</p>
             <ul className="font-body text-sm mb-5 space-y-1 text-muted-foreground">
@@ -250,9 +252,7 @@ export default function SeasonsPage() {
               <button onClick={() => { setShowCreateConfirm(false); handleCreateNextSeason(); }} disabled={saving} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 rounded-xl bg-primary px-5 py-2.5 font-body text-xs font-semibold text-primary-foreground transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60">{saving && <AdminLoadingDots className="mr-2" />}{saving ? "Creating…" : "Create Season"}</button>
               <button onClick={() => setShowCreateConfirm(false)} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring flex-1 px-5 py-2.5 rounded-xl font-body font-semibold text-xs bg-secondary text-muted-foreground">Cancel</button>
             </div>
-          </div>
-        </div>
-      )}
+      </AdminModal>
 
       <AdminPageHeader
         title="Seasons"
@@ -267,7 +267,7 @@ export default function SeasonsPage() {
           <div><p className="font-body text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><div className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-28" /> : activeSeason?.label ?? "Not set"}</div></div>
           <div><p className="font-body text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><div className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-8" /> : seasons.length}</div></div>
         </div>
-        <p className="font-body text-xs text-muted-foreground/80 sm:max-w-sm sm:text-right">The active season is what Roster, Schedule, Match Stats and Standings all read. Changing it changes every one of those pages.</p>
+        <p className="font-body text-xs text-muted-foreground sm:max-w-sm sm:text-right">The active season is what Roster, Schedule, Match Stats and Standings all read. Changing it changes every one of those pages.</p>
       </AdminPageToolbar>
 
       {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}
@@ -286,7 +286,7 @@ export default function SeasonsPage() {
           ))}
         </AdminSkeletonRegion>
       ) : error && seasons.length === 0 ? null : seasons.length === 0 ? (
-        <AdminPanel><p className="font-body text-muted-foreground">No seasons exist yet. Create the first season in Supabase before using this workflow.</p></AdminPanel>
+        <AdminPanel><p className="font-body text-muted-foreground">No seasons have been set up yet. Contact Onzio to create your first season.</p></AdminPanel>
       ) : (
         <div className="flex flex-col gap-3">
           {seasons.map((season) => {
@@ -305,22 +305,22 @@ export default function SeasonsPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{season.label} Season</p>
-                    {season.active && <span className="font-body text-xs px-3 py-1 rounded-full border border-success/30 bg-success/15 text-success">Active</span>}
+                    {season.active && <span className="font-body text-xs px-3 py-1 rounded-full border border-success/30 bg-success/10 text-success">Active</span>}
                   </div>
                   <p className="font-body text-sm text-muted-foreground">
                     {season.start_year} – {season.end_year}
                     {deleteState && (
-                      <span className="text-muted-foreground/60"> · {deleteState.matchCount} {deleteState.matchCount === 1 ? "match" : "matches"} · {deleteState.statRowCount} player stat {deleteState.statRowCount === 1 ? "row" : "rows"}</span>
+                      <span className="text-muted-foreground"> · {deleteState.matchCount} {deleteState.matchCount === 1 ? "match" : "matches"} · {deleteState.statRowCount} player stat {deleteState.statRowCount === 1 ? "row" : "rows"}</span>
                     )}
                   </p>
                   {!season.active && deleteState && (
-                    <p className={cn("font-body text-xs mt-1", canDelete ? "text-success" : "text-muted-foreground/80")}>{deleteState.reason}</p>
+                    <p className={cn("font-body text-xs mt-1", canDelete ? "text-success" : "text-muted-foreground")}>{deleteState.reason}</p>
                   )}
                 </div>
 
                 {!season.active && (
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <button onClick={() => handleSetActive(season.id)} disabled={saving} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring px-4 py-2 rounded-xl font-body font-semibold border border-success/20 bg-success/10 text-success/80 transition-colors hover:bg-success/20 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "0.85rem" }}>Set Active</button>
+                    <button onClick={() => handleSetActive(season.id)} disabled={saving} className="min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring px-4 py-2 rounded-xl font-body font-semibold border border-success/20 bg-success/10 text-success transition-colors hover:bg-success/20 disabled:opacity-60 disabled:cursor-not-allowed" style={{ fontSize: "0.85rem" }}>Set Active</button>
                     <button
                       onClick={() => confirmDeleteId === season.id ? handleDelete(season.id) : setConfirmDeleteId(season.id)}
                       disabled={saving || !canDelete}

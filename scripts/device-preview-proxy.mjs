@@ -22,7 +22,7 @@ import http from "node:http";
 const TENANT_HOST = process.env.TENANT_HOST ?? "alpha.localhost";
 const TARGET_PORT = Number(process.env.TARGET_PORT ?? 3110);
 const LISTEN_PORT = Number(process.env.LISTEN_PORT ?? 3111);
-const LISTEN_HOST = process.env.LISTEN_HOST ?? "0.0.0.0";
+const LISTEN_HOST = process.env.LISTEN_HOST ?? "127.0.0.1";
 
 const server = http.createServer((request, response) => {
   console.log(new Date().toISOString().slice(11,19), request.method, request.url, "from", request.socket.remoteAddress);

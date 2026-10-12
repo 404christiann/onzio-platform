@@ -303,7 +303,7 @@ export default function MembersPage() {
                 </span>
               </div>
             </div>
-            <span className="flex-none whitespace-nowrap rounded-full border border-border px-3 py-1.5 text-right text-xs text-muted-foreground">
+            <span className="max-w-full flex-none break-words whitespace-normal rounded-full border border-border px-3 py-1.5 text-right text-xs text-muted-foreground">
               Contact Onzio to transfer
             </span>
           </div>

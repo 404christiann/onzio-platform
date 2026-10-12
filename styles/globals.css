@@ -148,6 +148,20 @@ main.dark {
   --sidebar-ring: 211 100% 70%;
 }
 
+/* Status text and destructive actions need readable contrast on protected
+   cards. Scope this refinement to the portal; public and login tokens stay
+   independent on public and login routes. */
+.admin-theme[data-admin-theme="light"] .admin-portal {
+  --admin-selected-foreground: 211 100% 36%;
+  --success: 158 64% 27%;
+  --warning: 35 92% 30%;
+}
+
+.admin-theme[data-admin-theme="dark"] .admin-portal {
+  --destructive: 0 72% 66%;
+  --destructive-foreground: 220 20% 10%;
+}
+
 .admin-theme {
   min-height: 100svh;
   background: hsl(var(--background));

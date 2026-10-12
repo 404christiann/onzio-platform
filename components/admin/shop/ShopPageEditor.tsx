@@ -19,6 +19,7 @@ import ShopPurchaseDetailsSection from "@/components/ShopPurchaseDetailsSection"
 import { useClubContext } from "@/components/ClubContextProvider";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
+import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
@@ -263,7 +264,7 @@ export default function ShopPageEditor() {
         {saved && <p role="status" className="text-sm font-medium text-success">This page was saved.</p>}
         {(saveError || loadError) && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{saveError ?? loadError}</p>}
         {conflict && <div role="region" aria-label="Review latest Shop page" className="rounded-lg border border-border bg-card p-4 text-sm"><p>Another editor saved this page. Your draft is still here. Latest kit: {conflict.sections.find((section) => section.kit_variant === currentVariant)?.title || "Untitled"}.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" className="min-h-11 rounded-lg border border-border px-3" onClick={() => resolveConflict(true)}>Keep my draft</button><button type="button" className="min-h-11 rounded-lg border border-border px-3" onClick={() => resolveConflict(false)}>Use latest saved page</button></div></div>}
-        {!draft || !snapshot || !content ? <AdminPanel className="p-8 text-center text-sm text-muted-foreground">Loading the public page…</AdminPanel> : (
+        {!draft || !snapshot || !content ? <ShopContentSkeleton sectionCount={variants.length} /> : (
           <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_350px]">
             <div className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">

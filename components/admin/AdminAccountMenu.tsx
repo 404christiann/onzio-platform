@@ -45,6 +45,7 @@ export function AdminAccountMenu({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
+        aria-label={`Account menu, ${email ?? "Admin account"} ${role ?? "member"}`}
         aria-haspopup="menu"
         aria-expanded={open}
         className="flex h-11 items-center gap-2 rounded-lg px-1.5 text-left transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-2"

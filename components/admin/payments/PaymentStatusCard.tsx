@@ -312,7 +312,7 @@ export function PaymentStatusCard({
                 endpoint="/api/stripe/checkout"
                 fallbackMessage={`We couldn't start checkout. Nothing was charged — try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
               >
-                <Button type="submit" size="lg" className="min-h-11 rounded-xl text-sm font-semibold w-full sm:w-auto">
+                <Button type="submit" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto">
                   Start subscription
                 </Button>
               </BillingActionForm>
@@ -358,7 +358,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="min-h-11 rounded-xl text-sm font-semibold w-full sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
             >
               Manage billing
             </Button>
@@ -401,7 +401,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="min-h-11 rounded-xl text-sm font-semibold w-full sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
             >
               Manage billing
             </Button>
@@ -451,7 +451,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="min-h-11 rounded-xl text-sm font-semibold w-full border-warning/50 text-warning hover:bg-warning/10 hover:text-warning sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 border-warning/50 text-warning hover:bg-warning/10 hover:text-warning sm:w-auto"
             >
               Update payment method
             </Button>
@@ -476,7 +476,7 @@ export function PaymentStatusCard({
               type="submit"
               variant="outline"
               size="lg"
-              className="min-h-11 rounded-xl text-sm font-semibold w-full sm:w-auto"
+              className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto"
             >
               Manage billing
             </Button>

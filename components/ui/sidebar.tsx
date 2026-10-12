@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminModal } from "@/components/admin/AdminModal";
 import { useRender } from "@base-ui/react/use-render";
 import { PanelLeftIcon } from "lucide-react";
 import * as React from "react";
@@ -7,13 +8,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-/**
- * Trimmed, basecn-styled port of shadcn's Sidebar. Unlike the upstream
- * component this app does not have a desktop icon-collapse mode or a Base UI
- * Sheet-based mobile drawer — AdminShell already has its own proven mobile
- * off-canvas toggle (fixed panel + translate-x + overlay), so this component
- * reuses that pattern instead of pulling in Sheet/Tooltip/Separator/Input.
- */
+/** Desktop navigation stays persistent; the phone drawer uses the same
+ * accessible modal boundary as the protected editing panels. */
 
 const SIDEBAR_WIDTH = "16rem";
 
@@ -78,30 +74,35 @@ function Sidebar({
 }: React.ComponentProps<"div">) {
   const { openMobile, setOpenMobile } = useSidebar();
 
-  return (
-    <>
-      {/* Mobile overlay */}
-      {openMobile ? (
-        <div
-          aria-hidden="true"
-          className="fixed inset-0 z-20 bg-black/40 lg:hidden"
-          onClick={() => setOpenMobile(false)}
-        />
-      ) : null}
-
-      <div
-        data-slot="sidebar"
-        data-state={openMobile ? "expanded" : "collapsed"}
-        className={cn(
-          "bg-sidebar text-sidebar-foreground border-sidebar-border fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-[--sidebar-width] flex-col overflow-hidden border-r transition-transform duration-200 ease-linear lg:sticky lg:top-0 lg:inset-y-auto lg:z-auto lg:flex lg:h-screen lg:h-[100dvh] lg:max-h-screen lg:max-h-[100dvh] lg:self-start lg:translate-x-0",
-          openMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-          className
-        )}
-        {...props}
-      >
+  const [isMobile, setIsMobile] = React.useState(false);
+  React.useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const sidebarClass = cn(
+    "bg-sidebar text-sidebar-foreground border-sidebar-border fixed inset-y-0 left-0 z-30 flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-[--sidebar-width] flex-col overflow-hidden border-r transition-transform duration-200 ease-linear lg:sticky lg:top-0 lg:inset-y-auto lg:z-auto lg:flex lg:h-screen lg:h-[100dvh] lg:max-h-screen lg:max-h-[100dvh] lg:self-start lg:translate-x-0",
+    openMobile ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+    className,
+  );
+  if (isMobile && openMobile) {
+    return (
+      <AdminModal open onClose={() => setOpenMobile(false)}
+        aria-label="Admin navigation" id={props.id}
+        data-slot="sidebar" data-state="expanded"
+        className={sidebarClass} backdropClassName="fixed inset-0 z-20 bg-black/40">
         {children}
-      </div>
-    </>
+      </AdminModal>
+    );
+  }
+  return (
+    <div data-slot="sidebar" data-state="collapsed"
+      inert={isMobile || undefined} aria-hidden={isMobile || undefined}
+      className={sidebarClass} {...props}>
+      {children}
+    </div>
   );
 }
 

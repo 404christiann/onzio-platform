@@ -252,6 +252,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               width={40}
               height={40}
               className="size-10 shrink-0 rounded-lg border border-sidebar-border bg-white object-contain p-1"
+              fallback={(
+                <span role="img" aria-label={`${club.name} logo unavailable`} className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
+                  {club.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 3)}
+                </span>
+              )}
             />
           ) : (
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
@@ -264,7 +269,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-sidebar-foreground">{club.name}</p>
-            <p className="mt-0.5 text-xs text-sidebar-foreground/50">Club administration</p>
+            <p className="mt-0.5 text-xs text-sidebar-foreground/70">Club administration</p>
           </div>
           <button
             type="button"
@@ -335,7 +340,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           className={"border-t border-sidebar-border px-5 py-4 " + guided.sidebarFooter}
           style={{ paddingBottom: "max(1rem, var(--admin-safe-area-bottom))" }}
         >
-          <div className="flex items-baseline gap-1.5 text-xs text-sidebar-foreground/45">
+          <div className="flex items-baseline gap-1.5 text-xs text-sidebar-foreground/70">
             <span>Powered by</span>
             {/* Pre-trimmed 350x92 crop (ink bbox x76-425/y196-287 of the 500x500
                 master) so the box hugs the artwork exactly — no invisible padding

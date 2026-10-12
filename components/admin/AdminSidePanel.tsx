@@ -1,7 +1,8 @@
 "use client";
 
+import { AdminModal } from "@/components/admin/AdminModal";
 import { X } from "@/components/admin/icons";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import guided from "@/components/admin/AdminGuided.module.css";
 
@@ -61,8 +62,12 @@ export function AdminSidePanel({
   className,
 }: AdminSidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [panelElement, setPanelElement] = useState<HTMLDivElement | null>(null);
+  const setPanelRef = useCallback((element: HTMLDivElement | null) => {
+    panelRef.current = element;
+    setPanelElement(element);
+  }, []);
   const scrollContentRef = useRef<HTMLDivElement>(null);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +80,7 @@ export function AdminSidePanel({
 
   useEffect(() => {
     if (!open) return;
-    const panel = panelRef.current;
+    const panel = panelElement;
     if (!panel) return;
     // iOS leaves the layout viewport/dvh tall while its software keyboard
     // reduces the visual viewport. Keep the entire panel (including optional
@@ -126,42 +131,17 @@ export function AdminSidePanel({
       viewport?.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
-    requestAnimationFrame(() => panelRef.current?.focus());
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      requestAnimationFrame(() => previouslyFocusedRef.current?.focus());
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, panelElement]);
 
   if (!open) return null;
 
   return (
-    <>
-      <button
-        type="button"
-        aria-label="Close panel"
-        onClick={onClose}
-        className="fixed inset-0 z-40 cursor-default bg-foreground/10 backdrop-blur-[1px]"
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
+    <AdminModal
+        open={open}
+        onClose={onClose}
+        ref={setPanelRef}
+        initialFocus={panelRef}
         aria-label={typeof title === "string" ? title : undefined}
-        tabIndex={-1}
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex h-[100dvh] max-h-[100dvh] w-full max-w-md flex-col overflow-hidden border-l border-border bg-card text-card-foreground shadow-xl outline-none",
           guided.sidePanel,
@@ -202,7 +182,6 @@ export function AdminSidePanel({
             {footer}
           </div>
         )}
-      </div>
-    </>
+    </AdminModal>
   );
 }

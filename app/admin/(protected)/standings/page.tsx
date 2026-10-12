@@ -106,7 +106,7 @@ export default function AdminStandingsPage() {
     setLoading(true);
     setLoadFailed(false);
     setError(null);
-    fetchLeagueStandings(clubId)
+    fetchLeagueStandings(clubId, { strict: true })
       .then((content) => {
         if (cancelled) return;
         setSettings(content.settings);
@@ -306,7 +306,7 @@ export default function AdminStandingsPage() {
 
       await deleteStorageUrls("standings", pendingDeleteUrls, ["teams/"]);
 
-      const fresh = await fetchLeagueStandings(clubId);
+      const fresh = await fetchLeagueStandings(clubId, { strict: true });
       setSettings(fresh.settings);
       setRows(fresh.rows.map((row) => ({ ...row })));
       setOriginalRows(fresh.rows);

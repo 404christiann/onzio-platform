@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
+import { TryoutsWorkspaceSkeleton } from "@/components/admin/AdminOperationsSkeletons";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
@@ -390,7 +391,7 @@ function TryoutsPageEditorContent() {
       <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => setConfirmation({ kind: "discard" })} className="min-h-11 rounded-lg border border-border px-4 font-semibold">Use latest saved page</button><button type="button" onClick={keepDraftAfterConflict} className="min-h-11 rounded-lg bg-primary px-4 font-semibold text-primary-foreground">Keep my draft</button></div>
     </div>}
     {deleted.length > 0 && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-3 font-body text-sm"><span>{deleted.length === 1 ? `${deleted[0].event.headline || "Event"} will be deleted` : `${deleted.length} events will be deleted`} when you Save page.</span><button type="button" onClick={undoDelete} disabled={!canEdit} className="min-h-11 rounded-lg border border-border px-4 font-semibold text-foreground disabled:opacity-40">Undo</button></div>}
-    {loading ? <div role="status" className="rounded-xl border border-border bg-card p-10 font-body text-sm text-muted-foreground">Loading tryout events…</div> :
+    {loading ? <TryoutsWorkspaceSkeleton label="Loading tryout events…" pageIntro /> :
     <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
       <div className="min-w-0">
         <ScaledTryoutsPreview tryouts={previewTryouts} clubName={club.name} contactEmail={contactEmail}

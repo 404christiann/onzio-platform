@@ -31,6 +31,11 @@ for (const viewport of [
       await page.route("**/api/admin/data", handler);
       // Homepage now hydrates through its atomic document endpoint.
       await page.route("**/api/admin/homepage", async route => { await held; await route.continue(); });
+      // Contact hydrates through its atomic editor endpoint as well.
+      await page.route("**/api/admin/contact-editor", async route => { await held; await route.continue(); });
+      // Shop and Tryouts also read their atomic page documents directly.
+      await page.route("**/api/admin/shop?surface=*", async route => { await held; await route.continue(); });
+      await page.route("**/api/admin/tryouts-page", async route => { await held; await route.continue(); });
       await page.route("**/rest/v1/**", async route => { await held; await route.continue(); });
       try {
         await page.goto(`/admin/${routeName}`, { waitUntil: "domcontentloaded" });
@@ -52,6 +57,9 @@ for (const viewport of [
         release();
         await page.unroute("**/api/admin/data", handler);
         await page.unroute("**/api/admin/homepage");
+        await page.unroute("**/api/admin/contact-editor");
+        await page.unroute("**/api/admin/shop?surface=*");
+        await page.unroute("**/api/admin/tryouts-page");
         await page.unroute("**/rest/v1/**");
       }
     }

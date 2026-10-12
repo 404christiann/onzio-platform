@@ -3005,7 +3005,7 @@ export type Database = {
         Returns: Json
       }
       retire_unreferenced_media_asset: {
-        Args: { p_actor_id: string | null; p_asset_id: string; p_club_id: string }
+        Args: { p_actor_id: string; p_asset_id: string; p_club_id: string }
         Returns: Json
       }
       run_billing_lifecycle: {
@@ -3176,3 +3176,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
