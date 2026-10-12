@@ -69,6 +69,30 @@ function projectionArgs(
 }
 
 describe("PLAT-102 Stripe billing database contract", () => {
+  it("repairs an inflated grace deadline from canonical paid invoices without extending it on retries", async () => {
+    const clubId = await createClub({ lifecycle: "active" });
+    const initial = projectionArgs(clubId, {
+      p_status: "past_due", p_stripe_created_at: "2026-10-12T00:18:38.000Z",
+      p_paid_through: "2026-11-11T23:16:28.000Z", p_grace_ends_at: "2026-12-01T23:16:28.000Z",
+    });
+    expect((await clients.service.rpc("apply_stripe_projection", initial)).error).toBeNull();
+    const correction = {
+      ...initial, p_event_id: `evt_${randomUUID()}`, p_stripe_created_at: "2026-10-12T00:20:00.000Z",
+      p_paid_through: "2026-10-11T23:16:28.000Z", p_grace_ends_at: "2026-10-31T23:16:28.000Z",
+      p_public_access: "grace",
+    };
+    expect((await clients.service.rpc("apply_stripe_projection", correction)).error).toBeNull();
+    expect((await clients.service.rpc("apply_stripe_projection", {
+      ...correction, p_event_id: `evt_${randomUUID()}`, p_stripe_created_at: "2026-10-13T00:20:00.000Z",
+    })).error).toBeNull();
+    expect((await clients.service.from("club_subscriptions")
+      .select("status,paid_through,grace_ends_at").eq("club_id", clubId).single()).data).toEqual({
+      status: "past_due", paid_through: "2026-10-11T23:16:28+00:00", grace_ends_at: "2026-10-31T23:16:28+00:00",
+    });
+    expect((await clients.service.from("clubs").select("public_access").eq("id", clubId).single()).data)
+      .toEqual({ public_access: "grace" });
+  });
+
   it("atomically applies arbitrary Stripe facts without changing dormant tier metadata", async () => {
     const clubId = await createClub();
     const args = projectionArgs(clubId, {

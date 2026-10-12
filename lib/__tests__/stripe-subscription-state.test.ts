@@ -57,6 +57,18 @@ describe("PLAT-102 payment UI state", () => {
     });
   });
 
+  it("never calls a past-due subscription paid when its stored period is in the future", () => {
+    for (const cancel_at_period_end of [false, true]) {
+      expect(resolvePaymentsUiState(row({ status: "past_due", cancel_at_period_end }), NOW))
+        .toEqual({ state: "payment_failed" });
+    }
+  });
+
+  it("shows failed payment when no paid service period can be verified", () => {
+    expect(resolvePaymentsUiState(row({ status: "past_due", current_period_end: null }), NOW))
+      .toEqual({ state: "payment_failed" });
+  });
+
   it("suspends after grace and rejects trialing", () => {
     expect(
       resolvePaymentsUiState(

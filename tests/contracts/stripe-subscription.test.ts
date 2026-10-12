@@ -76,6 +76,45 @@ describe("Stripe Checkout and Portal routing", () => {
 });
 
 describe("Stripe webhook state contract", () => {
+  it.each(["customer.subscription.updated", "invoice.payment_failed"])(
+    "%s never advances paid-through to an unpaid billing-period end",
+    async (type) => {
+      const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
+        "@/lib/stripe-event-routing", "resolveStripeEvent",
+      );
+      const result = await resolveStripeEvent(
+        stripeEvent({ type }, { status: "past_due" }),
+        { ...currentState, graceEndsAt: "2026-09-20T00:00:00.000Z" },
+        { environment: "production", verifiedPaidThrough: "2026-07-23T00:00:00.000Z" },
+      );
+      expect(result).toMatchObject({
+        status: "past_due", paidThrough: "2026-07-23T00:00:00.000Z",
+        graceEndsAt: "2026-08-12T00:00:00.000Z", publicAccess: "grace",
+      });
+    },
+  );
+
+  it("does not invent paid coverage when no paid recurring invoice exists", async () => {
+    const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
+      "@/lib/stripe-event-routing", "resolveStripeEvent",
+    );
+    expect(await resolveStripeEvent(
+      stripeEvent({ type: "invoice.payment_failed" }, { status: "incomplete" }),
+      currentState, { environment: "production", verifiedPaidThrough: null },
+    )).toMatchObject({ paidThrough: null, graceEndsAt: null, publicAccess: "preview" });
+  });
+
+  it("a successful canonical purchase advances coverage and clears grace", async () => {
+    const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
+      "@/lib/stripe-event-routing", "resolveStripeEvent",
+    );
+    expect(await resolveStripeEvent(
+      stripeEvent({ type: "invoice.paid" }),
+      { ...currentState, status: "past_due", graceEndsAt: "2026-08-12T00:00:00.000Z" },
+      { environment: "production", verifiedPaidThrough: "2026-08-23T00:00:00.000Z" },
+    )).toMatchObject({ paidThrough: "2026-08-23T00:00:00.000Z", graceEndsAt: null, publicAccess: "live" });
+  });
+
   it("applies a canonical event without deriving or writing a tier", async () => {
     const resolveStripeEvent = await loadContract<ResolveStripeEvent>(
       "@/lib/stripe-event-routing",

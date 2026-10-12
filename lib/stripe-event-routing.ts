@@ -10,6 +10,7 @@ type UnknownRecord = Record<string, unknown>;
 type StripeRoutingConfig = {
   environment?: unknown;
   simulateRuntimeStateWriteFailure?: unknown;
+  verifiedPaidThrough?: unknown;
 };
 
 function record(value: unknown): UnknownRecord {
@@ -169,23 +170,20 @@ export async function resolveStripeEvent(
   if (!priceId.startsWith("price_")) failContract("INVALID_PRICE_ID");
   const status = requiredString(subscription.status);
   if (status === "trialing") failContract("TRIALING_NOT_SUPPORTED");
-  const periodEnd =
-    typeof subscriptionItem.current_period_end === "number"
-      ? subscriptionItem.current_period_end
-      : typeof subscription.current_period_end === "number"
-        ? subscription.current_period_end
-        : null;
-  const paidThrough =
-    periodEnd === null ? null : new Date(periodEnd * 1000).toISOString();
-  const priorGraceEndsAt =
-    typeof current?.graceEndsAt === "string" ? current.graceEndsAt : null;
+  // Stripe advances its billing period when invoicing, even if collection
+  // fails. Only the server's canonical paid-invoice lookup proves coverage.
+  const paidThrough = config.verifiedPaidThrough ?? null;
+  if (paidThrough !== null &&
+      (typeof paidThrough !== "string" || !Number.isFinite(Date.parse(paidThrough)))) {
+    failContract("INVALID_PAID_THROUGH");
+  }
+  const paidThroughTime = paidThrough === null ? null : Date.parse(paidThrough as string);
   const startsGrace = status === "past_due";
   const terminalStatus =
     status === "canceled" || status === "unpaid" || status === "incomplete_expired";
   const graceEndsAt =
-    (startsGrace || terminalStatus) && periodEnd !== null
-      ? priorGraceEndsAt ??
-        new Date(periodEnd * 1000 + STRIPE_GRACE_PERIOD_MS).toISOString()
+    (startsGrace || terminalStatus) && paidThroughTime !== null
+      ? new Date(paidThroughTime + STRIPE_GRACE_PERIOD_MS).toISOString()
       : null;
   const access = resolveSubscriptionAccess(
     { status, paidThrough, graceEndsAt },

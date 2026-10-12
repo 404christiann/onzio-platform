@@ -1,3 +1,26 @@
+## 2026-10-12 — Failed subscription payment fix locally accepted; live release pending
+
+`BILLING-FAILED-01` is in_progress in the attached `billing-failed-payment`
+worktree based on current main `1938a7e`; original dirty OTP checkout is
+preserved. Read-only production checks confirm Diverse City's applied failed
+payment is `past_due`, but the webhook incorrectly recorded the next unpaid
+period as paid-through; the portal therefore displayed a successful renewal.
+The implementation now rebuilds paid coverage from canonical paid recurring
+invoices, corrects grace deadlines transactionally and shows a clear failure
+instead of renewal. Focused pure/render/signed-webhook tests43, billing DB8,
+all contracts1,059, architecture21 and DB311 pass. Final complete suite is
+1,813/1,813 across192 files; final build, TypeScript/lint and DB-type parity
+pass. Six real local browser captures at1440px/390px verify failure, grace and
+recovery, zero overflow/page errors, the grace banner and inline Portal500
+handling; synthetic Alpha billing/kind/access restored. One unchanged local
+email-auth session timing failure was superseded by its passing focused retry
+and passing full rerun. Complete scope, changed files,
+evidence and release boundary: `docs/billing-failed-payment-fix.md`.
+No hosted writes or release. Exact next step: review the accepted local fix and
+obtain explicit production release/canonical reconciliation approval with
+verified backups. Production invoice-history retrieval requires refreshed
+Stripe access; never substitute synthetic regression dates for live evidence.
+
 ## 2026-10-12 — Approved release prerequisites satisfied; ready to merge PR #13
 
 Christian explicitly approved the previously requested prerequisite actions. Fresh private onzio/onzio_private backups completed under /private/tmp/onzio-pr13-production-backup with directory700/files600; all63 schema tables/COPY sections/terminators match and SHA-256 receipts are saved. Today's completed physical backup1943570699 and READY rollback deployment dpl_2VfUXDHYWSef5VfKTqVX3zE68iPr remain available. Structural/hash verification only; no production restore attempted. The approved push applied only20260925012119_public_email_branding_bucket.sql without seeds; readback matches49/49 migrations and identical existing public/PNG/1MB bucket settings. The earlier auto-review data-export rejection is resolved by Christian's specific approval; no outstanding authorization blocker remains.

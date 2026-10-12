@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { ContractError } from "@/lib/contract-error";
 import { getStripeClient } from "@/lib/stripe-client";
+import { getStripePaidThrough } from "@/lib/stripe-paid-through";
 import {
   getStripeRuntimeConfig,
   stripeConfigurationErrorCode,
@@ -162,11 +163,13 @@ export async function POST(request: Request) {
   const stripe = getStripeClient();
   let subscription: Stripe.Subscription;
   let canonicalCustomer: Stripe.Customer | Stripe.DeletedCustomer;
+  let verifiedPaidThrough: string | null;
   try {
     subscription = await canonicalSubscription(stripe, event);
     canonicalCustomer = await stripe.customers.retrieve(
       subscriptionCustomerId(subscription),
     );
+    verifiedPaidThrough = await getStripePaidThrough(stripe, subscription);
   } catch {
     return NextResponse.json(
       { error: "CANONICAL_SUBSCRIPTION_FAILED" },
@@ -207,7 +210,7 @@ export async function POST(request: Request) {
         data: { object: subscription },
       } as unknown as Record<string, unknown>,
       currentState(row),
-      config,
+      { ...config, verifiedPaidThrough },
     );
   } catch (error) {
     const code =

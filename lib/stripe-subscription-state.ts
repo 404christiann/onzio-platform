@@ -11,6 +11,7 @@ export type PaymentsUiState =
   | { state: "no_subscription" }
   | { state: "active"; periodEndsAt: string }
   | { state: "active_canceling"; periodEndsAt: string }
+  | { state: "payment_failed" }
   | { state: "grace"; graceEndsAt: string; daysRemaining: number }
   | { state: "terminal" };
 
@@ -44,6 +45,11 @@ export function resolvePaymentsUiState(
     return { state: "active", periodEndsAt: row.current_period_end! };
   }
   if (!NONACTIVE_STATUSES.has(row.status)) return { state: "terminal" };
+  // A paid service window and an outstanding invoice are separate facts.
+  // Never describe past-due billing as a successful upcoming renewal.
+  if (row.status === "past_due" && (beforePeriodEnd || periodEnd === null)) {
+    return { state: "payment_failed" };
+  }
   if (beforePeriodEnd) {
     return row.cancel_at_period_end
       ? { state: "active_canceling", periodEndsAt: row.current_period_end! }

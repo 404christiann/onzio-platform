@@ -409,6 +409,26 @@ export function PaymentStatusCard({
         </section>
       );
 
+    case "payment_failed":
+      return (
+        <section className={cn(CARD_SHELL, "border-2 border-warning")}>
+          <p className="inline-flex items-center gap-2 font-body text-xs font-semibold text-warning">
+            <AlertTriangle className="size-4" aria-hidden="true" />
+            Payment failed
+          </p>
+          <p className="mt-5 max-w-prose font-body text-sm leading-relaxed text-muted-foreground">
+            Your latest subscription payment failed. Update your payment method
+            and pay the outstanding invoice in the billing portal, or contact{" "}
+            <SupportEmailLink />.
+          </p>
+          <PortalForm>
+            <Button type="submit" variant="outline" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full border-warning/50 text-warning hover:bg-warning/10 hover:text-warning sm:px-6 sm:w-auto">
+              Resolve payment
+            </Button>
+          </PortalForm>
+        </section>
+      );
+
     case "grace": {
       const percentLeft = Math.min(
         100,
@@ -440,10 +460,11 @@ export function PaymentStatusCard({
             </div>
           </div>
           <p className="mt-5 max-w-prose font-body text-sm leading-relaxed text-muted-foreground">
-            Content editing remains available while payment is overdue, and
+            The subscription payment is overdue. Content editing remains available, and
             your public site stays live until the grace period ends on{" "}
-            {formatDate(uiState.graceEndsAt)}. Update the card in the Customer
-            Portal before then — otherwise the public site goes down — or
+            {formatDate(uiState.graceEndsAt)}. Update your payment method and pay
+            the outstanding invoice in the billing portal before then — otherwise
+            the public site goes down — or
             contact <SupportEmailLink />.
           </p>
           <PortalForm>
