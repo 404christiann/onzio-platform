@@ -1,5 +1,9 @@
 # Admin portal release QA — 2026-10-12
 
+## Follow-up PR review
+
+Two confirmed P2 issues were fixed after this report's original snapshot: Match discard during delayed tab navigation and Standings post-save refresh recovery. The latest full-diff review reports **No findings**. Source `c8c960a`, final build `26UE0JzwxYguDfsx5RF-E`, all 8 new browser regressions, both existing phone Competition checks, the full 1,791-test suite and sequential build/TypeScript/lint gates pass. See [the review rounds, fixes and current evidence](admin-portal-pr-review.md). The build-8 matrix and physical feedback below retain their earlier provenance; they were not re-created for these two logic fixes. Christian's explicit OK is required before merge.
+
 Status: local technical and physical iPhone acceptance complete. Christian approved the canonical generated-file EOF exception; [PR #13](https://github.com/404christiann/onzio-platform/pull/13) is open, non-draft and ready for review. Production merge/deployment approval remains open. The authorized local full-portal review and automated QA are complete on `codex/admin-guided-redesign`; the original OTP checkout is preserved. Frozen build 8 passes its build, complete 189-file/1,791-test suite, TypeScript/lint, exact generation and fresh 72-case visual matrix. Christian has now reported that the portal looks good and seems to be working on his physical iPhone. He separately confirmed that input paste and VoiceOver both worked. These are user-reported physical acceptance results; device model/iOS and specific physical save/upload actions are not inferred.
 
 ## Frozen source and integration provenance
@@ -69,7 +73,7 @@ Christian explicitly authorized retaining the generator-owned trailing blank lin
 
 `vercel.json` adds `codex/admin-guided-redesign: false` to the existing automatic-preview branch list. Hosted staging is retired; opening this PR must not create a hosted preview against an unverified database. Production branch deployment settings and cron definitions are unchanged.
 
-Only explicit production release approval remains. PR branch publication is authorized; main merge/deployment and live provider/payment actions are not. PR #13 targets main. At head `88672d9cb2a17c0c2339cc9f8b29766fe89f2857` and base `c10bea3f54442f31e4bdf7e3f68456e6c278de65`, GitHub reports `MERGEABLE` / `CLEAN` and an empty `statusCheckRollup`; this is not a remote CI pass. The only checked-in workflow is scheduled/manual media smoke, not a PR test pipeline. The PR is attached to the chat; source and documentation are published on the feature branch only. The non-mutating merge simulation passes. No new runtime changes invalidate the recorded code/browser/physical QA evidence.
+Only explicit production release approval remains. PR branch publication is authorized; main merge/deployment and live provider/payment actions are not. PR #13 targets main. At head `88672d9cb2a17c0c2339cc9f8b29766fe89f2857` and base `c10bea3f54442f31e4bdf7e3f68456e6c278de65`, GitHub reports `MERGEABLE` / `CLEAN` and an empty `statusCheckRollup`; this is not a remote CI pass. The only checked-in workflow is scheduled/manual media smoke, not a PR test pipeline. The PR is attached to the chat; source and documentation are published on the feature branch only. The non-mutating merge simulation passes. This paragraph records the original PR-opening snapshot; the follow-up review above records the later runtime fixes and fresh verification.
 
 ## Physical iPhone acceptance
 
