@@ -4,6 +4,8 @@ import { createContext, useContext, type HTMLAttributes } from "react";
 import type { HomepageDraft, PieceId } from "./model";
 
 export const HOMEPAGE_PIECE_LABELS: Record<PieceId, string> = {
+  "revamp.sponsors": "Partner section heading",
+  "revamp.raffle": "Raffle artwork", "revamp.ticket": "Ticket and map", "revamp.match": "Next home match", "revamp.prices": "Ticket prices", "revamp.championship": "Championship", "revamp.navigation": "Navigation labels",
   "hero.eyebrow": "Small heading", "hero.heading": "Main heading", "hero.intro": "Short paragraph", "hero.cta": "Top buttons",
   photos: "Photos", "story.text": "Your club's story", "story.cta": "Story button", story: "Your club's story", video: "Video feature",
   "shared.story": "Your club's story", "shared.shop": "Shop", "shared.programs": "Programs",

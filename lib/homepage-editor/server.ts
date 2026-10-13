@@ -1,3 +1,4 @@
+import type { CinematicArtwork, CinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import type { HomepageDraft } from "./model";
 
 export type HomepageSnapshot = {
@@ -12,10 +13,22 @@ export type HomepageSnapshot = {
 export function hydrateHomepageSnapshot<T extends HomepageSnapshot>(snapshot: T): T {
   const assets = new Map(snapshot.media.map((asset) => [asset.id, asset]));
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const hydrateArt = (art: CinematicArtwork): CinematicArtwork => {
+    const asset = art.assetId ? assets.get(art.assetId) : undefined;
+    if (!asset || asset.storage_bucket !== "onzio-media" || !base) return { ...art, url: null };
+    return { ...art, url: `${base}/storage/v1/object/public/onzio-media/${asset.storage_path.split("/").map(encodeURIComponent).join("/")}` };
+  };
+  const revamp = snapshot.content.revamp;
+  const hydratedRevamp: CinematicHomepageContent | undefined = revamp ? {
+    ...revamp, raffle: hydrateArt(revamp.raffle), ticket: { ...hydrateArt(revamp.ticket), visible: revamp.ticket.visible },
+    championship: { ...revamp.championship, trophy: hydrateArt(revamp.championship.trophy) },
+    presentation: { ...revamp.presentation, headerPartner: hydrateArt(revamp.presentation.headerPartner), heroPoster: hydrateArt(revamp.presentation.heroPoster), seatsBackground: hydrateArt(revamp.presentation.seatsBackground), episodePoster: hydrateArt(revamp.presentation.episodePoster) },
+  } : undefined;
   return {
     ...snapshot,
     content: {
       ...snapshot.content,
+      ...(hydratedRevamp ? { revamp: hydratedRevamp } : {}),
       photos: {
         ...snapshot.content.photos,
         items: snapshot.content.photos.items.map((photo) => {

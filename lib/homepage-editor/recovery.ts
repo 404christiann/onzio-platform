@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cinematicHomepageContentSchema } from "@/lib/cinematic-homepage-content";
 import { homepageHeroSchema, homepageStorySchema, homepageVideoSchema } from "./contract";
 
 // A recovered draft is browser-authored, not server-validated content: it can
@@ -17,6 +18,7 @@ const recoveryPhotoSchema = z.object({
 }).strict();
 
 const recoveryDraftSchema = z.object({
+  revamp: cinematicHomepageContentSchema.optional(),
   hero: homepageHeroSchema,
   photos: z.object({
     seasonLabel: z.string(),
@@ -109,4 +111,32 @@ export function resolveHomepageRecovery(input: {
   }
 
   return { kind: "restore", draft: record.draft };
+}
+
+/** Restore only fields changed by this draft. Concurrently saved words stay
+ * current, and operator-owned presentation inputs always come from the server.
+ * An edited ordered ticket-option list replaces that list, like photo order. */
+export function mergeCinematicHomepageRecovery(
+  baseline: import("@/lib/cinematic-homepage-content").CinematicHomepageContent | undefined,
+  recovered: import("@/lib/cinematic-homepage-content").CinematicHomepageContent,
+  current: import("@/lib/cinematic-homepage-content").CinematicHomepageContent,
+): import("@/lib/cinematic-homepage-content").CinematicHomepageContent {
+  function merge(before: unknown, after: unknown, latest: unknown): unknown {
+    if (JSON.stringify(before) === JSON.stringify(after)) return structuredClone(latest);
+    if (after && typeof after === "object" && !Array.isArray(after)) {
+      const prior = before && typeof before === "object" && !Array.isArray(before) ? before as Record<string, unknown> : {};
+      const edited = after as Record<string, unknown>;
+      const output = latest && typeof latest === "object" && !Array.isArray(latest) ? structuredClone(latest) as Record<string, unknown> : {};
+      for (const key of new Set([...Object.keys(prior), ...Object.keys(edited)])) {
+        if (JSON.stringify(prior[key]) === JSON.stringify(edited[key])) continue;
+        if (!Object.hasOwn(edited, key)) delete output[key];
+        else output[key] = merge(prior[key], edited[key], output[key]);
+      }
+      return output;
+    }
+    return structuredClone(after);
+  }
+  const result = merge(baseline, recovered, current) as import("@/lib/cinematic-homepage-content").CinematicHomepageContent;
+  result.presentation = structuredClone(current.presentation);
+  return result;
 }

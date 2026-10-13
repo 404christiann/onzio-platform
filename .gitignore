@@ -17,3 +17,6 @@ supabase/.temp/
 supabase/.branches/
 .vercel
 .codex-work/
+
+# Local rehearsal receipt contains destination-specific object URLs.
+assets/rose-city-2027/local-import-receipt.json

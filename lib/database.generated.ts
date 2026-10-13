@@ -855,6 +855,105 @@ export type Database = {
           },
         ]
       }
+      homepage_revamp_content: {
+        Row: {
+          club_id: string
+          content: Json
+          episode_poster_media_asset_id: string | null
+          header_partner_media_asset_id: string | null
+          hero_poster_media_asset_id: string | null
+          presentation_config: Json
+          raffle_media_asset_id: string | null
+          seats_background_media_asset_id: string | null
+          ticket_media_asset_id: string | null
+          trophy_media_asset_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          episode_poster_media_asset_id?: string | null
+          header_partner_media_asset_id?: string | null
+          hero_poster_media_asset_id?: string | null
+          presentation_config?: Json
+          raffle_media_asset_id?: string | null
+          seats_background_media_asset_id?: string | null
+          ticket_media_asset_id?: string | null
+          trophy_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          episode_poster_media_asset_id?: string | null
+          header_partner_media_asset_id?: string | null
+          hero_poster_media_asset_id?: string | null
+          presentation_config?: Json
+          raffle_media_asset_id?: string | null
+          seats_background_media_asset_id?: string | null
+          ticket_media_asset_id?: string | null
+          trophy_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_episode_poster_media_asset_fkey"
+            columns: ["club_id", "episode_poster_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_header_partner_media_asset_fkey"
+            columns: ["club_id", "header_partner_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_hero_poster_media_asset_id_fkey"
+            columns: ["club_id", "hero_poster_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_raffle_media_asset_id_fkey"
+            columns: ["club_id", "raffle_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_seats_background_media_ass_fkey"
+            columns: ["club_id", "seats_background_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_ticket_media_asset_id_fkey"
+            columns: ["club_id", "ticket_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "homepage_revamp_content_club_id_trophy_media_asset_id_fkey"
+            columns: ["club_id", "trophy_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
       homepage_slideshow_photos: {
         Row: {
           alt: string

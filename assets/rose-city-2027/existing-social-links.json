@@ -1,0 +1,40 @@
+{
+  "source": "Read-only onzio.site_social_links tenant 32ceba0b-4e25-52c2-bb6b-d82fb87637a7, verified 2026-10-13; preserve destinations",
+  "rows": [
+    {
+      "id": "113d4e22-26be-5e29-9957-465be0c6e7d3",
+      "label": "Instagram",
+      "href": "https://www.instagram.com/rosecityfutbolclub/",
+      "icon": "/images/logo/instagramLogo.svg",
+      "sort_order": 0
+    },
+    {
+      "id": "db9b5595-bb60-5585-bcf9-cf063714441e",
+      "label": "Facebook",
+      "href": "https://www.facebook.com/search/top?q=rose%20city%20futbol%20club",
+      "icon": "/images/logo/facebookLogo.svg",
+      "sort_order": 1
+    },
+    {
+      "id": "54373970-d041-5bb5-abd9-a7bbbc1a0ab1",
+      "label": "TikTok",
+      "href": "https://www.tiktok.com/@rosecityfc",
+      "icon": "/images/logo/tiktokLogo.svg",
+      "sort_order": 2
+    },
+    {
+      "id": "18c849f3-4410-5219-b023-5effa9391642",
+      "label": "X",
+      "href": "https://x.com/RoseCityFutbol",
+      "icon": "/images/logo/xLogo.svg",
+      "sort_order": 3
+    },
+    {
+      "id": "9c606449-dbb0-5703-a9c1-baced3b40454",
+      "label": "YouTube",
+      "href": "https://www.youtube.com/@RoseCityFC",
+      "icon": "/images/logo/youtubeLogo.svg",
+      "sort_order": 4
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { localPostgresConfig } from "../helpers/local-postgres";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -5,7 +6,7 @@ import { USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 
 let admin: Client, publisher: Client, writer: Client, clubId: string, photoId: string;
-const connection = () => new Client({ host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" });
+const connection = () => new Client(localPostgresConfig());
 async function publish(db: Client, template: string) {
   const documentId = randomUUID();
   await db.query(`insert into onzio.presentation_documents

@@ -1,5 +1,6 @@
 "use client";
 
+import CinematicNav from "@/components/cinematic/CinematicNav";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useHomepagePreview } from "@/lib/homepage-editor/preview-context";
@@ -185,7 +186,7 @@ export function loadAcademyNavPrograms(
   };
 }
 
-export default function Nav({
+function LegacyNav({
   initialPrograms,
   loadingAppearance = false,
 }: {
@@ -701,4 +702,9 @@ export default function Nav({
       </div>
     </header>
   );
+}
+
+export default function Nav(props: { initialPrograms?: ProgramContent[] | null; loadingAppearance?: boolean }) {
+  const club = useClubContext();
+  return club.presentationTemplateKey === "cinematic@2" ? <CinematicNav /> : <LegacyNav {...props} />;
 }

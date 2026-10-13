@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import CinematicDestination from "@/components/cinematic/CinematicDestination";
 import AcademyContactPage from "@/components/AcademyContactPage";
 import EditorialContactPage from "@/components/editorial/EditorialContactPage";
 import { getClubContextBySlug } from "@/lib/club-context";
@@ -11,6 +12,7 @@ export default async function TenantContactPage({
   params: Promise<{ slug: string }>;
 }) {
   const club = await getClubContextBySlug((await params).slug);
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicDestination clubId={club.id} labelId="contact" />;
 
   if (club.presentationTemplateKey === "editorial@1") {
     const onzio = (await createClient()).schema("onzio");

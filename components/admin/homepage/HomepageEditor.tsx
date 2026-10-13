@@ -10,6 +10,8 @@ import ResilientNativeImage from "@/components/ResilientNativeImage";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import TemplateFontScope from "@/components/TemplateFontScope";
+import CinematicShell from "@/components/cinematic/CinematicShell";
+import CinematicHomepageFields from "./CinematicHomepageFields";
 import EditorialShell from "@/components/editorial/EditorialShell";
 import HomepageRecoveryReview from "./HomepageRecoveryReview";
 import HomepageEditorSkeleton from "./HomepageEditorSkeleton";
@@ -22,7 +24,7 @@ import HomepageFields from "./HomepageFields";
 import HomepageNotifications, { useHomepageNotification } from "./HomepageNotifications";
 import "./homepage-editor.css";
 
-const SECTION_NAMES = { hero: "Top of your homepage", photos: "Photos", story: "Your club’s story", video: "Video feature" };
+const SECTION_NAMES = { hero: "Top of your homepage", photos: "Photos", story: "Your club’s story", video: "Video feature", revamp: "Matchday content and navigation" };
 
 export default function HomepageEditor() {
   const club = useClubContext();
@@ -186,10 +188,10 @@ export default function HomepageEditor() {
   const saveButton = <button type="button" className="hp-button hp-save" disabled={!!getHomepageSaveBlocker(state) || !!editor.recoveryConflict} onClick={() => void editor.save()}>{state.save === "saving" ? "Saving…" : "Save homepage"}</button>;
   const preview = <HomePageClient initialHeroContent={{ ...state.draft.hero, id: 1, updated_at: "" }} />;
   const tools = piece ? <>
-    {isShared ? <button className="hp-button" onClick={() => go(sharedHref)}>{sharedLabel}</button> : <button className="hp-button" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "primary" }); }}>Change the words</button>}
-    {piece === "photos" && <button className="hp-button" disabled={frozen || state.draft.photos.items.length >= 6} onClick={() => photoInput.current?.click()}>Add photo</button>}
+    {isShared ? <button className="hp-button" onClick={() => go(sharedHref)}>{sharedLabel}</button> : <button className="hp-button" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "primary" }); }}>{piece.startsWith("revamp.") ? "Edit this section" : "Change the words"}</button>}
+    {piece === "photos" && <button className="hp-button" disabled={frozen || state.draft.photos.items.length >= capabilities.maxPhotos} onClick={() => photoInput.current?.click()}>Add photo</button>}
     {visibility && <label className="hp-visibility"><input type="checkbox" checked={state.draft[visibility].visible} disabled={frozen || (visibility === "video" && !snapshot.videoSource)} onChange={event => dispatch({ type: "field-changed", field: `${visibility}.visible`, value: event.target.checked })} />Show on homepage</label>}
-    {!isShared && <button className="hp-button hp-more" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "more" }); }}>More options</button>}
+    {!isShared && !piece.startsWith("revamp.") && <button className="hp-button hp-more" onClick={() => { captureAnchor(piece); dispatch({ type: "disclosure-opened", mode: "more" }); }}>More options</button>}
     <button className="hp-button" onClick={done}>Done</button>
   </> : null;
   const parts: { name: string; piece: PieceId }[] = [];
@@ -197,6 +199,7 @@ export default function HomepageEditor() {
   if (capabilities.editableSections.includes("photos")) parts.push({ name: "Photos", piece: "photos" });
   if (capabilities.editableSections.includes("story")) parts.push({ name: "Your story", piece: "story.text" });
 
+  if (capabilities.editableSections.includes("revamp")) parts.push({ name: "Match & prices", piece: "revamp.match" }, { name: "Ticket & map", piece: "revamp.ticket" }, { name: "Navigation", piece: "revamp.navigation" });
   if (capabilities.editableSections.includes("video")) parts.push({ name: "Video", piece: "video" });
 
   return <div ref={root} className="hp-editor" data-sheet-open={!!disclosure && !playback} data-playback={playback}>
@@ -219,7 +222,7 @@ export default function HomepageEditor() {
     <div className="hp-workspace">
       <HomepagePreviewContext.Provider value={{ playback, draft: state.draft, videoSource: snapshot.videoSource, selection: piece, allowedPieces: state.allowedPieces, select }}>
         <HomepagePreviewFrame host={club.primaryDomain} playback={playback}>
-          {club.presentationTemplateKey === "editorial@1" ? <EditorialShell editing={!playback}>{preview}</EditorialShell> : <TemplateFontScope templateKey={club.presentationTemplateKey}>{playback && <Nav />}<main>{preview}</main>{playback && <Footer />}</TemplateFontScope>}
+          {club.presentationTemplateKey === "cinematic@2" ? <CinematicShell editing={!playback}>{preview}</CinematicShell> : club.presentationTemplateKey === "editorial@1" ? <EditorialShell editing={!playback}>{preview}</EditorialShell> : <TemplateFontScope templateKey={club.presentationTemplateKey}>{playback && <Nav />}<main>{preview}</main>{playback && <Footer />}</TemplateFontScope>}
         </HomepagePreviewFrame>
       </HomepagePreviewContext.Provider>
       {piece && disclosure && !navigationOpen && !isShared && !playback && <dialog ref={panel} className="hp-panel" aria-label={HOMEPAGE_PIECE_LABELS[piece]} aria-modal={mobile || undefined} onCancel={event => { event.preventDefault(); closePanel(); }} onKeyDown={event => {
@@ -234,11 +237,12 @@ export default function HomepageEditor() {
         <div className="hp-panel-heading"><h2>{HOMEPAGE_PIECE_LABELS[piece]}</h2>{saveButton}</div>
         <div className="hp-panel-fields">
         {!destination && <HomepageNotifications {...notificationProps} inModal />}
-          {(piece !== "photos" || capabilities.photoCaptionEditable) && <HomepageFields clubName={club.name} piece={piece} draft={state.draft} disabled={frozen} change={(field, value) => dispatch({ type: "field-changed", field, value })} programs={editor.programs} more={disclosure.mode === "more"} />}
+          {piece.startsWith("revamp.") && state.draft.revamp && <CinematicHomepageFields piece={piece} content={state.draft.revamp} disabled={frozen} change={content => dispatch({ type: "revamp-changed", content })} replaceArtwork={editor.replaceArtwork} retryArtwork={slot => { void editor.retryArtwork(slot); }} />}
+          {!piece.startsWith("revamp.") && (piece !== "photos" || capabilities.photoCaptionEditable) && <HomepageFields clubName={club.name} piece={piece} draft={state.draft} disabled={frozen} change={(field, value) => dispatch({ type: "field-changed", field, value })} programs={editor.programs} more={disclosure.mode === "more"} />}
           {(piece === "hero.cta" || (piece === "photos" && capabilities.photoCaptionEditable)) && disclosure.mode !== "more" && <button className="hp-button" onClick={() => dispatch({ type: "disclosure-opened", mode: "more" })}>More options</button>}
           {isStory && <p className="hp-help">Blank fields use your website’s standard wording.</p>}
           {piece === "video" && <p className="hp-help">The video is set by Onzio.{!snapshot.videoSource && " Contact Onzio to add a video."}</p>}
-          {piece === "photos" && <><p>{state.draft.photos.items.length} of 6 photos used</p>{state.draft.photos.items.map((photo, index) => <section key={photo.clientId} className="hp-photo" aria-label={`Photo ${index + 1}`}>
+          {piece === "photos" && <><p>{state.draft.photos.items.length} of {capabilities.maxPhotos} photos used</p>{state.draft.photos.items.map((photo, index) => <section key={photo.clientId} className="hp-photo" aria-label={`Photo ${index + 1}`}>
             {photo.url && <ResilientNativeImage src={photo.url} alt={photo.alt} />}
             <label htmlFor={`photo-${photo.clientId}`}>Describe this photo</label><input id={`photo-${photo.clientId}`} className="hp-field" value={photo.alt} disabled={frozen} maxLength={20000} aria-describedby={`photo-help-${photo.clientId}`} onChange={event => editor.updatePhoto(photo.clientId, { alt: event.target.value })} />
             <p id={`photo-help-${photo.clientId}`} className="hp-help">Helps people using screen readers understand the photo.</p>
@@ -247,7 +251,7 @@ export default function HomepageEditor() {
               dispatch({ type: "photos-changed", photos: items.map((p, order) => ({ ...p, order })) });
             }}>{delta === -1 ? "Move up" : "Move down"}</button>)}<button className="hp-button" disabled={frozen} onClick={() => editor.removePhoto(photo.clientId)}>Remove photo</button></div>
             {photo.upload === "uploading" && <p role="status">Adding your photo…</p>}{photo.upload === "failed" && <div role="alert"><p>{photo.error?.message}</p><button className="hp-button" onClick={() => void editor.retryPhoto(photo.clientId)}>Try this photo again</button></div>}
-          </section>)}<button className="hp-button" disabled={frozen || state.draft.photos.items.length >= 6} onClick={() => photoInput.current?.click()}>Add photo</button></>}
+          </section>)}<button className="hp-button" disabled={frozen || state.draft.photos.items.length >= capabilities.maxPhotos} onClick={() => photoInput.current?.click()}>Add photo</button></>}
         </div>
         <div className="hp-panel-footer"><button className="hp-button" onClick={done}>Done</button></div>
       </dialog>}

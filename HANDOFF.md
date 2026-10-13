@@ -1,3 +1,37 @@
+## 2026-10-13 — Rose City 2027 approved homepage implementation
+
+Christian approved the isolated homepage preview and authorized implementation
+on a new branch plus a local commit. Work is isolated in
+`codex/rose-city-homepage-2027`, based on refreshed `origin/main` at `f91616c`,
+under `Rose City 2027 Revamp/implementation/onzio-platform`; the original dirty
+OTP checkout is unchanged. No push, merge, deployment, hosted migration/content
+write or billing/lifecycle mutation is authorized or performed by this turn.
+
+The approved homepage is implemented as reusable `cinematic@2`, with its own
+scoped shell/styles and template-aware homepage editor. Whole raffle/ticket
+artwork is nonclickable publicly, prices/copy/nav labels are editable, the map
+has Show/Hide, seven photos retain atomic save/recovery, real next-home Schedule
+data uses the club timezone, current sponsors rotate on white on both widths,
+Bunny plays muted/inline without controls, and colored socials plus fully
+opaque Powered by Onzio retain the approved behavior. New destinations are
+temporary; other presentation versions preserve their existing renderers.
+
+The isolated local Supabase stack uses API55321/DB55322/Mailpit55324 and site3198.
+Reviewed assets are normalized through the real media pipeline; local synthetic
+subscription/membership fixtures never touch hosted billing. Final full suite
+passes 201 files/1865 tests, including scoped route guards and existing database
+regressions. Detailed browser/build evidence is recorded in
+`docs/rose-city-2027-implementation.md`; contract and asset provenance are in
+`docs/rose-city-cinematic-content-contract.md` and
+`assets/rose-city-2027/manifest.json`. Phone captures are browser viewport checks,
+not new physical iPhone/VoiceOver acceptance.
+
+Next: review this implementation commit, resolve the portable Avenir font/file
+and existing LEMON MILK commercial-use receipt, then prepare a separately
+approved hosted migration/media/presentation rollout. Preserve existing Schedule,
+Shop, social destinations, sponsor IDs and all other clubs. Never apply the
+local seed's synthetic club/subscription/member rows to hosted data.
+
 ## 2026-10-12 — Yellow billing warning follow-up
 
 `BILLING-YELLOW-01` is in_progress: requested yellow palette implemented in

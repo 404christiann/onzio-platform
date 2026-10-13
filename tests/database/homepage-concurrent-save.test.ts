@@ -1,3 +1,4 @@
+import { localPostgresConfig } from "../helpers/local-postgres";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, it } from "vitest";
@@ -7,7 +8,7 @@ import { createFreshLocalClient } from "../helpers/mfa";
 
 it("serializes independent authenticated saves and rejects the losing stale baseline", async () => {
   assertSafeTestEnvironment();
-  const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
+  const config = localPostgresConfig();
   const setup = new Client(config), first = new Client(config), second = new Client(config);
   const clubId = randomUUID();
   await Promise.all([setup.connect(), first.connect(), second.connect()]);

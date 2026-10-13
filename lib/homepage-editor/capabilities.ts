@@ -3,7 +3,7 @@ import type { HeroFields, HomepageSection } from "./model";
 
 export type HomepageRenderer = {
   templateKey: TemplateKey | null;
-  slideshowVariant: "none" | "editorial" | "matchday" | "legacy";
+  slideshowVariant: "none" | "editorial" | "matchday" | "legacy" | "cinematic";
   heroVariant?: "editable" | "legacy-fixed";
 };
 
@@ -12,17 +12,19 @@ export function homepageRendererForClub(club: { presentationTemplateKey: Templat
   const key = club.presentationTemplateKey;
   return {
     templateKey: key,
-    slideshowVariant: key === "academy@1" ? "none" : key === "editorial@1" ? "editorial" : club.slug === "rose-city" ? "legacy" : "matchday",
-    heroVariant: club.slug === "rose-city" && key !== "academy@1" && key !== "clubhouse@1" && key !== "editorial@1" ? "legacy-fixed" : "editable",
+    slideshowVariant: key === "cinematic@2" ? "cinematic" : key === "academy@1" ? "none" : key === "editorial@1" ? "editorial" : club.slug === "rose-city" ? "legacy" : "matchday",
+    heroVariant: club.slug === "rose-city" && key !== "academy@1" && key !== "clubhouse@1" && key !== "editorial@1" && key !== "cinematic@2" ? "legacy-fixed" : "editable",
   };
 }
 
 export function resolveHomepageCapabilities(input: HomepageRenderer) {
+  const cinematic = input.templateKey === "cinematic@2";
   const academy = input.templateKey === "academy@1";
   const editorial = input.templateKey === "editorial@1";
   const clubhouse = input.templateKey === "clubhouse@1";
   const editableSections: HomepageSection[] = [];
   const heroEditableFields: (keyof HeroFields)[] = [];
+  if (cinematic) editableSections.push("revamp");
   if (input.heroVariant !== "legacy-fixed") {
     editableSections.push("hero");
     if (!editorial && !clubhouse) heroEditableFields.push("eyebrow");
@@ -33,6 +35,7 @@ export function resolveHomepageCapabilities(input: HomepageRenderer) {
   if (!academy && !editorial && !clubhouse) editableSections.push("video");
   return {
     editableSections, heroEditableFields,
+    maxPhotos: cinematic ? 7 : 6,
     photoCaptionEditable: !academy && !editorial && input.slideshowVariant === "legacy",
     videoSourceEditable: false as const,
     sharedTargets: {

@@ -1,6 +1,9 @@
 import { headers } from "next/headers";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import CinematicShell from "@/components/cinematic/CinematicShell";
+import { fetchCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
+import { createClient } from "@/lib/supabase-server";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
@@ -87,6 +90,10 @@ export default async function TenantLayout({
     throw error;
   }
 
+  if (club.presentationTemplateKey === "cinematic@2") {
+    const initialContent = await fetchCinematicHomepageContent(club.id, (await createClient()).schema("onzio")).catch(() => null);
+    return <ClubContextProvider club={club}><ClubBrandingProvider><CinematicShell initialContent={initialContent}>{children}</CinematicShell></ClubBrandingProvider></ClubContextProvider>;
+  }
   if (club.presentationTemplateKey === "editorial@1") {
     // editorial@1 is a completely custom shell (own header/motion/main/
     // footer, see components/editorial/EditorialShell.tsx) -- it does not

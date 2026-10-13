@@ -1,3 +1,4 @@
+import CinematicShell from "@/components/cinematic/CinematicShell";
 import type { TemplateKey } from "@/packages/presentation";
 
 // DCFC-D110 registered a dedicated "montserrat-inter-dmsans" font pack for
@@ -17,6 +18,7 @@ export default function TemplateFontScope({
   templateKey: TemplateKey | null;
   children: React.ReactNode;
 }) {
+  if (templateKey === "cinematic@2") return <CinematicShell contentOnly>{children}</CinematicShell>;
   const fontPack = templateKey === "academy@1" ? "academy" : undefined;
   return (
     <div data-font-pack={fontPack} className="contents">

@@ -1,0 +1,1098 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-13T14:50:53.092Z",
+  "purpose": "Portable reviewed inputs for an isolated local Supabase import through the normal media pipeline; not public asset URLs or a completed content import",
+  "assetCount": 30,
+  "inputBytes": 4073375,
+  "slideshowSourceOrder": [
+    3,
+    1,
+    2,
+    4,
+    5,
+    6,
+    7
+  ],
+  "hero": {
+    "libraryId": "723074",
+    "videoId": "d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91",
+    "approvedPlayerUrl": "https://player.mediadelivery.net/play/723074/d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91",
+    "nativeDeliveryNeedsVerification": true,
+    "videoBytesExcluded": true
+  },
+  "episode": {
+    "youtubeId": "fJf_A4LdKDw",
+    "embedUrl": "https://www.youtube.com/embed/fJf_A4LdKDw?rel=0&modestbranding=1&color=white"
+  },
+  "fonts": {
+    "museoModerno": {
+      "path": "public/fonts/museomoderno/MuseoModerno.ttf",
+      "weight": 900,
+      "sha256": "d03b027cf5cf72d014c8a405a8ceb83ea1d5d8ae2c64a7f602b131d9973e3503",
+      "license": "SIL OFL",
+      "notice": "public/fonts/museomoderno/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/museomoderno/MuseoModerno%5Bwght%5D.ttf"
+    },
+    "avenir": {
+      "bundled": false,
+      "reason": "Mac local() font is preview-only; commercial webfont license and supplied hosted file remain a release dependency"
+    },
+    "lemonMilk": {
+      "path": "public/fonts/lemon-milk/LEMONMILK-BoldItalic.otf",
+      "notice": "public/fonts/lemon-milk/READ_ME.txt",
+      "commercialReceiptVerified": false
+    },
+    "phosphor": {
+      "bundled": false,
+      "reason": "No separately editable Phosphor lettering required by current approved homepage; supplied art contains its own lettering"
+    }
+  },
+  "assets": {
+    "crest": {
+      "inputPath": "assets/rose-city-2027/inputs/crest.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 44890,
+      "sha256": "0f23df61c426482691760b0d68555e701fdebe0d32a6c3862d51c35a7251aa3c",
+      "width": 600,
+      "height": 600,
+      "hasAlpha": true,
+      "assignment": "Header/footer branding; excluded from slideshow",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/crest.webp",
+        "approvedPreviewInputSha256": "0f23df61c426482691760b0d68555e701fdebe0d32a6c3862d51c35a7251aa3c",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/Rose City FC Official Club Logo 7 16 2027 MASTER.png",
+        "originalSha256": "62f344223f27a2f2f32b18f09c9b4f4c0b1f72dad7d4f072d03f7e725327a5e4",
+        "originalDimensions": [
+          3292,
+          3174
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/Rose City FC Official Club Logo 7 16 2027 MASTER.png",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAW6Ag",
+            "revision": "0165daf494bef8200000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/Rose City FC Official Club Logo 7 16 2027 MASTER.png",
+            "contentHash": "28a2eef040cd250715052dbc9d7869fd0aad84346ef0d1dbb84e37f1efb8c37c"
+          },
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAW6Fw",
+            "revision": "0165daf494bef9d00000003963301b3",
+            "path": "ns:15404827059//Rose City FC Official Club Logo 7 16 2027 MASTER.png",
+            "contentHash": "28a2eef040cd250715052dbc9d7869fd0aad84346ef0d1dbb84e37f1efb8c37c"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "raffle": {
+      "inputPath": "assets/rose-city-2027/inputs/raffle.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 395694,
+      "sha256": "7fdcce471340fc5a9ad52eab3e5109212c964729c1c91e9555ed2ab46e584043",
+      "width": 2264,
+      "height": 3000,
+      "hasAlpha": false,
+      "assignment": "One replaceable static raffle graphic, no clickable enlargement",
+      "processing": "Proportional inside3000px resize for existing graphic upload constraint; no cropping, recoloring, or generated content; WebP quality95",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/raffle.webp",
+        "approvedPreviewInputSha256": "baf43054073ea0653549c04509a7944b5997eacfbe4fa27eed54a8213c9a648d",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/Rose City FC Halftime Raffle 2027.jpg",
+        "originalSha256": "5c25a5600984ce006b1ab4d35d5690e8493ab29da40382ee1f81b56e38631c1d",
+        "originalDimensions": [
+          3000,
+          3975
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Homepage Files/Rose City FC Halftime Raffle 2027.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAW6Eg",
+            "revision": "0165db1d6ec9d3000000003963301b3",
+            "path": "ns:15404827059//Homepage Files/Rose City FC Halftime Raffle 2027.jpg",
+            "contentHash": "2f2f74873d16d0be69ca8f3608288a327d599abd02caa7c89aa303c9feb0c049"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "ticketMap": {
+      "inputPath": "assets/rose-city-2027/inputs/ticketMap.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 103736,
+      "sha256": "04626f68c38d8991c9a9e2528d1dc6639ba4657e5c074085e94e1aba5f75f931",
+      "width": 1800,
+      "height": 791,
+      "hasAlpha": false,
+      "assignment": "One replaceable static Robinson Stadium ticket/map; show/hide collapses section",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/ticket.webp",
+        "approvedPreviewInputSha256": "04626f68c38d8991c9a9e2528d1dc6639ba4657e5c074085e94e1aba5f75f931",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/Rose City FC Tickets ET_6x2.7_MiddleRightSN-Perf_OUT 09 3 2026 Foothill Transit Crop.jpg",
+        "originalSha256": "41340215ea98f9ec80e9cb18ca88d1cb77ef668adc80fa5c2b55cc36c963c7db",
+        "originalDimensions": [
+          1800,
+          791
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Homepage Files/Rose City FC Tickets ET_6x2.7_MiddleRightSN-Perf_OUT 09 3 2026 Foothill Transit Crop.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAW6EQ",
+            "revision": "0165db1dbd7932500000003963301b3",
+            "path": "ns:15404827059//Homepage Files/Rose City FC Tickets ET_6x2.7_MiddleRightSN-Perf_OUT 09 3 2026 Foothill Transit Crop.jpg",
+            "contentHash": "719bb5a3739d53c36db5fcaa0f4481ed5985879088d1cf6b513ad7aee5fec59e"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "trophies": {
+      "inputPath": "assets/rose-city-2027/inputs/trophies.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 283470,
+      "sha256": "4050e5318d384e7bbba7251d93469bc672083fa6eb312e7e9d3b145b2f07369a",
+      "width": 1500,
+      "height": 1309,
+      "hasAlpha": true,
+      "assignment": "Championship media; filename does not determine copy/year",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/trophies.webp",
+        "approvedPreviewInputSha256": "4050e5318d384e7bbba7251d93469bc672083fa6eb312e7e9d3b145b2f07369a",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/UPSL 2025 Trophy Design Rose City FC.png",
+        "originalSha256": "bd700db9d9754612913c5412208a30c193766f394f90fb512cebe7f4d23feec7",
+        "originalDimensions": [
+          4480,
+          3640
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Homepage Files/UPSL 2025 Trophy Design Rose City FC.png",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWvPQ",
+            "revision": "0165db1dd1a486a00000003963301b3",
+            "path": "ns:15404827059//Homepage Files/UPSL 2025 Trophy Design Rose City FC.png",
+            "contentHash": "3e75ef6dcea7390ac518b57a9a7aff00ccbf6f8149f9d6684a58c0d982dadee2"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "seats": {
+      "inputPath": "assets/rose-city-2027/inputs/seats.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 14562,
+      "sha256": "937918f958202c71f750ce3303e28bf98436464eb0519b91ebadcb0fe662d108",
+      "width": 1600,
+      "height": 876,
+      "hasAlpha": true,
+      "assignment": "Decorative match/ticket card background",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/seats.webp",
+        "approvedPreviewInputSha256": "937918f958202c71f750ce3303e28bf98436464eb0519b91ebadcb0fe662d108",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/Background seat graphic.png",
+        "originalSha256": "e0e64157917c21f10c0fbac67c41767cbd75236a3cef7aa461b80108207245e7",
+        "originalDimensions": [
+          2467,
+          1350
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Background seat graphic.png",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAW6DA",
+            "revision": "0165daf494bef9300000003963301b3",
+            "path": "ns:15404827059//Background seat graphic.png",
+            "contentHash": "ef8c3f4430d12fdf82399a0cd95153b6cd0471a28d33282871a07f385e138a07"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "slideshow1": {
+      "inputPath": "assets/rose-city-2027/inputs/slideshow1.webp",
+      "kind": "photo",
+      "mimeType": "image/webp",
+      "bytes": 528204,
+      "sha256": "3d58a437bc161a8b045c42ee2d567648705c04ee842ff7238b32a754794995c7",
+      "width": 1500,
+      "height": 837,
+      "hasAlpha": false,
+      "assignment": "Approved match photo 1; all seven retained",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/photo-1.webp",
+        "approvedPreviewInputSha256": "3d58a437bc161a8b045c42ee2d567648705c04ee842ff7238b32a754794995c7",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/20250308_RoseCityFC_vsChiarico_WN_1052 photo 1.jpg",
+        "originalSha256": "682a5010d4d79feb0aab739ef3b18c29ce05def3427ba87a8b6a7ebbfa2364f0",
+        "originalDimensions": [
+          1500,
+          837
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 1.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWrSQ",
+            "revision": "0165daf494bef7b00000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 1.jpg",
+            "contentHash": "d72c4437e32f8202c6a883d071ad4a6725d3ce101c1c4f7ca8deeee61f909ab7"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "slideshow2": {
+      "inputPath": "assets/rose-city-2027/inputs/slideshow2.webp",
+      "kind": "photo",
+      "mimeType": "image/webp",
+      "bytes": 318544,
+      "sha256": "31a156a4ac00a06c11f40ff89cefe3c8613f88b7b9882235beee9652a44f1d15",
+      "width": 1200,
+      "height": 670,
+      "hasAlpha": false,
+      "assignment": "Approved match photo 2; all seven retained",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/photo-2.webp",
+        "approvedPreviewInputSha256": "31a156a4ac00a06c11f40ff89cefe3c8613f88b7b9882235beee9652a44f1d15",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/20250308_RoseCityFC_vsChiarico_WN_1052 photo 2.jpg",
+        "originalSha256": "585a9caba45557fca200899466b47fb549c99b847dc76dc7ba7c99ec36f7464f",
+        "originalDimensions": [
+          1200,
+          670
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 2.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWrSg",
+            "revision": "0165daf494bef8100000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 2.jpg",
+            "contentHash": "47e2faa5aba5ee55b9d4c138645a9e296d2e58f027942e24553474732edb4367"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "slideshow3": {
+      "inputPath": "assets/rose-city-2027/inputs/slideshow3.webp",
+      "kind": "photo",
+      "mimeType": "image/webp",
+      "bytes": 279808,
+      "sha256": "0293d88f326d30da77063192c6bcdfb4c84761423ba9f817e640f40856081db1",
+      "width": 1200,
+      "height": 670,
+      "hasAlpha": false,
+      "assignment": "Approved match photo 3; all seven retained",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/photo-3.webp",
+        "approvedPreviewInputSha256": "0293d88f326d30da77063192c6bcdfb4c84761423ba9f817e640f40856081db1",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/20250308_RoseCityFC_vsChiarico_WN_1052 photo 3.jpg",
+        "originalSha256": "53bf8bb328fd6fb367853ec7fb569598c751ba7a0ace560417533fabf7c1fd96",
+        "originalDimensions": [
+          1200,
+          670
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 3.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWrSw",
+            "revision": "0165daf494bef8000000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 3.jpg",
+            "contentHash": "8b82763e155e2afceb68b954e9810a87f3c333611d2d48f336806c48d6772e15"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "slideshow4": {
+      "inputPath": "assets/rose-city-2027/inputs/slideshow4.webp",
+      "kind": "photo",
+      "mimeType": "image/webp",
+      "bytes": 310740,
+      "sha256": "559a187acce1f228600e3be15d40272550695be4620ac058f5f1340cd8136d9b",
+      "width": 1200,
+      "height": 670,
+      "hasAlpha": false,
+      "assignment": "Approved match photo 4; all seven retained",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/photo-4.webp",
+        "approvedPreviewInputSha256": "559a187acce1f228600e3be15d40272550695be4620ac058f5f1340cd8136d9b",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/20250308_RoseCityFC_vsChiarico_WN_1052 photo 4.jpg",
+        "originalSha256": "e8c05bad2d3ed51d53312718bd35b905db2bdf42c0828e7c384cc3a9e31ff391",
+        "originalDimensions": [
+          1200,
+          670
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 4.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWrTA",
+            "revision": "0165daf494bef7f00000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 4.jpg",
+            "contentHash": "f8e63b8c960ea08bae73331b46be2ba346f191c7d3af4f0f6af1474aa30e92f0"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "slideshow5": {
+      "inputPath": "assets/rose-city-2027/inputs/slideshow5.webp",
+      "kind": "photo",
+      "mimeType": "image/webp",
+      "bytes": 246902,
+      "sha256": "9328b5729e8b5b6bfc951a6c5f7f11b35108643b0bef2d3d1f8ffb24f56d22e9",
+      "width": 1200,
+      "height": 670,
+      "hasAlpha": false,
+      "assignment": "Approved match photo 5; all seven retained",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/photo-5.webp",
+        "approvedPreviewInputSha256": "9328b5729e8b5b6bfc951a6c5f7f11b35108643b0bef2d3d1f8ffb24f56d22e9",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/20250308_RoseCityFC_vsChiarico_WN_1052 photo 5.jpg",
+        "originalSha256": "3a28f2231c63bea9422d65efa7c72da046e17f997ab305ddc24879bc0f78ad58",
+        "originalDimensions": [
+          1200,
+          670
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 5.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWrTQ",
+            "revision": "0165daf494bef7e00000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 5.jpg",
+            "contentHash": "f68f4d5ed2b239e09ff5bae2cd372afb1d3e1cbb8ef8b03152a62565d4e65cba"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "slideshow6": {
+      "inputPath": "assets/rose-city-2027/inputs/slideshow6.webp",
+      "kind": "photo",
+      "mimeType": "image/webp",
+      "bytes": 319058,
+      "sha256": "f780c948fcf2ba0c77ec2a0583b39041afa453af784e9c7f6eb7bc8ac8d7f232",
+      "width": 1200,
+      "height": 670,
+      "hasAlpha": false,
+      "assignment": "Approved match photo 6; all seven retained",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/photo-6.webp",
+        "approvedPreviewInputSha256": "f780c948fcf2ba0c77ec2a0583b39041afa453af784e9c7f6eb7bc8ac8d7f232",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/20250308_RoseCityFC_vsChiarico_WN_1052 photo 6.jpg",
+        "originalSha256": "46fbebd914bcc941a9bfdbc5cd8de3a27bf28784469b14819d06caa7a874c528",
+        "originalDimensions": [
+          1200,
+          670
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 6.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWryw",
+            "revision": "0165daf494bef7d00000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 6.jpg",
+            "contentHash": "1fb0057889f9cb72c6d591870d6440aa5ecefa9fcf4471b6680055712772bbed"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "slideshow7": {
+      "inputPath": "assets/rose-city-2027/inputs/slideshow7.webp",
+      "kind": "photo",
+      "mimeType": "image/webp",
+      "bytes": 304194,
+      "sha256": "13e96914643339d7f88fd0a90066383236e40d97a63731ad3ba54df0e85e6156",
+      "width": 1200,
+      "height": 670,
+      "hasAlpha": false,
+      "assignment": "Approved match photo 7; all seven retained",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/photo-7.webp",
+        "approvedPreviewInputSha256": "13e96914643339d7f88fd0a90066383236e40d97a63731ad3ba54df0e85e6156",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/20250308_RoseCityFC_vsChiarico_WN_1052 photo 7.jpg",
+        "originalSha256": "6db64a3bf556136534a1fcb2caaea787c19bc44ea1ea57cc09d9dffefefd6de5",
+        "originalDimensions": [
+          1200,
+          670
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 7.jpg",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWrzA",
+            "revision": "0165daf494bef7c00000003963301b3",
+            "path": "ns:15404827059//Rose CIty FC website photos/20250308_RoseCityFC_vsChiarico_WN_1052 photo 7.jpg",
+            "contentHash": "9e000ba3a5b361e40dceed5c7a6b8865410c7d7cefece935d36ee5f74cd46667"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "player2027": {
+      "inputPath": "assets/rose-city-2027/inputs/player2027.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 436994,
+      "sha256": "295dd2a72d282037aca6206c2d5b7ee9ebaa5a7a95728c9f2ce3d8d2116a0220",
+      "width": 1500,
+      "height": 2068,
+      "hasAlpha": true,
+      "assignment": "Supplied 2027 City of Roses red player with Foothill Transit jersey sponsor",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/player-2027.webp",
+        "approvedPreviewInputSha256": "295dd2a72d282037aca6206c2d5b7ee9ebaa5a7a95728c9f2ce3d8d2116a0220",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/Rose City FC \"City of Roses\" Foothill Transit Front crop 2027.png",
+        "originalSha256": "30b94d4c6182fd514366f22e411949cba9e535ca6b7ca412f1513d1a2be97741",
+        "originalDimensions": [
+          2963,
+          3647
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Homepage Files/Rose City FC \"City of Roses\" Foothill Transit Front crop 2027.png",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAW6Yg",
+            "revision": "0165db2404abd1900000003963301b3",
+            "path": "ns:15404827059//Homepage Files/Rose City FC \"City of Roses\" Foothill Transit Front crop 2027.png",
+            "contentHash": "7a240d87c016d5f052e7523cce81496c00f1e49c27101d6b005e303fdae9516b"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "foothillHeader": {
+      "inputPath": "assets/rose-city-2027/inputs/foothillHeader.png",
+      "kind": "graphic",
+      "mimeType": "image/png",
+      "bytes": 9331,
+      "sha256": "26230cb63f241b8a40fc23c480ff62be5442b54ad6f98b043969b88603ba50e6",
+      "width": 500,
+      "height": 82,
+      "hasAlpha": true,
+      "assignment": "Official horizontal Foothill header wordmark, raster derivative",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/foothill.png",
+        "approvedPreviewInputSha256": "26230cb63f241b8a40fc23c480ff62be5442b54ad6f98b043969b88603ba50e6",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/foothill-official.svg",
+        "originalSha256": "407c7882174c322ca3e53bd73aa537df80f8940e4a19a1651313aa563660797f",
+        "originalDimensions": null,
+        "sourceUrlOrPath": "https://www.foothilltransit.org/themes/custom/fh2020/logo.svg",
+        "sourceIds": [],
+        "approvedPreparation": "Official SVG rasterized to500×82 PNG; unchanged horizontal mountain/wave wordmark"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "heroPoster": {
+      "inputPath": "assets/rose-city-2027/inputs/heroPoster.jpg",
+      "kind": "photo",
+      "mimeType": "image/jpeg",
+      "bytes": 125900,
+      "sha256": "2d295773255b730ed94e767dfaaca7d99b8142d759d40562223a385a1339f088",
+      "width": 1280,
+      "height": 720,
+      "hasAlpha": false,
+      "assignment": "Actual approved Bunny clip frame at0.1s; reduced-motion/poster fallback",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/hero-reference-frame.jpg",
+        "approvedPreviewInputSha256": "2d295773255b730ed94e767dfaaca7d99b8142d759d40562223a385a1339f088",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/hero-720p.mp4",
+        "originalSha256": "e8e5b20ce01c1b2f48b8c9a0702f918b82f11a51daca044fb4d2af5a049b28e0",
+        "originalDimensions": null,
+        "sourceUrlOrPath": "https://vz-dab9684b-901.b-cdn.net/d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91/play_720p.mp4",
+        "sourceIds": [],
+        "approvedPreparation": "Direct frame at0.1s of approved Bunny library723074/video d17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91; no generated footage"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "episodePoster": {
+      "inputPath": "assets/rose-city-2027/inputs/episodePoster.jpg",
+      "kind": "photo",
+      "mimeType": "image/jpeg",
+      "bytes": 14733,
+      "sha256": "d7709897e82ca7a9ee42055e570bf22879b0a75d7fd28dd2412a6981b1c7a338",
+      "width": 480,
+      "height": 360,
+      "hasAlpha": false,
+      "assignment": "Actual Behind the Rose S1E1 official YouTube thumbnail; click loads real episode",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/behind-rose-poster.jpg",
+        "approvedPreviewInputSha256": "d7709897e82ca7a9ee42055e570bf22879b0a75d7fd28dd2412a6981b1c7a338",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/behind-rose-poster.jpg",
+        "originalSha256": "d7709897e82ca7a9ee42055e570bf22879b0a75d7fd28dd2412a6981b1c7a338",
+        "originalDimensions": [
+          480,
+          360
+        ],
+        "sourceUrlOrPath": "https://i.ytimg.com/vi/fJf_A4LdKDw/hqdefault.jpg",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "matchSponsor": {
+      "inputPath": "assets/rose-city-2027/inputs/matchSponsor.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 30748,
+      "sha256": "975427e0d6fbf89c55fe070ead44bd05625f3a00d74b02309ce4090209eba3e2",
+      "width": 786,
+      "height": 164,
+      "hasAlpha": true,
+      "assignment": "Reference match card Chick-fil-A sample sponsor; actual schedule/shared owner must be resolved",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/chickfila.webp",
+        "approvedPreviewInputSha256": "975427e0d6fbf89c55fe070ead44bd05625f3a00d74b02309ce4090209eba3e2",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/Chick-fil-A_Pasadena_Logo_Red_png.png",
+        "originalSha256": "a483c755c8e2b0133856a2015e9d19def11021b4872918c5ab0fcf6ac3965c6e",
+        "originalDimensions": [
+          1080,
+          1350
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose City FC Sponsors/Chick-fil-A_Pasadena_Logo_Red_png.png",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAW6Bw",
+            "revision": "0165daf494bef8b00000003963301b3",
+            "path": "ns:15404827059//Rose City FC Sponsors/Chick-fil-A_Pasadena_Logo_Red_png.png",
+            "contentHash": "606b6be2927d170fd604634ecda9afe255953285c5320aff283b13f1171f280c"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; alpha-only empty padding trimmed when specified; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "sponsorChronic": {
+      "inputPath": "assets/rose-city-2027/inputs/sponsorChronic.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 37478,
+      "sha256": "919b59d32ed8aed897a9a8718c33be5e46cf4235d10bfa7743d1aedbddc84330",
+      "width": 1968,
+      "height": 825,
+      "hasAlpha": true,
+      "assignment": "Current carousel sponsor1; near-white lettering darkened only by approved renderer SVG filter, red strip preserved",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/chronic-tacos.webp",
+        "approvedPreviewInputSha256": "919b59d32ed8aed897a9a8718c33be5e46cf4235d10bfa7743d1aedbddc84330",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/chronic-tacos.webp",
+        "originalSha256": "919b59d32ed8aed897a9a8718c33be5e46cf4235d10bfa7743d1aedbddc84330",
+        "originalDimensions": [
+          1968,
+          825
+        ],
+        "sourceUrlOrPath": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/sponsors/8ecfcd34-0aa1-5040-87d9-b0ad942f2b24.webp",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "sponsorModern": {
+      "inputPath": "assets/rose-city-2027/inputs/sponsorModern.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 63252,
+      "sha256": "60b4513f8e441a3afa14d17f677c9d5274199d4bdf74b61576b197f0d08dcb48",
+      "width": 1968,
+      "height": 825,
+      "hasAlpha": true,
+      "assignment": "Current carousel sponsor2; source colors unchanged",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/modern-woodmen.webp",
+        "approvedPreviewInputSha256": "60b4513f8e441a3afa14d17f677c9d5274199d4bdf74b61576b197f0d08dcb48",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/modern-woodmen.webp",
+        "originalSha256": "60b4513f8e441a3afa14d17f677c9d5274199d4bdf74b61576b197f0d08dcb48",
+        "originalDimensions": [
+          1968,
+          825
+        ],
+        "sourceUrlOrPath": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/sponsors/d1fcd902-a24f-5201-a85d-3b6d2927854d.webp",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "sponsorNikys": {
+      "inputPath": "assets/rose-city-2027/inputs/sponsorNikys.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 44254,
+      "sha256": "996b71fcb415a9b5fb7d209ac9e656f9af0028241f761cb1e791a2b21f1c9fa4",
+      "width": 2423,
+      "height": 485,
+      "hasAlpha": true,
+      "assignment": "Current carousel sponsor3; source colors unchanged",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/nikys-previous.webp",
+        "approvedPreviewInputSha256": "996b71fcb415a9b5fb7d209ac9e656f9af0028241f761cb1e791a2b21f1c9fa4",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/nikys-previous.webp",
+        "originalSha256": "996b71fcb415a9b5fb7d209ac9e656f9af0028241f761cb1e791a2b21f1c9fa4",
+        "originalDimensions": [
+          2423,
+          485
+        ],
+        "sourceUrlOrPath": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/sponsors/1672bae0-27e6-55b0-9a9b-53fb1ba8d8b1.webp",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "sponsorPlanted": {
+      "inputPath": "assets/rose-city-2027/inputs/sponsorPlanted.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 28574,
+      "sha256": "eed093f991a6c0099123bce30301331f55518693e1cd144086b0010a0f63afb5",
+      "width": 2423,
+      "height": 485,
+      "hasAlpha": true,
+      "assignment": "Current carousel sponsor4; source colors unchanged",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/planted-beauty.webp",
+        "approvedPreviewInputSha256": "eed093f991a6c0099123bce30301331f55518693e1cd144086b0010a0f63afb5",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/planted-beauty.webp",
+        "originalSha256": "eed093f991a6c0099123bce30301331f55518693e1cd144086b0010a0f63afb5",
+        "originalDimensions": [
+          2423,
+          485
+        ],
+        "sourceUrlOrPath": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/sponsors/4841b07b-2e16-56ae-81c1-72f3074321d4.webp",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "sponsorTepitoPrevious": {
+      "inputPath": "assets/rose-city-2027/inputs/sponsorTepitoPrevious.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 18532,
+      "sha256": "f3769772a7bcdc0b58463c66d98dfde587369b5e00996d882881aff7991eaa9c",
+      "width": 2423,
+      "height": 485,
+      "hasAlpha": true,
+      "assignment": "Prior sixth-set inventory source preserved; renderer uses selected Tepito source instead",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/tepito-previous.webp",
+        "approvedPreviewInputSha256": "f3769772a7bcdc0b58463c66d98dfde587369b5e00996d882881aff7991eaa9c",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/tepito-previous.webp",
+        "originalSha256": "f3769772a7bcdc0b58463c66d98dfde587369b5e00996d882881aff7991eaa9c",
+        "originalDimensions": [
+          2423,
+          485
+        ],
+        "sourceUrlOrPath": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/sponsors/4edb8aba-aaaa-5e11-9acf-12c968b8a56d.webp",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "sponsorPackshot": {
+      "inputPath": "assets/rose-city-2027/inputs/sponsorPackshot.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 39484,
+      "sha256": "505cc9c156a24bdf850ef05f27651d7395440e9a1ab3eb0dec0cc34b49ade51e",
+      "width": 1968,
+      "height": 825,
+      "hasAlpha": true,
+      "assignment": "Current carousel sponsor6; white source displayed with renderer CSS invert(1)",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/pack-shot.webp",
+        "approvedPreviewInputSha256": "505cc9c156a24bdf850ef05f27651d7395440e9a1ab3eb0dec0cc34b49ade51e",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/pack-shot.webp",
+        "originalSha256": "505cc9c156a24bdf850ef05f27651d7395440e9a1ab3eb0dec0cc34b49ade51e",
+        "originalDimensions": [
+          1968,
+          825
+        ],
+        "sourceUrlOrPath": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/sponsors/610fd341-44ed-5833-97d4-323a30818be6.webp",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "sponsorTepitoSelected": {
+      "inputPath": "assets/rose-city-2027/inputs/sponsorTepitoSelected.webp",
+      "kind": "graphic",
+      "mimeType": "image/webp",
+      "bytes": 27028,
+      "sha256": "6ecc6f1e5b406f5c169e86a944eb2c6935f4b03df9aa70cbd3edb0ab83387930",
+      "width": 1200,
+      "height": 240,
+      "hasAlpha": true,
+      "assignment": "User-linked selected Tepito source for carousel sponsor5 on white; colors unchanged",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/tepito-on-white.webp",
+        "approvedPreviewInputSha256": "6ecc6f1e5b406f5c169e86a944eb2c6935f4b03df9aa70cbd3edb0ab83387930",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/Tepito Coffee Logo Big White 2026.png",
+        "originalSha256": "65c41b0d2eb238f462aec67536d3e13e51bde11f97fa9e8e0cd0fd38b9b8cf25",
+        "originalDimensions": [
+          2423,
+          485
+        ],
+        "sourceUrlOrPath": "ns:15404827059//Rose City FC Sponsors/Tepito Coffee Logo Big White 2026.png",
+        "sourceIds": [
+          {
+            "id": "id:jetk1g_lbVIAAAAAAAWrRg",
+            "revision": "0165daf494bef8900000003963301b3",
+            "path": "ns:15404827059//Rose City FC Sponsors/Tepito Coffee Logo Big White 2026.png",
+            "contentHash": "b3cafe3859ec4c5bfe141af9e82fd4ff67f1ece30155608158c2d55c448596bf"
+          }
+        ],
+        "approvedPreparation": "EXIF orientation applied; proportional resize; WebP quality92; no recoloring or subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "onzioWordmark": {
+      "inputPath": "assets/rose-city-2027/inputs/onzioWordmark.png",
+      "kind": "graphic",
+      "mimeType": "image/png",
+      "bytes": 29071,
+      "sha256": "705ee3a0ecce788439e6684f9e69b4b82d7968b046adba61bc5f90d3fdb1e9ad",
+      "width": 500,
+      "height": 500,
+      "hasAlpha": true,
+      "assignment": "Existing Onzio wordmark; renderer invert(1), opacity1, link https://onziofutbol.com/",
+      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/onzio-wordmark-white.png",
+        "approvedPreviewInputSha256": "705ee3a0ecce788439e6684f9e69b4b82d7968b046adba61bc5f90d3fdb1e9ad",
+        "originalReadOnlyPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/onzio/onzio-wordmark-white.png",
+        "originalSha256": "705ee3a0ecce788439e6684f9e69b4b82d7968b046adba61bc5f90d3fdb1e9ad",
+        "originalDimensions": null,
+        "sourceUrlOrPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/onzio/onzio-wordmark-white.png",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "socialInstagram": {
+      "inputPath": "assets/rose-city-2027/inputs/socialInstagram.png",
+      "kind": "graphic",
+      "mimeType": "image/png",
+      "bytes": 4456,
+      "sha256": "6ad51f72458ba6b9787e77f5dbe83e40baa348c7006bb0ac2948175b55dea3f9",
+      "width": 192,
+      "height": 192,
+      "hasAlpha": true,
+      "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
+      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/instagram.svg",
+        "approvedPreviewInputSha256": "990957a20b747bc784733a25a8dee74976502828b1c86764c4476d3116696155",
+        "originalReadOnlyPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/instagramLogo.svg",
+        "originalSha256": "990957a20b747bc784733a25a8dee74976502828b1c86764c4476d3116696155",
+        "originalDimensions": null,
+        "sourceUrlOrPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/instagramLogo.svg",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "socialFacebook": {
+      "inputPath": "assets/rose-city-2027/inputs/socialFacebook.png",
+      "kind": "graphic",
+      "mimeType": "image/png",
+      "bytes": 2906,
+      "sha256": "a75d8db2d8b51dcd16a368b7c739fe64938bb27fb823d1936cdb28a21a2ffd9a",
+      "width": 192,
+      "height": 192,
+      "hasAlpha": true,
+      "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
+      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/facebook.svg",
+        "approvedPreviewInputSha256": "09417fbcaeac1c5cf3ea354d3d0b40b68e70c419eb90619e970318c83349b140",
+        "originalReadOnlyPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/facebookLogo.svg",
+        "originalSha256": "09417fbcaeac1c5cf3ea354d3d0b40b68e70c419eb90619e970318c83349b140",
+        "originalDimensions": null,
+        "sourceUrlOrPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/facebookLogo.svg",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "socialTiktok": {
+      "inputPath": "assets/rose-city-2027/inputs/socialTiktok.png",
+      "kind": "graphic",
+      "mimeType": "image/png",
+      "bytes": 3463,
+      "sha256": "e7f22b1faca999ef4de0bbc316cb55cd127148182902cc66149f126ccba1cea9",
+      "width": 192,
+      "height": 192,
+      "hasAlpha": true,
+      "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
+      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/tiktok.svg",
+        "approvedPreviewInputSha256": "3d62599c1c5a3d79ba26bfb5f589069a1efbad83370d7957b8435333af6691f6",
+        "originalReadOnlyPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/tiktokLogo.svg",
+        "originalSha256": "3d62599c1c5a3d79ba26bfb5f589069a1efbad83370d7957b8435333af6691f6",
+        "originalDimensions": null,
+        "sourceUrlOrPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/tiktokLogo.svg",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "socialYoutube": {
+      "inputPath": "assets/rose-city-2027/inputs/socialYoutube.png",
+      "kind": "graphic",
+      "mimeType": "image/png",
+      "bytes": 3184,
+      "sha256": "09235d378c45414779b534680ff3384504518807b2c3fc79bee3acc1ab38f7fe",
+      "width": 192,
+      "height": 192,
+      "hasAlpha": true,
+      "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
+      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/youtube.svg",
+        "approvedPreviewInputSha256": "fda1382214c2053a1e11c06f51a087b85372bc5e8b280c2d31e6974fe0209aab",
+        "originalReadOnlyPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/youtubeLogo.svg",
+        "originalSha256": "fda1382214c2053a1e11c06f51a087b85372bc5e8b280c2d31e6974fe0209aab",
+        "originalDimensions": null,
+        "sourceUrlOrPath": "/Users/christianalcala/Downloads/onzio-platform/public/images/logo/youtubeLogo.svg",
+        "sourceIds": [],
+        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    },
+    "socialX": {
+      "inputPath": "assets/rose-city-2027/inputs/socialX.png",
+      "kind": "graphic",
+      "mimeType": "image/png",
+      "bytes": 4185,
+      "sha256": "77a49913f46caa9853853924fa6a9852ec085df5d41b7d7706b2b6f3f1a54f0b",
+      "width": 192,
+      "height": 192,
+      "hasAlpha": true,
+      "assignment": "Unchanged existing X icon-path raster mask; approved black brand treatment remains renderer-owned",
+      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "provenance": {
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/implementation/onzio-platform/public/images/logo/xLogo.svg",
+        "approvedPreviewInputSha256": "a624af5e89f493c901404993815ef36d33c196fe078f1a134568e3745f7b2ee8",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/implementation/onzio-platform/public/images/logo/xLogo.svg",
+        "originalSha256": "a624af5e89f493c901404993815ef36d33c196fe078f1a134568e3745f7b2ee8",
+        "sourceUrlOrPath": "public/images/logo/xLogo.svg",
+        "sourceIds": [],
+        "approvedPreparation": "Unchanged existing repository icon source"
+      },
+      "validation": {
+        "decoded": true,
+        "rasterFormat": true,
+        "withinDimensionLimit": true,
+        "withinByteLimit": true,
+        "graphicFormatAllowed": true
+      }
+    }
+  }
+}

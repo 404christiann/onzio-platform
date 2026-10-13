@@ -24,6 +24,7 @@ function AcademyFallback({ section }: { section: "hero" | "shop" | "match" | "st
   return <AcademySectionLoadingSkeleton />;
 }
 
+const CinematicHome = nextDynamic(() => import("@/components/cinematic/CinematicHome"), { ssr: false });
 const Hero           = nextDynamic(() => import("@/components/Hero"),           { ssr: false, loading: () => <AcademyFallback section="hero" /> });
 const NextMatchCard   = nextDynamic(() => import("@/components/NextMatchCard"),  { ssr: false });
 const ChampionsBadge = nextDynamic(() => import("@/components/ChampionsBadge"), { ssr: false });
@@ -56,6 +57,7 @@ export default function HomePageClient({
   const club = useClubContext();
   const preview = useHomepagePreview();
   const [academyHeroReady, setAcademyHeroReady] = useState(false);
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicHome initialHeroContent={initialHeroContent} />;
   if (club.presentationTemplateKey === "editorial@1") {
     return <EditorialHome initialHeroContent={initialHeroContent} />;
   }

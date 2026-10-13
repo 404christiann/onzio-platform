@@ -1,5 +1,6 @@
 "use client";
 
+import CinematicFooter from "@/components/cinematic/CinematicFooter";
 import Image from "@/components/ResilientImage";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -46,7 +47,7 @@ const academyFooterLinks = [
   { label: "Tryouts", href: "/tryouts" },
 ];
 
-export default function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
+function LegacyFooter({ overrides }: { overrides?: FooterOverrides } = {}) {
   const club = useClubContext();
   const clubId = club.id;
   const { clubLogoUrl, inverseLogoUrl, footerTagline: liveFooterTagline } = useClubBranding();
@@ -427,4 +428,9 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
       />
     </footer>
   );
+}
+
+export default function Footer(props: { overrides?: FooterOverrides } = {}) {
+  const club = useClubContext();
+  return club.presentationTemplateKey === "cinematic@2" ? <CinematicFooter overrides={props.overrides} /> : <LegacyFooter {...props} />;
 }

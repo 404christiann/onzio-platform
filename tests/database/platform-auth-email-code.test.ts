@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { afterEach, describe, expect, it } from "vitest";
 import { requireFreshClubSession } from "@/lib/auth-session";
-import { assertSafeTestEnvironment } from "../helpers/environment";
+import { localMailpitBaseUrl, assertSafeTestEnvironment } from "../helpers/environment";
 import { createLocalClients } from "../helpers/supabase";
 
 type MailpitMessage = {
@@ -14,7 +14,7 @@ type MailpitMessage = {
 
 async function latestMessageFor(email: string): Promise<MailpitMessage> {
   for (let attempt = 0; attempt < 20; attempt += 1) {
-    const response = await fetch("http://127.0.0.1:54324/api/v1/messages");
+    const response = await fetch(`${localMailpitBaseUrl()}/api/v1/messages`);
     const body = (await response.json()) as { messages: MailpitMessage[] };
     const match = body.messages.find((message) =>
       message.To.some((recipient) => recipient.Address.toLowerCase() === email),
@@ -69,7 +69,7 @@ describe("PLAT-101 local email-code authentication", () => {
     expect(message.Subject).toMatch(/^\d{6} is your Onzio sign-in code$/);
     const code = message.Subject.slice(0, 6);
     const detail = (await (
-      await fetch(`http://127.0.0.1:54324/api/v1/message/${message.ID}`)
+      await fetch(`${localMailpitBaseUrl()}/api/v1/message/${message.ID}`)
     ).json()) as { HTML: string };
     expect(detail.HTML).toContain(code);
     expect(detail.HTML).toContain("Sign in to Onzio");

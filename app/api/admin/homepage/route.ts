@@ -4,7 +4,7 @@ import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
-import { homepageSaveRequestSchema } from "@/lib/homepage-editor/contract";
+import { cinematicHomepageSaveRequestSchema, homepageSaveRequestSchema } from "@/lib/homepage-editor/contract";
 import { hydrateHomepageSnapshot } from "@/lib/homepage-editor/server";
 import { retirePublishedMedia } from "@/lib/media-processing";
 import { createClient } from "@/lib/supabase-server";
@@ -57,7 +57,7 @@ async function handle(request: Request, mutation: boolean) {
   if (mutation) {
     let body: unknown;
     try { body = await request.json(); } catch { return failure("INVALID_HOMEPAGE_PAYLOAD", 400); }
-    const parsed = homepageSaveRequestSchema.safeParse(body);
+    const parsed = cinematicHomepageSaveRequestSchema.safeParse(body);
     if (!parsed.success) return failure("INVALID_HOMEPAGE_PAYLOAD", 400);
     payload = parsed.data;
   } else {
@@ -76,6 +76,7 @@ async function handle(request: Request, mutation: boolean) {
   try { club = await getClubContext({ hostname: request.headers.get("host") ?? "", userId }); }
   catch { return failure("UNKNOWN_TENANT", 404); }
   if (!club) return failure("UNKNOWN_TENANT", 404);
+  if (mutation && club.presentationTemplateKey !== "cinematic@2" && !homepageSaveRequestSchema.safeParse(payload).success) return failure("INVALID_HOMEPAGE_PAYLOAD", 400);
   const memberships = club.role ? [{ userId, clubId: club.id, role: club.role, status: "active" }] : [];
   try {
     if (mutation) await authorizeMutation({ club, userId, memberships, aal: "aal1", feature: "homepage", payload: payload! });

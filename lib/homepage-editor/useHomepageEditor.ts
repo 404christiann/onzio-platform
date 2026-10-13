@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/admin-client";
 import { buildHomepageSaveRequest, type HomepageEditorSnapshot } from "./adapter";
+import { CINEMATIC_ARTWORK_SLOTS, defaultCinematicHomepageContent, cinematicArtwork, type CinematicArtworkSlot } from "@/lib/cinematic-homepage-content";
 import { resolveHomepageCapabilities } from "./capabilities";
 import { createHomepageEditorState, getDirtyHomepageSections, reduceHomepageEditor, type HomepageEditorAction, type HomepageEditorState, type HomepagePhoto, type PieceId } from "./model";
-import { resolveHomepageRecovery, type HomepageRecoveryRecord, type HomepageRecoveryResult } from "./recovery";
+import { mergeCinematicHomepageRecovery, resolveHomepageRecovery, type HomepageRecoveryRecord, type HomepageRecoveryResult } from "./recovery";
 import { RECOVERY_UNAVAILABLE, clearRecoveryRecord, readRecoveryFile, readRecoveryRecord, recoveryStorageKey, writeRecoveryFile, writeRecoveryRecord } from "./recovery-storage";
 
 type ErrorInfo = { code: string; message: string };
@@ -105,6 +106,11 @@ export function useHomepageEditor(clubId: string) {
     return task;
   }
 
+  function unsavedArtworkAssets(draft: HomepageEditorState["draft"], baseline: HomepageEditorState["draft"]): string[] {
+    if (!draft.revamp) return [];
+    const saved = new Set(baseline.revamp ? CINEMATIC_ARTWORK_SLOTS.map(slot => cinematicArtwork(baseline.revamp!, slot).assetId) : []);
+    return CINEMATIC_ARTWORK_SLOTS.map(slot => cinematicArtwork(draft.revamp!, slot).assetId).filter((id): id is string => !!id && !saved.has(id));
+  }
   async function discardUnsavedUploads(): Promise<boolean> {
     // Save may have started before React has disabled the Leave button. Never
     // navigate away from an in-flight operation that can still commit.
@@ -118,7 +124,7 @@ export function useHomepageEditor(clubId: string) {
       const unsaved = current.current?.draft.photos.items
         .filter(photo => photo.rowId === null && photo.assetId !== null)
         .map(photo => photo.assetId!) ?? [];
-      const assets = new Set([...pendingUploadCleanup.current, ...unsaved]);
+      const assets = new Set([...pendingUploadCleanup.current, ...unsaved, ...(current.current ? unsavedArtworkAssets(current.current.draft, current.current.baseline) : [])]);
       const results = await Promise.all(Array.from(assets, cleanupUploadedAsset));
       if (!results.every(Boolean) || run !== generation.current || saveInFlight()) return false;
       if (!await clearRecoveryNow() || run !== generation.current || saveInFlight()) return false;
@@ -149,6 +155,7 @@ export function useHomepageEditor(clubId: string) {
         if (!response.ok) throw new Error(body.error?.message ?? "We could not load your homepage.");
         let data = body as HomepageEditorSnapshot;
         const capabilities = resolveHomepageCapabilities(data.design);
+        if (capabilities.editableSections.includes("revamp") && !data.content.revamp) data.content.revamp = defaultCinematicHomepageContent();
         const allowedPieces: PieceId[] = [];
         if (capabilities.editableSections.includes("hero")) {
           if (capabilities.heroEditableFields.includes("eyebrow")) allowedPieces.push("hero.eyebrow");
@@ -157,10 +164,11 @@ export function useHomepageEditor(clubId: string) {
         if (capabilities.editableSections.includes("photos")) allowedPieces.push("photos");
         if (capabilities.editableSections.includes("story")) allowedPieces.push("story.text", "story.cta");
         if (capabilities.editableSections.includes("video")) allowedPieces.push("video");
+        if (capabilities.editableSections.includes("revamp")) allowedPieces.push("revamp.sponsors", "revamp.raffle", "revamp.ticket", "revamp.match", "revamp.prices", "revamp.championship", "revamp.navigation");
         if (capabilities.sharedTargets.storyText) allowedPieces.push("shared.story");
         allowedPieces.push("shared.shop");
         if (capabilities.sharedTargets.programs) allowedPieces.push("shared.programs");
-        let next = createHomepageEditorState({ content: data.content, revision: data.revision, designRevision: data.designRevision, editableSections: capabilities.editableSections, allowedPieces });
+        let next = createHomepageEditorState({ content: data.content, revision: data.revision, designRevision: data.designRevision, editableSections: capabilities.editableSections, allowedPieces, maxPhotos: capabilities.maxPhotos });
         if (generation.current !== run) return;
         // Recovery never blocks the editor: any failure here is swallowed and
         // the editor mounts with a clean server-loaded draft either way.
@@ -191,7 +199,7 @@ export function useHomepageEditor(clubId: string) {
                 if (generation.current !== run) return;
                 if (latest.designRevision !== data.designRevision) throw new Error("The design changed while loading.");
                 data = latest;
-                next = createHomepageEditorState({ content: latest.content, revision: latest.revision, designRevision: latest.designRevision, editableSections: capabilities.editableSections, allowedPieces });
+                next = createHomepageEditorState({ content: latest.content, revision: latest.revision, designRevision: latest.designRevision, editableSections: capabilities.editableSections, allowedPieces, maxPhotos: capabilities.maxPhotos });
                 if (latest.operation?.status === "committed") {
                   // Use CURRENT content, not the historical receipt: another
                   // administrator may have saved after our acknowledged save.
@@ -212,6 +220,15 @@ export function useHomepageEditor(clubId: string) {
                   }
                 }
                 if (generation.current !== run) return;
+                if (result.draft.revamp) for (const slot of CINEMATIC_ARTWORK_SLOTS) {
+                  const art = cinematicArtwork(result.draft.revamp, slot);
+                  if (art.upload && art.upload !== "ready" && art.localFileKey && key) {
+                    const file = await readRecoveryFile(art.localFileKey, key);
+                    if (file === RECOVERY_UNAVAILABLE) setRecoveryUnavailable(true);
+                    else if (file) files.current.set(art.localFileKey, file);
+                    art.upload = "failed"; art.error = "Add this artwork again before saving.";
+                  }
+                }
                 const restoredDraft = { ...result.draft, photos: { ...result.draft.photos, items: result.draft.photos.items.map(photo => photo.upload === "ready" ? photo : {
                   ...photo, upload: "failed" as const, error: photo.error ?? { code: "RECOVERY_INTERRUPTED", message: "This photo needs to be added again." },
                 }) } };
@@ -342,7 +359,7 @@ export function useHomepageEditor(clubId: string) {
   function addPhotos(selected: FileList | null) {
     const before = current.current;
     if (!before || !selected || before.submitted) return;
-    const additions = Array.from(selected).slice(0, Math.max(0, 6 - before.draft.photos.items.length)).map(file => {
+    const additions = Array.from(selected).slice(0, Math.max(0, before.maxPhotos - before.draft.photos.items.length)).map(file => {
       const clientId = crypto.randomUUID(); files.current.set(clientId, file);
       // Persisted so a queued/failed file survives reload for HP-05 recovery;
       // reauthorized and reuploaded on retry, never trusted as already staged.
@@ -355,7 +372,56 @@ export function useHomepageEditor(clubId: string) {
     dispatch({ type: "photos-changed", photos: [...before.draft.photos.items, ...additions].map((p, order) => ({ ...p, order })) });
     additions.forEach(photo => void startUpload(photo.clientId));
   }
+  function setArtwork(slot: CinematicArtworkSlot, update: Partial<import("@/lib/cinematic-homepage-content").CinematicArtwork>) {
+    const before = current.current;
+    if (!before?.draft.revamp) return;
+    const content = structuredClone(before.draft.revamp);
+    Object.assign(cinematicArtwork(content, slot), update);
+    dispatch({ type: "revamp-changed", content });
+  }
+  async function uploadArtwork(slot: CinematicArtworkSlot, id: string) {
+    const file = files.current.get(id);
+    const before = current.current;
+    if (!file || !before?.draft.revamp || before.submitted || uploading.current.has(id)) return;
+    const run = generation.current;
+    uploading.current.add(id); setArtwork(slot, { upload: "uploading", error: undefined });
+    try {
+      const storage = createClient().storage.from("homepage-artwork");
+      const result = await storage.upload(`${id}-${file.name}`, file);
+      if (result.error || !result.data) throw new Error("This artwork could not be added. Try again.");
+      const currentArt = current.current?.draft.revamp ? cinematicArtwork(current.current.draft.revamp, slot) : null;
+      if (generation.current === run && currentArt?.localFileKey === id) {
+        const previous = currentArt.assetId;
+        setArtwork(slot, { assetId: result.data.assetId, url: storage.getPublicUrl(result.data.path).data.publicUrl, upload: "ready", error: undefined });
+        const baselineIds = current.current?.baseline.revamp ? CINEMATIC_ARTWORK_SLOTS.map(key => cinematicArtwork(current.current!.baseline.revamp!, key).assetId) : [];
+        if (previous && !baselineIds.includes(previous)) void cleanupUploadedAsset(previous);
+      } else await cleanupUploadedAsset(result.data.assetId);
+    } catch (failure) {
+      if (generation.current === run && current.current?.draft.revamp && cinematicArtwork(current.current.draft.revamp, slot).localFileKey === id) setArtwork(slot, { upload: "failed", error: failure instanceof Error ? failure.message : "This artwork could not be added." });
+    } finally { uploading.current.delete(id); }
+  }
+  function startArtworkUpload(slot: CinematicArtworkSlot, id: string) {
+    const existing = uploadTasks.current.get(id);
+    if (existing) return existing;
+    const task = uploadArtwork(slot, id);
+    uploadTasks.current.set(id, task);
+    void task.finally(() => uploadTasks.current.delete(id));
+    return task;
+  }
+  function replaceArtwork(slot: CinematicArtworkSlot, file: File) {
+    const before = current.current;
+    if (!before?.draft.revamp || before.submitted || !before.editableSections.includes("revamp")) return;
+    const id = crypto.randomUUID(); files.current.set(id, file);
+    const key = recoveryKey.current;
+    if (key) persistence.current = persistence.current.then(async () => { if (!await writeRecoveryFile(id, key, file)) setRecoveryUnavailable(true); });
+    setArtwork(slot, { upload: "queued", localFileKey: id });
+    void startArtworkUpload(slot, id);
+  }
   return {
+    replaceArtwork, retryArtwork: (slot: CinematicArtworkSlot) => {
+      const id = current.current?.draft.revamp && cinematicArtwork(current.current.draft.revamp, slot).localFileKey;
+      if (id) return startArtworkUpload(slot, id);
+    },
     state, snapshot, loading, error, programs, dirty, dispatch, save, addPhotos, retryPhoto: startUpload, updatePhoto,
     retryLoad: () => setReload(x => x + 1), recoveryNotice, dismissRecoveryNotice: () => setRecoveryNotice(null),
     clearRecovery: clearRecoveryNow, discardUnsavedUploads, isDiscardingUnsaved: () => leaving.current, cleanupWarning, retryUnusedCleanup, removePhoto: (id: string) => {
@@ -378,7 +444,7 @@ export function useHomepageEditor(clubId: string) {
         // file is retained so the person can reupload it if they restore.
         const assetIds = new Set(recoveryConflict.draft.photos.items
           .filter(photo => photo.rowId === null && photo.assetId)
-          .map(photo => photo.assetId!));
+          .map(photo => photo.assetId!).concat(unsavedArtworkAssets(recoveryConflict.draft, stored.baseline)));
         if (assetIds.size) {
           if (!key) { setRecoveryUnavailable(true); return; }
           const safeDraft = structuredClone(recoveryConflict.draft);
@@ -386,6 +452,10 @@ export function useHomepageEditor(clubId: string) {
             ...photo, upload: "failed" as const, url: null,
             error: { code: "RECOVERY_CLEANUP_PENDING", message: "This photo needs to be added again if you restore this draft." },
           } : photo);
+          if (safeDraft.revamp) for (const slot of CINEMATIC_ARTWORK_SLOTS) {
+            const art = cinematicArtwork(safeDraft.revamp, slot);
+            if (art.assetId && assetIds.has(art.assetId)) Object.assign(art, { upload: "failed", url: null, error: "Add this artwork again before saving." });
+          }
           const safeRecord: HomepageRecoveryRecord = { ...stored, savedAt: new Date().toISOString(), draft: safeDraft };
           const writeResult = await persistence.current.then(() => writeRecoveryRecord(key, safeRecord, { expected: stored }));
           if (run !== generation.current) return;
@@ -427,6 +497,16 @@ export function useHomepageEditor(clubId: string) {
           const before = stored.baseline[section] as Record<string, unknown>;
           const recovered = stored.draft[section] as Record<string, unknown>;
           if (JSON.stringify(before[field]) !== JSON.stringify(recovered[field])) (draft[section] as Record<string, unknown>)[field] = recovered[field];
+        }
+      }
+      if (stored.draft.revamp && draft.revamp) draft.revamp = mergeCinematicHomepageRecovery(stored.baseline.revamp, stored.draft.revamp, draft.revamp);
+      if (draft.revamp) for (const slot of CINEMATIC_ARTWORK_SLOTS) {
+        const art = cinematicArtwork(draft.revamp, slot);
+        if (art.upload && art.upload !== "ready" && art.localFileKey && recoveryKey.current) {
+          const file = await readRecoveryFile(art.localFileKey, recoveryKey.current);
+          if (file === RECOVERY_UNAVAILABLE) setRecoveryUnavailable(true);
+          else if (file) files.current.set(art.localFileKey, file);
+          art.upload = "failed"; art.error = "Add this artwork again before saving.";
         }
       }
       if (JSON.stringify(stored.baseline.photos) !== JSON.stringify(stored.draft.photos)) draft.photos = structuredClone(stored.draft.photos);

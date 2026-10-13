@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadContract } from "../helpers/contract";
+import { cinematicHomepageSaveContent, defaultCinematicHomepageContent } from "@/lib/cinematic-homepage-content";
 import { homepageDraft, saveRequest } from "../fixtures/homepage-editor";
 
 const mocks = vi.hoisted(() => ({
@@ -88,6 +89,16 @@ beforeEach(() => {
 });
 
 describe("homepage admin route contract", () => {
+  it("gates the new content and seventh photo on the server-resolved template", async () => {
+    const { POST } = await route();
+    const body = { ...saveRequest(), sections: { revamp: cinematicHomepageSaveContent(defaultCinematicHomepageContent()) } };
+    expect((await POST(request("POST", body))).status).toBe(400);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    mocks.getClubContext.mockResolvedValue({ id: clubId, lifecycle: "active", role: "owner", presentationTemplateKey: "cinematic@2" });
+    expect((await POST(request("POST", body))).status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("save_homepage", { p_club_id: clubId, p_request: body });
+  });
+
   it("never calls the RPC for an unauthenticated request", async () => {
     mocks.requireFreshClubSession.mockRejectedValue(new Error("UNAUTHENTICATED"));
     const { GET } = await route();

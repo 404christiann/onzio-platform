@@ -30,3 +30,12 @@ export function assertSafeTestEnvironment(
     webhookSecret,
   };
 }
+
+/** The isolated Auth stack captures mail on its own local Mailpit port. */
+export function localMailpitBaseUrl(env: Record<string, string | undefined> = process.env): string {
+  const url = new URL(env.SUPABASE_TEST_MAILPIT_URL ?? "http://127.0.0.1:54324");
+  if (!["http:", "https:"].includes(url.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+    throw new Error("[TEST SAFETY] Refusing a non-loopback Mailpit URL.");
+  }
+  return url.origin;
+}

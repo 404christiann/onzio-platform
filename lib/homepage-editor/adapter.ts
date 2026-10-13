@@ -1,5 +1,6 @@
 import { resolveHomepageCapabilities, type HomepageRenderer } from "./capabilities";
-import { homepageSaveRequestSchema, type HomepageSaveRequest } from "./contract";
+import { cinematicHomepageSaveContent } from "@/lib/cinematic-homepage-content";
+import { cinematicHomepageSaveRequestSchema, homepageSaveRequestSchema, type HomepageSaveRequest } from "./contract";
 import { getDirtyHomepageSections, type HomepageEditorState } from "./model";
 import type { HomepageSnapshot } from "./server";
 
@@ -15,7 +16,9 @@ export function buildHomepageSaveRequest(state: HomepageEditorState, renderer: H
   const sections: HomepageSaveRequest["sections"] = {};
   for (const section of getDirtyHomepageSections({ ...state, draft })) {
     if (!capabilities.editableSections.includes(section)) continue;
-    if (section === "hero") {
+    if (section === "revamp") {
+      if (draft.revamp) sections.revamp = cinematicHomepageSaveContent(draft.revamp);
+    } else if (section === "hero") {
       sections.hero = Object.fromEntries(capabilities.heroEditableFields.map(field => [field, draft.hero[field]]));
     } else if (section === "photos") {
       sections.photos = {
@@ -24,7 +27,7 @@ export function buildHomepageSaveRequest(state: HomepageEditorState, renderer: H
       };
     } else sections[section] = draft[section] as never;
   }
-  return homepageSaveRequestSchema.parse({
+  return (renderer.templateKey === "cinematic@2" ? cinematicHomepageSaveRequestSchema : homepageSaveRequestSchema).parse({
     operationId: state.submitted?.operationId ?? operationId,
     expectedRevision: state.baseRevision, designRevision: state.designRevision, sections,
   });

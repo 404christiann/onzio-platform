@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cinematicHomepageSaveSchema } from "@/lib/cinematic-homepage-content";
 
 const text = z.string().max(20_000);
 const href = text.regex(/^(?:|\/[-A-Za-z0-9_/?#=&%.]*)$/);
@@ -22,15 +23,15 @@ export const homepageVideoSchema = z.object({
   video_title: text, caption: text,
 }).strict();
 
-const photo = z.object({
+const photoForLimit = (maximum: number) => z.object({
   clientId: z.string().min(1).max(200),
   rowId: z.uuid().nullable(), assetId: z.uuid().nullable(),
-  alt: text, order: z.number().int().min(0).max(5),
+  alt: text, order: z.number().int().min(0).max(maximum - 1),
 }).strict().refine(p => p.rowId !== null || p.assetId !== null, "A photo needs a saved row or prepared asset.");
 
-export const homepagePhotosSchema = z.object({
+const photosForLimit = (maximum: number) => z.object({
   seasonLabel: text.optional(),
-  items: z.array(photo).max(6),
+  items: z.array(photoForLimit(maximum)).max(maximum),
 }).strict().superRefine(({ items }, ctx) => {
   for (const field of ["clientId", "rowId", "assetId"] as const) {
     const ids = items.map(p => p[field]).filter(id => id !== null);
@@ -39,16 +40,17 @@ export const homepagePhotosSchema = z.object({
   if (items.some((p, i) => p.order !== i)) ctx.addIssue({ code: "custom", message: "Photo order must be contiguous." });
 });
 
-export const homepageSaveRequestSchema = z.object({
-  operationId: z.uuid(),
-  expectedRevision: z.string().min(1).max(200),
-  designRevision: z.string().min(1).max(200),
-  sections: z.object({
-    hero: homepageHeroSchema.partial().refine(v => Object.keys(v).length > 0).optional(),
-    photos: homepagePhotosSchema.optional(),
-    story: homepageStorySchema.optional(),
-    video: homepageVideoSchema.optional(),
-  }).strict().refine(v => Object.keys(v).length > 0, "No sections supplied."),
+export const homepagePhotosSchema = photosForLimit(6);
+export const cinematicHomepagePhotosSchema = photosForLimit(7);
+const homepageSectionsSchema = z.object({
+  hero: homepageHeroSchema.partial().refine(v => Object.keys(v).length > 0).optional(),
+  photos: homepagePhotosSchema.optional(), story: homepageStorySchema.optional(), video: homepageVideoSchema.optional(),
 }).strict();
-
-export type HomepageSaveRequest = z.infer<typeof homepageSaveRequestSchema>;
+export const homepageSaveRequestSchema = z.object({
+  operationId: z.uuid(), expectedRevision: z.string().min(1).max(200), designRevision: z.string().min(1).max(200),
+  sections: homepageSectionsSchema.refine(v => Object.keys(v).length > 0, "No sections supplied."),
+}).strict();
+export const cinematicHomepageSaveRequestSchema = homepageSaveRequestSchema.extend({
+  sections: homepageSectionsSchema.extend({ photos: cinematicHomepagePhotosSchema.optional(), revamp: cinematicHomepageSaveSchema.optional() }).refine(v => Object.keys(v).length > 0, "No sections supplied."),
+});
+export type HomepageSaveRequest = z.infer<typeof cinematicHomepageSaveRequestSchema>;

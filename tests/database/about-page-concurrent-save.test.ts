@@ -1,10 +1,11 @@
+import { localPostgresConfig } from "../helpers/local-postgres";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, it } from "vitest";
 import { USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "../helpers/environment";
 
-const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
+const config = localPostgresConfig();
 async function actor(client: Client) {
   const timestamp = Number((await client.query("select floor(extract(epoch from now()))::bigint as second")).rows[0].second);
   await client.query("select set_config('request.jwt.claims',$1,true)", [JSON.stringify({ sub: USER_IDS.ownerAal2, role: "authenticated", aal: "aal1", amr: [{ method: "otp", timestamp }] })]);
