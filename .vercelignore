@@ -6,3 +6,6 @@ test-results
 playwright-report
 coverage
 lions-font-comparison.html
+
+# Local supplied font; webfont license remains unverified.
+public/fonts/avenir-local/

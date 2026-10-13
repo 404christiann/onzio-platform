@@ -1,0 +1,60 @@
+{
+  "source": {
+    "path": "assets/originals/foothill-official.svg",
+    "sha256": "407c7882174c322ca3e53bd73aa537df80f8940e4a19a1651313aa563660797f"
+  },
+  "outputs": [
+    {
+      "path": "assets/prepared/foothill-white.svg",
+      "sha256": "6213d6abb9032fae5728165f5abb1a44a29fef919ccfe6d79ad91b5166330bd9"
+    },
+    {
+      "path": "assets/prepared/foothill-white.png",
+      "sha256": "30e16506d7201ed7cf798406876d9847d7bb0903f6e458bd92c219e8c04726e3"
+    }
+  ],
+  "method": "Exact SVG fill replacement on lettering paths only, faithful Sharp SVG rasterization at 8x. No AI recreation.",
+  "changedPaths": [
+    {
+      "svgPathIndex": 1,
+      "originalFill": "#143D8C",
+      "derivativeFill": "#FFFFFF",
+      "pathDataSha256": "07f67bfe057c6b9111b4217fbb179d5e75a53ecc9af5bd284fe096022b86fac8"
+    },
+    {
+      "svgPathIndex": 2,
+      "originalFill": "#143D8C",
+      "derivativeFill": "#FFFFFF",
+      "pathDataSha256": "1f2349f54cebe13e95e6648b4be63c559786f0adbf18a6b96a28fa6c9cbe382d"
+    },
+    {
+      "svgPathIndex": 3,
+      "originalFill": "#143D8C",
+      "derivativeFill": "#FFFFFF",
+      "pathDataSha256": "e90dc1029e2d4764195847df1c9b398981c4d803e612d48fc6579b6555513c95"
+    }
+  ],
+  "svgDimensions": {
+    "width": 304,
+    "height": 50,
+    "viewBox": "0 0 304 50"
+  },
+  "pngDimensions": {
+    "width": 2432,
+    "height": 400,
+    "channels": 4
+  },
+  "verification": {
+    "pathGeometryUnchanged": true,
+    "originalSourcePreserved": true,
+    "emblemRasterChangedChannels": 0,
+    "emblemRasterComparisonXRange": [
+      0,
+      703
+    ],
+    "alphaChannelPreserved": true,
+    "transparentPixelCount": 712845,
+    "whiteGlyphPixelCount": 74947,
+    "alteredPixelCount": 74947
+  }
+}

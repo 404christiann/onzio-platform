@@ -1,0 +1,20 @@
+Free License — icons.download
+Source: https://icons.download/license
+Checked: 2026-10-09
+Creator: Vitaly Belousov
+
+All icons on icons.download are free to use for personal and commercial projects.
+
+You are allowed to:
+— use the icons in any project
+— modify, customize, and remix them
+— use them in commercial products, apps, and websites
+
+You don't need to:
+— ask for permission
+— provide attribution (though it's appreciated)
+
+You are not allowed to:
+— resell or redistribute the icons as a standalone library or competing service
+
+The icons are provided "as is" without warranty of any kind.

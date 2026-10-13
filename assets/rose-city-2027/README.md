@@ -41,3 +41,16 @@ Re-run verification after rebuilding or changing the manifest. The later import 
 MuseoModerno's official variable TTF is in `public/fonts/museomoderno/MuseoModerno.ttf`; use weight900, with preserved SIL OFL at `public/fonts/museomoderno/OFL.txt`. Existing LEMON MILK BoldItalic and its notice remain at their existing `public/fonts/lemon-milk/` paths; a commercial-use receipt has not been verified. Avenir Medium was local-only in the approved Mac preview. No system TTC or unlicensed Avenir webfont is included; licensed portable Avenir remains a release dependency. No separately editable Phosphor typography is required by the current approved homepage; relevant lettering is already baked into supplied artwork.
 
 This package performs no uploads, seeds, database mutations, provider configuration, deployment or billing changes. Its source/format checks are asset preparation evidence, not proof of completed local import or live delivery.
+
+Supplied2026-10-13 ZIPs are now inspected. Avenir Medium can render from an
+ignored local-only font input; it is excluded from deployment uploads and is
+not a licensed portable release asset. LEMON MILK BoldItalic already matches
+the supplied ZIP. See `docs/rose-city-2027-fonts.md`. Launch is on hold.
+
+## Foothill white-lettering derivative
+
+Trusted source: workspace assets/originals/foothill-official.svg. Lettering paths1,2,3 alone changed blue to white; geometry, emblem and alpha preserved exactly. Prepared SVG/8x transparent PNG and provenance remain in workspace assets/prepared. App runtime uses public/images/cinematic/foothill-white.png; provenance is in foothill-white.provenance.json. Original configured partner image remains in the white mobile dialog.
+
+## Foothill blue-lettering transparent variant
+
+Exact original SVG rasterized at8x, without geometry/fill edits, to public/images/cinematic/foothill-blue.png. Blue SVG/PNG and provenance remain in workspace assets/prepared; app provenance is foothill-blue.provenance.json. Blue is used by the restored white header and mobile dialog; white variant remains saved.

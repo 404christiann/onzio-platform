@@ -1,0 +1,10 @@
+{
+  "source": "assets/originals/foothill-official.svg",
+  "method": "Faithful rasterization of exact original SVG with blue lettering and transparent exterior; no geometry or fill edits.",
+  "sourceSha256": "407c7882174c322ca3e53bd73aa537df80f8940e4a19a1651313aa563660797f",
+  "pngSha256": "8a1fc50faf320b1567ee3c04699af8627d1551c09580ae76e1f5df5ebd995754",
+  "width": 2432,
+  "height": 400,
+  "transparentPixels": 712845,
+  "whiteVariantRetained": true
+}
