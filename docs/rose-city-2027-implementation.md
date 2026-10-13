@@ -47,3 +47,16 @@ acceptance, not new physical-device testing. Initial sandbox-only build/tests
 were blocked by outbound font/loopback network restrictions; unchanged
 network-enabled reruns passed. The updated production build is served locally
 on3198; no push, hosted content change or deployment occurred.
+
+## Final selection: Roomier (supersedes Slim)
+
+Christian subsequently selected Roomier. Final desktop header88px/crest64px,
+phone header68px plus safe-area inset/crest48px, with unchanged centered44px
+navigation/Menu targets and28px Foothill box. Desktop panels begin at88px.
+The same scoped stylesheet is the only runtime change. Fresh build (including
+lint), TypeScript, full201-file/1865-test suite and whitespace checks pass.
+Actual1280px/390px checks confirm dimensions, no horizontal overflow, desktop
+panel containment/Escape, and phone drawer open/close. Final captures outside
+the repo: `review-notes/navbar/roomier-desktop.png` and `roomier-phone.png`.
+Local3198 runs the final build; no push or hosted release. These checks use
+browser viewports and do not claim additional physical-device acceptance.

@@ -1,3 +1,18 @@
+## 2026-10-13 — Roomier navbar selected (supersedes Slim)
+
+Christian changed the selected comparison to Roomier. The final application
+header is88px desktop with64px crest and68px phone with48px crest; navigation,
+Foothill and Menu stay centered, the Menu target remains44px, and desktop
+panels start at88px. Only scoped CSS proportions changed on the existing
+revamp branch. Fresh build/lint, TypeScript, full201-file/1865-test suite and
+whitespace checks pass. Actual1280px/390px browser checks confirm the dimensions,
+no horizontal overflow, contained Community panel/Escape, and phone drawer
+open/close. Captures: `review-notes/navbar/roomier-desktop.png` and
+`roomier-phone.png` outside the repository. Viewport checks only; no new hardware
+claim. Local3198 serves the new build; no push/deployment/hosted mutations.
+Next: review the final committed homepage, then separately authorize hosted
+release preparation per `docs/rose-city-2027-implementation.md`.
+
 ## 2026-10-13 — Approved slim Rose City navbar
 
 Christian selected Slim from the isolated responsive comparison. Applied only
