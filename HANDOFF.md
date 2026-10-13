@@ -1,3 +1,21 @@
+## 2026-10-13 — Approved slim Rose City navbar
+
+Christian selected Slim from the isolated responsive comparison. Applied only
+header proportions in `components/cinematic/cinematic.css` on
+`codex/rose-city-homepage-2027`: desktop72px/crest56px, phone60px/crest44px,
+44px Menu target, centered navigation/Foothill logo, and dropdowns starting at
+the header edge. Homepage content and navigation behavior remain unchanged.
+Production build (including lint), sequential TypeScript, full201 files/1865
+tests and whitespace checks pass. Actual local app at1280px/390px has no
+horizontal overflow; desktop dropdown containment/Escape and phone drawer
+open/close pass. Phone evidence is browser viewport verification only. Saved
+captures: `Rose City 2027 Revamp/review-notes/navbar/implemented-desktop.png`
+and `implemented-phone.png`. Initial sandbox checks could not access Google
+Fonts or loopback Supabase; network-enabled reruns passed. The local production
+server on3198 serves the updated build. No hosted mutation, push or deployment.
+Next: review the committed homepage, then separately authorize the hosted
+release preparation described in `docs/rose-city-2027-implementation.md`.
+
 ## 2026-10-13 — Rose City 2027 approved homepage implementation
 
 Christian approved the isolated homepage preview and authorized implementation

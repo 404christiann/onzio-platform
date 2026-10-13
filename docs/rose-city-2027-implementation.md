@@ -27,3 +27,23 @@ MuseoModerno is bundled with its official OFL notice. Avenir currently resolves 
 ## Verification
 
 Final acceptance: full suite 201 files / 1865 tests; production build, TypeScript, lint, exact database type generation and whitespace checks. Actual desktop1440/phone390 editor workflows passed 2/2, including real graphic upload, save/reload public parity, navigation renaming, prices, map visibility and preservation of seven photo identities. Tests restore original copy/settings through normal APIs; the original raffle bytes are re-published with a new valid media ID because a committed replacement correctly retires the previous identity. Public production smoke at desktop1208/phone390 verifies HTTP200, metadata, loaded media, exactly one header/footer, video and sponsor motion, no controls/artwork links, correct Onzio href/opacity, no overflow and no JS errors. Scoped routing tests also preserve authenticated private previews using only their explicit published pointer. Branding preview overrides use the current tenant’s entered links and canonical social rows replace older UUID duplicates, including authoritative blank rows. Actual captures and diagnostic reports are saved outside the repo under `Rose City 2027 Revamp/review-notes/actual-site/`. Phone results are browser viewport verification, not new physical iPhone or VoiceOver acceptance. Native Bunny delivery has been empirically verified from a normal browser referrer with muted autoplay, inline playback and no controls; bare requests without a referrer returning403 do not reflect normal browser delivery.
+
+## Approved slim navbar follow-up
+
+Christian selected the isolated Slim option. The real cinematic2 shell now has
+a72px desktop header with56px crest,44px navigation targets and28px Foothill
+logo box, all centered. The phone header is60px plus safe-area inset, with44px
+crest/Menu target. Desktop dropdowns start at the header edge. Only scoped CSS
+changed; navigation semantics, editable labels, other homepage sections and
+presentation versions retain their behavior.
+
+Fresh production build (including lint), sequential TypeScript, full201-file /
+1865-test suite and whitespace checks pass. Actual browser1280px/390px confirms
+exact header heights, shared vertical centers, no horizontal overflow,
+contained Community dropdown with Escape dismissal, and phone drawer open/close.
+Captures are saved outside the repository in `review-notes/navbar/` as
+`implemented-desktop.png` and `implemented-phone.png`. This is browser viewport
+acceptance, not new physical-device testing. Initial sandbox-only build/tests
+were blocked by outbound font/loopback network restrictions; unchanged
+network-enabled reruns passed. The updated production build is served locally
+on3198; no push, hosted content change or deployment occurred.
