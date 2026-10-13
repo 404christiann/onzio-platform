@@ -60,3 +60,15 @@ panel containment/Escape, and phone drawer open/close. Final captures outside
 the repo: `review-notes/navbar/roomier-desktop.png` and `roomier-phone.png`.
 Local3198 runs the final build; no push or hosted release. These checks use
 browser viewports and do not claim additional physical-device acceptance.
+
+## Larger crest refinement
+
+Final navigation crest is76px desktop/56px phone at Christian's request; roomier
+header heights remain88px/68px plus phone safe-area. Centered tabs/Foothill and
+all behavior are unchanged. Actual1280px/390px checks verify loaded crest,
+shared vertical centers and no overflow; captures `review-notes/navbar/
+larger-crest-desktop.png` and `larger-crest-phone.png` are outside the repo.
+Build/lint, sequential TypeScript and whitespace pass. Full run passed1843 tests
+in200 files; registration-rls's22 tests encountered a local connection-readiness
+timeout and passed unchanged on focused rerun (4.43s). All1865 distinct tests
+pass across the full run/rerun. No new physical-device result is claimed.

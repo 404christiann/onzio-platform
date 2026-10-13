@@ -1,3 +1,18 @@
+## 2026-10-13 — Larger crest within the roomier navbar
+
+Christian requested a slightly larger navigation logo. Increased only the Rose
+City crest:64→76px desktop and48→56px phone. Header heights stay88/68px, with
+unchanged alignment, Foothill size and navigation behavior. The isolated roomier
+comparison was updated too. Actual1280px/390px checks confirm loaded crest,
+shared vertical centers and no horizontal overflow; captures are outside the
+repo in `review-notes/navbar/larger-crest-desktop.png` and
+`larger-crest-phone.png`. Build/lint, sequential TypeScript and whitespace pass.
+Full suite passed200 files/1843 tests; the remaining registration database file
+hit a local connection-readiness timeout, then passed all22 cases unchanged on
+the focused rerun. All1865 distinct tests therefore pass across those runs.
+Local3198 serves this build. No push, hosted mutation or deployment. Next:
+review final homepage and separately authorize hosted release preparation.
+
 ## 2026-10-13 — Roomier navbar selected (supersedes Slim)
 
 Christian changed the selected comparison to Roomier. The final application
