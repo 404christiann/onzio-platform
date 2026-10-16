@@ -1,3 +1,124 @@
+## 2026-10-16 - Verify the complete Shop photo-save flow for PR #16
+
+`SIMPLIFY-03` remains ready_for_review with its full Shop browser/API gap
+closed. Three new real local browser cases pass: Academy desktop, Cinematic
+desktop and Cinematic phone with committed-response loss. Both photo
+collections traverse real authorization, staging upload, finalization, Shop
+save, database references, receipt replay, reload and direct WebP rendering.
+The phone case also verifies an earlier receipt after current media changes.
+No mutation or receipt response is fabricated. No application defect was
+found; production source remains exactly `e20fef5`.
+
+The first new test expected a 403 for Bravo's private preview. The existing
+RLS/tenant boundary correctly returns 404 `Not found`; that new test assertion
+was corrected without changing application behavior or existing contracts.
+All mutable Alpha fixtures are restored exactly and Bravo is unchanged.
+Twelve captured test uploads are retired and their Storage objects removed.
+Existing receipts/documents are preserved; five new receipts and two immutable
+test presentation documents remain as recorded local audit history.
+After the broader regression suites, two fixture metadata records were restored
+from the pre-run backups; final mutable fixture readback matches both tenants.
+
+Fresh full 1,819/193 files, architecture 21, contracts 1,065, database 311,
+lint, build and post-build typecheck pass. Private evidence is under
+`/home/coder/.local/state/onzio/pr16-shop-flow`; reproduction and fixture
+requirements are in `tests/README.md`. Native-device/hosted acceptance is
+not claimed. The temporary server is stopped and existing services retained.
+Final revision review/SHA are on PR #16. Exact next step is owner approval of
+that revision. Do not merge, enable auto-merge or deploy without approval.
+
+## 2026-10-16 - Implement the bounded PR #16 photo-resolution cleanup
+
+`SIMPLIFY-02` is complete and `SIMPLIFY-03` is ready_for_review. The user
+accepted the pure photo-resolution package from clean base
+`750e98122ddac8028d802ab41b2624d97bec9ba2`. One shared factory now replaces
+duplicate Homepage/Shop URL rules. Editor-specific receipt recursion remains.
+Three production files and two contract files change; six behavior cases are
+added without weakening existing assertions. No dependency or migration changes.
+
+Full 1,819 tests in 193 files, contracts 1,065, architecture 21, database 311,
+legacy 422, lint, production build and post-build typecheck pass. The initial
+build found Homepage's nullable URL type; the signature is corrected and a
+new null-URL behavior case protects it. The 15 focused cases pass. Both
+baseline and head pass 13 Homepage photo/recovery and 9 Shop recovery/phone
+browser cases. Head public/login/owner routing and 401/404 denial smoke pass
+without JavaScript errors. Shop browser mutation/receipt responses are
+intercepted; real Shop atomic persistence and isolation pass in database tests.
+No full browser/API Shop-photo save, native-device or hosted acceptance is claimed.
+
+The browser worker initially lacked the retirement helper's local service
+environment. An extra assertion caught five leftover uploads from each run.
+All ten were verified unreferenced and retired through the existing guarded
+API. Repeating the real upload case with the proper local environment passes;
+the final fixture readback confirms the seeded template, zero photo rows and
+settings, and zero new Homepage uploads still published. Existing receipt
+records are preserved. No environment or cleanup source was changed.
+
+Independent review and comment review report no outstanding findings. Final
+revision SHA and publication review are recorded on PR #16. Private receipts,
+including the failed first build, remain under
+`/home/coder/.local/state/onzio/pr16-photo`. The working plan and audit contain
+scope, evidence, limitations and rollback. Keep other simplification candidates
+deferred. Exact next step is owner review and explicit approval of the current
+revision. Do not merge, enable auto-merge or deploy before that approval.
+
+## 2026-10-16 - Complete the PR #16 audit and scoped baseline
+
+`SIMPLIFY-01` is complete at audited source
+`59a9a7ad8ee92f77ab37d541ad7dd3141c0c93dd`. Results, source-backed candidates,
+documentation conflicts, browser limits, and rollback requirements are in
+`docs/behavior-preserving-simplification-audit.md`. The plan ledger is updated
+in `docs/behavior-preserving-simplification-plan.md`.
+
+SSH is usable through the scoped Windows `onzio-vm` alias. Strict host-key
+and existing identity checks remain. Five fresh sessions and a 256-KiB transfer
+passed. VirtualBox also recorded whole-guest stalls while running via the
+Windows hypervisor/NEM path. The underlying cause remains unproven; no host
+security/hypervisor change, VM reboot, or unrelated service restart occurred.
+
+The first full run had 1,812 passes and one 15-second owner/admin cleanup
+timeout. The unchanged focused three-test check and full 1,813-test rerun pass.
+Architecture 21, contracts 1,059, database 311, legacy 422, lint, build, and
+post-build typecheck pass. Tests and timeouts were not changed. Production-mode
+local browser checks pass for email-code login, public/login/admin routing,
+401 API and 404 unknown-tenant denials, and desktop/phone player save/reload.
+Both persistence cases assert exact fixture restoration. Full Homepage/Shop
+recovery matrices and native-device acceptance remain unverified. Smoke video
+CDN requests were blocked and do not establish provider availability.
+
+No application, test, dependency, or migration source changed. The verified
+checkout stayed clean through runtime checks. Private logs/auth state remain
+under `/home/coder/.local/state/onzio/pr16-baseline`. The temporary baseline
+production server was stopped after verification. The existing dev server and
+other project services were preserved.
+
+`SIMPLIFY-02` is ready_for_review. Exact next step is scope acceptance of one
+pure photo-resolution cleanup, then Shop characterization before extraction.
+Keep receipt media maps editor-specific. Defer stateful save-transport
+consolidation. The new PR revision remains draft; no merge, deployment, hosted
+mutation, or live provider acceptance is authorized by this audit.
+
+## 2026-10-16 - Open the behavior-preserving simplification plan
+
+`SIMPLIFY-01` is in_progress. The supervising user approved merging the exact
+PR #15 revision and opening a separate planning PR. PR #15 is merged at
+`1a07dd70531633a473274e4e3959864774fd6a24`. The working plan is
+`docs/behavior-preserving-simplification-plan.md`.
+
+This change adds the audit scope, baseline requirements, candidate-selection
+rules, acceptance evidence, and status ledger. It also disables automatic
+Vercel preview deployment for `agent/simplification-plan`. No application,
+dependency, migration, or test behavior changes are included.
+
+Publication uses the supervising Windows environment because VM loopback SSH
+timed out. No credentials were transferred. The previous VM test results are
+historical; no fresh application tests or browser acceptance are claimed here.
+The draft is ready for the scoped audit, not for a refactor or production
+release. Exact next step is to restore verified VM access, record the current
+base and clean worktree, run the isolated baseline, and rank source-backed
+simplification candidates before selecting one bounded implementation package.
+The user retains acceptance and merge authority for this new PR revision.
+
 ## 2026-10-16 — Ubuntu-Coding VM ready for Onzio work
 
 `VM-ENV-01` is complete for local development: installed locked dependencies,

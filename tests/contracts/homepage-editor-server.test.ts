@@ -37,6 +37,20 @@ afterEach(() => {
 });
 
 describe("homepage snapshot media hydration", () => {
+  it("resolves a null URL only when a public asset and base URL are available", async () => {
+    const content = homepageDraft();
+    content.photos.items[0].url = null;
+    const input = snapshot({ content, media: [{ id: assetId, storage_bucket: "onzio-media", storage_path: "photo.webp" }] });
+    const resolve = await hydrate();
+    expect(resolve(input).content.photos.items[0].url).toBe(
+      `${baseUrl}/storage/v1/object/public/onzio-media/photo.webp`,
+    );
+    expect(resolve({ ...input, media: [] }).content.photos.items[0]).toBe(content.photos.items[0]);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", undefined);
+    expect(resolve(input).content.photos.items[0]).toBe(content.photos.items[0]);
+    expect(input.content.photos.items[0].url).toBeNull();
+  });
+
   it("builds a direct normalized public URL and encodes path segments", async () => {
     const input = snapshot({
       media: [{ id: assetId, storage_bucket: "onzio-media", storage_path: "homepage/season 2026/match photo.webp" }],
