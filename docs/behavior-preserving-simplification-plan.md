@@ -2,15 +2,16 @@
 
 Use this working plan to reduce maintenance cost while preserving the public
 sites, admin workflows, tenant isolation, authentication, billing, and stored
-data. Use the completed source audit and fresh scoped baseline linked below. Do not treat this planning
-PR as an approved rewrite or a completed simplification implementation.
+data. Use the completed source audit and fresh scoped baseline linked below. This
+PR covers only the accepted photo-resolution cleanup. Other refactors need
+separate scope acceptance.
 
 
 The [audit and baseline](behavior-preserving-simplification-audit.md) records
 the exact source, observed checks, original timeout, passing unchanged rerun,
-runtime limits, documentation conflicts, and ranked candidates. The first
-proposed package extracts only duplicate photo resolution after protecting
-Shop behavior. Application implementation has not started.
+runtime limits, documentation conflicts, and ranked candidates. The accepted first package extracts only duplicate photo resolution after
+protecting Shop behavior. Implementation and local verification are complete;
+owner acceptance and merge approval remain pending.
 
 ## Establish the scope
 
@@ -71,8 +72,8 @@ following columns.
 | Rollback | How to revert the isolated change without data repair. |
 
 The completed read-only audit ranks these areas. Its exact callers and
-behavior differences are recorded in the linked audit. They are proposed
-packages, not accepted abstractions or confirmed dead code.
+behavior differences are recorded in the linked audit. Only the photo-resolution package is accepted. The other candidates remain
+proposals, not confirmed dead code or accepted abstractions.
 
 - Compare snapshot media hydration in `lib/homepage-editor/server.ts` and
   `lib/shop-editor/server.ts`. Keep each editor's tenant, capability, and
@@ -87,7 +88,7 @@ packages, not accepted abstractions or confirmed dead code.
   security or recovery policies.
 - [x] Select one bounded candidate and name its exact file boundaries,
   acceptance criteria, expected benefit, and remaining uncertainty.
-- [ ] Present the evidence-backed package before starting application edits.
+- [x] Present the evidence-backed package before starting application edits.
 
 ## Implement one verified change
 
@@ -95,14 +96,14 @@ Start this section only after the audit has defined the bounded package and
 the user has accepted its scope. Use the pstack Refactoring playbook through
 its Codex adaptation. Keep the current model and reasoning settings.
 
-- [ ] Record a clean baseline at the exact implementation base.
-- [ ] Preserve all contract assertions. Add a regression test only when an
+- [x] Record a clean baseline at the exact implementation base.
+- [x] Preserve all contract assertions. Add a regression test only when an
   uncovered observable behavior needs protection.
-- [ ] Make one coherent structural change. Migrate its callers together and
+- [x] Make one coherent structural change. Migrate its callers together and
   remove the superseded implementation when equivalence is proven.
-- [ ] Run the narrow behavior tests before continuing to another change.
-- [ ] Complete the local verification and independent review below.
-- [ ] Update this ledger and `HANDOFF.md` with actual evidence and next steps.
+- [x] Run the narrow behavior tests before continuing to another change.
+- [x] Complete the local verification and independent review below.
+- [x] Update this ledger and `HANDOFF.md` with actual evidence and next steps.
 
 Do not change database schemas, migrations, provider integrations, feature
 behavior, or product design as incidental cleanup. Any such change requires a
@@ -111,22 +112,22 @@ session age, billing entitlement, operation receipts, and audit boundaries.
 
 ## Verify behavior and review the result
 
-- [ ] Run the candidate's focused tests, all architecture and contract tests,
+- [x] Run the candidate's focused tests, all architecture and contract tests,
   local database tests, the full suite, typecheck, lint, and build.
-- [ ] Compare the same local public and admin scenarios at baseline and head.
+- [x] Compare the same local public and admin scenarios at baseline and head.
   Include ordinary saves, reloads, errors, retries, conflicts, and cross-tenant
   denials where the selected package affects them.
-- [ ] Check desktop and phone layouts for any affected editor. Preserve
+- [x] Check desktop and phone layouts for any affected editor. Preserve
   keyboard focus, modal behavior, and unsaved-change recovery.
-- [ ] If the selected change can affect latency, bundle size, or query count,
+- [x] If the selected change can affect latency, bundle size, or query count,
   name the metric and failure threshold before implementation. Measure the
   same workload on baseline and head. Otherwise record why a performance
   measurement does not apply. Do not invent a speedup.
-- [ ] Obtain independent review at the exact head. Resolve findings and rerun
+- [x] Obtain independent review at the exact head. Resolve findings and rerun
   affected checks after fixes. Record remaining limitations honestly.
-- [ ] Confirm that fixtures are restored and that the final diff contains no
+- [x] Confirm that fixtures are restored and that the final diff contains no
   unrelated source changes, credentials, or authentication state.
-- [ ] Submit the exact revision for user acceptance. Only the user authorizes
+- [x] Submit the exact revision for user acceptance. Only the user authorizes
   merging that revision. No auto-merge, protection bypass, deployment, hosted
   mutation, or live provider action is included in this plan.
 
@@ -135,13 +136,14 @@ session age, billing entitlement, operation receipts, and audit boundaries.
 | Package | Status | Evidence and exact next step |
 | --- | --- | --- |
 | SIMPLIFY-01 | complete | Source audit and scoped local baseline recorded in the linked audit. Preserve the initial timeout and VM-host-stall risk. |
-| SIMPLIFY-02 | ready_for_review | Proposed photo-resolution package has exact callers, behavior gaps, verification, and rollback. Await scope acceptance before application edits. |
-| SIMPLIFY-03 | not_started | Implement and independently review the accepted bounded package. Record its head SHA and all required receipts before requesting merge. |
+| SIMPLIFY-02 | complete | The user accepted only the photo-resolution cleanup. Receipt traversal and save transport remain editor-specific. |
+| SIMPLIFY-03 | ready_for_review | Shared pure photo resolution, six new behavior cases, full local gates and baseline/head browser comparisons pass. Final revision and independent review are recorded in PR #16. Await the user's acceptance and explicit merge approval. |
 
-The planning PR contains this document, the audit and baseline, handoff
-entries, and the existing preview guard for `agent/simplification-plan`.
-It changes no application source, dependency, migration, or test behavior.
-Documentation and configuration checks do not establish runtime acceptance.
+PR #16 contains the planning documents, implementation evidence, one shared
+photo resolver, the two editor callers, and six added behavior cases. The
+branch preview guard remains in place. No dependency or migration changes
+are included. See the implementation evidence in the audit for actual checks
+and remaining environment limits.
 
 ## Keep the evidence with the package
 
@@ -149,5 +151,6 @@ Record the audited and tested SHAs, commands, results, log paths, local runtime
 captures, independent review, fixture restoration, and remaining gaps before
 marking any package complete. Keep private local artifacts outside Git.
 
-The next step is scope acceptance of the proposed photo-resolution package.
+The next step is owner review of the exact published PR revision. Do not merge
+until the user explicitly approves that revision in the desktop chat.
 This document does not pre-approve a repository-wide rewrite.

@@ -218,3 +218,70 @@ review, not implemented. No application, test, dependency, or migration file
 was changed during this audit. The next step is acceptance of the bounded
 package, followed by behavior characterization and one reviewed refactor.
 Only the user may approve merging the new revision.
+
+## Photo-resolution implementation evidence
+
+The user accepted this bounded package on 2026-10-16. Implementation starts
+from clean PR head `750e98122ddac8028d802ab41b2624d97bec9ba2`.
+`lib/snapshot-photo.ts` owns the media index and public URL rules. Homepage
+and Shop retain their snapshot shapes and receipt traversal. Each receipt
+builds its own media map. There is one map per snapshot, reused for both Shop
+collections. The factory accepts the base URL explicitly and imports nothing.
+
+The factory design avoids rebuilding the Shop map for each photo collection.
+An array resolver would duplicate that work or require another collection
+grouping argument. Model the Domain puts the shared photo policy together;
+Laziness Protocol limits the change to three production files. Maintainers
+follow one import to one URL policy instead of maintaining two copies. No
+query, runtime dependency, optimizer or performance claim is added.
+
+Five Shop behavior cases passed against the original implementation before
+extraction. They protect both collections, fallback object identity, missing
+base URLs, private/unmatched/null identities, exact segment encoding, metadata,
+ordering, immutability and receipt-specific media. The first build caught a
+too-narrow string URL constraint because Homepage permits null URLs. A new
+Homepage null-URL case passed before widening that constraint to the existing
+domain type. No cast or suppression was added. All 15 focused cases then pass.
+The initial failed build/typecheck logs remain in `attempt-1` in the private
+receipt directory; corrected-tree results below supersede those attempts.
+
+Fresh corrected-tree verification passes in series. Full 1,819 in 193 files,
+contracts 1,065, architecture 21, database 311, legacy 422, lint, production
+build and post-build typecheck all pass. The initial audit's unrelated timeout
+remains recorded above; no timeout or existing assertion was changed.
+
+The same production-mode local Chromium cases pass at baseline and head:
+13 Homepage photo/recovery cases and 9 Shop recovery/phone cases per revision.
+Homepage exercises real uploads, photo cleanup, saves, reload recovery and a
+lost response after a real commit. Shop browser cases intercept mutation and
+receipt responses; real Shop persistence, receipt and home/shop isolation are
+covered separately by the eight local atomic-save database cases. This is
+not a claim of a real Shop photo save through the complete browser/API stack.
+Public/login, owner dashboard, 401 unauthenticated API and 404 unknown-tenant smoke checks
+also pass at head without browser JavaScript errors. External video requests
+were blocked in that smoke and do not establish provider availability.
+
+An extra cleanup assertion caught an existing browser-worker environment gap.
+The worker loaded `.env.test`, which lacks the service URL/key used by its
+retirement helper; `restorePhotos` swallowed that helper's errors. Each run
+left five unreferenced published uploads despite restoring the photo rows and
+template. The ten exact test uploads were verified unreferenced and retired
+through the existing guarded API using loopback `.env.local`. Historical
+receipts were preserved. Repeating the real upload case with `.env.local`
+exported before `.env.test` passes and its cleanup succeeds. Final readback
+confirms the seeded presentation, zero photo rows/settings, and zero new
+Homepage uploads still published. No environment file or cleanup source was
+changed; the harness's swallowed-error behavior remains a documented limit.
+
+Source-only comment and independent correctness reviews found no outstanding
+issues after the nullable-URL correction. Final publication SHA and final
+revision review are recorded on PR #16. Logs and private auth state remain
+under `/home/coder/.local/state/onzio/pr16-photo` and the existing baseline
+auth directory. No native-device or hosted acceptance is claimed. The known
+VM host-stall risk remains. The temporary server is stopped after verification;
+the existing development server and unrelated project services are preserved.
+
+Rollback is a source revert of the extraction and its characterization tests.
+No data migration or repair is required. Save transport consolidation and all
+other candidates remain deferred. Exact next step is owner acceptance of the
+published revision. No merge or deployment is authorized.

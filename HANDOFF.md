@@ -1,3 +1,38 @@
+## 2026-10-16 - Implement the bounded PR #16 photo-resolution cleanup
+
+`SIMPLIFY-02` is complete and `SIMPLIFY-03` is ready_for_review. The user
+accepted the pure photo-resolution package from clean base
+`750e98122ddac8028d802ab41b2624d97bec9ba2`. One shared factory now replaces
+duplicate Homepage/Shop URL rules. Editor-specific receipt recursion remains.
+Three production files and two contract files change; six behavior cases are
+added without weakening existing assertions. No dependency or migration changes.
+
+Full 1,819 tests in 193 files, contracts 1,065, architecture 21, database 311,
+legacy 422, lint, production build and post-build typecheck pass. The initial
+build found Homepage's nullable URL type; the signature is corrected and a
+new null-URL behavior case protects it. The 15 focused cases pass. Both
+baseline and head pass 13 Homepage photo/recovery and 9 Shop recovery/phone
+browser cases. Head public/login/owner routing and 401/404 denial smoke pass
+without JavaScript errors. Shop browser mutation/receipt responses are
+intercepted; real Shop atomic persistence and isolation pass in database tests.
+No full browser/API Shop-photo save, native-device or hosted acceptance is claimed.
+
+The browser worker initially lacked the retirement helper's local service
+environment. An extra assertion caught five leftover uploads from each run.
+All ten were verified unreferenced and retired through the existing guarded
+API. Repeating the real upload case with the proper local environment passes;
+the final fixture readback confirms the seeded template, zero photo rows and
+settings, and zero new Homepage uploads still published. Existing receipt
+records are preserved. No environment or cleanup source was changed.
+
+Independent review and comment review report no outstanding findings. Final
+revision SHA and publication review are recorded on PR #16. Private receipts,
+including the failed first build, remain under
+`/home/coder/.local/state/onzio/pr16-photo`. The working plan and audit contain
+scope, evidence, limitations and rollback. Keep other simplification candidates
+deferred. Exact next step is owner review and explicit approval of the current
+revision. Do not merge, enable auto-merge or deploy before that approval.
+
 ## 2026-10-16 - Complete the PR #16 audit and scoped baseline
 
 `SIMPLIFY-01` is complete at audited source
