@@ -2,8 +2,15 @@
 
 Use this working plan to reduce maintenance cost while preserving the public
 sites, admin workflows, tenant isolation, authentication, billing, and stored
-data. Start with an audit and a fresh local baseline. Do not treat this planning
-PR as an approved rewrite or a completed simplification audit.
+data. Use the completed source audit and fresh scoped baseline linked below. Do not treat this planning
+PR as an approved rewrite or a completed simplification implementation.
+
+
+The [audit and baseline](behavior-preserving-simplification-audit.md) records
+the exact source, observed checks, original timeout, passing unchanged rerun,
+runtime limits, documentation conflicts, and ranked candidates. The first
+proposed package extracts only duplicate photo resolution after protecting
+Shop behavior. Application implementation has not started.
 
 ## Establish the scope
 
@@ -14,8 +21,8 @@ PR as an approved rewrite or a completed simplification audit.
 3. Preserve the existing architecture decisions and contract assertions.
    Record conflicting instructions before implementing a change that depends on
    them. Historical production approvals do not authorize new hosted actions.
-4. Use the Ubuntu VM for implementation and synthetic local verification after
-   verified access is restored. Keep owner credentials on Windows.
+4. Use the Ubuntu VM for implementation and synthetic local verification.
+   The `onzio-vm` SSH profile is verified; retain the host-stall risk below. Keep owner credentials on Windows.
 
 Limit the first implementation package to one behavior-preserving change.
 Require evidence of real duplication, dead code, or an unnecessary boundary.
@@ -24,23 +31,24 @@ Do not select a target by line count alone.
 
 ## Record the starting state
 
-- [ ] Record the current `origin/main` SHA, task branch SHA, worktree status,
+- [x] Record the current `origin/main` SHA, task branch SHA, worktree status,
   tool versions, and test commands in the acceptance ledger below.
-- [ ] Preserve unrelated local changes. Use an isolated worktree when needed.
-- [ ] Confirm that Supabase and provider fixtures are local and synthetic
+- [x] Preserve unrelated local changes. Use an isolated worktree when needed.
+- [x] Confirm that Supabase and provider fixtures are local and synthetic
   without printing environment values or committing authentication state.
-- [ ] Export the test environment through the project launcher. Run
+- [x] Export the test environment through the project launcher. Run
   `/home/coder/.local/bin/onzio test`, `onzio test:architecture`,
   `onzio test:contracts`, `onzio test:db`, and `onzio typecheck` serially.
-- [ ] Run `npm run lint` and `npm run build` with the project tool paths.
+- [x] Run `npm run lint` and `npm run build` with the project tool paths.
   Keep build and typecheck sequential to avoid generated-file races.
-- [ ] Record actual totals, failures, logs, and environment limits. The
+- [x] Record actual totals, failures, logs, and environment limits. The
   1,813-test result in PR #15 is historical evidence, not this package's run.
-- [ ] Reconcile the older intentionally-red framing in `AGENTS.md` and
+- [x] Reconcile the older intentionally-red framing in `AGENTS.md` and
   `tests/README.md` with the current handoff and observed test results.
   Never skip or weaken a failing contract to produce a green baseline.
-- [ ] Capture representative local public pages, login and admin redirects,
-  one ordinary editor save/reload, error recovery, and tenant-denial behavior.
+- [x] Capture representative local public pages, login and admin redirects,
+  one ordinary editor save/reload, and tenant-denial behavior. Fresh recovery
+  browser matrices remain a required implementation-package gate.
   Run browser and database suites serially and restore shared fixtures.
 
 If a starting-state check fails, separate that failure from the proposed
@@ -62,8 +70,9 @@ following columns.
 | Verification | Named existing tests and local runtime scenarios. |
 | Rollback | How to revert the isolated change without data repair. |
 
-Initial read-only inspection suggests these areas to investigate. They are
-audit leads, not accepted abstractions or confirmed dead code.
+The completed read-only audit ranks these areas. Its exact callers and
+behavior differences are recorded in the linked audit. They are proposed
+packages, not accepted abstractions or confirmed dead code.
 
 - Compare snapshot media hydration in `lib/homepage-editor/server.ts` and
   `lib/shop-editor/server.ts`. Keep each editor's tenant, capability, and
@@ -72,11 +81,11 @@ audit leads, not accepted abstractions or confirmed dead code.
   `lib/about-editor/recovery.ts`. Preserve operation identity, conflict
   handling, response-loss reconciliation, and unsaved state.
 
-- [ ] Inspect each candidate's complete call graph and load-bearing tests.
-- [ ] Identify the smallest useful deletion before proposing shared code.
-- [ ] Reject candidates whose apparent duplication represents different
+- [x] Inspect each candidate's complete call graph and load-bearing tests.
+- [x] Identify the smallest useful deletion before proposing shared code.
+- [x] Reject candidates whose apparent duplication represents different
   security or recovery policies.
-- [ ] Select one bounded candidate and name its exact file boundaries,
+- [x] Select one bounded candidate and name its exact file boundaries,
   acceptance criteria, expected benefit, and remaining uncertainty.
 - [ ] Present the evidence-backed package before starting application edits.
 
@@ -125,12 +134,12 @@ session age, billing entitlement, operation receipts, and audit boundaries.
 
 | Package | Status | Evidence and exact next step |
 | --- | --- | --- |
-| SIMPLIFY-01 | in_progress | Planning PR opened from the merged VM setup revision. Restore verified VM access, capture a fresh isolated baseline, and complete the ranked audit. |
-| SIMPLIFY-02 | not_started | Select one candidate only after SIMPLIFY-01 provides its callers, risk, tests, runtime checks, and rollback. |
+| SIMPLIFY-01 | complete | Source audit and scoped local baseline recorded in the linked audit. Preserve the initial timeout and VM-host-stall risk. |
+| SIMPLIFY-02 | ready_for_review | Proposed photo-resolution package has exact callers, behavior gaps, verification, and rollback. Await scope acceptance before application edits. |
 | SIMPLIFY-03 | not_started | Implement and independently review the accepted bounded package. Record its head SHA and all required receipts before requesting merge. |
 
-The planning PR changes this document, adds the handoff entry, and disables
-automatic Vercel preview deployment only for `agent/simplification-plan`.
+The planning PR contains this document, the audit and baseline, handoff
+entries, and the existing preview guard for `agent/simplification-plan`.
 It changes no application source, dependency, migration, or test behavior.
 Documentation and configuration checks do not establish runtime acceptance.
 
@@ -140,5 +149,5 @@ Record the audited and tested SHAs, commands, results, log paths, local runtime
 captures, independent review, fixture restoration, and remaining gaps before
 marking any package complete. Keep private local artifacts outside Git.
 
-The next deliverable is the ranked audit and selected implementation package.
+The next step is scope acceptance of the proposed photo-resolution package.
 This document does not pre-approve a repository-wide rewrite.

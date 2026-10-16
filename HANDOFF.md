@@ -1,3 +1,39 @@
+## 2026-10-16 - Complete the PR #16 audit and scoped baseline
+
+`SIMPLIFY-01` is complete at audited source
+`59a9a7ad8ee92f77ab37d541ad7dd3141c0c93dd`. Results, source-backed candidates,
+documentation conflicts, browser limits, and rollback requirements are in
+`docs/behavior-preserving-simplification-audit.md`. The plan ledger is updated
+in `docs/behavior-preserving-simplification-plan.md`.
+
+SSH is usable through the scoped Windows `onzio-vm` alias. Strict host-key
+and existing identity checks remain. Five fresh sessions and a 256-KiB transfer
+passed. VirtualBox also recorded whole-guest stalls while running via the
+Windows hypervisor/NEM path. The underlying cause remains unproven; no host
+security/hypervisor change, VM reboot, or unrelated service restart occurred.
+
+The first full run had 1,812 passes and one 15-second owner/admin cleanup
+timeout. The unchanged focused three-test check and full 1,813-test rerun pass.
+Architecture 21, contracts 1,059, database 311, legacy 422, lint, build, and
+post-build typecheck pass. Tests and timeouts were not changed. Production-mode
+local browser checks pass for email-code login, public/login/admin routing,
+401 API and 404 unknown-tenant denials, and desktop/phone player save/reload.
+Both persistence cases assert exact fixture restoration. Full Homepage/Shop
+recovery matrices and native-device acceptance remain unverified. Smoke video
+CDN requests were blocked and do not establish provider availability.
+
+No application, test, dependency, or migration source changed. The verified
+checkout stayed clean through runtime checks. Private logs/auth state remain
+under `/home/coder/.local/state/onzio/pr16-baseline`. The temporary baseline
+production server was stopped after verification. The existing dev server and
+other project services were preserved.
+
+`SIMPLIFY-02` is ready_for_review. Exact next step is scope acceptance of one
+pure photo-resolution cleanup, then Shop characterization before extraction.
+Keep receipt media maps editor-specific. Defer stateful save-transport
+consolidation. The new PR revision remains draft; no merge, deployment, hosted
+mutation, or live provider acceptance is authorized by this audit.
+
 ## 2026-10-16 - Open the behavior-preserving simplification plan
 
 `SIMPLIFY-01` is in_progress. The supervising user approved merging the exact
