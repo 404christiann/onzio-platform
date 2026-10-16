@@ -1,3 +1,26 @@
+## 2026-10-16 — Ubuntu-Coding VM ready for Onzio work
+
+`VM-ENV-01` is complete for local development: installed locked dependencies,
+started synthetic local Supabase with checked-in migrations and seed, and
+configured local-only environment files (gitignored, mode600). Existing Node
+24.22.0 and signed-in Codex are reused; Docker29.9.1, Supabase CLI2.121.0 and
+project-scoped Chromium are available. No shared Node/shell profile, package
+manifest or lockfile was changed. The other project was not modified or restarted.
+
+TypeScript, lint, production build, architecture21 and full192 files/1813
+tests pass. App/login smoke renders without browser JavaScript errors.
+Runtime instructions: `docs/vm-development.md`; local logs and receipts:
+`/home/coder/.local/state/onzio`. Onzio Coding and Onzio Agent shortcuts use
+the project launcher. GitHub is onzio-coder with repo-local credentials;
+strict owner-review/owner-only merge protections are verified. VM agents
+submit reviewed PRs; only the user authorizes merging in desktop Codex.
+
+No live provider or hosted database credentials were copied. Historical
+production approvals below are not current-session authorization. Next:
+the user assigns a task; start it with `onzio task NAME`, test/review and
+submit a PR. This environment setup authorizes no feature implementation,
+production release, or hosted data/provider action.
+
 ## 2026-10-12 — Yellow billing warning follow-up
 
 `BILLING-YELLOW-01` is in_progress: requested yellow palette implemented in
