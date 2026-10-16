@@ -285,3 +285,63 @@ Rollback is a source revert of the extraction and its characterization tests.
 No data migration or repair is required. Save transport consolidation and all
 other candidates remain deferred. Exact next step is owner acceptance of the
 published revision. No merge or deployment is authorized.
+
+## Real Shop browser/API follow-up
+
+This follow-up closes the earlier missing full Shop photo-save coverage.
+The application source remains exactly the implementation at
+`e20fef5cac08aebe1e51b5b237c015c2a5e83c6d`. No application defect was found
+and no additional application, dependency, schema or environment change was
+needed. A dedicated local Playwright configuration and three durable browser
+cases now cover the real flow.
+
+All three cases pass against the production-mode local app. Academy at 1440px
+uploads two kit photos. Cinematic at 1440px uploads two kit photos and two
+photo-row images. Cinematic at 390px repeats both collections and loses a
+real committed POST response. Every upload traverses authorization, signed
+staging upload and finalization. Reordering is verified in the save response
+and database rows. Saved API URLs, published asset metadata, direct WebP
+responses, reloaded editor thumbnails and decoded public Shop images agree.
+
+The phone case lets the real receipt GET recover the dropped response,
+asserts only one initial mutation and one receipt, and replays the exact
+request without advancing the page revision. A later real save removes one
+photo. Loading the earlier operation still hydrates both receipt collections
+using their own media while the current outer media excludes the removed
+asset. There are no fabricated mutation or receipt responses.
+
+The homepage Shop feature stays unchanged and Bravo remains byte-for-byte
+unchanged across the backed-up tables. The initial test run reached the end
+of the Academy flow but expected a 403 denial for Bravo's private preview.
+Read-only probes and tenant/RLS inspection confirm the existing fail-closed
+response is 404 `Not found`. The new assertion was corrected; no existing
+contract or application authorization changed. That initial run and its
+cleanup evidence remain in the private `attempt-1` receipts.
+
+Exact Shop rows, page revisions and presentation state are restored after
+each case and checked again after regression tests. All twelve test uploads,
+including two from the initial harness run, have guarded retirement confirmed,
+soft-deletion metadata and removed Storage objects. Existing receipts and
+presentation documents are preserved. Five new operation receipts and two
+immutable Cinematic presentation documents remain as intentional local audit
+history, with IDs recorded in the private verification summary. Cleanup uses
+the actual loopback service environment and fails on errors.
+
+The broader regression suites subsequently changed only Alpha's presentation
+timestamp and Bravo's Shop revision in these backed-up mutable records.
+After confirming all content and other fields matched, those two fixture
+metadata records were restored from the pre-run backups under the Shop locks.
+The final readback then matches both tenants' original mutable fixtures.
+
+Fresh post-browser gates pass: full 1,819 tests in 193 files, architecture 21,
+contracts 1,065, local database 311, lint, production build and post-build
+typecheck. No existing assertion or timeout was loosened. The temporary
+port 3112 server is stopped; port 3110 and unrelated services are preserved.
+Final revision review and exact publication SHA are recorded in PR #16.
+
+Reproduction is in `tests/README.md`. Private logs, backups, verification
+reports and the failed harness attempt are under
+`/home/coder/.local/state/onzio/pr16-shop-flow` and the ignored browser result
+directory. Native hardware and hosted-provider acceptance remain unclaimed.
+The known VirtualBox stall risk remains. Exact next step is owner approval
+of the final PR revision; this verification authorizes no merge or deployment.

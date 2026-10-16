@@ -223,3 +223,39 @@ matching local authenticated browser state. Never commit browser auth state.
 - Shared phone focus: `lib/__tests__/page-editor-focus.test.ts` checks stable target recovery after iframe blur/node replacement, duplicate Tryouts labels, detached frames and normal outer triggers. These narrow DOM facades complement the unchanged real browser focus-trap/Escape/Done tests in `public-page-editor-phone.spec.ts`; they do not establish native focus/keyboard acceptance.
 
 - Phone canvas obstruction: the independent Tryouts first-selection case in `public-page-editor-phone.spec.ts` verifies the iframe target's outer-page center stays above the persistent Save strip before the actual click opens tools. This catches outer overlays that iframe-local hit testing misses; existing modal/focus/keyboard assertions remain unchanged.
+
+## Shop photo browser/API flow
+
+`playwright.shop-photos.config.ts` runs three real local cases in series:
+Academy at 1440px, Cinematic at 1440px, and Cinematic at 390px with a dropped
+commit response. They upload and reorder kit photos and the Cinematic photo
+row, save through the API, check database references and receipt replay,
+reload, and decode direct public WebP images. Recovery drops the response
+only after the real save commits. It does not fabricate mutation or receipt
+responses. The phone case also removes a photo and verifies an earlier
+receipt against its own media after the current media changes.
+
+Use an isolated local Supabase and an already running local app. Set
+`PAGE_EDITOR_BASE_URL` to its tenant URL and `PAGE_EDITOR_STORAGE_STATE` to
+existing locally authenticated owner state. Alpha must have the seeded
+Academy presentation and empty Shop photo collections; the suite fails
+before writes if those fixture preconditions differ. Export both local
+environment files so server-side fixture cleanup has its service URL/key:
+
+```bash
+set -a
+. ./.env.local
+. ./.env.test
+set +a
+npx playwright test --config=playwright.shop-photos.config.ts --max-failures=1
+```
+
+The suite rejects non-loopback service URLs. Keep it serial with all other
+database/browser suites. Exact-row backups, uploaded asset IDs and verification
+reports are saved under ignored `test-results/shop-editor-photos`. It restores
+the original Shop content, page revisions and presentation state, verifies
+Bravo is unchanged, preserves existing receipts/documents, and retires only
+captured test uploads through the guarded API. Cleanup errors fail the test.
+Immutable test presentation documents and operation receipts remain as local
+audit history; their IDs are recorded. Never commit backups, traces, auth
+state or environment files.

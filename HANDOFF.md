@@ -1,3 +1,32 @@
+## 2026-10-16 - Verify the complete Shop photo-save flow for PR #16
+
+`SIMPLIFY-03` remains ready_for_review with its full Shop browser/API gap
+closed. Three new real local browser cases pass: Academy desktop, Cinematic
+desktop and Cinematic phone with committed-response loss. Both photo
+collections traverse real authorization, staging upload, finalization, Shop
+save, database references, receipt replay, reload and direct WebP rendering.
+The phone case also verifies an earlier receipt after current media changes.
+No mutation or receipt response is fabricated. No application defect was
+found; production source remains exactly `e20fef5`.
+
+The first new test expected a 403 for Bravo's private preview. The existing
+RLS/tenant boundary correctly returns 404 `Not found`; that new test assertion
+was corrected without changing application behavior or existing contracts.
+All mutable Alpha fixtures are restored exactly and Bravo is unchanged.
+Twelve captured test uploads are retired and their Storage objects removed.
+Existing receipts/documents are preserved; five new receipts and two immutable
+test presentation documents remain as recorded local audit history.
+After the broader regression suites, two fixture metadata records were restored
+from the pre-run backups; final mutable fixture readback matches both tenants.
+
+Fresh full 1,819/193 files, architecture 21, contracts 1,065, database 311,
+lint, build and post-build typecheck pass. Private evidence is under
+`/home/coder/.local/state/onzio/pr16-shop-flow`; reproduction and fixture
+requirements are in `tests/README.md`. Native-device/hosted acceptance is
+not claimed. The temporary server is stopped and existing services retained.
+Final revision review/SHA are on PR #16. Exact next step is owner approval of
+that revision. Do not merge, enable auto-merge or deploy without approval.
+
 ## 2026-10-16 - Implement the bounded PR #16 photo-resolution cleanup
 
 `SIMPLIFY-02` is complete and `SIMPLIFY-03` is ready_for_review. The user

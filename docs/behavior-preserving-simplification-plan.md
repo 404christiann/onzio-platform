@@ -137,10 +137,11 @@ session age, billing entitlement, operation receipts, and audit boundaries.
 | --- | --- | --- |
 | SIMPLIFY-01 | complete | Source audit and scoped local baseline recorded in the linked audit. Preserve the initial timeout and VM-host-stall risk. |
 | SIMPLIFY-02 | complete | The user accepted only the photo-resolution cleanup. Receipt traversal and save transport remain editor-specific. |
-| SIMPLIFY-03 | ready_for_review | Shared pure photo resolution, six new behavior cases, full local gates and baseline/head browser comparisons pass. Final revision and independent review are recorded in PR #16. Await the user's acceptance and explicit merge approval. |
+| SIMPLIFY-03 | ready_for_review | Shared pure photo resolution and six contract cases pass. Three real Shop browser/API cases now verify uploads, both photo collections, save/reload, direct rendering, receipt recovery and isolation. Fresh regression gates and fixture readback pass. Final revision and independent review are recorded in PR #16. Await explicit owner merge approval. |
 
 PR #16 contains the planning documents, implementation evidence, one shared
-photo resolver, the two editor callers, and six added behavior cases. The
+photo resolver, the two editor callers, six added contract cases and three
+real Shop browser/API cases with a dedicated local configuration. The
 branch preview guard remains in place. No dependency or migration changes
 are included. See the implementation evidence in the audit for actual checks
 and remaining environment limits.
