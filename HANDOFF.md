@@ -1,3 +1,24 @@
+## 2026-10-16 - Open the behavior-preserving simplification plan
+
+`SIMPLIFY-01` is in_progress. The supervising user approved merging the exact
+PR #15 revision and opening a separate planning PR. PR #15 is merged at
+`1a07dd70531633a473274e4e3959864774fd6a24`. The working plan is
+`docs/behavior-preserving-simplification-plan.md`.
+
+This change adds the audit scope, baseline requirements, candidate-selection
+rules, acceptance evidence, and status ledger. It also disables automatic
+Vercel preview deployment for `agent/simplification-plan`. No application,
+dependency, migration, or test behavior changes are included.
+
+Publication uses the supervising Windows environment because VM loopback SSH
+timed out. No credentials were transferred. The previous VM test results are
+historical; no fresh application tests or browser acceptance are claimed here.
+The draft is ready for the scoped audit, not for a refactor or production
+release. Exact next step is to restore verified VM access, record the current
+base and clean worktree, run the isolated baseline, and rank source-backed
+simplification candidates before selecting one bounded implementation package.
+The user retains acceptance and merge authority for this new PR revision.
+
 ## 2026-10-16 — Ubuntu-Coding VM ready for Onzio work
 
 `VM-ENV-01` is complete for local development: installed locked dependencies,

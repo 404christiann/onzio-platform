@@ -18,7 +18,8 @@
       "codex/contact-editor": false,
       "codex/public-page-editors-release": false,
       "codex/admin-icon-refresh": false,
-      "codex/admin-guided-redesign": false
+      "codex/admin-guided-redesign": false,
+      "agent/simplification-plan": false
     }
   }
 }
