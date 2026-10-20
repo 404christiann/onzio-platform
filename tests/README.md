@@ -1,13 +1,18 @@
-# Onzio red contract suite
+# Tests
 
-This directory remains intentionally ahead of the multi-tenant platform.
-Rose City's legacy application has been copied into the repository, but
-contract tests still import planned Onzio modules under `lib/`; database tests
-still expect future local Supabase migrations; and architecture tests still
-expect future tenant/security modules. Until each corresponding delivery phase
-is implemented, those contracts must remain red.
+The suites cover application behavior, tenant routing, authorization, database
+constraints, media handling, billing, and admin editing. `lib/__tests__` retains
+regression coverage from the Rose City application. `tests/contracts` covers
+platform behavior, `tests/database` exercises local PostgreSQL and RLS, and
+`tests/architecture` checks repository boundaries.
 
-## Local database setup — required before `test:db` or `npm test`
+The project began with failing contracts for unimplemented features. That is
+historical context, not an expectation that the current suites should fail.
+Use the current requirements and recorded baseline in [HANDOFF.md](../HANDOFF.md)
+when investigating a failure. Do not skip, weaken, or broadly mock a contract
+to obtain a passing run.
+
+## Configure local database tests
 
 The database suite needs a running local Supabase **and** the test environment
 exported into the shell. Vitest does **not** auto-load `.env.test`; nothing in
@@ -15,21 +20,27 @@ exported into the shell. Vitest does **not** auto-load `.env.test`; nothing in
 
 ```bash
 supabase start
-cp .env.test.example .env.test   # then fill in from `supabase status`
-set -a && . ./.env.test && set +a && npm run test:db
 ```
 
-Skipping the `set -a && . ./.env.test` step produces
-`[RED CONTRACT] Local Supabase is unavailable or the planned onzio.clubs
-contract is missing: Error: Expected 3 parts in JWT; got 1`, plus
-`Invalid supabaseUrl`. Both mean **the environment was not exported**, not that
-Supabase is down — check `supabase status` before concluding the database is
-unavailable. Roughly 75 database tests fail this way, and the message has
-already been misread once as an unrunnable environment (`DCFC-702`, 2026-08-06).
+Create `.env.test` from `.env.test.example` if it does not exist. Fill in the
+local values described in the [development guide](../docs/local-development.md).
+Export the file before running tests:
 
-`.env.test` is gitignored. Its values are local fixtures: the Supabase demo JWTs
-are identical on every local install, and the Stripe entries are inert
-placeholders the suite rejects live values for.
+```bash
+set -a
+. ./.env.test
+set +a
+npm run test:db
+```
+
+If database tests report invalid JWTs or an invalid Supabase URL, check the
+exported local environment first. Use `supabase status` to check the stack.
+The `[RED CONTRACT]` prefix remains in test-helper diagnostics; the prefix
+alone does not establish whether a failure is configuration or application behavior.
+
+`.env.test` is gitignored. Use credentials from the isolated local Supabase
+stack and inert Stripe test values. The suite rejects hosted database URLs
+and live Stripe values.
 
 Commands:
 
@@ -73,9 +84,10 @@ Commands:
 The database suite accepts only loopback Supabase URLs. Stripe fixtures accept
 only test-mode keys and events.
 
-Phase 1 verified 229 passing legacy tests. The 2026-09-17 local full suite passes
-1,535 tests. Treat future contract failures as requirements, not harness defects;
-do not skip, weaken, or broadly mock them.
+Run database and browser suites serially. They share deterministic local
+fixtures, so concurrent writers can invalidate each other's assertions and
+cleanup. The prepared VM's `onzio test` command exports `.env.test` automatically;
+see the [VM guide](../docs/vm-development.md).
 
 ## Contact section-guide editor
 

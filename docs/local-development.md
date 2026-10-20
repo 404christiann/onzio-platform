@@ -1,4 +1,4 @@
-# Local Development and Environment Safety
+# Local development
 
 ## Prerequisites
 
@@ -10,20 +10,29 @@
 ## Install and verify
 
 ```bash
-npm install
-npm run test:legacy
-npx tsc --noEmit
-npm run test:contracts
-npm run test:architecture
-npm run test:db
+npm ci
+```
+
+Configure the local application and test environments below, then start the app
+with `npm run dev` and open `http://alpha.localhost:3000`. The prepared Ubuntu
+VM uses its [project launcher](vm-development.md) and port 3110 instead.
+
+Once local Supabase is running and `.env.test` contains local values, run:
+
+```bash
+set -a
+. ./.env.test
+set +a
 npm test
 npm run lint
 npm run build
+npx tsc --noEmit
 ```
 
-The platform suites intentionally fail for unimplemented phases. A red
-contract must fail with `[RED CONTRACT]`, not with an import, configuration, or
-test-harness error. `npm run test:legacy` must remain green.
+Investigate failures against the current requirements and recorded baseline.
+Early red-contract milestones are historical. The
+[test guide](../tests/README.md) explains local prerequisites and focused suites.
+Run shared-fixture database and browser suites serially.
 
 ## Application environment
 

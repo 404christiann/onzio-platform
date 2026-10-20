@@ -1,3 +1,24 @@
+## 2026-10-20 - Public setup and test guidance
+
+`DOCS-01` is ready_for_review. The README now describes the application and
+links to local setup, tests, and architecture. Agent instructions and setup
+guides no longer describe current failures as expected red contracts. Test
+setup exports `.env.test` and requires serial database/browser suites.
+
+Validation passes for 21 architecture tests, 10 presentation contracts,
+11 relative Markdown links, documented npm script names, and whitespace.
+The only configuration change disables automatic Vercel deployment for
+`agent/public-docs-cleanup`. Application code, test assertions, dependencies,
+and migrations are unchanged. No full regression suite or database suite
+was rerun for this documentation change.
+
+The user accepted code-authored club sites and valid content maintenance
+independent of displayed fields. That migration is separate from this PR.
+Next is owner review of this revision, followed by a concise architecture
+decision and current-behavior/performance coverage for the site migration.
+Review findings and the exact revision belong in the PR handoff. No merge,
+deployment, hosted write, or live provider operation is included.
+
 ## 2026-10-16 — Ubuntu-Coding VM ready for Onzio work
 
 `VM-ENV-01` is complete for local development: installed locked dependencies,
