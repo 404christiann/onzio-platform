@@ -31,7 +31,7 @@ beforeAll(() => {
   put(source, "components/ClubContextProvider.tsx", 'export const authority = "Current platform";');
   put(source, "lib/homepage-editor/capabilities.ts", 'export const binding = "legacy@1";');
   put(source, "public/first-load.png", "retained image bytes");
-  put(source, "package-lock.json", JSON.stringify({ packages: Object.fromEntries(["tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"].map(name => [`node_modules/${name}`, { version: "1.0.0" }])) }));
+  put(source, "package-lock.json", JSON.stringify({ packages: Object.fromEntries(["next", "react", "react-dom", "typescript", "tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"].map(name => [`node_modules/${name}`, { version: "1.0.0" }])) }));
   execFileSync("git", ["init", "--quiet"], { cwd: source });
   execFileSync("git", ["add", "."], { cwd: source });
   execFileSync("git", ["-c", "user.name=Local test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Test platform"], { cwd: source });
@@ -56,6 +56,14 @@ describe("retained pilot source boundary", () => {
     expect(verifyPilotSource(artifact, packageDigest).digest).toBe(packageDigest);
     expect(readFileSync(join(output, "components/sites/diverse-city/TypeChild.ts"), "utf8")).toContain("Retained type child");
     expect(readFileSync(join(output, "components/sites/diverse-city/AliasChild.ts"), "utf8")).toContain("Retained alias child");
+  });
+  it.each(["next", "react", "react-dom", "typescript"])("rejects a changed implicit framework/build package %s", name => {
+    const current = join(directory, `changed-${name}`);
+    cpSync(source, current, { recursive: true });
+    const lock = JSON.parse(readFileSync(join(current, "package-lock.json"), "utf8"));
+    lock.packages[`node_modules/${name}`].version = "2.0.0";
+    put(current, "package-lock.json", JSON.stringify(lock));
+    expect(() => reconstructPilotSource({ root: current, directory: artifact, expectedDigest: packageDigest, output: join(directory, `rejected-${name}`) })).toThrow("Runtime versions differ; compatibility review required");
   });
   it.each(["source/components/sites/diverse-city/Child.tsx", "emitted/static/media/font.woff2", "source/public/first-load.png"])("rejects missing retained bytes %s", path => {
     const damaged = copy(path.replaceAll("/", "-"));
