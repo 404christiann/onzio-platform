@@ -20,7 +20,8 @@
       "codex/admin-icon-refresh": false,
       "codex/admin-guided-redesign": false,
       "agent/public-docs-cleanup": false,
-      "agent/site-architecture": false
+      "agent/site-architecture": false,
+      "agent/site-performance-checks": false
     }
   }
 }

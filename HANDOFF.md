@@ -1,3 +1,24 @@
+## 2026-10-20 - Reusable homepage performance checks
+
+`SITE-02` adds `scripts/check-site-performance.mjs` for local production
+captures, content identity, completed kit reads, and resource gates. Independent
+review found an automatic-redirect escape. The fix disables automatic redirects
+and validates each target before fetching it. A two-server probe reproduced the
+original escape and confirmed zero destination requests after the fix. The
+checked-in redirect-chain and WebSocket regressions pass. The second independent
+review reproduced a socket escape; sockets are now blocked before connection.
+Both fixes prevent any request to the controlled disallowed destination.
+Reports before schema version 3 are invalidated.
+
+Fresh baseline and unchanged comparison pass all 24 navigations. Each measured
+viewport loads five fonts (173,316 decoded bytes) and completes 31 browser REST
+reads. The unused-variant gate correctly rejects the current broad loader.
+Architecture tests pass 21/21; the exact-revision review belongs in the PR handoff. Request mediation excludes timing speedup claims. No application
+or database behavior changes. Next is the separately reviewed homepage extraction,
+then narrow home-kit loading. Use identical synthetic fixtures and run shared
+fixture database/browser writers serially. Release and content-policy work remain
+later packages in the architecture ledger.
+
 ## 2026-10-20 - Accepted club site architecture
 
 `SITE-01` records the accepted code-authored site model in

@@ -115,7 +115,7 @@ their separate assignments.
 | Package | Scope | Status and acceptance |
 | --- | --- | --- |
 | SITE-01 | This decision and superseded guidance | ready_for_review; no application behavior changes. |
-| SITE-02 | Reusable local performance checks | pending; capture valid production output and prove the resource gates. |
+| SITE-02 | Reusable local performance checks | ready_for_review; 24 production navigations, redirect-chain regression, and expected unused-variant rejection pass. |
 | SITE-03 | First homepage extraction | pending; public/editor reuse, preserved output, and existing save/recovery checks. |
 | SITE-04 | Narrow homepage data loading | pending; remove unused reads and compare identical production scenarios. |
 | SITE-05 | Retained release and assignment proof | pending; verify old/new code, concurrency, unknown releases, and rollback locally. |
