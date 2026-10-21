@@ -1,3 +1,33 @@
+## 2026-10-21 - Pilot runtime inventory review correction
+
+PR23 now requires explicit Next, React, React DOM and TypeScript versions even
+when the retained source graph does not import them. The CSS tools remain
+explicit roots. Four regressions reproduced successful reconstruction after
+changing each omitted lockfile version, then passed after the inventory fix.
+Old packages without these entries must be regenerated and their new digest
+accepted. This inventory records package roots, not the full transitive lock
+closure. No application, hosted data or production assignment behavior changes.
+
+All 1,828 tests across 194 files, including the 14 focused package checks,
+pass. TypeScript, lint and diff whitespace checks pass. Independent review of
+the committed correction is required before updating PR23.
+Next, rebase PR24 onto this correction and guard its effective local environment.
+
+## 2026-10-21 - Actual pilot source package
+
+`SITE-05B` is ready_for_review. The local package tool follows the actual homepage,
+shell, injected badge, font/style and compiler roots through literal imports.
+It retains public assets and emitted CSS/media with a digest-pinned manifest.
+Reconstruction replaces visual inputs while preserving current query, tenant,
+preview, persistence and media-policy implementations. Binding changes and
+runtime version changes require compatibility review. Production callers and
+assignments are unchanged. `SITE-05A` is merged in PR22.
+
+Next acceptance is the real retained-source reconstruction build and browser
+proof in `SITE-05C`. Offline font builds, isolated shell/style ownership and
+production assignment/save integration are not established by source hashes.
+All 1,824 tests across 194 files, 10 focused package checks, lint and TypeScript pass. The actual 706-file package verifies against its accepted digest and reconstructs successfully. The existing production build supplies its emitted CSS/media; real reconstructed browser acceptance follows in SITE-05C. Exact-revision independent review is required before submission.
+
 ## 2026-10-21 - Local assignment and rollback proof
 
 `SITE-05A` is ready_for_review. Tests and a loopback-only runner exercise immutable

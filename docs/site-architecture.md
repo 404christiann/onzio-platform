@@ -119,7 +119,9 @@ their separate assignments.
 | SITE-03 | First homepage extraction | complete; merged; 1,813 regressions, 8 browser tests, public/editor reuse, screenshot parity, and resource gates pass. |
 | SITE-04 | Narrow homepage data loading | complete; merged; browser reads 31 to 27, populated screenshot parity, 1,813 regressions and 10 browser tests pass. |
 | SITE-05 | Retained release and assignment proof | in_progress; isolated mechanism in SITE-05A. Actual pilot packaging, binding-aware saves and deployment coordination remain. |
-| SITE-05A | Local SQL and retained React release rehearsal | ready_for_review; 1,814 tests, real SQL races and inspected desktop/mobile retained-rendering proof pass. |
+| SITE-05A | Local SQL and retained React release rehearsal | complete; merged; 1,814 tests, real SQL races and inspected desktop/mobile retained-rendering proof pass. |
+| SITE-05B | Actual pilot source package and reconstruction tool | ready_for_review; PR23 correction explicitly pins framework/build roots; four lock-version mismatch regressions pass; 1,824 tests pass; actual 706-file package verifies and reconstructs; source graph, emitted CSS/media and explicit current-platform boundaries. Real reconstructed browser acceptance follows in SITE-05C. |
+| SITE-05C | Actual pilot reconstruction acceptance | pending; fresh Next build, visual mutation and current-platform checks, desktop/mobile public/editor verification. |
 | SITE-06 | Content-policy migration | pending; one domain per PR with authorized and denied direct-RPC cases. |
 | SITE-07 | Complete pilot and remaining sites | pending; full local acceptance before each separately authorized activation. |
 | SITE-08 | Retire active theme machinery | pending; all active/rollback assignments migrated and historical consumers inventoried. |
@@ -137,3 +139,6 @@ revision, actual results, remaining limits, and exact next action in each PR.
 The [local assignment proof](site-assignment-proof.md) uses independent synthetic
 React releases. It does not package the Academy dependency tree, migrate current
 routing, or establish new binding-aware save authorization.
+
+The [pilot source package guide](pilot-source-package.md) describes retained
+source reconstruction and its remaining runtime ownership limits.
