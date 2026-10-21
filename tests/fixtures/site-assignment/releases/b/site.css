@@ -1,0 +1,1 @@
+body{margin:0;background:#18382e;color:#fff4d7;font-family:Georgia,serif}main{box-sizing:border-box;max-width:960px;margin:auto;padding:32px;overflow-wrap:anywhere}header{display:flex;gap:24px;align-items:center}h1{font-size:clamp(2rem,6vw,4rem)}a{display:inline-block;padding:16px;background:#fff4d7;color:#18382e}img{image-rendering:pixelated}

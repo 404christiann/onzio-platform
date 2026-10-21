@@ -89,6 +89,14 @@ fixtures, so concurrent writers can invalidate each other's assertions and
 cleanup. The prepared VM's `onzio test` command exports `.env.test` automatically;
 see the [VM guide](../docs/vm-development.md).
 
+## Local site assignment and rollback proof
+
+See [the proof scope and commands](../docs/site-assignment-proof.md).
+The proof creates a unique unexposed schema in loopback PostgreSQL, exercises
+real concurrent transactions and existing homepage RPCs, then removes the schema.
+Run it serially with other database and browser suites. Its React pages are test
+fixtures; they do not change the current club site or editor.
+
 ## Local homepage performance checks
 
 Use production builds with the same synthetic Alpha content. The check only

@@ -23,7 +23,8 @@
       "agent/site-architecture": false,
       "agent/site-performance-checks": false,
       "agent/homepage-pilot": false,
-      "agent/home-kit-loading": false
+      "agent/home-kit-loading": false,
+      "agent/site-assignment-proof": false
     }
   }
 }
