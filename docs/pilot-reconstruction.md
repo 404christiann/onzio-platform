@@ -49,6 +49,11 @@ If that checkout predates the launcher, invoke the launcher's absolute path
 from the current checkout while keeping the accepted app as your working folder.
 Keep the synthetic Alpha fixture on its seeded Academy assignment.
 
+The launcher records a successful build and verifies its source, output and
+selected public environment before start. Old builds without a receipt need a
+fresh guarded build. See [local build provenance](pilot-build-provenance.md) for
+file coverage, lock recovery and limits.
+
 The launcher resolves and checks the environment again immediately before each
 Next build or start. It passes that checked environment to the child process
 and binds starts to `127.0.0.1`. Use these guarded commands throughout the

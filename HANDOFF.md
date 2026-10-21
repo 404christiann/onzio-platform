@@ -1,3 +1,66 @@
+## 2026-10-21 - Guarded local build provenance and stale-start rejection
+
+`SITE-05H` is ready_for_review. PR28 is verified merged at
+`5122ab712cc3998e625b5c494e98dd211d01462f`; SITE-05G is reconciled as complete.
+The new isolated task starts from that merge. SITE-05 remains in_progress.
+
+A genuine Next production fixture reproduced the gap: build A, change source to
+B, and the existing guarded start still serves A. Independent designs and a
+judge selected one strict successful local-build receipt, consumed by the real
+guarded launcher. It records complete observed source/output inventories and a
+digest of selected public environment. Start verifies these before Next spawn.
+An exclusive root lock spans the child, including a running server. Losing
+commands preserve the owner's lock and receipt. A failed new build invalidates
+previous success before environment/Next preflight. Receipt publication is atomic.
+
+The first design could stamp old default output when a successful child built
+into a custom excluded output folder. A genuine Next control reproduced it.
+Build now removes the old regular BUILD_ID after safe output scanning and
+requires Next to recreate it, preserving the remaining output/cache. The fixed
+real custom-output case leaves no eligible receipt. Included symlinks fail closed.
+The new overlapping-command regression uses explicit release synchronization.
+
+Both first exact-revision reviews requested changes at `507f18e`. One reproduced
+a genuine phase-dependent Next configuration that builds default B but serves
+stale custom A. The other independently reproduced unsafe temporary-path
+validation preserving the old receipt after a failed build. Configuration now
+uses the actual Next loader in isolated checked-environment probes. Both build
+phases must select normal .next; start checks the server phase between receipt
+validations. Probe output is suppressed, and input snapshots span evaluation.
+Old receipt/BUILD_ID are revoked before temporary-path preflight. Ten added
+regressions and genuine Next replays cover both corrections. Repairing the temp
+path no longer restores eligibility, and the old phase-dependent receipt rejects
+without starting stale A. Normal HTTP/rebuild controls still pass. Updated
+independent exact-revision reviews are required for these corrections.
+
+All 2,104 tests in 201 files pass, plus 1,211 contracts, 137 architecture cases
+and 334 local database cases. The focused launcher/environment suite passes 86
+cases, adding 55 while preserving all 31 environment checks. The initial targeted
+baseline had 17 failures. TypeScript, lint and whitespace checks pass. Database
+suites ran serially. A minimal genuine Next 15.5.22 app passes fresh build/start
+HTTP marker checks, source/output rejection, rebuild, failed-compilation
+invalidation and overlap rejection. Only owned loopback children were started
+and stopped. This is command lifecycle evidence, not fresh Academy public/editor,
+full installed-pilot, browser-origin or deployment acceptance. The prior raw
+database-types-generation mismatch is untouched and was not rerun.
+
+The new module/launcher, two architecture suites, local lock ignore, build guide,
+reconstruction/tests guidance and ledger/handoff comprise this unit. Task-branch
+automatic deployment is disabled. App routes/UI, SQL, generated types, source
+package/reconstruction checks, dependencies, save/recovery and permissions remain
+unchanged. Independent exact-revision verdicts belong in the final PR handoff.
+Evidence and rerunnable genuine Next probes are in `/tmp/onzio-installed-release`.
+No comment or suppression findings.
+
+Observed pre/post snapshots do not prove continuous immutability. Private/custom
+environment, excluded paths and installed dependency bytes remain outside the
+receipt identity. It is not a signature, runtime ABI certificate, accepted-package
+identity or proof-server binding. These remain separate installed-release units;
+authored assignments and activation remain unimplemented. Next is Christian's
+final review and merge. The original intentional dirty HANDOFF bytes and source
+conversation are preserved. No merge, deploy, auto-merge, protection, hosted-data,
+provider, billing, desktop-credential or unified-ai-chat operation occurred.
+
 ## 2026-10-21 - Complete dependency-lock gate for retained pilot reconstruction
 
 `SITE-05G` is ready_for_review. PR27 is verified merged at

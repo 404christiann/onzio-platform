@@ -327,3 +327,20 @@ for preparation compatibility preflight and documented build/start environment
 guards. The tests run the real CLIs with synthetic file fixtures and a harmless Next child stub. They
 check dotenv precedence and expansion, shell overrides, both live Stripe key
 prefixes and error redaction without starting the app or contacting providers.
+
+
+## Guarded local build provenance
+
+Run `npx vitest run tests/architecture/pilot-reconstruction-build.test.ts
+tests/architecture/pilot-reconstruction-environment.test.ts` for real launcher
+CLI cases with isolated synthetic Next children. These check receipt lifecycle,
+complete file membership, public environment drift, stale output, symlinks and
+exclusive operation locks while preserving all environment rejection cases.
+The suite also checks actual-loader phase selection and redaction, configuration
+side effects, and failed-build invalidation before temporary-path validation.
+The [local build guide](../docs/pilot-build-provenance.md) states the guarantee
+and exclusions. Synthetic child tests do not establish a genuine Next build.
+Separate acceptance builds a minimal actual Next application, starts it on
+loopback, reads its marker, rebuilds changed source and rejects corrupted
+executable output and failed-build reuse. That is command lifecycle evidence,
+not full Onzio public/editor or installed-pilot acceptance.
