@@ -29,6 +29,57 @@ The live rules apply to every checkout. This VM note mirrors Christian's update;
 the corresponding Mac note was reported as uncommitted. No GitHub rules were
 changed from the VM during this synchronization.
 
+## 2026-10-21 - Assignment-aware homepage saves
+
+`SITE-05E` is ready_for_review. PR25 is merged at
+`b91fbe8e8b83d9596dd455636772b80134cdcf30`; SITE-05D is reconciled as complete.
+The homepage-only opaque design token now includes a private assignment epoch
+and installed binding identity. Current legacy published-pointer selection and
+latest-document fallback remain the authority. No production authored-release
+registry or activation is introduced. Other page editors retain their tokens.
+
+A real local A→B→A reproduction accepted the old save before this change and
+returns `DESIGN_CHANGED` afterward with unchanged content revision. Epochs cover
+slug, state lifecycle, pointer changes and fallback document insertion. No-op
+and draft-only updates preserve them. The save/load RPC bodies, original request
+hash, receipt storage and nonmigrated SQL content policy remain unchanged.
+Authorized exact actor/club receipt replay precedes current assignment, binding
+and content conflicts. Unknown binding or missing epoch fails fresh operations.
+Content permissions remain separate from binding visibility.
+
+All 1,970 tests across 199 files pass. Separate runs pass 1,150 contracts,
+64 architecture checks and 334 local database checks. The focused run passes
+51 cases, including real committed transitions, both observed advisory lock
+orders, genuine legacy-format receipt replay, stale content, tenant isolation,
+binding parity and migration contention. TypeScript, lint and the guarded
+production build pass. Browser results and independent exact-revision review
+verdicts are recorded in the final PR handoff under
+`/tmp/onzio-assignment-saves`. The desktop conflict banner also receives two CSS
+rules to put its actions beneath the message; its layout assertion was reproduced
+failing before the fix. Incompatible-draft integration remains a separate PR.
+
+The local CLI initially rejected `LOCK TABLE` outside an explicit transaction
+before any schema change. The migration now has explicit BEGIN/COMMIT and applies
+successfully through `supabase migration up --local`. It takes table locks with
+NOWAIT before a nonblocking advisory-lock attempt, avoiding migration/writer
+lock inversion. Both contention paths abort without partial changes. Local
+security advisors report no issues. No hosted migration was attempted.
+
+The additional `npm run db:types:check` fails on generator-wide conventions in
+Supabase CLI 2.121.0, including quoted properties, added `ComputedFields: never`
+and `NonNullable` wrappers on existing JSON fields. The raw check is not passing.
+A diagnostic AST comparison matches after accounting for those conventions;
+this is not a substitute for the raw check. The exposed schema and committed
+`lib/database.generated.ts` are unchanged. Diff and diagnostic logs are retained.
+
+The leading merge-rules note is preserved verbatim, including its original
+uncommitted copy in the starting checkout. Task-branch Vercel deployment is
+disabled. Christian retains final review and merging. SITE-05 remains in_progress.
+Authored assignment resolution, incompatible-draft review/apply and deployment
+coordination remain separate work. All rehearsals use local synthetic data;
+no hosted/provider, merge, deployment, auto-merge, protection or unified-ai-chat
+operations are authorized or performed.
+
 ## 2026-10-21 - Versioned homepage editing bindings
 
 `SITE-05D` is ready_for_review. The code-owned element map in

@@ -13,6 +13,8 @@
 .hp-notification p { margin:2px 0 0; overflow-wrap:anywhere; }
 .hp-notification-icon { display:grid; place-items:center; width:22px; height:22px; border-radius:50%; color:white; font-weight:700; }
 .hp-notification-actions { display:flex; align-items:center; gap:4px; }
+.hp-notification-modal { grid-template-columns:24px minmax(0,1fr); }
+.hp-notification-modal .hp-notification-actions { grid-column:2; }
 .hp-notification-action,.hp-notification-dismiss { min-width:44px; min-height:44px; border:0; background:transparent; color:inherit; font:600 12px/1.2 inherit; cursor:pointer; padding:4px; }
 .hp-notification-action { text-decoration:underline; }
 .hp-notification-saving { background:#eef6ff; border-color:#b9d9ff; color:#174a82; }

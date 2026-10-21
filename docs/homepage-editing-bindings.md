@@ -33,7 +33,7 @@ Equality establishes only the same editing meaning. It establishes neither
 content freshness nor authorization, assignment freshness, or installed code.
 
 The source-package tool retains and compares the entire `capabilities.ts` file.
-This PR changes those bytes, so older retained source packages require fresh
+PR25 changed those bytes, so older retained source packages require fresh
 compatibility review and regeneration with a newly accepted digest. Semantic
 binding identity does not replace the existing byte comparison. Historical
 packages and receipts remain intact.
@@ -52,16 +52,14 @@ current callers, including save filtering.
 
 ## Integration boundaries
 
-The existing homepage save request, content revision, and `designRevision` remain
-unchanged. No binding identity enters RPC arguments, request hashes, actor-scoped
-receipts, or browser recovery records in this PR. Exact receipt replay still
-precedes current design and stale-content conflicts after authorization. The
-legacy SQL restrictions, tenant validation, media validation, and trusted
-internal destinations remain authoritative for nonmigrated content.
+The save request shape and browser recovery schema remain unchanged. The
+[assignment-aware save boundary](homepage-assignment-saves.md) now includes the
+server-owned assignment epoch and trusted binding identity in the homepage-only
+opaque `designRevision`. Other page editors keep their existing design tokens.
+Exact actor-scoped receipt replay still precedes current-design and stale-content
+conflicts after authorization. Nonmigrated SQL content policy remains unchanged.
 
-The next PR must integrate assignment-aware saves without invalidating exact
-receipt replay. A later PR must retain incompatible unsaved drafts for explicit
-review before applying them. Neither unit can infer safety from UI visibility or
-from this contract alone. Local deployment and activation coordination still
-need proof before a new authored assignment can become active. Content-policy
-migration remains a separate domain-by-domain change with direct-RPC coverage.
+Incompatible unsaved drafts remain a separate PR. Existing conflicts retain their
+records without rebinding them to current identity. Authored assignment resolution
+and deployment/activation coordination still need proof before activation.
+Domain-by-domain content-policy migration requires its own direct-RPC coverage.
