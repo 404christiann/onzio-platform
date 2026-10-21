@@ -69,7 +69,7 @@ function localImport(from: string, specifier: string) {
 function graph(root: string) {
   const owned = new Set<string>();
   const shared = new Set<string>();
-  const packages = new Set<string>(["tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"]);
+  const packages = new Set<string>(["next", "react", "react-dom", "typescript", "tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"]);
   function visit(path: string) {
     if (platform.has(path)) { shared.add(path); return; }
     if (!visual(path)) throw new Error(`Unclassified visual dependency: ${path}`);

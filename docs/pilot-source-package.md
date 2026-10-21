@@ -49,7 +49,12 @@ preview context identity, editor state types, database types, presentation
 validation, errors and media policy. These files never transfer from the retained
 package. The manifest records their original hashes for provenance. Reconstruction
 keeps their current bytes and requires the locked build/runtime versions to match.
-Future version compatibility needs a separate verification pass.
+The inventory explicitly includes Next, React, React DOM, TypeScript and the CSS
+build tools even without source imports. Scanned imports add other package roots.
+This inventory does not track every transitive dependency in the lockfile.
+Future version compatibility needs a separate verification pass. Packages created
+without the required framework/build roots fail verification. Regenerate those
+packages and accept their new digests before reconstruction.
 
 Legacy homepage capabilities are retained as binding metadata. Reconstruction
 refuses a changed capability implementation instead of overwriting current save

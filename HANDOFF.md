@@ -1,3 +1,18 @@
+## 2026-10-21 - Pilot runtime inventory review correction
+
+PR23 now requires explicit Next, React, React DOM and TypeScript versions even
+when the retained source graph does not import them. The CSS tools remain
+explicit roots. Four regressions reproduced successful reconstruction after
+changing each omitted lockfile version, then passed after the inventory fix.
+Old packages without these entries must be regenerated and their new digest
+accepted. This inventory records package roots, not the full transitive lock
+closure. No application, hosted data or production assignment behavior changes.
+
+All 1,828 tests across 194 files, including the 14 focused package checks,
+pass. TypeScript, lint and diff whitespace checks pass. Independent review of
+the committed correction is required before updating PR23.
+Next, rebase PR24 onto this correction and guard its effective local environment.
+
 ## 2026-10-21 - Actual pilot source package
 
 `SITE-05B` is ready_for_review. The local package tool follows the actual homepage,
