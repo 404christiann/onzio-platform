@@ -32,7 +32,7 @@ const section = {
 };
 const photos = ["/images/shop/rosecityshirt1.webp", "/images/shop/rosecityshirt2.jpeg"].map((url, index) => ({ id: String(index), surface: "home", kit_variant: "home", url, sort_order: index, created_at: section.updated_at }));
 const routeErrors: string[] = [];
-const captures: { label: string; width: number; public: unknown; preview: unknown; fonts: string[]; css: string[]; images: string[]; scripts: { path: string; sha256: string }[]; screenshots: string[]; pageErrors: string[] }[] = [];
+const captures: { label: string; width: number; public: unknown; preview: unknown; fonts: string[]; css: string[]; images: string[]; scripts: { path: string; sha256: string }[]; screenshots: string[]; pageErrors: string[]; networkErrors: string[]; consoleErrors: string[]; bodyErrors: string[] }[] = [];
 async function main() {
 let lateFont: (typeof manifest.files)[number] | undefined;
 const browser = await chromium.launch();
@@ -148,7 +148,7 @@ try {
         assert(fonts.size >= 3 && [...fonts].every(value => retainedHashes.has(value)), "Loaded font bytes must come from retained artifact");
         assert([...images.values()].every(value => retainedHashes.has(value)), "Loaded image bytes must come from retained artifact");
       }
-      captures.push({ label, width, public: publicState, preview, fonts: [...fonts].sort(), css: [...css].sort(), images: photos.map(photo => required(images.get(photo.url), photo.url)), screenshots, pageErrors, scripts: [...scripts].sort().map(([path, sha256]) => ({ path, sha256 })) });
+      captures.push({ label, width, public: publicState, preview, fonts: [...fonts].sort(), css: [...css].sort(), images: photos.map(photo => required(images.get(photo.url), photo.url)), screenshots, pageErrors, networkErrors, consoleErrors, bodyErrors, scripts: [...scripts].sort().map(([path, sha256]) => ({ path, sha256 })) });
     } finally { await context.close(); }
   }
   for (const width of [1440, 390]) {

@@ -56,6 +56,6 @@ for (const path of ["source/components/Hero.tsx", font.path, "source/public/imag
 const report = { artifact, digest: values.digest, sourceCommit: manifest.sourceCommit,
   currentPlatformCommit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
   changed: current, restored: restored.directory, rejectedMissingFiles: failures,
-  limits: ["Setup only; build both copies and run the browser rehearsal before acceptance.", "Local environment files remain private in this ignored directory."] };
+  limits: ["Setup only; build both copies and run the browser rehearsal before acceptance.", "Local environment files remain private in this temporary directory."] };
 writeFileSync(join(output, "setup.json"), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify({ setup: join(output, "setup.json"), changed: current, restored: restored.directory }));

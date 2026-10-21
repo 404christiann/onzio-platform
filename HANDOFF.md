@@ -1,6 +1,6 @@
 ## 2026-10-21 - Actual pilot reconstruction acceptance
 
-`SITE-05C` is in_progress on top of the reviewed source package. The real Next
+`SITE-05C` is ready_for_review on top of the reviewed source package. The real Next
 build of retained A restores public/editor typography, stylesheet/font/image
 bytes and exact kit screenshots after B changes. Current B's API denial marker
 remains active. Desktop 1440 and phone 390 public/kit/editor screenshots were
@@ -12,7 +12,15 @@ binding-aware saves, deployment coordination and runtime activation remain open.
 The setup command creates private temporary controls and rejects actual package
 copies missing a hero module, font or kit image. It never modifies the current
 app or hosted state. Source packaging is PR23. Record final validation and exact
-independent review before submission of this child unit.
+independent review before submission of this child unit. All 1,824 tests across
+194 files, lint and TypeScript pass. Original and generated B/restored A Next
+production builds and post-build TypeScript pass. The new browser rehearsal
+passes all six desktop/mobile captures; all 18 screenshots were inspected from
+the first strict run. The setup-generated rerun also passes. Existing editor
+browser acceptance passes 13 tests, including committed response-loss recovery
+and all-template public/preview parity. Its production inputs match the generated
+restored A across 598 files. Alpha content, slug and seeded pointers must be
+verified restored before handoff.
 
 ## 2026-10-21 - Pilot runtime inventory review correction
 
