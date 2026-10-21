@@ -1,3 +1,32 @@
+## 2026-10-21 - Homepage home-kit loading
+
+`SITE-04` is ready_for_review. The Academy homepage feature uses the existing
+single-kit query for home/home, preserving tenant scope, ordered photos, editor
+override, loading and own-kit error behavior. Other multi-kit callers are unchanged.
+The browser regression reproduces valid home content disappearing on unused-kit
+failures in the previous build and passes against the change at desktop/mobile
+widths. Controlled GET responses supply local product images; no kit fixture is written.
+
+Validation passes 119 focused tests, all 1,813 regressions, lint, isolated
+production build and TypeScript. Twelve production browser samples preserve
+content and font bytes while completed browser REST reads fall from 31 to 27
+(min/median/max 27 per measured viewport). Home-kit section/photo reads each occur
+once; third/away reads disappear. This measures browser resources, not total SQL
+or end-to-end speed. Decoded JavaScript grows by 9 bytes versus the extraction.
+Normal populated home-kit copy, photo order, loaded images, and screenshots match
+the previous build at 1440 and 390 widths while kit reads fall from 6 to 2.
+Screenshots were opened and inspected. All 10 browser cases pass, including real
+editor saves, retries, recovery, keyboard and full public/editor parity.
+
+An initial browser run was terminated before completion. Synthetic state was
+restored with the existing repair helper and the entire suite rerun serially;
+Alpha slug, seeded design pointers and baseline hero copy are verified restored.
+Only temporary test copies adapt existing hardcoded ports to 3124. Build source
+was 037ca042f0b89385bbd17600323d0699421de58e; application sources match the final
+revision. Exact-head independent review and artifact details belong in the PR.
+Next is `SITE-05`, proving retained releases and assignment/rollback locally.
+Content-policy migration, wider document cleanup and theme retirement remain.
+
 ## 2026-10-20 - First authored homepage pilot
 
 `SITE-03` is ready_for_review. Diverse City's composition lives under

@@ -92,7 +92,7 @@ describe("editorial store page", () => {
     // academy@1's equivalent teaser does read the home surface, so DCFC's
     // Home Page tab stays live.
     const academy = stripComments(read("components/AcademyHomeShopFeature.tsx"));
-    expect(academy).toContain('fetchShopKitVariants("home", clubId)');
+    expect(academy).toContain('fetchShopKitContent("home", "home", clubId)');
   });
 
   it("carries every non-blank photo for a variant, not just the first one", () => {
