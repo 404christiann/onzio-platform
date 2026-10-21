@@ -22,7 +22,8 @@
       "agent/public-docs-cleanup": false,
       "agent/site-architecture": false,
       "agent/site-performance-checks": false,
-      "agent/homepage-pilot": false
+      "agent/homepage-pilot": false,
+      "agent/home-kit-loading": false
     }
   }
 }

@@ -117,7 +117,7 @@ their separate assignments.
 | SITE-01 | This decision and superseded guidance | ready_for_review; no application behavior changes. |
 | SITE-02 | Reusable local performance checks | ready_for_review; 24 production navigations, redirect-chain regression, and expected unused-variant rejection pass. |
 | SITE-03 | First homepage extraction | ready_for_review; 1,813 regressions, 8 browser tests, public/editor reuse, screenshot parity, and resource gates pass. |
-| SITE-04 | Narrow homepage data loading | pending; remove unused reads and compare identical production scenarios. |
+| SITE-04 | Narrow homepage data loading | ready_for_review; browser reads 31 to 27, populated screenshot parity, 1,813 regressions and 10 browser tests pass. |
 | SITE-05 | Retained release and assignment proof | pending; verify old/new code, concurrency, unknown releases, and rollback locally. |
 | SITE-06 | Content-policy migration | pending; one domain per PR with authorized and denied direct-RPC cases. |
 | SITE-07 | Complete pilot and remaining sites | pending; full local acceptance before each separately authorized activation. |

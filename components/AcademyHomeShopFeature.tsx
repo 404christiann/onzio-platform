@@ -5,7 +5,7 @@ import { useHomepagePiece } from "@/lib/homepage-editor/preview-context";
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ResilientImage";
-import { fetchShopKitVariants, type ShopKitContent } from "@/lib/queries";
+import { fetchShopKitContent, type ShopKitContent } from "@/lib/queries";
 import {
   kitPhotoAlt,
   normalizeKitBulletPoints,
@@ -16,11 +16,6 @@ import { useClubId } from "@/components/ClubContextProvider";
 import { AcademyShopLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
-// Mockup-parity homepage store feature for academy@1 (DCFC-D132 pass),
-// modeled on the sales mockup's HomeShopFeature: front/back jersey renders
-// side by side on the sky #B9E3F6 panel with the fade into the page
-// ground, and the red "Buy Now"-style CTA into /shop. Copy stays
-// admin-editable through the existing home-surface shop kit section.
 export default function AcademyHomeShopFeature({ editorContent }: { editorContent?: ShopKitContent }) {
   const sharedPiece = useHomepagePiece("shared.shop");
   const clubId = useClubId();
@@ -30,8 +25,8 @@ export default function AcademyHomeShopFeature({ editorContent }: { editorConten
 
   useEffect(() => {
     if (editorContent) return;
-    fetchShopKitVariants("home", clubId)
-      .then((variants) => setContent(variants.home))
+    fetchShopKitContent("home", "home", clubId)
+      .then(setContent)
       .catch((error) => {
         console.error("AcademyHomeShopFeature:", error);
       })

@@ -373,14 +373,14 @@ describe("editorial@1 admin surface hides", () => {
       expect(editor).toContain('Homepage shop feature {shopDraftDirty(drafts.home) ? "•" : ""}');
       expect(editor).toContain('surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} />');
       expect(editor).toContain('<ShopKitSectionContainer surface={surface}');
-      expect(source("components/AcademyHomeShopFeature.tsx")).toContain('fetchShopKitVariants("home", clubId)');
+      expect(source("components/AcademyHomeShopFeature.tsx")).toContain('fetchShopKitContent("home", "home", clubId)');
       expect(source("app/(public)/shop/page.tsx")).toContain('<ShopKitSectionContainer\n        surface="shop"');
     });
 
     it("matches the public homepage's shared versus independent Shop data", () => {
       expect(source("components/ClubhouseHomePage.tsx")).toContain('fetchShopKitVariants("shop", club.id)');
       expect(source("components/editorial/EditorialHomeStore.tsx")).toContain('fetchShopKitVariants("shop", club.id)');
-      expect(source("components/AcademyHomeShopFeature.tsx")).toContain('fetchShopKitVariants("home", clubId)');
+      expect(source("components/AcademyHomeShopFeature.tsx")).toContain('fetchShopKitContent("home", "home", clubId)');
       expect(source(SHOP_EDITOR)).toContain('const sharedWithHomepage = isClubhouse || isEditorial;');
     });
 

@@ -114,6 +114,10 @@ For the home-kit loading package, add `--home-kit-only` to require that third/aw
 kit requests disappear while home section/photo reads remain. This gate applies
 to the client-loader pilot, not a future server-loaded kit. Empty kit fixtures
 do not establish populated product rendering; check that separately.
+The existing homepage browser suite includes `homepage-editor-home-kit.spec.ts`.
+It supplies populated kit GET responses and makes unused variants fail, then
+checks loaded photo order, copy, CTA and layout at desktop and phone widths.
+It leaves database fixtures unchanged; use the authenticated browser setup below.
 
 Outputs must be new JSON files in a gitignored directory or the system temporary
 directory. The VM launcher supplies the installed Playwright browser path.
