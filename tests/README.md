@@ -168,10 +168,19 @@ proves layout; native iOS keyboard/safe-area behavior remains unverified.
 
 ## Homepage editor redesign
 
+The [assignment-aware homepage save guide](../docs/homepage-assignment-saves.md)
+explains the homepage-only token and migration boundary. Its focused local tests
+are `tests/database/homepage-assignment-save.test.ts`,
+`tests/database/homepage-assignment-concurrent.test.ts` and
+`tests/database/homepage-assignment-migration.test.ts`. The browser regression is
+`tests/browser/homepage-editor-assignment.spec.ts` in the existing homepage config.
+Run these serially with other fixture writers.
+
 The [versioned editing bindings](../docs/homepage-editing-bindings.md) have focused
 projection, identity, reducer and save-adapter regressions in
 `tests/contracts/homepage-editor-bindings.test.ts`. They preserve the legacy save
-and recovery contracts while binding-aware integration remains separate.
+and recovery contracts. Assignment-aware save integration uses the guide above;
+incompatible-draft integration remains separate.
 
 Status and acceptance ledger: `docs/homepage-editor-redesign-plan.md`.
 The state, capability, save schema, route and media hydration contracts have

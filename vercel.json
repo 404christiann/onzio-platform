@@ -27,7 +27,8 @@
       "agent/site-assignment-proof": false,
       "agent/pilot-release-package": false,
       "agent/pilot-reconstruction-proof": false,
-      "agent/homepage-editing-bindings": false
+      "agent/homepage-editing-bindings": false,
+      "agent/homepage-assignment-saves": false
     }
   }
 }
