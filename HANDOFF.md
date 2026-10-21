@@ -29,6 +29,83 @@ The live rules apply to every checkout. This VM note mirrors Christian's update;
 the corresponding Mac note was reported as uncommitted. No GitHub rules were
 changed from the VM during this synchronization.
 
+## 2026-10-21 - Binding-aware homepage draft recovery
+
+`SITE-05F` is ready_for_review. PR26 is verified merged at
+`0b6296ad8928f4351108e6917167ba1f0fa8dd6f`; SITE-05E is reconciled as complete.
+This unit adds binding-aware browser recovery without changing SQL policy,
+save payloads, operation hashes or authored assignment routing. The original
+checkout's uncommitted leading merge-rules note remains untouched.
+
+Independent A/B design exploration and an independent judge selected one
+versioned recovery decision, version 1/2 record support and IndexedDB version 2.
+The storage upgrade retains the existing stores, keys and files. Older clients'
+explicit version-1 opens fail before they can parse and erase a new record.
+Old-build browser recovery becomes unavailable after upgrade; rollback must not
+delete or downgrade that database. Existing old records retain their original
+identity, and changed-token old drafts remain review-only.
+
+New work records binding identity. Recovery checks saved, SQL and installed
+TypeScript meaning. Unknown or incompatible meanings stay separate for review.
+Proven compatible changes require explicit apply onto current content, preserving
+untouched fields and current revision/token. Pending operations are checked before
+binding/design/content conflicts. A committed result uses current content, not
+historical receipt content. Original submitted state remains intact for supported
+exact retries. A reviewed stale rebase creates a fresh unsent edit.
+
+All 2,031 tests in 200 files pass, including 61 new recovery cases. Separate
+runs pass 1,211 contracts, 64 architecture checks and 334 local database checks.
+The implementation owner's focused run passes 240 cases. TypeScript, lint and
+the guarded production build pass. Final source inputs stayed unchanged through
+the build. All 36 selected production browser cases pass serially, including
+14 new recovery cases and the existing six photo/upload/cleanup cases. Actual
+1440px and 390px compatible/incompatible review screenshots were opened and
+inspected. The failed-apply message is visible in the sticky actions area;
+Escape and trigger focus pass. Native-device acceptance is not established.
+
+The compatible-review browser regression failed on merged main before the fix.
+The first broad browser run was 30/31 because its old photo-inspection helper
+explicitly opened IndexedDB version 1. Its read now uses the current version;
+all cleanup assertions remain, and that revision passed 33/33. Screenshot inspection
+also caught the failed-apply message outside the viewport; the final regression
+requires the whole message to be visible. Comment review found an inherited hook
+dependency suppression in the modified persistence effect. Stable callbacks and
+explicit dependencies replace it, and lint passes without a suppression.
+
+Both independent reviews of the first committed revision `887f5b1` found the
+same P2. Editing, undoing to the saved value and recreating the identical edit
+could skip recovery persistence because a successful clear retained the old
+content marker. The failure was reproduced in the real browser, including lost
+words after reload. Successful guarded clears now reset that marker. The new
+browser regression covers the entire sequence; the fixed probe reports that the
+edit is persisted again and restored. Required checks and the full browser run
+were repeated for this correction. Updated exact-revision reviews then found
+that a recreated edit could still be skipped while the clear was pending. Real
+held IndexedDB transactions reproduced that loss and the analogous stale-write
+ordering. Deduplication now runs inside the existing persistence queue after
+preceding mutations finish. The captured requested state is preserved, and the
+existing generation, source and CAS guards remain. An independent design check
+selected this over a second pending-intent model. Both held-transaction browser
+regressions pass; final acceptance includes all 36 cases. Updated exact-revision
+reviews are required for this queue correction.
+
+SQL migrations, save wire schema, model/submitted representation, binding-file
+bytes, server hydration, API route, generated types and save serializer remain
+byte-identical to the base. No schema generation was needed or rerun. PR26's
+separately documented raw database-types generator mismatch remains unresolved;
+it is not claimed as passing here. Current logs and design reports are under
+`/tmp/onzio-incompatible-drafts`. Scope and storage limits are described in
+`docs/homepage-draft-recovery.md`; independent exact-revision review verdicts
+belong in the final PR handoff.
+
+A read-only parallel inventory traced actual authored assignment, public/preview
+and retained-package callers. It proposes dependency-lock compatibility rejection
+as a bounded independent follow-up. That inventory is complete; its implementation
+is not started. Production authored dispatch and activation remain unimplemented.
+No hosted/provider, deployment, merge, auto-merge, protection or unified-ai-chat
+operations occurred. Christian retains final review and merging. Source
+conversation remains available. SITE-05 stays in_progress.
+
 ## 2026-10-21 - Assignment-aware homepage saves
 
 `SITE-05E` is ready_for_review. PR25 is merged at

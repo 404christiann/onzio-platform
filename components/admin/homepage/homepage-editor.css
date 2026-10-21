@@ -149,6 +149,7 @@ textarea.hp-field { min-height:108px; resize:vertical; }
 .hp-recovery-comparison dt { font-size:12px; color:hsl(var(--muted-foreground)); }
 .hp-recovery-comparison dd { font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
 .hp-recovery-actions { display:flex; flex-wrap:wrap; gap:12px; position:sticky; bottom:-24px; background:hsl(var(--card)); padding-block:12px; }
+.hp-recovery-actions [role="alert"] { flex-basis:100%; }
 @media(max-width:767px) and (max-height:500px) { .hp-panel { height:calc(var(--hp-viewport) - 16px); } }
 
 .hp-panel-fields label,.hp-panel-fields legend { font-weight:500; }

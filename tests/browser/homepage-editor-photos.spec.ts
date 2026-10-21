@@ -372,7 +372,7 @@ test.describe("homepage editor photo queue", () => {
       await expect.poll(async () => (await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetIds[0]])).rows[0]?.status).toBe("orphaned");
       expect((await db.query("select status from onzio.media_assets where id=$1", [uploadedAssetIds[1]])).rows[0]?.status).toBe("published");
       const recoveryPhotos = await page.evaluate(async () => {
-        const request = indexedDB.open("onzio-homepage-editor", 1);
+        const request = indexedDB.open("onzio-homepage-editor");
         const db = await new Promise<IDBDatabase>((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
         try {
           const records = await new Promise<Array<{ draft: { photos: { items: Array<{ upload: string; assetId: string | null; localFileKey?: string }> } } }>>((resolve, reject) => {

@@ -73,7 +73,7 @@ for (const width of [1440, 390]) {
     const review = page.getByRole("dialog", { name: "Recovered homepage draft", exact: true });
     await expect(review).toContainText(marker);
     await expect(review).toContainText("The website design changed");
-    await expect(review.getByRole("button", { name: "Use recovered changes", exact: true })).toHaveCount(0);
+    await expect(review.getByRole("button", { name: "Use recovered changes", exact: true })).toBeVisible();
     await page.screenshot({ path: info.outputPath(`assignment-draft-retained-${width}.png`), fullPage: true });
     expect(errors).toEqual([]);
   });

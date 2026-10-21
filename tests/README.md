@@ -168,6 +168,17 @@ proves layout; native iOS keyboard/safe-area behavior remains unverified.
 
 ## Homepage editor redesign
 
+The [binding-aware draft recovery guide](../docs/homepage-draft-recovery.md)
+describes version 1/2 records, the IndexedDB upgrade, explicit reviewed apply and
+receipt-first recovery. Focused pure cases are in
+`tests/contracts/homepage-editor-binding-recovery.test.ts`. Real browser cases
+are in `tests/browser/homepage-editor-binding-recovery.spec.ts`, under the existing
+homepage config. They cover compatible and incompatible review, old records and
+files, old-client access rejection, persistence after undo, and
+committed/uncommitted response loss. They also hold real IndexedDB transactions
+to check recovery after older clears and writes complete.
+Run browser and database fixture writers serially.
+
 The [assignment-aware homepage save guide](../docs/homepage-assignment-saves.md)
 explains the homepage-only token and migration boundary. Its focused local tests
 are `tests/database/homepage-assignment-save.test.ts`,
@@ -180,7 +191,7 @@ The [versioned editing bindings](../docs/homepage-editing-bindings.md) have focu
 projection, identity, reducer and save-adapter regressions in
 `tests/contracts/homepage-editor-bindings.test.ts`. They preserve the legacy save
 and recovery contracts. Assignment-aware save integration uses the guide above;
-incompatible-draft integration remains separate.
+binding-aware recovery uses the separate draft guide.
 
 Status and acceptance ledger: `docs/homepage-editor-redesign-plan.md`.
 The state, capability, save schema, route and media hydration contracts have

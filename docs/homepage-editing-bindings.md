@@ -59,7 +59,10 @@ opaque `designRevision`. Other page editors keep their existing design tokens.
 Exact actor-scoped receipt replay still precedes current-design and stale-content
 conflicts after authorization. Nonmigrated SQL content policy remains unchanged.
 
-Incompatible unsaved drafts remain a separate PR. Existing conflicts retain their
-records without rebinding them to current identity. Authored assignment resolution
-and deployment/activation coordination still need proof before activation.
+The [draft recovery integration](homepage-draft-recovery.md) records binding
+identity with new local work. It requires explicit review after assignment changes
+and keeps incompatible or unknown meanings available without an apply action.
+Older changed-token drafts remain separate without inferred historical identity.
+Authored assignment resolution and deployment/activation coordination still need
+proof before activation.
 Domain-by-domain content-policy migration requires its own direct-RPC coverage.
