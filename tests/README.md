@@ -309,8 +309,11 @@ matching local authenticated browser state. Never commit browser auth state.
 ## Actual pilot source package
 
 Run `npx vitest run tests/architecture/pilot-source-package.test.ts` for package
-integrity and reconstruction boundary checks. These tests use small file-format
-fixtures, not a rendered Next application. See the
+integrity and reconstruction boundary checks. The suite exercises exported
+functions and real pack/verify/reconstruct CLIs with temporary synthetic Git
+repositories. It checks complete-lock rejection before output, historical v1
+verification without reconstruction, and retained visual/current platform
+ownership. These fixtures do not render a Next application. See the
 [pilot package guide](../docs/pilot-source-package.md) for actual build inputs,
 commands and the separate reconstructed public/editor acceptance requirement.
 
@@ -320,7 +323,7 @@ desktop/mobile public/editor checks. The new browser rehearsal performs reads
 only; run the existing real-save suites serially afterward.
 
 Run `npx vitest run tests/architecture/pilot-reconstruction-environment.test.ts`
-for preparation and documented build/start environment guards. The tests run the
-real CLIs with synthetic file fixtures and a harmless Next child stub. They
+for preparation compatibility preflight and documented build/start environment
+guards. The tests run the real CLIs with synthetic file fixtures and a harmless Next child stub. They
 check dotenv precedence and expansion, shell overrides, both live Stripe key
 prefixes and error redaction without starting the app or contacting providers.

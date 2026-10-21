@@ -1,3 +1,53 @@
+## 2026-10-21 - Complete dependency-lock gate for retained pilot reconstruction
+
+`SITE-05G` is ready_for_review. PR27 is verified merged at
+`45a1b34a79567f3f108bed09ab182444da66eabb`; SITE-05F is reconciled as complete.
+SITE-05 remains in_progress. The isolated task branch starts from that merge.
+The original checkout's intentional uncommitted HANDOFF patch matches the
+transferred copy byte-for-byte and remains untouched.
+
+The actual pack/reconstruct CLI accepted nested version, integrity and resolution
+changes with fixed root versions on merged main. Each created output. Independent
+read-only designs and a judge selected a strict v1/v2 manifest union with a
+required complete-lock SHA-256. New packages use v2. Historical v1 packages keep
+their original accepted-digest verification but require regeneration and review
+before reconstruction. No historical artifact is rewritten. Root-version
+diagnostics, source ownership and whole binding-byte guards remain.
+
+A shared compatibility verifier protects reconstruction and setup before output
+creation. Setup checks again against its generated current-B tree. The same-lock
+function and CLI cases restore retained visual A while preserving current denial
+B and current lock bytes. Lock changes, missing/malformed metadata and an accepted
+but incorrect hash reject without output. A separately retained package produced
+by the original v1 CLI still verifies with its pre-change accepted digest and
+rejects reconstruction without changing its manifest.
+
+All 2,049 tests in 200 files pass. Separate runs pass 1,211 contracts, 82
+architecture checks and 334 local database checks. The focused package/environment
+suite passes 61 cases, including 18 new regressions; its baseline run had 11
+failures and 50 passes. TypeScript, lint and whitespace checks pass. TypeScript
+first caught a missing NODE_ENV in the new CLI test helper; its explicit test
+environment is corrected. Shared database suites ran serially. No fresh Next
+build, browser, installed-runtime or database-types-generation acceptance is
+claimed. PR26's documented raw types-generation mismatch remains unresolved.
+
+Changed files are the package module and setup caller, their two architecture
+tests, package/reconstruction guides, tests README and this ledger/handoff.
+The task branch disables automatic Vercel deployment. Application routes, SQL,
+receipts, content permissions, save/recovery code and dependency inputs are
+unchanged. Logs, design comparison and command probes are under
+`/tmp/onzio-lock-compatibility`; independent exact-revision review verdicts belong
+in the final PR handoff after committing. No comment or suppression findings.
+
+Complete lock equality conservatively rejects unrelated or formatting-only
+changes. It does not attest installed node_modules, runtime ABI, build output or
+compatibility with every current platform interface. Next, Christian reviews and
+merges this bounded PR. Installed release contracts, authored assignment/read/save
+routing and deployment/activation acceptance remain separately scoped and
+unimplemented. No hosted/provider, deployment, merge, auto-merge, protection,
+desktop-credential or unified-ai-chat operation occurred. The source conversation
+remains available and was not archived.
+
 ## 2026-10-21 - GitHub merge rules update
 
 Christian reports that PR23 and PR24 passed independent review with no high- or

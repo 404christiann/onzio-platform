@@ -48,13 +48,23 @@ Current platform dependencies include tenant and branding contexts, query reads,
 preview context identity, editor state types, database types, presentation
 validation, errors and media policy. These files never transfer from the retained
 package. The manifest records their original hashes for provenance. Reconstruction
-keeps their current bytes and requires the locked build/runtime versions to match.
+keeps their current bytes and requires the complete accepted `package-lock.json`
+bytes to match.
 The inventory explicitly includes Next, React, React DOM, TypeScript and the CSS
 build tools even without source imports. Scanned imports add other package roots.
-This inventory does not track every transitive dependency in the lockfile.
-Future version compatibility needs a separate verification pass. Packages created
-without the required framework/build roots fail verification. Regenerate those
-packages and accept their new digests before reconstruction.
+New packages use `onzio-pilot-source@2` and record a SHA-256 fingerprint of the
+complete lockfile, including nested versions, integrity, resolution and metadata.
+The package-root map remains a diagnostic check. Reconstruction and setup reject
+lock mismatches before creating output. Even whitespace or unrelated dependency
+changes require regeneration and review under the new dependency inputs. No old
+lockfile or dependency tree replaces current platform inputs.
+
+Historical `onzio-pilot-source@1` packages still support byte verification with
+their original accepted digest. That verdict does not authorize reconstruction.
+Regenerate the package from a clean checkout and successful build, then review
+and accept its new digest. The tool never upgrades or rewrites old artifacts.
+Missing or malformed v2 lock metadata fails verification. Packages without the
+required framework/build roots also fail verification.
 
 Legacy homepage capabilities are retained as binding metadata. Reconstruction
 refuses a changed capability implementation instead of overwriting current save
@@ -68,7 +78,9 @@ only to the homepage. CSS URL references must resolve inside the package.
 
 ## Acceptance limits
 
-Packaging and hash checks establish retained bytes. Actual page acceptance needs
+Packaging and hash checks establish retained bytes and declared lock-input
+equality. They do not attest installed node_modules, runtime ABI, build output or
+compatibility with every current platform interface. Actual page acceptance needs
 a fresh reconstructed production build and real public/editor browser checks at
 desktop and phone widths. The separate reconstruction proof must demonstrate
 that changed live visual sources do not replace retained A, while current
