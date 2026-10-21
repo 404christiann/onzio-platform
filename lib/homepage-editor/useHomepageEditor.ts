@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/admin-client";
 import { buildHomepageSaveRequest, type HomepageEditorSnapshot } from "./adapter";
-import { resolveHomepageCapabilities } from "./capabilities";
+import { resolveHomepageBindings, resolveHomepageCapabilities } from "./capabilities";
 import { createHomepageEditorState, getDirtyHomepageSections, reduceHomepageEditor, type HomepageEditorAction, type HomepageEditorState, type HomepagePhoto, type PieceId } from "./model";
 import { resolveHomepageRecovery, type HomepageRecoveryRecord, type HomepageRecoveryResult } from "./recovery";
 import { RECOVERY_UNAVAILABLE, clearRecoveryRecord, readRecoveryFile, readRecoveryRecord, recoveryStorageKey, writeRecoveryFile, writeRecoveryRecord } from "./recovery-storage";
@@ -149,17 +149,8 @@ export function useHomepageEditor(clubId: string) {
         if (!response.ok) throw new Error(body.error?.message ?? "We could not load your homepage.");
         let data = body as HomepageEditorSnapshot;
         const capabilities = resolveHomepageCapabilities(data.design);
-        const allowedPieces: PieceId[] = [];
-        if (capabilities.editableSections.includes("hero")) {
-          if (capabilities.heroEditableFields.includes("eyebrow")) allowedPieces.push("hero.eyebrow");
-          allowedPieces.push("hero.heading", "hero.intro", "hero.cta");
-        }
-        if (capabilities.editableSections.includes("photos")) allowedPieces.push("photos");
-        if (capabilities.editableSections.includes("story")) allowedPieces.push("story.text", "story.cta");
-        if (capabilities.editableSections.includes("video")) allowedPieces.push("video");
-        if (capabilities.sharedTargets.storyText) allowedPieces.push("shared.story");
-        allowedPieces.push("shared.shop");
-        if (capabilities.sharedTargets.programs) allowedPieces.push("shared.programs");
+        const bindings = resolveHomepageBindings({ capabilities });
+        const allowedPieces = Object.keys(bindings.elements);
         let next = createHomepageEditorState({ content: data.content, revision: data.revision, designRevision: data.designRevision, editableSections: capabilities.editableSections, allowedPieces });
         if (generation.current !== run) return;
         // Recovery never blocks the editor: any failure here is swallowed and

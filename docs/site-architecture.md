@@ -118,10 +118,11 @@ their separate assignments.
 | SITE-02 | Reusable local performance checks | complete; merged; 24 production navigations, redirect-chain regression, and expected unused-variant rejection pass. |
 | SITE-03 | First homepage extraction | complete; merged; 1,813 regressions, 8 browser tests, public/editor reuse, screenshot parity, and resource gates pass. |
 | SITE-04 | Narrow homepage data loading | complete; merged; browser reads 31 to 27, populated screenshot parity, 1,813 regressions and 10 browser tests pass. |
-| SITE-05 | Retained release and assignment proof | in_progress; isolated mechanism in SITE-05A. Actual pilot packaging, binding-aware saves and deployment coordination remain. |
+| SITE-05 | Retained release and assignment proof | in_progress; local mechanism, actual source package and reconstruction are merged in SITE-05A through SITE-05C. Assignment-aware saves, incompatible drafts and deployment coordination remain. |
 | SITE-05A | Local SQL and retained React release rehearsal | complete; merged; 1,814 tests, real SQL races and inspected desktop/mobile retained-rendering proof pass. |
-| SITE-05B | Actual pilot source package and reconstruction tool | ready_for_review; PR23 correction explicitly pins framework/build roots; four lock-version mismatch regressions pass; 1,824 tests pass; actual 706-file package verifies and reconstructs; source graph, emitted CSS/media and explicit current-platform boundaries. Real reconstructed browser acceptance follows in SITE-05C. |
-| SITE-05C | Actual pilot reconstruction acceptance | ready_for_review; PR24 correction guards setup and effective build/start environments; 28 CLI environment checks and 1,856 regressions pass; previously recorded A/B/reconstructed A browsers, 13 editor cases and inspected screenshots pass; fresh Next build, visual mutation and current-platform checks, desktop/mobile public/editor verification. |
+| SITE-05B | Actual pilot source package and reconstruction tool | complete; merged in PR23 at `7247b3b0090dc27adaf11c8f58074815cf0266e8`; correction explicitly pins framework/build roots; four lock-version mismatch regressions pass; 1,824 tests pass; actual 706-file package verifies and reconstructs; source graph, emitted CSS/media and explicit current-platform boundaries. Real reconstructed browser acceptance follows in SITE-05C. |
+| SITE-05C | Actual pilot reconstruction acceptance | complete; merged in PR24 at `455c7e6ae4f9592153acf5242d090f5b7d2941d9`; correction guards setup and effective build/start environments; 28 CLI environment checks and 1,856 regressions pass; previously recorded A/B/reconstructed A browsers, 13 editor cases and inspected screenshots pass; fresh Next build, visual mutation and current-platform checks, desktop/mobile public/editor verification. |
+| SITE-05D | Versioned homepage editing bindings | ready_for_review; element ownership map drives existing preview selection; semantic identities, 1,948 regressions, 13 production browser cases and inspected desktop/mobile controls pass. Save and incompatible-draft integration remain separate. |
 | SITE-06 | Content-policy migration | pending; one domain per PR with authorized and denied direct-RPC cases. |
 | SITE-07 | Complete pilot and remaining sites | pending; full local acceptance before each separately authorized activation. |
 | SITE-08 | Retire active theme machinery | pending; all active/rollback assignments migrated and historical consumers inventoried. |
@@ -145,3 +146,6 @@ source reconstruction and its remaining runtime ownership limits.
 
 The [actual pilot reconstruction guide](pilot-reconstruction.md) covers the
 three-build mutation proof and current-platform denial check.
+
+The [homepage binding contract](homepage-editing-bindings.md) describes the first
+editor integration and its separate save, draft and authorization boundaries.

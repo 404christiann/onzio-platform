@@ -1,3 +1,75 @@
+## 2026-10-21 - GitHub merge rules update
+
+Christian reports that PR23 and PR24 passed independent review with no high- or
+medium-severity findings, received his approval and merged into main:
+
+- PR23: `7247b3b0090dc27adaf11c8f58074815cf0266e8`.
+- PR24: `455c7e6ae4f9592153acf5242d090f5b7d2941d9`.
+
+The ruleset `Hybrid: owner-only protected updates`, ID `25276357`, is disabled.
+Its active `update` rule blocked normal PR merges even when the review rule
+passed. Older notes describing that update rule as active are historical.
+
+The active `Hybrid: required owner review` ruleset, ID `25276359`, requires one
+approval, CODEOWNERS approval and resolved review threads. It dismisses stale
+approvals and permits merge, squash and rebase. Christian's single approval
+satisfies the review requirement when he is the CODEOWNER. The extra approval
+for unattributed Copilot PRs is disabled. Deletion and force-push protections
+remain active. The owner-only branch-creation ruleset, ID `25277133`, remains
+active.
+
+If GitHub reports a PR as blocked, inspect the effective rules for `main` and
+the ruleset evaluation to identify the specific failing rule before changing
+approval settings. Do not request another reviewer solely to compensate for
+the disabled update rule, and do not use `gh pr merge --admin` as a workaround.
+Christian retains final review and merging authority. VM agents still must not
+merge, enable auto-merge, change protection settings or push protected branches.
+
+The live rules apply to every checkout. This VM note mirrors Christian's update;
+the corresponding Mac note was reported as uncommitted. No GitHub rules were
+changed from the VM during this synchronization.
+
+## 2026-10-21 - Versioned homepage editing bindings
+
+`SITE-05D` is ready_for_review. The code-owned element map in
+`lib/homepage-editor/capabilities.ts` records local field groups, shared owners,
+Shop surfaces and variants, and semantic key/revision equality. The hook uses
+its keys for selection, replacing the duplicated piece expansion. An independent
+A/B design comparison selected the map and one caller migration. Public and
+preview renderers, save payloads, SQL policy, receipt replay and recovery records
+are unchanged. Binding visibility grants no content permission.
+
+All 1,948 tests across 196 files pass, including 91 new binding cases and the
+revision-only retained-package guard. Separate runs pass 1,150 contracts,
+64 architecture checks and 312 local database checks. The focused implementation
+run passes 208 tests. Lint, TypeScript before and after the guarded production
+build, relative documentation links and whitespace checks pass. The build retains
+the dependency warning about Supabase's process.version use in Edge Runtime.
+All 13 production browser save/recovery/template cases pass serially. Final
+1440px desktop and 390px phone heading-control screenshots were opened and
+inspected; keyboard selection, disclosure, Done and width bounds pass with no
+page or relevant console errors. Analytics is excluded from the smoke error
+check. Alpha/Bravo slug, presentation pointers and hero-content snapshot matches
+its pre-run value. Browser artifacts and logs are under
+`/tmp/onzio-bindings-work`; full browser suite artifacts are in the task worktree's
+`test-results/homepage-editor-browser`. Native-device behavior is not established.
+
+PR23 and PR24 are verified merged, and SITE-05B/C are reconciled as complete in
+`docs/site-architecture.md`. The leading merge-rules note is preserved verbatim;
+the original checkout still has that exact uncommitted patch. Task-branch
+Vercel deployment is disabled. Independent comment review found no findings;
+exact committed-revision reviews are required before submission and belong in
+the PR handoff. Christian retains final review and merging.
+
+The binding file's bytes changed, so earlier retained packages require new
+compatibility review and regeneration with accepted digests. This PR does not
+activate an authored assignment. `SITE-05` remains in_progress. Next, implement
+assignment-aware saves while preserving actor-scoped exact receipt replay,
+stale-edit and tenant safeguards. Incompatible-draft integration follows in its
+own PR. Deployment/activation coordination and domain-by-domain content-policy
+migration remain separate. No hosted/provider, deployment, merge, protection,
+auto-merge or unified-ai-chat operations occurred.
+
 ## 2026-10-21 - Pilot reconstruction environment review correction
 
 PR24 is rebased onto corrected PR23 at
