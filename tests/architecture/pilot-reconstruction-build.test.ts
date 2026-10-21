@@ -26,7 +26,8 @@ function fixture() {
     const config = (await import(require("node:url").pathToFileURL(require("node:path").join(root, "next.config.mjs")))).default;
     return { distDir: ".next", ...await (typeof config === "function" ? config(phase) : config) };
   };`);
-  put(root, "node_modules/next/dist/bin/next", `const fs = require("node:fs");
+  put(root, "node_modules/next/dist/bin/next", `async function main() {
+const fs = require("node:fs");
 const path = require("node:path");
 function put(name, value) { fs.mkdirSync(path.dirname(name), {recursive:true}); fs.writeFileSync(name, value); }
 const action = process.argv[2];
@@ -41,10 +42,18 @@ if (action === "build") {
     put(".next/required-server-files.json", "{}");
   }
 }
-fs.writeFileSync(process.env.PILOT_CHILD_REPORT, JSON.stringify({args: process.argv.slice(2), build: fs.existsSync(".next/BUILD_ID") ? fs.readFileSync(".next/BUILD_ID", "utf8") : null}));
+let output = ".next";
+if (action === "start") {
+  process.env.PORT = String(Number(process.argv[process.argv.indexOf("--port") + 1]));
+  process.env.__NEXT_PRIVATE_ORIGIN = "http://127.0.0.1:" + process.env.PORT;
+  output = (await require("../server/config").default("phase-production-server", process.cwd())).distDir;
+}
+const buildId = path.join(output, "BUILD_ID");
+fs.writeFileSync(process.env.PILOT_CHILD_REPORT, JSON.stringify({args: process.argv.slice(2), build: fs.existsSync(buildId) ? fs.readFileSync(buildId, "utf8") : null}));
 if (process.env.CHILD_HOLD) {
   while (!fs.existsSync(process.env.CHILD_RELEASE)) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
-}`);
+}
+} main();`);
   return { root, report };
 }
 function launch(f: ReturnType<typeof fixture>, action: "build" | "start", shell: Record<string, string> = {}) {
@@ -163,6 +172,22 @@ describe("guarded reconstruction failure lifecycle", () => {
     build(f);
     const result = rejectedStart(f, { CUSTOM_SERVER_OUTPUT: "1" });
     expect(result.stderr).toContain("normal .next output");
+  });
+  it.each(["__NEXT_PRIVATE_ORIGIN", "PORT"])("rejects output selected by Next-created %s before the real start CLI child runs", variable => {
+    const f = fixture();
+    put(f.root, "next.config.mjs", `export default phase => ({distDir: phase === "phase-production-server" && process.env.${variable} ? "output/stale" : ".next"});`);
+    put(f.root, "output/stale/BUILD_ID", "stale-custom-build");
+    build(f);
+    const result = rejectedStart(f);
+    expect(result.stderr).toContain("normal .next output");
+    expect(existsSync(join(f.root, ".onzio-pilot-build.lock"))).toBe(false);
+  });
+  it("accepts normal output with the fixed runtime port and origin in the start CLI", () => {
+    const f = fixture();
+    put(f.root, "next.config.mjs", 'export default phase => ({distDir: phase === "phase-production-server" && process.env.PORT === "3127" && process.env.__NEXT_PRIVATE_ORIGIN === "http://127.0.0.1:3127" ? "./.next" : ".next"});');
+    build(f);
+    expect(launch(f, "start").status).toBe(0);
+    expect(JSON.parse(readFileSync(f.report, "utf8")).build).toBe("synthetic-build");
   });
   it.each(["phase-production-build", "phase-production-server"])("revokes prior success before rejecting effective custom %s output", phase => {
     const f = fixture(); build(f);

@@ -5,19 +5,15 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { z } from "zod";
 import { chromium, expect, type BrowserContext } from "@playwright/test";
+import { withPilotProofServers } from "./pilot-proof-servers";
 import { verifyPilotSource } from "./pilot-source-package";
 
 const { values } = parseArgs({ options: {
-  package: { type: "string" }, digest: { type: "string" }, baseline: { type: "string" },
-  restored: { type: "string" }, changed: { type: "string" }, auth: { type: "string" },
+  package: { type: "string" }, digest: { type: "string" }, "baseline-root": { type: "string" },
+  "restored-root": { type: "string" }, "changed-root": { type: "string" }, auth: { type: "string" },
 } });
 function required(value: string | undefined, name: string) { assert(value, `${name} is required`); return value; }
-function origin(value: string | undefined, name: string) {
-  const url = new URL(required(value, name));
-  assert(url.protocol === "http:" && url.hostname.endsWith(".localhost") && !url.username && !url.password && url.pathname === "/" && !url.search && !url.hash, "Use local synthetic tenant origins");
-  return url.origin;
-}
-const endpoints = { baseline: origin(values.baseline, "baseline"), changed: origin(values.changed, "changed"), restored: origin(values.restored, "restored") };
+const roots = { baseline: required(values["baseline-root"], "baseline-root"), changed: required(values["changed-root"], "changed-root"), restored: required(values["restored-root"], "restored-root") };
 const { manifest, digest } = verifyPilotSource(required(values.package, "package"), required(values.digest, "digest"));
 const auth = required(values.auth, "auth");
 const retainedHashes = new Set(manifest.files.map(item => item.sha256));
@@ -34,9 +30,14 @@ const photos = ["/images/shop/rosecityshirt1.webp", "/images/shop/rosecityshirt2
 const routeErrors: string[] = [];
 const captures: { label: string; width: number; public: unknown; preview: unknown; fonts: string[]; css: string[]; images: string[]; scripts: { path: string; sha256: string }[]; screenshots: string[]; pageErrors: string[]; networkErrors: string[]; consoleErrors: string[]; bodyErrors: string[] }[] = [];
 async function main() {
+const result = await withPilotProofServers(roots, async (servers, signal) => {
+const endpoints = { baseline: servers.baseline.origin, changed: servers.changed.origin, restored: servers.restored.origin };
 let lateFont: (typeof manifest.files)[number] | undefined;
 const browser = await chromium.launch();
+const abort = () => { void browser.close(); };
+signal.addEventListener("abort", abort, { once: true });
 try {
+  signal.throwIfAborted();
   async function guard(context: BrowserContext) {
     await context.routeWebSocket("**/*", socket => socket.close());
     await context.route("**/*", async route => {
@@ -183,11 +184,13 @@ try {
   assert.equal(response.status(), 200);
   assert.equal(hash(await response.body()), lateFont.sha256);
 } finally { await late.close(); }
-} finally { await browser.close(); }
+} finally { signal.removeEventListener("abort", abort); await browser.close(); }
 assert(lateFont);
 assert.deepEqual(routeErrors, []);
-const report = { verdict: "PASS", digest, sourceCommit: manifest.sourceCommit, endpoints, captures, lateFont,
-  limits: ["Local retained-source reconstruction, not runtime assignment or original compiled-byte retention.", "Populated home-kit GET data is controlled; no saves occur in this rehearsal.", "External media and analytics are blocked; no latency or LCP claim.", "Current tenant/editor mounting, runtime and build-time font provider remain shared."] };
+return { digest, sourceCommit: manifest.sourceCommit, endpoints, servers, captures, lateFont,
+  limits: ["Owned generic build receipts do not bind these roots to the accepted package. Accepted-package build identity remains separate.", "Local retained-source reconstruction, not runtime assignment or original compiled-byte retention.", "Populated home-kit GET data is controlled; no saves occur in this rehearsal.", "External media and analytics are blocked; no latency or LCP claim.", "Current tenant/editor mounting, runtime and build-time font provider remain shared."] };
+});
+const report = { verdict: "PASS", ...result };
 writeFileSync(join(output, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
 console.log(JSON.stringify({ verdict: "PASS", report: join(output, "report.json") }));
 

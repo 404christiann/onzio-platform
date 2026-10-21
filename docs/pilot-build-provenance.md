@@ -18,9 +18,12 @@ npx tsx /absolute/path/to/current/scripts/run-pilot-reconstruction.ts start --po
 Before building, the launcher uses the application's actual Next configuration
 loader to check both production-build and production-server phases. Both must
 select the normal `.next` directory. Start checks the production-server phase
-again between receipt validations. Configuration failures report a generic error;
-configuration output and errors are not forwarded. Input checks include
-configuration evaluation, and start rechecks output afterward.
+again between receipt validations, with the requested port and the loopback
+origin that Next sets before it loads server configuration. Configuration failures
+report a generic error;
+configuration output and errors are not forwarded. Each isolated configuration
+probe has a five-second timeout and is killed if it does not finish. Input checks
+include configuration evaluation, and start rechecks output afterward.
 
 A successful guarded build writes `.next/onzio-pilot-build.json` with mode 0600.
 Prior builds without this receipt need a fresh guarded build. A failed build
@@ -93,9 +96,14 @@ a later start.
 
 The excluded node_modules tree may include external runtime dependencies. Lock
 bytes do not attest installed dependency bytes, native modules or runtime ABI.
-The receipt also does not bind an accepted source package or authored release,
-prove current-platform interface compatibility, or identify the process behind
-an arbitrary browser-proof URL. Those remain separate acceptance work.
+The receipt also does not bind an accepted source package or authored release
+or prove current-platform interface compatibility. Those remain separate
+acceptance work.
+
+The [reconstruction rehearsal](pilot-reconstruction.md) consumes these receipts
+through its own guarded server processes. It accepts application roots, acquires
+ephemeral loopback servers, and retains each root lock until shutdown. Supplied
+server URLs cannot satisfy that proof boundary.
 
 The [reconstruction rehearsal](pilot-reconstruction.md) still requires its actual
 public/editor and retained-asset checks. A minimal real Next fixture establishes

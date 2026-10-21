@@ -344,3 +344,15 @@ Separate acceptance builds a minimal actual Next application, starts it on
 loopback, reads its marker, rebuilds changed source and rejects corrupted
 executable output and failed-build reuse. That is command lifecycle evidence,
 not full Onzio public/editor or installed-pilot acceptance.
+
+Run `npx vitest run tests/architecture/pilot-proof-servers.test.ts` for owned
+reconstruction-proof server lifecycle checks. Synthetic child fixtures cover
+receipt checks, actual resolved router/renderer paths, the native listening
+socket, isolated role environments, locks, interruption and cleanup. Listener
+controls include config changing port environment strings to an unrelated server,
+invalid addresses and capture-time listener replacement or closure.
+The proof CLI accepts `--baseline-root`, `--changed-root` and `--restored-root`;
+its private-IPC children select their own loopback ports. Supplied server URLs
+are rejected. A minimal genuine Next runtime check is separate from Academy
+public/editor browser acceptance and accepted-package/build identity. See the
+[reconstruction guide](../docs/pilot-reconstruction.md).

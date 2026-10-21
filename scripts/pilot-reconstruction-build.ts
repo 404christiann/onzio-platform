@@ -115,20 +115,27 @@ export function publishReconstructionBuild(root: string, inputs: Inventory, publ
 }
 export function verifyReconstructionBuild(root: string, publicEnvironmentSha256: string) {
   let receipt: BuildReceipt;
+  let bytes: Buffer;
   try {
     assertReceiptPaths(root);
-    receipt = receiptSchema.parse(JSON.parse(readFileSync(join(root, ".next", receiptName), "utf8")));
+    bytes = readFileSync(join(root, ".next", receiptName));
+    receipt = receiptSchema.parse(JSON.parse(bytes.toString("utf8")));
   } catch { throw new Error("Missing or invalid reconstruction build receipt; run a fresh guarded build"); }
   if (receipt.publicEnvironmentSha256 !== publicEnvironmentSha256) throw new Error("Reconstruction public build environment changed; run a fresh guarded build");
   assertSameReconstructionInputs(receipt.inputs, reconstructionInputs(root));
   const current = outputSnapshot(root);
   if (receipt.buildId !== current.buildId || JSON.stringify(receipt.outputs) !== JSON.stringify(current.outputs)) throw new Error("Reconstruction output changed; run a fresh guarded build");
+  return { buildId: receipt.buildId, receiptSha256: hash(bytes) };
 }
-export function withReconstructionLock(root: string, action: () => void) {
+export function acquireReconstructionLock(root: string) {
   const path = join(root, lockName);
   let descriptor: number;
   try { descriptor = openSync(path, "wx", 0o600); }
   catch { throw new Error("Another guarded reconstruction command holds the local lock; remove a stale lock only after checking its process"); }
+  return () => { closeSync(descriptor); unlinkSync(path); };
+}
+export function withReconstructionLock(root: string, action: () => void) {
+  const release = acquireReconstructionLock(root);
   try { action(); }
-  finally { closeSync(descriptor); unlinkSync(path); }
+  finally { release(); }
 }
