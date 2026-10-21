@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -18,15 +19,33 @@ function put(root: string, path: string, value: string) {
   mkdirSync(dirname(join(root, path)), { recursive: true });
   writeFileSync(join(root, path), value);
 }
-function prepare(options: { file?: Record<string, string>; shell?: Record<string, string>; production?: Record<string, string> } = {}) {
+function prepare(options: { file?: Record<string, string>; shell?: Record<string, string>; production?: Record<string, string>; compatibility?: "changed-lock" | "v1" | "malformed-v2" } = {}) {
   const root = join(directory, `case-${sequence++}`);
   cpSync(source, root, { recursive: true });
   const serialize = (values: Record<string, string>) => Object.entries(values).map(([name, value]) => `${name}=${value}`).join("\n");
   put(root, ".env.local", serialize({ NEXT_PUBLIC_SUPABASE_URL: localUrl, ...options.file }));
   if (options.production) put(root, ".env.production.local", serialize(options.production));
+  let retained = artifact;
+  let accepted = packageDigest;
+  if (options.compatibility === "changed-lock") {
+    const lock = JSON.parse(readFileSync(join(root, "package-lock.json"), "utf8"));
+    lock.packages["node_modules/next/node_modules/transitive-fixture"].integrity = "sha512-changed-fixture";
+    put(root, "package-lock.json", JSON.stringify(lock));
+    execFileSync("git", ["add", "package-lock.json"], { cwd: root });
+    execFileSync("git", ["-c", "user.name=Local test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Changed synthetic lock"], { cwd: root });
+  } else if (options.compatibility) {
+    retained = join(directory, `retained-${sequence}`);
+    cpSync(artifact, retained, { recursive: true });
+    const current = JSON.parse(readFileSync(join(retained, "manifest.json"), "utf8"));
+    const manifest = options.compatibility === "v1"
+      ? { format: "onzio-pilot-source@1", sourceCommit: current.sourceCommit, files: current.files, platform: current.platform, packages: current.packages }
+      : { ...current, format: "onzio-pilot-source@2", packageLockSha256: "malformed" };
+    put(retained, "manifest.json", JSON.stringify(manifest));
+    accepted = createHash("sha256").update(JSON.stringify(manifest)).digest("hex");
+  }
   const output = join(root, "output");
   mkdirSync(output);
-  const result = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/prepare-pilot-reconstruction.ts"), "--package", artifact, "--digest", packageDigest], {
+  const result = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/prepare-pilot-reconstruction.ts"), "--package", retained, "--digest", accepted], {
     cwd: root,
     encoding: "utf8",
     timeout: 10_000,
@@ -55,6 +74,9 @@ beforeAll(() => {
   put(source, "public/images/shop/rosecityshirt2.jpeg", "changed kit image");
   put(source, ".gitignore", ".env*\nnode_modules\noutput\n");
   put(source, "package-lock.json", JSON.stringify({ packages: Object.fromEntries(["next", "react", "react-dom", "typescript", "tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"].map(name => [`node_modules/${name}`, { version: "1.0.0" }])) }));
+  const lock = JSON.parse(readFileSync(join(source, "package-lock.json"), "utf8"));
+  lock.packages["node_modules/next/node_modules/transitive-fixture"] = { version: "1.0.0", integrity: "sha512-accepted-fixture" };
+  put(source, "package-lock.json", JSON.stringify(lock));
   execFileSync("git", ["init", "--quiet"], { cwd: source });
   execFileSync("git", ["add", "."], { cwd: source });
   execFileSync("git", ["-c", "user.name=Local test", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Synthetic reconstruction input"], { cwd: source });
@@ -69,6 +91,15 @@ beforeAll(() => {
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
 
 describe("pilot preparation environment boundary", () => {
+  it.each([
+    ["changed-lock", "Dependency lock differs"], ["v1", "Regenerate and review"], ["malformed-v2", "packageLockSha256"],
+  ] as const)("rejects %s before creating setup controls", (compatibility, reason) => {
+    const result = prepare({ compatibility });
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(reason);
+    expect(readdirSync(result.output).filter(name => name.startsWith("onzio-pilot-reconstruction-"))).toEqual([]);
+  });
   it("prepares local synthetic controls with safe environment values", () => {
     const result = prepare({ file: { STRIPE_SECRET_KEY: "sk_test_inert_reconstruction_fixture" } });
     expect(result.error).toBeUndefined();

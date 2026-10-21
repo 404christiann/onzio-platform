@@ -9,6 +9,9 @@ and retained A reconstructed over current platform B.
 Create an accepted package with the [package tool](pilot-source-package.md).
 Commit tracked changes before this setup command. It copies the current commit
 into private temporary folders and never changes the working application.
+Before creating those folders, setup requires a v2 package with matching complete
+lockfile bytes, root versions and binding bytes. Historical v1 byte verification
+does not satisfy this compatibility check. Regenerate and review a new package.
 The local environment must use synthetic Supabase on port 54321. Setup checks
 `.env.local` and Next's effective production environment, including shell
 overrides, dotenv precedence and variable expansion. It rejects live Stripe
@@ -81,6 +84,10 @@ gets 400ms to settle after scroll before capture. Keyboard selection, draft
 preview, Escape and focus restoration use the real editor. No Save occurs here.
 An anonymous request must still be denied by current platform B. A new context
 then fetches a retained font that neither A page loaded earlier.
+
+The browser command verifies retained bytes and compares existing servers. It
+does not check their lock inputs or replace the setup compatibility check.
+Historical package comparisons remain historical visual evidence.
 
 Reports appear under gitignored test-results. PASS is written after browser
 cleanup. Open the screenshots before acceptance. Separately run the existing

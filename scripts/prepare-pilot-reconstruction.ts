@@ -5,13 +5,13 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { loadPilotReconstructionEnvironment } from "./pilot-reconstruction-environment";
-import { reconstructPilotSource, verifyPilotSource } from "./pilot-source-package";
+import { reconstructPilotSource, verifyPilotReconstructionSource, verifyPilotSource } from "./pilot-source-package";
 
 const { values } = parseArgs({ options: { package: { type: "string" }, digest: { type: "string" } } });
 assert(values.package && values.digest, "Use --package and --digest");
 const artifact = resolve(values.package);
-const { manifest } = verifyPilotSource(artifact, values.digest);
 const root = process.cwd();
+const { manifest } = verifyPilotReconstructionSource({ root, directory: artifact, expectedDigest: values.digest });
 assert.equal(execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: root, encoding: "utf8" }).trim(), "", "Commit tracked changes first");
 loadPilotReconstructionEnvironment(root);
 const output = mkdtempSync(join(tmpdir(), "onzio-pilot-reconstruction-"));

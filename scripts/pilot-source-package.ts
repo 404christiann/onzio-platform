@@ -27,11 +27,15 @@ const visualLibraries = new Set([
 ]);
 const bindingPath = "lib/homepage-editor/capabilities.ts";
 const entrySchema = z.object({ path: z.string(), sha256: z.string().regex(/^[a-f0-9]{64}$/), bytes: z.number().int().nonnegative() }).strict();
-const manifestSchema = z.object({
+const legacyManifestSchema = z.object({
   format: z.literal("onzio-pilot-source@1"), sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
   files: z.array(entrySchema).min(1), platform: z.array(entrySchema),
   packages: z.record(z.string(), z.string()),
 }).strict();
+const currentManifestSchema = legacyManifestSchema.extend({
+  format: z.literal("onzio-pilot-source@2"), packageLockSha256: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+const manifestSchema = z.discriminatedUnion("format", [legacyManifestSchema, currentManifestSchema]);
 export type PilotSourceManifest = z.infer<typeof manifestSchema>;
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
@@ -172,8 +176,9 @@ export function packPilotSource({ root, buildRoot, output }: { root: string; bui
       ...inventory(root, "public").map(path => save(root, path, target, `source/${path}`)),
       ...[...css, ...media].map(path => save(buildRoot, path, target, `emitted/${path.slice(6)}`)),
     ].sort((a, b) => a.path.localeCompare(b.path));
-    const manifest = manifestSchema.parse({ format: "onzio-pilot-source@1", sourceCommit, files,
-      platform: sourceGraph.shared.map(path => entry(root, path)), packages: versions(root, sourceGraph.packages) });
+    const manifest = currentManifestSchema.parse({ format: "onzio-pilot-source@2", sourceCommit, files,
+      platform: sourceGraph.shared.map(path => entry(root, path)), packages: versions(root, sourceGraph.packages),
+      packageLockSha256: digest(file(root, "package-lock.json")) });
     writeFileSync(join(target, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     return { directory: target, digest: digest(JSON.stringify(manifest)), files: files.length };
   } catch (error) { rmSync(target, { recursive: true, force: true }); throw error; }
@@ -212,10 +217,17 @@ export function verifyPilotSource(directory: string, expectedDigest?: string) {
   if (JSON.stringify(sourceGraph.packages) !== JSON.stringify(Object.keys(manifest.packages).sort())) throw new Error("Runtime dependency inventory differs");
   return { manifest, digest: digest(JSON.stringify(manifest)) };
 }
-export function reconstructPilotSource({ root, directory, expectedDigest, output }: { root: string; directory: string; expectedDigest: string; output: string }) {
-  const { manifest } = verifyPilotSource(directory, expectedDigest);
+export function verifyPilotReconstructionSource({ root, directory, expectedDigest }: { root: string; directory: string; expectedDigest: string }) {
+  const verified = verifyPilotSource(directory, expectedDigest);
+  const { manifest } = verified;
+  if (manifest.format !== "onzio-pilot-source@2") throw new Error("Regenerate and review a new pilot source package with complete dependency-lock metadata before reconstruction");
   if (JSON.stringify(versions(root, Object.keys(manifest.packages))) !== JSON.stringify(manifest.packages)) throw new Error("Runtime versions differ; compatibility review required");
+  if (digest(file(root, "package-lock.json")) !== manifest.packageLockSha256) throw new Error("Dependency lock differs; compatibility review required");
   if (!file(root, bindingPath).equals(file(directory, `bindings/${bindingPath}`))) throw new Error("Binding meaning changed; migration review required");
+  return { ...verified, manifest };
+}
+export function reconstructPilotSource({ root, directory, expectedDigest, output }: { root: string; directory: string; expectedDigest: string; output: string }) {
+  const { manifest } = verifyPilotReconstructionSource({ root, directory, expectedDigest });
   const paths = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
   const target = newOutput(root, output);
   try {
