@@ -12,7 +12,7 @@ into private temporary folders and never changes the working application.
 The local environment must use synthetic Supabase on port 54321. Setup checks
 `.env.local` and Next's effective production environment, including shell
 overrides, dotenv precedence and variable expansion. It rejects live Stripe
-secret and restricted keys without printing their values. Every supplied
+secret and restricted keys without printing their values. Every effective
 Supabase URL must target loopback HTTP port 54321. Database URL variables must
 target loopback PostgreSQL port 54322.
 

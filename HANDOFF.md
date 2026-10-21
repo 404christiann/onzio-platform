@@ -13,9 +13,10 @@ nonlocal shell URL with exit zero. Fifteen initial regressions reproduced 13
 failures, including malformed-URL disclosure. All 28 environment/launch checks
 now pass, including harmless child-process probes and an environment change
 after setup. The 14 source-package checks also pass. TypeScript, lint and
-whitespace checks pass. All 1,856 tests across 195 files pass. Separate required
-suite commands and exact-revision independent review are being completed before
-the PR update. No fresh browser or full Next
+whitespace checks pass. All 1,856 tests across 195 files pass. Separate contract, architecture and local database commands pass. The real
+setup CLI rejects both shell live-key prefixes and the nonlocal URL override
+without marker disclosure, and safe setup succeeds. Exact-revision independent
+review is required before the PR update. No fresh browser or full Next
 build claim is added by these command-boundary tests.
 
 PR23's regenerated 706-file local candidate verifies and reconstructs at digest
