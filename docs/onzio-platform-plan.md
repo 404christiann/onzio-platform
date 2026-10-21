@@ -1,5 +1,10 @@
 # Onzio Platform — Secure Multi-Tenant Architecture
 
+The [club site architecture decision](site-architecture.md), accepted on
+2026-10-20, supersedes this plan's reusable template-family and semantic-theme
+choices. Other platform invariants remain. The new model is not implemented by
+this documentation change; migration follows its reviewed package ledger.
+
 ## Summary
 
 Onzio will be a multi-tenant club website platform serving an expected 5–10 clubs in the first 12 months.
@@ -36,7 +41,7 @@ migrated in place.
 - **Authentication:** passwordless email codes for owners/admins; operator TOTP
 - **Authentication email:** Supabase Auth through Resend SMTP from one
   Onzio-owned authentication subdomain
-- **Membership:** managed only by an Onzio operator in v1
+- **Membership:** operators provision clubs and transfer ownership; owners manage admins
 - **Publishing:** club-content saves become publicly visible immediately;
   presentation configuration uses operator-only draft/publish versions
 - **Billing self-service:** owners use Stripe Customer Portal

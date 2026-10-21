@@ -19,7 +19,8 @@
       "codex/public-page-editors-release": false,
       "codex/admin-icon-refresh": false,
       "codex/admin-guided-redesign": false,
-      "agent/public-docs-cleanup": false
+      "agent/public-docs-cleanup": false,
+      "agent/site-architecture": false
     }
   }
 }
