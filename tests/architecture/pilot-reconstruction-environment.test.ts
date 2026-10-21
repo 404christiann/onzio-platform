@@ -145,15 +145,27 @@ describe("pilot preparation environment boundary", () => {
 });
 
 function installNextStub(root: string) {
+  put(root, "node_modules/next/constants.js", 'exports.PHASE_PRODUCTION_BUILD = "phase-production-build"; exports.PHASE_PRODUCTION_SERVER = "phase-production-server";');
+  put(root, "node_modules/next/dist/server/config.js", `exports.default = async (phase) => {
+    if (process.env.PILOT_CONFIG_REPORT) require("node:fs").writeFileSync(process.env.PILOT_CONFIG_REPORT, JSON.stringify({phase, target: process.env.NEXT_PUBLIC_SUPABASE_URL, mode: process.env.NODE_ENV}));
+    return {distDir: ".next"};
+  };`);
   put(root, "package.json", '{"private":true}');
   put(root, "node_modules/next/package.json", '{"name":"next","version":"0.0.0-test"}');
   put(root, "node_modules/next/dist/bin/next", `const fs = require("node:fs");
+if (process.argv[2] === "build") {
+  fs.mkdirSync(".next/server", {recursive:true});
+  fs.mkdirSync(".next/static", {recursive:true});
+  fs.writeFileSync(".next/BUILD_ID", "synthetic-build");
+  fs.writeFileSync(".next/server/page.js", "server");
+  fs.writeFileSync(".next/static/page.js", "client");
+}
 fs.writeFileSync(process.env.PILOT_CHILD_REPORT, JSON.stringify({
   args: process.argv.slice(2), target: process.env.NEXT_PUBLIC_SUPABASE_URL, mode: process.env.NODE_ENV
 }));`);
 }
 function launch(root: string, action: string, shell: Record<string, string> = {}) {
-  const report = join(root, "child.json");
+  const report = join(directory, `child-${sequence++}.json`);
   const result = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/run-pilot-reconstruction.ts"), action, ...(action === "start" ? ["--port", "3127"] : [])], {
     cwd: root, encoding: "utf8", timeout: 10_000,
     env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "test", PILOT_CHILD_REPORT: report, ...shell },
@@ -171,9 +183,16 @@ describe("documented pilot build and start boundary", () => {
   it.each(["build", "start"])("passes the checked production environment to %s", action => {
     const root = launchRoot();
     put(root, ".env.production.local", "NEXT_PUBLIC_SUPABASE_URL=$LOCAL_API");
-    const result = launch(root, action, { LOCAL_API: "http://localhost:54321", STRIPE_SECRET_KEY: "sk_test_inert_fixture" });
+    const configReport = join(directory, `config-${sequence++}.json`);
+    const shell = { PILOT_CONFIG_REPORT: configReport, LOCAL_API: "http://localhost:54321", STRIPE_SECRET_KEY: "sk_test_inert_fixture" };
+    if (action === "start") expect(launch(root, "build", shell).status).toBe(0);
+    const result = launch(root, action, shell);
     expect(result.error).toBeUndefined();
     expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(configReport, "utf8"))).toEqual({
+      phase: "phase-production-server",
+      target: "http://localhost:54321", mode: "production",
+    });
     expect(JSON.parse(readFileSync(result.report, "utf8"))).toEqual({
       args: action === "start" ? ["start", "--hostname", "127.0.0.1", "--port", "3127"] : ["build"],
       target: "http://localhost:54321", mode: "production",
@@ -188,7 +207,7 @@ describe("documented pilot build and start boundary", () => {
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}${result.stderr}`).not.toContain(marker);
     expect(result.stderr).toContain("Live provider credentials are forbidden");
-    expect(readdirSync(root)).not.toContain("child.json");
+    expect(() => readFileSync(result.report)).toThrow();
   });
   it.each(["build", "start"])("rejects a changed shell target after preparation before %s", action => {
     const prepared = prepare();
@@ -202,6 +221,6 @@ describe("documented pilot build and start boundary", () => {
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}${result.stderr}`).not.toContain(marker);
     expect(result.stderr).toContain("Only local synthetic Supabase is supported");
-    expect(readdirSync(root)).not.toContain("child.json");
+    expect(() => readFileSync(result.report)).toThrow();
   });
 });

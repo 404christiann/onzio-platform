@@ -17,3 +17,5 @@ supabase/.temp/
 supabase/.branches/
 .vercel
 .codex-work/
+
+.onzio-pilot-build.lock
