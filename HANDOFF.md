@@ -1,3 +1,56 @@
+## 2026-10-21 - Pilot reconstruction environment review correction
+
+PR24 is rebased onto corrected PR23 at
+`d31cdff8dc53eaf4c8320c35c94758217a911572`. Preparation checks raw `.env.local`
+credentials and Next's effective production environment. The documented guarded
+build/start commands repeat that check immediately before spawning Next with the
+checked environment. Both Stripe live key prefixes and nonlocal Supabase API or
+database URL variables are rejected without values in errors. Starts bind to
+loopback. Direct Next commands bypass these rehearsal-specific guards.
+
+The real setup CLI previously accepted an inert restricted shell key and a
+nonlocal shell URL with exit zero. Fifteen initial regressions reproduced 13
+failures, including malformed-URL disclosure. All 28 environment/launch checks
+now pass, including harmless child-process probes and an environment change
+after setup. The 14 source-package checks also pass. TypeScript, lint and
+whitespace checks pass. All 1,856 tests across 195 files pass. Separate contract, architecture and local database commands pass. The real
+setup CLI rejects both shell live-key prefixes and the nonlocal URL override
+without marker disclosure, and safe setup succeeds. Exact-revision independent
+review is required before the PR update. No fresh browser or full Next
+build claim is added by these command-boundary tests.
+
+PR23's regenerated 706-file local candidate verifies and reconstructs at digest
+`be20522dadfa1e75f29ec45d9d6cbb20ea606f029277d15d952a9f974bef46f4`.
+Older inventories lacking the required framework/build roots must be regenerated.
+The inventory pins package roots, not all transitive lock entries. The existing
+browser evidence below predates these guard corrections. Next, Christian reviews
+and merges the stack; deployment, provider calls and hosted changes remain outside
+this task.
+
+## 2026-10-21 - Actual pilot reconstruction acceptance
+
+`SITE-05C` is ready_for_review on top of the reviewed source package. The real Next
+build of retained A restores public/editor typography, stylesheet/font/image
+bytes and exact kit screenshots after B changes. Current B's API denial marker
+remains active. Desktop 1440 and phone 390 public/kit/editor screenshots were
+opened and inspected. A fresh context retrieves a previously unloaded A font.
+No content saves occur in the new rehearsal; separate existing browser suites
+exercise actual saves and recovery. Shell/style isolation, offline font builds,
+binding-aware saves, deployment coordination and runtime activation remain open.
+
+The setup command creates private temporary controls and rejects actual package
+copies missing a hero module, font or kit image. It never modifies the current
+app or hosted state. Source packaging is PR23. Record final validation and exact
+independent review before submission of this child unit. All 1,824 tests across
+194 files, lint and TypeScript pass. Original and generated B/restored A Next
+production builds and post-build TypeScript pass. The new browser rehearsal
+passes all six desktop/mobile captures; all 18 screenshots were inspected from
+the first strict run. The setup-generated rerun also passes. Existing editor
+browser acceptance passes 13 tests, including committed response-loss recovery
+and all-template public/preview parity. Its production inputs match the generated
+restored A across 598 files. Alpha content, slug and seeded pointers must be
+verified restored before handoff.
+
 ## 2026-10-21 - Pilot runtime inventory review correction
 
 PR23 now requires explicit Next, React, React DOM and TypeScript versions even
