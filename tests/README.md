@@ -168,6 +168,11 @@ proves layout; native iOS keyboard/safe-area behavior remains unverified.
 
 ## Homepage editor redesign
 
+The [versioned editing bindings](../docs/homepage-editing-bindings.md) have focused
+projection, identity, reducer and save-adapter regressions in
+`tests/contracts/homepage-editor-bindings.test.ts`. They preserve the legacy save
+and recovery contracts while binding-aware integration remains separate.
+
 Status and acceptance ledger: `docs/homepage-editor-redesign-plan.md`.
 The state, capability, save schema, route and media hydration contracts have
 production implementations. Local SQL/HTTP transaction coverage lives in

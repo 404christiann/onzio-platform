@@ -29,7 +29,7 @@ beforeAll(() => {
   put(source, "components/sites/diverse-city/AliasChild.ts", 'export const aliasChild = "Retained alias child";');
   put(source, "components/sites/diverse-city/Child.tsx", 'export const heading = "Retained A";');
   put(source, "components/ClubContextProvider.tsx", 'export const authority = "Current platform";');
-  put(source, "lib/homepage-editor/capabilities.ts", 'export const binding = "legacy@1";');
+  put(source, "lib/homepage-editor/capabilities.ts", 'export const binding = "legacy@1"; export const semanticBindingRevision = 1;');
   put(source, "public/first-load.png", "retained image bytes");
   put(source, "package-lock.json", JSON.stringify({ packages: Object.fromEntries(["next", "react", "react-dom", "typescript", "tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"].map(name => [`node_modules/${name}`, { version: "1.0.0" }])) }));
   execFileSync("git", ["init", "--quiet"], { cwd: source });
@@ -88,6 +88,14 @@ describe("retained pilot source boundary", () => {
     cpSync(source, current, { recursive: true });
     put(current, "lib/homepage-editor/capabilities.ts", 'export const binding = "incompatible@2";');
     expect(() => reconstructPilotSource({ root: current, directory: artifact, expectedDigest: packageDigest, output: join(directory, "rejected") })).toThrow("Binding meaning changed");
+  });
+  it("requires compatibility review after only the semantic binding revision changes", () => {
+    const current = join(directory, "binding-revision-only");
+    cpSync(source, current, { recursive: true });
+    const path = "lib/homepage-editor/capabilities.ts";
+    const original = readFileSync(join(current, path), "utf8");
+    put(current, path, original.replace("semanticBindingRevision = 1", "semanticBindingRevision = 2"));
+    expect(() => reconstructPilotSource({ root: current, directory: artifact, expectedDigest: packageDigest, output: join(directory, "rejected-binding-revision") })).toThrow("Binding meaning changed");
   });
   it.each([
     'export type Dependency = typeof import("./MissingVisualDependency");',
