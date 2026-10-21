@@ -450,3 +450,68 @@ test("recreating an undone edit persists recovery again and survives reload", as
   expect(posts).toBe(0);
   expect((await (await page.request.get("/api/admin/homepage")).json()).content).toEqual(baseline.content);
 });
+
+async function holdRecoveryWrites(page: Page) {
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const opened = indexedDB.open("onzio-homepage-editor");
+    opened.onerror = () => reject(opened.error);
+    opened.onsuccess = () => {
+      const db = opened.result;
+      const tx = db.transaction("drafts", "readwrite");
+      const store = tx.objectStore("drafts");
+      let holding = true;
+      let started = false;
+      window.addEventListener("release-recovery-writes", () => { holding = false; }, { once: true });
+      const keepAlive = () => {
+        const request = store.get("__transaction_hold__");
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          if (!started) { started = true; resolve(); }
+          if (holding) keepAlive();
+        };
+      };
+      tx.oncomplete = () => db.close();
+      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
+      keepAlive();
+    };
+  }));
+}
+
+for (const mutation of ["clear", "write"] as const) {
+  test(`latest edit survives an older pending ${mutation} recovery transaction`, async ({ page, context }) => {
+    const baseline = await (await page.request.get("/api/admin/homepage")).json();
+    const marker = `Latest queued draft ${randomUUID().slice(0, 8)}`;
+    const olderMarker = `Earlier queued draft ${randomUUID().slice(0, 8)}`;
+    const heading = await editHeading(page, marker);
+    expect(await readStoredRecord(page)).toMatchObject({ draft: { hero: { headline_line_one: marker } } });
+    const holder = await context.newPage();
+    try {
+      await holder.goto("/admin");
+      await holdRecoveryWrites(holder);
+      await page.bringToFront();
+      await page.evaluate(() => {
+        const original = IDBDatabase.prototype.transaction;
+        IDBDatabase.prototype.transaction = function(this: IDBDatabase, ...args: Parameters<IDBDatabase["transaction"]>) {
+          const names = typeof args[0] === "string" ? [args[0]] : Array.from(args[0]);
+          if (args[1] === "readwrite" && names.includes("drafts")) document.documentElement.dataset.recoveryMutationStarted = "true";
+          return original.apply(this, args);
+        };
+      });
+      await page.getByLabel("Line one", { exact: true }).fill(mutation === "clear" ? baseline.content.hero.headline_line_one : olderMarker);
+      await expect.poll(() => page.evaluate(() => document.documentElement.dataset.recoveryMutationStarted)).toBe("true");
+      await page.getByLabel("Line one", { exact: true }).fill(marker);
+      await page.waitForTimeout(900);
+      await holder.evaluate(() => window.dispatchEvent(new Event("release-recovery-writes")));
+      await page.waitForTimeout(900);
+      await page.reload();
+      await expect(heading).toContainText(marker);
+      expect(await readStoredRecord(page)).toMatchObject({ draft: { hero: { headline_line_one: marker } } });
+      expect((await (await page.request.get("/api/admin/homepage")).json()).content).toEqual(baseline.content);
+    } finally {
+      if (!holder.isClosed()) {
+        await holder.evaluate(() => window.dispatchEvent(new Event("release-recovery-writes")));
+        await holder.close();
+      }
+    }
+  });
+}

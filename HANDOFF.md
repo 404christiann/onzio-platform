@@ -57,8 +57,8 @@ All 2,031 tests in 200 files pass, including 61 new recovery cases. Separate
 runs pass 1,211 contracts, 64 architecture checks and 334 local database checks.
 The implementation owner's focused run passes 240 cases. TypeScript, lint and
 the guarded production build pass. Final source inputs stayed unchanged through
-the build. All 34 selected production browser cases pass serially, including
-12 new recovery cases and the existing six photo/upload/cleanup cases. Actual
+the build. All 36 selected production browser cases pass serially, including
+14 new recovery cases and the existing six photo/upload/cleanup cases. Actual
 1440px and 390px compatible/incompatible review screenshots were opened and
 inspected. The failed-apply message is visible in the sticky actions area;
 Escape and trigger focus pass. Native-device acceptance is not established.
@@ -79,7 +79,15 @@ content marker. The failure was reproduced in the real browser, including lost
 words after reload. Successful guarded clears now reset that marker. The new
 browser regression covers the entire sequence; the fixed probe reports that the
 edit is persisted again and restored. Required checks and the full browser run
-were repeated for this correction. Updated exact-revision reviews are required.
+were repeated for this correction. Updated exact-revision reviews then found
+that a recreated edit could still be skipped while the clear was pending. Real
+held IndexedDB transactions reproduced that loss and the analogous stale-write
+ordering. Deduplication now runs inside the existing persistence queue after
+preceding mutations finish. The captured requested state is preserved, and the
+existing generation, source and CAS guards remain. An independent design check
+selected this over a second pending-intent model. Both held-transaction browser
+regressions pass; final acceptance includes all 36 cases. Updated exact-revision
+reviews are required for this queue correction.
 
 SQL migrations, save wire schema, model/submitted representation, binding-file
 bytes, server hydration, API route, generated types and save serializer remain

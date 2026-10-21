@@ -175,7 +175,8 @@ receipt-first recovery. Focused pure cases are in
 are in `tests/browser/homepage-editor-binding-recovery.spec.ts`, under the existing
 homepage config. They cover compatible and incompatible review, old records and
 files, old-client access rejection, persistence after undo, and
-committed/uncommitted response loss.
+committed/uncommitted response loss. They also hold real IndexedDB transactions
+to check recovery after older clears and writes complete.
 Run browser and database fixture writers serially.
 
 The [assignment-aware homepage save guide](../docs/homepage-assignment-saves.md)

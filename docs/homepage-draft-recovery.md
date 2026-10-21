@@ -47,7 +47,10 @@ to that older client until compatible code returns. An application rollback
 must not delete or downgrade this database.
 
 A blocked upgrade retains the existing timeout and unavailable-storage warning.
-Writes resolve after transaction commit. Guarded writes and compare-delete keep
+Writes resolve after transaction commit. Content deduplication runs inside the
+serialized queue after earlier writes and clears finish. An edit recreated while
+storage is pending therefore remains eligible for persistence. Guarded writes
+and compare-delete keep
 another tab's newer draft and referenced files. A failed reviewed replacement
 keeps the source draft available instead of consuming it.
 

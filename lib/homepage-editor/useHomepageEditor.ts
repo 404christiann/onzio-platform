@@ -70,10 +70,11 @@ export function useHomepageEditor(clubId: string) {
   }, [cancelPendingPersistence]);
   const persistState = useCallback((value: HomepageEditorState): Promise<void> => {
     const key = recoveryKey.current;
-    if (!key || recoveryContent(value) === retainedState.current) return Promise.resolve();
+    if (!key) return Promise.resolve();
     const binding = editorBinding.current;
     if (!binding) { setRecoveryUnavailable(true); return Promise.resolve(); }
     const run = generation.current;
+    const content = recoveryContent(value);
     const record = {
       schemaVersion: 2, binding, scope: { origin: window.location.origin, userId: recoveryUserId.current, clubId },
       savedAt: new Date().toISOString(), baseRevision: value.baseRevision,
@@ -81,10 +82,11 @@ export function useHomepageEditor(clubId: string) {
     };
     const pending = persistence.current.then(async () => {
       if (run !== generation.current || key !== recoveryKey.current) return;
+      if (content === retainedState.current) return;
       const expected = ownedRecord.current;
       const result = await writeRecoveryRecord(key, record, { expected });
       if (run !== generation.current || ownedRecord.current !== expected) return;
-      if (result === "written") { ownedRecord.current = record; retainedState.current = recoveryContent(value); setRecoveryOtherTab(false); }
+      if (result === "written") { ownedRecord.current = record; retainedState.current = content; setRecoveryOtherTab(false); }
       else if (result === "newer-record") setRecoveryOtherTab(true);
       else setRecoveryUnavailable(true);
     });
@@ -287,7 +289,7 @@ export function useHomepageEditor(clubId: string) {
     persistTimeout.current = setTimeout(() => {
       persistTimeout.current = null;
       const value = current.current;
-      if (!value || recoveryDiscardBusy.current || recoveryContent(value) === retainedState.current) return;
+      if (!value || recoveryDiscardBusy.current) return;
       if (getDirtyHomepageSections(value).length === 0 && !value.submitted) { void clearRecoveryNow(); return; }
       void persistState(value);
     }, 500);
