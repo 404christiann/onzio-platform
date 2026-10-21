@@ -28,7 +28,8 @@
       "agent/pilot-release-package": false,
       "agent/pilot-reconstruction-proof": false,
       "agent/homepage-editing-bindings": false,
-      "agent/homepage-assignment-saves": false
+      "agent/homepage-assignment-saves": false,
+      "agent/homepage-incompatible-drafts": false
     }
   }
 }

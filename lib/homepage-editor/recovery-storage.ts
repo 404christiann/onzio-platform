@@ -9,7 +9,7 @@ export const RECOVERY_UNAVAILABLE = Symbol("recovery-unavailable");
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    const request = indexedDB.open(DB_NAME, 2);
     let settled = false;
     const fail = () => { if (!settled) { settled = true; clearTimeout(timer); reject(new Error("Recovery storage unavailable")); } };
     const timer = setTimeout(fail, 2000);

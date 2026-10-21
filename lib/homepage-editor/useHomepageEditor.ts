@@ -3,13 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/admin-client";
 import { buildHomepageSaveRequest, type HomepageEditorSnapshot } from "./adapter";
-import { resolveHomepageBindings, resolveHomepageCapabilities } from "./capabilities";
+import { resolveHomepageBindings, resolveHomepageCapabilities, type HomepageBindingIdentity } from "./capabilities";
 import { createHomepageEditorState, getDirtyHomepageSections, reduceHomepageEditor, type HomepageEditorAction, type HomepageEditorState, type HomepagePhoto, type PieceId } from "./model";
-import { resolveHomepageRecovery, type HomepageRecoveryRecord, type HomepageRecoveryResult } from "./recovery";
+import { currentHomepageBinding, homepageSaveFailureSettlesOperation, overlayHomepageRecovery, parseHomepageRecoveryRecord, resolveHomepageRecovery, type HomepageRecoveryResult } from "./recovery";
 import { RECOVERY_UNAVAILABLE, clearRecoveryRecord, readRecoveryFile, readRecoveryRecord, recoveryStorageKey, writeRecoveryFile, writeRecoveryRecord } from "./recovery-storage";
 
 type ErrorInfo = { code: string; message: string };
 type RecoveryNotice = "restored" | "reconciled" | null;
+
+function recoveryContent(value: HomepageEditorState): string {
+  return JSON.stringify([value.baseline, value.draft, value.submitted, value.baseRevision, value.designRevision]);
+}
 
 export function useHomepageEditor(clubId: string) {
   const [state, setState] = useState<HomepageEditorState | null>(null);
@@ -27,6 +31,8 @@ export function useHomepageEditor(clubId: string) {
   const [discardingUnsaved, setDiscardingUnsaved] = useState(false);
   const [discardingRecovery, setDiscardingRecovery] = useState(false);
   const ownedRecord = useRef<unknown>(null);
+  const editorBinding = useRef<HomepageBindingIdentity | null>(null);
+  const retainedState = useRef<string | null>(null);
   const persistence = useRef<Promise<void>>(Promise.resolve());
   const busy = useRef(false);
   const leaving = useRef(false);
@@ -40,42 +46,52 @@ export function useHomepageEditor(clubId: string) {
   const recoveryKey = useRef<string | null>(null);
   const recoveryUserId = useRef<string | null>(null);
   const persistTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  function cancelPendingPersistence() {
+  const cancelPendingPersistence = useCallback(() => {
     if (persistTimeout.current) { clearTimeout(persistTimeout.current); persistTimeout.current = null; }
-  }
-  function clearRecoveryNow(): Promise<boolean> {
+  }, []);
+  const clearRecoveryNow = useCallback((): Promise<boolean> => {
     cancelPendingPersistence();
     const key = recoveryKey.current;
+    const run = generation.current;
     const pending = persistence.current.then(async () => {
-      if (key && !await clearRecoveryRecord(key, ownedRecord.current, Array.from(files.current.keys()))) {
+      if (run !== generation.current || key !== recoveryKey.current) return false;
+      const source = ownedRecord.current;
+      if (key && !await clearRecoveryRecord(key, source, Array.from(files.current.keys()))) {
         setRecoveryUnavailable(true);
         return false;
       }
+      if (run !== generation.current || ownedRecord.current !== source) return false;
       ownedRecord.current = null;
       return true;
     });
     persistence.current = pending.then(() => undefined);
     return pending;
-  }
-  function persistState(value: HomepageEditorState): Promise<void> {
+  }, [cancelPendingPersistence]);
+  const persistState = useCallback((value: HomepageEditorState): Promise<void> => {
     const key = recoveryKey.current;
-    if (!key) return Promise.resolve();
+    if (!key || recoveryContent(value) === retainedState.current) return Promise.resolve();
+    const binding = editorBinding.current;
+    if (!binding) { setRecoveryUnavailable(true); return Promise.resolve(); }
+    const run = generation.current;
     const record = {
-      schemaVersion: 1, scope: { origin: window.location.origin, userId: recoveryUserId.current, clubId },
+      schemaVersion: 2, binding, scope: { origin: window.location.origin, userId: recoveryUserId.current, clubId },
       savedAt: new Date().toISOString(), baseRevision: value.baseRevision,
       designRevision: value.designRevision, baseline: value.baseline, draft: value.draft, submitted: value.submitted,
     };
     const pending = persistence.current.then(async () => {
-      const result = await writeRecoveryRecord(key, record, { expected: ownedRecord.current });
-      if (result === "written") { ownedRecord.current = record; setRecoveryOtherTab(false); }
+      if (run !== generation.current || key !== recoveryKey.current) return;
+      const expected = ownedRecord.current;
+      const result = await writeRecoveryRecord(key, record, { expected });
+      if (run !== generation.current || ownedRecord.current !== expected) return;
+      if (result === "written") { ownedRecord.current = record; retainedState.current = recoveryContent(value); setRecoveryOtherTab(false); }
       else if (result === "newer-record") setRecoveryOtherTab(true);
       else setRecoveryUnavailable(true);
     });
     persistence.current = pending;
     return pending;
-  }
+  }, [clubId]);
   const dispatch = useCallback((action: HomepageEditorAction) => {
-    if (!current.current) return;
+    if (!current.current || recoveryDiscardBusy.current) return;
     const next = reduceHomepageEditor(current.current, action);
     current.current = next;
     setState(next);
@@ -113,6 +129,13 @@ export function useHomepageEditor(clubId: string) {
     const run = generation.current;
     let readyToNavigate = false;
     try {
+      if (current.current?.submitted || recoveryConflict) {
+        cancelPendingPersistence();
+        await persistence.current;
+        if (run !== generation.current || saveInFlight()) return false;
+        readyToNavigate = true;
+        return true;
+      }
       await Promise.allSettled(Array.from(uploadTasks.current.values()));
       if (run !== generation.current || saveInFlight()) return false;
       const unsaved = current.current?.draft.photos.items
@@ -136,10 +159,27 @@ export function useHomepageEditor(clubId: string) {
     await Promise.all(Array.from(pendingUploadCleanup.current, cleanupUploadedAsset));
   }
 
+  async function hydrateRecoveredDraft(draft: HomepageEditorState["draft"], key: string, run: number) {
+    const working = structuredClone(draft);
+    for (const photo of working.photos.items) {
+      if (photo.upload === "ready") continue;
+      if (photo.localFileKey) {
+        const file = await readRecoveryFile(photo.localFileKey, key);
+        if (run !== generation.current || key !== recoveryKey.current) return null;
+        if (file === RECOVERY_UNAVAILABLE) setRecoveryUnavailable(true);
+        else if (file) files.current.set(photo.clientId, file);
+      }
+      photo.upload = "failed";
+      photo.error ??= { code: "RECOVERY_INTERRUPTED", message: "This photo needs to be added again." };
+    }
+    return working;
+  }
+
   useEffect(() => {
     const controller = new AbortController();
     const run = ++generation.current;
-    current.current = null;
+    current.current = null; editorBinding.current = null; retainedState.current = null;
+    cancelPendingPersistence();
     setState(null); setSnapshot(null); setLoading(true); setError(null); setRecoveryNotice(null); setRecoveryConflict(null); setRecoveryUnavailable(false); setRecoveryOtherTab(false); ownedRecord.current = null;
     files.current.clear(); uploading.current.clear(); busy.current = false; leaving.current = false; setDiscardingUnsaved(false); recoveryDiscardBusy.current = false; setDiscardingRecovery(false); recoveryKey.current = null;
     async function load() {
@@ -148,69 +188,58 @@ export function useHomepageEditor(clubId: string) {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error?.message ?? "We could not load your homepage.");
         let data = body as HomepageEditorSnapshot;
-        const capabilities = resolveHomepageCapabilities(data.design);
-        const bindings = resolveHomepageBindings({ capabilities });
-        const allowedPieces = Object.keys(bindings.elements);
-        let next = createHomepageEditorState({ content: data.content, revision: data.revision, designRevision: data.designRevision, editableSections: capabilities.editableSections, allowedPieces });
+        let next: HomepageEditorState | undefined;
         if (generation.current !== run) return;
-        // Recovery never blocks the editor: any failure here is swallowed and
-        // the editor mounts with a clean server-loaded draft either way.
         try {
           const { data: authData } = await createClient().auth.getUser();
+          if (generation.current !== run) return;
           const userId = authData.user?.id;
           if (userId) {
             const key = recoveryStorageKey(clubId, userId);
             recoveryKey.current = key; recoveryUserId.current = userId;
             const record = await readRecoveryRecord(key);
+            if (generation.current !== run) return;
             if (record === RECOVERY_UNAVAILABLE) setRecoveryUnavailable(true);
             else ownedRecord.current = record;
-            const result: HomepageRecoveryResult = resolveHomepageRecovery({
-              record, scope: { origin: window.location.origin, userId, clubId },
-              serverRevision: data.revision, designRevision: data.designRevision, now: new Date().toISOString(),
+            const scope = { origin: window.location.origin, userId, clubId };
+            const decide = (operation: "unchecked" | "not-committed" | "committed" | "unresolved" = "unchecked") => resolveHomepageRecovery({
+              record, scope, serverRevision: data.revision, designRevision: data.designRevision,
+              design: data.design, now: new Date().toISOString(), operation,
             });
+            let result = decide();
             if (generation.current !== run) return;
-            if (result.kind === "conflict") {
-              setRecoveryConflict(result);
-            } else if (result.kind === "restore" || result.kind === "reconcile") {
-              // The resolver validated the stored shape and identity above.
-              const stored = record as HomepageRecoveryRecord;
-              let shouldRestore = true;
-              if (stored.submitted) {
-                const receiptResponse = await fetch(`/api/admin/homepage?operationId=${encodeURIComponent(stored.submitted.operationId)}`, { credentials: "same-origin", cache: "no-store", signal: controller.signal });
-                if (!receiptResponse.ok) throw new Error("Could not check the last save.");
-                const latest = await receiptResponse.json() as HomepageEditorSnapshot;
+            if (result.kind === "reconcile") {
+              const receiptResponse = await fetch(`/api/admin/homepage?operationId=${encodeURIComponent(result.operationId)}`, { credentials: "same-origin", cache: "no-store", signal: controller.signal });
+              if (!receiptResponse.ok) throw new Error("Could not check the last save.");
+              data = await receiptResponse.json() as HomepageEditorSnapshot;
+              if (generation.current !== run) return;
+              result = decide(data.operation?.status ?? "unresolved");
+            }
+            const capabilities = resolveHomepageCapabilities(data.design);
+            const bindings = resolveHomepageBindings({ capabilities });
+            next = createHomepageEditorState({ content: data.content, revision: data.revision, designRevision: data.designRevision, editableSections: capabilities.editableSections, allowedPieces: Object.keys(bindings.elements) });
+            if (result.kind === "unresolved" || result.kind === "reconcile") throw new Error("Could not check the last save.");
+            if (result.kind === "conflict") setRecoveryConflict(result);
+            else if (result.kind === "committed") {
+              if (!await clearRecoveryRecord(key, record)) setRecoveryUnavailable(true);
+              else {
+                const remaining = await readRecoveryRecord(key);
                 if (generation.current !== run) return;
-                if (latest.designRevision !== data.designRevision) throw new Error("The design changed while loading.");
-                data = latest;
-                next = createHomepageEditorState({ content: latest.content, revision: latest.revision, designRevision: latest.designRevision, editableSections: capabilities.editableSections, allowedPieces });
-                if (latest.operation?.status === "committed") {
-                  // Use CURRENT content, not the historical receipt: another
-                  // administrator may have saved after our acknowledged save.
-                  if (await clearRecoveryRecord(key, stored)) ownedRecord.current = null;
-                  else setRecoveryUnavailable(true);
-                  shouldRestore = false;
-                } else if (latest.revision !== stored.baseRevision || latest.designRevision !== stored.designRevision) {
-                  setRecoveryConflict({ kind: "conflict", draft: stored.draft, reason: latest.designRevision !== stored.designRevision ? "DESIGN_CHANGED" : "CONTENT_CHANGED" });
-                  shouldRestore = false;
-                }
+                if (remaining === RECOVERY_UNAVAILABLE) setRecoveryUnavailable(true);
+                else if (remaining) setRecoveryOtherTab(true);
+                else ownedRecord.current = null;
               }
-              if (shouldRestore) {
-                for (const photo of result.draft.photos.items) {
-                  if (photo.upload !== "ready" && photo.localFileKey) {
-                    const file = await readRecoveryFile(photo.localFileKey, key);
-                    if (file === RECOVERY_UNAVAILABLE) setRecoveryUnavailable(true);
-                    else if (file) files.current.set(photo.clientId, file);
-                  }
-                }
-                if (generation.current !== run) return;
-                const restoredDraft = { ...result.draft, photos: { ...result.draft.photos, items: result.draft.photos.items.map(photo => photo.upload === "ready" ? photo : {
-                  ...photo, upload: "failed" as const, error: photo.error ?? { code: "RECOVERY_INTERRUPTED", message: "This photo needs to be added again." },
-                }) } };
-                next = { ...next, draft: restoredDraft, submitted: stored.submitted, ...(stored.submitted ? { save: "failed" as const } : {}) };
-                if (getDirtyHomepageSections(next).length) setRecoveryNotice("restored");
-              }
+            } else if (result.kind === "restore") {
+              const stored = parseHomepageRecoveryRecord(record);
+              if (!stored) throw new Error("Could not read the recovered draft.");
+              const draft = await hydrateRecoveredDraft(result.draft, key, run);
+              if (!draft || generation.current !== run) return;
+              next = { ...next, baseline: stored.baseline, baseRevision: stored.baseRevision, designRevision: stored.designRevision,
+                draft, submitted: stored.submitted, ...(stored.submitted ? { save: "failed" as const } : {}) };
+              if (getDirtyHomepageSections(next).length) setRecoveryNotice("restored");
             } else if (record !== RECOVERY_UNAVAILABLE) {
               await clearRecoveryRecord(key, record);
+              if (generation.current !== run) return;
               ownedRecord.current = null;
             }
           }
@@ -221,6 +250,11 @@ export function useHomepageEditor(clubId: string) {
           setRecoveryUnavailable(true);
         }
         if (generation.current !== run) return;
+        const capabilities = resolveHomepageCapabilities(data.design);
+        next ??= createHomepageEditorState({ content: data.content, revision: data.revision, designRevision: data.designRevision,
+          editableSections: capabilities.editableSections, allowedPieces: Object.keys(resolveHomepageBindings({ capabilities }).elements) });
+        editorBinding.current = currentHomepageBinding(data.design);
+        retainedState.current = recoveryContent(next);
         current.current = next; setState(next); setSnapshot(data);
         // Existing dynamic destinations remain available in the button picker.
         const result = await createClient().from("programs").select("slug, nav_label, display_title").eq("status", "active").order("sort_order", { ascending: true });
@@ -235,7 +269,7 @@ export function useHomepageEditor(clubId: string) {
     }
     void load();
     return () => { controller.abort(); generation.current = run + 1; };
-  }, [clubId, reload]);
+  }, [clubId, reload, cancelPendingPersistence]);
 
   const dirty = state ? getDirtyHomepageSections(state) : [];
   useEffect(() => {
@@ -248,20 +282,20 @@ export function useHomepageEditor(clubId: string) {
   // Selection changes never rewrite recovery. Serialize writes and clears;
   // canceling a debounce alone cannot cancel an already-started IDB write.
   useEffect(() => {
-    if (!recoveryKey.current || !state || recoveryConflict) return;
+    if (!recoveryKey.current || !current.current || recoveryConflict) return;
     persistTimeout.current = setTimeout(() => {
       persistTimeout.current = null;
-      if (dirty.length === 0 && !state.submitted) { void clearRecoveryNow(); return; }
-      void persistState(state);
+      const value = current.current;
+      if (!value || recoveryDiscardBusy.current || recoveryContent(value) === retainedState.current) return;
+      if (getDirtyHomepageSections(value).length === 0 && !value.submitted) { void clearRecoveryNow(); return; }
+      void persistState(value);
     }, 500);
     return cancelPendingPersistence;
-    // Persist content/save changes only; helpers read the current scope refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state?.draft, state?.submitted, state?.baseRevision, dirty.length, clubId, recoveryConflict]);
+  }, [state?.draft, state?.submitted, state?.baseRevision, dirty.length, clubId, recoveryConflict, cancelPendingPersistence, clearRecoveryNow, persistState]);
 
   async function save(): Promise<boolean> {
     const before = current.current;
-    if (!before || !snapshot || busy.current || leaving.current || recoveryConflict) return false;
+    if (!before || !snapshot || busy.current || leaving.current || recoveryDiscardBusy.current || recoveryConflict) return false;
     let payload;
     try { payload = buildHomepageSaveRequest(before, snapshot.design, crypto.randomUUID()); }
     catch { setError({ code: "INVALID_FIELDS", message: "Check the field lengths and photo descriptions before saving." }); return false; }
@@ -274,15 +308,14 @@ export function useHomepageEditor(clubId: string) {
       // Persist the operation before sending: a quick commit/response loss can
       // happen before the ordinary 500ms editing debounce runs.
       if (current.current) await persistState(current.current);
+      if (run !== generation.current) return false;
       const response = await fetch("/api/admin/homepage", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const data = await response.json();
       if (run !== generation.current) return false;
       if (!response.ok) {
         const failure = data.error ?? { code: "SAVE_FAILED", message: "We could not confirm your save. Your changes are still here." };
         dispatch({ type: "save-failed", ...failure });
-        // Validation/authorization/conflict responses prove no content committed.
-        // Network and server failures retain the same submitted operation.
-        if (response.status >= 400 && response.status < 500) dispatch({ type: "save-reconciled-not-committed" });
+        if (homepageSaveFailureSettlesOperation(failure.code)) dispatch({ type: "save-reconciled-not-committed" });
         setError(failure); return false;
       }
       const saved = data as HomepageEditorSnapshot;
@@ -306,7 +339,7 @@ export function useHomepageEditor(clubId: string) {
   }
   async function upload(id: string) {
     const file = files.current.get(id);
-    if (!file || uploading.current.has(id) || current.current?.submitted) return;
+    if (!file || uploading.current.has(id) || current.current?.submitted || recoveryDiscardBusy.current || recoveryConflict) return;
     const run = generation.current;
     uploading.current.add(id); updatePhoto(id, { upload: "uploading", error: undefined });
     try {
@@ -332,7 +365,7 @@ export function useHomepageEditor(clubId: string) {
   }
   function addPhotos(selected: FileList | null) {
     const before = current.current;
-    if (!before || !selected || before.submitted) return;
+    if (!before || !selected || before.submitted || recoveryDiscardBusy.current || recoveryConflict) return;
     const additions = Array.from(selected).slice(0, Math.max(0, 6 - before.draft.photos.items.length)).map(file => {
       const clientId = crypto.randomUUID(); files.current.set(clientId, file);
       // Persisted so a queued/failed file survives reload for HP-05 recovery;
@@ -351,14 +384,16 @@ export function useHomepageEditor(clubId: string) {
     retryLoad: () => setReload(x => x + 1), recoveryNotice, dismissRecoveryNotice: () => setRecoveryNotice(null),
     clearRecovery: clearRecoveryNow, discardUnsavedUploads, isDiscardingUnsaved: () => leaving.current, cleanupWarning, retryUnusedCleanup, removePhoto: (id: string) => {
       const before = current.current;
-      if (!before) return;
+      if (!before || before.submitted || recoveryDiscardBusy.current || recoveryConflict) return;
       const photo = before.draft.photos.items.find(item => item.clientId === id);
       dispatch({ type: "photos-changed", photos: before.draft.photos.items.filter(item => item.clientId !== id).map((item, order) => ({ ...item, order })) });
       if (photo?.rowId === null && photo.assetId) void cleanupUploadedAsset(photo.assetId);
     }, recoveryUnavailable, recoveryOtherTab, recoveryConflict, discardingUnsaved, discardingRecovery,
     discardRecoveredDraft: async () => {
       if (recoveryDiscardBusy.current || recoveryOtherTab || !recoveryConflict) return;
-      const stored = ownedRecord.current as HomepageRecoveryRecord;
+      const source = ownedRecord.current;
+      const stored = parseHomepageRecoveryRecord(source);
+      if (!stored) return;
       const key = recoveryKey.current;
       const run = generation.current;
       recoveryDiscardBusy.current = true; setDiscardingRecovery(true);
@@ -377,9 +412,13 @@ export function useHomepageEditor(clubId: string) {
             ...photo, upload: "failed" as const, url: null,
             error: { code: "RECOVERY_CLEANUP_PENDING", message: "This photo needs to be added again if you restore this draft." },
           } : photo);
-          const safeRecord: HomepageRecoveryRecord = { ...stored, savedAt: new Date().toISOString(), draft: safeDraft };
-          const writeResult = await persistence.current.then(() => writeRecoveryRecord(key, safeRecord, { expected: stored }));
-          if (run !== generation.current) return;
+          const safeRecord = { ...stored, draft: safeDraft };
+          cancelPendingPersistence();
+          const pending = persistence.current.then(() => run === generation.current && ownedRecord.current === source
+            ? writeRecoveryRecord(key, safeRecord, { expected: source }) : "newer-record" as const);
+          persistence.current = pending.then(() => undefined);
+          const writeResult = await pending;
+          if (run !== generation.current || ownedRecord.current !== source) return;
           if (writeResult !== "written") {
             if (writeResult === "newer-record") setRecoveryOtherTab(true);
             else setRecoveryUnavailable(true);
@@ -394,6 +433,7 @@ export function useHomepageEditor(clubId: string) {
         if (!await clearRecoveryNow()) return;
         if (run !== generation.current) return;
         const remaining = key ? await readRecoveryRecord(key) : null;
+        if (run !== generation.current) return;
         if (remaining === RECOVERY_UNAVAILABLE) { setRecoveryUnavailable(true); return; }
         if (remaining) {
           // A concurrent tab replaced our expected record. Its copy stays in
@@ -404,35 +444,43 @@ export function useHomepageEditor(clubId: string) {
         }
         if (expected) setRecoveryConflict(null);
       } finally {
-        recoveryDiscardBusy.current = false;
-        if (run === generation.current) setDiscardingRecovery(false);
+        if (run === generation.current) { recoveryDiscardBusy.current = false; setDiscardingRecovery(false); }
       }
     },
-    restoreRecoveredDraft: async () => {
-      if (recoveryDiscardBusy.current || recoveryOtherTab || !recoveryConflict || recoveryConflict.reason === "DESIGN_CHANGED" || !current.current) return;
-      const stored = ownedRecord.current as HomepageRecoveryRecord;
+    restoreRecoveredDraft: async (): Promise<boolean> => {
+      if (recoveryDiscardBusy.current || recoveryOtherTab || !recoveryConflict || recoveryConflict.allowedAction !== "apply" || !current.current || !snapshot) return false;
+      const source = ownedRecord.current;
+      const stored = parseHomepageRecoveryRecord(source);
+      const key = recoveryKey.current;
+      const binding = editorBinding.current;
+      if (!stored || !key || !binding) return false;
+      const before = current.current;
       const run = generation.current;
-      const draft = structuredClone(current.current.draft);
-      for (const section of ["hero", "story", "video"] as const) {
-        for (const field of Object.keys(stored.draft[section])) {
-          const before = stored.baseline[section] as Record<string, unknown>;
-          const recovered = stored.draft[section] as Record<string, unknown>;
-          if (JSON.stringify(before[field]) !== JSON.stringify(recovered[field])) (draft[section] as Record<string, unknown>)[field] = recovered[field];
+      recoveryDiscardBusy.current = true;
+      cancelPendingPersistence();
+      try {
+        const overlaid = overlayHomepageRecovery({ record: stored, current: before.draft,
+          bindings: resolveHomepageBindings({ capabilities: resolveHomepageCapabilities(snapshot.design) }) });
+        if (!overlaid) return false;
+        const draft = await hydrateRecoveredDraft(overlaid, key, run);
+        if (!draft || run !== generation.current || ownedRecord.current !== source || current.current !== before) return false;
+        const next = { ...before, draft, submitted: null, save: "idle" as const, saveError: null };
+        const record = { schemaVersion: 2, binding, scope: stored.scope, savedAt: new Date().toISOString(),
+          baseRevision: next.baseRevision, designRevision: next.designRevision, baseline: next.baseline, draft, submitted: null };
+        const pending = persistence.current.then(() => run === generation.current && ownedRecord.current === source && current.current === before
+          ? writeRecoveryRecord(key, record, { expected: source }) : "newer-record" as const);
+        persistence.current = pending.then(() => undefined);
+        const result = await pending;
+        if (run !== generation.current || ownedRecord.current !== source || current.current !== before) return false;
+        if (result !== "written") {
+          if (result === "newer-record") setRecoveryOtherTab(true);
+          else setRecoveryUnavailable(true);
+          return false;
         }
-      }
-      if (JSON.stringify(stored.baseline.photos) !== JSON.stringify(stored.draft.photos)) draft.photos = structuredClone(stored.draft.photos);
-      for (const photo of draft.photos.items) {
-        if (photo.upload !== "ready" && photo.localFileKey && recoveryKey.current) {
-          const file = await readRecoveryFile(photo.localFileKey, recoveryKey.current);
-          if (file === RECOVERY_UNAVAILABLE) setRecoveryUnavailable(true);
-          else if (file) files.current.set(photo.clientId, file);
-          photo.upload = "failed";
-          photo.error = { code: "RECOVERY_INTERRUPTED", message: "This photo needs to be added again." };
-        }
-      }
-      if (generation.current !== run || ownedRecord.current !== stored || !current.current) return;
-      const next = { ...current.current, draft };
-      current.current = next; setState(next); setRecoveryConflict(null); setRecoveryNotice("restored");
+        ownedRecord.current = record; retainedState.current = recoveryContent(next);
+        current.current = next; setState(next); setRecoveryConflict(null); setRecoveryNotice("restored");
+        return true;
+      } finally { if (run === generation.current) recoveryDiscardBusy.current = false; }
     },
   };
 }

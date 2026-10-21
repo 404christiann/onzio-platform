@@ -86,9 +86,10 @@ regressions for this change.
 
 ## Next integration
 
-Old unsaved token values conflict through the existing recovery path. Their
-records are not rebound to current identity. Incompatible-draft review and apply
-behavior remain a separate PR. No claim of complete recovery across authored
-assignments follows from these save checks. Authored assignment resolution,
+The [draft recovery integration](homepage-draft-recovery.md) handles old unsaved
+tokens without rebinding their original operation or inventing old binding
+identity. Proven compatible work can be copied into a fresh draft after explicit
+review. Incompatible meanings remain available for reference. No claim of complete
+recovery across authored assignments follows from these save checks. Authored assignment resolution,
 installed-code compatibility and deployment/activation coordination still need
 their own proof before activation. Content-policy migration remains separate.
