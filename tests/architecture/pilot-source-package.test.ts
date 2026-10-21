@@ -24,7 +24,9 @@ function copy(name: string) {
 beforeAll(() => {
   const roots = ["components/sites/diverse-city/HomePage.tsx", "components/Nav.tsx", "components/Footer.tsx", "components/TemplateFontScope.tsx", "components/AcademyRouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
   for (const path of roots) put(source, path, path.endsWith(".css") ? "body { color: navy; }" : "export {};");
-  put(source, roots[0], 'import "@/components/ClubContextProvider"; export const child = () => import("./Child");');
+  put(source, roots[0], 'import "@/components/ClubContextProvider"; export const child = () => import("./Child"); export type ChildType = typeof import("./TypeChild"); import Alias = require("./AliasChild");');
+  put(source, "components/sites/diverse-city/TypeChild.ts", 'export const typeChild = "Retained type child";');
+  put(source, "components/sites/diverse-city/AliasChild.ts", 'export const aliasChild = "Retained alias child";');
   put(source, "components/sites/diverse-city/Child.tsx", 'export const heading = "Retained A";');
   put(source, "components/ClubContextProvider.tsx", 'export const authority = "Current platform";');
   put(source, "lib/homepage-editor/capabilities.ts", 'export const binding = "legacy@1";');
@@ -52,6 +54,8 @@ describe("retained pilot source boundary", () => {
     expect(readFileSync(join(output, "components/sites/diverse-city/Child.tsx"), "utf8")).toContain("Retained A");
     expect(readFileSync(join(output, "components/ClubContextProvider.tsx"), "utf8")).toContain("New denial behavior");
     expect(verifyPilotSource(artifact, packageDigest).digest).toBe(packageDigest);
+    expect(readFileSync(join(output, "components/sites/diverse-city/TypeChild.ts"), "utf8")).toContain("Retained type child");
+    expect(readFileSync(join(output, "components/sites/diverse-city/AliasChild.ts"), "utf8")).toContain("Retained alias child");
   });
   it.each(["source/components/sites/diverse-city/Child.tsx", "emitted/static/media/font.woff2", "source/public/first-load.png"])("rejects missing retained bytes %s", path => {
     const damaged = copy(path.replaceAll("/", "-"));
@@ -76,6 +80,22 @@ describe("retained pilot source boundary", () => {
     cpSync(source, current, { recursive: true });
     put(current, "lib/homepage-editor/capabilities.ts", 'export const binding = "incompatible@2";');
     expect(() => reconstructPilotSource({ root: current, directory: artifact, expectedDigest: packageDigest, output: join(directory, "rejected") })).toThrow("Binding meaning changed");
+  });
+  it.each([
+    'export type Dependency = typeof import("./MissingVisualDependency");',
+    'import Dependency = require("./MissingVisualDependency");',
+    'const target = "./MissingVisualDependency"; export const child = import(target);',
+  ])("rejects omitted source dependency %s", code => {
+    const damaged = copy(`missing-form-${code.length}`);
+    const path = "source/components/sites/diverse-city/Child.tsx";
+    const manifest = verifyPilotSource(damaged).manifest;
+    put(damaged, path, code);
+    const item = manifest.files.find(value => value.path === path);
+    if (!item) throw new Error("Child fixture missing");
+    item.bytes = Buffer.byteLength(code);
+    item.sha256 = createHash("sha256").update(code).digest("hex");
+    put(damaged, "manifest.json", JSON.stringify(manifest));
+    expect(() => verifyPilotSource(damaged)).toThrow();
   });
   it("rejects an unclassified dependency rather than retaining platform implementation", () => {
     const damaged = copy("bad-import");

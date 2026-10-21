@@ -11,7 +11,7 @@ assignments are unchanged. `SITE-05A` is merged in PR22.
 Next acceptance is the real retained-source reconstruction build and browser
 proof in `SITE-05C`. Offline font builds, isolated shell/style ownership and
 production assignment/save integration are not established by source hashes.
-All 1,821 tests across 194 files, seven focused package checks, lint and TypeScript pass. The actual 706-file package verifies against its accepted digest and reconstructs successfully. The existing production build supplies its emitted CSS/media; real reconstructed browser acceptance follows in SITE-05C. Exact-revision independent review is required before submission.
+All 1,824 tests across 194 files, 10 focused package checks, lint and TypeScript pass. The actual 706-file package verifies against its accepted digest and reconstructs successfully. The existing production build supplies its emitted CSS/media; real reconstructed browser acceptance follows in SITE-05C. Exact-revision independent review is required before submission.
 
 ## 2026-10-21 - Local assignment and rollback proof
 

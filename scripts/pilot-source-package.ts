@@ -80,6 +80,8 @@ function graph(root: string) {
       if (/@import\b|url\s*\(/i.test(content)) throw new Error(`CSS dependency needs an explicit root: ${path}`);
       return;
     }
+    const references = ts.preProcessFile(content);
+    if (references.referencedFiles.length || references.typeReferenceDirectives.length) throw new Error(`Explicit import required instead of reference directives: ${path}`);
     const source = ts.createSourceFile(path, content, ts.ScriptTarget.Latest, true);
     function imported(specifier: string) {
       const local = localImport(path, specifier);
@@ -94,6 +96,16 @@ function graph(root: string) {
       visit(resolved);
     }
     function scan(node: ts.Node) {
+      if (ts.isImportTypeNode(node)) {
+        if (!ts.isLiteralTypeNode(node.argument) || !ts.isStringLiteral(node.argument.literal)) throw new Error(`Literal type import required: ${path}`);
+        imported(node.argument.literal.text);
+      }
+      if (ts.isImportEqualsDeclaration(node) && ts.isExternalModuleReference(node.moduleReference)) {
+        const argument = node.moduleReference.expression;
+        if (!argument || !ts.isStringLiteral(argument)) throw new Error(`Literal import alias required: ${path}`);
+        imported(argument.text);
+      }
+      if (ts.isMetaProperty(node) && node.keywordToken === ts.SyntaxKind.ImportKeyword) throw new Error(`Explicit asset root required instead of import.meta: ${path}`);
       if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
         if (!ts.isStringLiteral(node.moduleSpecifier)) throw new Error(`Literal import required: ${path}`);
         imported(node.moduleSpecifier.text);
