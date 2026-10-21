@@ -1,3 +1,19 @@
+## 2026-10-21 - Actual pilot reconstruction acceptance
+
+`SITE-05C` is in_progress on top of the reviewed source package. The real Next
+build of retained A restores public/editor typography, stylesheet/font/image
+bytes and exact kit screenshots after B changes. Current B's API denial marker
+remains active. Desktop 1440 and phone 390 public/kit/editor screenshots were
+opened and inspected. A fresh context retrieves a previously unloaded A font.
+No content saves occur in the new rehearsal; separate existing browser suites
+exercise actual saves and recovery. Shell/style isolation, offline font builds,
+binding-aware saves, deployment coordination and runtime activation remain open.
+
+The setup command creates private temporary controls and rejects actual package
+copies missing a hero module, font or kit image. It never modifies the current
+app or hosted state. Source packaging is PR23. Record final validation and exact
+independent review before submission of this child unit.
+
 ## 2026-10-21 - Pilot runtime inventory review correction
 
 PR23 now requires explicit Next, React, React DOM and TypeScript versions even

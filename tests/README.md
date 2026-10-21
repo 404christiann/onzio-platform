@@ -288,3 +288,8 @@ integrity and reconstruction boundary checks. These tests use small file-format
 fixtures, not a rendered Next application. See the
 [pilot package guide](../docs/pilot-source-package.md) for actual build inputs,
 commands and the separate reconstructed public/editor acceptance requirement.
+
+The [actual pilot reconstruction guide](../docs/pilot-reconstruction.md) adds
+changed visual/current-platform controls, fresh production builds and real
+desktop/mobile public/editor checks. The new browser rehearsal performs reads
+only; run the existing real-save suites serially afterward.
