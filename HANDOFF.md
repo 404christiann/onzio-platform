@@ -1,3 +1,18 @@
+## 2026-10-21 - Actual pilot source package
+
+`SITE-05B` is in_progress. The local package tool follows the actual homepage,
+shell, injected badge, font/style and compiler roots through literal imports.
+It retains public assets and emitted CSS/media with a digest-pinned manifest.
+Reconstruction replaces visual inputs while preserving current query, tenant,
+preview, persistence and media-policy implementations. Binding changes and
+runtime version changes require compatibility review. Production callers and
+assignments are unchanged. `SITE-05A` is merged in PR22.
+
+Next acceptance is the real retained-source reconstruction build and browser
+proof in `SITE-05C`. Offline font builds, isolated shell/style ownership and
+production assignment/save integration are not established by source hashes.
+Actual validation and independent review must be recorded before submission.
+
 ## 2026-10-21 - Local assignment and rollback proof
 
 `SITE-05A` is ready_for_review. Tests and a loopback-only runner exercise immutable

@@ -280,3 +280,11 @@ matching local authenticated browser state. Never commit browser auth state.
 - Shared phone focus: `lib/__tests__/page-editor-focus.test.ts` checks stable target recovery after iframe blur/node replacement, duplicate Tryouts labels, detached frames and normal outer triggers. These narrow DOM facades complement the unchanged real browser focus-trap/Escape/Done tests in `public-page-editor-phone.spec.ts`; they do not establish native focus/keyboard acceptance.
 
 - Phone canvas obstruction: the independent Tryouts first-selection case in `public-page-editor-phone.spec.ts` verifies the iframe target's outer-page center stays above the persistent Save strip before the actual click opens tools. This catches outer overlays that iframe-local hit testing misses; existing modal/focus/keyboard assertions remain unchanged.
+
+## Actual pilot source package
+
+Run `npx vitest run tests/architecture/pilot-source-package.test.ts` for package
+integrity and reconstruction boundary checks. These tests use small file-format
+fixtures, not a rendered Next application. See the
+[pilot package guide](../docs/pilot-source-package.md) for actual build inputs,
+commands and the separate reconstructed public/editor acceptance requirement.
