@@ -9,7 +9,12 @@ and retained A reconstructed over current platform B.
 Create an accepted package with the [package tool](pilot-source-package.md).
 Commit tracked changes before this setup command. It copies the current commit
 into private temporary folders and never changes the working application.
-The local environment must use synthetic Supabase on port 54321.
+The local environment must use synthetic Supabase on port 54321. Setup checks
+`.env.local` and Next's effective production environment, including shell
+overrides, dotenv precedence and variable expansion. It rejects live Stripe
+secret and restricted keys without printing their values. Every supplied
+Supabase URL must target loopback HTTP port 54321. Database URL variables must
+target loopback PostgreSQL port 54322.
 
 ```bash
 npx tsx scripts/prepare-pilot-reconstruction.ts \
@@ -30,13 +35,21 @@ third port. On the VM, run these commands through `onzio shell`.
 
 ```bash
 cd /absolute/path/to/changed
-npm run build
+npx tsx scripts/run-pilot-reconstruction.ts build
 npx tsc --noEmit
-npx next start -H 127.0.0.1 -p 3127
+npx tsx scripts/run-pilot-reconstruction.ts start --port 3127
 ```
 
-Repeat for restored A on port 3126. Use the original accepted A build on port 3125.
+Repeat the guarded build and start commands for restored A on port 3126. In
+the original accepted A checkout, use the guarded start command on port 3125.
+If that checkout predates the launcher, invoke the launcher's absolute path
+from the current checkout while keeping the accepted app as your working folder.
 Keep the synthetic Alpha fixture on its seeded Academy assignment.
+
+The launcher resolves and checks the environment again immediately before each
+Next build or start. It passes that checked environment to the child process
+and binds starts to `127.0.0.1`. Use these guarded commands throughout the
+rehearsal. Direct `npm run build` or `next start` commands bypass these checks.
 
 ## Run the browser checks
 

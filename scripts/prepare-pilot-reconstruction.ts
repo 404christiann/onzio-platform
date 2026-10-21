@@ -4,7 +4,7 @@ import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, sym
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { parse } from "dotenv";
+import { loadPilotReconstructionEnvironment } from "./pilot-reconstruction-environment";
 import { reconstructPilotSource, verifyPilotSource } from "./pilot-source-package";
 
 const { values } = parseArgs({ options: { package: { type: "string" }, digest: { type: "string" } } });
@@ -13,9 +13,7 @@ const artifact = resolve(values.package);
 const { manifest } = verifyPilotSource(artifact, values.digest);
 const root = process.cwd();
 assert.equal(execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: root, encoding: "utf8" }).trim(), "", "Commit tracked changes first");
-const environment = parse(readFileSync(join(root, ".env.local")));
-assert.equal(new URL(environment.NEXT_PUBLIC_SUPABASE_URL ?? "").origin, "http://127.0.0.1:54321", "Only local synthetic Supabase is supported");
-assert(!Object.values(environment).some(value => value.startsWith("sk_live_")), "Live provider credentials are forbidden");
+loadPilotReconstructionEnvironment(root);
 const output = mkdtempSync(join(tmpdir(), "onzio-pilot-reconstruction-"));
 const current = join(output, "platform-b");
 mkdirSync(current);

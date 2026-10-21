@@ -293,3 +293,9 @@ The [actual pilot reconstruction guide](../docs/pilot-reconstruction.md) adds
 changed visual/current-platform controls, fresh production builds and real
 desktop/mobile public/editor checks. The new browser rehearsal performs reads
 only; run the existing real-save suites serially afterward.
+
+Run `npx vitest run tests/architecture/pilot-reconstruction-environment.test.ts`
+for preparation and documented build/start environment guards. The tests run the
+real CLIs with synthetic file fixtures and a harmless Next child stub. They
+check dotenv precedence and expansion, shell overrides, both live Stripe key
+prefixes and error redaction without starting the app or contacting providers.

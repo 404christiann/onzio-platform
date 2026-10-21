@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -77,6 +77,11 @@ describe("pilot preparation environment boundary", () => {
     expect(readdirSync(result.output).filter(name => name.startsWith("onzio-pilot-reconstruction-"))).toHaveLength(1);
     expect(result.stdout).toContain('"restored":');
   });
+  it("accepts a local URL expanded from the shell", () => {
+    const result = prepare({ file: { NEXT_PUBLIC_SUPABASE_URL: "$LOCAL_API" }, shell: { LOCAL_API: localUrl } });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+  });
   it.each(["sk_live_", "rk_live_"])("rejects inert %s credentials from the local file", prefix => {
     const marker = "inert_file_credential_marker";
     expectRejected({ file: { STRIPE_SECRET_KEY: `${prefix}${marker}` } }, "Live provider credentials are forbidden", marker);
@@ -105,5 +110,67 @@ describe("pilot preparation environment boundary", () => {
   it("rejects a malformed target without printing its credential marker", () => {
     const marker = "inert_malformed_target_marker";
     expectRejected({ file: { NEXT_PUBLIC_SUPABASE_URL: `malformed-${marker}` } }, "Only local synthetic Supabase is supported", marker);
+  });
+});
+
+function installNextStub(root: string) {
+  put(root, "package.json", '{"private":true}');
+  put(root, "node_modules/next/package.json", '{"name":"next","version":"0.0.0-test"}');
+  put(root, "node_modules/next/dist/bin/next", `const fs = require("node:fs");
+fs.writeFileSync(process.env.PILOT_CHILD_REPORT, JSON.stringify({
+  args: process.argv.slice(2), target: process.env.NEXT_PUBLIC_SUPABASE_URL, mode: process.env.NODE_ENV
+}));`);
+}
+function launch(root: string, action: string, shell: Record<string, string> = {}) {
+  const report = join(root, "child.json");
+  const result = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/run-pilot-reconstruction.ts"), action, ...(action === "start" ? ["--port", "3127"] : [])], {
+    cwd: root, encoding: "utf8", timeout: 10_000,
+    env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "test", PILOT_CHILD_REPORT: report, ...shell },
+  });
+  return { ...result, report };
+}
+function launchRoot() {
+  const root = join(directory, `launch-${sequence++}`);
+  put(root, ".env.local", `NEXT_PUBLIC_SUPABASE_URL=${localUrl}`);
+  installNextStub(root);
+  return root;
+}
+
+describe("documented pilot build and start boundary", () => {
+  it.each(["build", "start"])("passes the checked production environment to %s", action => {
+    const root = launchRoot();
+    put(root, ".env.production.local", "NEXT_PUBLIC_SUPABASE_URL=$LOCAL_API");
+    const result = launch(root, action, { LOCAL_API: "http://localhost:54321", STRIPE_SECRET_KEY: "sk_test_inert_fixture" });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(JSON.parse(readFileSync(result.report, "utf8"))).toEqual({
+      args: action === "start" ? ["start", "--hostname", "127.0.0.1", "--port", "3127"] : ["build"],
+      target: "http://localhost:54321", mode: "production",
+    });
+  });
+  it.each(["build", "start"].flatMap(action => ["sk_live_", "rk_live_"].flatMap(prefix => ["file", "shell"].map(origin => ({ action, prefix, origin })))))("rejects inert $prefix from $origin before $action starts", ({ action, prefix, origin }) => {
+    const root = launchRoot();
+    const marker = "inert_launch_credential_marker";
+    if (origin === "file") put(root, ".env.local", `NEXT_PUBLIC_SUPABASE_URL=${localUrl}\nSTRIPE_SECRET_KEY=${prefix}${marker}`);
+    const result = launch(root, action, origin === "shell" ? { STRIPE_SECRET_KEY: `${prefix}${marker}` } : {});
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).not.toContain(marker);
+    expect(result.stderr).toContain("Live provider credentials are forbidden");
+    expect(readdirSync(root)).not.toContain("child.json");
+  });
+  it.each(["build", "start"])("rejects a changed shell target after preparation before %s", action => {
+    const prepared = prepare();
+    expect(prepared.status).toBe(0);
+    const root = JSON.parse(prepared.stdout).restored;
+    rmSync(join(root, "node_modules"));
+    installNextStub(root);
+    const marker = "inert_changed_after_setup_marker";
+    const result = launch(root, action, { NEXT_PUBLIC_SUPABASE_URL: `https://${marker}.example.invalid` });
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).not.toContain(marker);
+    expect(result.stderr).toContain("Only local synthetic Supabase is supported");
+    expect(readdirSync(root)).not.toContain("child.json");
   });
 });

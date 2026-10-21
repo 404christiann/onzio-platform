@@ -1,3 +1,31 @@
+## 2026-10-21 - Pilot reconstruction environment review correction
+
+PR24 is rebased onto corrected PR23 at
+`d31cdff8dc53eaf4c8320c35c94758217a911572`. Preparation checks raw `.env.local`
+credentials and Next's effective production environment. The documented guarded
+build/start commands repeat that check immediately before spawning Next with the
+checked environment. Both Stripe live key prefixes and nonlocal Supabase API or
+database URL variables are rejected without values in errors. Starts bind to
+loopback. Direct Next commands bypass these rehearsal-specific guards.
+
+The real setup CLI previously accepted an inert restricted shell key and a
+nonlocal shell URL with exit zero. Fifteen initial regressions reproduced 13
+failures, including malformed-URL disclosure. All 28 environment/launch checks
+now pass, including harmless child-process probes and an environment change
+after setup. The 14 source-package checks also pass. TypeScript, lint and
+whitespace checks pass. All 1,856 tests across 195 files pass. Separate required
+suite commands and exact-revision independent review are being completed before
+the PR update. No fresh browser or full Next
+build claim is added by these command-boundary tests.
+
+PR23's regenerated 706-file local candidate verifies and reconstructs at digest
+`be20522dadfa1e75f29ec45d9d6cbb20ea606f029277d15d952a9f974bef46f4`.
+Older inventories lacking the required framework/build roots must be regenerated.
+The inventory pins package roots, not all transitive lock entries. The existing
+browser evidence below predates these guard corrections. Next, Christian reviews
+and merges the stack; deployment, provider calls and hosted changes remain outside
+this task.
+
 ## 2026-10-21 - Actual pilot reconstruction acceptance
 
 `SITE-05C` is ready_for_review on top of the reviewed source package. The real Next
