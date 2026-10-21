@@ -114,11 +114,12 @@ their separate assignments.
 
 | Package | Scope | Status and acceptance |
 | --- | --- | --- |
-| SITE-01 | This decision and superseded guidance | ready_for_review; no application behavior changes. |
-| SITE-02 | Reusable local performance checks | ready_for_review; 24 production navigations, redirect-chain regression, and expected unused-variant rejection pass. |
-| SITE-03 | First homepage extraction | ready_for_review; 1,813 regressions, 8 browser tests, public/editor reuse, screenshot parity, and resource gates pass. |
-| SITE-04 | Narrow homepage data loading | ready_for_review; browser reads 31 to 27, populated screenshot parity, 1,813 regressions and 10 browser tests pass. |
-| SITE-05 | Retained release and assignment proof | pending; verify old/new code, concurrency, unknown releases, and rollback locally. |
+| SITE-01 | This decision and superseded guidance | complete; merged; no application behavior changes. |
+| SITE-02 | Reusable local performance checks | complete; merged; 24 production navigations, redirect-chain regression, and expected unused-variant rejection pass. |
+| SITE-03 | First homepage extraction | complete; merged; 1,813 regressions, 8 browser tests, public/editor reuse, screenshot parity, and resource gates pass. |
+| SITE-04 | Narrow homepage data loading | complete; merged; browser reads 31 to 27, populated screenshot parity, 1,813 regressions and 10 browser tests pass. |
+| SITE-05 | Retained release and assignment proof | in_progress; isolated mechanism in SITE-05A. Actual pilot packaging, binding-aware saves and deployment coordination remain. |
+| SITE-05A | Local SQL and retained React release rehearsal | ready_for_review; 1,814 tests, real SQL races and inspected desktop/mobile retained-rendering proof pass. |
 | SITE-06 | Content-policy migration | pending; one domain per PR with authorized and denied direct-RPC cases. |
 | SITE-07 | Complete pilot and remaining sites | pending; full local acceptance before each separately authorized activation. |
 | SITE-08 | Retire active theme machinery | pending; all active/rollback assignments migrated and historical consumers inventoried. |
@@ -132,3 +133,7 @@ Final removal requires no active template-based rendering or fresh-save policy,
 no duplicated preview design, and no unresolved legacy receipt consumer. Original
 migrations and immutable history remain. Keep the ledger current with the tested
 revision, actual results, remaining limits, and exact next action in each PR.
+
+The [local assignment proof](site-assignment-proof.md) uses independent synthetic
+React releases. It does not package the Academy dependency tree, migrate current
+routing, or establish new binding-aware save authorization.

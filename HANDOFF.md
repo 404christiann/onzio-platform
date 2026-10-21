@@ -1,3 +1,22 @@
+## 2026-10-21 - Local assignment and rollback proof
+
+`SITE-05A` is ready_for_review. Tests and a loopback-only runner exercise immutable
+assignment events, stale/ABA rejection, tenant/role constraints, both real homepage
+save lock orders, transaction-visible receipt replay, and retained React rendering.
+Two independent fixture releases own their bindings, CSS and raster assets.
+Public and draft-overlay fixture pages reuse each retained renderer.
+
+All 1,814 tests across 193 files, 29 focused assignment/homepage tests, lint,
+isolated production build, post-build TypeScript and relative-link checks pass.
+The browser rehearsal passes at 1440x844 and 390x844 with no page/console errors.
+All eight public/draft/rollback screenshots were opened and inspected; rollback
+matches the original fixture screenshots. Intentional browser-launch failure
+exits with no proof-schema residue. Exact-head independent review is required
+before submission. Earlier SITE-01 through SITE-04 PRs are merged. `SITE-05` remains
+in_progress until actual pilot packaging, binding-aware save/draft behavior and
+release coordination pass. No product routing, production migration, provider,
+hosted assignment or activation changes are included.
+
 ## 2026-10-21 - Homepage home-kit loading
 
 `SITE-04` is ready_for_review. The Academy homepage feature uses the existing
