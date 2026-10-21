@@ -174,7 +174,8 @@ receipt-first recovery. Focused pure cases are in
 `tests/contracts/homepage-editor-binding-recovery.test.ts`. Real browser cases
 are in `tests/browser/homepage-editor-binding-recovery.spec.ts`, under the existing
 homepage config. They cover compatible and incompatible review, old records and
-files, old-client access rejection, and committed/uncommitted response loss.
+files, old-client access rejection, persistence after undo, and
+committed/uncommitted response loss.
 Run browser and database fixture writers serially.
 
 The [assignment-aware homepage save guide](../docs/homepage-assignment-saves.md)

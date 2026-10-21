@@ -57,8 +57,8 @@ All 2,031 tests in 200 files pass, including 61 new recovery cases. Separate
 runs pass 1,211 contracts, 64 architecture checks and 334 local database checks.
 The implementation owner's focused run passes 240 cases. TypeScript, lint and
 the guarded production build pass. Final source inputs stayed unchanged through
-the build. All 33 selected production browser cases pass serially, including
-11 new recovery cases and the existing six photo/upload/cleanup cases. Actual
+the build. All 34 selected production browser cases pass serially, including
+12 new recovery cases and the existing six photo/upload/cleanup cases. Actual
 1440px and 390px compatible/incompatible review screenshots were opened and
 inspected. The failed-apply message is visible in the sticky actions area;
 Escape and trigger focus pass. Native-device acceptance is not established.
@@ -66,11 +66,20 @@ Escape and trigger focus pass. Native-device acceptance is not established.
 The compatible-review browser regression failed on merged main before the fix.
 The first broad browser run was 30/31 because its old photo-inspection helper
 explicitly opened IndexedDB version 1. Its read now uses the current version;
-all cleanup assertions remain, and the final run is 33/33. Screenshot inspection
+all cleanup assertions remain, and that revision passed 33/33. Screenshot inspection
 also caught the failed-apply message outside the viewport; the final regression
 requires the whole message to be visible. Comment review found an inherited hook
 dependency suppression in the modified persistence effect. Stable callbacks and
 explicit dependencies replace it, and lint passes without a suppression.
+
+Both independent reviews of the first committed revision `887f5b1` found the
+same P2. Editing, undoing to the saved value and recreating the identical edit
+could skip recovery persistence because a successful clear retained the old
+content marker. The failure was reproduced in the real browser, including lost
+words after reload. Successful guarded clears now reset that marker. The new
+browser regression covers the entire sequence; the fixed probe reports that the
+edit is persisted again and restored. Required checks and the full browser run
+were repeated for this correction. Updated exact-revision reviews are required.
 
 SQL migrations, save wire schema, model/submitted representation, binding-file
 bytes, server hydration, API route, generated types and save serializer remain

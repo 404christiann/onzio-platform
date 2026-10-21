@@ -432,3 +432,21 @@ for (const version of [1, 2]) {
     }
   });
 }
+
+test("recreating an undone edit persists recovery again and survives reload", async ({ page }) => {
+  const baseline = await (await page.request.get("/api/admin/homepage")).json();
+  const marker = `Recreated local draft ${randomUUID().slice(0, 8)}`;
+  let posts = 0;
+  page.on("request", request => { if (request.method() === "POST" && request.url().endsWith("/api/admin/homepage")) posts += 1; });
+  const heading = await editHeading(page, marker);
+  expect(await readStoredRecord(page)).toMatchObject({ draft: { hero: { headline_line_one: marker } } });
+  await page.getByLabel("Line one", { exact: true }).fill(baseline.content.hero.headline_line_one);
+  await expect.poll(() => readStoredRecord(page)).toBeNull();
+  await page.getByLabel("Line one", { exact: true }).fill(marker);
+  await page.waitForTimeout(900);
+  await page.reload();
+  await expect(heading).toContainText(marker);
+  expect(await readStoredRecord(page)).toMatchObject({ draft: { hero: { headline_line_one: marker } } });
+  expect(posts).toBe(0);
+  expect((await (await page.request.get("/api/admin/homepage")).json()).content).toEqual(baseline.content);
+});

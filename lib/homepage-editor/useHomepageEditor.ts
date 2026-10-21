@@ -62,6 +62,7 @@ export function useHomepageEditor(clubId: string) {
       }
       if (run !== generation.current || ownedRecord.current !== source) return false;
       ownedRecord.current = null;
+      retainedState.current = null;
       return true;
     });
     persistence.current = pending.then(() => undefined);

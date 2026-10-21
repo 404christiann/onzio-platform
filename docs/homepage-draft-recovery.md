@@ -87,7 +87,8 @@ uses no automatic POST fallback.
 Pure recovery checks exercise version compatibility, binding equality, receipt
 priority, changed-field merging and scope rejection. Local browser checks cover
 compatible and incompatible reviews, storage upgrade, old-client rejection,
-explicit save, response loss and existing cross-tab recovery. Shared synthetic
+explicit save, response loss, persistence after undo and existing cross-tab
+recovery. Shared synthetic
 fixture writers run serially. Commands and acceptance results belong in
 [the testing guide](../tests/README.md) and the current handoff.
 
