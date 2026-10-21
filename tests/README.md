@@ -89,6 +89,39 @@ fixtures, so concurrent writers can invalidate each other's assertions and
 cleanup. The prepared VM's `onzio test` command exports `.env.test` automatically;
 see the [VM guide](../docs/vm-development.md).
 
+## Local homepage performance checks
+
+Use production builds with the same synthetic Alpha content. The check only
+allows loopback runtime requests and read-only methods. It fetches intercepted
+responses without automatic redirects and validates every redirect target before
+fetching it. It blocks WebSockets before connecting, as well as
+external media and analytics, so it does not establish production LCP or CDN
+performance. Request mediation also makes timing unsuitable for a speedup claim.
+
+```bash
+node --test scripts/check-site-performance-redirect.test.mjs
+node scripts/check-site-performance.mjs --base-url http://alpha.localhost:3122 --expected-title "Alpha FC" --source-sha FULL_BASE_SHA --output test-results/site-performance/base.json
+node scripts/check-site-performance.mjs --base-url http://alpha.localhost:3123 --expected-title "Alpha FC" --source-sha FULL_HEAD_SHA --output test-results/site-performance/head.json --compare test-results/site-performance/base.json
+```
+
+Start each server separately from its known production build. The supplied SHA
+is metadata, not verification of the server's source. Each capture has one warmup
+and five samples at desktop and phone widths. Reports require successful output,
+matching visible content, completed home-kit reads, and no unexpected local errors.
+Comparison rejects scenario mismatches and increased font or browser REST costs.
+
+For the home-kit loading package, add `--home-kit-only` to require that third/away
+kit requests disappear while home section/photo reads remain. This gate applies
+to the client-loader pilot, not a future server-loaded kit. Empty kit fixtures
+do not establish populated product rendering; check that separately.
+
+Outputs must be new JSON files in a gitignored directory or the system temporary
+directory. The VM launcher supplies the installed Playwright browser path.
+Reports separate decoded resource bodies and transfer bytes, and browser REST
+reads are not total SQL queries. Timings are descriptive. Interleave baseline/head
+runs and profile separately before claiming a speedup. See the
+[architecture decision](../docs/site-architecture.md) for the migration gates.
+
 ## Contact section-guide editor
 
 The approved Contact editor saves `contact_profile` and `contact_page_content`
