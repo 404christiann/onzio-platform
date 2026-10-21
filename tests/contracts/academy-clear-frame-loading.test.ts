@@ -90,7 +90,7 @@ describe("academy Header Stays loading", () => {
 
   it("reveals the homepage over a loaded poster while the video buffers", () => {
     const heroSource = readFileSync(resolve(process.cwd(), "components/Hero.tsx"), "utf8");
-    const homeSource = readFileSync(resolve(process.cwd(), "components/HomePageClient.tsx"), "utf8");
+    const homeSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/HomePage.tsx"), "utf8");
     const videoSource = readFileSync(resolve(process.cwd(), "components/ResilientBunnyVideo.tsx"), "utf8");
     expect(heroSource).toContain("!editing && !academyMediaReady");
     expect(heroSource).toContain("<AcademyHeroLoadingSkeleton clubName={club.name} />");

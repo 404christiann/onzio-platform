@@ -1,3 +1,28 @@
+## 2026-10-20 - First authored homepage pilot
+
+`SITE-03` is ready_for_review. Diverse City's composition lives under
+`components/sites/diverse-city/HomePage.tsx`, shared through existing public and
+editor callers. The outer adapter retains legacy assignment dispatch. Section
+order, dynamic loading, preview-aware hero gating, and Rose City's badge remain.
+The moved loading contract reads its new owner with unchanged assertions.
+No content, schema, save policy, or stored assignment changes.
+
+Validation passes 93 focused and all 1,813 regression tests, lint, isolated
+production build, and post-build TypeScript. Twelve production browser samples
+preserve visible content, five fonts (173,316 decoded bytes) and 31 browser REST
+reads. Decoded JavaScript grows by 1,086 bytes; this extraction claims no speedup.
+Public screenshots match the baseline at desktop 1440x1000 and phone 390x844.
+Desktop/mobile editor screens and keyboard interactions were inspected. Analytics
+is excluded from direct error checks. Eight existing editor, template-parity,
+and recovery browser tests pass. Local Alpha slug, seeded design pointers and
+hero copy are restored. Temporary copies only adapt hardcoded test ports to3123.
+
+Build source was 1c043ede35adfbe4d7a5f9597eb0c3c71e605e47; application sources
+match the rebased pilot. Exact revision/review and artifact details belong in the
+PR handoff. Next is `SITE-04`, narrowing the homepage to home-kit reads and
+checking populated content separately. Release, content policy, and complete
+theme retirement remain later packages; this is the first authored page boundary.
+
 ## 2026-10-20 - Reusable homepage performance checks
 
 `SITE-02` adds `scripts/check-site-performance.mjs` for local production
