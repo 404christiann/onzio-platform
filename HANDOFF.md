@@ -1,3 +1,17 @@
+## 2026-10-20 - Accepted club site architecture
+
+`SITE-01` records the accepted code-authored site model in
+`docs/site-architecture.md`. It separates site design, content maintenance,
+and platform authorization; preserves receipt/history guarantees; and defines
+the performance and release proofs required before migration. Earlier theme
+decisions are explicitly superseded. No application behavior changes here.
+
+The pilot starts with the Academy homepage and synthetic Alpha fixtures.
+`SITE-02` adds reusable local production checks before page extraction and
+narrow data-loading work in separate PRs. Release/assignment and direct-SQL
+content-policy changes remain later packages. No hosted activation or merge
+is authorized. Exact validation and independent revision review belong on this PR.
+
 ## 2026-10-20 - Public setup and test guidance
 
 `DOCS-01` is ready_for_review. The README now describes the application and
