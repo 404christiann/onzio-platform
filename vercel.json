@@ -31,7 +31,8 @@
       "agent/homepage-assignment-saves": false,
       "agent/homepage-incompatible-drafts": false,
       "agent/pilot-lock-compatibility": false,
-      "agent/pilot-installed-release": false
+      "agent/pilot-installed-release": false,
+      "agent/pilot-proof-identity": false
     }
   }
 }

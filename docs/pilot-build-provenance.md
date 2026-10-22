@@ -18,9 +18,20 @@ npx tsx /absolute/path/to/current/scripts/run-pilot-reconstruction.ts start --po
 Before building, the launcher uses the application's actual Next configuration
 loader to check both production-build and production-server phases. Both must
 select the normal `.next` directory. Start checks the production-server phase
-again between receipt validations. Configuration failures report a generic error;
-configuration output and errors are not forwarded. Input checks include
-configuration evaluation, and start rechecks output afterward.
+again between receipt validations, with the requested port and the loopback
+origin that Next sets before it loads server configuration. Configuration failures
+report a generic error;
+configuration output and errors are not forwarded. Each configuration probe has
+a five-second validation deadline. The launcher stops the probe and its owned
+descendants before releasing the root lock, including children left behind by
+a configuration that returned successfully. On POSIX, the standalone launcher
+owns a separate probe process group. On Windows, the probe keeps its IPC parent
+alive until `taskkill /T /F` completes on that process tree. If cleanup cannot
+be confirmed, the lock remains for manual inspection. Proof-server probes stay
+inside their proof server's owned POSIX group; the server stops remaining probe
+descendants before serving requests, and its owner verifies group shutdown
+before releasing locks. Windows proof-server startup remains unsupported. Input
+checks include configuration evaluation, and start rechecks output afterward.
 
 A successful guarded build writes `.next/onzio-pilot-build.json` with mode 0600.
 Prior builds without this receipt need a fresh guarded build. A failed build
@@ -76,11 +87,11 @@ replace the output beneath that server. Separate baseline, changed and restored
 folders can run independently. A losing command neither removes the owner's
 lock nor invalidates its receipt.
 
-Ordinary exits and failures release the lock. Abrupt wrapper termination can
-leave a lock and a Next child. Check that the wrapper and its child have stopped
-before manually clearing their stale lock. The launcher never clears a lock
-based on its age. Direct Next commands bypass this coordination and the receipt
-checks.
+Ordinary exits and failures release the lock only after owned probe cleanup.
+Abrupt wrapper termination or uncertain cleanup can leave a lock and a child.
+Check that the wrapper and its children have stopped before manually clearing
+their stale lock. The launcher never clears a lock based on its age. Direct Next
+commands bypass this coordination and the receipt checks.
 
 ## Acceptance limits
 
@@ -93,9 +104,14 @@ a later start.
 
 The excluded node_modules tree may include external runtime dependencies. Lock
 bytes do not attest installed dependency bytes, native modules or runtime ABI.
-The receipt also does not bind an accepted source package or authored release,
-prove current-platform interface compatibility, or identify the process behind
-an arbitrary browser-proof URL. Those remain separate acceptance work.
+The receipt also does not bind an accepted source package or authored release
+or prove current-platform interface compatibility. Those remain separate
+acceptance work.
+
+The [reconstruction rehearsal](pilot-reconstruction.md) consumes these receipts
+through its own guarded server processes. It accepts application roots, acquires
+ephemeral loopback servers, and retains each root lock until shutdown. Supplied
+server URLs cannot satisfy that proof boundary.
 
 The [reconstruction rehearsal](pilot-reconstruction.md) still requires its actual
 public/editor and retained-asset checks. A minimal real Next fixture establishes

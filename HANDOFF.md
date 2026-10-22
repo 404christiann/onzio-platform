@@ -1,3 +1,168 @@
+## 2026-10-21 - PR30 review corrections in progress
+
+`SITE-05I` remains in_progress. PR30's worker review found two medium issues in
+the owned reconstruction proof. A bound `127.0.0.1` listener was reported as an
+`alpha.localhost` origin without pinning every request to that listener. A timed
+out Next configuration probe killed only its direct child, so descendants could
+write after the local build lock was released.
+
+The correction adds an owned IPv4 HTTP proxy for the proof. It accepts only the
+three verified logical application origins and local synthetic Supabase, handles
+Playwright's HTTP CONNECT tunnel, preserves the logical Host and cookie scope,
+and forwards to `127.0.0.1` at the verified port. Every guarded route fetch and
+both direct APIRequestContext requests carry a one-use marker that the proxy
+must confirm. Redirects still use the existing allowlist; cross-origin requests
+clear authorization and cookie headers. A real Chromium regression covers page
+and image requests, refreshed same-origin redirect cookies (replacement,
+deletion and path scope), cross-origin credential suppression, an escaped
+redirect, a rejected read-only POST 307, anonymous denial, a late font request
+and cancellation of a stalled upstream. It passes (1/1) on Windows. The proxy
+destroys upstream requests when the downstream aborts or its scope closes.
+
+Next configuration probes now run asynchronously. Standalone POSIX probes own
+process groups; proof-server probes stay in their owner's group and stop
+remaining group descendants before proof startup. Windows standalone probes
+remain alive over IPC until `taskkill /T /F` stops their process tree. Cleanup
+uncertainty retains the root lock. Three Windows CLI regressions pass: a
+successful probe that spawned a delayed writer, a timed-out probe with a
+delayed writer, and launcher death while an IPC-held probe had a delayed
+writer. Their fixtures create the output directory so a surviving child would
+write a detectable file. The abrupt-death case retains its stale lock. Windows
+proof servers remain unsupported as before.
+
+Changed files: `scripts/pilot-proof-proxy.ts`, `scripts/pilot-proof-network.ts`,
+`scripts/prove-pilot-reconstruction.ts`, `scripts/pilot-reconstruction-next.ts`,
+`scripts/pilot-reconstruction-build.ts`, `scripts/run-pilot-proof-server.ts`,
+`scripts/run-pilot-reconstruction.ts`, `tests/browser/pilot-proof-network.spec.ts`,
+`playwright.pilot-proof.config.ts`, `tests/architecture/pilot-reconstruction-build.test.ts`,
+`tests/architecture/pilot-proof-servers.test.ts`,
+`docs/pilot-reconstruction.md`, `docs/pilot-build-provenance.md`, `tests/README.md`,
+`docs/site-architecture.md`, and this handoff.
+
+The Windows launcher suite passed 50 of 60 cases; nine preexisting symlink
+fixtures fail at `symlinkSync` with Windows EPERM, and the preexisting POSIX
+receipt-mode assertion sees Windows mode 0666 instead of 0600. The guarded
+Chromium transport regression and three focused Windows cleanup regressions
+pass after the latest corrections. Two fresh independent Interrogate reviews
+found no Critical or Warning findings in the corrected diff. `tsc --noEmit`
+reports only the unrelated existing Stripe interval type error at
+`lib/stripe-price.ts:68`. The proof-server suite requires POSIX groups and
+cannot run on this Windows host; its descendant cleanup regression needs POSIX
+CI execution. No package metadata or lockfile was changed. Exact next step:
+update PR30, verify the protected POSIX checks and current owner-review
+requirements, and merge only if they pass.
+
+## 2026-10-21 - Owned guarded servers for reconstruction proof
+
+`SITE-05H` is complete. PR29 is verified merged at
+`26f93a8bd00d073caa52ac32d993babd636adfaf`. This isolated follow-up starts from
+that merge and keeps SITE-05 in_progress. SITE-05I is ready_for_review and closes
+the next bounded proof-server identity prerequisite. Accepted-package/build identity remains open.
+
+The actual merged-main proof CLI reached an arbitrary unguarded local listener,
+with all three roles using the same origin, before failing a later Academy visual
+assertion. This reproduced the missing ownership check, not a full false PASS.
+An independent package design also proved that distinct accepted manifests can
+produce identical reconstructed inputs and generic receipts. Two executable
+designs and an independent judge selected proof-server ownership first because
+it connects the existing browser acceptance caller to guarded build identity.
+The accepted-package alternative remains a later unit; no unused registry is added.
+
+The proof now takes three distinct canonical application roots instead of URLs.
+It acquires their existing locks, starts owned children using the installed
+Next production CLI implementation on ephemeral loopback ports, and accepts
+readiness only over each child's private IPC channel. Each child repeats the
+existing environment, configuration and complete receipt checks. Isolated
+per-root environment loading avoids cross-root dotenv state. Rechecks preserve
+Next's runtime environment. The report records root, origin, BUILD_ID and receipt
+fingerprint for each role. The origin derives from the native HTTP server's actual
+listening address. Postchecks require the same listening server object and port.
+Both actual resolved router and renderer output paths
+must identify normal .next before readiness and after capture, between receipt
+checks. Postchecks must match, and PASS is published only
+after the owned children stop. Failure, timeout, interruption and parent death
+cannot adopt another listener. Owned POSIX process groups also stop configuration
+probe descendants before lock release. Shared configuration probes have a
+five-second kill timeout. Windows proof startup is explicitly unsupported. Locks remain recoverable after abrupt parent death.
+
+The final focused run passes 135 cases, including 49 new cases and all 86 existing
+build/environment cases. Final full-suite outcomes, independent review verdicts
+and exact reviewed SHA belong in the final PR handoff. TypeScript, lint and
+whitespace checks pass on the listener correction. One earlier focused run was
+contaminated by a concurrent red-reproduction file restore and is discarded;
+the stable sequential run passed all 135 cases.
+
+Both initial exact-revision reviews requested changes at
+`2cb853019af92a6b2daf837b4a64d840db526de8`. Each independently reproduced genuine
+Next setting PORT and its private origin before runtime configuration evaluation,
+then serving stale custom output while proof certified normal .next bytes. Five
+new failing exported-boundary and real-CLI cases reproduced the issue. Proof now
+checks configuration again with actual runtime values between receipt checks,
+before IPC readiness. Ordinary fixed-port start checks the canonical runtime
+port/origin before spawning Next. Seven new cases, including normal controls,
+pass. Both independent genuine stale-output fixtures now reject before proof's
+callback, and the real fixed-port CLI rejects them. Fresh reviews of the corrected
+revision are required; verdicts belong in the final PR handoff.
+
+The next two exact reviews requested changes at
+`e6e69819ef5b110f025a0e26ddb2acf263f39291`. Both independently reproduced a
+configuration using Next's private origin and later deployment environment.
+The running server selected stale output before constructor environment changes,
+while the later replay selected normal output. This falsified the replay premise.
+Executed designs compared actual resolved state, cached configuration and a
+loader interceptor. Both reviewers favored inspecting the actual router config
+and renderer output path. The implementation now reads both pinned Next objects,
+parses the paths, and requires normal .next before readiness and after capture.
+No post-start configuration replay remains. Ten new regressions reproduced red,
+then passed, including missing/malformed or divergent consumers, capture-time
+state drift and absence of replay. All four independent genuine stale-output
+fixtures now reject before callback. New exact-revision review verdicts belong
+in the final PR handoff.
+
+Review of `b0fd57c37a8c209549a84aeeac810ca631249d13` exposed a third gap.
+Config could change PORT/private-origin strings to an unrelated loopback server.
+One completed independent review reproduced the mismatch. Another saved its
+reproduction but stopped with a tool safety error, so it is incomplete. A parent
+probe independently confirmed the genuine runtime failure. Proof now reads the
+already initialized renderer's native HTTP server and requires its listening
+IPv4 loopback address. Eight new cases reproduce red on the previous bootstrap
+and pass with the correction. A genuine Next control now reaches its owned build
+while preserving the unrelated listener. Fresh final reviews are required.
+
+Three genuine Next production builds serve the expected per-role HTTP markers.
+All six desktop/phone runtime screenshots were opened and inspected with no
+page errors. Receipt fingerprints, competing real guarded-build CLI rejection,
+callback failure, source drift, signal shutdown and abrupt parent-death controls
+pass. The revised actual proof CLI rejects old URL flags and unverified roots
+without requesting an unrelated listener. A genuine verified-root CLI control
+reaches the browser, fails the expected non-Academy visual assertion, publishes
+no PASS and cleans its owned servers. No fresh Academy
+public/editor, full installed-pilot or raw database-types-generation acceptance
+is claimed by the minimal runtime controls. The PR26 generation mismatch remains
+unresolved and untouched.
+
+Changed files are the proof caller, owned-server/protocol/bootstrap helpers,
+shared Next preflight and existing receipt/lock module, the focused lifecycle
+suite, reconstruction/build/testing guidance, this ledger/handoff and task-branch
+deployment disablement. Generic receipt format, source-package/v1 compatibility,
+complete dependency-lock gating, app routes, SQL, content permissions and
+save/recovery behavior are unchanged. No dependency or lockfile edits occur.
+
+The next unit is externally expected accepted-package/reconstruction/build
+identity consumed by this owned proof caller. It must retain current-platform
+ownership and whole binding/complete-lock guards. Authored routing, assignment
+read/save storage and activation stay separate. Observed receipt snapshots do not
+attest continuous immutability, excluded dependency bytes or runtime ABI.
+
+The original checkout's intentional dirty HANDOFF remains byte-for-byte at
+`c77eea2749d0b9d8126f1c2382f198b487411f75068f9dbfc12c5842d8d24b30`.
+Source conversations `01a1603e-0af8-7c02-a6d5-c2e53da3fb32` and
+`01a15f8c-4a54-75c2-902d-38df62252aa2` remain available and unarchived.
+No merge, deploy, auto-merge, protection, hosted-data, provider, billing,
+desktop-credential or unified-ai-chat operation occurred. Christian owns final
+review and merge. Evidence and rerunnable probes are under
+`/home/coder/.codex/visualizations/2026/10/21/onzio-pilot-proof-identity`.
+
 ## 2026-10-21 - Guarded local build provenance and stale-start rejection
 
 `SITE-05H` is ready_for_review. PR28 is verified merged at

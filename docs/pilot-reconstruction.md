@@ -32,22 +32,21 @@ The setup rejects copies missing the actual hero module, a font or a kit image.
 
 Each temporary app has a node_modules link and a private copy of the local
 .env.local. Those environment files never enter the source package or reports.
-Keep the temporary folders private. Build each app, then serve changed B and
-restored A on separate loopback ports. Serve the original accepted build on a
-third port. On the VM, run these commands through `onzio shell`.
+Keep the temporary folders private. Build each app with the guarded launcher.
+The proof command starts and stops its own servers. On the VM, run these
+commands through `onzio shell`.
 
 ```bash
 cd /absolute/path/to/changed
 npx tsx scripts/run-pilot-reconstruction.ts build
 npx tsc --noEmit
-npx tsx scripts/run-pilot-reconstruction.ts start --port 3127
 ```
 
-Repeat the guarded build and start commands for restored A on port 3126. In
-the original accepted A checkout, use the guarded start command on port 3125.
-If that checkout predates the launcher, invoke the launcher's absolute path
-from the current checkout while keeping the accepted app as your working folder.
-Keep the synthetic Alpha fixture on its seeded Academy assignment.
+Repeat the guarded build for restored A and the original accepted A checkout.
+If a checkout predates the launcher, invoke its absolute path from the current
+checkout while keeping the app as your working folder. Keep the synthetic Alpha
+fixture on its seeded Academy assignment. Stop any guarded start using these
+roots before running proof. Its existing lock prevents proof from acquiring it.
 
 The launcher records a successful build and verifies its source, output and
 selected public environment before start. Old builds without a receipt need a
@@ -62,25 +61,45 @@ rehearsal. Direct `npm run build` or `next start` commands bypass these checks.
 ## Run the browser checks
 
 Use the existing local login helper against the baseline app. On this Linux VM,
-make a temporary helper copy that changes port 3110 to the baseline port and
-`/private/tmp/onzio-homepage-tests` to a private folder under `/tmp`. Export
-.env.test before running it. Never commit the resulting browser authentication.
+temporarily start baseline A with the guarded start command on a loopback port.
+Make a helper copy that uses that port and a private folder under `/tmp`. Export
+.env.test before running it, then stop that temporary baseline server. Never
+commit the resulting browser authentication. Proof starts a fresh baseline
+process on its own port; cookies for `alpha.localhost` work across ports.
 
 From the main checkout, pass that storage-state path to the rehearsal.
 
 ```bash
 npx tsx scripts/prove-pilot-reconstruction.ts \
   --package /absolute/path/to/release-a --digest ACCEPTED_DIGEST \
-  --baseline http://alpha.localhost:3125 \
-  --changed http://alpha.localhost:3127 \
-  --restored http://alpha.localhost:3126 \
+  --baseline-root /absolute/path/to/accepted-a \
+  --changed-root /absolute/path/to/changed \
+  --restored-root /absolute/path/to/restored-a \
   --auth /absolute/path/to/private-local-auth.json
 ```
 
-The browser permits only the three explicit local origins and local Supabase.
-It blocks external resources, analytics, WebSockets and mutations. The existing
-admin data endpoint may receive read-only select requests. Populated home-kit
-GET responses use local photos without changing fixture content.
+The command runs on POSIX hosts and accepts three distinct application roots. It refuses supplied URLs
+and aliases of the same root. Each child repeats the existing environment,
+Next output-configuration and successful-build receipt checks. The command holds
+each root lock until its owned child stops. Next selects an ephemeral port on
+`127.0.0.1`; private IPC reports readiness from that process. The origin uses
+the native HTTP server's actual listening address, rather than mutable environment
+strings. Postchecks require the same server object and port. The command never
+adopts an existing listener. Before readiness and after capture, it inspects
+Next's actual resolved router configuration and renderer output directory. Both
+must use the normal `.next` build, between receipt checks. Missing, malformed
+or divergent runtime state fails proof. These pinned internal Next APIs are
+checked directly; validation does not replay configuration under a later environment.
+
+The browser permits only the three owned `alpha.localhost` origins and local Supabase.
+An owned IPv4 proxy forwards each approved logical origin to its verified
+`127.0.0.1` listener. Browser pages and request contexts keep the logical tenant
+hostname, Host header and cookie scope. Every routed or direct proof request
+must confirm that it crossed the proxy. Redirects are checked against the same
+origin allowlist, and cross-origin credentials are cleared. The guard blocks
+external resources, analytics, WebSockets and mutations. The existing admin
+data endpoint may receive read-only select requests. Populated home-kit GET
+responses use local photos without changing fixture content.
 
 At 1440px and 390px the checks capture public, kit and editor states. They require
 B to differ, then require A's computed public/editor typography, stylesheet,
@@ -90,15 +109,24 @@ preview, Escape and focus restoration use the real editor. No Save occurs here.
 An anonymous request must still be denied by current platform B. A new context
 then fetches a retained font that neither A page loaded earlier.
 
-The browser command verifies retained bytes and compares existing servers. It
-does not check their lock inputs or replace the setup compatibility check.
-Historical package comparisons remain historical visual evidence.
+The browser command verifies retained bytes and measures only its owned guarded
+servers. It records each canonical root, origin, build ID and receipt fingerprint,
+then rechecks identity after capture. Child death or changed source/output fails
+proof. PASS is written only after postchecks and successful owned shutdown.
+
+The generic receipts do not bind an accepted retained package to those roots.
+The setup compatibility check and retained-byte visual checks still apply.
+Accepted-package/build identity remains a separate prerequisite. Historical
+package comparisons remain historical visual evidence.
 
 Reports appear under gitignored test-results. PASS is written after browser
 cleanup. Open the screenshots before acceptance. Separately run the existing
 homepage save, recovery, template-parity and populated-kit browser tests against
 restored A. Run shared-fixture writers serially and verify restored Alpha state.
-Stop only the servers started for this rehearsal when finished.
+The proof command stops only its owned process groups, including after failures.
+It waits for their exit before releasing locks and escalates TERM to KILL if needed.
+Abrupt termination can leave locks. Check that the owned process has stopped
+before removing a stale lock; see the build-provenance guide.
 
 ## What this establishes
 
