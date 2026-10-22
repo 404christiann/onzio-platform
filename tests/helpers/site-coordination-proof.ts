@@ -75,7 +75,7 @@ export async function openCoordinationProof() {
     await db.query("begin");
     await db.query(`insert into onzio.clubs(id,slug,name,kind,lifecycle,public_access,tier,primary_color,secondary_color,store_enabled)
       select $1,$2,name,'test','active','live',tier,primary_color,secondary_color,store_enabled from onzio.clubs where id=$3`,
-    [clubId, `site-proof-${clubId}`, CLUB_IDS.alpha]);
+    [clubId, "pilot", CLUB_IDS.alpha]);
     await db.query("insert into onzio.club_members(club_id,user_id,role,status) values($1,$2,'owner','active')", [clubId, USER_IDS.ownerAal2]);
     await db.query(`insert into onzio.club_domains(club_id,hostname,is_primary,verified_at,environment,active)
       values($1,'pilot.localhost',true,now(),'production',true)`, [clubId]);
