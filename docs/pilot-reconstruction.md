@@ -127,8 +127,11 @@ not load per-root environment files. Historical package comparisons remain
 historical visual evidence; a standalone generic build is insufficient for this
 accepted reconstruction proof.
 
-Reports appear under gitignored test-results. PASS is written after browser
-cleanup. Open the screenshots before acceptance. Separately run the existing
+Reports appear under gitignored test-results. The page observation owner waits
+for network idle, stops response intake, drains every async body read, closes the
+context and checks final errors before returning copied resource observations.
+PASS is written after browser cleanup and owned server shutdown. Open the
+screenshots before acceptance. Separately run the existing
 homepage save, recovery, template-parity and populated-kit browser tests against
 restored A. Run shared-fixture writers serially and verify restored Alpha state.
 The proof command stops only its owned process groups, including after failures.
@@ -147,5 +150,9 @@ outside the retained source package.
 This does not activate an assignment or prove hot runtime rollback. Root styles,
 fonts and tenant/editor mounting are still shared compatibility contracts.
 Google fonts still need a build-time fetch. External video is blocked, so the
-rehearsal makes no latency, LCP or live video claim. Full shell/style isolation,
-binding-aware saves and deployment coordination remain SITE-05 gates.
+rehearsal makes no latency, LCP or live video claim. Assignment-aware saves and
+binding-aware draft recovery are implemented in
+SITE-05E and SITE-05F and are exercised separately against restored A. Full
+shell/style isolation, authored assignment authority, activation and deployment
+coordination remain separate SITE-05 gates. See the
+[post-PR32 Academy acceptance record](pilot-academy-acceptance.md).
