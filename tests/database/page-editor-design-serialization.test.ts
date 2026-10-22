@@ -27,7 +27,7 @@ const cases = [
   { label: "Tryouts template change", initial: "academy", next: "clubhouse", rpc: "save_tryouts_page", receipt: "tryouts_page_save_receipts", error: "PAGE_UNAVAILABLE" },
   { label: "Program page template change", initial: "academy", next: "clubhouse", rpc: "save_program_page", receipt: "program_page_receipts", error: "PAGE_UNAVAILABLE" },
   { label: "Programs directory template change", initial: "academy", next: "clubhouse", rpc: "save_program_directory", receipt: "program_directory_receipts", error: "PAGE_UNAVAILABLE" },
-  { label: "Editorial Store disable", initial: "editorial", next: null, rpc: "save_shop_page", receipt: "shop_page_receipts", error: "PAGE_UNAVAILABLE" },
+  { label: "Editorial Store disable", initial: "editorial", next: null, rpc: "save_shop_page", receipt: "shop_page_receipts", error: null },
   { label: "Shop design revision change", initial: "cinematic", next: "heritage", rpc: "save_shop_page", receipt: "shop_page_receipts", error: "DESIGN_CHANGED" },
 ];
 beforeEach(async () => {
@@ -59,7 +59,7 @@ afterEach(async () => {
 });
 
 describe("remaining editor saves serialize with publication on independent connections", () => {
-  it.each(cases)("waits for $label and rejects without content or receipt writes", async target => {
+  it.each(cases)("waits for $label before applying current content policy", async target => {
     await publish(admin, target.initial);
     const operationId = randomUUID();
     let payload: Record<string, unknown>;
@@ -92,6 +92,15 @@ describe("remaining editor saves serialize with publication on independent conne
       expect(settled).toBe(false);
       await publisher.query("commit");
       const outcome = await saving;
+      if (target.error === null) {
+        expect(outcome.error).toBeNull();
+        const response = outcome.result!.rows[0].data;
+        expect(response.sections).toMatchObject([{ kit_variant: "home", title: "New kit", bullet_points: [] }]);
+        expect((await admin.query("select response from onzio_private.shop_page_receipts where club_id=$1 and actor_id=$2 and operation_id=$3", [clubId, USER_IDS.ownerAal2, operationId])).rows).toEqual([{ response }]);
+        expect((await admin.query("select store_enabled from onzio.clubs where id=$1", [clubId])).rows[0].store_enabled).toBe(false);
+        expect((await writer.query("select onzio.load_shop_page($1,'shop') as data", [clubId])).rows[0].data.sections).toEqual(response.sections);
+        return;
+      }
       expect(outcome.error?.message).toContain(target.error);
       expect((await admin.query(`select count(*)::int as n from onzio_private.${target.receipt} where club_id=$1 and operation_id=$2`, [clubId, operationId])).rows[0].n).toBe(0);
       for (const table of ["programs", "tryouts_page_content", "shop_kit_section"]) {
