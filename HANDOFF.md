@@ -1,10 +1,8 @@
-## 2026-10-21 - PR30 review corrections in progress
+## 2026-10-21 - PR30 merged; POSIX verification pending
 
-`SITE-05I` remains in_progress. PR30's worker review found two medium issues in
-the owned reconstruction proof. A bound `127.0.0.1` listener was reported as an
-`alpha.localhost` origin without pinning every request to that listener. A timed
-out Next configuration probe killed only its direct child, so descendants could
-write after the local build lock was released.
+`SITE-05I` remains in_progress. PR30 was merged at `00b745aee3d6a76fb9fed6876b6c206f9d396157`, with reviewed head `65bd1432f6b943b6878622adb6c3f3572948f762`. Two independent Interrogate reviews of that head found no Critical or Warning findings, and the supervising owner approved the current revision. GitHub reported the PR clean and mergeable. The repository has no PR-triggered workflow or required status checks.
+
+PR30's worker review found two medium issues in the owned reconstruction proof. A bound `127.0.0.1` listener was reported as an `alpha.localhost` origin without pinning every request to that listener. A timed out Next configuration probe killed only its direct child, so descendants could write after the local build lock was released.
 
 The correction adds an owned IPv4 HTTP proxy for the proof. It accepts only the
 three verified logical application origins and local synthetic Supabase, handles
@@ -48,9 +46,17 @@ found no Critical or Warning findings in the corrected diff. `tsc --noEmit`
 reports only the unrelated existing Stripe interval type error at
 `lib/stripe-price.ts:68`. The proof-server suite requires POSIX groups and
 cannot run on this Windows host; its descendant cleanup regression needs POSIX
-CI execution. No package metadata or lockfile was changed. Exact next step:
-update PR30, verify the protected POSIX checks and current owner-review
-requirements, and merge only if they pass.
+execution. No package metadata or lockfile was changed. A live ruleset read
+also found `Hybrid: owner-only protected updates` disabled, despite the saved
+`hybrid-verification.json` snapshot reporting it active. The required owner
+review ruleset is active with no bypass actors, and PR30 was merged by the
+owner after current-revision approval. Recheck and restore the owner-only
+update rule before relying on that protection for future automation.
+
+Exact next step: run
+`npx vitest run tests/architecture/pilot-proof-servers.test.ts` on a POSIX
+host, record the proof-group cleanup result, and separately re-verify the live
+owner-only update ruleset. Keep `SITE-05I` in_progress until those checks pass.
 
 ## 2026-10-21 - Owned guarded servers for reconstruction proof
 
