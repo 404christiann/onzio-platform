@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createServer, request, type ClientRequest, type IncomingHttpHeaders, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { Socket } from "node:net";
+import { proofHostnameSchema } from "./pilot-proof-protocol";
 
 const markerHeader = "x-onzio-proof-proxy-marker";
 
@@ -16,7 +17,7 @@ export async function withPilotProofProxy<T>(origins: readonly string[], action:
   for (const origin of origins) {
     const url = new URL(origin);
     assert.equal(url.protocol, "http:");
-    assert.equal(url.hostname, "alpha.localhost");
+    proofHostnameSchema.parse(url.hostname);
     assert.equal(url.origin, origin);
   }
   const pending = new Set<string>();
