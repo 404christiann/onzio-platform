@@ -33,7 +33,19 @@ npx tsx scripts/package-pilot-local.ts reconstruct \
 Reconstruction copies the current tracked platform files, then replaces only the
 retained visual sources and public assets. Environment files, Git metadata and
 node_modules do not transfer. Supply local environment and dependencies
-separately, then run the real Next production build in the reconstructed folder.
+separately, then run the guarded Next production build in the reconstructed
+folder.
+Reconstruction also writes `.onzio-pilot-reconstruction.json` with the full
+accepted v2 manifest. It verifies the actual copied retained inputs, whole binding
+and complete lock before writing that marker. A tracked current-root file at that
+reserved path rejects reconstruction before output creation. Failure removes the
+new target directory.
+
+The marker is an ordinary input to the existing generic build receipt. Guarded
+builds validate a present marker before and after Next. Missing markers permit
+generic builds; malformed present markers fail. Reconstruct old roots again to
+obtain this identity. Do not copy a digest-only label onto unrelated source.
+
 The retained emitted files are evidence to compare against that new build. They
 are not substituted into the new build automatically.
 
@@ -82,9 +94,13 @@ Packaging and hash checks establish retained bytes and declared lock-input
 equality. They do not attest installed node_modules, runtime ABI, build output or
 compatibility with every current platform interface. Actual page acceptance needs
 a fresh reconstructed production build and real public/editor browser checks at
-desktop and phone widths. The separate reconstruction proof must demonstrate
-that changed live visual sources do not replace retained A, while current
-platform checks still apply.
+desktop and phone widths. The reconstruction proof requires the externally accepted digest to match the
+restored build's validated marker identity before browser capture. Baseline A's
+retained inputs, whole binding and complete lock must match the same manifest.
+Changed B remains a generic negative visual control. Extra current-platform B
+files remain observed build inputs; original shared-platform hashes remain
+provenance. The separate browser assertions still demonstrate retained visuals
+and current authorization behavior.
 
 This is source reconstruction, not original executable-byte rollback. Next and
 React remain shared runtime dependencies. Root Google font declarations still

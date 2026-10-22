@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const proofIdentitySchema = z.object({
   root: z.string().min(1),
+  reconstruction: z.object({ digest: z.string().regex(/^[a-f0-9]{64}$/) }).strict().nullable(),
   buildId: z.string().min(1),
   receiptSha256: z.string().regex(/^[a-f0-9]{64}$/),
   origin: z.string().refine(value => {

@@ -361,3 +361,11 @@ Run `npx playwright test --config=playwright.pilot-proof.config.ts` for the
 proof's actual guarded Chromium and direct request transport. The isolated
 IPv4 listeners check logical tenant Host/cookies, proxy traversal, approved and
 blocked redirects, anonymous access, and late retained-asset retrieval.
+
+Run `npx vitest run tests/architecture/pilot-accepted-build-identity.test.ts` for
+accepted reconstruction identity through real package/build/proof CLIs and owned
+native HTTP fixtures. Cases distinguish metadata-only acceptances, reject missing,
+malformed or changed markers and explicit invalid expectations, and preserve
+whole binding, complete lock, current-platform B and generic-build behavior.
+These synthetic Next fixtures complement separate genuine Next runtime controls;
+they do not establish full Academy public/editor acceptance.

@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { parseArgs } from "node:util";
+import { readPilotReconstructionIdentity } from "./pilot-source-package";
 import { checkedNextCommand } from "./pilot-reconstruction-next";
 import { loadPilotReconstructionEnvironment } from "./pilot-reconstruction-environment";
 import { assertSameReconstructionInputs, invalidateReconstructionBuild, publicBuildEnvironmentSha256, publishReconstructionBuild, reconstructionInputs, verifyReconstructionBuild, withReconstructionLock } from "./pilot-reconstruction-build";
@@ -17,6 +18,7 @@ if (action === "start") {
 const root = process.cwd();
 void withReconstructionLock(root, async () => {
   if (action === "build") invalidateReconstructionBuild(root);
+  if (action === "build") readPilotReconstructionIdentity(root);
   const environment = loadPilotReconstructionEnvironment(root);
   const publicEnvironment = publicBuildEnvironmentSha256(environment);
   const inputs = reconstructionInputs(root);
@@ -34,6 +36,7 @@ void withReconstructionLock(root, async () => {
   process.exitCode = child.status ?? 1;
   if (action === "build" && child.status === 0 && child.signal === null) {
     assertSameReconstructionInputs(inputs, reconstructionInputs(root));
+    readPilotReconstructionIdentity(root);
     publishReconstructionBuild(root, inputs, publicEnvironment);
   }
 }).catch(error => { console.error(error); process.exitCode = 1; });

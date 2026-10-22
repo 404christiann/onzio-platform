@@ -24,7 +24,9 @@ npx tsx scripts/prepare-pilot-reconstruction.ts \
   --package /absolute/path/to/release-a --digest ACCEPTED_DIGEST
 ```
 
-The command prints the changed and restored folder paths. It adds a visible
+The command prints the changed and restored folder paths. The restored root
+carries a verified full accepted-manifest marker. Older restored roots without
+that marker must be reconstructed again and freshly guarded-built. It adds a visible
 banner, changes Academy heading fonts and styling, and replaces a kit image in B.
 It also adds a marker header to the current homepage API's existing error replies.
 Reconstructed A must retain that current server marker while restoring A's visuals.
@@ -114,10 +116,16 @@ servers. It records each canonical root, origin, build ID and receipt fingerprin
 then rechecks identity after capture. Child death or changed source/output fails
 proof. PASS is written only after postchecks and successful owned shutdown.
 
-The generic receipts do not bind an accepted retained package to those roots.
-The setup compatibility check and retained-byte visual checks still apply.
-Accepted-package/build identity remains a separate prerequisite. Historical
-package comparisons remain historical visual evidence.
+The proof always passes its external accepted digest to the owned server helper.
+The restored child's strict IPC identity must contain that validated reconstruction
+digest. Missing, malformed or different identity rejects before browser capture.
+The child brackets marker reads with generic receipt checks and repeats identity
+verification after capture. The marker's exact bytes are included build inputs.
+Baseline A requires matching retained source, whole binding and complete lock,
+without a reconstruction-history claim. Changed B stays generic. The parent does
+not load per-root environment files. Historical package comparisons remain
+historical visual evidence; a standalone generic build is insufficient for this
+accepted reconstruction proof.
 
 Reports appear under gitignored test-results. PASS is written after browser
 cleanup. Open the screenshots before acceptance. Separately run the existing
