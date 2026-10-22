@@ -46,12 +46,12 @@ describe("independent About/Logo atomic save",()=>{
  it.each([null,{},[{title:null,description:""}],[{title:"Value",description:null}]])("rejects malformed values %j atomically",async values=>{
  const input=await request();const before=await load();await rejects(()=>save({...input,content:{...input.content,values}}),"INVALID_ABOUT_PAYLOAD");expect(await load()).toEqual(before);
  });
- it("recovers committed Logo receipt after its design becomes unavailable, and rejects fresh Logo saves",async()=>{
- const input=await request("logo"),receipt=await save(input);await design("academy");expect(await save(input)).toEqual(receipt);expect((await load("logo",input.operationId)).operation.receipt).toEqual(receipt);await rejects(()=>load("logo"),"PAGE_UNAVAILABLE");
+ it("recovers committed Logo receipt and permits fresh maintenance after its design hides Logo",async()=>{
+ const input=await request("logo"),receipt=await save(input);await design("academy");expect(await save(input)).toEqual(receipt);expect((await load("logo",input.operationId)).operation.receipt).toEqual(receipt);expect((await load("logo")).content).toEqual(receipt.content);expect((await save(await request("logo"))).revision).not.toBe(receipt.revision);
  });
- it("rejects changed design and unpublished/unsupported closing destinations",async()=>{
+ it("rejects changed design and maintains unpublished/unsupported trusted destinations",async()=>{
  const stale=await request();await design("cinematic",["home","club"]);await rejects(()=>save(stale),"DESIGN_CHANGED");
- const current=await request();await rejects(()=>save(current),"INVALID_ABOUT_DESTINATION");await rejects(()=>save({...current,content:{...current.content,closing_cta_href:"/contact"}}),"INVALID_ABOUT_DESTINATION");
+ const current=await request();expect((await save(current)).content.closing_cta_href).toBe("/schedule");const hidden=await request();expect((await save({...hidden,content:{...hidden.content,closing_cta_href:"/contact"}})).content.closing_cta_href).toBe("/contact");
  });
  it("canonicalizes forged nested origins and durably records removed asset cleanup IDs",async()=>{
  const asset=await media(),input=await request("logo");const content={...input.content,features:[{title:"Feature",description:"",patch_url:asset.url,icon_url:asset.url,icon_size:70,icon_scale:1}],color_cards:[{label:"Color",image_url:asset.url}]};
