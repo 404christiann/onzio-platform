@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const proofHostnameSchema = z.enum(["alpha.localhost", "pilot.localhost"]);
+export type PilotProofHostname = z.infer<typeof proofHostnameSchema>;
+
 export const proofIdentitySchema = z.object({
   root: z.string().min(1),
   reconstruction: z.object({ digest: z.string().regex(/^[a-f0-9]{64}$/) }).strict().nullable(),
@@ -8,7 +11,7 @@ export const proofIdentitySchema = z.object({
   origin: z.string().refine(value => {
     try {
       const url = new URL(value);
-      return url.protocol === "http:" && url.hostname === "alpha.localhost" && Number(url.port) > 0 && url.origin === value;
+      return url.protocol === "http:" && proofHostnameSchema.safeParse(url.hostname).success && Number(url.port) > 0 && url.origin === value;
     } catch { return false; }
   }),
 }).strict();

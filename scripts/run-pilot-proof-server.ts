@@ -6,7 +6,7 @@ import { z } from "zod";
 import { loadPilotReconstructionEnvironment } from "./pilot-reconstruction-environment";
 import { publicBuildEnvironmentSha256, verifyReconstructionBuild } from "./pilot-reconstruction-build";
 import { checkedNextCommand } from "./pilot-reconstruction-next";
-import { proofIdentitySchema, proofServerCommandSchema, type ProofIdentity } from "./pilot-proof-protocol";
+import { proofHostnameSchema, proofIdentitySchema, proofServerCommandSchema, type ProofIdentity } from "./pilot-proof-protocol";
 
 process.on("disconnect", () => process.kill(-process.pid, "SIGKILL"));
 function fail() {
@@ -18,6 +18,8 @@ process.on("unhandledRejection", fail);
 
 async function main() {
   if (!process.send) throw new Error("Proof server requires its owner IPC channel");
+  if (process.argv.length > 3) throw new Error("Proof server accepts only its owner-selected hostname");
+  const hostname = proofHostnameSchema.parse(process.argv[2] ?? "alpha.localhost");
   const root = process.cwd();
   const environment = loadPilotReconstructionEnvironment(root);
   function receipt() {
@@ -61,7 +63,7 @@ async function main() {
   }
   const listener = await actualRuntime();
   const port = listener.port;
-  const identity: ProofIdentity = proofIdentitySchema.parse({ root, ...receipt(), origin: `http://alpha.localhost:${port}` });
+  const identity: ProofIdentity = proofIdentitySchema.parse({ root, ...receipt(), origin: `http://${hostname}:${port}` });
   if (JSON.stringify({ buildId: identity.buildId, receiptSha256: identity.receiptSha256, reconstruction: identity.reconstruction }) !== JSON.stringify(initial)) throw new Error("Proof build identity changed during startup");
   process.on("message", async (value: unknown) => {
     try {

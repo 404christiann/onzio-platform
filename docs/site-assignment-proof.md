@@ -55,15 +55,19 @@ It does not delete or rewrite existing receipts.
 
 ## What remains
 
-The current Academy page still imports shared visual components, fonts and global
-styles. These fixtures do not package that actual dependency tree or exercise the
-real editor. Both use the current legacy hero binding meaning. A new assignment
-is invisible to the existing design-revision SQL. Transaction-visible receipt
-replay does not establish committed response-loss behavior across assignments.
-Existing homepage regressions cover committed and stale-save behavior separately.
+This earlier fixture proof does not package the Academy dependency tree or
+exercise its real editor. Its assignment events remain invisible to the existing
+design-revision SQL. Transaction-visible receipt replay here does not establish
+committed response-loss behavior across assignments.
 
-Before activating an authored site, retain its real rendering dependencies and
-preview styles. Integrate assignment-aware binding revisions with the current
-save/receipt authority and preserve incompatible browser drafts. Prove current
-platform authorization, rolling deployment compatibility and activation checks.
-SITE-05 stays in progress until those checks pass. Hosted activation is separate.
+The later [coordinated local Academy proof](pilot-site-coordination.md) joins
+actual accepted rendering, full-document isolation, authored events, a finite
+local fleet and exact immutable legacy projections. The unmodified epoch and
+save RPC then enforce real stale-token denial and committed receipt replay across
+A/B/A. Prior SITE-05E, SITE-05F and SITE-05K acceptance covers binding-aware saves
+and recovery of incompatible drafts.
+
+Hosted traffic inventory/admission, production authored dispatch/storage,
+deployment/cache coordination and an operator activation endpoint remain
+unimplemented. Those adapters need implementation and acceptance before any
+separately authorized hosted activation.

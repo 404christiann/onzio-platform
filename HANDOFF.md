@@ -1,3 +1,92 @@
+## 2026-10-22 - Final local SITE-05 coordination
+
+PR33 is verified merged at `b7fbc9d9d157a443e417278bc8714011b1d5ce1b`.
+SITE-05K is complete. SITE-05L and parent SITE-05 are ready_for_review for local
+proof completion. The remaining local release, assignment, save-authority and
+finite-fleet acceptance gates pass. Final independent exact-revision verdicts
+and the submitted SHA are recorded in the PR handoff. Christian alone reviews,
+merges and deploys. SITE-06 is not started.
+
+The new scoped owner supplies immutable native-listener identities, root locks,
+reverification and abort/cleanup ownership for a finite set of distinct local
+roots. Its private active-scope check rejects fabricated or expired authority.
+The existing fixed-three reconstruction API preserves its accepted-digest gates.
+The coordinator admits only externally accepted v2 reconstructions with exact
+markers, whole binding, complete lock, current-platform inputs, public build
+environment and the explicitly supported runtime/dependency-root contract.
+Metadata aliases, generic builds, unsupported roots and platform drift reject.
+Registration is atomic and prepared transitions are private scope-bound objects.
+
+An ephemeral unexposed SQL schema owns immutable releases, worker incarnations,
+assignment events and a fleet generation. Activation and traffic changes take the
+same advisory lock as real homepage saves. Expected event/generation comparisons
+and current/previous capability checks enforce local rolling admission. Each
+transition atomically appends its event and updates an exact immutable legacy
+Academy projection. The unmodified assignment epoch, `load_homepage` and
+`save_homepage` then enforce A/B/A conflicts, content CAS, actor authorization,
+original operation hashes and receipt-first replay. No token, UUID, payload or
+receipt is translated. Outside legacy-pointer changes invalidate authored reads
+and transitions. No production schema migration or app routing change is made.
+
+Fresh real Next 15.5.22 builds use the existing controlled local font hook.
+Retained A is the prior externally accepted 706-file package at
+`e52eabfac98ff890f17d063aee3df18c31bfe57040a946094b8f5576e858bd59`.
+B has its own accepted package at
+`ed14a9236d7e6cf344d5ea0ca997ed218710e01b64345d1bc31923d1cac94ea0`.
+A is reconstructed over current B. Distinct old/new serving copies leave the
+frozen original Academy runtime untouched. The supported runtime is Linux x64,
+Node v24.22.0, modules identifier 137, Next 15.5.22 and the same canonical prepared
+dependency tree. This is not installed-byte or arbitrary native-ABI attestation.
+
+The real coordinator-selected browser run passes at 1440px and 390px. All 18
+final public, populated-kit and real editor screenshots were opened and inspected.
+A/B/A preserves exact returned kit PNG bytes, loaded retained styles/fonts/images
+and computed typography. Old full documents keep their original assets after
+fleet drain and B activation. New navigation to a drained participant is denied.
+Keyboard draft/Escape/focus, late unused A font, original committed receipt
+replay, fresh stale-token denial and current-platform anonymous denial pass.
+Final page, body, network, console and route diagnostics are empty. PASS follows
+resource observation, owned postchecks/shutdown and disposable-fixture cleanup.
+No browser Save occurs. Real SQL saves use only the disposable club.
+
+The first login attempt exposed a fixture slug mismatch with the existing
+localhost middleware rule. The disposable club now uses `pilot`. The first full
+protocol pass used an overlong synthetic kit title. Its captures are preserved
+and superseded by the final fitting `Home kit pilot` run. No application styles,
+proof assertions or timeouts were weakened. Sixteen real capability controls,
+20 synthetic coordinator boundary cases, 12 new owned-scope cases, 82 prior
+owned/identity regressions and ten real SQL cases passed during development.
+All required final checks pass. The full suite passes 2,233 cases across 206
+files, contracts pass 1,211 across 111, architecture passes 256 across ten, and
+local database passes 344 across 36. The existing Windows-only case is skipped
+in the full and architecture runs. Three actual Chromium proof regressions,
+nonincremental TypeScript, lint, whitespace and changed-guide relative links
+pass. All five guarded build receipts still verify. Raw database-types generation
+was not run. The prior SITE-05K 64 serial homepage cases remain historical
+acceptance, not a claimed fresh rerun of those cases here.
+
+Hosted traffic inventory/admission, deployment/cache coordination, production
+authored dispatch/storage and an operator activation endpoint remain
+unimplemented. A finite local proof does not establish unknown hosted-worker
+absence. Full-document isolation here does not prove same-origin module mixing.
+Pre/post checks and cooperative locks do not establish continuous or hostile
+filesystem immutability. Child liveness and SQL commit are not one atomic event.
+Private/custom environment equality, production latency/LCP, external video and
+native software-keyboard/screen-reader acceptance remain outside this proof.
+These limits require separate rollout work before any hosted activation.
+
+Files include the scoped owner/protocol/proxy/child, coordinator and browser CLI,
+local SQL fixture/helper/cases, focused architecture tests, guides, ledger,
+testing instructions and task-branch deployment disablement. See the
+[coordination guide](docs/pilot-site-coordination.md) for the protocol and commands.
+Evidence is under
+`/home/coder/.codex/visualizations/2026/10/22/onzio-site05-completion`.
+The original dirty HANDOFF still hashes to
+`c77eea2749d0b9d8126f1c2382f198b487411f75068f9dbfc12c5842d8d24b30`.
+The original checkout and frozen Academy runtime are preserved. Source
+conversations remain unarchived. No merge, deployment, hosted-data, provider,
+billing, desktop-credential, protection or unified-ai-chat operation occurred.
+
 ## 2026-10-22 - Full local Academy acceptance after PR32
 
 PR32 is verified merged at `1d93dc35b249bd197db37b7e98910b0a7493faab`.

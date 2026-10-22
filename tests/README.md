@@ -370,3 +370,24 @@ malformed or changed markers and explicit invalid expectations, and preserve
 whole binding, complete lock, current-platform B and generic-build behavior.
 These synthetic Next fixtures complement separate genuine Next runtime controls;
 they do not establish full Academy public/editor acceptance.
+
+## Coordinated local Academy acceptance
+
+Run `npx vitest run tests/architecture/pilot-owned-scope.test.ts
+ tests/architecture/pilot-site-coordination.test.ts` for scoped owned-lifetime and
+coordination boundary checks. These use actual package/build/owner APIs with tiny
+synthetic native children. They do not prove real Academy rendering or SQL.
+
+Run `npx vitest run tests/database/site-coordination.test.ts` with the exported
+local environment for real committed fleet/event races, exact immutable legacy
+projection changes, unmodified homepage stale-token and receipt authority, tenant
+and role denials, and fixture restoration. Run shared-fixture writers serially.
+
+The [coordinated local Academy guide](../docs/pilot-site-coordination.md) describes
+`npx tsx scripts/prove-pilot-site-coordination.ts --config /private/path/proof-input.json`.
+It requires real guarded A/B/current-platform roots and both externally accepted
+packages. It produces public, kit and editor captures at both widths after real
+assignment-selected navigation, verifies returned retained resources and original
+receipts, then withholds PASS until owned shutdown and disposable-club cleanup.
+Inspect all screenshots. Hosted admission and production dispatch are separate
+unimplemented adapters.
