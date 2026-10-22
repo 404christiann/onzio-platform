@@ -24,7 +24,7 @@ const program = { slug: "new-program", nav_label: "New", display_title: "New", k
   hero_media_asset_id: null, detail_media_asset_id: null, external_cta_label: "", external_cta_href: "", registration_form_id: null, registration_enabled: false,
   registration_eyebrow: "", registration_headline: "", registration_body: "", registration_pending_body: "", registration_pending_label: "", status: "active", sort_order: 0 };
 const cases = [
-  { label: "Tryouts template change", initial: "academy", next: "clubhouse", rpc: "save_tryouts_page", receipt: "tryouts_page_save_receipts", error: "PAGE_UNAVAILABLE" },
+  { label: "Tryouts template change", initial: "academy", next: "clubhouse", rpc: "save_tryouts_page", receipt: "tryouts_page_save_receipts", error: null },
   { label: "Program page template change", initial: "academy", next: "clubhouse", rpc: "save_program_page", receipt: "program_page_receipts", error: "PAGE_UNAVAILABLE" },
   { label: "Programs directory template change", initial: "academy", next: "clubhouse", rpc: "save_program_directory", receipt: "program_directory_receipts", error: "PAGE_UNAVAILABLE" },
   { label: "Editorial Store disable", initial: "editorial", next: null, rpc: "save_shop_page", receipt: "shop_page_receipts", error: null },
@@ -47,13 +47,22 @@ afterEach(async () => {
   if (writer) await writer.end();
   if (publisher) await publisher.end();
   if (admin) {
-    // Only this test's synthetic tenant is committed; deterministic fixtures stay untouched.
-    for (const table of ["program_media", "programs", "tryouts", "tryouts_page_content", "shop_kit_photos", "shop_carousel_photos", "shop_kit_section", "shop_purchase_details", "media_assets", "club_members"]) {
-      await admin.query(`delete from onzio.${table} where club_id=$1`, [clubId]);
-    }
-    // Presentation documents are immutable, including cascade deletes. Archive
-    // this synthetic tenant; the parent's next local reset removes test history.
-    await admin.query("update onzio.clubs set lifecycle='archived',public_access='suspended' where id=$1", [clubId]);
+    await admin.query("begin");
+    try {
+      await admin.query("lock table onzio.presentation_documents in access exclusive mode");
+      await admin.query("delete from onzio.presentation_state where club_id=$1", [clubId]);
+      await admin.query("alter table onzio.presentation_documents disable trigger presentation_documents_immutable");
+      await admin.query("delete from onzio.presentation_documents where club_id=$1", [clubId]);
+      await admin.query("alter table onzio.presentation_documents enable trigger presentation_documents_immutable");
+      for (const table of ["tryouts", "tryouts_page_content", "program_media", "programs", "shop_kit_photos", "shop_carousel_photos", "shop_kit_section", "shop_purchase_details", "media_assets", "club_members", "audit_events"]) {
+        await admin.query(`delete from onzio.${table} where club_id=$1`, [clubId]);
+      }
+      await admin.query("delete from onzio.clubs where id=$1", [clubId]);
+      for (const table of ["onzio.clubs", "onzio.presentation_documents", "onzio_private.tryouts_page_save_receipts", "onzio_private.program_page_receipts", "onzio_private.program_directory_receipts", "onzio_private.shop_page_receipts"]) {
+        expect((await admin.query(`select count(*)::int as n from ${table} where ${table === "onzio.clubs" ? "id" : "club_id"}=$1`, [clubId])).rows).toEqual([{ n: 0 }]);
+      }
+      await admin.query("commit");
+    } catch (error) { await admin.query("rollback"); throw error; }
     await admin.end();
   }
 });
@@ -95,6 +104,13 @@ describe("remaining editor saves serialize with publication on independent conne
       if (target.error === null) {
         expect(outcome.error).toBeNull();
         const response = outcome.result!.rows[0].data;
+        if (target.rpc === "save_tryouts_page") {
+          expect(response.page).toEqual({ intro_with_tryouts: "New", intro_no_tryouts: "Later" });
+          expect(response.events).toEqual([]);
+          expect((await admin.query("select response from onzio_private.tryouts_page_save_receipts where club_id=$1 and actor_id=$2 and operation_id=$3", [clubId, USER_IDS.ownerAal2, operationId])).rows).toEqual([{ response }]);
+          expect((await writer.query("select onzio.load_tryouts_page($1) as data", [clubId])).rows[0].data.page).toEqual(response.page);
+          return;
+        }
         expect(response.sections).toMatchObject([{ kit_variant: "home", title: "New kit", bullet_points: [] }]);
         expect((await admin.query("select response from onzio_private.shop_page_receipts where club_id=$1 and actor_id=$2 and operation_id=$3", [clubId, USER_IDS.ownerAal2, operationId])).rows).toEqual([{ response }]);
         expect((await admin.query("select store_enabled from onzio.clubs where id=$1", [clubId])).rows[0].store_enabled).toBe(false);

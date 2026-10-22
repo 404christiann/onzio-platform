@@ -55,7 +55,7 @@ for (const target of cases) describe(`${target.label} receipt recovery after pag
   beforeEach(() => mocks.getClubContext.mockResolvedValue({ id: clubId, role: "owner", lifecycle: "active", presentationTemplateKey: target.template, storeEnabled: false }));
 
   it("applies the current domain policy to fresh GET and POST", async () => {
-    if (target.label === "Shop") {
+    if (target.label === "Shop" || target.label === "Tryouts") {
       mocks.rpc.mockResolvedValue({ data: target.snapshot(), error: null });
       const { GET, POST } = await target.route();
       expect((await GET(request(target.path))).status).toBe(200);
