@@ -152,7 +152,10 @@ fonts and tenant/editor mounting are still shared compatibility contracts.
 Google fonts still need a build-time fetch. External video is blocked, so the
 rehearsal makes no latency, LCP or live video claim. Assignment-aware saves and
 binding-aware draft recovery are implemented in
-SITE-05E and SITE-05F and are exercised separately against restored A. Full
-shell/style isolation, authored assignment authority, activation and deployment
-coordination remain separate SITE-05 gates. See the
-[post-PR32 Academy acceptance record](pilot-academy-acceptance.md).
+SITE-05E and SITE-05F and are exercised separately against restored A. The later
+[coordinated local Academy proof](pilot-site-coordination.md) joins full-document
+shell/style isolation, authored events, actual save authority and finite local
+fleet activation. Hosted traffic admission, production dispatch/storage and
+deployment coordination still require implementation and separate acceptance.
+See the [post-PR32 Academy acceptance record](pilot-academy-acceptance.md) for the
+prior reconstruction and serial save/recovery evidence.

@@ -108,5 +108,8 @@ need a build-time font fetch. Retained font bytes allow comparison but do not
 establish offline builds. Tailwind scans the reconstructed platform, and the
 editor copies its current head styles. Assignment-aware saves and binding-aware
 recovery are implemented separately in
-SITE-05E and SITE-05F. Complete isolated shell/style ownership, authored assignment
-authority, release coordination and production dispatch remain open.
+SITE-05E and SITE-05F. The later
+[coordinated local Academy proof](pilot-site-coordination.md) demonstrates
+full-document shell/style isolation, authored assignment authority and a finite
+local fleet with these actual retained packages. Hosted deployment/traffic
+coordination and production authored dispatch/storage remain unimplemented.

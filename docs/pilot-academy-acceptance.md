@@ -1,6 +1,8 @@
 # Academy acceptance after PR32
 
-Status: SITE-05K ready_for_review. SITE-05 remains in_progress. Christian alone reviews,
+Status: SITE-05K complete, merged in PR33 at
+`b7fbc9d9d157a443e417278bc8714011b1d5ce1b`. Parent SITE-05 is ready_for_review through
+[the later local coordination proof](pilot-site-coordination.md). Christian alone reviews,
 merges and deploys.
 
 ## Scope
@@ -113,6 +115,8 @@ there is no latency or LCP claim. Chromium mobile dimensions do not prove native
 software-keyboard or screen-reader behavior.
 
 Assignment-aware saves, receipt-first replay and binding-aware recovery already exist.
-Authored routing, assignment reads, storage/write authority, activation and deployed
-coordination remain separate future units requiring their own scope. No new assignment
-is activated here.
+This reconstruction proof activates no new assignment. The later
+[coordinated local Academy proof](pilot-site-coordination.md) joins authored
+assignment resolution, event/save authority and finite local fleet activation.
+Hosted traffic inventory, production authored dispatch/storage and deployment
+coordination still require implementation and separate acceptance.
