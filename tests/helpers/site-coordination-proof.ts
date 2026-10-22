@@ -34,10 +34,17 @@ export async function openCoordinationProof() {
   assertSafeTestEnvironment();
   const db = new Client(config);
   await db.connect();
-  await db.query("set statement_timeout='8s'");
-  const initial = await protectedFingerprint(db);
-  const initialTrigger = (await db.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows;
-  assert.deepEqual(initialTrigger, [{ tgenabled: "O" }], "Presentation immutability must be enabled before local proof");
+  let initial: string;
+  let initialTrigger: { tgenabled: string }[];
+  try {
+    await db.query("set statement_timeout='8s'");
+    initial = await protectedFingerprint(db);
+    initialTrigger = (await db.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows;
+    assert.deepEqual(initialTrigger, [{ tgenabled: "O" }], "Presentation immutability must be enabled before local proof");
+  } catch (error) {
+    await db.end();
+    throw error;
+  }
   const schema = `site_coordination_${randomUUID().replaceAll("-", "")}`;
   const clubId = randomUUID();
   const documents = { a: randomUUID(), b: randomUUID(), legacy: randomUUID() };
