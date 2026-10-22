@@ -40,7 +40,8 @@
       "agent/site06-homepage-content-policy": false,
       "agent/site06-shop-content-policy": false,
       "agent/site06-about-content-policy": false,
-      "agent/site06-contact-content-policy": false
+      "agent/site06-contact-content-policy": false,
+      "agent/site06-tryouts-content-policy": false
     }
   }
 }
