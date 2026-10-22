@@ -7,7 +7,7 @@ import {
   type AdminDataRequest,
 } from "@/lib/admin-data-contract";
 import { resolveMediaReferences } from "@/lib/media-assets";
-import { loadAboutDestinationOptions } from "@/lib/about-editor/destinations";
+import { isAboutContentDestination } from "@/lib/about-editor/content-policy";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess, authorizeMutation } from "@/lib/authorization";
 import { ContractError } from "@/lib/contract-error";
@@ -118,22 +118,10 @@ export async function POST(request: Request) {
     (input.operation === "insert" || input.operation === "update" || input.operation === "upsert") &&
     payload
   ) {
-    let options: Awaited<ReturnType<typeof loadAboutDestinationOptions>> = [];
-    if (club.presentationTemplateKey !== "academy@1") {
-      try {
-        options = await loadAboutDestinationOptions(supabase, club);
-      } catch {
-        return errorResponse("DESTINATIONS_UNAVAILABLE", 503, "Available pages could not be checked. Try again.");
-      }
-    }
-    const allowed = new Set(options.map((option) => option.href));
     for (const row of Array.isArray(payload) ? payload : [payload]) {
       if (!("closing_cta_href" in row)) continue;
       const href = row.closing_cta_href;
-      if (
-        typeof href !== "string" ||
-        (club.presentationTemplateKey === "academy@1" ? href !== "/schedule" : !allowed.has(href))
-      ) {
+      if (!isAboutContentDestination(href)) {
         return errorResponse("INVALID_ABOUT_DESTINATION", 400, "Choose a page available to this club.");
       }
     }

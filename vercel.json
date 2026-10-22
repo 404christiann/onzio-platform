@@ -38,7 +38,8 @@
       "agent/site05-completion": false,
       "agent/site05-postmerge-status": false,
       "agent/site06-homepage-content-policy": false,
-      "agent/site06-shop-content-policy": false
+      "agent/site06-shop-content-policy": false,
+      "agent/site06-about-content-policy": false
     }
   }
 }
