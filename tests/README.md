@@ -306,6 +306,20 @@ matching local authenticated browser state. Never commit browser auth state.
 
 - Phone canvas obstruction: the independent Tryouts first-selection case in `public-page-editor-phone.spec.ts` verifies the iframe target's outer-page center stays above the persistent Save strip before the actual click opens tools. This catches outer overlays that iframe-local hit testing misses; existing modal/focus/keyboard assertions remain unchanged.
 
+## Local About and Logo content policy
+
+`20261022200815_about_content_policy.sql` separates valid content maintenance from current template, navigation, and Store visibility. Trusted closing destinations remain the thirteen exact historical paths. The normal destination picker and Academy save adapter keep their current display behavior.
+
+Run the focused behavior checks with the loopback test environment exported:
+
+```bash
+npx vitest run tests/database/about-content-policy.test.ts tests/database/about-page-atomic-save.test.ts tests/database/about-page-concurrent-save.test.ts tests/contracts/about-content-policy-route.test.ts tests/contracts/about-content-destinations.test.ts lib/__tests__/about-editor-destinations.test.ts lib/__tests__/about-editor-save.test.ts lib/__tests__/about-editor-recovery.test.ts lib/__tests__/about-editor-public-query.test.ts
+```
+
+The policy suite covers hidden About and Logo maintenance, strict trusted paths, nested payload and media validation, current authorization, atomic rollback, independent revisions, original hashes, and actor receipts. Historical compatibility creates a real old-function receipt before applying the complete new migration in rollback scope. Loopback PostgREST commits nonempty content on a disposable synthetic club and verifies denial without effects. Route contracts invoke the actual exported mutation handlers with isolated boundary collaborators.
+
+Run shared database and browser fixture writers serially. See [the About policy](../docs/about-content-policy.md) for the unchanged security, media, receipt, and concurrency contracts. This SQL and API package does not claim new browser acceptance or hosted application.
+
 ## Actual pilot source package
 
 Run `npx vitest run tests/architecture/pilot-source-package.test.ts` for package
