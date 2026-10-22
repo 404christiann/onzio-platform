@@ -438,3 +438,22 @@ npx vitest run tests/database/shop-content-policy.test.ts tests/database/shop-pa
 Export the local test environment before database checks. Run shared-fixture
 writers serially. This package changes SQL and API maintenance policy. It does
 not add editor controls or change public Store availability and rendering.
+
+## Contact content maintenance policy
+
+The [Contact policy guide](../docs/contact-content-policy.md) describes SITE-06D.
+Direct SQL and loopback PostgREST exercise paired Contact maintenance under hidden
+and missing presentation, strict input and media boundaries, current authority,
+content conflicts, atomic failures and genuine pre-policy receipt replay.
+Separate database connections observe lock waits with both legacy Contact
+singletons in both write orders. Route contracts invoke the exported handlers.
+
+```bash
+npx vitest run tests/contracts/contact-content-policy-route.test.ts tests/contracts/diverse-city-contact-admin.test.ts tests/contracts/editorial-contact.test.ts
+npx vitest run tests/database/contact-content-policy.test.ts tests/database/contact-page-concurrent-save.test.ts tests/database/contact-page-atomic-save.test.ts
+```
+
+Export the local test environment before database checks. Run shared-fixture
+writers serially. SQL retains its bounded phone string and table email CHECK;
+the HTTP schema also validates phone and email syntax. Normal Contact controls,
+public rendering and social-link ownership retain their existing policy.
