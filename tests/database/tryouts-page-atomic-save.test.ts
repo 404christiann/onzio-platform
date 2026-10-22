@@ -176,28 +176,27 @@ describe("atomic Tryouts public-page save", () => {
     expect(await load()).toEqual(baseline);
   });
 
-  it("rejects load and Save after switching to a design without a public Tryouts page", async () => {
+  it("allows load and fresh Save after switching to a design without a public Tryouts page", async () => {
     await design("editorial");
     const payload = await request(null);
     expect((await save(payload)).revision).toBeDefined();
     await design("clubhouse");
-    await rejects(() => load(), "PAGE_UNAVAILABLE");
-    // A new operation exercises the fresh Save gate; the original UUID already committed.
-    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    const latest = await load();
+    expect((await save({ ...payload, expectedRevision: latest.revision, operationId: randomUUID() })).revision).toBeDefined();
   });
 
-  it("recovers the actor's committed save after Tryouts becomes unavailable without allowing fresh or changed requests", async () => {
+  it("recovers the actor's committed save after Tryouts is hidden while retaining actor and hash boundaries", async () => {
     const payload = await request({ intro_with_tryouts: "Saved before publication", intro_no_tryouts: "Later" });
     const receipt = await save(payload);
     await design("clubhouse");
     expect((await load(payload.operationId)).operation).toEqual({ status: "committed", receipt });
     expect(await save(payload)).toEqual(receipt);
-    await rejects(() => load(), "PAGE_UNAVAILABLE");
-    await rejects(() => load(randomUUID()), "PAGE_UNAVAILABLE");
-    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    const latest = await load();
+    expect((await load(randomUUID())).operation).toEqual({ status: "not-committed" });
+    expect((await save({ ...payload, operationId: randomUUID(), expectedRevision: latest.revision })).page).toEqual(receipt.page);
     await rejects(() => save({ ...payload, page: null }), "OPERATION_REUSED");
     await actor(USER_IDS.adminAal2);
-    await rejects(() => load(payload.operationId), "PAGE_UNAVAILABLE");
+    expect((await load(payload.operationId)).operation).toEqual({ status: "not-committed" });
     await actor();
     await db.query("reset role");
     await db.query("update onzio.clubs set lifecycle='archived',public_access='suspended' where id=$1", [clubId]);

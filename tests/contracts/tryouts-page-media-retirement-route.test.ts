@@ -44,12 +44,12 @@ beforeEach(() => {
 });
 
 describe("Tryouts event photo retirement", () => {
-  it("does not call Tryouts RPCs for a design without a public Tryouts route", async () => {
+  it("calls Tryouts RPCs for ordinary maintenance under a hidden design", async () => {
     mocks.getClubContext.mockResolvedValue({ id: clubId, role: "owner", lifecycle: "active", presentationTemplateKey: "clubhouse@1" });
     const { GET, POST } = await import("@/app/api/admin/tryouts-page/route");
-    expect((await GET(request("GET"))).status).toBe(404);
-    expect((await POST(request("POST", payload()))).status).toBe(404);
-    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect((await GET(request("GET"))).status).toBe(200);
+    expect((await POST(request("POST", payload()))).status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledTimes(2);
   });
 
   it("retires old saved photos after the atomic Save and hides the receipt bookkeeping", async () => {

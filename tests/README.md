@@ -457,3 +457,25 @@ Export the local test environment before database checks. Run shared-fixture
 writers serially. SQL retains its bounded phone string and table email CHECK;
 the HTTP schema also validates phone and email syntax. Normal Contact controls,
 public rendering and social-link ownership retain their existing policy.
+
+
+## Tryouts content maintenance policy
+
+The [Tryouts policy guide](../docs/tryouts-content-policy.md) describes SITE-06E.
+Direct SQL and loopback PostgREST cover hidden nonempty intro/event maintenance,
+strict boundaries, current authority, original hashes, historical receipt replay,
+media relationships, full-roster CAS, and atomic failures. Independent database
+connections exercise both legacy writer tables in both write orders. Exported
+GET and POST handlers retain parsing, tenant, origin, cleanup, and enrichment
+behavior.
+
+```bash
+npx vitest run tests/contracts/tryouts-content-policy-route.test.ts tests/contracts/tryouts-page-media-retirement-route.test.ts tests/contracts/page-editor-receipt-availability-route.test.ts
+npx vitest run tests/database/tryouts-content-policy.test.ts tests/database/tryouts-page-concurrent-save.test.ts tests/database/tryouts-page-atomic-save.test.ts tests/database/page-editor-design-serialization.test.ts
+```
+
+Export the local test environment before database checks. Run shared-fixture
+writers serially. The HTTP schema and SQL retain their existing type, calendar,
+and public-link differences. Normal editor controls, bindings, public rendering,
+and form status behavior retain their existing policy. This SQL/API package
+claims no new browser acceptance or hosted application.
