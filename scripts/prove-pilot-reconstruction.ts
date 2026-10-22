@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium, expect } from "@playwright/test";
 import { installPilotProofGuard, proofGet } from "./pilot-proof-network";
+import { observePilotProofPage } from "./pilot-proof-page";
 import { withPilotProofProxy } from "./pilot-proof-proxy";
 import { withPilotProofServers } from "./pilot-proof-servers";
 import { verifyPilotSource } from "./pilot-source-package";
@@ -45,35 +46,7 @@ try {
     try {
       await installPilotProofGuard(context, Object.values(endpoints), proxy, section, photos, routeErrors);
       const page = await context.newPage();
-      const pageErrors: string[] = [];
-      const fonts = new Set<string>(); const css = new Set<string>(); const images = new Map<string, string>();
-      const pending: Promise<void>[] = [];
-      const bodyErrors: string[] = [];
-      const networkErrors: string[] = [];
-      const consoleErrors: string[] = [];
-      const scripts = new Map<string, string>();
-      page.on("pageerror", error => pageErrors.push(error.message));
-      page.on("console", message => {
-        const location = message.location().url;
-        if (message.type() === "error" && location && new URL(location).hostname.endsWith(".localhost") && !location.includes("/_vercel/insights/")) consoleErrors.push(message.text());
-      });
-      page.on("requestfailed", request => {
-        const url = new URL(request.url());
-        if (url.hostname.endsWith(".localhost") && !url.pathname.startsWith("/_vercel/insights/") && request.failure()?.errorText !== "net::ERR_ABORTED") networkErrors.push(`${url.pathname}: ${request.failure()?.errorText}`);
-      });
-      page.on("response", response => {
-        const path = new URL(response.url()).pathname;
-        if (response.status() >= 400) networkErrors.push(`${path}: ${response.status()}`);
-        if (response.ok() && (path.endsWith(".woff2") || path.endsWith(".css") || path.startsWith("/_next/") && path.endsWith(".js") || photos.some(photo => photo.url === path))) {
-          pending.push(response.body().then(bytes => {
-            const digest = hash(bytes);
-            if (path.endsWith(".woff2")) fonts.add(digest);
-            else if (path.endsWith(".css")) css.add(digest);
-            else if (path.endsWith(".js")) scripts.set(path, digest);
-            else images.set(path, digest);
-          }).catch(error => { bodyErrors.push(String(error)); }));
-        }
-      });
+      const finishCapture = observePilotProofPage(page, photos.map(photo => photo.url));
       assert.equal((await page.goto(base))?.status(), 200);
       await expect(page.locator("main h1").first()).toBeVisible();
       const feature = page.locator("section").filter({ has: page.getByRole("heading", { name: section.title, exact: true }) });
@@ -81,7 +54,6 @@ try {
       await expect.poll(() => feature.locator("img").evaluateAll(items => items.length === 2 && items.every(item => item instanceof HTMLImageElement && item.complete && item.naturalWidth > 0))).toBe(true);
       await page.evaluate(() => document.fonts.ready);
       await page.waitForLoadState("networkidle");
-      await Promise.all(pending);
       const publicState = await page.locator("main h1").first().evaluate(element => ({ text: element.textContent, color: getComputedStyle(element).color, font: getComputedStyle(element).fontFamily, size: getComputedStyle(element).fontSize }));
       await expect(page.locator("[data-pilot-mutation]")).toHaveCount(label === "changed" ? 1 : 0);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
@@ -94,7 +66,6 @@ try {
       await page.waitForTimeout(400);
       const kitShot = join(output, `${label}-${width}-kit.png`);
       await feature.screenshot({ path: kitShot, animations: "disabled" }); screenshots.push(kitShot);
-      await Promise.all(pending);
       assert.equal((await page.goto(`${base}/admin/homepage`))?.status(), 200);
       const frame = page.frameLocator('iframe[title="Homepage preview"]');
       const heading = frame.locator('[data-homepage-piece="hero.heading"]');
@@ -104,23 +75,21 @@ try {
       const input = page.getByLabel("Line one", { exact: true });
       await expect(input).toBeFocused(); await input.fill("Retained draft rehearsal");
       await expect(heading).toContainText("Retained draft rehearsal");
+      await frame.locator("html").evaluate(() => document.fonts.ready);
       const preview = await heading.evaluate(element => ({ text: element.textContent, color: getComputedStyle(element).color, font: getComputedStyle(element).fontFamily, size: getComputedStyle(element).fontSize, width: element.ownerDocument.documentElement.clientWidth }));
       const editorShot = join(output, `${label}-${width}-editor.png`);
       await page.screenshot({ path: editorShot, animations: "disabled" }); screenshots.push(editorShot);
       await input.press("Escape");
       await expect(page.getByRole("dialog", { name: "Main heading", exact: true })).toHaveCount(0);
       await expect(heading).toBeFocused();
-      await Promise.all(pending);
-      assert.deepEqual(pageErrors, []);
-      assert.deepEqual(bodyErrors, []);
-      assert.deepEqual(networkErrors, []);
-      assert.deepEqual(consoleErrors, []);
+      const observation = await finishCapture();
       if (label !== "changed") {
-        assert(css.size > 0 && [...css].every(value => retainedHashes.has(value)), "Loaded styles must match retained emitted bytes");
-        assert(fonts.size >= 3 && [...fonts].every(value => retainedHashes.has(value)), "Loaded font bytes must come from retained artifact");
-        assert([...images.values()].every(value => retainedHashes.has(value)), "Loaded image bytes must come from retained artifact");
+        assert(observation.css.length > 0 && observation.css.every(value => retainedHashes.has(value)), "Loaded styles must match retained emitted bytes");
+        assert(observation.fonts.length >= 3 && observation.fonts.every(value => retainedHashes.has(value)), "Loaded font bytes must come from retained artifact");
+        assert(Object.values(observation.images).every(value => retainedHashes.has(value)), "Loaded image bytes must come from retained artifact");
       }
-      captures.push({ label, width, public: publicState, preview, fonts: [...fonts].sort(), css: [...css].sort(), images: photos.map(photo => required(images.get(photo.url), photo.url)), screenshots, pageErrors, networkErrors, consoleErrors, bodyErrors, scripts: [...scripts].sort().map(([path, sha256]) => ({ path, sha256 })) });
+      captures.push({ label, width, public: publicState, preview, screenshots, ...observation,
+        images: photos.map(photo => required(observation.images[photo.url], photo.url)) });
     } finally { await context.close(); }
   }
   for (const width of [1440, 390]) {
