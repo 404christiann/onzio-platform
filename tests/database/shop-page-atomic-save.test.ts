@@ -111,7 +111,7 @@ describe("atomic Shop page database contract", () => {
     expect((await db.query("select count(*)::int as n from onzio_private.shop_page_receipts where operation_id=$1", [operationId])).rows[0].n).toBe(0);
   });
 
-  it("rejects a stale page revision and hidden template sections", async () => {
+  it("rejects a stale page revision while allowing hidden template content", async () => {
     const kitAsset = await asset();
     const before = await load();
     const request = {
@@ -122,9 +122,9 @@ describe("atomic Shop page database contract", () => {
     await rejects(() => save({ ...request, operationId: randomUUID() }), "CONTENT_CHANGED");
     await design("academy");
     const academy = await load();
-    await rejects(() => save({
+    expect((await save({
       ...request, operationId: randomUUID(), expectedRevision: academy.revision, designRevision: academy.designRevision, purchase,
-    }), "SECTION_UNAVAILABLE");
+    })).purchase).toMatchObject(purchase);
   });
 
   it("rejects unowned media even through a direct authenticated RPC", async () => {
@@ -137,7 +137,7 @@ describe("atomic Shop page database contract", () => {
     expect(await load()).toEqual(before);
   });
 
-  it("rejects both loading and saving an Editorial Store after its public page is disabled", async () => {
+  it("maintains an Editorial Store after its public page is disabled", async () => {
     await design("editorial");
     await db.query("reset role");
     await db.query("update onzio.clubs set store_enabled=true where id=$1", [clubId]);
@@ -147,11 +147,11 @@ describe("atomic Shop page database contract", () => {
     await db.query("reset role");
     await db.query("update onzio.clubs set store_enabled=false where id=$1", [clubId]);
     await actor();
-    await rejects(() => load(), "PAGE_UNAVAILABLE");
-    await rejects(() => save({
+    expect((await load()).designRevision).toBe(before.designRevision);
+    expect((await save({
       operationId: randomUUID(), surface: "shop", expectedRevision: before.revision, designRevision: before.designRevision,
       variants: { home: { section, photos: [{ rowId: null, assetId: kitAsset, order: 0 }] } },
-    }), "PAGE_UNAVAILABLE");
+    })).sections.find((item: { kit_variant: string }) => item.kit_variant === "home").title).toBe(section.title);
   });
 
   it("recovers committed Shop receipts and exact retries after Editorial Store is disabled", async () => {
@@ -169,8 +169,8 @@ describe("atomic Shop page database contract", () => {
     const recovered = (await db.query("select onzio.load_shop_page($1,'shop',$2) as data", [clubId, payload.operationId])).rows[0].data;
     expect(recovered.operation).toEqual({ status: "committed", receipt });
     expect(await save(payload)).toEqual(receipt);
-    await rejects(() => load(), "PAGE_UNAVAILABLE");
-    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    expect((await load()).revision).toBe(receipt.revision);
+    await rejects(() => save({ ...payload, operationId: randomUUID() }), "CONTENT_CHANGED");
     await rejects(() => save({ ...payload, variants: { home: { section: { ...section, title: "Different" }, photos: [{ rowId: null, assetId: photo, order: 0 }] } } }), "OPERATION_REUSED");
     await db.query("reset role");
     await db.query("update onzio.clubs set lifecycle='archived',public_access='suspended' where id=$1", [clubId]);
@@ -179,7 +179,7 @@ describe("atomic Shop page database contract", () => {
     await rejects(() => save(payload), "NOT_AUTHORIZED");
   });
 
-  it("recovers a Homepage Shop save after its section disappears while blocking fresh reads and writes", async () => {
+  it("recovers a hidden Homepage Shop save while preserving fresh design conflicts", async () => {
     const photo = await asset(), before = await load("home");
     const payload = { operationId: randomUUID(), surface: "home", expectedRevision: before.revision, designRevision: before.designRevision,
       variants: { home: { section, photos: [{ rowId: null, assetId: photo, order: 0 }] } } };
@@ -187,8 +187,10 @@ describe("atomic Shop page database contract", () => {
     await design("clubhouse");
     expect((await db.query("select onzio.load_shop_page($1,'home',$2) as data", [clubId, payload.operationId])).rows[0].data.operation.receipt).toEqual(receipt);
     expect(await save(payload)).toEqual(receipt);
-    await rejects(() => load("home"), "PAGE_UNAVAILABLE");
-    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    const current = await load("home");
+    expect(current.revision).toBe(receipt.revision);
+    await rejects(() => save({ ...payload, operationId: randomUUID() }), "DESIGN_CHANGED");
+    expect((await save({ ...payload, operationId: randomUUID(), expectedRevision: current.revision, designRevision: current.designRevision })).revision).not.toBe(current.revision);
   });
 
   it("rejects malformed revision and design tokens without changing content or creating receipts", async () => {

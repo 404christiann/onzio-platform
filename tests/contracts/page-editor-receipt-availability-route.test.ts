@@ -54,7 +54,15 @@ beforeEach(() => {
 for (const target of cases) describe(`${target.label} receipt recovery after page availability changes`, () => {
   beforeEach(() => mocks.getClubContext.mockResolvedValue({ id: clubId, role: "owner", lifecycle: "active", presentationTemplateKey: target.template, storeEnabled: false }));
 
-  it("preserves zero-RPC rejection for fresh unavailable GET and POST", async () => {
+  it("applies the current domain policy to fresh GET and POST", async () => {
+    if (target.label === "Shop") {
+      mocks.rpc.mockResolvedValue({ data: target.snapshot(), error: null });
+      const { GET, POST } = await target.route();
+      expect((await GET(request(target.path))).status).toBe(200);
+      expect((await POST(request(target.path, target.body))).status).toBe(200);
+      expect(mocks.rpc).toHaveBeenCalledTimes(2);
+      return;
+    }
     const { GET, POST } = await target.route();
     expect((await GET(request(target.path))).status).toBe(404);
     expect((await POST(request(target.path, target.body))).status).toBe(404);
@@ -86,7 +94,7 @@ for (const target of cases) describe(`${target.label} receipt recovery after pag
     if (target.cleanup) expect(mocks.retirePublishedMedia).toHaveBeenCalledExactlyOnceWith({ clubId, actorId: userId, assetId });
   });
 
-  it("does not turn recovery intent into authorization for a new operation", async () => {
+  it("preserves database rejection even when recovery intent is present", async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { message: "PAGE_UNAVAILABLE", code: "22023" } });
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {

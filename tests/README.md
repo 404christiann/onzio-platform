@@ -405,4 +405,22 @@ npx vitest run tests/database/homepage-content-policy.test.ts
 
 Export the local environment and run these serially with the existing atomic,
 assignment, concurrent-save and coordination suites. UI bindings and rendering
-are unchanged. Other content domains retain their existing availability rules.
+are unchanged. Nonmigrated content domains retain their existing availability rules.
+
+## Shop content maintenance policy
+
+The [Shop policy guide](../docs/shop-content-policy.md) describes SITE-06B.
+The local cases exercise hidden Shop and homepage home-kit maintenance, retained
+surface ownership, strict validation and media checks, current authorization,
+revision conflicts, rollback and real pre-policy receipt migration.
+The HTTP cases use loopback PostgREST and a disposable club. Route contracts
+execute the actual GET and POST adapters with boundary collaborators isolated.
+
+```bash
+npx vitest run tests/contracts/shop-content-policy-route.test.ts tests/contracts/shop-page-editor.test.ts
+npx vitest run tests/database/shop-content-policy.test.ts tests/database/shop-page-atomic-save.test.ts
+```
+
+Export the local test environment before database checks. Run shared-fixture
+writers serially. This package changes SQL and API maintenance policy. It does
+not add editor controls or change public Store availability and rendering.

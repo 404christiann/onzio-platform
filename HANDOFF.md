@@ -1,3 +1,84 @@
+## 2026-10-22 - SITE-06B local Shop content policy
+
+PR36 is verified MERGED at `53fd7de66cfddbb3e21f9c1737483c928a738415`,
+final head `3cd22a044b806d886ae09ea3949be80557681703`. The trees match.
+SITE-06A is complete for its local scope. Its recorded acceptance remains
+revision-specific and was not repeated solely to reconstruct context.
+
+Christian then authorized all remaining local SITE-06 domains, one reviewed PR
+at a time. This supersedes earlier homepage-only limits. The queue is Shop/home-kit,
+About/Logo, Contact, Tryouts and Programs. No additional domain approval is needed
+within that local queue. Hosted application, inventory, dispatch, activation,
+deployment, SITE-07 and SITE-08 remain excluded. Christian alone reviews,
+merges and deploys.
+
+SITE-06B is ready_for_review for local acceptance. The task branch is `agent/site06-shop-content-policy`,
+based on the verified PR36 merge. It separates renderer/public Store visibility
+from valid content maintenance. The `home` surface retains home-kit-only
+ownership. The `shop` surface retains all existing variant, photo-strip and
+purchase shapes. Normal controls, bindings and public rendering remain unchanged.
+
+The forward migration `20261022193528_shop_content_policy.sql` replaces the
+existing load/save RPCs and migrates their sole private section validator to a
+content-only signature. It removes the obsolete renderer-boolean helper without
+CASCADE. Public signatures, strict request shapes, invoker security, search paths,
+narrow grants, current authorization, both locks, original request hashes,
+actor-scoped receipt-first replay, media ownership, atomic writes and design/content
+revision conflicts remain. The API removes its display/recovery-only dispatch
+gate. No frontend, public renderer, binding or assignment-epoch change is included.
+
+Fifty-five new SQL/HTTP cases and fifteen new route cases cover maintenance and
+denials. A real old-function save creates a receipt before the entire new file
+runs in rollback scope; subsequent content/design changes preserve exact replay.
+The loopback PostgREST case persists and reads back a nonempty third-kit strip,
+then denies an unaffiliated actor without effects. The concurrent Store-disable
+case still waits for the shared lock and verifies success with Store disabled.
+Other domains keep their existing policies.
+
+The old-policy focused run recorded 54 failures and 46 passes. Six photo-bound
+cases and stronger status/HTTP controls were added afterward. Final focused
+acceptance passes 112 cases across six files; affected concurrency/recovery passes
+29 across two. Complete serial checks pass 2,352 full tests across 210 files,
+1,229 contracts across 113, 256 architecture across ten and 445 local database
+cases across 38. Full and architecture retain the existing Windows-only skip.
+Nonincremental TypeScript, lint, whitespace and relative file links pass.
+
+After iterative application, the exact original function bodies/grants were
+restored temporarily under the exclusive local lease. The actual migration runner
+then applied and recorded the whole new file successfully. Final installed bodies
+match it. The obsolete helper is absent; the new helper is immutable/invoker with
+empty search path, authenticated execution and anonymous denial. Original Alpha/
+Bravo lifecycle/access, Store flags, published pointers, full hero and Shop rows
+match baseline. Disposable policy/pilot clubs and coordination schemas are absent;
+presentation immutability remains enabled. Local security advisors have no
+findings before/after at the warn threshold.
+
+Raw generated types are byte-identical before/after. The committed-type check
+fails at baseline and afterward with the existing unrelated mismatch. This
+package adds no type drift and does not replace the generated file. No browser,
+production build or prior Academy acceptance rerun is claimed.
+
+Changed files are the new migration, Shop API, two new policy suites, existing
+Shop model/atomic contracts, shared receipt/serialization cases, policy guide,
+SITE ledger, test instructions, this HANDOFF and task deployment disablement.
+The separate comment audit has no findings. Consult the evidence handoff for
+exact-final-revision independent advisory verdicts, submitted SHA and PR URL.
+
+Evidence is under
+`/home/coder/.codex/visualizations/2026/10/22/onzio-site06-shop-content-policy`.
+It records authorization, grounded design alternatives, local baselines and
+actual commands, logs and acceptance. See [the Shop policy](docs/shop-content-policy.md)
+and the [SITE ledger](docs/site-architecture.md).
+
+Next is Christian's review and merge of this Shop package, followed by the already
+authorized local SITE-06C About/Logo package. Trusted internal destination safety
+requires its own grounded design. The remaining queue stays authorized.
+
+The original intentionally dirty HANDOFF, frozen Academy runtime, existing
+worktrees and all unarchived source conversations remain preserved. No merge,
+auto-merge, protected/protection operation, hosted-data/provider/billing operation,
+deployment, desktop credential access or unified-ai-chat operation is included.
+
 ## 2026-10-22 - SITE-06A local homepage content policy
 
 PR35 is verified MERGED at `e349380625dc4f372cfbe23e0ff7280a40e90bfc`,
