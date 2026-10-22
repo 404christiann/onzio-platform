@@ -35,7 +35,8 @@
       "agent/pilot-proof-identity": false,
       "agent/pilot-accepted-build-identity": false,
       "agent/academy-local-acceptance": false,
-      "agent/site05-completion": false
+      "agent/site05-completion": false,
+      "agent/site05-postmerge-status": false
     }
   }
 }

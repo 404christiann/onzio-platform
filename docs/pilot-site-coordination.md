@@ -121,20 +121,43 @@ created by this rehearsal.
 
 ## Acceptance record and remaining hosted boundary
 
-SITE-05L and parent SITE-05 are ready_for_review for local proof completion.
-The actual A/B/A browser run passes at 1440px and 390px with 18 inspected images,
-exact returned kit PNGs and no final diagnostics. All 2,233 regressions, 1,211
-contracts, 256 architecture, 344 local database and three Chromium proof cases
-pass. The full and architecture runs skip the existing Windows-only case.
-Nonincremental TypeScript, lint, whitespace, relative links and all five guarded
-build receipts pass. Raw database-types generation was not run.
+SITE-05L and parent SITE-05 are complete for the local proof scope. [PR34](https://github.com/404christiann/onzio-platform/pull/34)
+merged at `b2acbe4c0f344b614f594ca445dbebbd803b961e` on 2026-10-22.
+Its final head is `5c9edf67edabfe78fba015d5831bb9185dd82d5f`; the merged tree
+matches that head exactly.
 
-The submitted SHA, final independent exact-revision verdicts and artifacts are
-recorded in HANDOFF.md and the local PR handoff. The durable evidence directory is
+Complete acceptance and two independent approvals cover
+`116f455271ea12163dc004eb0d70a882954439e6`. The actual A/B/A browser run passed
+at 1440px and 390px with 18 inspected images, exact returned kit PNGs and no final
+diagnostics. All 2,233 regressions, 1,211 contracts, 256 architecture, 344 local
+database and three Chromium proof cases passed at that revision. The full and
+architecture runs skipped the existing Windows-only case. Nonincremental
+TypeScript, lint, whitespace, relative links and all five guarded build receipts
+passed. Raw database-types generation was not run.
+
+The later `5c9edf6` repair changes only `tests/helpers/site-coordination-proof.ts`
+and adds `tests/contracts/site-coordination-proof-cleanup.test.ts`. A failed
+statement-timeout, fingerprint or trigger preflight now closes its connected
+client before rethrowing, before any transaction or disposable fixture begins.
+Four new contract cases cover statement-timeout, fingerprint, trigger-query and
+trigger-assertion failure. Post-merge verification at the actual merged tree
+passes those four contracts, all ten real local coordination SQL cases and
+nonincremental TypeScript. Complete acceptance was not repeated for this bounded
+delta. The prior approvals do not claim review of the later repair.
+
+Historical evidence remains unchanged at
 `/home/coder/.codex/visualizations/2026/10/22/onzio-site05-completion`.
-It includes the design, real capability controls, fresh build logs, actual
-coordination report, inspected screenshots and the decision trail. The earlier
-login-fixture failure and superseded long-title capture remain disclosed.
+Its publication metadata records the earlier OPEN PR at `116f455`; the verified
+merge above supersedes that state. The directory retains the design, real
+capability controls, fresh build logs, actual coordination report, inspected
+screenshots, independent reviews and decision trail. The earlier login-fixture
+failure and superseded long-title capture remain disclosed.
+
+Post-merge commands, logs, cleanup confirmation and advisory review are recorded
+separately at `/home/coder/.codex/visualizations/2026/10/22/onzio-site05-postmerge`.
+The status reconciliation changes HANDOFF.md, this guide, the SITE-05/SITE-05L
+ledger and task-branch deployment disablement. No authorized local SITE-05 work
+remains. SITE-06 and hosted rollout require Christian's separate direction.
 
 Hosted traffic inventory/admission, deployment and cache coordination,
 production authored dispatch/storage and an operator activation endpoint remain

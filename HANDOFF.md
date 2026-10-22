@@ -1,3 +1,47 @@
+## 2026-10-22 - Post-merge SITE-05 local completion
+
+[PR34](https://github.com/404christiann/onzio-platform/pull/34) is verified MERGED
+at `b2acbe4c0f344b614f594ca445dbebbd803b961e`, final head
+`5c9edf67edabfe78fba015d5831bb9185dd82d5f`. The merged tree exactly matches
+that head. SITE-05 and SITE-05L are complete for the authorized local proof
+scope. Earlier ready_for_review entries below describe the pre-merge state.
+SITE-05K remains complete from PR33. SITE-06 remains pending and unauthorized.
+
+Complete local acceptance and two independent approvals cover
+`116f455271ea12163dc004eb0d70a882954439e6`. That evidence is preserved at
+`/home/coder/.codex/visualizations/2026/10/22/onzio-site05-completion`, including
+its historical OPEN publication metadata. It has not been rewritten to imply
+acceptance or prior review of the later repair.
+
+The final head adds only preflight connection cleanup in
+`tests/helpers/site-coordination-proof.ts` and four new cases in
+`tests/contracts/site-coordination-proof-cleanup.test.ts`. Statement-timeout,
+fingerprint, trigger-query and trigger-assertion failures now close the connected
+client before any transaction begins. Post-merge verification passes those four
+contracts, all ten real local coordination SQL cases and nonincremental
+TypeScript. Complete acceptance and browser captures were not repeated solely
+to reconstruct context. The prior acceptance remains revision-specific.
+
+This reconciliation changes only HANDOFF.md, `docs/site-architecture.md`,
+`docs/pilot-site-coordination.md` and the new task branch's deployment disablement
+in `vercel.json`. Commands, actual logs, cleanup confirmation and advisory review
+are under `/home/coder/.codex/visualizations/2026/10/22/onzio-site05-postmerge`.
+The new task worktree is `/home/coder/projects/onzio-site05-postmerge-status` on
+`agent/site05-postmerge-status`, based on the verified merge.
+
+The original intentionally dirty HANDOFF, frozen Academy runtime, existing
+worktrees and unarchived source conversations remain preserved. No application,
+production schema, hosted dispatch or activation changes are included.
+
+No authorized local SITE-05 work remains. The next action is Christian's review
+of this status reconciliation and direction on a separately scoped package.
+SITE-06 content policy, hosted inventory/admission, production authored
+dispatch/storage, deployment/cache coordination and operator activation remain
+outside this authorization. Existing local-proof limits still apply.
+Christian alone reviews, merges and deploys. No merge, auto-merge, protected or
+protection operation, deployment, hosted-data/provider/billing operation,
+desktop credential access or unified-ai-chat operation occurred.
+
 ## 2026-10-22 - Final local SITE-05 coordination
 
 PR33 is verified merged at `b7fbc9d9d157a443e417278bc8714011b1d5ce1b`.
