@@ -391,3 +391,18 @@ assignment-selected navigation, verifies returned retained resources and origina
 receipts, then withholds PASS until owned shutdown and disposable-club cleanup.
 Inspect all screenshots. Hosted admission and production dispatch are separate
 unimplemented adapters.
+
+## Homepage content maintenance policy
+
+The [homepage policy guide](../docs/homepage-content-policy.md) describes the
+local SITE-06A migration. Direct-RPC tests cover valid content hidden by the
+current renderer, retained authorization and validation, whole-save rollback
+and real pre-policy receipt replay across the new function replacement.
+
+```bash
+npx vitest run tests/database/homepage-content-policy.test.ts
+```
+
+Export the local environment and run these serially with the existing atomic,
+assignment, concurrent-save and coordination suites. UI bindings and rendering
+are unchanged. Other content domains retain their existing availability rules.

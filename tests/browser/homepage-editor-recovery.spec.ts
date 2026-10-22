@@ -136,8 +136,6 @@ test.describe("homepage editor local draft recovery", () => {
     } finally {
       const current = await (await page.request.get("/api/admin/homepage")).json();
       if (current.content.hero.headline_line_one === "Recovered after reload") {
-        // Clubhouse does not expose "eyebrow" as an editable hero field;
-        // resubmitting it here is rejected with FIELD_UNAVAILABLE.
         const { eyebrow: _eyebrow, ...restorableHero } = current.content.hero;
         const restore = await page.request.post("/api/admin/homepage", { data: { operationId: crypto.randomUUID(), expectedRevision: current.revision, designRevision: current.designRevision, sections: { hero: { ...restorableHero, headline_line_one: "" } } } });
         if (!restore.ok()) throw new Error(`Failed to restore Alpha's hero content: ${await restore.text()}`);

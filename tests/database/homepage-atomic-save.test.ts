@@ -145,12 +145,13 @@ describe("atomic homepage database contract", () => {
     await rejects(() => save(payload), "DESIGN_CHANGED");
   });
 
-  it("never seeds or edits unavailable sections or unrendered hero fields", async () => {
+  it("maintains valid hidden sections and unrendered hero fields", async () => {
     await design("editorial");
-    await rejects(async () => save(await request({ story })), "SECTION_UNAVAILABLE");
-    await rejects(async () => save(await request({ hero: { eyebrow: "Not rendered" } })), "FIELD_UNAVAILABLE");
-    await save(await request({ hero: { intro: "Valid editorial intro" } }));
-    expect((await load()).content.story.heading).not.toBe("New story");
+    await save(await request({ story, hero: { eyebrow: "Maintained eyebrow", intro: "Valid editorial intro" } }));
+    const current = await load();
+    expect(current.content.story.heading).toBe("New story");
+    expect(current.content.hero.eyebrow).toBe("Maintained eyebrow");
+    expect(current.content.hero.intro).toBe("Valid editorial intro");
   });
 
   it("preserves source video and rejects source replacement even through direct RPC", async () => {

@@ -484,9 +484,6 @@ test.describe("homepage editor photo queue", () => {
     } finally {
       const current = await (await page.request.get("/api/admin/homepage")).json();
       if (baselineHero && current.content.hero.headline_line_one === savedMarker) {
-        // Clubhouse does not expose "eyebrow" as an editable hero field;
-        // resubmitting it here is rejected with FIELD_UNAVAILABLE, which
-        // would otherwise leave this restore silently failed.
         const { eyebrow: _eyebrow, ...restorableHero } = baselineHero;
         const restore = await page.request.post("/api/admin/homepage", { data: { operationId: crypto.randomUUID(), expectedRevision: current.revision, designRevision: current.designRevision, sections: { hero: restorableHero } } });
         if (!restore.ok()) throw new Error(`Failed to restore Alpha's hero content: ${await restore.text()}`);
