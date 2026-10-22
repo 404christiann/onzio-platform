@@ -57,7 +57,10 @@ The save request shape and browser recovery schema remain unchanged. The
 server-owned assignment epoch and trusted binding identity in the homepage-only
 opaque `designRevision`. Other page editors keep their existing design tokens.
 Exact actor-scoped receipt replay still precedes current-design and stale-content
-conflicts after authorization. Nonmigrated SQL content policy remains unchanged.
+conflicts after authorization. The [homepage content policy](homepage-content-policy.md)
+accepts valid supplied content independently of renderer visibility. Normal editor
+projection and binding meaning remain unchanged. Other domains retain their
+existing SQL content policy.
 
 The [draft recovery integration](homepage-draft-recovery.md) records binding
 identity with new local work. It requires explicit review after assignment changes
@@ -65,4 +68,4 @@ and keeps incompatible or unknown meanings available without an apply action.
 Older changed-token drafts remain separate without inferred historical identity.
 Authored assignment resolution and deployment/activation coordination still need
 proof before activation.
-Domain-by-domain content-policy migration requires its own direct-RPC coverage.
+Each further content-policy domain requires its own direct-RPC coverage.

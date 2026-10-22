@@ -1,3 +1,83 @@
+## 2026-10-22 - SITE-06A local homepage content policy
+
+PR35 is verified MERGED at `e349380625dc4f372cfbe23e0ff7280a40e90bfc`,
+final head `14a09571f20a908e3c65561f81542e207818814e`; their trees match.
+Christian explicitly authorized the first local SITE-06 package after that merge.
+Earlier statements that SITE-06 was unauthorized describe the prior scope.
+This assignment covers homepage content policy, direct-RPC acceptance and a
+reviewed PR. Other domains, hosted work and deployment remain excluded.
+
+SITE-06A is ready_for_review for local acceptance. Parent SITE-06 remains
+in_progress. Authorized owners and admins can save valid homepage content even
+when the current design hides it. The forward migration
+`20261022183955_homepage_content_policy.sql` replaces only the existing
+`onzio.save_homepage` invoker function. It removes the section-availability,
+compact-hero eyebrow and nonlegacy season-label guards and their unused locals.
+The original migrations, current snapshot and assignment helpers remain intact.
+
+The request shape, current authorization, RLS, strict validation, media and
+video-source ownership, shared advisory lock, assignment/content conflicts,
+original complete request hashes and actor-scoped receipt-first replay remain.
+Normal UI controls, bindings, rendering and browser recovery meaning are
+unchanged. Other page/domain availability rules remain authoritative.
+
+The authorized old rejection assertion is replaced with a positive hidden-content
+contract. Forty-six new direct SQL/HTTP cases cover owner/admin maintenance,
+absent singletons, hidden fields/sections/photos, source and media checks,
+authorization denials, lifecycle/access, full rollback and real receipt migration
+compatibility. A real old-function save creates the original receipt before the
+actual new migration; later assignment/content changes do not alter exact replay.
+A committed loopback PostgREST save persists hidden legacy story and denies an
+unaffiliated caller. Two obsolete browser comments are deleted; browser behavior
+is unchanged.
+
+Before application the focused run produced 41 failures and 32 passes under the
+old visibility guards. Final narrow acceptance passes 73 cases across two files;
+33 existing assignment, concurrent-save, migration and coordination cases pass.
+The complete required serial checks pass 2,283 tests across 208 files, 1,215
+contracts across 112, 256 architecture across ten and 390 local database cases
+across 37. Full and architecture runs retain the existing Windows-only skip.
+Nonincremental TypeScript, lint, whitespace and relative file links pass.
+The implementation is unchanged by the final evidence-only documentation update.
+
+The local migration runner successfully applied and recorded the new file.
+The installed function body exactly matches that file. Function ACL, invoker
+security and search path match the pre-migration baseline. Local security
+advisors report no issues before or after. Alpha/Bravo slug, lifecycle, access,
+published pointer and full hero rows match the pre-apply baseline. Zero disposable
+policy/pilot clubs or coordination schemas remain; immutability is enabled.
+
+Raw generated database types are byte-for-byte identical before and after.
+`npm run db:types:check` still fails against the committed file, as established
+by pre-migration generation. This package introduces no additional type drift
+and does not replace the unrelated generated file. No browser, production build
+or prior Academy acceptance rerun is claimed for this SQL-only policy change.
+
+Evidence is under
+`/home/coder/.codex/visualizations/2026/10/22/onzio-site06-homepage-content-policy`.
+It includes grounding, two inherited-settings designs, cross-judgment, normalized
+function diff, actual commands/logs, raw type comparison and fixture checks.
+The CLI multi-statement query returned error JSON with exit zero; failed runs
+and corrected fixture-setup attempts remain disclosed. The complete file was
+actually applied via loopback pg, then verified through the local migration
+runner. Independent exact-revision advisory verdicts, submitted SHA and PR URL
+are recorded in the evidence handoff. The separate comment audit has no findings.
+
+Changed files are the one forward migration, focused policy tests and updated
+atomic contract, two browser-comment removals, policy/binding/assignment guides,
+this handoff, SITE ledger, test instructions and task-branch deployment disablement.
+The task branch is `agent/site06-homepage-content-policy`, based on the verified
+PR35 merge. See [the policy guide](docs/homepage-content-policy.md).
+
+The original intentionally dirty HANDOFF still hashes to
+`c77eea2749d0b9d8126f1c2382f198b487411f75068f9dbfc12c5842d8d24b30`.
+Frozen Academy, existing worktrees and unarchived source conversations remain
+preserved. Christian reviews and merges the PR, then directs the next content
+domain under its own scope. No hosted migration, inventory/admission, authored
+dispatch, activation, deployment, provider or billing work is included. No merge,
+auto-merge, protected/protection operation, desktop credential access or
+unified-ai-chat operation occurred. Christian alone reviews, merges and deploys.
+
 ## 2026-10-22 - Post-merge SITE-05 local completion
 
 [PR34](https://github.com/404christiann/onzio-platform/pull/34) is verified MERGED

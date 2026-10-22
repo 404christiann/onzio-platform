@@ -45,8 +45,10 @@ A changed request under the same operation remains `OPERATION_REUSED`.
 
 Only an uncommitted operation reads the current token. A stale assignment returns
 `DESIGN_CHANGED` with SQLSTATE `PT409`. A stale content revision still returns
-`CONTENT_CHANGED`. Existing section, field, media, destination, membership,
-session, lifecycle and tenant safeguards remain authoritative. No receipt or
+`CONTENT_CHANGED`. The [homepage content policy](homepage-content-policy.md)
+accepts valid maintained sections independently of renderer visibility. Strict
+field shapes, media, destination, membership, session, lifecycle and tenant
+safeguards remain authoritative. No receipt or
 historical request acquires new fields, hashes or inferred current identity.
 
 The existing load RPC resolves the current snapshot before operation status.
