@@ -31,7 +31,7 @@ const photos = ["/images/shop/rosecityshirt1.webp", "/images/shop/rosecityshirt2
 const routeErrors: string[] = [];
 const captures: { label: string; width: number; public: unknown; preview: unknown; fonts: string[]; css: string[]; images: string[]; scripts: { path: string; sha256: string }[]; screenshots: string[]; pageErrors: string[]; networkErrors: string[]; consoleErrors: string[]; bodyErrors: string[] }[] = [];
 async function main() {
-const result = await withPilotProofServers(roots, async (servers, signal) => {
+const result = await withPilotProofServers({ ...roots, acceptedDigest: digest }, async (servers, signal) => {
 const endpoints = { baseline: servers.baseline.origin, changed: servers.changed.origin, restored: servers.restored.origin };
 return withPilotProofProxy(Object.values(endpoints), async proxy => {
 let lateFont: (typeof manifest.files)[number] | undefined;
@@ -159,7 +159,7 @@ try {
 assert(lateFont);
 assert.deepEqual(routeErrors, []);
 return { digest, sourceCommit: manifest.sourceCommit, endpoints, servers, captures, lateFont,
-  limits: ["Owned generic build receipts do not bind these roots to the accepted package. Accepted-package build identity remains separate.", "Local retained-source reconstruction, not runtime assignment or original compiled-byte retention.", "Populated home-kit GET data is controlled; no saves occur in this rehearsal.", "External media and analytics are blocked; no latency or LCP claim.", "Current tenant/editor mounting, runtime and build-time font provider remain shared."] };
+  limits: ["Local retained-source reconstruction, not runtime assignment or original compiled-byte retention.", "Populated home-kit GET data is controlled; no saves occur in this rehearsal.", "External media and analytics are blocked; no latency or LCP claim.", "Current tenant/editor mounting, runtime and build-time font provider remain shared."] };
 });
 });
 const report = { verdict: "PASS", ...result };

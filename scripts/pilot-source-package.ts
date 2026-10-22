@@ -26,21 +26,25 @@ const visualLibraries = new Set([
   "lib/use-bounded-academy-loading.ts",
 ]);
 const bindingPath = "lib/homepage-editor/capabilities.ts";
-const entrySchema = z.object({ path: z.string(), sha256: z.string().regex(/^[a-f0-9]{64}$/), bytes: z.number().int().nonnegative() }).strict();
+const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+const entrySchema = z.object({ path: z.string(), sha256: sha256Schema, bytes: z.number().int().nonnegative() }).strict();
 const legacyManifestSchema = z.object({
   format: z.literal("onzio-pilot-source@1"), sourceCommit: z.string().regex(/^[a-f0-9]{40}$/),
   files: z.array(entrySchema).min(1), platform: z.array(entrySchema),
   packages: z.record(z.string(), z.string()),
 }).strict();
 const currentManifestSchema = legacyManifestSchema.extend({
-  format: z.literal("onzio-pilot-source@2"), packageLockSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  format: z.literal("onzio-pilot-source@2"), packageLockSha256: sha256Schema,
 }).strict();
+const reconstructionMarkerName = ".onzio-pilot-reconstruction.json";
+const reconstructionMarkerSchema = z.object({ format: z.literal("onzio-pilot-reconstruction@1"), manifest: currentManifestSchema }).strict();
 const manifestSchema = z.discriminatedUnion("format", [legacyManifestSchema, currentManifestSchema]);
 export type PilotSourceManifest = z.infer<typeof manifestSchema>;
+type CurrentPilotSourceManifest = z.infer<typeof currentManifestSchema>;
 const digest = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 
 function safePath(path: string) {
-  if (isAbsolute(path) || path.includes("\\") || path.split("/").some(part => !part || part === "." || part === "..")) throw new Error(`Unsafe package path: ${path}`);
+  if (isAbsolute(path) || path.includes("\\") || path.includes("\0") || path.split("/").some(part => !part || part === "." || part === "..")) throw new Error(`Unsafe package path: ${path}`);
   return path;
 }
 function file(root: string, path: string) {
@@ -183,10 +187,7 @@ export function packPilotSource({ root, buildRoot, output }: { root: string; bui
     return { directory: target, digest: digest(JSON.stringify(manifest)), files: files.length };
   } catch (error) { rmSync(target, { recursive: true, force: true }); throw error; }
 }
-export function verifyPilotSource(directory: string, expectedDigest?: string) {
-  const root = realpathSync(directory);
-  const manifest = manifestSchema.parse(JSON.parse(file(root, "manifest.json").toString("utf8")));
-  if (expectedDigest && digest(JSON.stringify(manifest)) !== expectedDigest) throw new Error("Package digest differs");
+function manifestFiles(manifest: PilotSourceManifest) {
   const names = new Set<string>();
   for (const item of manifest.files) {
     safePath(item.path);
@@ -194,12 +195,27 @@ export function verifyPilotSource(directory: string, expectedDigest?: string) {
     names.add(item.path);
     const allowed = item.path.startsWith("source/public/") || item.path.startsWith("source/") && visual(item.path.slice(7)) || item.path === `bindings/${bindingPath}` || /^emitted\/static\/(css|media)\/[^/]+$/.test(item.path);
     if (!allowed) throw new Error(`Package cannot replace platform file: ${item.path}`);
+  }
+  const shared = new Set<string>();
+  for (const item of manifest.platform) {
+    safePath(item.path);
+    if (!platform.has(item.path) || shared.has(item.path)) throw new Error(`Invalid platform boundary: ${item.path}`);
+    shared.add(item.path);
+  }
+  if (![...names].some(path => path.startsWith("emitted/static/css/")) || ![...names].some(path => path.startsWith("emitted/static/media/") && path.endsWith(".woff2"))) throw new Error("Built CSS and fonts are required");
+  return names;
+}
+export function verifyPilotSource(directory: string, expectedDigest?: string) {
+  const root = realpathSync(directory);
+  const manifest = manifestSchema.parse(JSON.parse(file(root, "manifest.json").toString("utf8")));
+  if (expectedDigest && digest(JSON.stringify(manifest)) !== expectedDigest) throw new Error("Package digest differs");
+  const names = manifestFiles(manifest);
+  for (const item of manifest.files) {
     const bytes = file(root, item.path);
     if (bytes.length !== item.bytes || digest(bytes) !== item.sha256) throw new Error(`Package file differs: ${item.path}`);
   }
   const actual = readdirSync(root).sort().flatMap(name => name === "manifest.json" ? [] : inventory(root, name));
   if (actual.length !== names.size || actual.some(path => !names.has(path))) throw new Error("Undeclared package file");
-  if (![...names].some(path => path.startsWith("emitted/static/css/")) || ![...names].some(path => path.startsWith("emitted/static/media/") && path.endsWith(".woff2"))) throw new Error("Built CSS and fonts are required");
   for (const path of names) {
     if (!path.startsWith("emitted/static/css/")) continue;
     const css = file(root, path).toString("utf8");
@@ -217,7 +233,34 @@ export function verifyPilotSource(directory: string, expectedDigest?: string) {
   if (JSON.stringify(sourceGraph.packages) !== JSON.stringify(Object.keys(manifest.packages).sort())) throw new Error("Runtime dependency inventory differs");
   return { manifest, digest: digest(JSON.stringify(manifest)) };
 }
+export function verifyPilotReconstructionInputs(root: string, manifest: CurrentPilotSourceManifest) {
+  const names = manifestFiles(manifest);
+  for (const item of manifest.files) {
+    const path = item.path.startsWith("source/") ? item.path.slice(7) : item.path === `bindings/${bindingPath}` ? bindingPath : null;
+    if (path === null) continue;
+    const bytes = file(root, path);
+    if (bytes.length !== item.bytes || digest(bytes) !== item.sha256) throw new Error(`Retained reconstruction input differs: ${path}`);
+  }
+  const sourceGraph = graph(root);
+  const expected = sourceGraph.owned.map(path => `source/${path}`);
+  if (expected.some(path => !names.has(path)) || [...names].some(path => path.startsWith("source/") && !path.startsWith("source/public/") && !expected.includes(path)) || !names.has(`bindings/${bindingPath}`)) throw new Error("Incomplete reconstruction source graph");
+  if (JSON.stringify(sourceGraph.shared) !== JSON.stringify(manifest.platform.map(item => item.path).sort())) throw new Error("Platform boundary differs");
+  if (JSON.stringify(sourceGraph.packages) !== JSON.stringify(Object.keys(manifest.packages).sort())) throw new Error("Runtime dependency inventory differs");
+  if (JSON.stringify(versions(root, Object.keys(manifest.packages))) !== JSON.stringify(manifest.packages)) throw new Error("Runtime versions differ; compatibility review required");
+  if (digest(file(root, "package-lock.json")) !== manifest.packageLockSha256) throw new Error("Dependency lock differs; compatibility review required");
+}
+export function readPilotReconstructionIdentity(root: string) {
+  try { lstatSync(join(root, reconstructionMarkerName)); }
+  catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
+    throw error;
+  }
+  const { manifest } = reconstructionMarkerSchema.parse(JSON.parse(file(root, reconstructionMarkerName).toString("utf8")));
+  verifyPilotReconstructionInputs(root, manifest);
+  return { manifest, digest: digest(JSON.stringify(manifest)) };
+}
 export function verifyPilotReconstructionSource({ root, directory, expectedDigest }: { root: string; directory: string; expectedDigest: string }) {
+  sha256Schema.parse(expectedDigest);
   const verified = verifyPilotSource(directory, expectedDigest);
   const { manifest } = verified;
   if (manifest.format !== "onzio-pilot-source@2") throw new Error("Regenerate and review a new pilot source package with complete dependency-lock metadata before reconstruction");
@@ -229,6 +272,7 @@ export function verifyPilotReconstructionSource({ root, directory, expectedDiges
 export function reconstructPilotSource({ root, directory, expectedDigest, output }: { root: string; directory: string; expectedDigest: string; output: string }) {
   const { manifest } = verifyPilotReconstructionSource({ root, directory, expectedDigest });
   const paths = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
+  if (paths.some(path => path === reconstructionMarkerName || path.startsWith(`${reconstructionMarkerName}/`))) throw new Error("Current source contains the reserved reconstruction identity path");
   const target = newOutput(root, output);
   try {
     for (const path of paths) {
@@ -243,6 +287,8 @@ export function reconstructPilotSource({ root, directory, expectedDigest, output
     for (const item of manifest.platform) {
       if (!file(root, item.path).equals(file(target, item.path))) throw new Error(`Current platform changed: ${item.path}`);
     }
+    verifyPilotReconstructionInputs(target, manifest);
+    writeFileSync(join(target, reconstructionMarkerName), `${JSON.stringify({ format: "onzio-pilot-reconstruction@1", manifest }, null, 2)}\n`);
     return { directory: target, sourceCommit: manifest.sourceCommit, digest: expectedDigest };
   } catch (error) { rmSync(target, { recursive: true, force: true }); throw error; }
 }

@@ -1,3 +1,99 @@
+## 2026-10-21 - Accepted reconstruction identity for owned proof
+
+`SITE-05I` is complete. PR30 is verified merged at
+`00b745aee3d6a76fb9fed6876b6c206f9d396157`, including the later IPv4 proof proxy
+and asynchronous configuration-probe descendant cleanup. This isolated task
+starts from that exact merge. `SITE-05J` is ready_for_review; SITE-05 remains
+in_progress. Christian owns final review and merge.
+
+The actual package/reconstruct/build CLIs reproduced the missing association.
+Two externally accepted manifests with different source provenance reconstructed
+identical inputs and generic receipts. A later generic build accepted unretained
+C while package A still verified. With a genuine Next fixture, the real proof
+CLI verified a metadata-distinct package, then reached a later Academy visual
+assertion instead of rejecting the missing build association. No full false
+browser PASS is claimed.
+
+Two executable designs and an independent judge selected a durable full-manifest
+marker over proof-time source equivalence. The latter accepted both metadata-only
+digests for the same receipt. Reconstruction now validates the actual copied
+retained inputs, whole binding and complete lock, preserves current platform B,
+and writes `.onzio-pilot-reconstruction.json` before returning success. A tracked
+current-root collision rejects before output creation. Copy failure removes only
+the new target. The source-package module owns the canonical manifest parser,
+digest, marker presence rules and input relation. Historical v1 verification and
+v2 reconstruction compatibility remain.
+
+The marker is an ordinary included input of the unchanged generic build receipt.
+Guarded builds invalidate old success first, then validate any present marker
+before and after Next. Generic roots without a marker stay generic. Malformed,
+unsafe, duplicate-declared or symlinked identity never becomes absence. The
+required exported reconstruction digest now rejects missing or empty values,
+closing a reproduced export-only gap already guarded by the CLI.
+
+Owned children bracket marker reads with generic receipt checks and send a
+mandatory strict `reconstruction: { digest } | null` identity over private IPC.
+The actual proof CLI always passes its externally accepted digest. Before capture
+and after child postchecks, the owner requires the restored identity to match it
+and checks baseline original A's retained inputs, whole binding and complete lock
+against that manifest. Explicit invalid expectations cannot downgrade to generic
+proof. Parent environment loading, original-platform hash equality and exclusive
+public-file membership are not added. Changed B stays a negative generic control;
+additional current B files remain observed inputs. Native listener, IPv4 proxy,
+redirect/cookie guards, locks and process cleanup remain.
+
+The stable focused suite passes 203 applicable cases across five files, including
+35 new cases and all 168 baseline cases. One existing Windows-only case is skipped
+on POSIX. Initial red coverage had 16 failures; two exported empty/missing digest
+cases also reproduced red. TypeScript, lint and whitespace checks pass on the
+implementation. Final required full-suite results and fresh independent exact
+revision verdicts are recorded in the PR handoff.
+
+One expanded test run was discarded after an IPC fixture changed its own shared
+synthetic module through a symlink. All six failures were classified and the
+fixture now copies private synthetic modules before modification. The final
+stable run passed. A new untracked test briefly landed in the original checkout
+and was moved immediately; no original tracked bytes changed.
+
+The first complete run exposed a separate fixture environment mismatch. Its CLI
+builds omitted exported public variables that the owned proof children inherited.
+The strict receipt correctly rejected seven positive cases. The fixture now
+inherits the same environment for both paths, and all 35 new cases pass with the
+required exported synthetic test environment. Final full reruns and updated
+exact-revision reviews remain recorded in the PR handoff.
+
+Three fresh genuine Next 15.5.22 builds, real package/reconstruction CLIs and owned
+proxy HTTP controls pass for original A, changed B and retained A over current B.
+Wrong metadata-only acceptance, invalid expectations, postbuild marker replacement,
+capture drift, unretained-C build revocation and missing-marker generic rebuild
+controls pass. The corrected actual proof CLI rejects the wrong digest before
+browser assertions; its valid identity control reaches the expected non-Academy
+visual failure, publishes no PASS and cleans owned children. All six actual
+1440px/390px screenshots were opened and inspected, with no page or route errors.
+These are minimal runtime controls, not full Academy public/editor acceptance.
+
+Changed files are the source-package owner, guarded build caller, private proof
+protocol/child/owner/caller, one focused architecture suite, package/build/proof
+and testing guidance, this handoff/ledger and task-branch deployment disablement.
+No app, SQL, dependency, lockfile, content-permission, save/replay, tenant or
+stale-edit changes occur. The PR30 network and Next-probe implementations remain.
+
+Next is Christian's review and merge of this bounded unit. Full Academy and full
+installed-pilot acceptance, installed dependency bytes, runtime ABI and current
+platform interface compatibility remain separate. The raw PR26 types-generation
+mismatch is untouched and was not rerun. Authored routing, assignment read/save
+storage and activation remain separate. This local marker is not a signature or
+an unforgeable history. Pre/post checks do not attest continuous immutability.
+
+The original intentional dirty HANDOFF remains byte-for-byte at SHA256
+`c77eea2749d0b9d8126f1c2382f198b487411f75068f9dbfc12c5842d8d24b30`.
+Source conversations `01a1603e-0af8-7c02-a6d5-c2e53da3fb32` and
+`01a15f8c-4a54-75c2-902d-38df62252aa2` remain available and unarchived.
+No merge, deployment, auto-merge, protection, hosted-data, provider, billing,
+desktop-credential or unified-ai-chat operation occurred. Evidence and rerunnable
+probes are under
+`/home/coder/.codex/visualizations/2026/10/21/onzio-pilot-accepted-build-identity`.
+
 ## 2026-10-21 - PR30 review corrections in progress
 
 `SITE-05I` remains in_progress. PR30's worker review found two medium issues in

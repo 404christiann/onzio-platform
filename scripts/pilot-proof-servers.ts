@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { readPilotReconstructionIdentity, verifyPilotReconstructionInputs } from "./pilot-source-package";
 import { fork } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -82,7 +84,8 @@ function ownedServer(root: string, fail: (error: Error) => void) {
   };
 }
 
-export async function withPilotProofServers<T>(roots: ProofRoots, action: (servers: ProofServers, signal: AbortSignal) => Promise<T>): Promise<T> {
+export async function withPilotProofServers<T>(roots: ProofRoots & { acceptedDigest?: string }, action: (servers: ProofServers, signal: AbortSignal) => Promise<T>): Promise<T> {
+  const acceptedDigest = "acceptedDigest" in roots ? z.string().regex(/^[a-f0-9]{64}$/).parse(roots.acceptedDigest) : undefined;
   if (process.platform === "win32") throw new Error("Owned proof servers require POSIX process groups");
   const canonical = { baseline: realpathSync(roots.baseline), changed: realpathSync(roots.changed), restored: realpathSync(roots.restored) };
   if (new Set(Object.values(canonical)).size !== 3) throw new Error("Proof roles require three distinct local roots");
@@ -111,11 +114,20 @@ export async function withPilotProofServers<T>(roots: ProofRoots, action: (serve
       }
       finally { clearTimeout(timer); }
       if (new Set(Object.values(servers).map(item => item.origin)).size !== 3) throw new Error("Proof servers require distinct owned listeners");
+      function acceptedReconstruction() {
+        if (acceptedDigest === undefined) return;
+        if (servers.restored.reconstruction?.digest !== acceptedDigest) throw new Error("Restored build differs from the externally accepted package");
+        const reconstruction = readPilotReconstructionIdentity(canonical.restored);
+        if (reconstruction === null || reconstruction.digest !== acceptedDigest) throw new Error("Accepted reconstruction identity differs");
+        verifyPilotReconstructionInputs(canonical.baseline, reconstruction.manifest);
+      }
+      acceptedReconstruction();
       const result = await action(servers, controller.signal);
       controller.signal.throwIfAborted();
       timer = setTimeout(() => fail(new Error("Owned proof server postcheck timed out")), startupTimeout);
       try { await Promise.race([Promise.all(children.map(child => child.verify())), failed]); }
       finally { clearTimeout(timer); }
+      acceptedReconstruction();
       controller.signal.throwIfAborted();
       return result;
     }

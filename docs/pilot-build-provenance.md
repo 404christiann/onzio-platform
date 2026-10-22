@@ -53,7 +53,11 @@ temporary file and atomic rename after all checks pass.
 The input inventory includes every regular file under the application root,
 independently of Git. This includes source, configuration, public assets,
 package.json, package-lock.json, platform code, bindings, scripts, tests and docs.
-Even a documentation-only edit can require rebuilding.
+Even a documentation-only edit can require rebuilding. Reconstructed roots also
+include `.onzio-pilot-reconstruction.json`. Guarded builds validate its accepted
+manifest against actual retained source, whole binding and complete lock before
+and after Next. A malformed marker or changed retained input revokes old success
+and rejects the new build. Roots without a marker retain generic build behavior.
 
 Only these root-relative metadata, dependency and generated paths are excluded,
 including their descendants where applicable:
@@ -104,9 +108,11 @@ a later start.
 
 The excluded node_modules tree may include external runtime dependencies. Lock
 bytes do not attest installed dependency bytes, native modules or runtime ABI.
-The receipt also does not bind an accepted source package or authored release
-or prove current-platform interface compatibility. Those remain separate
-acceptance work.
+Generic roots do not carry accepted-package provenance. Reconstructed roots bind
+the validated full-manifest marker through the existing receipt's input inventory.
+The owned proof consumer checks its externally expected accepted digest against
+that identity. This remains trusted local input identity, without a signature,
+authored-release activation or a claim of current-platform interface compatibility.
 
 The [reconstruction rehearsal](pilot-reconstruction.md) consumes these receipts
 through its own guarded server processes. It accepts application roots, acquires

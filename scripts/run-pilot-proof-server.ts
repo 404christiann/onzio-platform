@@ -1,3 +1,4 @@
+import { readPilotReconstructionIdentity } from "./pilot-source-package";
 import { Server } from "node:http";
 import { createRequire } from "node:module";
 import { join, relative } from "node:path";
@@ -19,17 +20,21 @@ async function main() {
   if (!process.send) throw new Error("Proof server requires its owner IPC channel");
   const root = process.cwd();
   const environment = loadPilotReconstructionEnvironment(root);
-  const initial = verifyReconstructionBuild(root, publicBuildEnvironmentSha256(environment));
   function receipt() {
     const runtime = { ...process.env };
     try {
       const current = loadPilotReconstructionEnvironment(root);
-      return verifyReconstructionBuild(root, publicBuildEnvironmentSha256(current));
+      const before = verifyReconstructionBuild(root, publicBuildEnvironmentSha256(current));
+      const reconstruction = readPilotReconstructionIdentity(root);
+      const after = verifyReconstructionBuild(root, publicBuildEnvironmentSha256(current));
+      if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error("Proof build identity changed while reading reconstruction identity");
+      return { ...after, reconstruction: reconstruction === null ? null : { digest: reconstruction.digest } };
     } finally {
       for (const key of Object.keys(process.env)) if (!(key in runtime)) delete process.env[key];
       Object.assign(process.env, runtime);
     }
   }
+  const initial = receipt();
   await checkedNextCommand(root, "start", environment, "proof-group");
   if (JSON.stringify(receipt()) !== JSON.stringify(initial)) throw new Error("Proof build identity changed");
   const require = createRequire(join(root, "package.json"));
@@ -57,7 +62,7 @@ async function main() {
   const listener = await actualRuntime();
   const port = listener.port;
   const identity: ProofIdentity = proofIdentitySchema.parse({ root, ...receipt(), origin: `http://alpha.localhost:${port}` });
-  if (identity.buildId !== initial.buildId || identity.receiptSha256 !== initial.receiptSha256) throw new Error("Proof build identity changed during startup");
+  if (JSON.stringify({ buildId: identity.buildId, receiptSha256: identity.receiptSha256, reconstruction: identity.reconstruction }) !== JSON.stringify(initial)) throw new Error("Proof build identity changed during startup");
   process.on("message", async (value: unknown) => {
     try {
       proofServerCommandSchema.parse(value);

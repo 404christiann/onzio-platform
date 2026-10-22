@@ -32,7 +32,8 @@
       "agent/homepage-incompatible-drafts": false,
       "agent/pilot-lock-compatibility": false,
       "agent/pilot-installed-release": false,
-      "agent/pilot-proof-identity": false
+      "agent/pilot-proof-identity": false,
+      "agent/pilot-accepted-build-identity": false
     }
   }
 }
