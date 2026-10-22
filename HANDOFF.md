@@ -1,3 +1,67 @@
+## 2026-10-22 - Full local Academy acceptance after PR32
+
+PR32 is verified merged at `1d93dc35b249bd197db37b7e98910b0a7493faab`.
+`SITE-05J` is complete. `SITE-05K` is ready_for_review with final local acceptance recorded below. SITE-05 remains in_progress. Christian alone reviews,
+merges and deploys.
+
+The actual Academy A, deliberately changed B and retained A reconstructed over
+current B pass the strengthened owned accepted-identity proof at 1440px and
+390px. All 18 final screenshots were opened and inspected. Final page, console,
+network and resource-body error arrays are empty. CSS, font and image hashes,
+public/editor typography, exact kit PNGs, late retained font, real editor draft
+interaction and current-B anonymous denial pass. A metadata-only alternate
+accepted package verifies its own bytes but is rejected before browser capture.
+No Save occurs in the proof itself.
+
+Actual acceptance exposed a proof-runner race: its provisional PASS report
+contained a body-read error appended during context close. That result is
+superseded. The page observation owner now waits for network idle, drains async
+body reads, closes the context with diagnostics active, checks final errors and
+returns copied observations. Both real delayed-body regressions fail with the
+original collector and pass with the correction. Existing transport coverage
+passes. No proof gate or timeout is weakened.
+
+The accepted 706-file v2 digest is
+`e52eabfac98ff890f17d063aee3df18c31bfe57040a946094b8f5576e858bd59`.
+Actual builds use unchanged visual/binding/lock inputs and genuine prepared font
+bytes through Next's existing local response hook. Independent loader/hash review
+passes. This does not establish offline production fonts or installed dependency
+byte/native ABI compatibility. Runtime A remains frozen at
+`7bff31f185945e1d64d62b6f1881796671d7b155` in the acceptance worktree; final docs
+use a separate PR worktree to preserve its guarded receipt. All 598 production
+inputs match. All three receipts still verify after the serial browser run.
+
+All 64 existing homepage browser cases pass serially against restored A, covering
+real saves, assignment ABA and receipts, binding-aware recovery, exact retries,
+IndexedDB upgrade, CAS, template parity, populated kits, photos and accessibility.
+All 2,191 regressions, 1,211 contracts, 224 architecture and 334 local database
+checks pass, with one existing Windows-only skip. TypeScript, lint and whitespace
+checks pass. The existing local helper clears the known notification-test marker;
+final Alpha content, slug and seeded pointers exactly match the start.
+Exact-revision reviews and detailed evidence are recorded in [the acceptance record](docs/pilot-academy-acceptance.md) and the PR
+handoff. Preliminary staging-label builds, a corrected local DNS allowlist, the
+superseded proof and an interrupted accessibility attempt remain disclosed in the
+local evidence. They are not counted as final acceptance.
+
+Changed files are the proof page observer/caller, its real Chromium regressions
+and config, reconstruction/package/testing guidance, acceptance record,
+SITE ledger, this handoff and task-branch deployment disablement. Application,
+SQL, lock, save/recovery permissions, tenant/stale-edit/CAS and receipt behavior
+remain unchanged. Existing assignment-aware saves and binding-aware recovery are
+integrated here; authored routing, assignment reads/storage/write authority,
+activation and deployment coordination remain separate future units.
+
+Evidence is under
+`/home/coder/.codex/visualizations/2026/10/22/onzio-academy-local-acceptance`.
+Original checkout remains at `455c7e6ae4f9592153acf5242d090f5b7d2941d9` with only
+its intentional dirty HANDOFF at SHA256
+`c77eea2749d0b9d8126f1c2382f198b487411f75068f9dbfc12c5842d8d24b30`.
+Source conversations `01a1607e-8887-7dd3-a5d5-24eda0ca10ee`,
+`01a1603e-0af8-7c02-a6d5-c2e53da3fb32` and
+`01a15f8c-4a54-75c2-902d-38df62252aa2` are left unarchived.
+No merge, auto-merge, deployment, protection, hosted-data, provider, billing,
+desktop-credential or unified-ai-chat operation is part of this work.
+
 ## 2026-10-21 - Accepted reconstruction identity for owned proof
 
 `SITE-05I` is complete. PR30 is verified merged at

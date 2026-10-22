@@ -106,5 +106,7 @@ This is source reconstruction, not original executable-byte rollback. Next and
 React remain shared runtime dependencies. Root Google font declarations still
 need a build-time font fetch. Retained font bytes allow comparison but do not
 establish offline builds. Tailwind scans the reconstructed platform, and the
-editor copies its current head styles. Complete isolated shell/style ownership,
-binding-aware saves, release coordination and production dispatch remain open.
+editor copies its current head styles. Assignment-aware saves and binding-aware
+recovery are implemented separately in
+SITE-05E and SITE-05F. Complete isolated shell/style ownership, authored assignment
+authority, release coordination and production dispatch remain open.

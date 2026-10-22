@@ -358,7 +358,8 @@ public/editor browser acceptance and accepted-package/build identity. See the
 [reconstruction guide](../docs/pilot-reconstruction.md).
 
 Run `npx playwright test --config=playwright.pilot-proof.config.ts` for the
-proof's actual guarded Chromium and direct request transport. The isolated
+proof's actual guarded Chromium and direct request transport, plus capture shutdown
+with delayed successful and truncated resource bodies. The isolated
 IPv4 listeners check logical tenant Host/cookies, proxy traversal, approved and
 blocked redirects, anonymous access, and late retained-asset retrieval.
 
