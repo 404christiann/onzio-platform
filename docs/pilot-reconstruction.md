@@ -92,9 +92,14 @@ or divergent runtime state fails proof. These pinned internal Next APIs are
 checked directly; validation does not replay configuration under a later environment.
 
 The browser permits only the three owned `alpha.localhost` origins and local Supabase.
-It blocks external resources, analytics, WebSockets and mutations. The existing
-admin data endpoint may receive read-only select requests. Populated home-kit
-GET responses use local photos without changing fixture content.
+An owned IPv4 proxy forwards each approved logical origin to its verified
+`127.0.0.1` listener. Browser pages and request contexts keep the logical tenant
+hostname, Host header and cookie scope. Every routed or direct proof request
+must confirm that it crossed the proxy. Redirects are checked against the same
+origin allowlist, and cross-origin credentials are cleared. The guard blocks
+external resources, analytics, WebSockets and mutations. The existing admin
+data endpoint may receive read-only select requests. Populated home-kit GET
+responses use local photos without changing fixture content.
 
 At 1440px and 390px the checks capture public, kit and editor states. They require
 B to differ, then require A's computed public/editor typography, stylesheet,

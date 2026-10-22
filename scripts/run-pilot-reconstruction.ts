@@ -15,7 +15,7 @@ if (action === "start") {
   args = ["start", "--hostname", "127.0.0.1", "--port", port];
 }
 const root = process.cwd();
-withReconstructionLock(root, () => {
+void withReconstructionLock(root, async () => {
   if (action === "build") invalidateReconstructionBuild(root);
   const environment = loadPilotReconstructionEnvironment(root);
   const publicEnvironment = publicBuildEnvironmentSha256(environment);
@@ -26,7 +26,7 @@ withReconstructionLock(root, () => {
     PORT: String(Number(values.port)),
     __NEXT_PRIVATE_ORIGIN: `http://127.0.0.1:${Number(values.port)}`,
   } : environment;
-  const next = checkedNextCommand(root, action, configurationEnvironment);
+  const next = await checkedNextCommand(root, action, configurationEnvironment, "standalone");
   assertSameReconstructionInputs(inputs, reconstructionInputs(root));
   if (action === "start") verifyReconstructionBuild(root, publicEnvironment);
   const child = spawnSync(process.execPath, [next, ...args], { cwd: root, env: environment, stdio: "inherit" });
@@ -36,4 +36,4 @@ withReconstructionLock(root, () => {
     assertSameReconstructionInputs(inputs, reconstructionInputs(root));
     publishReconstructionBuild(root, inputs, publicEnvironment);
   }
-});
+}).catch(error => { console.error(error); process.exitCode = 1; });

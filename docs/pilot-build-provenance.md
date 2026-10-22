@@ -21,9 +21,17 @@ select the normal `.next` directory. Start checks the production-server phase
 again between receipt validations, with the requested port and the loopback
 origin that Next sets before it loads server configuration. Configuration failures
 report a generic error;
-configuration output and errors are not forwarded. Each isolated configuration
-probe has a five-second timeout and is killed if it does not finish. Input checks
-include configuration evaluation, and start rechecks output afterward.
+configuration output and errors are not forwarded. Each configuration probe has
+a five-second validation deadline. The launcher stops the probe and its owned
+descendants before releasing the root lock, including children left behind by
+a configuration that returned successfully. On POSIX, the standalone launcher
+owns a separate probe process group. On Windows, the probe keeps its IPC parent
+alive until `taskkill /T /F` completes on that process tree. If cleanup cannot
+be confirmed, the lock remains for manual inspection. Proof-server probes stay
+inside their proof server's owned POSIX group; the server stops remaining probe
+descendants before serving requests, and its owner verifies group shutdown
+before releasing locks. Windows proof-server startup remains unsupported. Input
+checks include configuration evaluation, and start rechecks output afterward.
 
 A successful guarded build writes `.next/onzio-pilot-build.json` with mode 0600.
 Prior builds without this receipt need a fresh guarded build. A failed build
@@ -79,11 +87,11 @@ replace the output beneath that server. Separate baseline, changed and restored
 folders can run independently. A losing command neither removes the owner's
 lock nor invalidates its receipt.
 
-Ordinary exits and failures release the lock. Abrupt wrapper termination can
-leave a lock and a Next child. Check that the wrapper and its child have stopped
-before manually clearing their stale lock. The launcher never clears a lock
-based on its age. Direct Next commands bypass this coordination and the receipt
-checks.
+Ordinary exits and failures release the lock only after owned probe cleanup.
+Abrupt wrapper termination or uncertain cleanup can leave a lock and a child.
+Check that the wrapper and its children have stopped before manually clearing
+their stale lock. The launcher never clears a lock based on its age. Direct Next
+commands bypass this coordination and the receipt checks.
 
 ## Acceptance limits
 

@@ -126,6 +126,21 @@ function assertClean(items: ReturnType<typeof roots>) {
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
 
 describe("owned proof servers", () => {
+  it("stops successful configuration-probe descendants before reporting server readiness", async () => {
+    const items = roots();
+    put(items.changed, "node_modules/next/dist/server/config.js", `exports.default = async () => {
+      if (!process.send) {
+        const fs = require("node:fs"); fs.mkdirSync("output", {recursive:true});
+        require("node:child_process").spawn(process.execPath, ["-e", 'setTimeout(() => require("node:fs").writeFileSync("output/late-probe-write", "late"), 700)'], {stdio:"ignore"}).unref();
+      }
+      return {distDir:".next"};
+    };`);
+    await withPilotProofServers(items, async () => {
+      await new Promise(resolve => setTimeout(resolve, 950));
+      expect(existsSync(join(items.changed, "output/late-probe-write"))).toBe(false);
+    });
+    assertClean(items);
+  });
   it("uses verified distinct builds, isolated role environments and locks until callback and cleanup finish", async () => {
     const items = roots();
     const result = await withPilotProofServers(items, async servers => {

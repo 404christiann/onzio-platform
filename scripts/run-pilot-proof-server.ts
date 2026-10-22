@@ -30,7 +30,7 @@ async function main() {
       Object.assign(process.env, runtime);
     }
   }
-  checkedNextCommand(root, "start", environment);
+  await checkedNextCommand(root, "start", environment, "proof-group");
   if (JSON.stringify(receipt()) !== JSON.stringify(initial)) throw new Error("Proof build identity changed");
   const require = createRequire(join(root, "package.json"));
   const { nextStart }: typeof import("next/dist/cli/next-start") = require(require.resolve("next/dist/cli/next-start"));

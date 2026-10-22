@@ -8,6 +8,8 @@ import { afterAll, describe, expect, it } from "vitest";
 const project = resolve(import.meta.dirname, "../..");
 const directory = mkdtempSync(join(tmpdir(), "onzio-pilot-build-test-"));
 const loader = createRequire(import.meta.url).resolve("tsx");
+const tsxCli = join(dirname(createRequire(import.meta.url).resolve("tsx/package.json")), "dist/cli.mjs");
+const runner = (script: string) => process.platform === "win32" ? [tsxCli, script] : ["--import", loader, script];
 let sequence = 0;
 function put(root: string, path: string, value: string) {
   mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -58,7 +60,7 @@ if (process.env.CHILD_HOLD) {
 }
 function launch(f: ReturnType<typeof fixture>, action: "build" | "start", shell: Record<string, string> = {}) {
   rmSync(f.report, { force: true });
-  return spawnSync(process.execPath, ["--import", loader, join(project, "scripts/run-pilot-reconstruction.ts"), action, ...(action === "start" ? ["--port", "3127"] : [])], {
+  return spawnSync(process.execPath, [...runner(join(project, "scripts/run-pilot-reconstruction.ts")), action, ...(action === "start" ? ["--port", "3127"] : [])], {
     cwd: f.root, encoding: "utf8", timeout: 10_000,
     env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "test", PILOT_CHILD_REPORT: f.report, ...shell },
   });
@@ -80,6 +82,67 @@ const receiptPath = ".next/onzio-pilot-build.json";
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
 
 describe("guarded reconstruction build and start CLI", () => {
+  it("stops background configuration children after a successful probe before releasing its lock", async () => {
+    const f = fixture();
+    put(f.root, "next.config.mjs", `import { spawn } from "node:child_process";
+      import { mkdirSync } from "node:fs";
+      export default () => {
+        mkdirSync("output", {recursive:true});
+        spawn(process.execPath, ["-e", 'setTimeout(() => require("node:fs").writeFileSync("output/late-probe-write", "late"), 400)'], { stdio: "ignore" }).unref();
+        return { distDir: ".next" };
+      };`);
+    build(f);
+    await new Promise(resolve => setTimeout(resolve, 650));
+    expect(existsSync(join(f.root, "output/late-probe-write"))).toBe(false);
+    expect(existsSync(join(f.root, ".onzio-pilot-build.lock"))).toBe(false);
+  });
+  it("stops a timed-out configuration child and its descendants before releasing its lock", async () => {
+    const f = fixture();
+    put(f.root, "next.config.mjs", `import { spawn } from "node:child_process";
+      import { mkdirSync } from "node:fs";
+      export default async () => {
+        mkdirSync("output", {recursive:true});
+        spawn(process.execPath, ["-e", 'setTimeout(() => require("node:fs").writeFileSync("output/late-probe-write", "late"), 6000)'], { stdio: "ignore" });
+        setInterval(() => {}, 1000);
+        await new Promise(() => {});
+        return { distDir: ".next" };
+      };`);
+    const result = launch(f, "build");
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    await new Promise(resolve => setTimeout(resolve, 1400));
+    expect(existsSync(join(f.root, "output/late-probe-write"))).toBe(false);
+    expect(existsSync(join(f.root, ".onzio-pilot-build.lock"))).toBe(false);
+  }, 12_000);
+  it.runIf(process.platform === "win32")("stops an IPC-held probe tree after its launcher dies", async () => {
+    const f = fixture();
+    put(f.root, "next.config.mjs", `import { spawn } from "node:child_process";
+      import { mkdirSync, writeFileSync } from "node:fs";
+      export default async () => {
+        mkdirSync("output", {recursive:true});
+        writeFileSync("output/probe-pid", String(process.pid));
+        spawn(process.execPath, ["-e", 'setTimeout(() => require("node:fs").writeFileSync("output/late-probe-write", "late"), 1300)'], {stdio:"ignore"});
+        setInterval(() => {}, 1000);
+        await new Promise(() => {});
+      };`);
+    const launcher = spawn(process.execPath, [...runner(join(project, "scripts/run-pilot-reconstruction.ts")), "build"], {
+      cwd: f.root, stdio: "ignore", env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "test", PILOT_CHILD_REPORT: f.report },
+    });
+    try {
+      await expect.poll(() => existsSync(join(f.root, "output/probe-pid")), { timeout: 5_000 }).toBe(true);
+      launcher.kill("SIGKILL");
+      await new Promise<void>(resolve => launcher.once("exit", () => resolve()));
+      await new Promise(resolve => setTimeout(resolve, 1_650));
+      expect(existsSync(join(f.root, "output/late-probe-write"))).toBe(false);
+      expect(existsSync(join(f.root, ".onzio-pilot-build.lock"))).toBe(true);
+    } finally {
+      launcher.kill("SIGKILL");
+      if (existsSync(join(f.root, "output/probe-pid"))) {
+        const pid = Number(readFileSync(join(f.root, "output/probe-pid"), "utf8"));
+        spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+      }
+    }
+  }, 10_000);
   it("refuses an unrelated preexisting build without a successful guarded build", () => {
     const f = fixture();
     put(f.root, ".next/BUILD_ID", "old-unrelated-build");
@@ -308,7 +371,7 @@ describe("guarded reconstruction failure lifecycle", () => {
     rmSync(f.report);
     const receipt = readFileSync(join(f.root, receiptPath), "utf8");
     const release = join(directory, `release-${sequence++}`);
-    const child = spawn(process.execPath, ["--import", loader, join(project, "scripts/run-pilot-reconstruction.ts"), "start", "--port", "3127"], {
+    const child = spawn(process.execPath, [...runner(join(project, "scripts/run-pilot-reconstruction.ts")), "start", "--port", "3127"], {
       cwd: f.root, stdio: "ignore", env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "test", PILOT_CHILD_REPORT: f.report, CHILD_HOLD: "1", CHILD_RELEASE: release },
     });
     const completion = new Promise<number | null>((resolve, reject) => {

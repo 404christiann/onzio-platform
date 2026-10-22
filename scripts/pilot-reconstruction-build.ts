@@ -134,8 +134,14 @@ export function acquireReconstructionLock(root: string) {
   catch { throw new Error("Another guarded reconstruction command holds the local lock; remove a stale lock only after checking its process"); }
   return () => { closeSync(descriptor); unlinkSync(path); };
 }
-export function withReconstructionLock(root: string, action: () => void) {
+export class UnsafeReconstructionCleanupError extends Error {}
+
+export async function withReconstructionLock(root: string, action: () => Promise<void>) {
   const release = acquireReconstructionLock(root);
-  try { action(); }
-  finally { release(); }
+  let safeToRelease = true;
+  try { await action(); }
+  catch (error) {
+    if (error instanceof UnsafeReconstructionCleanupError) safeToRelease = false;
+    throw error;
+  } finally { if (safeToRelease) release(); }
 }

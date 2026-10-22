@@ -1,3 +1,57 @@
+## 2026-10-21 - PR30 review corrections in progress
+
+`SITE-05I` remains in_progress. PR30's worker review found two medium issues in
+the owned reconstruction proof. A bound `127.0.0.1` listener was reported as an
+`alpha.localhost` origin without pinning every request to that listener. A timed
+out Next configuration probe killed only its direct child, so descendants could
+write after the local build lock was released.
+
+The correction adds an owned IPv4 HTTP proxy for the proof. It accepts only the
+three verified logical application origins and local synthetic Supabase, handles
+Playwright's HTTP CONNECT tunnel, preserves the logical Host and cookie scope,
+and forwards to `127.0.0.1` at the verified port. Every guarded route fetch and
+both direct APIRequestContext requests carry a one-use marker that the proxy
+must confirm. Redirects still use the existing allowlist; cross-origin requests
+clear authorization and cookie headers. A real Chromium regression covers page
+and image requests, refreshed same-origin redirect cookies (replacement,
+deletion and path scope), cross-origin credential suppression, an escaped
+redirect, a rejected read-only POST 307, anonymous denial, a late font request
+and cancellation of a stalled upstream. It passes (1/1) on Windows. The proxy
+destroys upstream requests when the downstream aborts or its scope closes.
+
+Next configuration probes now run asynchronously. Standalone POSIX probes own
+process groups; proof-server probes stay in their owner's group and stop
+remaining group descendants before proof startup. Windows standalone probes
+remain alive over IPC until `taskkill /T /F` stops their process tree. Cleanup
+uncertainty retains the root lock. Three Windows CLI regressions pass: a
+successful probe that spawned a delayed writer, a timed-out probe with a
+delayed writer, and launcher death while an IPC-held probe had a delayed
+writer. Their fixtures create the output directory so a surviving child would
+write a detectable file. The abrupt-death case retains its stale lock. Windows
+proof servers remain unsupported as before.
+
+Changed files: `scripts/pilot-proof-proxy.ts`, `scripts/pilot-proof-network.ts`,
+`scripts/prove-pilot-reconstruction.ts`, `scripts/pilot-reconstruction-next.ts`,
+`scripts/pilot-reconstruction-build.ts`, `scripts/run-pilot-proof-server.ts`,
+`scripts/run-pilot-reconstruction.ts`, `tests/browser/pilot-proof-network.spec.ts`,
+`playwright.pilot-proof.config.ts`, `tests/architecture/pilot-reconstruction-build.test.ts`,
+`tests/architecture/pilot-proof-servers.test.ts`,
+`docs/pilot-reconstruction.md`, `docs/pilot-build-provenance.md`, `tests/README.md`,
+`docs/site-architecture.md`, and this handoff.
+
+The Windows launcher suite passed 50 of 60 cases; nine preexisting symlink
+fixtures fail at `symlinkSync` with Windows EPERM, and the preexisting POSIX
+receipt-mode assertion sees Windows mode 0666 instead of 0600. The guarded
+Chromium transport regression and three focused Windows cleanup regressions
+pass after the latest corrections. Two fresh independent Interrogate reviews
+found no Critical or Warning findings in the corrected diff. `tsc --noEmit`
+reports only the unrelated existing Stripe interval type error at
+`lib/stripe-price.ts:68`. The proof-server suite requires POSIX groups and
+cannot run on this Windows host; its descendant cleanup regression needs POSIX
+CI execution. No package metadata or lockfile was changed. Exact next step:
+update PR30, verify the protected POSIX checks and current owner-review
+requirements, and merge only if they pass.
+
 ## 2026-10-21 - Owned guarded servers for reconstruction proof
 
 `SITE-05H` is complete. PR29 is verified merged at
