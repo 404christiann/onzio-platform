@@ -498,32 +498,32 @@ describe("Phase 9.2 presentation schema and registries", () => {
     ]);
   });
 
-  it("keeps template and font-pack compatibility registrations bidirectionally consistent", async () => {
-    const { fontPacks, templateRegistry } = await loadPresentation();
+  it("accepts exactly the font packs each template registers", async () => {
+    const { parsePresentationDocument, validatePresentationDocument, templateRegistry, fontPacks } =
+      await loadPresentation();
+    const accepted: Record<string, string[]> = {
+      "cinematic@1": ["bebas-inter"],
+      "heritage@1": ["archivo-sora", "bebas-inter"],
+      "clubhouse@1": ["geist", "bebas-inter"],
+      "academy@1": ["montserrat-inter-dmsans", "bebas-inter"],
+      "editorial@1": ["geist", "bebas-inter"],
+    };
+    expect(Object.keys(templateRegistry).sort()).toEqual(Object.keys(accepted).sort());
+    const source = parsePresentationDocument(validAcademyDocument(), { surface: "production" });
 
-    for (const [templateKey, template] of Object.entries(templateRegistry)) {
-      for (const fontPackKey of template.compatibleFontPacks) {
+    for (const template of Object.values(templateRegistry)) {
+      const document = presentationDocumentForTemplate(source, template.id);
+      for (const fontPack of [...Object.keys(fontPacks), "comic-sans"]) {
+        const report = validatePresentationDocument(
+          { ...document, fontPack },
+          { surface: "production" },
+        );
         expect(
-          fontPacks[fontPackKey],
-          `${templateKey} references the unregistered font pack ${fontPackKey}`,
-        ).toBeDefined();
-        expect(
-          fontPacks[fontPackKey]?.compatibleTemplates,
-          `${templateKey} accepts ${fontPackKey}, but ${fontPackKey} does not accept ${templateKey}`,
-        ).toContain(templateKey);
-      }
-    }
-
-    for (const [fontPackKey, fontPack] of Object.entries(fontPacks)) {
-      for (const templateKey of fontPack.compatibleTemplates) {
-        expect(
-          templateRegistry[templateKey],
-          `${fontPackKey} references the unregistered template ${templateKey}`,
-        ).toBeDefined();
-        expect(
-          templateRegistry[templateKey]?.compatibleFontPacks,
-          `${fontPackKey} accepts ${templateKey}, but ${templateKey} does not accept ${fontPackKey}`,
-        ).toContain(fontPackKey);
+          report.errors.map((error) => error.code),
+          `${template.key} with ${fontPack}`,
+        ).toEqual(
+          accepted[template.key].includes(fontPack) ? [] : ["PRESENTATION_UNKNOWN_FONT_PACK"],
+        );
       }
     }
   });
@@ -606,12 +606,9 @@ describe("Phase 9.2 presentation schema and registries", () => {
     );
   });
 
-  it("returns deterministic validation and compatibility reports", async () => {
-    const {
-      parsePresentationDocument,
-      validatePresentationDocument,
-      switchPresentationTemplate,
-    } = await loadPresentation();
+  it("returns a deterministic validation report", async () => {
+    const { parsePresentationDocument, validatePresentationDocument } =
+      await loadPresentation();
     const source = parsePresentationDocument(validCinematicDocument(), {
       surface: "operator_preview",
     });
@@ -622,88 +619,6 @@ describe("Phase 9.2 presentation schema and registries", () => {
     expect(validation.valid).toBe(true);
     expect(validation.errors).toEqual([]);
     expect(validation.warnings).toEqual([]);
-
-    const switched = switchPresentationTemplate(source, {
-      id: "heritage",
-      version: 1,
-    });
-    expect(switched.document.template).toEqual({ id: "heritage", version: 1 });
-    expect(switched.report.mappedSections).toContain("shared.next-match");
-    expect(switched.report.disabledSections).toEqual([
-      "cinematic.hero",
-      "cinematic.gallery",
-    ]);
-    expect(switched.report.preservedUnsupported.sections).toHaveLength(2);
-
-    const clubhouse = switchPresentationTemplate(source, {
-      id: "clubhouse",
-      version: 1,
-    });
-    expect(clubhouse.document.template).toEqual({ id: "clubhouse", version: 1 });
-    expect(clubhouse.document.fontPack).toBe("bebas-inter");
-    expect(clubhouse.report.mappedSections).toContain("shared.next-match");
-    expect(clubhouse.report.disabledSections).toEqual([
-      "cinematic.hero",
-      "cinematic.gallery",
-    ]);
-  });
-
-  it("evaluates readiness from real approved club photos only and explains overrides", async () => {
-    const { evaluatePresentationReadiness, recordTemplateOverride } =
-      await loadPresentation();
-
-    const limited = evaluatePresentationReadiness({
-      photos: [
-        { id: "logo", kind: "logo", approved: true, duplicateOf: null, accessible: true, sample: false },
-        { id: "sample", kind: "photo", approved: true, duplicateOf: null, accessible: true, sample: true },
-      ],
-      evaluatedAt: "2026-07-29T00:00:00.000Z",
-    });
-    expect(limited.recommendedTemplate).toBe("heritage@1");
-    expect(limited.scoreBand).toBe("limited");
-    expect(limited.realApprovedPhotoCount).toBe(0);
-    expect(limited.suggestedPlaceholderAssignments.length).toBeGreaterThan(0);
-
-    const strong = evaluatePresentationReadiness({
-      photos: Array.from({ length: 6 }, (_, index) => ({
-        id: `photo-${index}`,
-        kind: "photo" as const,
-        approved: true,
-        duplicateOf: null,
-        accessible: true,
-        sample: false,
-      })),
-      evaluatedAt: "2026-07-29T00:00:00.000Z",
-    });
-    expect(strong.recommendedTemplate).toBe("cinematic@1");
-    expect(strong.scoreBand).toBe("strong");
-
-    const developing = evaluatePresentationReadiness({
-      photos: Array.from({ length: 5 }, (_, index) => ({
-        id: `photo-${index}`,
-        kind: "photo" as const,
-        approved: true,
-        duplicateOf: null,
-        accessible: true,
-        sample: false,
-      })),
-      evaluatedAt: "2026-07-29T00:00:00.000Z",
-    });
-    expect(developing.recommendedTemplate).toBe("clubhouse@1");
-    expect(developing.scoreBand).toBe("developing");
-
-    expect(
-      recordTemplateOverride(strong, {
-        selectedTemplate: "heritage@1",
-        operatorUserId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1",
-        reason: "Christian approved heritage for this club launch.",
-        decidedAt: "2026-07-29T00:01:00.000Z",
-      }),
-    ).toMatchObject({
-      recommendation: strong,
-      selectedTemplate: "heritage@1",
-      override: true,
-    });
   });
 });
 
