@@ -52,7 +52,7 @@ export function presentationDocumentForTemplate(
   const key: TemplateKey = `${templateId}@1`;
   const fallback = FALLBACKS[templateId];
   const sections = source.homepage.sections.filter((section) =>
-    sectionRegistry[section.type]?.compatibleTemplates.includes(key),
+    sectionRegistry[section.type]?.compatibleTemplates?.includes(key),
   );
   const routes = source.navigation.groups
     .flatMap((group) => group.routes)
@@ -61,7 +61,7 @@ export function presentationDocumentForTemplate(
   return {
     ...source,
     template: { id: templateId, version: 1 },
-    fontPack: fontPacks[source.fontPack]?.compatibleTemplates.includes(key)
+    fontPack: fontPacks[source.fontPack]?.compatibleTemplates?.includes(key)
       ? source.fontPack
       : fallback.fontPack,
     homepage: {
@@ -76,6 +76,8 @@ export function presentationDocumentForTemplate(
               config: {},
             })),
     },
-    navigation: { groups: [{ id: "main", label: null, routes }] },
+    navigation: {
+      groups: [{ id: "main", label: null, routes: routes.length > 0 ? routes : templateRegistry[key].defaultRoutes }],
+    },
   };
 }

@@ -513,7 +513,7 @@ describe("Phase 9.2 presentation schema and registries", () => {
 
     for (const template of Object.values(templateRegistry)) {
       const document = presentationDocumentForTemplate(source, template.id);
-      for (const fontPack of [...Object.keys(fontPacks), "comic-sans"]) {
+      for (const fontPack of new Set([...Object.keys(fontPacks), ...Object.values(accepted).flat(), "comic-sans"])) {
         const report = validatePresentationDocument(
           { ...document, fontPack },
           { surface: "production" },
