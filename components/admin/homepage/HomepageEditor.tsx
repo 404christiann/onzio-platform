@@ -10,6 +10,7 @@ import ResilientNativeImage from "@/components/ResilientNativeImage";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import TemplateFontScope from "@/components/TemplateFontScope";
+import AcademyShell from "@/components/sites/diverse-city/Shell";
 import EditorialShell from "@/components/editorial/EditorialShell";
 import HomepageRecoveryReview from "./HomepageRecoveryReview";
 import HomepageEditorSkeleton from "./HomepageEditorSkeleton";
@@ -219,7 +220,7 @@ export default function HomepageEditor() {
     <div className="hp-workspace">
       <HomepagePreviewContext.Provider value={{ playback, draft: state.draft, videoSource: snapshot.videoSource, selection: piece, allowedPieces: state.allowedPieces, select }}>
         <HomepagePreviewFrame host={club.primaryDomain} playback={playback}>
-          {club.presentationTemplateKey === "editorial@1" ? <EditorialShell editing={!playback}>{preview}</EditorialShell> : <TemplateFontScope templateKey={club.presentationTemplateKey}>{playback && <Nav />}<main>{preview}</main>{playback && <Footer />}</TemplateFontScope>}
+          {club.presentationTemplateKey === "editorial@1" ? <EditorialShell editing={!playback}>{preview}</EditorialShell> : club.presentationTemplateKey === "academy@1" ? <AcademyShell>{preview}</AcademyShell> : <TemplateFontScope templateKey={club.presentationTemplateKey}>{playback && <Nav />}<main>{preview}</main>{playback && <Footer />}</TemplateFontScope>}
         </HomepagePreviewFrame>
       </HomepagePreviewContext.Provider>
       {piece && disclosure && !navigationOpen && !isShared && !playback && <dialog ref={panel} className="hp-panel" aria-label={HOMEPAGE_PIECE_LABELS[piece]} aria-modal={mobile || undefined} onCancel={event => { event.preventDefault(); closePanel(); }} onKeyDown={event => {

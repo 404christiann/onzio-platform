@@ -435,7 +435,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
   const story = source("components/DevelopingNextGeneration.tsx");
   const pathway = source("components/AcademyProgramsPathway.tsx");
   const programsPage = source("components/AcademyProgramsPage.tsx");
-  const footer = source("components/Footer.tsx");
+  const footer = source("components/sites/diverse-city/Footer.tsx");
 
   it("no longer hardcodes the homepage story copy", () => {
     for (const literal of [
@@ -524,6 +524,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
       "components/AcademyProgramsPathway.tsx",
       "components/AcademyProgramsPage.tsx",
       "components/Footer.tsx",
+      "components/sites/diverse-city/Footer.tsx",
       "lib/homepage-story-content.ts",
       "lib/programs-page-content.ts",
       "lib/club-branding.ts",

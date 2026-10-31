@@ -63,10 +63,10 @@ function expectRejected(options: Parameters<typeof prepare>[0], reason: string, 
 }
 
 beforeAll(() => {
-  const roots = ["components/sites/diverse-city/HomePage.tsx", "components/Nav.tsx", "components/Footer.tsx", "components/TemplateFontScope.tsx", "components/AcademyRouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
+  const roots = ["components/sites/diverse-city/HomePage.tsx", "components/sites/diverse-city/Shell.tsx", "components/sites/diverse-city/RouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
   for (const path of roots) put(source, path, path.endsWith(".css") ? "body { color: navy; }" : "export {};");
-  put(source, roots[0], 'import Hero from "@/components/Hero"; export default function Page() { return <Hero initialContent={{}} />; }');
-  put(source, "components/Hero.tsx", 'export default function Hero() { return null; }');
+  put(source, roots[0], 'import Hero from "./Hero"; export default function Page() { return <Hero initialContent={{}} />; }');
+  put(source, "components/sites/diverse-city/Hero.tsx", 'export default function Hero() { return null; }');
   put(source, "app/layout.tsx", "const academyHeading = Montserrat({});");
   put(source, "app/api/admin/homepage/route.ts", 'export const reply = { headers: { "Cache-Control": "no-store" }, };');
   put(source, "lib/homepage-editor/capabilities.ts", 'export const binding = "legacy@1";');

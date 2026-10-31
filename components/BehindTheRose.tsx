@@ -8,7 +8,7 @@ import { DEFAULT_BEHIND_THE_ROSE_SECTION } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
-import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 gsap.registerPlugin(ScrollTrigger);

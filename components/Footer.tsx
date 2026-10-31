@@ -6,27 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import PoweredByOnzio from "@/components/PoweredByOnzio";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import type { DBSiteSocialLink, DBSiteSponsorLogo, SiteSocialPlatform } from "@/lib/db-types";
-import {
-  fetchContactProfile,
-  fetchSiteSocialLinks,
-  fetchSiteSponsorLogos,
-  type ContactProfileContent,
-} from "@/lib/queries";
+import { fetchSiteSocialLinks, fetchSiteSponsorLogos } from "@/lib/queries";
 import { DEFAULT_SITE_SOCIAL_LINKS } from "@/lib/social-links";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { imageDeliveryProps } from "@/lib/image-delivery";
-
-/**
- * Optional draft overrides used only by the /admin/branding "Footer preview"
- * panel, so it can show unsaved tagline/social-link edits in the real
- * Footer markup. When omitted (every real public-site usage), Footer's
- * behavior is unchanged: it fetches and renders live data exactly as
- * before.
- */
-export type FooterOverrides = {
-  tagline?: string;
-  socialLinks?: Partial<Record<SiteSocialPlatform, string>>;
-};
+import AcademyFooter, { type FooterOverrides } from "@/components/sites/diverse-city/Footer";
 
 const footerLinks = [
   { label: "Home", href: "/" },
@@ -36,28 +20,20 @@ const footerLinks = [
   { label: "Shop", href: "/shop" },
 ];
 
-const academyFooterLinks = [
-  { label: "Club", href: "/club/about" },
-  { label: "Programs", href: "/programs" },
-  { label: "Roster", href: "/roster" },
-  { label: "Schedule", href: "/schedule" },
-  { label: "Sponsors", href: "/sponsors" },
-  { label: "Contact", href: "/contact" },
-  { label: "Tryouts", href: "/tryouts" },
-];
-
+/** The Academy footer lives in its site module; every other template renders here. */
 export default function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "academy@1") return <AcademyFooter overrides={overrides} />;
+  return <TemplateFooter overrides={overrides} />;
+}
+
+function TemplateFooter({ overrides }: { overrides?: FooterOverrides }) {
+  const club = useClubContext();
   const clubId = club.id;
-  const { clubLogoUrl, inverseLogoUrl, footerTagline: liveFooterTagline } = useClubBranding();
-  const footerTagline = overrides?.tagline ?? liveFooterTagline;
-  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const { clubLogoUrl, inverseLogoUrl } = useClubBranding();
   const [partners, setPartners] = useState<DBSiteSponsorLogo[]>([]);
   const [socialLinks, setSocialLinks] =
     useState<DBSiteSocialLink[]>([]);
-  const [contactProfile, setContactProfile] =
-    useState<ContactProfileContent | null>(null);
-  const activeFooterLinks = isAcademy ? academyFooterLinks : footerLinks;
 
   // When `overrides.socialLinks` is provided, layer the draft href values
   // over the live-fetched rows (falling back to DEFAULT_SITE_SOCIAL_LINKS'
@@ -112,19 +88,6 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
         setSocialLinks([]);
       });
   }, [clubId]);
-
-  useEffect(() => {
-    if (!isAcademy) {
-      setContactProfile(null);
-      return;
-    }
-    fetchContactProfile(clubId)
-      .then(setContactProfile)
-      .catch((error) => {
-        console.error("Footer contact profile:", error);
-        setContactProfile(null);
-      });
-  }, [clubId, isAcademy]);
 
   if (club.presentationTemplateKey === "clubhouse@1") {
     const visiblePartners = partners.length > 0
@@ -191,128 +154,6 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
     );
   }
 
-  if (isAcademy) {
-    // Mockup-parity footer (DCFC-D132 pass): navy multi-column layout from
-    // the sales mockup's Footer.tsx — crest + tagline, Explore link grid,
-    // Connect column with email/phone and inverted social icons. No "Proud
-    // Partners" strip here: the mockup's only sponsors band is the homepage
-    // SponsorCarousel, so the generic footer's global strip would duplicate
-    // it on every route.
-    const phone = contactProfile?.publicPhone?.trim() ?? "";
-    const phoneDigits = phone.replace(/\D/g, "");
-    const email = contactProfile?.publicEmail?.trim() ?? "";
-    return (
-      <footer className="bg-[#1E3653] text-[#F9FAFD]">
-        <div className="mx-auto grid max-w-7xl grid-cols-[.8fr_1.2fr] gap-x-8 gap-y-6 px-6 py-8 md:grid-cols-[1.1fr_.8fr_1fr] md:gap-8 lg:px-10">
-          <div className="col-span-2 flex items-center gap-5 md:col-span-1">
-            {clubLogoUrl && (
-              <div className="relative h-20 w-20 flex-none">
-                <Image
-                  src={clubLogoUrl}
-                  alt={`${club.name} crest`}
-                  fill
-                  priority
-                  sizes="80px"
-                  className="object-contain"
-                  {...imageDeliveryProps("club-logo")}
-                />
-              </div>
-            )}
-            <div>
-              <p className="font-display text-xl font-black uppercase italic">
-                {club.name}
-              </p>
-              {/* The club's own slogan, not template chrome: it comes from
-                  onzio.site_branding.footer_tagline (editable at
-                  /admin/branding) and falls back to the approved academy@1
-                  wording. whitespace-pre-line keeps the club's own line break,
-                  which is what reproduces the two-line lockup. */}
-              {footerTagline ? (
-                <p className="mt-2 whitespace-pre-line font-body text-sm text-white/65">
-                  {footerTagline}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-4 font-display text-xs font-bold uppercase text-white/45">
-              Explore
-            </p>
-            <ul className="grid grid-cols-2 gap-x-5 gap-y-3">
-              {academyFooterLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="font-body text-sm text-white/75 hover:text-white"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="mb-4 font-display text-xs font-bold uppercase text-white/45">
-              Connect
-            </p>
-            {email && (
-              <a
-                className="block break-words font-body text-sm text-white/75 hover:text-white"
-                href={`mailto:${email}`}
-              >
-                {email}
-              </a>
-            )}
-            {phone && phoneDigits && (
-              <a
-                className="mt-2 block font-body text-sm text-white/75 hover:text-white"
-                href={`tel:${phoneDigits}`}
-              >
-                {phone}
-              </a>
-            )}
-            {displaySocialLinks.length > 0 && (
-              <div className="mt-4 flex gap-4">
-                {displaySocialLinks.map((social) => (
-                  <a
-                    key={social.label}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={social.label}
-                    className="relative h-6 w-6 opacity-70 transition-opacity hover:opacity-100"
-                  >
-                    <Image
-                      src={social.icon}
-                      alt=""
-                      fill
-                      sizes="24px"
-                      className="object-contain brightness-0 invert"
-                      {...imageDeliveryProps("small-graphic")}
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 border-t border-white/10 px-6 py-3 font-body text-xs text-white/40 sm:flex-row sm:justify-between lg:px-10">
-          <span>
-            © {new Date().getFullYear()} {club.name}
-          </span>
-          <span>All rights reserved.</span>
-        </div>
-        <PoweredByOnzio
-          className="px-6 pb-5 lg:px-10"
-          textClassName="font-body text-xs text-white/40"
-        />
-      </footer>
-    );
-  }
-
   return (
     <footer
       className="border-t border-gray-200"
@@ -366,7 +207,7 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
 
         {/* Nav Links */}
         <ul className="flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          {activeFooterLinks.map((link) => (
+          {footerLinks.map((link) => (
             <li key={link.href}>
               {link.href.startsWith("mailto:") ? (
                 <a

@@ -560,7 +560,7 @@ describe("editorial header nav", () => {
 describe("editorial footer attribution", () => {
   it("reuses the same public Onzio attribution link as the shared Diverse City footer", () => {
     const editorialFooter = read("components/editorial/EditorialFooter.tsx");
-    const sharedFooter = read("components/Footer.tsx");
+    const sharedFooter = read("components/sites/diverse-city/Footer.tsx");
     const attribution = read("components/PoweredByOnzio.tsx");
 
     expect(editorialFooter).toContain(

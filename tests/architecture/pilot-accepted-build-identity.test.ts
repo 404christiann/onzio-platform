@@ -32,7 +32,7 @@ function successful(at: string, script: string, args: string[]) {
 function build(at: string) { successful(at, "run-pilot-reconstruction.ts", ["build"]); }
 function git(...args: string[]) { return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim(); }
 beforeAll(() => {
-  const visual = ['components/sites/diverse-city/HomePage.tsx', 'components/Nav.tsx', 'components/Footer.tsx', 'components/TemplateFontScope.tsx', 'components/AcademyRouteLoadingSkeleton.tsx', 'components/ChampionsBadge.tsx', 'app/layout.tsx', 'styles/globals.css', 'tailwind.config.ts', 'postcss.config.mjs'];
+  const visual = ['components/sites/diverse-city/HomePage.tsx', 'components/sites/diverse-city/Shell.tsx', 'components/sites/diverse-city/RouteLoadingSkeleton.tsx', 'components/ChampionsBadge.tsx', 'app/layout.tsx', 'styles/globals.css', 'tailwind.config.ts', 'postcss.config.mjs'];
   for (const path of visual) put(root, path, path.endsWith('.css') ? 'body {color:navy}' : 'export {};');
   put(root, 'components/sites/diverse-city/HomePage.tsx', 'import "@/components/ClubContextProvider"; export const visual = "retained A";');
   put(root, 'components/ClubContextProvider.tsx', 'export const authority="current platform";');

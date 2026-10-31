@@ -9,7 +9,7 @@ import {
   type StandingsTableContent,
 } from "@/lib/standings-content";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
-import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 export default function LeagueStandingsContainer() {

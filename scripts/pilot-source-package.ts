@@ -7,8 +7,8 @@ import ts from "typescript";
 import { z } from "zod";
 
 const roots = [
-  "components/sites/diverse-city/HomePage.tsx", "components/Nav.tsx", "components/Footer.tsx",
-  "components/TemplateFontScope.tsx", "components/AcademyRouteLoadingSkeleton.tsx",
+  "components/sites/diverse-city/HomePage.tsx", "components/sites/diverse-city/Shell.tsx",
+  "components/sites/diverse-city/RouteLoadingSkeleton.tsx",
   "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css",
   "tailwind.config.ts", "postcss.config.mjs",
 ];
@@ -20,7 +20,7 @@ const platform = new Set([
   "lib/contract-error.ts", "packages/presentation/index.ts",
 ]);
 const visualLibraries = new Set([
-  "lib/academy-page-scroll-lock.ts", "lib/academy-loading-route.ts", "lib/bunny-video.ts", "lib/data.ts",
+  "lib/academy-page-scroll-lock.ts", "lib/bunny-video.ts", "lib/data.ts",
   "lib/homepage-content.ts", "lib/homepage-story-content.ts", "lib/programs-page-content.ts",
   "lib/shop-kit.ts", "lib/site-flags.ts", "lib/social-links.ts", "lib/standings-content.ts",
   "lib/use-bounded-academy-loading.ts",

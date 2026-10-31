@@ -11,7 +11,7 @@ import {
   type HomepageStoryContent,
 } from "@/lib/homepage-story-content";
 import { loadAcademyStoryData } from "@/components/academy-story-data";
-import { AcademyStoryLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademyStoryLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 
 /**
  * Homepage story section for `academy@1`. Modeled on the approved sales

@@ -51,8 +51,9 @@ are not substituted into the new build automatically.
 
 ## Package boundary
 
-Explicit roots cover the real page, Nav, Footer, font scope, loading shell,
-injected champions badge, root font declarations and stylesheet compiler inputs.
+Explicit roots cover the real page, the Academy shell (header, footer, font
+scope and page frame), the route loading shell, injected champions badge, root
+font declarations and stylesheet compiler inputs.
 The tool derives the source inventory from literal imports, including dynamic
 imports. Shared visual modules remain whole during this proof.
 

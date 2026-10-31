@@ -42,7 +42,7 @@ for (const directory of [current, restored.directory]) {
 const font = manifest.files.find(item => item.path.startsWith("emitted/static/media/") && item.path.endsWith(".woff2"));
 assert(font);
 const failures: string[] = [];
-for (const path of ["source/components/Hero.tsx", font.path, "source/public/images/shop/rosecityshirt1.webp"]) {
+for (const path of ["source/components/sites/diverse-city/Hero.tsx", font.path, "source/public/images/shop/rosecityshirt1.webp"]) {
   const broken = join(output, "broken");
   try {
     cpSync(artifact, broken, { recursive: true });
