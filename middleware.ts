@@ -23,7 +23,7 @@ const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);
 const REGISTRATION_PATH =
   /^\/register\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/confirmation)?$/;
 
-function isPublicTenantPath(pathname: string): boolean {
+export function isPublicTenantPath(pathname: string): boolean {
   if (PUBLIC_TENANT_PATHS.has(pathname)) return true;
   return (
     /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
