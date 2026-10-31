@@ -5,11 +5,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import PoweredByOnzio from "@/components/PoweredByOnzio";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
-import type { DBSiteSocialLink, DBSiteSponsorLogo, SiteSocialPlatform } from "@/lib/db-types";
+import type { DBSiteSocialLink, SiteSocialPlatform } from "@/lib/db-types";
 import {
   fetchContactProfile,
   fetchSiteSocialLinks,
-  fetchSiteSponsorLogos,
   type ContactProfileContent,
 } from "@/lib/queries";
 import { DEFAULT_SITE_SOCIAL_LINKS } from "@/lib/social-links";
@@ -34,7 +33,6 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
   const clubId = club.id;
   const { clubLogoUrl, footerTagline: liveFooterTagline } = useClubBranding();
   const footerTagline = overrides?.tagline ?? liveFooterTagline;
-  const [partners, setPartners] = useState<DBSiteSponsorLogo[]>([]);
   const [socialLinks, setSocialLinks] =
     useState<DBSiteSocialLink[]>([]);
   const [contactProfile, setContactProfile] =
@@ -80,12 +78,6 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
   }, [overrides?.socialLinks, socialLinks]);
 
   useEffect(() => {
-    fetchSiteSponsorLogos("footer", clubId)
-      .then(setPartners)
-      .catch((error) => {
-        console.error("Footer sponsors:", error);
-        setPartners([]);
-      });
     fetchSiteSocialLinks(clubId)
       .then(setSocialLinks)
       .catch((error) => {
