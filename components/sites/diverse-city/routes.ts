@@ -79,8 +79,6 @@ export function academyLoadingRoute(pathname: string): AcademyLoadingRoute {
   return id === null ? "simple" : academyRoutes[id].loading;
 }
 
-export type AcademyHeroHeader = HeroHeader;
-
 /** How the header behaves over this route's opening hero, or undefined for a solid header. */
 export function academyHeroHeader(pathname: string): HeroHeader | undefined {
   const id = matchAcademyRoute(pathname);

@@ -12,9 +12,9 @@ import { imageDeliveryProps } from "@/lib/image-delivery";
  * concept mockup via the superseded claude/lions-fc-website-setup-ij0p7t
  * reference branch's EditorialHeader.tsx -- transparent-on-home-at-scroll-0
  * treatment, crest lockup, mobile full-panel menu -- with its flat NAV_ITEMS
- * list rewritten into the dropdown-capable shape from Nav.tsx's
- * academyNavLinks()/isNavItemActive() pattern (components/Nav.tsx lines
- * ~124-260), since "Schedule" now has a Fixtures/Tryouts dropdown and the
+ * list rewritten into the dropdown-capable shape from the Academy
+ * academyNavItems()/isNavItemActive() pattern (components/sites/diverse-city/
+ * navigation.ts), since "Schedule" now has a Fixtures/Tryouts dropdown and the
  * whole list has an entitlement-gated "Store" entry.
  *
  * Desktop dropdowns open on hover AND keyboard focus via plain CSS
