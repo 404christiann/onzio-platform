@@ -5,10 +5,10 @@ import { Client } from "pg";
 import { expect, test } from "@playwright/test";
 import {
   parsePresentationDocument,
-  switchPresentationTemplate,
   type PresentationDocument,
   type TemplateId,
 } from "@/packages/presentation";
+import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
 import { retirePublishedMedia } from "@/lib/media-processing";
 
 // These cases exercise the real local media pipeline (authorize -> staged
@@ -71,9 +71,8 @@ async function readOriginalState(db: Client): Promise<OriginalState & { configur
 }
 
 async function publishTemplate(db: Client, source: PresentationDocument, templateId: TemplateId, createdBy: string) {
-  const switched = switchPresentationTemplate(source, { id: templateId, version: 1 });
   const id = randomUUID();
-  const configuration = parsePresentationDocument(switched.document, { surface: "production" });
+  const configuration = parsePresentationDocument(presentationDocumentForTemplate(source, templateId), { surface: "production" });
   const digest = createHash("sha256").update(JSON.stringify(configuration)).digest("hex");
   const versionResult = await db.query(
     "select coalesce(max(version), 0) + 1 as version from onzio.presentation_documents where club_id = $1",

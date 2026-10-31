@@ -3,10 +3,10 @@ import { Client } from "pg";
 import { expect, test } from "@playwright/test";
 import {
   parsePresentationDocument,
-  switchPresentationTemplate,
   type PresentationDocument,
   type TemplateId,
 } from "@/packages/presentation";
+import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
 
 const ALPHA_CLUB_ID = "11111111-1111-4111-8111-111111111111";
 /** seed.sql publishes exactly this Academy document for Alpha. Every spec here
@@ -54,9 +54,8 @@ async function publishFixture(
   templateId: TemplateId,
   createdBy: string,
 ) {
-  const switched = switchPresentationTemplate(source, { id: templateId, version: 1 });
   const id = randomUUID();
-  const configuration = parsePresentationDocument(switched.document, { surface: "production" });
+  const configuration = parsePresentationDocument(presentationDocumentForTemplate(source, templateId), { surface: "production" });
   const digest = createHash("sha256")
     .update(JSON.stringify(configuration))
     .digest("hex");

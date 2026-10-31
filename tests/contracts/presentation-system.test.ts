@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { expectContractError, loadContract } from "../helpers/contract";
+import { presentationDocumentForTemplate } from "../helpers/presentation-fixture";
 
 type PresentationExports = typeof import("@/packages/presentation");
 
@@ -704,4 +705,30 @@ describe("Phase 9.2 presentation schema and registries", () => {
       override: true,
     });
   });
+});
+
+describe("browser fixture documents", () => {
+  const templateIds = ["academy", "editorial", "clubhouse", "cinematic", "heritage"] as const;
+
+  it.each(templateIds)(
+    "publishes a production-valid %s document from the seeded Academy shape",
+    async (templateId) => {
+      const { parsePresentationDocument } = await loadPresentation();
+      const seeded = {
+        ...validAcademyDocument(),
+        homepage: {
+          sections: [
+            { id: "hero-main", type: "academy.hero", enabled: true, emptyBehavior: "hide", config: {} },
+            { id: "programs-pathway", type: "academy.programs-pathway", enabled: true, emptyBehavior: "hide", config: {} },
+          ],
+        },
+      };
+      const source = parsePresentationDocument(seeded, { surface: "production" });
+      const target = parsePresentationDocument(
+        presentationDocumentForTemplate(source, templateId),
+        { surface: "production" },
+      );
+      expect(target.template).toEqual({ id: templateId, version: 1 });
+    },
+  );
 });
