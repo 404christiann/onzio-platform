@@ -68,7 +68,7 @@ cleanup() {
 trap cleanup EXIT
 
 command -v gh >/dev/null    || die "gh not found"
-command -v codex >/dev/null || die "codex not found"
+(( DRY_RUN )) || command -v codex >/dev/null || die "codex not found on PATH (nvm installs it under ~/.nvm/versions/node/<version>/bin; add that directory to PATH, which also gives the runner node and npm)"
 command -v jq >/dev/null    || die "jq not found"
 [[ -f "$GUIDE" ]]           || die "missing $GUIDE"
 
