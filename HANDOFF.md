@@ -1,3 +1,12 @@
+## 2026-10-31 - Codex ticket loop rules and runner
+
+- Christian wants Codex to implement the SITE tickets in a loop while Claude Code reviews independently. Added the strict rule set `docs/agents/codex-loop.md`, the runner `scripts/codex-loop.sh` with its skip list, and `scripts/with-local-db-lock.sh`. Documentation and scripts only; no application code, migration, or hosted change.
+- The runner picks the lowest-numbered open `ready-for-agent` issue that is unclaimed, not skipped and has no open native blocker, claims it with the `in-progress` label, cuts a fresh worktree from `origin/main`, and runs one fresh `codex exec` session in the workspace-write sandbox. It pushes and opens a PR only with `CODEX_LOOP_PUBLISH=1`. It never merges. It defaults to one iteration.
+- The lock wrapper serializes database, whole-suite and browser runs on the one local Supabase. Checked by hand: a second caller times out with exit 75, a stale lock is reclaimed, and the lock is released on exit.
+- Created the GitHub labels `in-progress`, `ready-for-review` and `blocked`. `vercel.json` now disables preview deploys for `agent/*` and this branch, since Vercel supports minimatch patterns in `git.deploymentEnabled`.
+- Verification: `bash -n` on both scripts, runner `--dry-run` (reports idle, since every remaining agent ticket is blocked by #43), and the lock tests above. Not run: a real `codex exec` iteration. The sandbox may block network or the local database for Codex, so the first run must be a one-ticket pilot.
+- Next: Christian reviews and merges. Pilot one ticket once #43 is merged and #47 to #52 unblock.
+
 ## 2026-10-22 - SITE-06E local Tryouts content policy
 
 - PR39 is verified MERGED at `14d41756882acfa45004aa21a8666dee4475b5de`, final reviewed head `7be767357da59a837910413511a8da618ae05653`. Their trees match. SITE-06D is complete for local scope. Its recorded acceptance remains revision-specific and was not repeated to reconstruct context.

@@ -1,0 +1,8 @@
+# Issue numbers the loop must never pick up. One per line; text after the number is a note.
+41 spec, not a work ticket
+42 branch finished locally, awaiting PR
+43 branch finished locally, awaiting PR
+44 branch finished locally, awaiting PR
+45 PR 57 open
+46 ready-for-human hosted check
+54 ready-for-human hosted activation gate
