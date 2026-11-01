@@ -128,19 +128,38 @@ check_cmd() { # name -> prints: timeout lock(0/1) vitest(0/1) command...
     architecture) echo "900 0 1 npm run test:architecture --" ;;
     build)        echo "1200 1 0 npm run build" ;;
     db)           echo "1800 1 1 npm run test:db --" ;;
-    suite)        echo "2400 1 1 npm test --" ;;
+    suite)        echo "2400 1 1 npm test -- $SUITE_EXCLUDE" ;;
     *)            return 1 ;;
   esac
 }
+# `npm test` runs every vitest file, so it repeats the contracts, architecture and database
+# checks. Those three already ran as their own rows, so the whole-suite run covers the rest
+# of the files and the rows together are the whole suite. One run of each, not two. The
+# form `--exclude=dir/**` has no space and cannot be glob-expanded by the shell into files.
+SUITE_EXCLUDE=""; SUITE_NOTE=""
+for _n in contracts architecture db; do
+  case ",$CHECKS," in *",$_n,"*)
+    case "$_n" in contracts) _d=tests/contracts;; architecture) _d=tests/architecture;; db) _d=tests/database;; esac
+    SUITE_EXCLUDE="$SUITE_EXCLUDE --exclude=$_d/**"
+    SUITE_NOTE="${SUITE_NOTE:+$SUITE_NOTE, }$_n" ;;
+  esac
+done
+[[ -n "$SUITE_NOTE" ]] && SUITE_NOTE="the $SUITE_NOTE files ran as their own rows above and are not run twice"
 needs_env() { [[ "$1" == "db" || "$1" == "suite" || "$1" == "build" ]]; }
 needs_live_db() { [[ "$1" == "db" || "$1" == "suite" ]]; }
 
-# run one check in <dir>, store exit/duration/ids/counts under <resdir>
-exec_check() { # dir resdir name
+# The command for running only some vitest files. The database check needs SUPABASE_LOCAL=1
+# the way `npm run test:db` sets it; without it those tests do not run against the database.
+vitest_files_cmd() { case "$1" in db) echo "env SUPABASE_LOCAL=1 npx vitest run";; *) echo "npx vitest run";; esac; }
+
+# run one check in <dir>, store exit/duration/ids/counts under <resdir>. With a 4th argument
+# (test files), a vitest check runs only those files.
+exec_check() { # dir resdir name [files]
   local d="$1" r="$2" n="$3" t lockflag vit cmd json start rc
   read -r t lockflag vit cmd <<<"$(check_cmd "$n")"
   json="$r/$n.json"; start=$(date +%s)
   local full=($cmd)
+  [[ "$vit" == "1" && -n "${4:-}" ]] && full=($(vitest_files_cmd "$n") $4)
   [[ "$vit" == "1" ]] && full+=(--reporter=json "--outputFile=$json")
   if [[ "$lockflag" == "1" ]]; then scrubbed "$d" "$LOCK" "${LIMIT[@]}" "$t" "${full[@]}" >"$r/$n.log" 2>&1
   else scrubbed "$d" "${LIMIT[@]}" "$t" "${full[@]}" >"$r/$n.log" 2>&1; fi
@@ -168,7 +187,7 @@ rerun_new_failures() { # name -> narrows $RES/$n.new to failures that persist
   files="$(sed -E 's/ (>|\().*$//' "$RES/$n.new" | sort -u | tr '\n' ' ')"
   [[ -n "${files// /}" ]] || return 0
   json="$RES/$n.rerun.json"; rm -f "$json"
-  local full=(npx vitest run $files --testTimeout=60000 --hookTimeout=90000 --reporter=json "--outputFile=$json")
+  local full=($(vitest_files_cmd "$n") $files --testTimeout=60000 --hookTimeout=90000 --reporter=json "--outputFile=$json")
   if [[ "$lockflag" == "1" ]]; then scrubbed "$CHECK_DIR" "$LOCK" "${LIMIT[@]}" "$t" "${full[@]}" >"$RES/$n.rerun.log" 2>&1
   else scrubbed "$CHECK_DIR" "${LIMIT[@]}" "$t" "${full[@]}" >"$RES/$n.rerun.log" 2>&1; fi
   if [[ -s "$json" ]]; then
@@ -212,6 +231,7 @@ for n in "${LIST[@]}"; do
   echo "verify: running $n ..." >&2
   exec_check "$CHECK_DIR" "$RES" "$n"
   rc="$(cat "$RES/$n.exit")"; secs="$(cat "$RES/$n.secs")"; counts="$(cat "$RES/$n.counts")"
+  [[ "$n" == "suite" && -n "$SUITE_NOTE" ]] && counts="${counts:-exit $rc}; $SUITE_NOTE"
   if [[ "$rc" == "0" ]]; then
     printf '| %s | `%s` | PASS | %s%s (%ss) |\n' "$label" "$cmdtxt" "${counts:-exit 0}" "" "$secs" >> "$RES/rows"
     continue
@@ -226,7 +246,13 @@ for n in "${LIST[@]}"; do
   fi
   # failed: compare with the baseline copy, once per check
   if ensure_baseline; then
-    exec_check "$BASE_DIR" "$BASE_RES" "$n"
+    # Only the files that failed on the change are rerun on the base. Running the whole check
+    # again on the base cost as long as the check itself (a full architecture run is ten
+    # minutes, the whole suite seventeen) to learn about a handful of files.
+    bfiles=""
+    read -r _t _l _v _c <<<"$(check_cmd "$n")"
+    [[ "$_v" == "1" ]] && bfiles="$(sed -E 's/ (>|\().*$//' "$RES/$n.ids" | sort -u | tr '\n' ' ')"
+    exec_check "$BASE_DIR" "$BASE_RES" "$n" "$bfiles"
     brc="$(cat "$BASE_RES/$n.exit")"
     # A baseline that could not start (command not found, no results) proves nothing.
     if [[ "$brc" == "126" || "$brc" == "127" ]]; then brc="?"; fi

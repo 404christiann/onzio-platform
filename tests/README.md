@@ -23,6 +23,12 @@ change to that script or to `verify_gate` in `scripts/codex-loop.sh`:
 node --test scripts/codex-loop-verify.test.mjs
 ```
 
+The script is built to be fast because ticket #48's run took 68 minutes in the verifier
+alone: a failing check is compared with the base by rerunning only its failing files, and
+the whole-suite run skips the contracts, architecture and database files that already ran
+as their own rows. The tests pin both (a baseline that reran the whole check, and a suite
+that ran those files twice, fail them).
+
 ## Configure local database tests
 
 The database suite needs a running local Supabase **and** the test environment

@@ -75,8 +75,14 @@ THE LOOP. GitHub is the source of truth. Repeat until a stop condition:
    mode in that PR's worktree. Three fix rounds per PR; then label it blocked and tell
    Christian.
 3. Then tickets. Claim the lowest-numbered ready ticket (label in-progress and a comment).
-   Create ~/.codex/worktrees/onzio-ticket-<n> on branch agent/site<n>-<slug> from origin/main,
-   run npm ci, and start a worker in TICKET mode. At most two workers at once. Anything that
+   Create ~/.codex/worktrees/onzio-ticket-<n> on branch agent/site<n>-<slug> from origin/main.
+   Set it up in seconds, not minutes: copy .env.local and .env.test into it from
+   ~/Downloads/onzio-platform-t43 with cp (never read them), chmod 600; and if its
+   package-lock.json is identical to the loop worktree's, clone node_modules with
+   cp -cR (instant on APFS) instead of npm ci, otherwise run npm ci. Start a worker in
+   TICKET mode. Keep two workers going whenever two tickets are ready: page tickets rarely
+   touch the database, so only their database, whole-suite and build runs wait on the lock.
+   Verify the first worker's commit while the second works. At most two workers at once. Anything that
    runs the database suites, the whole suite or the build goes through
    scripts/with-local-db-lock.sh.
 4. Worker brief, by pointer: mode, ticket or PR number, branch, worktree path, "follow
