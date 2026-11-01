@@ -25,7 +25,9 @@ fi
 code=0; [ -f "$d/$script.exit" ] && code=$(cat "$d/$script.exit")
 exit "$code"
 `;
-const stubNpx = stubNpm.replace('case "$1" in test) script=suite ;; *) script="$2" ;; esac', 'script=types');
+// The types stub also fails if an ignored leftover folder is present in its working directory,
+// the way tsc picked up stale copies of old code under test-results/.
+const stubNpx = stubNpm.replace('case "$1" in test) script=suite ;; *) script="$2" ;; esac', 'script=types\n[ -d test-results ] && { echo "error: leaked test-results"; exit 1; }');
 
 const git = (cwd, ...args) => execFileSync("git", ["-C", cwd, "-c", "user.name=t", "-c", "user.email=t@t.invalid", ...args], { encoding: "utf8", stdio: "pipe" });
 const root = mkdtempSync(join(tmpdir(), "codex-verify-test-"));
@@ -49,7 +51,7 @@ function fixture({ base = {}, change = {} } = {}) {
   execFileSync("git", ["clone", "-q", origin, repo], { stdio: "pipe" });
   mkdirSync(bin);
   put(bin, "npm", stubNpm); put(bin, "npx", stubNpx); chmodSync(join(bin, "npm"), 0o755); chmodSync(join(bin, "npx"), 0o755);
-  put(repo, ".gitignore", "node_modules/\n");
+  put(repo, ".gitignore", "node_modules/\ntest-results/\n");
   for (const f of ["codex-loop-verify.sh", "with-local-db-lock.sh"]) { mkdirSync(join(repo, "scripts"), { recursive: true }); copyFileSync(join(scripts, f), join(repo, "scripts", f)); chmodSync(join(repo, "scripts", f), 0o755); }
   for (const [p, t] of Object.entries(base)) put(repo, p, t);
   put(repo, "README.txt", "base\n");
@@ -108,6 +110,26 @@ test("a failure with nothing identifiable counts against the change, never as sa
   const r = run(fixture({ base: { ".stub/lint.exit": "1" }, change: {} }), { checks: "lint" });
   assert.equal(r.status, 1);
   assert.match(row(r.md, "Lint"), /NEW FAILURES/);
+});
+
+test("ignored files in the working directory do not affect the result: the change is checked on a clean checkout (regression: stale test-results/ failed types and build)", () => {
+  const fx = fixture();
+  put(fx.repo, "test-results/pilot/old/copy.ts", "// stale generated copy of old code\n");
+  const r = run(fx, { checks: "types" });
+  assert.equal(r.status, 0, r.md);
+  assert.match(row(r.md, "Types"), /\| PASS \|/);
+});
+
+test("the clean checkout used for verification is removed afterwards", () => {
+  const fx = fixture();
+  assert.equal(run(fx, { checks: "types" }).status, 0);
+  const leftovers = existsSync(fx.worktrees) ? execFileSync("ls", ["-A", fx.worktrees], { encoding: "utf8" }).split("\n").filter(n => n.startsWith(".verify-")) : [];
+  assert.deepEqual(leftovers, []);
+});
+
+test("middleware.ts is app code, not check configuration, and is not refused", () => {
+  const r = run(fixture({ change: { "middleware.ts": "export {};\n" } }), { checks: "types" });
+  assert.equal(r.status, 0, r.md);
 });
 
 test("a worktree without installed dependencies is refused, not reported as passing", () => {

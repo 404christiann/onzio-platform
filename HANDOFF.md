@@ -1,3 +1,12 @@
+## 2026-11-01 - First orchestrator run on #43: verify now checks a clean checkout
+
+- The orchestrator ran #43 (`agent/site07-academy-shell`) and behaved correctly: the verify script exited 3, then after an override exited 1, so nothing was pushed, no PR was opened, and #43 was labeled blocked with the table posted. The evidence was good: Lint PASS, Contracts 1,494 of 1,494, Database 804 of 804, Architecture same as the clean base (the same 9 macOS failures), Whole suite PASS with one flaky test rerun clean.
+- The two failures it reported, Types (9) and Build (1), were false. All pointed at `test-results/pilot/site07-*/...`: a 64 MB gitignored folder of stale reconstructed copies of old code in the #43 worktree, which `tsconfig.json` includes (`**/*.ts`, only `node_modules` excluded), so `tsc` and `next build` checked it. The baseline copy was a clean checkout, so the comparison was lopsided.
+- Fix: `scripts/codex-loop-verify.sh` now checks a clean worktree of the exact commit, like the baseline, and removes it afterwards. `middleware.ts` and `instrumentation.ts` are app code and no longer trip the root-level refusal. Two regression tests were added (24 total; the two new ones fail against the previous script).
+- The orchestrator also set `CODEX_LOOP_TRUST_DIFF=1` itself after exit 3. The docs say that override needs a person who has read the diff, but the prompt did not forbid it. `docs/agents/codex-orchestrator.md` now says never to set it and to stop and tell Christian.
+- #43 still triggers exit 3 for a legitimate reason: it changes `scripts/pilot-source-package.ts` and `scripts/prepare-pilot-reconstruction.ts`. Whether to authorize the override for #43 is Christian's decision.
+- Not run: the orchestrator on #43 after the fix.
+
 ## 2026-11-01 - Orchestrator start order corrected
 
 - Before the first orchestrator run, the worktrees for the finished branches were inspected. #43 (`~/Downloads/onzio-platform-t43`) is clean. #44 (`-t44`) and #42 (`-t42`) hold uncommitted work from earlier sessions: selector-check test changes in `tests/architecture/template-selectors.test.ts` and `tests/helpers/template-selectors.ts` for #44, and `docs/programs-content-policy.md` plus a `tests/README.md` edit for #42. The prompt's start order told the orchestrator to merge `main` into all three, which could have mixed up or lost that work.
