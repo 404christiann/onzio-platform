@@ -39,14 +39,30 @@ head commit the review covers.
 The bot may merge a PR once its latest review, at the PR's current head, reports no High
 or Medium findings. If it reports any, Codex fixes them and the cycle repeats.
 
+## Decided by Christian (2026-10-31)
+
+- The bot merges every PR that meets the criterion above, including PRs that touch
+  `supabase/migrations/`. There is no human-merge carve-out for migrations. Merging to
+  `main` deploys to production, so the migration-parity check in `CLAUDE.md` (`supabase
+  migration list --linked`, then `supabase db push --linked`) is not run by the merge
+  path. Whoever sets up the bot's merge owns when and how production migrations get
+  applied.
+- Christian will give the bot access to the production Supabase project (ref
+  `ioalthwsdrlzrubomrow`) so it can apply migrations itself. That access belongs to the
+  bot only. Codex and Claude Code stay barred from any hosted Supabase operation by
+  `AGENTS.md` and `codex-loop.md`; nothing here changes that.
+- Order the bot's merge path must keep, from the 2026-08-14 outage and the established
+  Diverse City FC pattern: for a PR that adds migrations, preview with
+  `supabase db push --linked --dry-run`, apply with `supabase db push --linked`, confirm
+  `supabase migration list --linked` shows every migration in the branch on the Remote
+  side, and only then merge. Merging first deploys code against a schema that is not
+  there yet. If any step fails, do not merge.
+
 ## Not yet decided
 
 These were raised when merge power was discussed and have no answer yet. The loop does
 not enforce them; the bot's merge setup would have to.
 
-- [ ] PRs that touch `supabase/migrations/` stay human-merged. Merging to `main` deploys
-      to production, and the migration-parity gate in `CLAUDE.md` cannot be run by an
-      agent.
 - [ ] The merge requires deterministic checks (types, lint, contracts, build) in
       addition to the review. The `Onzio / independent PR review` status on `main`
       exists today; no other status checks do.
