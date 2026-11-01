@@ -47,11 +47,12 @@ reason, remove `hold` if you already took it (see 4), and stop.
    refusal asked for. From step 6 onward production has changed, so keep `hold` until the
    PR is merged and step 9 passes, or until a person clears it.
 5. Your credentials are linked to `ioalthwsdrlzrubomrow`, and nothing else.
-6. The PR's Verification section shows `npm run test:db` and `npm test` as run and
-   passing, and its `Tested revision` equals `<reviewed sha>`. "Not run" for either, or a
-   different revision, is a stop: label the PR `blocked` so a person can run them under
-   `scripts/with-local-db-lock.sh`. A migration whose database tests never ran does not
-   reach production.
+6. The PR body has the runner's table ("Verification run by the runner, outside the Codex
+   sandbox"), its `Tested revision` equals `<reviewed sha>`, and its Database and Whole
+   suite rows both say PASS. A NOT RUN, SAME AS BASELINE or NEW FAILURES row for either, a
+   missing table, or a different revision is a stop: label the PR `blocked` so a person can
+   run them under `scripts/with-local-db-lock.sh`. A migration whose database tests did not
+   pass does not reach production.
 
 ## Stop and hand to a human: breaking migrations
 
