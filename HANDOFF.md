@@ -1,3 +1,9 @@
+## 2026-11-01 - Orchestrator start order corrected
+
+- Before the first orchestrator run, the worktrees for the finished branches were inspected. #43 (`~/Downloads/onzio-platform-t43`) is clean. #44 (`-t44`) and #42 (`-t42`) hold uncommitted work from earlier sessions: selector-check test changes in `tests/architecture/template-selectors.test.ts` and `tests/helpers/template-selectors.ts` for #44, and `docs/programs-content-policy.md` plus a `tests/README.md` edit for #42. The prompt's start order told the orchestrator to merge `main` into all three, which could have mixed up or lost that work.
+- `docs/agents/codex-orchestrator.md` now starts with #43 only, forbids touching the #44 and #42 worktrees, and adds a general rule that a worktree with someone else's uncommitted changes is off limits. Documentation only; nothing was run.
+- Next: Christian decides what happens to the #44 and #42 uncommitted work. Local Supabase (Docker/Colima) is still off.
+
 ## 2026-11-01 - Verification outside the sandbox, app mode and the orchestrator prompt
 
 - Pilot #59 ran for real and showed what Codex's `workspace-write` sandbox can do. It passes types, lint and the 1,483 contract tests. It cannot run the architecture tests (no process inspection, no local ports; 112 of 257 fail identically on a clean `main`), the build (no Google Fonts), or the database suites (no loopback to local Supabase). Nothing in the pilot changed product code.
