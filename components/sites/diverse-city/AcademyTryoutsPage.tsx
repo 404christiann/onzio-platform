@@ -5,6 +5,7 @@ import {
   resolveTryoutsPageContent,
   type TryoutsPageContent,
 } from "@/lib/tryouts-page-content";
+import { academyHref } from "./routes";
 
 function eventDate(value: string | null): string {
   if (!value) return "TBA";
@@ -119,7 +120,7 @@ export default function AcademyTryoutsPage({
           <p className="mt-10 max-w-2xl font-body text-sm leading-7 text-[#1E3653]/60">
             Have questions before details are announced?{" "}
             <a
-              href="/contact"
+              href={academyHref("contact")}
               className="font-bold text-[#1E3653] underline hover:text-[#FF1616]"
             >
               Contact {clubName}
