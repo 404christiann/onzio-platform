@@ -1,3 +1,11 @@
+## 2026-11-01 - SITE-07 issue #48: Tryouts and Contact page ownership
+
+- Moved the unchanged Academy Tryouts and Contact page components into the existing Academy site module at `components/sites/diverse-city/`. Tenant routes, canonical routes, and the admin preview components now import those module-owned pages. No page JSX, shell behavior, registration action, or Contact submission behavior changed.
+- Added `tests/contracts/academy-site-page-ownership.test.ts` to assert that every public and preview surface uses the module pages and that the old duplicate component paths are absent. Added `tests/browser/site07-contact-tryouts-evidence.spec.ts` to capture base/head screenshots at 1440×900 and 390×844 and compare DOM hashes, links, errors, fonts, and local Supabase reads.
+- Verification on the clean `bcc002b` base plus these local changes: `npx tsc --noEmit` passed; `npm run lint` passed; `npm run test:contracts` passed (1,496 tests). The focused pre-change contract run failed on the expected missing module paths, then passed after the move (112 tests).
+- Not run by the worker: architecture, database, whole suite, production build, Playwright capture, and `scripts/check-site-performance.mjs --compare`. The loop runner owns the full checks. The exact-base/head guarded builds and browser evidence still need to run under the local database lock. The evidence spec's outputs belong under `docs/verification/site07-shell/ticket-48/`.
+- Exact next action: review the diff, commit the worker result, run the exact-head verifier from the refreshed coordinator, and capture the two pages against clean guarded base/head production builds. Open a PR only if the verifier exits 0, then wait for the bot.
+
 ## 2026-11-01 - PR #66 follow-up: isolate the SITE-07 evidence spec
 
 - The bot review of `0eded344` confirmed the screenshot/resource evidence and package records, then found that the evidence spec's `homepage-editor-` filename made the normal homepage Playwright config collect it without its capture environment. Renamed it to `tests/browser/site07-shell-evidence.spec.ts`, outside that config's `homepage-editor*.spec.ts` match. No app behavior changed; editor Playback's transparent header remains as captured and undecided.

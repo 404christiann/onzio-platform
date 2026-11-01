@@ -10,7 +10,7 @@ import type { DBSiteSocialLink } from "@/lib/db-types";
  * There is no reference implementation of a Contact page on the superseded
  * claude/lions-fc-website-setup-ij0p7t branch, so this is built from
  * scratch: structurally modeled on the already-shipped
- * components/AcademyContactPage.tsx (same `ContactContent` shape from
+ * components/sites/diverse-city/AcademyContactPage.tsx (same `ContactContent` shape from
  * `fetchContactContent`, same empty-state logic when both `profile` and
  * `page` are null), restyled with editorial's own interior-hero + detail
  * grid pattern instead of DCFC's navy hero and bordered-card mockup styling.

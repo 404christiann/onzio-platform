@@ -110,7 +110,7 @@ describe("editorial tryouts: dispatch wiring", () => {
 describe("editorial tryouts: classic/clubhouse/academy regression", () => {
   it("never mounts editorial content in any non-editorial tryouts surface", () => {
     for (const file of [
-      "components/AcademyTryoutsPage.tsx",
+      "components/sites/diverse-city/AcademyTryoutsPage.tsx",
       "app/(public)/tryouts/page.tsx",
     ]) {
       expect(stripComments(read(file))).not.toMatch(/editorial/i);
@@ -118,7 +118,7 @@ describe("editorial tryouts: classic/clubhouse/academy regression", () => {
   });
 
   it("the academy tryouts page keeps its own mockup-parity classes untouched", () => {
-    const source = read("components/AcademyTryoutsPage.tsx");
+    const source = read("components/sites/diverse-city/AcademyTryoutsPage.tsx");
     expect(source).toContain("#1E3653");
     expect(source).toContain("#FF1616");
   });

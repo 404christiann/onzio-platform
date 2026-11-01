@@ -2,7 +2,7 @@ import type { DBTryoutsPageContent } from "@/lib/db-types";
 
 /**
  * Resolved copy for the two /tryouts page intro paragraphs
- * (components/AcademyTryoutsPage.tsx).
+ * (components/sites/diverse-city/AcademyTryoutsPage.tsx).
  *
  * The tryout events themselves are not here — they are rows in onzio.tryouts,
  * already editable at /admin/tryouts. This is only the page-level wording

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import AcademyTryoutsPage from "@/components/AcademyTryoutsPage";
+import AcademyTryoutsPage from "@/components/sites/diverse-city/AcademyTryoutsPage";
 import EditorialTryouts from "@/components/editorial/EditorialTryouts";
 import TryoutsPreviewFrame from "@/components/admin/TryoutsPreviewFrame";
 import { useClubContext } from "@/components/ClubContextProvider";

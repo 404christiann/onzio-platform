@@ -3427,7 +3427,7 @@
 
 /* ============ TRYOUTS PAGE (E5 real-data render) ============
    components/editorial/EditorialTryouts.tsx renders the SAME per-event
-   onzio.tryouts rows (via fetchTryouts) that components/AcademyTryoutsPage.tsx
+   onzio.tryouts rows (via fetchTryouts) that components/sites/diverse-city/AcademyTryoutsPage.tsx
    already renders -- status badge, date/location/cost, registration/contact
    action, closedMessage, and an empty state driven by
    onzio.tryouts_page_content. This is a different data shape than the

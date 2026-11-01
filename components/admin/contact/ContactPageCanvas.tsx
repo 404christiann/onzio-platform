@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import AcademyContactPage from "@/components/AcademyContactPage";
+import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
 import { useClubContext } from "@/components/ClubContextProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import EditorialContactPage from "@/components/editorial/EditorialContactPage";
