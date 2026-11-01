@@ -12,7 +12,7 @@ import {
 // 20260809120000_tryouts_page_content.sql.
 //
 // The table holds the two /tryouts hero paragraphs that used to be string
-// literals in components/AcademyTryoutsPage.tsx. These cover the boundary the
+// literals in components/sites/diverse-city/AcademyTryoutsPage.tsx. These cover the boundary the
 // migration owns: an untouched club renders the template defaults, a club can
 // only manage its own copy, the public can only read it for a club whose site
 // is actually readable, and both documented CHECK ceilings are real.

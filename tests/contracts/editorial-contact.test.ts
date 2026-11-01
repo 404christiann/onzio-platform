@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
  * There is no reference implementation of a Contact page on the superseded
  * claude/lions-fc-website-setup-ij0p7t branch, so components/editorial/
  * EditorialContactPage.tsx was built from scratch: structurally modeled on
- * the already-shipped components/AcademyContactPage.tsx (same
+ * the already-shipped components/sites/diverse-city/AcademyContactPage.tsx (same
  * ContactContent shape from fetchContactContent, same empty-state logic
  * when both `profile` and `page` are null), restyled with editorial's own
  * interior-hero + detail grid pattern instead of DCFC's navy hero and
@@ -151,7 +151,7 @@ describe("editorial contact: dispatch wiring", () => {
 describe("editorial contact: classic/clubhouse/academy regression", () => {
   it("never mounts editorial content in any non-editorial contact surface", () => {
     for (const file of [
-      "components/AcademyContactPage.tsx",
+      "components/sites/diverse-city/AcademyContactPage.tsx",
       "app/(public)/contact/page.tsx",
     ]) {
       expect(stripComments(read(file))).not.toMatch(/editorial/i);
@@ -159,7 +159,7 @@ describe("editorial contact: classic/clubhouse/academy regression", () => {
   });
 
   it("the academy contact page keeps its own mockup-parity classes untouched", () => {
-    const source = read("components/AcademyContactPage.tsx");
+    const source = read("components/sites/diverse-city/AcademyContactPage.tsx");
     expect(source).toContain("#1E3653");
     expect(source).toContain("#FF1616");
   });

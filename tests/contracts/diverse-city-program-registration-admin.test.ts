@@ -375,8 +375,8 @@ describe("academy@1 program surfaces render stored content, not literals", () =>
       "components/AcademySponsorsPage.tsx",
       "components/AcademyProgramDetailPage.tsx",
       "components/AcademyProgramsPage.tsx",
-      "components/AcademyContactPage.tsx",
-      "components/AcademyTryoutsPage.tsx",
+      "components/sites/diverse-city/AcademyContactPage.tsx",
+      "components/sites/diverse-city/AcademyTryoutsPage.tsx",
     ]) {
       expect(
         source(path).includes("Diverse City"),

@@ -71,8 +71,8 @@ describe("DCFC-304 reusable public route acceptance", () => {
 
   it("renders safe external actions without collecting registration or contact data", () => {
     const joined = [
-      source("components/AcademyContactPage.tsx"),
-      source("components/AcademyTryoutsPage.tsx"),
+      source("components/sites/diverse-city/AcademyContactPage.tsx"),
+      source("components/sites/diverse-city/AcademyTryoutsPage.tsx"),
       source("components/AcademyProgramsPage.tsx"),
       source("components/AcademyProgramDetailPage.tsx"),
     ].join("\n");

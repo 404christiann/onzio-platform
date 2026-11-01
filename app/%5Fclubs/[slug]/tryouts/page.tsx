@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import AcademyTryoutsPage from "@/components/AcademyTryoutsPage";
+import AcademyTryoutsPage from "@/components/sites/diverse-city/AcademyTryoutsPage";
 import EditorialTryouts from "@/components/editorial/EditorialTryouts";
 import { getClubContextBySlug } from "@/lib/club-context";
 import {

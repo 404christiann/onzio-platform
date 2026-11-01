@@ -13,7 +13,7 @@ import type { TryoutsPageContent } from "@/lib/tryouts-page-content";
  * `tryout_page_content.sessions[]` / what-to-bring-list shape from a table
  * that no longer exists -- this component consumes the SAME real per-event data
  * Diverse City's academy@1 tryouts page already uses:
- * `fetchTryouts` -> `TryoutContent[]` (components/AcademyTryoutsPage.tsx is
+ * `fetchTryouts` -> `TryoutContent[]` (components/sites/diverse-city/AcademyTryoutsPage.tsx is
  * the functional reference for what renders where). Only the visual layout
  * (interior hero + content sections) is carried over from that reference
  * branch; its data logic is not ported at all.

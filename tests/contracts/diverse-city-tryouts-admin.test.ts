@@ -212,7 +212,7 @@ describe("Tryouts page intro copy", () => {
       "Tryout dates and locations are still being finalized. Register your interest below to stay informed once details are announced.",
     );
     const component = readFileSync(
-      resolve(process.cwd(), "components/AcademyTryoutsPage.tsx"),
+      resolve(process.cwd(), "components/sites/diverse-city/AcademyTryoutsPage.tsx"),
       "utf8",
     );
     expect(component).not.toContain("Review current club evaluations below.");
@@ -235,7 +235,7 @@ describe("Tryouts page intro copy", () => {
 
   it("keeps the retired per-event prose off the public event card", () => {
     const component = readFileSync(
-      resolve(process.cwd(), "components/AcademyTryoutsPage.tsx"),
+      resolve(process.cwd(), "components/sites/diverse-city/AcademyTryoutsPage.tsx"),
       "utf8",
     );
     for (const retired of [

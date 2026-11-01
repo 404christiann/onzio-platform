@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import AcademyContactPage from "@/components/AcademyContactPage";
+import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
 import EditorialContactPage from "@/components/editorial/EditorialContactPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchContactContent } from "@/lib/queries";
