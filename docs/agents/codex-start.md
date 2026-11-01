@@ -39,10 +39,18 @@ Codex's sandbox, on the committed result, and refuses to push if they fail. The 
 suites need local Supabase running (Docker or Colima up, then `supabase start`); if it is
 down they are reported "NOT RUN", and a change touching `supabase/`, `lib/` or
 `tests/database/` is held back. `CODEX_LOOP_VERIFY=off` skips the runner's checks, and
-`CODEX_LOOP_VERIFY=types,lint,contracts` runs a subset. A change that touches `package.json`,
-`scripts/`, config files or `.github/` is refused (exit 3) because Codex's code would run
-outside the sandbox; `CODEX_LOOP_TRUST_DIFF=1` overrides that after a person has read the
-diff.
+`CODEX_LOOP_VERIFY=types,lint,contracts` runs a subset; for a change touching those paths the
+database rows are still written as NOT RUN and `off` is refused. A change to any root-level
+file other than markdown (`package.json`, `.eslintrc.json`, `tailwind.config.ts` and so on),
+or to `scripts/`, `.github/` or `supabase/config.toml`, is refused (exit 3) because Codex's
+code would run outside the sandbox; `CODEX_LOOP_TRUST_DIFF=1` overrides that after a person
+has read the diff.
+
+What limits that code, and what does not: `HOME` is an empty temporary directory, so
+`~/.config/gh`, `~/.supabase` and `~/.ssh` are out of reach; the environment holds only the
+env file's values; and every Supabase URL or host value in that file must be loopback, or the
+build and database suites do not run. It is not a sandbox. The code still runs as you, with
+network access, and the macOS keychain is not isolated.
 
 ```bash
 scripts/codex-loop.sh --dry-run          # what would run; changes nothing

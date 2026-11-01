@@ -77,8 +77,9 @@ are not new policy for the bot to weigh; Christian can strike one by editing thi
   outside the Codex sandbox (`scripts/codex-loop-verify.sh`), compares failures with a clean
   copy of the base commit, and puts its table in the PR body under "Verification run by the
   runner". It does not push when that fails, so a PR the bot sees has passed it. A
-  "NOT RUN" database row (for example local Supabase was down) on such a PR is a gap for a
-  person to close, not a pass.
+  "NOT RUN" database row (for example local Supabase was down), or a missing Database or
+  Whole suite row, on such a PR is a gap for a person to close, not a pass. The runner always
+  writes both rows for such a change and refuses `CODEX_LOOP_VERIFY=off` for it.
 
 ## Not yet decided
 

@@ -15,9 +15,13 @@
 #   CODEX_LOOP_TRUST_DIFF=1            run even if the change touches checks, config or deps
 #   CODEX_LOOP_WORKTREES=dir           where the cached baseline copy lives
 #
-# Code written by Codex runs here with your user's privileges, so: the environment is
-# scrubbed (no tokens from your shell, only the env file), only loopback Supabase URLs are
-# accepted, and changes to dependencies, scripts, config or CI are refused by default.
+# Code written by Codex runs here as your user, with network access. What limits that:
+# HOME is an empty temporary directory (so ~/.config/gh, ~/.supabase and ~/.ssh are not
+# reachable), the environment holds only the env file's values, every SUPABASE*URL value in
+# the env file must be loopback, and a change to a root-level file (dependencies, config,
+# lint rules), scripts/, CI or supabase/config.toml is refused (exit 3) unless a person says
+# so. Residual risk, stated plainly: it is not a sandbox. The macOS keychain and the network
+# are still reachable by a process running as you.
 set -uo pipefail
 
 [[ $# -eq 2 ]] || { echo "usage: $0 <worktree> <out.md>" >&2; exit 64; }
@@ -27,6 +31,7 @@ WORKTREES="${CODEX_LOOP_WORKTREES:-$HOME/.codex/worktrees}"
 CHECKS="${CODEX_LOOP_VERIFY:-types,lint,contracts,architecture,build,db,suite}"
 ENV_FILE="${CODEX_LOOP_ENV_FILE:-}"
 LOCK="$ROOT/scripts/with-local-db-lock.sh"
+SCRUB_HOME="$(mktemp -d)"     # HOME for every check: empty, so no credentials on disk
 RES="$(mktemp -d)"            # results for the change
 BASE_RES="$(mktemp -d)"       # results for the baseline copy
 
@@ -40,10 +45,10 @@ BASE_SHA="$(git -C "$WT" merge-base origin/main HEAD)"
 CHANGED="$(git -C "$WT" diff --name-only "$BASE_SHA..HEAD")"
 
 # ---- 1. refuse to run a change that alters how checks run, unless a person says so
-RISKY="$(grep -E '^(package(-lock)?\.json|scripts/|\.github/|vercel\.json|(next|vitest|eslint|postcss)\.config\.|tsconfig[^/]*\.json|vitest\.setup\.ts|\.env|supabase/config\.toml)' <<<"$CHANGED" || true)"
+RISKY="$(grep -E '^(scripts/|\.github/|supabase/config\.toml$)|^[^/]+$' <<<"$CHANGED" | grep -vE '\.md$' || true)"
 if [[ -n "$RISKY" && "${CODEX_LOOP_TRUST_DIFF:-0}" != "1" ]]; then
   { echo "## Verification run by the runner"; echo
-    echo "Not run. This change touches files that control how checks run, and code written by Codex would execute outside its sandbox. A person must review and run the checks (or set \`CODEX_LOOP_TRUST_DIFF=1\`):"; echo
+    echo "Not run. This change touches root-level files, scripts, CI or Supabase config, which control how checks run, and code written by Codex would execute outside its sandbox. A person must review and run the checks (or set \`CODEX_LOOP_TRUST_DIFF=1\`):"; echo
     sed 's/^/- `/; s/$/`/' <<<"$RISKY"; } > "$OUT"
   exit 3
 fi
@@ -51,23 +56,35 @@ fi
 # ---- 2. scrubbed environment; loopback-only Supabase
 scrubbed() { # dir cmd...   run cmd in dir with only HOME/PATH/TMPDIR/locale and the env file
   local d="$1"; shift
-  ( cd "$d" && env -i HOME="$HOME" PATH="$PATH" TMPDIR="${TMPDIR:-/tmp}" LANG="${LANG:-en_US.UTF-8}" \
-      CI=1 NEXT_TELEMETRY_DISABLED=1 ENVF="$ENV_FILE" bash -c '
+  ( cd "$d" && env -i HOME="$SCRUB_HOME" npm_config_cache="$SCRUB_HOME/.npm" PATH="$PATH" \
+      TMPDIR="${TMPDIR:-/tmp}" LANG="${LANG:-en_US.UTF-8}" CI=1 NEXT_TELEMETRY_DISABLED=1 \
+      ENVF="$ENV_FILE" bash -c '
         if [[ -n "$ENVF" ]]; then set -a; . "$ENVF"; set +a; fi
-        export NEXT_PUBLIC_SUPABASE_URL="${NEXT_PUBLIC_SUPABASE_URL:-${SUPABASE_TEST_URL:-}}"
-        export NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-${SUPABASE_TEST_ANON_KEY:-}}"
-        export SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-${SUPABASE_TEST_SERVICE_ROLE_KEY:-}}"
+        # Assigned, never defaulted: a hosted value in the env file must not reach the app.
+        export NEXT_PUBLIC_SUPABASE_URL="${SUPABASE_TEST_URL:-}"
+        export NEXT_PUBLIC_SUPABASE_ANON_KEY="${SUPABASE_TEST_ANON_KEY:-}"
+        export SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_TEST_SERVICE_ROLE_KEY:-}"
+        unset SUPABASE_ACCESS_TOKEN
         exec "$@"' _ "$@" )
 }
-SUPA_URL=""
+LOOPBACK_RE='^[a-zA-Z][a-zA-Z0-9+.-]*://([^/@]*@)?(127\.0\.0\.1|localhost|\[::1\])([:/]|$)'
+SUPA_URL=""; NONLOOP=""
 if [[ -n "$ENV_FILE" && -r "$ENV_FILE" ]]; then
   SUPA_URL="$(env -i bash -c 'set -a; . "$1"; set +a; printf %s "${SUPABASE_TEST_URL:-}"' _ "$ENV_FILE" 2>/dev/null)"
+  # Every Supabase URL or host value in the file must be loopback, not just SUPABASE_TEST_URL:
+  # the checks and the app read others, and a hosted one would run Codex-written code against
+  # a real project.
+  while IFS== read -r k v; do
+    [[ -n "$k" ]] || continue
+    [[ "$v" =~ $LOOPBACK_RE ]] || NONLOOP="$NONLOOP $k"
+  done < <(env -i bash -c 'set -a; . "$1"; set +a; env' _ "$ENV_FILE" 2>/dev/null | grep -E '^[A-Za-z_]*SUPABASE[A-Za-z_]*(URL|HOST)[A-Za-z_]*=')
 fi
 env_reason=""  # empty means a usable, loopback-only local test environment exists
 db_reason=""   # empty means the local API also answers (database suites can run)
 if [[ -z "$ENV_FILE" || ! -r "$ENV_FILE" ]]; then env_reason="no local test environment (CODEX_LOOP_ENV_FILE not set)"
 elif [[ -z "$SUPA_URL" ]]; then env_reason="SUPABASE_TEST_URL is not set in the env file"
-elif ! [[ "$SUPA_URL" =~ ^https?://(127\.0\.0\.1|localhost|\[::1\])([:/]|$) ]]; then env_reason="refusing a non-loopback SUPABASE_TEST_URL"
+elif ! [[ "$SUPA_URL" =~ $LOOPBACK_RE ]]; then env_reason="refusing a non-loopback SUPABASE_TEST_URL"
+elif [[ -n "$NONLOOP" ]]; then env_reason="refusing: not a loopback address in the env file:$NONLOOP"
 fi
 if [[ -n "$env_reason" ]]; then db_reason="$env_reason"
 else
@@ -208,6 +225,16 @@ for n in "${LIST[@]}"; do
     NOTES="$NOTES"$'\n'"New failures in $label (first 10):"$'\n'"$(head -10 "$RES/$n.new" | sed 's/^/- /')"
   fi
 done
+
+if (( REQ_DB )); then
+  for n in db suite; do
+    case ",$CHECKS," in *",$n,"*) continue ;; esac
+    label="Database"; [[ "$n" == "suite" ]] && label="Whole suite"
+    cmdtxt="$(check_cmd "$n" | cut -d' ' -f4- | sed 's/ --$//')"
+    printf '| %s | `%s` | NOT RUN | not selected by CODEX_LOOP_VERIFY, but this change touches supabase/, lib/ or tests/database/ |\n' "$label" "$cmdtxt" >> "$RES/rows"
+    REQUIRED_MISSING=1
+  done
+fi
 
 {
   echo "## Verification run by the runner, outside the Codex sandbox"

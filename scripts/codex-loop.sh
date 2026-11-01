@@ -206,6 +206,12 @@ VERIFY_BIN="${CODEX_LOOP_VERIFY_BIN:-$ROOT/scripts/codex-loop-verify.sh}"
 # 1 new failures or a required suite not run, 3 refused (the change alters how checks run).
 verify_gate() { # worktree out-file
   if [[ "${CODEX_LOOP_VERIFY:-}" == "off" ]]; then
+    # Skipping is allowed for a change that cannot affect the database, never for one that can.
+    local base; base="$(git -C "$1" merge-base origin/main HEAD)"
+    if git -C "$1" diff --name-only "$base..HEAD" | grep -qE '^(supabase/|tests/database/|lib/)'; then
+      printf '## Verification run by the runner\n\nNot skipped. CODEX_LOOP_VERIFY=off was set, but this change touches supabase/, lib/ or tests/database/, so the database suites are required.\n' > "$2"
+      return 1
+    fi
     printf '## Verification run by the runner\n\nSkipped on request (CODEX_LOOP_VERIFY=off).\n' > "$2"
     return 0
   fi
