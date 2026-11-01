@@ -78,6 +78,15 @@ command -v gh >/dev/null    || die "gh not found"
 command -v jq >/dev/null    || die "jq not found"
 [[ -f "$GUIDE" ]]           || die "missing $GUIDE"
 
+# A local misconfiguration must fail here, before anything is claimed on GitHub. The
+# cleanup trap relabels a claimed ticket blocked, which would hide a real ticket because of
+# a typo. Check that the env file is readable and also loads without error.
+if [[ -n "${CODEX_LOOP_ENV_FILE:-}" ]]; then
+  [[ -r "$CODEX_LOOP_ENV_FILE" ]] || die "CODEX_LOOP_ENV_FILE is not readable"
+  ( set -a; . "$CODEX_LOOP_ENV_FILE" ) >/dev/null 2>&1 \
+    || die "CODEX_LOOP_ENV_FILE does not load cleanly (check for unquoted values with spaces)"
+fi
+
 skipped() {
   [[ -f "$SKIP_FILE" ]] || return 1
   awk '/^[0-9]+/ {print $1}' "$SKIP_FILE" | grep -qx "$1"
@@ -161,9 +170,6 @@ run_codex() { # worktree prompt-file output-file
   [[ -z "${CODEX_MODEL:-}" ]] || args+=(-m "$CODEX_MODEL")
   # CODEX_LOOP_ENV_FILE (for example the .env.test of a local Supabase) is exported into
   # the Codex process only, so the agent can use the variables without reading the file.
-  if [[ -n "${CODEX_LOOP_ENV_FILE:-}" && ! -r "$CODEX_LOOP_ENV_FILE" ]]; then
-    die "CODEX_LOOP_ENV_FILE is not readable"
-  fi
   (
     if [[ -n "${CODEX_LOOP_ENV_FILE:-}" ]]; then set -a; . "$CODEX_LOOP_ENV_FILE"; set +a; fi
     exec codex exec ${args[@]+"${args[@]}"} -C "$1" -s workspace-write -o "$3" - < "$2"

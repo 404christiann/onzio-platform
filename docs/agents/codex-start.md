@@ -19,7 +19,8 @@ export CODEX_MODEL=gpt-6-astra
 ```
 
 To let Codex use the local test environment without reading secret files, point the
-runner at the env file. It is exported into the Codex process only:
+runner at the env file. It is checked at startup (readable, and loads without error),
+before anything is claimed on GitHub, then exported into the Codex process only:
 
 ```bash
 export CODEX_LOOP_ENV_FILE=~/Downloads/onzio-platform/.env.test
