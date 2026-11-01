@@ -43,10 +43,10 @@ or Medium findings. If it reports any, Codex fixes them and the cycle repeats.
 
 - The bot merges every PR that meets the criterion above, including PRs that touch
   `supabase/migrations/`. There is no human-merge carve-out for migrations. Merging to
-  `main` deploys to production, so the migration-parity check in `CLAUDE.md` (`supabase
-  migration list --linked`, then `supabase db push --linked`) is not run by the merge
-  path. Whoever sets up the bot's merge owns when and how production migrations get
-  applied.
+  `main` deploys to production and does not run the migration-parity check in `CLAUDE.md`
+  by itself, so the bot must run the whole procedure in
+  `docs/agents/review-bot-supabase.md` before every merge of a PR that adds migrations.
+  That procedure is part of the merge, not an option.
 - Christian will give the bot access to the production Supabase project (ref
   `ioalthwsdrlzrubomrow`) so it can apply migrations itself. That access belongs to the
   bot only. Codex and Claude Code stay barred from any hosted Supabase operation by
@@ -54,11 +54,25 @@ or Medium findings. If it reports any, Codex fixes them and the cycle repeats.
 - The full step-by-step for that path, with its stop conditions, is
   `docs/agents/review-bot-supabase.md`. Give the bot that file.
 - Order the bot's merge path must keep, from the 2026-08-14 outage and the established
-  Diverse City FC pattern: for a PR that adds migrations, preview with
-  `supabase db push --linked --dry-run`, apply with `supabase db push --linked`, confirm
-  `supabase migration list --linked` shows every migration in the branch on the Remote
-  side, and only then merge. Merging first deploys code against a schema that is not
-  there yet. If any step fails, do not merge.
+  Diverse City FC pattern: verify a backup, preview with
+  `supabase db push --linked --dry-run --skip-vault`, apply with
+  `supabase db push --linked --skip-vault`, confirm `supabase migration list --linked`
+  shows every migration in the branch on the Remote side, and only then merge. Merging
+  first deploys code against a schema that is not there yet. If any step fails, do not
+  merge. The exact steps and stop rules are in `review-bot-supabase.md`.
+
+## Required of every merge, migrations or not
+
+These follow from rules already in the repo and from the review findings on this PR. They
+are not new policy for the bot to weigh; Christian can strike one by editing this file.
+
+- The merge is pinned to the head the review covered:
+  `gh pr merge <N> --match-head-commit <reviewed sha>`. If the head moves, the review no
+  longer counts and the bot stops.
+- A PR that touches `supabase/`, data access under `lib/`, or RLS does not merge while any
+  required suite in its Verification section is marked "not run". Codex reports
+  "not run: sandbox blocked it" when it cannot reach the local database; that is a gap
+  for a person to close, not a pass.
 
 ## Not yet decided
 
@@ -68,7 +82,8 @@ not enforce them; the bot's merge setup would have to.
 - [ ] The merge requires deterministic checks (types, lint, contracts, build) in
       addition to the review. The `Onzio / independent PR review` status on `main`
       exists today; no other status checks do.
-- [ ] A `hold` label or equivalent pauses merging everywhere. The loop already skips a
-      PR labeled `hold`.
+- [ ] The bot itself refuses to merge a PR labeled `hold`. The label exists and the loop
+      skips such PRs; whether the bot honors it is part of the bot's setup. The migration
+      procedure already uses it as a one-at-a-time lock.
 - [ ] The review verdict is tied to the head sha and fails closed on missing or
       malformed output.

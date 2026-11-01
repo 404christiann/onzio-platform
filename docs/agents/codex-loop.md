@@ -128,8 +128,9 @@ Rules for the database and browser suites:
   serially.
 - Types, lint and contracts need no lock and may run any time.
 - The sandbox may block the local Supabase ports. If a database or browser suite cannot
-  connect, report it as "not run: sandbox blocked it", never as skipped or passing. The
-  reviewer decides whether that gap blocks the PR.
+  connect, report it as "not run: sandbox blocked it", never as skipped or passing. A PR
+  that touches database code, RLS or migrations will not merge while a required suite is
+  marked "not run", so a person has to run it.
 - Export the local test environment first as `tests/README.md` describes.
 - If something fails, do not guess. Run the same check on pristine `origin/main` in a
   scratch copy and compare per test. Report both numbers. Only call a failure

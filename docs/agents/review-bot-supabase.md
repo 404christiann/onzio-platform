@@ -28,15 +28,24 @@ Vercel project: `onzio-platform`, team `404christianns-projects`.
 All must hold. If any fails, do not apply and do not merge. Comment on the PR with the
 reason and stop.
 
-1. Your review at the PR's current head reports no High or Medium findings.
+1. Your review at the PR's current head reports no High or Medium findings. Record that
+   head as `<reviewed sha>`. Everything below is for that exact commit only; if the head
+   moves at any point, stop (see step 8).
 2. The PR head contains current `main` (the `main` ruleset requires an up-to-date
    branch). Compute the PR's migrations as
    `git diff --name-only --diff-filter=A origin/main...HEAD -- supabase/migrations`.
 3. The PR only **adds** migration files. Any edit, rename or deletion of a migration file
    that already exists on `main` is a stop: applied migrations are immutable.
-4. No other migration PR is mid-flight. Do one at a time; the next waits for the previous
-   merge to finish.
+4. No other open PR carries the `hold` label. You put `hold` on this PR before step 1 and
+   remove it only after step 9 passes (the Codex loop skips PRs labeled `hold`, so it cannot
+   push a fix mid-migration). If another PR already has `hold`, wait; do not run two
+   migration merges at once.
 5. Your credentials are linked to `ioalthwsdrlzrubomrow`, and nothing else.
+6. The PR's Verification section shows `npm run test:db` and `npm test` as run and
+   passing, and its `Tested revision` equals `<reviewed sha>`. "Not run" for either, or a
+   different revision, is a stop: label the PR `blocked` so a person can run them under
+   `scripts/with-local-db-lock.sh`. A migration whose database tests never ran does not
+   reach production.
 
 ## Stop and hand to a human: breaking migrations
 
@@ -58,7 +67,9 @@ does one of these, because the code now in production would break the moment it 
 
 Additive changes (new tables, new nullable columns, new functions or overloads, new
 policies that only add access for existing tenants' own rows, new indexes on small
-tables) may proceed. If you are unsure which a statement is, it is a stop.
+tables) may proceed. A new exposed table must create its RLS policies and grants in the
+same migration and use composite `(club_id, id)` relationships (`AGENTS.md`); a new table
+without them is a stop. If you are unsure which a statement is, it is a stop.
 
 ## Procedure
 
@@ -76,14 +87,18 @@ Run these in order. Record each result for the PR comment.
    read-only queries.
 4. **Backup.** Production has `pitr_enabled=false`, so the daily physical backup is the
    only recovery point. Run `supabase backups list`. Require a completed physical backup
-   less than 24 hours old, and record its timestamp. If the audit-event snapshot shows
-   production writes since that backup, take fresh restricted logical dumps of `onzio`
-   and `onzio_private` into a directory with mode 700 (files 600) outside the repository,
-   record their SHA-256, and never commit or print them.
+   less than 24 hours old, and record its timestamp. Take fresh restricted logical dumps
+   of `onzio` and `onzio_private` when the newest backup is not from today or the
+   audit-event snapshot shows writes since that backup (not every write creates an audit
+   event, so when in doubt, dump). Put them in a directory with mode 700 (files 600)
+   outside the repository, record their SHA-256, and never commit or print them. They hold
+   tenant personal data: delete them once step 9 passes; the physical backup stays the
+   recovery point.
 5. **Dry run.** `supabase db push --linked --dry-run --skip-vault`. The files it lists
    must equal the PR's added migrations exactly, in order, with no seeds, roles or Vault
    changes. Any difference is a stop.
-6. **Apply.** `supabase db push --linked --skip-vault`. Never add `--include-all`. If it
+6. **Apply.** `supabase db push --linked --skip-vault`, with Supabase CLI 2.117.0 or newer
+   (the version the PR #5 release used). Never add `--include-all`. If it
    fails, do not retry. Re-run step 1 and step 5 to learn what state production is in,
    then stop and report it.
 7. **Verify.**
@@ -97,16 +112,23 @@ Run these in order. Record each result for the PR comment.
      `lib/database.generated.ts` on the PR head. On first use, run it against current
      `main` once to learn whether a baseline difference already exists, and from then on
      treat only a change from that baseline as a stop.
-8. **Merge** the PR, immediately, in the same run. If the merge fails, retry up to three
-   times. If it still fails, comment that migrations are applied and the PR is not
-   merged, label it `blocked`, and tell Christian. Do not revert the migrations. A later
-   migration PR will stop at step 1 until this is resolved, which is correct.
+8. **Merge** immediately, in the same run, pinned to the reviewed commit:
+   `gh pr merge <N> --match-head-commit <reviewed sha>`. Before any retry, check that the
+   PR head still equals `<reviewed sha>`. If it moved (for example a fix round was
+   pushed), stop: the migrations are applied for a head that is no longer the one
+   reviewed, so label the PR `blocked` and tell Christian. Never merge a different
+   commit than the one you reviewed and migrated. If the merge fails for another reason,
+   retry up to three times with the same check. If it still fails, comment that
+   migrations are applied and the PR is not merged, label it `blocked`, keep `hold` on,
+   and tell Christian. Do not revert the migrations. A later migration PR will stop at
+   step 1 until this is resolved, which is correct.
 9. **Post-deploy check.** Wait for Vercel's production deployment of the exact merge
    commit to reach READY. Then, for every verified production domain in
    `onzio.club_domains`, request `/` and expect HTTP 200 with no `UNKNOWN_TENANT` in the
    body. For Diverse City FC also request `/programs`, `/roster` and `/shop`, which the
    2026-09 release used. If anything fails, roll production back to the step 2 target
-   and tell Christian immediately. Never roll the database back.
+   and tell Christian immediately. Never roll the database back. When every check
+   passes, remove `hold` from the PR.
 
 ## The PR comment you leave
 
@@ -127,7 +149,8 @@ emails or tokens.
 - deleting or altering backups, pausing or restoring the project
 - touching Stripe, DNS, Vercel environment variables, GitHub rulesets or your own review
   criterion
-- merging on any partial, uncertain or unexpected state
+- merging a commit other than the one you reviewed and migrated, or merging on any
+  partial, uncertain or unexpected state
 
 ## Credentials
 

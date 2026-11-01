@@ -10,7 +10,10 @@
 #   CODEX_LOOP_PUBLISH=1               push branches, open PRs, post comments and labels
 #                                      that tell the bot and reviewers there is work.
 #                                      Without it the runner edits and commits locally and
-#                                      only claims the ticket (label + comment).
+#                                      only claims a ticket (label + comment). Fix mode makes
+#                                      no PR writes at all and remembers each PR it already
+#                                      handled in $WORKTREES/.codex-loop-local-fix (delete a
+#                                      line to retry that PR).
 #   CODEX_LOOP_MAX=n                   iterations per invocation (default 1: pilot first)
 #   CODEX_LOOP_FIX_ROUNDS=n            fix rounds per PR before it is labeled blocked (3)
 #   ONZIO_BOT_LOGIN=login              GitHub login the review comments come from
@@ -27,6 +30,7 @@ ROOT="$(git rev-parse --show-toplevel)"
 SKIP_FILE="$ROOT/scripts/codex-loop.skip"
 GUIDE="$ROOT/docs/agents/codex-loop.md"
 WORKTREES="${CODEX_LOOP_WORKTREES:-$HOME/.codex/worktrees}"
+LOCAL_FIX_STATE="$WORKTREES/.codex-loop-local-fix"
 MAX_ITERATIONS="${CODEX_LOOP_MAX:-1}"
 FIX_ROUNDS_CAP="${CODEX_LOOP_FIX_ROUNDS:-3}"
 PUBLISH="${CODEX_LOOP_PUBLISH:-0}"
@@ -103,7 +107,7 @@ next_ticket() {
 has_actionable_findings() {
   awk '
     { l = tolower($0) }
-    l ~ /^##+ +(critical|high|medium)([^a-z]|$)/ { insec = 1; next }
+    l ~ /^##+ +(critical|high|medium)([ :(]|$)/ { insec = 1; next }
     l ~ /^##+ / { insec = 0; next }
     insec && $0 !~ /^[[:space:]]*$/ && l !~ /^[[:space:]]*[-*_ ]*(none|n\/a|no issues?|no findings?)[^a-z]*$/ { found = 1 }
     END { exit found ? 0 : 1 }'
@@ -112,7 +116,8 @@ has_actionable_findings() {
 # Sets FIX_PR, FIX_BRANCH, FIX_OID, FIX_BODY, FIX_DONE for the lowest-numbered open agent/*
 # PR whose newest bot review is for its current head and has actionable findings.
 find_fix_target() {
-  local prs pr json body sha oid
+  local prs pr json body sha oid me
+  me="${CODEX_LOOP_RUNNER_LOGIN:-$(gh api user --jq .login 2>/dev/null || true)}"
   prs="$(gh pr list --repo "$REPO" --state open --limit 100 --json number,headRefName \
     --jq '.[] | select(.headRefName | startswith("agent/")) | .number' | sort -n)"
   for pr in $prs; do
@@ -123,12 +128,15 @@ find_fix_target() {
     sha="$(head -n1 <<<"$body" | sed -nE 's/.* at `([0-9a-f]{7,40})`.*/\1/p')"
     oid="$(jq -r .headRefOid <<<"$json")"
     [[ -n "$sha" && "$oid" == "$sha"* ]] || continue
+    # Already handled by a local-only run (nothing was pushed, so GitHub cannot tell us).
+    ! grep -qx "$pr $oid" "$LOCAL_FIX_STATE" 2>/dev/null || continue
     has_actionable_findings <<<"$body" || continue
     FIX_PR="$pr"
     FIX_BRANCH="$(jq -r .headRefName <<<"$json")"
     FIX_OID="$oid"
     FIX_BODY="$body"
-    FIX_DONE="$(jq --arg m "$FIX_MARKER" '[.comments[] | select(.body | contains($m))] | length' <<<"$json")"
+    # Count only the runner's own marker comments; anyone can paste the marker on a public repo.
+    FIX_DONE="$(jq --arg m "$FIX_MARKER" --arg me "$me" '[.comments[] | select((.body | contains($m)) and ($me == "" or .author.login == $me))] | length' <<<"$json")"
     return 0
   done
   return 1
@@ -151,7 +159,7 @@ run_codex() { # worktree prompt-file output-file
 commit_all() { # worktree subject body
   local wt="$1" subject="$2" body="$3"
   if [[ -n "$(git -C "$wt" status --porcelain)" ]]; then
-    if git -C "$wt" status --porcelain | awk '{print $NF}' | grep -Eq '(^|/)\.env|(^|/)auth\.json$|\.(pem|key)$'; then
+    if git -C "$wt" status --porcelain --untracked-files=all | awk '{print $NF}' | grep -Eq '(^|/)\.env|(^|/)auth\.json$|\.(pem|key)$'; then
       die "refusing to commit a path that looks like a secret in $wt"
     fi
     git -C "$wt" add -A
@@ -206,13 +214,16 @@ for (( i = 1; i <= MAX_ITERATIONS; i++ )); do
     fi
 
     if (( FIX_DONE >= FIX_ROUNDS_CAP )); then
-      gh pr edit "$pr" --repo "$REPO" --add-label blocked >/dev/null
-      gh pr comment "$pr" --repo "$REPO" --body "Fix-round cap ($FIX_ROUNDS_CAP) reached with High/Medium findings still open. Needs a human decision." >/dev/null
+      if [[ "$PUBLISH" == "1" ]]; then
+        gh pr edit "$pr" --repo "$REPO" --add-label blocked >/dev/null
+        gh pr comment "$pr" --repo "$REPO" --body "Fix-round cap ($FIX_ROUNDS_CAP) reached with High/Medium findings still open. Needs a human decision." >/dev/null
+      fi
       echo "blocked: PR #$pr hit the fix-round cap"
       exit 2
     fi
 
-    CLAIM_KIND="pr"; CLAIM_REF="$pr"
+    # No PR writes unless publishing: the failure trap only acts on a claim.
+    if [[ "$PUBLISH" == "1" ]]; then CLAIM_KIND="pr"; CLAIM_REF="$pr"; fi
     t="$(grep -oE '^agent/site[0-9]+' <<<"$branch" | grep -oE '[0-9]+' || echo "$pr")"
     wt="$WORKTREES/onzio-ticket-$t"
     git -C "$ROOT" fetch origin --quiet
@@ -236,8 +247,13 @@ for (( i = 1; i <= MAX_ITERATIONS; i++ )); do
     if ! run_codex "$wt" "$work/prompt.md" "$out"; then die "codex exec failed on PR #$pr"; fi
 
     if [[ ! -s "$out" ]] || head -n1 "$out" | grep -q '^BLOCKED:'; then
-      gh pr edit "$pr" --repo "$REPO" --add-label blocked >/dev/null
-      gh pr comment "$pr" --repo "$REPO" --body "$(blocked_message "$out" | scrub)" >/dev/null
+      if [[ "$PUBLISH" == "1" ]]; then
+        gh pr edit "$pr" --repo "$REPO" --add-label blocked >/dev/null
+        gh pr comment "$pr" --repo "$REPO" --body "$(blocked_message "$out" | scrub)" >/dev/null
+      else
+        echo "$pr $FIX_OID" >> "$LOCAL_FIX_STATE"
+        blocked_message "$out" | scrub >&2
+      fi
       CLAIM_REF=""
       echo "blocked: PR #$pr (worktree kept at $wt)"
       exit 2
@@ -254,7 +270,8 @@ for (( i = 1; i <= MAX_ITERATIONS; i++ )); do
 $(cat "$work/comment.md")" >/dev/null
       echo "pushed fix round for PR #$pr at ${sha:0:7}"
     else
-      echo "local only: fix committed on $branch at ${sha:0:7} (not pushed)"
+      echo "$pr $FIX_OID" >> "$LOCAL_FIX_STATE"
+      echo "local only: fix committed on $branch at ${sha:0:7} (not pushed; PR #$pr will be skipped on later local runs)"
     fi
     CLAIM_REF=""; did_work=1
     continue
