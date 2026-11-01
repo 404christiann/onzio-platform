@@ -17,6 +17,7 @@
 #   CODEX_LOOP_MAX=n                   iterations per invocation (default 1: pilot first)
 #   CODEX_LOOP_FIX_ROUNDS=n            fix rounds per PR before it is labeled blocked (3)
 #   CODEX_MODEL=name                   model for codex exec, overriding ~/.codex/config.toml
+#   CODEX_LOOP_ENV_FILE=path           env file (local Supabase test values) exported to Codex
 #   ONZIO_BOT_LOGIN=login              GitHub login the review comments come from
 #
 # Exit codes: 0 worked, 2 blocked (needs a human), 3 idle (nothing to do), 1 failure.
@@ -76,6 +77,15 @@ command -v gh >/dev/null    || die "gh not found"
 (( DRY_RUN )) || command -v codex >/dev/null || die "codex not found on PATH (nvm installs it under ~/.nvm/versions/node/<version>/bin; add that directory to PATH, which also gives the runner node and npm)"
 command -v jq >/dev/null    || die "jq not found"
 [[ -f "$GUIDE" ]]           || die "missing $GUIDE"
+
+# A local misconfiguration must fail here, before anything is claimed on GitHub. The
+# cleanup trap relabels a claimed ticket blocked, which would hide a real ticket because of
+# a typo. Check that the env file is readable and also loads without error.
+if [[ -n "${CODEX_LOOP_ENV_FILE:-}" ]]; then
+  [[ -r "$CODEX_LOOP_ENV_FILE" ]] || die "CODEX_LOOP_ENV_FILE is not readable"
+  ( set -a; . "$CODEX_LOOP_ENV_FILE" ) >/dev/null 2>&1 \
+    || die "CODEX_LOOP_ENV_FILE does not load cleanly (check for unquoted values with spaces)"
+fi
 
 skipped() {
   [[ -f "$SKIP_FILE" ]] || return 1
@@ -158,7 +168,12 @@ run_codex() { # worktree prompt-file output-file
   # session never shows. The ${args[@]+...} form keeps an empty array safe on macOS bash 3.2.
   local args=()
   [[ -z "${CODEX_MODEL:-}" ]] || args+=(-m "$CODEX_MODEL")
-  codex exec ${args[@]+"${args[@]}"} -C "$1" -s workspace-write -o "$3" - < "$2"
+  # CODEX_LOOP_ENV_FILE (for example the .env.test of a local Supabase) is exported into
+  # the Codex process only, so the agent can use the variables without reading the file.
+  (
+    if [[ -n "${CODEX_LOOP_ENV_FILE:-}" ]]; then set -a; . "$CODEX_LOOP_ENV_FILE"; set +a; fi
+    exec codex exec ${args[@]+"${args[@]}"} -C "$1" -s workspace-write -o "$3" - < "$2"
+  )
 }
 
 # Codex only edits files; commit whatever it left. A commit Codex made itself also counts.

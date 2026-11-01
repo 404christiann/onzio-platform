@@ -44,9 +44,14 @@ an open PR). Follow the matching section.
 5. Update the SITE ledger (`docs/site-architecture.md`) and `HANDOFF.md` with the real
    results, as the ticket's acceptance criteria require.
 6. **Do not commit.** Do not run `git add`, `git commit`, `git checkout`, `git stash`,
-   `git reset` or anything else that writes under `.git`. The sandbox forbids it and the
-   runner commits your working tree after you finish. Make your last edit before your
-   last verification run, so what you verified is what gets committed.
+   `git reset` or anything else that writes to the repository you were started in. The
+   sandbox forbids it and the runner commits your working tree after you finish. Make your
+   last edit before your last verification run, so what you verified is what gets
+   committed. This rule is about that repository and any other real one. Tests that build
+   a throwaway repository in a temporary directory they created (`git init`, `git add`,
+   `git commit` there, as `tests/architecture` does) are normal and allowed; the sandbox
+   permits temporary directories. Never run those commands in your worktree, in
+   `$ROOT`, or in any existing repository.
 7. Write your final message in the exact format below and stop. Do not pick up another
    ticket. The runner decides what runs next.
 
@@ -131,12 +136,18 @@ Rules for the database and browser suites:
   connect, report it as "not run: sandbox blocked it", never as skipped or passing. A PR
   that touches database code, RLS or migrations will not merge while a required suite is
   marked "not run", so a person has to run it.
-- Export the local test environment first as `tests/README.md` describes.
+- The runner may export the local test environment (the `SUPABASE_TEST_*` variables from
+  `tests/README.md`) into your process. Use it; never print its values and never read
+  `.env*` files yourself. If those variables are absent, report the database suites and
+  any build that needs them as "not run: no local test environment".
 - If something fails, do not guess. Run the same check on pristine `origin/main` in a
   scratch copy and compare per test. Report both numbers. Only call a failure
   "pre-existing" when that comparison shows the same test failing the same way.
 - A check you did not run is reported as "not run" with the reason. Never write "should
   pass" or "expected to pass".
+- One check that cannot run (a missing prerequisite, a service that is down) is not a
+  reason to stop. Mark that check "not run: <reason>" and run every other check. Stop with
+  `BLOCKED:` only when the ticket's own work cannot proceed.
 
 ## Stop conditions
 
