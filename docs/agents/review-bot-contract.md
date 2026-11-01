@@ -51,6 +51,8 @@ or Medium findings. If it reports any, Codex fixes them and the cycle repeats.
   `ioalthwsdrlzrubomrow`) so it can apply migrations itself. That access belongs to the
   bot only. Codex and Claude Code stay barred from any hosted Supabase operation by
   `AGENTS.md` and `codex-loop.md`; nothing here changes that.
+- The full step-by-step for that path, with its stop conditions, is
+  `docs/agents/review-bot-supabase.md`. Give the bot that file.
 - Order the bot's merge path must keep, from the 2026-08-14 outage and the established
   Diverse City FC pattern: for a PR that adds migrations, preview with
   `supabase db push --linked --dry-run`, apply with `supabase db push --linked`, confirm
