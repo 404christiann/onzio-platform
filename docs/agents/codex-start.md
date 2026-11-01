@@ -47,6 +47,11 @@ file other than markdown and `middleware.ts` or `instrumentation.ts` (`package.j
 code would run outside the sandbox; `CODEX_LOOP_TRUST_DIFF=1` overrides that after a person
 has read the diff.
 
+The verify script refuses (exit 64) if its own copy differs from `origin/main`, so a stale
+coordinator worktree cannot produce evidence from old logic; update that worktree with
+`git checkout --detach origin/main`, or set `CODEX_LOOP_ALLOW_STALE_SCRIPT=1` when deliberately
+testing a changed script.
+
 The checks run on a clean checkout of the exact commit (a temporary worktree, removed
 afterwards), never on the working directory, because ignored files such as `test-results/`
 or `.next/` are picked up by `tsc` and the build and would make the same commit fail there
