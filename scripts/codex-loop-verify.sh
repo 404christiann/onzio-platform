@@ -143,7 +143,11 @@ check_cmd() { # name -> prints: timeout lock(0/1) vitest(0/1) command...
 PILOT_DEPS='pilot|^scripts/|^tests/(fixtures|helpers)/|^lib/homepage-editor/|^packages/|^[^/]+$'
 ARCH_EXCLUDE=""; ARCH_NOTE=""
 # Markdown never changes their result (every ticket edits HANDOFF.md, a root file).
-if [[ "${CODEX_LOOP_PILOT_TESTS:-0}" != "1" ]] && ! grep -vE '\.md$' <<<"$CHANGED" | grep -qE "$PILOT_DEPS"; then
+# (The filtered list goes in a variable and grep reads all of it: `grep -q` exits at the first
+# match and `grep -v` then dies of SIGPIPE, which under pipefail made a large change look like
+# it touched nothing.)
+NON_MD_CHANGED="$(grep -vE '\.md$' <<<"$CHANGED" || true)"
+if [[ "${CODEX_LOOP_PILOT_TESTS:-0}" != "1" ]] && [[ -z "$(grep -E "$PILOT_DEPS" <<<"$NON_MD_CHANGED" || true)" ]]; then
   ARCH_EXCLUDE="--exclude=tests/architecture/pilot-*.test.ts"
   ARCH_NOTE="the pilot-* files were skipped: this change touches nothing they depend on (CODEX_LOOP_PILOT_TESTS=1 runs them)"
 fi
@@ -155,7 +159,7 @@ for _n in contracts architecture db; do
     SUITE_NOTE="${SUITE_NOTE:+$SUITE_NOTE, }$_n" ;;
   esac
 done
-[[ -n "$SUITE_NOTE" ]] && SUITE_NOTE="the $SUITE_NOTE files ran as their own rows above and are not run twice"
+[[ -n "$SUITE_NOTE" ]] && SUITE_NOTE="the $SUITE_NOTE files ran as their own rows in this table and are not run twice"
 needs_env() { [[ "$1" == "db" || "$1" == "suite" || "$1" == "build" ]]; }
 needs_live_db() { [[ "$1" == "db" || "$1" == "suite" ]]; }
 

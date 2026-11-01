@@ -260,7 +260,7 @@ test("the whole suite does not run the contracts, architecture and database file
   assert.equal(r.status, 0, r.stderr);
   const suite = logOf(r, "suite");
   for (const dir of ["contracts", "architecture", "database"]) assert.ok(suite.includes(`--exclude=tests/${dir}/**`), dir);
-  assert.match(row(r.md, "Whole suite"), /ran as their own rows above and are not run twice/);
+  assert.match(row(r.md, "Whole suite"), /ran as their own rows in this table and are not run twice/);
 });
 
 test("the whole suite on its own runs everything", () => {
@@ -296,4 +296,13 @@ test("markdown, including HANDOFF.md at the root, does not bring the pilot archi
 test("CODEX_LOOP_PILOT_TESTS=1 runs the pilot architecture files for any change", () => {
   const r = run(fixture({ change: { "app/page.tsx": "export {};\n" } }), { checks: "architecture", env: { pilot: true } });
   assert.doesNotMatch(archLog(r), /--exclude/);
+});
+
+test("a very large change that touches a pilot dependency still runs the pilot files (regression: grep -q closed the pipe, pipefail made the gate skip them)", () => {
+  const change = { "app/aaa-pilot-first.ts": "export {};\n" };
+  for (let i = 0; i < 4000; i++) change[`app/generated/file-${String(i).padStart(4, "0")}.ts`] = "x\n";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const r = run(fixture({ change }), { checks: "architecture" });
+    assert.doesNotMatch(archLog(r), /--exclude/, `attempt ${attempt}`);
+  }
 });

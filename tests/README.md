@@ -20,8 +20,11 @@ modes are pinned by stub-based tests. They build a throwaway git repository with
 change to that script or to `verify_gate` in `scripts/codex-loop.sh`:
 
 ```bash
-node --test scripts/codex-loop-verify.test.mjs
+node --test scripts/codex-loop-verify.test.mjs scripts/provision-worktree-env.test.mjs
 ```
+
+`scripts/provision-worktree-env.sh` (copies the local env files into a ticket worktree after
+checking they are loopback-only) has its own tests in the second file.
 
 The script is built to be fast because ticket #48's run took 68 minutes in the verifier
 alone: a failing check is compared with the base by rerunning only its failing files, and
