@@ -166,10 +166,6 @@ export type TemplateRegistration = {
   key: TemplateKey;
   displayName: string;
   originNote: string;
-  defaultFontPack: string;
-  compatibleFontPacks: string[];
-  defaultSections: string[];
-  supportedSections: string[];
   defaultRoutes: string[];
   supportedRoutes: string[];
   supportedModules: string[];
@@ -185,44 +181,6 @@ export type ValidationReport = {
   valid: boolean;
   errors: ValidationIssue[];
   warnings: ValidationIssue[];
-};
-
-export type CompatibilityReport = {
-  fromTemplate: TemplateKey;
-  toTemplate: TemplateKey;
-  mappedSections: string[];
-  disabledSections: string[];
-  mappedRoutes: string[];
-  disabledRoutes: string[];
-  missingModules: string[];
-  preservedUnsupported: {
-    sections: PresentationDocument["homepage"]["sections"];
-    routes: string[];
-  };
-};
-
-export type PlaceholderSuggestion = {
-  sectionType: string;
-  reason: string;
-};
-
-export type ReadinessRecommendation = {
-  recommendedTemplate: TemplateKey;
-  scoreBand: "limited" | "developing" | "strong";
-  realApprovedPhotoCount: number;
-  reasons: string[];
-  warnings: string[];
-  suggestedPlaceholderAssignments: PlaceholderSuggestion[];
-  evaluatedAt: string;
-};
-
-export type ReadinessPhoto = {
-  id: string;
-  kind: "photo" | "logo" | "sponsor" | "graphic";
-  approved: boolean;
-  duplicateOf: string | null;
-  accessible: boolean;
-  sample: boolean;
 };
 
 export type FontPackRegistration = {
@@ -531,15 +489,6 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
     key: "cinematic@1",
     displayName: "Cinematic",
     originNote: "Based on the approved Rose City visual system.",
-    defaultFontPack: "bebas-inter",
-    compatibleFontPacks: ["bebas-inter"],
-    defaultSections: ["cinematic.hero", "shared.next-match", "cinematic.gallery"],
-    supportedSections: [
-      "cinematic.hero",
-      "shared.next-match",
-      "shared.history",
-      "cinematic.gallery",
-    ],
     defaultRoutes: ["home", "roster", "schedule", "club", "club-logo", "store"],
     supportedRoutes: ["home", "roster", "schedule", "club", "club-logo", "store", "sponsors"],
     supportedModules: ["roster", "schedule", "store", "sponsors", "standings", "affiliations"],
@@ -550,15 +499,6 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
     key: "heritage@1",
     displayName: "Heritage",
     originNote: "Based on the approved Deportivo Olimpico visual system.",
-    defaultFontPack: "archivo-sora",
-    compatibleFontPacks: ["archivo-sora", "bebas-inter"],
-    defaultSections: ["heritage.identity", "shared.next-match", "shared.history", "heritage.affiliations"],
-    supportedSections: [
-      "heritage.identity",
-      "shared.next-match",
-      "shared.history",
-      "heritage.affiliations",
-    ],
     defaultRoutes: [
       "home",
       "roster",
@@ -598,24 +538,6 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
     key: "clubhouse@1",
     displayName: "Clubhouse",
     originNote: "Based on the approved Lions prospect mockup visual system.",
-    defaultFontPack: "geist",
-    compatibleFontPacks: ["geist", "bebas-inter"],
-    defaultSections: [
-      "clubhouse.hero",
-      "shared.next-match",
-      "clubhouse.slideshow",
-      "clubhouse.kits",
-      "shared.history",
-      "clubhouse.partners",
-    ],
-    supportedSections: [
-      "clubhouse.hero",
-      "shared.next-match",
-      "clubhouse.slideshow",
-      "clubhouse.kits",
-      "shared.history",
-      "clubhouse.partners",
-    ],
     defaultRoutes: ["home", "roster", "schedule", "store"],
     supportedRoutes: [
       "home",
@@ -651,26 +573,6 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
     displayName: "Academy",
     originNote:
       "Based on the approved Diverse City FC prospect visual system (pinned snapshot 5bbdfa3).",
-    defaultFontPack: "montserrat-inter-dmsans",
-    compatibleFontPacks: ["montserrat-inter-dmsans", "bebas-inter"],
-    defaultSections: [
-      "academy.hero",
-      "academy.kit-feature",
-      "shared.next-match",
-      "shared.history",
-      "academy.partners",
-      "academy.standings",
-      "academy.programs-pathway",
-    ],
-    supportedSections: [
-      "academy.hero",
-      "academy.kit-feature",
-      "shared.next-match",
-      "shared.history",
-      "academy.partners",
-      "academy.standings",
-      "academy.programs-pathway",
-    ],
     defaultRoutes: ["home", "roster", "schedule", "club", "programs", "store", "contact"],
     supportedRoutes: [
       "home",
@@ -705,10 +607,6 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
     key: "editorial@1",
     displayName: "Lions Editorial",
     originNote: "Based on the approved Lions editorial concept mockup visual system.",
-    defaultFontPack: "geist",
-    compatibleFontPacks: ["geist", "bebas-inter"],
-    defaultSections: ["editorial.hero", "shared.next-match", "editorial.slideshow", "shared.history"],
-    supportedSections: ["editorial.hero", "shared.next-match", "editorial.slideshow", "shared.history"],
     defaultRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
     supportedRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
     supportedModules: ["roster", "schedule", "store", "staff", "tryouts", "contact"],
@@ -863,161 +761,6 @@ export function validatePresentationDocument(
   }
 
   return { valid: errors.length === 0, errors, warnings };
-}
-
-export function switchPresentationTemplate(
-  source: PresentationDocument,
-  target: { id: TemplateId; version: 1 },
-): { document: PresentationDocument; report: CompatibilityReport } {
-  const fromTemplate = templateKey(source.template);
-  const toTemplate = templateKey(target);
-  const targetRegistration = templateRegistry[toTemplate];
-  if (!targetRegistration) {
-    throw new PresentationError(
-      "PRESENTATION_UNKNOWN_TEMPLATE",
-      "Cannot switch to an unknown template.",
-    );
-  }
-
-  const mappedSections = source.homepage.sections.filter((section) =>
-    targetRegistration.supportedSections.includes(section.type),
-  );
-  const disabledSections = source.homepage.sections
-    .filter((section) => !targetRegistration.supportedSections.includes(section.type))
-    .map((section) => ({ ...section, enabled: false }));
-  const sourceRoutes = source.navigation.groups.flatMap((group) => group.routes);
-  const mappedRoutes = sourceRoutes.filter((route) =>
-    targetRegistration.supportedRoutes.includes(route),
-  );
-  const disabledRoutes = sourceRoutes.filter(
-    (route) => !targetRegistration.supportedRoutes.includes(route),
-  );
-
-  const nextSections =
-    mappedSections.length > 0
-      ? mappedSections
-      : targetRegistration.defaultSections.map((type) => ({
-          id: type.replace(".", "-"),
-          type,
-          enabled: true,
-          emptyBehavior: sectionRegistry[type].emptyBehavior,
-          config: {},
-        }));
-
-  const document: PresentationDocument = {
-    ...source,
-    template: target,
-    fontPack: targetRegistration.compatibleFontPacks.includes(source.fontPack)
-      ? source.fontPack
-      : targetRegistration.defaultFontPack,
-    homepage: { sections: nextSections },
-    navigation: {
-      groups: [
-        {
-          id: "main",
-          label: null,
-          routes: mappedRoutes.length > 0 ? mappedRoutes : targetRegistration.defaultRoutes,
-        },
-      ],
-    },
-  };
-
-  return {
-    document,
-    report: {
-      fromTemplate,
-      toTemplate,
-      mappedSections: mappedSections.map((section) => section.type),
-      disabledSections: disabledSections.map((section) => section.type),
-      mappedRoutes,
-      disabledRoutes,
-      missingModules: Object.keys(source.modules).filter(
-        (moduleKey) => !targetRegistration.supportedModules.includes(moduleKey),
-      ),
-      preservedUnsupported: {
-        sections: disabledSections,
-        routes: disabledRoutes,
-      },
-    },
-  };
-}
-
-export function evaluatePresentationReadiness(input: {
-  photos: ReadinessPhoto[];
-  evaluatedAt: string;
-}): ReadinessRecommendation {
-  const realApprovedPhotoCount = input.photos.filter(
-    (photo) =>
-      photo.kind === "photo" &&
-      photo.approved &&
-      photo.duplicateOf === null &&
-      photo.accessible &&
-      !photo.sample,
-  ).length;
-
-  if (realApprovedPhotoCount >= 6) {
-    return {
-      recommendedTemplate: "cinematic@1",
-      scoreBand: "strong",
-      realApprovedPhotoCount,
-      reasons: [
-        "Six or more real approved club photos can support the image-led cinematic rhythm.",
-      ],
-      warnings: [],
-      suggestedPlaceholderAssignments: [],
-      evaluatedAt: input.evaluatedAt,
-    };
-  }
-
-  if (realApprovedPhotoCount >= 2) {
-    return {
-      recommendedTemplate: "clubhouse@1",
-      scoreBand: "developing",
-      realApprovedPhotoCount,
-      reasons: [
-        "The club has enough real media for a crest-led home presentation with a focused matchday slideshow.",
-      ],
-      warnings: ["Cinematic gallery sections should remain hidden until more real photos are approved."],
-      suggestedPlaceholderAssignments: [],
-      evaluatedAt: input.evaluatedAt,
-    };
-  }
-
-  return {
-    recommendedTemplate: "heritage@1",
-    scoreBand: "limited",
-    realApprovedPhotoCount,
-    reasons: [
-      "The club has fewer than two real approved photos, so crest, typography, history, and affiliations should carry the presentation.",
-    ],
-    warnings: ["Placeholders are preview-only and cannot be published."],
-    suggestedPlaceholderAssignments: [
-      {
-        sectionType: "clubhouse.hero",
-        reason: "Use protected preview placeholders only while real imagery is collected.",
-      },
-    ],
-    evaluatedAt: input.evaluatedAt,
-  };
-}
-
-export function recordTemplateOverride(
-  recommendation: ReadinessRecommendation,
-  decision: {
-    selectedTemplate: TemplateKey;
-    operatorUserId: string;
-    reason: string;
-    decidedAt: string;
-  },
-) {
-  return {
-    recommendation,
-    selectedTemplate: decision.selectedTemplate,
-    operatorUserId: decision.operatorUserId,
-    reason: decision.reason,
-    decidedAt: decision.decidedAt,
-    override: decision.selectedTemplate !== recommendation.recommendedTemplate,
-  };
 }
 
 function issue(

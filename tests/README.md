@@ -12,6 +12,17 @@ Use the current requirements and recorded baseline in [HANDOFF.md](../HANDOFF.md
 when investigating a failure. Do not skip, weaken, or broadly mock a contract
 to obtain a passing run.
 
+## Verification script tests
+
+`scripts/codex-loop-verify.sh` decides what the review bot treats as evidence, so its failure
+modes are pinned by stub-based tests. They build a throwaway git repository with stubbed
+`npm` and `npx`, so they need neither Supabase nor the real repository. Run them after any
+change to that script or to `verify_gate` in `scripts/codex-loop.sh`:
+
+```bash
+node --test scripts/codex-loop-verify.test.mjs
+```
+
 ## Configure local database tests
 
 The database suite needs a running local Supabase **and** the test environment

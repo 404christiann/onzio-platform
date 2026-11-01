@@ -1,0 +1,186 @@
+import assert from "node:assert/strict";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { after, before, test } from "node:test";
+
+// Regression tests for scripts/codex-loop-verify.sh. That script decides what the merge bot
+// treats as evidence, so each failure mode found while building it is pinned here. They run
+// against a throwaway git repository with stubbed npm and npx; nothing touches the real repo.
+
+const scripts = join(import.meta.dirname);
+const stubNpm = `#!/bin/sh
+# stub: "npm run <script> [-- args]" or "npm test [-- args]". Behavior comes from files in the
+# working copy (.stub/<script>.exit, .out, .json), so the base commit and the change differ.
+case "$1" in test) script=suite ;; *) script="$2" ;; esac
+echo "HOME=$HOME"
+d=.stub
+[ -f "$d/$script.out" ] && cat "$d/$script.out"
+for a in "$@"; do case "$a" in --outputFile=*) out="\${a#--outputFile=}";; esac; done
+if [ -n "$out" ]; then
+  if [ -f "$d/$script.json" ]; then cp "$d/$script.json" "$out"
+  else echo '{"numTotalTests":1,"numPassedTests":1,"numFailedTests":0,"numPendingTests":0,"testResults":[]}' > "$out"; fi
+fi
+code=0; [ -f "$d/$script.exit" ] && code=$(cat "$d/$script.exit")
+exit "$code"
+`;
+const stubNpx = stubNpm.replace('case "$1" in test) script=suite ;; *) script="$2" ;; esac', 'script=types');
+
+const git = (cwd, ...args) => execFileSync("git", ["-C", cwd, "-c", "user.name=t", "-c", "user.email=t@t.invalid", ...args], { encoding: "utf8", stdio: "pipe" });
+const root = mkdtempSync(join(tmpdir(), "codex-verify-test-"));
+// The fake local API must run in its own process: spawnSync blocks this one, so a server here
+// could never answer the script's reachability check.
+let apiProcess; let apiUrl;
+before(async () => {
+  apiProcess = spawn(process.execPath, ["-e", `require("http").createServer((q,r)=>{r.statusCode=401;r.end("{}")}).listen(0,"127.0.0.1",function(){console.log(this.address().port)})`], { stdio: ["ignore", "pipe", "inherit"] });
+  const port = await new Promise(resolve => apiProcess.stdout.once("data", d => resolve(String(d).trim())));
+  apiUrl = `http://127.0.0.1:${port}`;
+});
+after(() => { apiProcess?.kill(); rmSync(root, { recursive: true, force: true }); });
+
+let counter = 0;
+function put(dir, path, text) { mkdirSync(dirname(join(dir, path)), { recursive: true }); writeFileSync(join(dir, path), text); }
+// base: files committed on main. change: files committed on top (the change under test).
+function fixture({ base = {}, change = {} } = {}) {
+  const dir = join(root, `fx${++counter}`); mkdirSync(dir);
+  const origin = join(dir, "origin.git"); const repo = join(dir, "repo"); const bin = join(dir, "bin");
+  execFileSync("git", ["init", "-q", "--bare", "-b", "main", origin]);
+  execFileSync("git", ["clone", "-q", origin, repo], { stdio: "pipe" });
+  mkdirSync(bin);
+  put(bin, "npm", stubNpm); put(bin, "npx", stubNpx); chmodSync(join(bin, "npm"), 0o755); chmodSync(join(bin, "npx"), 0o755);
+  put(repo, ".gitignore", "node_modules/\n");
+  for (const f of ["codex-loop-verify.sh", "with-local-db-lock.sh"]) { mkdirSync(join(repo, "scripts"), { recursive: true }); copyFileSync(join(scripts, f), join(repo, "scripts", f)); chmodSync(join(repo, "scripts", f), 0o755); }
+  for (const [p, t] of Object.entries(base)) put(repo, p, t);
+  put(repo, "README.txt", "base\n");
+  for (const tool of ["vitest", "tsc"]) { put(repo, `node_modules/.bin/${tool}`, "#!/bin/sh\nexit 0\n"); chmodSync(join(repo, "node_modules/.bin", tool), 0o755); }
+  git(repo, "checkout", "-q", "-b", "main"); git(repo, "add", "-A"); git(repo, "commit", "-q", "-m", "base"); git(repo, "push", "-q", "origin", "main");
+  git(repo, "checkout", "-q", "-b", "change");
+  for (const [p, t] of Object.entries(change)) put(repo, p, t);
+  put(repo, "CHANGE.md", "change\n");
+  git(repo, "add", "-A"); git(repo, "commit", "-q", "-m", "change");
+  const envFile = join(dir, "env.test");
+  return { dir, repo, bin, worktrees: join(dir, "wt"), envFile, writeEnv: text => writeFileSync(envFile, text) };
+}
+function run(fx, { checks, env = {}, up = true } = {}) {
+  fx.writeEnv(`SUPABASE_TEST_URL=${up ? apiUrl : "http://127.0.0.1:1"}\nSUPABASE_TEST_ANON_KEY=anon\nSUPABASE_TEST_SERVICE_ROLE_KEY=svc\n${env.extraEnvFile ?? ""}`);
+  const out = join(fx.dir, "out.md");
+  const e = { ...process.env, PATH: `${fx.bin}:${process.env.PATH}`, CODEX_LOOP_ENV_FILE: fx.envFile, CODEX_LOOP_WORKTREES: fx.worktrees };
+  delete e.CODEX_LOOP_TRUST_DIFF; delete e.CODEX_LOOP_VERIFY;
+  if (checks) e.CODEX_LOOP_VERIFY = checks;
+  const result = spawnSync("bash", [join(fx.repo, "scripts/codex-loop-verify.sh"), fx.repo, out], { env: e, encoding: "utf8", timeout: 120000 });
+  return { status: result.status, stderr: result.stderr, md: existsSync(out) ? readFileSync(out, "utf8") : "" };
+}
+const row = (md, label) => md.split("\n").find(l => l.startsWith(`| ${label} |`)) ?? "";
+
+test("everything passing exits 0 and reports every check as PASS", () => {
+  const r = run(fixture());
+  assert.equal(r.status, 0, r.stderr);
+  for (const label of ["Types", "Lint", "Contracts", "Architecture", "Build", "Database", "Whole suite"]) assert.match(row(r.md, label), /\| PASS \|/, label);
+});
+
+test("a failure the base commit does not have is a NEW FAILURE and exits 1", () => {
+  const r = run(fixture({ change: { ".stub/lint.exit": "1", ".stub/lint.out": "error: unused thing\n" } }), { checks: "lint" });
+  assert.equal(r.status, 1);
+  assert.match(row(r.md, "Lint"), /NEW FAILURES/);
+});
+
+test("a failure identical to the base commit is SAME AS BASELINE and does not block", () => {
+  const stub = { ".stub/lint.exit": "1", ".stub/lint.out": "error: existing problem\n" };
+  const r = run(fixture({ base: stub }), { checks: "lint" });
+  assert.equal(r.status, 0, r.md);
+  assert.match(row(r.md, "Lint"), /SAME AS BASELINE/);
+});
+
+test("a stale link on the cached baseline copy is refreshed (regression: baseline could not start, every failure looked new)", () => {
+  const stub = { ".stub/lint.exit": "1", ".stub/lint.out": "error: existing problem\n" };
+  const fx = fixture({ base: stub });
+  assert.equal(run(fx, { checks: "lint" }).status, 0);
+  const cached = join(fx.worktrees, `.baseline-${git(fx.repo, "rev-parse", "--short=7", "main").trim()}`);
+  rmSync(join(cached, "node_modules"), { force: true });
+  symlinkSync(join(fx.dir, "does-not-exist"), join(cached, "node_modules"));
+  const second = run(fx, { checks: "lint" });
+  assert.equal(second.status, 0, second.md);
+  assert.match(row(second.md, "Lint"), /SAME AS BASELINE/);
+});
+
+test("a failure with nothing identifiable counts against the change, never as same-as-baseline", () => {
+  const r = run(fixture({ base: { ".stub/lint.exit": "1" }, change: {} }), { checks: "lint" });
+  assert.equal(r.status, 1);
+  assert.match(row(r.md, "Lint"), /NEW FAILURES/);
+});
+
+test("a worktree without installed dependencies is refused, not reported as passing", () => {
+  const fx = fixture();
+  rmSync(join(fx.repo, "node_modules"), { recursive: true });
+  assert.equal(run(fx).status, 64);
+});
+
+for (const file of ["package.json", ".eslintrc.json", "tailwind.config.ts", "playwright.e2e.config.ts", "scripts/other.sh", ".github/workflows/x.yml", "supabase/config.toml"]) {
+  test(`a change to ${file} is refused (exit 3)`, () => {
+    const r = run(fixture({ change: { [file]: "x\n" } }));
+    assert.equal(r.status, 3);
+    assert.match(r.md, /Not run\./);
+    assert.ok(r.md.includes(file), r.md);
+  });
+}
+
+test("root-level markdown does not trigger a refusal", () => {
+  assert.equal(run(fixture({ change: { "HANDOFF.md": "note\n" } }), { checks: "types" }).status, 0);
+});
+
+test("a database-touching change with a subset that omits the database suites exits 1 (regression: subset exited 0)", () => {
+  const r = run(fixture({ change: { "lib/data.ts": "export const x = 1;\n" } }), { checks: "types,lint,contracts" });
+  assert.equal(r.status, 1, r.md);
+  assert.match(row(r.md, "Database"), /NOT RUN \| not selected/);
+  assert.match(row(r.md, "Whole suite"), /NOT RUN \| not selected/);
+  assert.match(r.md, /Not verified/);
+});
+
+test("a database-touching change with local Supabase down exits 1", () => {
+  const r = run(fixture({ change: { "supabase/migrations/1_x.sql": "select 1;\n" } }), { up: false });
+  assert.equal(r.status, 1);
+  assert.match(row(r.md, "Database"), /NOT RUN \| local Supabase is not running/);
+});
+
+test("a change that cannot affect the database may leave the suites NOT RUN and still exit 0", () => {
+  const r = run(fixture({ change: { "docs/x.md": "x\n" } }), { up: false });
+  assert.equal(r.status, 0, r.md);
+  assert.match(row(r.md, "Database"), /NOT RUN/);
+});
+
+test("any hosted Supabase URL in the env file is refused, not just SUPABASE_TEST_URL (regression: only one variable was checked)", () => {
+  for (const extra of ["NEXT_PUBLIC_SUPABASE_URL=https://abc.supabase.co\n", "SUPABASE_URL=https://abc.supabase.co\n", "SUPABASE_DB_URL=postgresql://postgres:pw@db.abc.supabase.co:5432/postgres\n"]) {
+    const r = run(fixture({ change: { "lib/data.ts": "export const x = 1;\n" } }), { env: { extraEnvFile: extra } });
+    assert.equal(r.status, 1, extra);
+    assert.match(row(r.md, "Build"), /NOT RUN \| refusing: not a loopback address/, extra);
+    assert.match(row(r.md, "Database"), /NOT RUN \| refusing/, extra);
+  }
+});
+
+test("loopback database URLs are accepted", () => {
+  const r = run(fixture(), { env: { extraEnvFile: "SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres\n" } });
+  assert.equal(r.status, 0, r.md);
+});
+
+test("checks run with an empty temporary HOME, not the real one (regression: credentials on disk were reachable)", () => {
+  const fx = fixture();
+  const r = run(fx, { checks: "lint" });
+  assert.equal(r.status, 0);
+  const logs = /logs kept in (\S+)/.exec(r.stderr)[1];
+  const log = readFileSync(join(logs, "lint.log"), "utf8");
+  assert.match(log, /HOME=\//);
+  assert.ok(!log.includes(`HOME=${process.env.HOME}\n`), log);
+});
+
+test("the runner refuses CODEX_LOOP_VERIFY=off for a database-touching change but allows it for docs", () => {
+  const runner = readFileSync(join(scripts, "codex-loop.sh"), "utf8");
+  const fn = /^verify_gate\(\) \{[\s\S]*?^\}/m.exec(runner)[0];
+  for (const [file, expected] of [["lib/data.ts", 1], ["docs/x.md", 0]]) {
+    const fx = fixture({ change: { [file]: "x\n" } });
+    const out = join(fx.dir, "gate.md");
+    const result = spawnSync("bash", ["-c", `${fn}\nverify_gate "$1" "$2"`, "_", fx.repo, out], { env: { ...process.env, CODEX_LOOP_VERIFY: "off" }, encoding: "utf8" });
+    assert.equal(result.status, expected, `${file}: ${result.stderr}`);
+    assert.match(readFileSync(out, "utf8"), expected ? /Not skipped/ : /Skipped on request/);
+  }
+});

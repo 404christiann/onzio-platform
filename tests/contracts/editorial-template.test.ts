@@ -12,34 +12,15 @@ async function loadPresentation(): Promise<PresentationExports> {
 }
 
 // Pinned snapshots of the pre-existing clubhouse@1 and academy@1 template
-// registrations, copied verbatim from packages/presentation/index.ts before
-// the editorial@1 (E2) change. This file exists to prove the E2 registry
-// addition was purely additive -- it must not mutate any field on any
-// pre-existing template or section registration.
+// registrations. This file exists to prove the E2 registry addition was purely
+// additive -- it must not mutate any field on any pre-existing template or
+// section registration.
 const CLUBHOUSE_TEMPLATE_SNAPSHOT = {
   id: "clubhouse",
   version: 1,
   key: "clubhouse@1",
   displayName: "Clubhouse",
   originNote: "Based on the approved Lions prospect mockup visual system.",
-  defaultFontPack: "geist",
-  compatibleFontPacks: ["geist", "bebas-inter"],
-  defaultSections: [
-    "clubhouse.hero",
-    "shared.next-match",
-    "clubhouse.slideshow",
-    "clubhouse.kits",
-    "shared.history",
-    "clubhouse.partners",
-  ],
-  supportedSections: [
-    "clubhouse.hero",
-    "shared.next-match",
-    "clubhouse.slideshow",
-    "clubhouse.kits",
-    "shared.history",
-    "clubhouse.partners",
-  ],
   defaultRoutes: ["home", "roster", "schedule", "store"],
   supportedRoutes: [
     "home",
@@ -72,26 +53,6 @@ const ACADEMY_TEMPLATE_SNAPSHOT = {
   displayName: "Academy",
   originNote:
     "Based on the approved Diverse City FC prospect visual system (pinned snapshot 5bbdfa3).",
-  defaultFontPack: "montserrat-inter-dmsans",
-  compatibleFontPacks: ["montserrat-inter-dmsans", "bebas-inter"],
-  defaultSections: [
-    "academy.hero",
-    "academy.kit-feature",
-    "shared.next-match",
-    "shared.history",
-    "academy.partners",
-    "academy.standings",
-    "academy.programs-pathway",
-  ],
-  supportedSections: [
-    "academy.hero",
-    "academy.kit-feature",
-    "shared.next-match",
-    "shared.history",
-    "academy.partners",
-    "academy.standings",
-    "academy.programs-pathway",
-  ],
   defaultRoutes: [
     "home",
     "roster",
