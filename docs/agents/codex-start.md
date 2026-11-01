@@ -18,6 +18,16 @@ on 2026-11-01) instead of editing your config:
 export CODEX_MODEL=gpt-6-astra
 ```
 
+To let Codex use the local test environment without reading secret files, point the
+runner at the env file. It is exported into the Codex process only:
+
+```bash
+export CODEX_LOOP_ENV_FILE=~/Downloads/onzio-platform/.env.test
+```
+
+The database suites also need the local Supabase running (Docker or Colima up, then
+`supabase start`). The first pilot found it down, so those suites reported "not run".
+
 ```bash
 scripts/codex-loop.sh --dry-run          # what would run; changes nothing
 scripts/codex-loop.sh --fix --dry-run    # PRs with open High/Medium findings

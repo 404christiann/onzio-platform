@@ -17,6 +17,7 @@
 #   CODEX_LOOP_MAX=n                   iterations per invocation (default 1: pilot first)
 #   CODEX_LOOP_FIX_ROUNDS=n            fix rounds per PR before it is labeled blocked (3)
 #   CODEX_MODEL=name                   model for codex exec, overriding ~/.codex/config.toml
+#   CODEX_LOOP_ENV_FILE=path           env file (local Supabase test values) exported to Codex
 #   ONZIO_BOT_LOGIN=login              GitHub login the review comments come from
 #
 # Exit codes: 0 worked, 2 blocked (needs a human), 3 idle (nothing to do), 1 failure.
@@ -158,7 +159,15 @@ run_codex() { # worktree prompt-file output-file
   # session never shows. The ${args[@]+...} form keeps an empty array safe on macOS bash 3.2.
   local args=()
   [[ -z "${CODEX_MODEL:-}" ]] || args+=(-m "$CODEX_MODEL")
-  codex exec ${args[@]+"${args[@]}"} -C "$1" -s workspace-write -o "$3" - < "$2"
+  # CODEX_LOOP_ENV_FILE (for example the .env.test of a local Supabase) is exported into
+  # the Codex process only, so the agent can use the variables without reading the file.
+  if [[ -n "${CODEX_LOOP_ENV_FILE:-}" && ! -r "$CODEX_LOOP_ENV_FILE" ]]; then
+    die "CODEX_LOOP_ENV_FILE is not readable"
+  fi
+  (
+    if [[ -n "${CODEX_LOOP_ENV_FILE:-}" ]]; then set -a; . "$CODEX_LOOP_ENV_FILE"; set +a; fi
+    exec codex exec ${args[@]+"${args[@]}"} -C "$1" -s workspace-write -o "$3" - < "$2"
+  )
 }
 
 # Codex only edits files; commit whatever it left. A commit Codex made itself also counts.
