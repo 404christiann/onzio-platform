@@ -57,6 +57,13 @@ test("capture and compare Academy Contact and Tryouts pages at desktop and phone
         }
         return route.continue();
       });
+      await context.route("**/_vercel/insights/script.js", route => {
+        const url = new URL(route.request().url());
+        const loopback = url.hostname.endsWith(".localhost") || ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+        return loopback
+          ? route.fulfill({ status: 200, contentType: "application/javascript", body: "" })
+          : route.fallback();
+      });
 
       for (const routePath of routes) {
         const page = await context.newPage();
@@ -100,8 +107,15 @@ test("capture and compare Academy Contact and Tryouts pages at desktop and phone
             },
           };
         });
+        const appOrigin = new URL(build.origin).origin;
+        const comparableState = {
+          ...state,
+          header: state.header.replaceAll(appOrigin, "http://alpha.localhost"),
+          main: state.main.replaceAll(appOrigin, "http://alpha.localhost"),
+          footer: state.footer.replaceAll(appOrigin, "http://alpha.localhost"),
+        };
         const hashKey = `${routePath}/${viewport.name}`;
-        const hash = digest(JSON.stringify({ header: state.header, main: state.main, footer: state.footer, links: state.links }));
+        const hash = digest(JSON.stringify({ header: comparableState.header, main: comparableState.main, footer: comparableState.footer, links: state.links }));
         const resources = { fonts: state.fonts, restReads };
         if (build.name === "base") {
           baseline.set(hashKey, { hash, errors: resourceErrors, resources });
@@ -122,9 +136,9 @@ test("capture and compare Academy Contact and Tryouts pages at desktop and phone
           route: routePath,
           viewport,
           status: response?.status() ?? null,
-          headerDomSha256: digest(state.header),
-          mainDomSha256: digest(state.main),
-          footerDomSha256: digest(state.footer),
+          headerDomSha256: digest(comparableState.header),
+          mainDomSha256: digest(comparableState.main),
+          footerDomSha256: digest(comparableState.footer),
           linkList: state.links,
           resources,
           pageErrors,
