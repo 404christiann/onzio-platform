@@ -42,6 +42,7 @@
       "agent/site06-about-content-policy": false,
       "agent/site06-contact-content-policy": false,
       "agent/site06-tryouts-content-policy": false,
+      "agent/site08-dead-theme-exports": false,
       "agent/*": false,
       "docs/codex-loop-guide": false
     }
