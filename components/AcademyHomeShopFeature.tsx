@@ -13,7 +13,7 @@ import {
   titleLines,
 } from "@/lib/shop-kit";
 import { useClubId } from "@/components/ClubContextProvider";
-import { AcademyShopLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademyShopLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 export default function AcademyHomeShopFeature({ editorContent }: { editorContent?: ShopKitContent }) {

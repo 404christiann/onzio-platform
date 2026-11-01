@@ -12,7 +12,7 @@ import {
   AcademyMatchLoadingSkeleton,
   AcademyStoryLoadingSkeleton,
   AcademySectionLoadingSkeleton,
-} from "@/components/AcademyLoadingSkeleton";
+} from "./LoadingSkeleton";
 
 function Loading({ section }: { section: "hero" | "shop" | "match" | "story" | "other" }) {
   const club = useClubContext();
@@ -23,7 +23,7 @@ function Loading({ section }: { section: "hero" | "shop" | "match" | "story" | "
   return <AcademySectionLoadingSkeleton />;
 }
 
-const Hero = nextDynamic(() => import("@/components/Hero"), { ssr: false, loading: () => <Loading section="hero" /> });
+const Hero = nextDynamic(() => import("./Hero"), { ssr: false, loading: () => <Loading section="hero" /> });
 const HomeShop = nextDynamic(() => import("@/components/AcademyHomeShopFeature"), { ssr: false, loading: () => <Loading section="shop" /> });
 const NextMatch = nextDynamic(() => import("@/components/AcademyNextMatch"), { ssr: false, loading: () => <Loading section="match" /> });
 const Story = nextDynamic(() => import("@/components/DevelopingNextGeneration"), { ssr: false, loading: () => <Loading section="story" /> });

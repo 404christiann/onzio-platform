@@ -973,7 +973,7 @@ export async function fetchShopCarouselPhotos(
  * app/%5Fclubs/[slug]/page.tsx) exactly like fetchAboutClubContent; client
  * components fall back to the shared browser client. Kept as its own export
  * so the tenant homepage can resolve the hero server-side and hand it to
- * components/Hero.tsx as an initial prop — the fix for the Diverse City
+ * the homepage hero as an initial prop — the fix for the Diverse City
  * first-paint flash of Rose City branding.
  */
 export async function fetchHomepageHeroContent(

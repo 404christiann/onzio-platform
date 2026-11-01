@@ -12,7 +12,7 @@ import { Fixture } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
 import EditorialSchedule from "@/components/editorial/EditorialSchedule";
-import { AcademyScheduleLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademyScheduleLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
 

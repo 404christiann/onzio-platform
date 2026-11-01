@@ -2,14 +2,16 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { fetchClubBranding } from "@/lib/queries";
-import { academyLoadingRoute } from "@/lib/academy-loading-route";
+import { academyLoadingRoute } from "@/components/sites/diverse-city/routes";
 
 vi.mock("@/lib/supabase", () => ({ supabase: {} }));
 
-const loadingSource = readFileSync(resolve(process.cwd(), "components/AcademyLoadingSkeleton.tsx"), "utf8");
-const routeSource = readFileSync(resolve(process.cwd(), "components/AcademyRouteLoadingSkeleton.tsx"), "utf8");
+const loadingSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/LoadingSkeleton.tsx"), "utf8");
+const routeSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/RouteLoadingSkeleton.tsx"), "utf8");
 const layoutSource = readFileSync(resolve(process.cwd(), "app/%5Fclubs/[slug]/layout.tsx"), "utf8");
-const navSource = readFileSync(resolve(process.cwd(), "components/Nav.tsx"), "utf8");
+const navSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/Nav.tsx"), "utf8");
+const shellSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/Shell.tsx"), "utf8");
+const tenantLoadingSource = readFileSync(resolve(process.cwd(), "components/TenantPageLoading.tsx"), "utf8");
 
 describe("academy Header Stays loading", () => {
   it("uses the roster-inspired centered loader without placeholder geometry", () => {
@@ -27,19 +29,21 @@ describe("academy Header Stays loading", () => {
     expect(routeSource).toContain("<ClubBrandingProvider>");
     expect(routeSource).toContain("<Nav loadingAppearance />");
     expect(routeSource).toContain("<AcademyPageLoadingSurface label={labels[route]} />");
-    expect(layoutSource).toContain("<Suspense fallback={<AcademyPageLoadingSkeleton />}>");
-    expect(layoutSource).toContain("<Nav />");
+    expect(shellSource).toContain("<Suspense fallback={<AcademyRoutePageLoading />}>");
+    expect(shellSource).toContain("<Nav />");
+    expect(layoutSource).toContain("<AcademyShell>{children}</AcademyShell>");
     expect(layoutSource).toContain("<Suspense fallback={<AcademyRouteLoadingSkeleton />}>");
   });
 
   it("keeps a visible loading state for other tenant templates", () => {
-    expect(routeSource).toContain('if (club?.presentationTemplateKey !== "academy@1") return <OtherTemplatePageLoading />');
-    expect(routeSource).toContain('aria-label="Loading page"');
-    expect(routeSource).not.toContain('if (club?.presentationTemplateKey !== "academy@1") return null');
+    expect(tenantLoadingSource).toContain('if (club?.presentationTemplateKey !== "academy@1") return <OtherTemplatePageLoading />');
+    expect(tenantLoadingSource).toContain('aria-label="Loading page"');
+    expect(tenantLoadingSource).not.toContain('if (club?.presentationTemplateKey !== "academy@1") return null');
+    expect(routeSource).not.toContain("presentationTemplateKey");
   });
 
   it("keeps the academy mobile menu scrollable while the homepage is covered", () => {
-    expect(navSource).toContain("useAcademyPageScrollLock(isAcademy && menuOpen)");
+    expect(navSource).toContain("useAcademyPageScrollLock(menuOpen)");
     expect(navSource).toContain("overflow-y-auto overscroll-contain bg-white");
     expect(navSource).toContain("flex min-h-full flex-col justify-center px-8 pb-16");
     expect(navSource).toContain("aria-expanded={menuOpen}");
@@ -81,7 +85,8 @@ describe("academy Header Stays loading", () => {
     expect(read("components/AcademyShopPage.tsx")).toContain("<AcademyInteriorLoadingSkeleton shop />");
     expect(read("app/(public)/roster/page.tsx")).toContain("loading && isAcademy && <AcademyRosterLoadingSkeleton />");
     expect(read("app/(public)/schedule/page.tsx")).toContain("loading && isAcademy && <AcademyScheduleLoadingSkeleton />");
-    expect(read("app/%5Fclubs/[slug]/loading.tsx")).toContain("<AcademyPageLoadingSkeleton />");
+    expect(read("app/%5Fclubs/[slug]/loading.tsx")).toContain("<TenantPageLoading />");
+    expect(tenantLoadingSource).toContain("<AcademyRoutePageLoading />");
     expect(loadingSource).toContain("Loading club store…");
     expect(loadingSource).toContain("Loading next match…");
     expect(loadingSource).toContain("Loading club story…");
@@ -89,7 +94,7 @@ describe("academy Header Stays loading", () => {
   });
 
   it("reveals the homepage over a loaded poster while the video buffers", () => {
-    const heroSource = readFileSync(resolve(process.cwd(), "components/Hero.tsx"), "utf8");
+    const heroSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/Hero.tsx"), "utf8");
     const homeSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/HomePage.tsx"), "utf8");
     const videoSource = readFileSync(resolve(process.cwd(), "components/ResilientBunnyVideo.tsx"), "utf8");
     expect(heroSource).toContain("!editing && !academyMediaReady");

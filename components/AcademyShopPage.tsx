@@ -8,7 +8,7 @@ import {
   normalizeKitStoreNote,
 } from "@/lib/shop-kit";
 import { useClubId } from "@/components/ClubContextProvider";
-import { AcademyInteriorLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademyInteriorLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 
 const VIEW_LABELS = ["Front", "Back"] as const;
 

@@ -13,7 +13,7 @@ import {
   fetchLeagueStandings,
   fetchSchedule,
 } from "@/lib/queries";
-import { AcademyMatchLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademyMatchLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 

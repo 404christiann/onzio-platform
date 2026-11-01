@@ -13,7 +13,7 @@ import { fetchHomepageContent } from "@/lib/queries";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import ImageFallback from "@/components/ImageFallback";
-import { AcademySectionLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 gsap.registerPlugin(ScrollTrigger);

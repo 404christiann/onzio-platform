@@ -7,6 +7,13 @@ import ts from "typescript";
 import { z } from "zod";
 
 const roots = [
+  "components/sites/diverse-city/HomePage.tsx", "components/sites/diverse-city/Shell.tsx",
+  "components/sites/diverse-city/RouteLoadingSkeleton.tsx",
+  "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css",
+  "tailwind.config.ts", "postcss.config.mjs",
+];
+const shellRoot = "components/sites/diverse-city/Shell.tsx";
+const rootsBeforeShellModule = [
   "components/sites/diverse-city/HomePage.tsx", "components/Nav.tsx", "components/Footer.tsx",
   "components/TemplateFontScope.tsx", "components/AcademyRouteLoadingSkeleton.tsx",
   "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css",
@@ -20,6 +27,7 @@ const platform = new Set([
   "lib/contract-error.ts", "packages/presentation/index.ts",
 ]);
 const visualLibraries = new Set([
+  // Keep the legacy loader in packages recorded before SITE-07A.
   "lib/academy-page-scroll-lock.ts", "lib/academy-loading-route.ts", "lib/bunny-video.ts", "lib/data.ts",
   "lib/homepage-content.ts", "lib/homepage-story-content.ts", "lib/programs-page-content.ts",
   "lib/shop-kit.ts", "lib/site-flags.ts", "lib/social-links.ts", "lib/standings-content.ts",
@@ -74,7 +82,7 @@ function localImport(from: string, specifier: string) {
   const path = specifier.startsWith("@/") ? specifier.slice(2) : specifier.startsWith(".") ? relative(".", join(dirname(from), specifier)).split(sep).join("/") : null;
   return path === null ? null : safePath(path);
 }
-function graph(root: string) {
+function graph(root: string, graphRoots: readonly string[] = roots) {
   const owned = new Set<string>();
   const shared = new Set<string>();
   const packages = new Set<string>(["next", "react", "react-dom", "typescript", "tailwindcss", "tailwindcss-animate", "postcss", "autoprefixer"]);
@@ -127,7 +135,7 @@ function graph(root: string) {
     }
     scan(source);
   }
-  roots.forEach(visit);
+  graphRoots.forEach(visit);
   return { owned: [...owned].sort(), shared: [...shared].sort(), packages: [...packages].sort() };
 }
 function versions(root: string, names: string[]) {
@@ -226,7 +234,8 @@ export function verifyPilotSource(directory: string, expectedDigest?: string) {
       if (!names.has(target)) throw new Error(`Missing emitted CSS dependency: ${target}`);
     }
   }
-  const sourceGraph = graph(join(root, "source"));
+  const retainsShellModule = manifest.files.some(item => item.path === `source/${shellRoot}`);
+  const sourceGraph = graph(join(root, "source"), retainsShellModule ? roots : rootsBeforeShellModule);
   const expected = [...sourceGraph.owned.map(path => `source/${path}`), `bindings/${bindingPath}`];
   if (expected.some(path => !names.has(path)) || [...names].some(path => path.startsWith("source/") && !path.startsWith("source/public/") && !expected.includes(path))) throw new Error("Incomplete source graph");
   if (JSON.stringify(sourceGraph.shared) !== JSON.stringify(manifest.platform.map(item => item.path).sort())) throw new Error("Platform boundary differs");
@@ -264,6 +273,7 @@ export function verifyPilotReconstructionSource({ root, directory, expectedDiges
   const verified = verifyPilotSource(directory, expectedDigest);
   const { manifest } = verified;
   if (manifest.format !== "onzio-pilot-source@2") throw new Error("Regenerate and review a new pilot source package with complete dependency-lock metadata before reconstruction");
+  if (!manifest.files.some(item => item.path === `source/${shellRoot}`)) throw new Error("Regenerate and review a new pilot source package that retains the Academy shell module before reconstruction");
   if (JSON.stringify(versions(root, Object.keys(manifest.packages))) !== JSON.stringify(manifest.packages)) throw new Error("Runtime versions differ; compatibility review required");
   if (digest(file(root, "package-lock.json")) !== manifest.packageLockSha256) throw new Error("Dependency lock differs; compatibility review required");
   if (!file(root, bindingPath).equals(file(directory, `bindings/${bindingPath}`))) throw new Error("Binding meaning changed; migration review required");

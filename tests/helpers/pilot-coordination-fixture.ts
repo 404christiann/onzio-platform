@@ -10,7 +10,7 @@ import { packPilotSource, reconstructPilotSource } from "../../scripts/pilot-sou
 const project = resolve(import.meta.dirname, "../..");
 const loader = createRequire(import.meta.url).resolve("tsx");
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
-const visualRoots = ["components/sites/diverse-city/HomePage.tsx", "components/Nav.tsx", "components/Footer.tsx", "components/TemplateFontScope.tsx", "components/AcademyRouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
+const visualRoots = ["components/sites/diverse-city/HomePage.tsx", "components/sites/diverse-city/Shell.tsx", "components/sites/diverse-city/RouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
 
 export function coordinationFixture() {
   const directory = mkdtempSync(join(tmpdir(), "onzio-coordination-"));

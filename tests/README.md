@@ -331,6 +331,30 @@ The policy suite covers hidden About and Logo maintenance, strict trusted paths,
 
 Run shared database and browser fixture writers serially. See [the About policy](../docs/about-content-policy.md) for the unchanged security, media, receipt, and concurrency contracts. This SQL and API package does not claim new browser acceptance or hosted application.
 
+## Academy site shell and routes
+
+`components/sites/diverse-city` owns the Academy header, footer, hero, font
+scope, loading states and one table of the pages the tenant adapters implement
+(`routes.ts`). Header links, footer links, hero default buttons, the active-link
+rule, hero-header behavior and loading labels all derive from that table. A
+destination is the branded `AcademyHref` type that only `academyHref` can build,
+so a hand-written path does not compile.
+
+```bash
+npx vitest run tests/architecture/academy-site-routes.test.ts tests/contracts/academy-site-navigation.test.ts
+npx vitest run tests/contracts/academy-clear-frame-loading.test.ts tests/contracts/academy-footer-focus.test.ts tests/contracts/academy-nav-branding-timeout.test.ts tests/contracts/academy-programs-loading-stall.test.ts tests/contracts/academy-hero-content-stall.test.ts
+```
+
+The architecture check fails when the table and the `page.tsx` files under
+`app/%5Fclubs/[slug]` differ, and when any module file other than `routes.ts`
+spells an internal path. Add a page adapter and its table entry together. The
+contracts read the module's real sources, so they need no browser or database.
+
+Public routes and the homepage editor preview both render `AcademyShell`. Before
+and after screenshots, header and footer DOM hashes, link lists and resource gates
+come from guarded production builds of the base and the head revision. Run the
+browser pass under the shared database lock, as with the homepage suites above.
+
 ## Actual pilot source package
 
 Run `npx vitest run tests/architecture/pilot-source-package.test.ts` for package

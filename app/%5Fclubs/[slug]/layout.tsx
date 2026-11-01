@@ -10,7 +10,8 @@ import EditorialShell from "@/components/editorial/EditorialShell";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { loadAcademyShellBranding } from "@/lib/academy-shell-branding";
-import AcademyRouteLoadingSkeleton, { AcademyPageLoadingSkeleton } from "@/components/AcademyRouteLoadingSkeleton";
+import AcademyRouteLoadingSkeleton from "@/components/sites/diverse-city/RouteLoadingSkeleton";
+import AcademyShell from "@/components/sites/diverse-city/Shell";
 import type { ClubContext } from "@/lib/club-context";
 import type { Metadata } from "next";
 
@@ -49,7 +50,7 @@ export async function generateMetadata({
   };
 }
 
-async function AcademyResolvedShell({ club, children }: { club: ClubContext; children: React.ReactNode }) {
+async function AcademyBrandedShell({ club, children }: { club: ClubContext; children: React.ReactNode }) {
   // Keep the first-paint crest when the request is healthy, but never hold
   // every route behind an unbounded branding read. The provider can retry on
   // the client when this request fails or exceeds the budget.
@@ -57,16 +58,7 @@ async function AcademyResolvedShell({ club, children }: { club: ClubContext; chi
 
   return (
     <ClubBrandingProvider initialBranding={branding}>
-      {/* Remove the footer and its links while the page loader is present so
-          slow routes cannot scroll into a blank footer-sized area. */}
-      <style>{`html:has([data-academy-page-loading]) footer { display: none; }`}</style>
-      <Nav />
-      <main>
-        <Suspense fallback={<AcademyPageLoadingSkeleton />}>
-          {children}
-        </Suspense>
-      </main>
-      <Footer />
+      <AcademyShell>{children}</AcademyShell>
     </ClubBrandingProvider>
   );
 }
@@ -107,11 +99,9 @@ export default async function TenantLayout({
   if (club.presentationTemplateKey === "academy@1") {
     return (
       <ClubContextProvider club={club}>
-        <TemplateFontScope templateKey={club.presentationTemplateKey}>
-          <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
-            <AcademyResolvedShell club={club}>{children}</AcademyResolvedShell>
-          </Suspense>
-        </TemplateFontScope>
+        <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
+          <AcademyBrandedShell club={club}>{children}</AcademyBrandedShell>
+        </Suspense>
       </ClubContextProvider>
     );
   }

@@ -51,14 +51,15 @@ are not substituted into the new build automatically.
 
 ## Package boundary
 
-Explicit roots cover the real page, Nav, Footer, font scope, loading shell,
-injected champions badge, root font declarations and stylesheet compiler inputs.
+Explicit roots cover the real page, the Academy shell (header, footer, font
+scope and page frame), the route loading shell, injected champions badge, root
+font declarations and stylesheet compiler inputs.
 The tool derives the source inventory from literal imports, including dynamic
 imports. Shared visual modules remain whole during this proof.
 
 Current platform dependencies include tenant and branding contexts, query reads,
-preview context identity, editor state types, database types, presentation
-validation, errors and media policy. These files never transfer from the retained
+preview context identity, editor state types, database types, errors and media
+policy. These files never transfer from the retained
 package. The manifest records their original hashes for provenance. Reconstruction
 keeps their current bytes and requires the complete accepted `package-lock.json`
 bytes to match.
@@ -78,10 +79,20 @@ and accept its new digest. The tool never upgrades or rewrites old artifacts.
 Missing or malformed v2 lock metadata fails verification. Packages without the
 required framework/build roots also fail verification.
 
+Packages made before the Academy shell moved into its site module (SITE-07A) list
+the old header, footer, font-scope and loading roots. They still verify byte for
+byte under their original digest, and the tool picks that root set when the
+manifest does not retain `components/sites/diverse-city/Shell.tsx`. Reconstruction
+refuses them, because the tenant layout and editor preview now render the module's
+shell and an old package cannot replace it. Regenerate from a revision that
+includes the module and accept the new digest. That includes the accepted package
+recorded in [the Academy acceptance](pilot-academy-acceptance.md).
+
 Legacy homepage capabilities are retained as binding metadata. Reconstruction
 refuses a changed capability implementation instead of overwriting current save
 or editor policy. SQL authorization, receipts and content revisions remain current.
 The tenant layout and editor preview mounting remain current shared contracts.
+Both render the retained `AcademyShell`.
 
 The package retains every public file because computed image paths cannot be
 exhaustively inferred from string literals. It also retains all generated CSS and

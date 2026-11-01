@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { academyFooterLinks, academyNavItems } from "@/components/sites/diverse-city/navigation";
 
 const root = process.cwd();
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
@@ -58,8 +59,11 @@ describe("DCFC-304 reusable public route acceptance", () => {
     expect(source("middleware.ts")).toContain(
       "if (internalSlug !== tenant.slug) return notFound()",
     );
-    expect(source("components/Nav.tsx")).toContain(
-      'rewrittenPathname.replace(/^\\/_clubs\\/[^/]+/, "") || "/"',
+    expect(source("components/sites/diverse-city/Nav.tsx")).toContain(
+      "academyPathname(rewrittenPathname)",
+    );
+    expect(source("components/sites/diverse-city/routes.ts")).toContain(
+      '.replace(/^\\/(?:_clubs|%5fclubs)\\/[^/]+/i, "")',
     );
     expect(joined).not.toContain('club.slug === "diverse-city"');
     expect(joined).not.toContain('club.slug === "alpha"');
@@ -83,25 +87,22 @@ describe("DCFC-304 reusable public route acceptance", () => {
   });
 
   it("uses editable program navigation and the approved Academy footer paths", () => {
-    const nav = source("components/Nav.tsx");
-    const footer = source("components/Footer.tsx");
-    expect(nav).toContain("fetchPrograms(club.id)");
-    expect(nav).toContain('label: "Tryouts", href: "/tryouts"');
-    // Programs is now an intentional hover/tap-only dropdown trigger with no
-    // page of its own (matching the existing "Club" pattern), per Christian's
+    expect(source("components/sites/diverse-city/Nav.tsx")).toContain("fetchPrograms(club.id)");
+    const items = academyNavItems([{ slug: "mens-teams", navLabel: "", displayTitle: "Men's Teams" }]);
+    const schedule = items.find((item) => item.label === "Schedule");
+    expect(schedule && "children" in schedule ? schedule.children : []).toContainEqual({ label: "Tryouts", href: "/tryouts" });
+    // Programs is an intentional hover/tap-only dropdown trigger with no page
+    // of its own (matching the existing "Club" pattern), per Christian's
     // explicit request — so it must exist but must NOT carry its own href.
-    expect(nav).toContain('label: "Programs",');
-    expect(nav).not.toContain('label: "Programs", href:');
-    for (const href of [
-      'href: "/programs"',
-      'href: "/roster"',
-      'href: "/schedule"',
-      'href: "/sponsors"',
-      'href: "/contact"',
-      'href: "/tryouts"',
-    ]) {
-      expect(footer).toContain(href);
-    }
+    const programs = items.find((item) => item.label === "Programs");
+    expect(programs).toBeDefined();
+    expect(programs).not.toHaveProperty("href");
+    expect(programs && "children" in programs ? programs.children : []).toEqual([
+      { label: "Men's Teams", href: "/programs/mens-teams" },
+    ]);
+    expect(academyFooterLinks.map((link) => link.href)).toEqual(
+      expect.arrayContaining(["/programs", "/roster", "/schedule", "/sponsors", "/contact", "/tryouts"]),
+    );
   });
 
   it("renders tenant-specific admin chrome without an empty image source", () => {

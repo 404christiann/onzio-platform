@@ -37,7 +37,7 @@ function copy(name: string) {
 }
 
 beforeAll(() => {
-  const roots = ["components/sites/diverse-city/HomePage.tsx", "components/Nav.tsx", "components/Footer.tsx", "components/TemplateFontScope.tsx", "components/AcademyRouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
+  const roots = ["components/sites/diverse-city/HomePage.tsx", "components/sites/diverse-city/Shell.tsx", "components/sites/diverse-city/RouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
   for (const path of roots) put(source, path, path.endsWith(".css") ? "body { color: navy; }" : "export {};");
   put(source, roots[0], 'import "@/components/ClubContextProvider"; export const child = () => import("./Child"); export type ChildType = typeof import("./TypeChild"); import Alias = require("./AliasChild");');
   put(source, "components/sites/diverse-city/TypeChild.ts", 'export const typeChild = "Retained type child";');
@@ -169,6 +169,29 @@ describe("retained pilot source boundary", () => {
     expect(existsSync(output)).toBe(false);
     expect(readFileSync(join(historical, "manifest.json"))).toEqual(original);
     expect(verifyPilotSource(historical, accepted).digest).toBe(accepted);
+  });
+  it("still verifies a package made before the Academy shell module but refuses to reconstruct it", () => {
+    const earlier = copy("before-shell-module");
+    const shellFiles = ["source/components/sites/diverse-city/Shell.tsx", "source/components/sites/diverse-city/RouteLoadingSkeleton.tsx"];
+    const earlierRoots = ["components/Nav.tsx", "components/Footer.tsx", "components/TemplateFontScope.tsx", "components/AcademyRouteLoadingSkeleton.tsx"];
+    for (const path of shellFiles) rmSync(join(earlier, path));
+    for (const path of earlierRoots) put(earlier, `source/${path}`, "export {};");
+    const accepted = rewriteManifest(earlier, manifest => {
+      const files = (manifest.files as { path: string; bytes: number; sha256: string }[]).filter(item => !shellFiles.includes(item.path));
+      for (const path of earlierRoots) files.push({ path: `source/${path}`, sha256: hash("export {};"), bytes: Buffer.byteLength("export {};") });
+      manifest.files = files.sort((a, b) => a.path.localeCompare(b.path));
+    });
+    expect(verifyPilotSource(earlier, accepted).digest).toBe(accepted);
+    const verified = cli(source, ["verify", "--package", earlier, "--digest", accepted]);
+    expect(verified.error).toBeUndefined();
+    expect(verified.status).toBe(0);
+    const output = join(directory, "rejected-before-shell-module");
+    expect(() => reconstructPilotSource({ root: source, directory: earlier, expectedDigest: accepted, output })).toThrow("retains the Academy shell module");
+    const result = cli(source, ["reconstruct", "--package", earlier, "--digest", accepted, "--output", output]);
+    expect(result.error).toBeUndefined();
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("retains the Academy shell module");
+    expect(existsSync(output)).toBe(false);
   });
   it.each(["next", "react", "react-dom", "typescript"])("rejects a changed implicit framework/build package %s", name => {
     const current = join(directory, `changed-${name}`);

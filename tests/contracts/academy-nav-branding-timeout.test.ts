@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import ts from "typescript";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const navSource = readFileSync(resolve(process.cwd(), "components/Nav.tsx"), "utf8");
+const navSource = readFileSync(resolve(process.cwd(), "components/sites/diverse-city/Nav.tsx"), "utf8");
 
 // The contract runner uses Node and cannot import this client TSX component.
 // Transpile and execute the actual timer helpers from its TypeScript AST.

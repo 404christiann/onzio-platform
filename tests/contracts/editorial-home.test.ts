@@ -560,7 +560,7 @@ describe("editorial header nav", () => {
 describe("editorial footer attribution", () => {
   it("reuses the same public Onzio attribution link as the shared Diverse City footer", () => {
     const editorialFooter = read("components/editorial/EditorialFooter.tsx");
-    const sharedFooter = read("components/Footer.tsx");
+    const sharedFooter = read("components/sites/diverse-city/Footer.tsx");
     const attribution = read("components/PoweredByOnzio.tsx");
 
     expect(editorialFooter).toContain(
@@ -612,6 +612,12 @@ describe("editorial home: classic regression", () => {
       "components/NextMatchCard.tsx",
       "components/PhotoSlideshow.tsx",
       "components/TemplateFontScope.tsx",
+      "components/sites/diverse-city/Nav.tsx",
+      "components/sites/diverse-city/Footer.tsx",
+      "components/sites/diverse-city/Hero.tsx",
+      "components/sites/diverse-city/Shell.tsx",
+      "components/sites/diverse-city/FontScope.tsx",
+      "components/sites/diverse-city/RouteLoadingSkeleton.tsx",
     ]) {
       expect(read(file)).not.toMatch(/editorial/i);
     }

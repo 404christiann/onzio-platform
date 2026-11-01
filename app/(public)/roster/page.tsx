@@ -12,7 +12,7 @@ import { Player, Staff } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
 import EditorialRoster from "@/components/editorial/EditorialRoster";
-import { AcademyRosterLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
+import { AcademyRosterLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
 
