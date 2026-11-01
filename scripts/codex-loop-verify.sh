@@ -45,13 +45,26 @@ BASE_SHA="$(git -C "$WT" merge-base origin/main HEAD)"
 CHANGED="$(git -C "$WT" diff --name-only "$BASE_SHA..HEAD")"
 
 # ---- 1. refuse to run a change that alters how checks run, unless a person says so
-RISKY="$(grep -E '^(scripts/|\.github/|supabase/config\.toml$)|^[^/]+$' <<<"$CHANGED" | grep -vE '\.md$' || true)"
+RISKY="$(grep -E '^(scripts/|\.github/|supabase/config\.toml$)|^[^/]+$' <<<"$CHANGED" | grep -vE '\.md$|^(middleware|instrumentation)\.(ts|tsx|js)$' || true)"
 if [[ -n "$RISKY" && "${CODEX_LOOP_TRUST_DIFF:-0}" != "1" ]]; then
   { echo "## Verification run by the runner"; echo
     echo "Not run. This change touches root-level files, scripts, CI or Supabase config, which control how checks run, and code written by Codex would execute outside its sandbox. A person must review and run the checks (or set \`CODEX_LOOP_TRUST_DIFF=1\`):"; echo
     sed 's/^/- `/; s/$/`/' <<<"$RISKY"; } > "$OUT"
   exit 3
 fi
+
+# ---- 1b. check a clean checkout of the exact commit, not the working directory.
+# A worktree carries ignored files (test-results/, .next/, logs) that tsconfig and the build
+# pick up, so the same commit can fail there and pass on a clean copy. The baseline is a clean
+# checkout, so the change must be one too, and the two then differ only by the commit.
+mkdir -p "$WORKTREES"
+CHECK_DIR="$WORKTREES/.verify-${HEAD_SHA:0:7}"
+if [[ -e "$CHECK_DIR" ]]; then git -C "$ROOT" worktree remove --force "$CHECK_DIR" >/dev/null 2>&1 || rm -rf "$CHECK_DIR"; fi
+git -C "$ROOT" worktree prune
+git -C "$ROOT" worktree add --detach "$CHECK_DIR" "$HEAD_SHA" >/dev/null 2>&1 \
+  || { echo "verify: cannot make a clean checkout of $HEAD_SHA" >&2; exit 64; }
+ln -sfn "$WT/node_modules" "$CHECK_DIR/node_modules"
+trap 'git -C "$ROOT" worktree remove --force "$CHECK_DIR" >/dev/null 2>&1 || true' EXIT
 
 # ---- 2. scrubbed environment; loopback-only Supabase
 scrubbed() { # dir cmd...   run cmd in dir with only HOME/PATH/TMPDIR/locale and the env file
@@ -144,8 +157,8 @@ rerun_new_failures() { # name -> narrows $RES/$n.new to failures that persist
   [[ -n "${files// /}" ]] || return 0
   json="$RES/$n.rerun.json"; rm -f "$json"
   local full=(npx vitest run $files --testTimeout=60000 --hookTimeout=90000 --reporter=json "--outputFile=$json")
-  if [[ "$lockflag" == "1" ]]; then scrubbed "$WT" "$LOCK" "${LIMIT[@]}" "$t" "${full[@]}" >"$RES/$n.rerun.log" 2>&1
-  else scrubbed "$WT" "${LIMIT[@]}" "$t" "${full[@]}" >"$RES/$n.rerun.log" 2>&1; fi
+  if [[ "$lockflag" == "1" ]]; then scrubbed "$CHECK_DIR" "$LOCK" "${LIMIT[@]}" "$t" "${full[@]}" >"$RES/$n.rerun.log" 2>&1
+  else scrubbed "$CHECK_DIR" "${LIMIT[@]}" "$t" "${full[@]}" >"$RES/$n.rerun.log" 2>&1; fi
   if [[ -s "$json" ]]; then
     jq -r '.testResults[] | . as $f | ($f.name | sub("^.*/(?<p>(tests|lib|app)/.*)$"; "\(.p)")) as $p
            | (($f.assertionResults[]? | select(.status=="failed") | "\($p) > \(.fullName)"),
@@ -185,7 +198,7 @@ for n in "${LIST[@]}"; do
     continue
   fi
   echo "verify: running $n ..." >&2
-  exec_check "$WT" "$RES" "$n"
+  exec_check "$CHECK_DIR" "$RES" "$n"
   rc="$(cat "$RES/$n.exit")"; secs="$(cat "$RES/$n.secs")"; counts="$(cat "$RES/$n.counts")"
   if [[ "$rc" == "0" ]]; then
     printf '| %s | `%s` | PASS | %s%s (%ss) |\n' "$label" "$cmdtxt" "${counts:-exit 0}" "" "$secs" >> "$RES/rows"

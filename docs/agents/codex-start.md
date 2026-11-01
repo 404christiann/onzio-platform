@@ -41,10 +41,16 @@ down they are reported "NOT RUN", and a change touching `supabase/`, `lib/` or
 `tests/database/` is held back. `CODEX_LOOP_VERIFY=off` skips the runner's checks, and
 `CODEX_LOOP_VERIFY=types,lint,contracts` runs a subset; for a change touching those paths the
 database rows are still written as NOT RUN and `off` is refused. A change to any root-level
-file other than markdown (`package.json`, `.eslintrc.json`, `tailwind.config.ts` and so on),
-or to `scripts/`, `.github/` or `supabase/config.toml`, is refused (exit 3) because Codex's
+file other than markdown and `middleware.ts` or `instrumentation.ts` (`package.json`,
+`.eslintrc.json`, `tailwind.config.ts` and so on), or to `scripts/`, `.github/` or
+`supabase/config.toml`, is refused (exit 3) because Codex's
 code would run outside the sandbox; `CODEX_LOOP_TRUST_DIFF=1` overrides that after a person
 has read the diff.
+
+The checks run on a clean checkout of the exact commit (a temporary worktree, removed
+afterwards), never on the working directory, because ignored files such as `test-results/`
+or `.next/` are picked up by `tsc` and the build and would make the same commit fail there
+and pass on a clean copy.
 
 What limits that code, and what does not: `HOME` is an empty temporary directory, so
 `~/.config/gh`, `~/.supabase` and `~/.ssh` are out of reach; the environment holds only the
