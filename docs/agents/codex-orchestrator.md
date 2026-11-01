@@ -62,7 +62,10 @@ SETUP, once. Report each result in one line and stop if one fails:
    cannot do.
 
 THE LOOP. GitHub is the source of truth. Repeat until a stop condition:
-1. Refresh. git fetch. List open PRs from agent/* branches with their newest onzio-coder
+1. Refresh. git fetch, then move your own worktree to the new origin/main (git checkout
+   --detach origin/main) so you always run the current scripts. A stale copy of
+   scripts/codex-loop-verify.sh gives wrong evidence; the script refuses (exit 64) if its copy
+   differs from origin/main. List open PRs from agent/* branches with their newest onzio-coder
    review. List open ready-for-agent issues. A ticket is ready when every native blocker
    (gh api repos/404christiann/onzio-platform/issues/<n>/dependencies/blocked_by) is closed,
    it is not in scripts/codex-loop.skip, and it has none of the labels in-progress, blocked,
