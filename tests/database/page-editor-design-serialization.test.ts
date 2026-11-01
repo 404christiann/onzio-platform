@@ -25,8 +25,8 @@ const program = { slug: "new-program", nav_label: "New", display_title: "New", k
   registration_eyebrow: "", registration_headline: "", registration_body: "", registration_pending_body: "", registration_pending_label: "", status: "active", sort_order: 0 };
 const cases = [
   { label: "Tryouts template change", initial: "academy", next: "clubhouse", rpc: "save_tryouts_page", receipt: "tryouts_page_save_receipts", error: null },
-  { label: "Program page template change", initial: "academy", next: "clubhouse", rpc: "save_program_page", receipt: "program_page_receipts", error: "PAGE_UNAVAILABLE" },
-  { label: "Programs directory template change", initial: "academy", next: "clubhouse", rpc: "save_program_directory", receipt: "program_directory_receipts", error: "PAGE_UNAVAILABLE" },
+  { label: "Program page template change", initial: "academy", next: "clubhouse", rpc: "save_program_page", receipt: "program_page_receipts", error: null },
+  { label: "Programs directory template change", initial: "academy", next: "clubhouse", rpc: "save_program_directory", receipt: "program_directory_receipts", error: null },
   { label: "Editorial Store disable", initial: "editorial", next: null, rpc: "save_shop_page", receipt: "shop_page_receipts", error: null },
   { label: "Shop design revision change", initial: "cinematic", next: "heritage", rpc: "save_shop_page", receipt: "shop_page_receipts", error: "DESIGN_CHANGED" },
 ];
@@ -80,7 +80,10 @@ describe("remaining editor saves serialize with publication on independent conne
       const baseline = (await writer.query("select onzio.load_tryouts_page($1) as data", [clubId])).rows[0].data;
       payload = { operationId, expectedRevision: baseline.revision, page: { intro_with_tryouts: "New", intro_no_tryouts: "Later" }, events: [], deletedIds: [] };
     } else if (target.rpc === "save_program_page") payload = { operationId, programId: null, expected: { programUpdatedAt: null, gallery: [] }, program, gallery: [] };
-    else payload = { operationId, expected: [], programs: [] };
+    else {
+      const seeded = (await admin.query("insert into onzio.programs(club_id,slug,display_title) values($1,'seeded-program','Seeded') returning id,updated_at::text as updated_at", [clubId])).rows[0];
+      payload = { operationId, expected: [{ id: seeded.id, updatedAt: seeded.updated_at }], programs: [{ id: seeded.id, sortOrder: 0, status: "hidden" }] };
+    }
 
     const writerPid = Number((await writer.query("select pg_backend_pid() as pid")).rows[0].pid);
     await publisher.query("begin");
@@ -109,6 +112,18 @@ describe("remaining editor saves serialize with publication on independent conne
           expect(response.events).toEqual([]);
           expect((await admin.query("select response from onzio_private.tryouts_page_save_receipts where club_id=$1 and actor_id=$2 and operation_id=$3", [clubId, USER_IDS.ownerAal2, operationId])).rows).toEqual([{ response }]);
           expect((await writer.query("select onzio.load_tryouts_page($1) as data", [clubId])).rows[0].data.page).toEqual(response.page);
+          return;
+        }
+        if (target.rpc === "save_program_page") {
+          expect(response.program.display_title).toBe("New");
+          expect((await admin.query("select response from onzio_private.program_page_receipts where club_id=$1 and actor_id=$2 and operation_id=$3", [clubId, USER_IDS.ownerAal2, operationId])).rows).toEqual([{ response }]);
+          expect((await writer.query("select onzio.load_program_page($1,$2) as data", [clubId, response.program.id])).rows[0].data.program).toEqual(response.program);
+          return;
+        }
+        if (target.rpc === "save_program_directory") {
+          expect(response.programs[0].status).toBe("hidden");
+          expect((await admin.query("select response from onzio_private.program_directory_receipts where club_id=$1 and actor_id=$2 and operation_id=$3", [clubId, USER_IDS.ownerAal2, operationId])).rows).toEqual([{ response }]);
+          expect((await writer.query("select onzio.load_program_directory($1) as data", [clubId])).rows[0].data.programs).toEqual(response.programs);
           return;
         }
         expect(response.sections).toMatchObject([{ kit_variant: "home", title: "New kit", bullet_points: [] }]);

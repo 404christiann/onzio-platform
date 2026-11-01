@@ -1,3 +1,12 @@
+## 2026-11-01 - SITE-06F issue #42: Programs content policy
+
+- Resumed the existing #42 implementation on `agent/site06f-programs-content-policy-refresh`, refreshed from `origin/main` `503768a`. Preserved the original dirty #42 worktree. The existing `agent/*` rule already disables branch previews, so no redundant `vercel.json` change is needed.
+- The forward migration removes only the four Programs template-availability refusals. The page and directory APIs no longer reject a non-Academy template before the existing authority and validation logic. The policy guide records the unchanged Academy-only editor, navigation, preview-forms route, public routes and preview.
+- Focused contracts pass: 168/168 across six files. Four local database suites pass: 186/186. Applied `20261030170000_programs_content_policy.sql` only to the local Supabase stack under the database lock. The clean-base verifier on `503768a` exited 0; its database row was SAME AS BASELINE at 803/804, with the same failure on the clean base.
+- Exact-head verification and independent review of the final revision are pending. No hosted Supabase, deployment, push or PR was performed. The migration-bearing branch remains unpublished until Christian confirms the review bot's hosted Supabase access is live.
+- Files: Programs API routes, migration, six focused contract/database suites, `docs/programs-content-policy.md`, `tests/README.md`, `docs/site-architecture.md`, and this handoff. No browser acceptance is claimed.
+- Exact next step: commit the acceptance docs, run `scripts/codex-loop-verify.sh` on the exact head with `CODEX_LOOP_ENV_FILE=~/.codex/onzio-local-env/.env.test`, then obtain an independent review of that final revision. Publish only after the migration-review access gate is confirmed.
+
 ## 2026-11-01 - SITE-07 issue #48: Tryouts and Contact page ownership
 
 - Resumed from `c93bc0f`. The Academy Tryouts route now links Contact through `academyHref("contact")` in `components/sites/diverse-city/AcademyTryoutsPage.tsx`. The route-table architecture suite passes 5/5 and `npx vitest run --changed origin/main` passes 433/433 across 28 files.

@@ -55,21 +55,11 @@ for (const target of cases) describe(`${target.label} receipt recovery after pag
   beforeEach(() => mocks.getClubContext.mockResolvedValue({ id: clubId, role: "owner", lifecycle: "active", presentationTemplateKey: target.template, storeEnabled: false }));
 
   it("applies the current domain policy to fresh GET and POST", async () => {
-    if (target.label === "Shop" || target.label === "Tryouts") {
-      mocks.rpc.mockResolvedValue({ data: target.snapshot(), error: null });
-      const { GET, POST } = await target.route();
-      expect((await GET(request(target.path))).status).toBe(200);
-      expect((await POST(request(target.path, target.body))).status).toBe(200);
-      expect(mocks.rpc).toHaveBeenCalledTimes(2);
-      return;
-    }
+    mocks.rpc.mockResolvedValue({ data: target.snapshot(), error: null });
     const { GET, POST } = await target.route();
-    expect((await GET(request(target.path))).status).toBe(404);
-    expect((await POST(request(target.path, target.body))).status).toBe(404);
-    expect(mocks.rpc).not.toHaveBeenCalled();
-    expect(mocks.retirePublishedMedia).not.toHaveBeenCalled();
-    expect(mocks.authorizeAdminAccess).toHaveBeenCalledTimes(1);
-    expect(mocks.authorizeMutation).toHaveBeenCalledTimes(1);
+    expect((await GET(request(target.path))).status).toBe(200);
+    expect((await POST(request(target.path, target.body))).status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledTimes(2);
   });
 
   it("recovers an actor receipt and finishes its pending media cleanup", async () => {

@@ -524,3 +524,25 @@ writers serially. The HTTP schema and SQL retain their existing type, calendar,
 and public-link differences. Normal editor controls, bindings, public rendering,
 and form status behavior retain their existing policy. This SQL/API package
 claims no new browser acceptance or hosted application.
+
+## Programs content maintenance policy
+
+The [Programs policy guide](../docs/programs-content-policy.md) describes SITE-06F.
+Direct SQL and loopback PostgREST cover program page and directory maintenance
+under every template and under absent presentation history, strict boundaries,
+the three destination layers, media rules, content CAS on `updated_at` baselines,
+original hashes, historical receipt replay for both surfaces, and fault-injected
+atomicity. Independent database connections race both legacy writer tables
+against the page save and the `programs` table against the directory save, in
+both orders. Exported GET and POST handlers retain parsing, tenant, origin,
+cleanup, and error mapping behavior.
+
+```bash
+npx vitest run tests/contracts/programs-content-policy-route.test.ts tests/contracts/page-editor-receipt-availability-route.test.ts tests/contracts/program-page-editor.test.ts tests/contracts/page-editor-media-retirement-route.test.ts tests/contracts/program-editor-media-hydration-route.test.ts tests/contracts/editorial-admin-surface.test.ts
+npx vitest run tests/database/programs-content-policy.test.ts tests/database/programs-page-concurrent-save.test.ts tests/database/program-page-atomic-save.test.ts tests/database/page-editor-design-serialization.test.ts
+```
+
+Export the local test environment before database checks. Run shared-fixture
+writers serially. The Programs editor page, admin navigation entry, preview-forms
+route, public routes, and Academy preview keep their Academy-only policy. This
+SQL and API package claims no new browser acceptance or hosted application.

@@ -69,7 +69,6 @@ describe("Programs public-page editor contract", () => {
     const sql = source("supabase/migrations/20261002204000_program_page_atomic_save.sql");
     expect(route).toContain("requireFreshClubSession");
     expect(route).toContain("authorizeMutation");
-    expect(route).toContain('club.presentationTemplateKey !== "academy@1"');
     expect(route).toContain('request.headers.get("sec-fetch-site") !== "cross-site"');
     expect(route).toContain('onzio.rpc("save_program_page"');
     expect(sql).toContain("create function onzio.save_program_page");
