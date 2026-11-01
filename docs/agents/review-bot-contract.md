@@ -72,10 +72,13 @@ are not new policy for the bot to weigh; Christian can strike one by editing thi
 - The merge is pinned to the head the review covered:
   `gh pr merge <N> --match-head-commit <reviewed sha>`. If the head moves, the review no
   longer counts and the bot stops.
-- A PR that touches `supabase/`, data access under `lib/`, or RLS does not merge while any
-  required suite in its Verification section is marked "not run". Codex reports
-  "not run: sandbox blocked it" when it cannot reach the local database; that is a gap
-  for a person to close, not a pass.
+- A PR that touches `supabase/`, data access under `lib/`, or RLS does not merge while a
+  required suite is not run or has new failures. The runner now runs the full check set
+  outside the Codex sandbox (`scripts/codex-loop-verify.sh`), compares failures with a clean
+  copy of the base commit, and puts its table in the PR body under "Verification run by the
+  runner". It does not push when that fails, so a PR the bot sees has passed it. A
+  "NOT RUN" database row (for example local Supabase was down) on such a PR is a gap for a
+  person to close, not a pass.
 
 ## Not yet decided
 

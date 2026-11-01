@@ -17,8 +17,15 @@
 #   CODEX_LOOP_MAX=n                   iterations per invocation (default 1: pilot first)
 #   CODEX_LOOP_FIX_ROUNDS=n            fix rounds per PR before it is labeled blocked (3)
 #   CODEX_MODEL=name                   model for codex exec, overriding ~/.codex/config.toml
-#   CODEX_LOOP_ENV_FILE=path           env file (local Supabase test values) exported to Codex
+#   CODEX_LOOP_ENV_FILE=path           env file (local Supabase test values). Codex gets only its
+#                                      SUPABASE_* and NEXT_PUBLIC_* lines; the verification run
+#                                      gets the whole file.
+#   CODEX_LOOP_VERIFY=off              skip the runner's verification (default: run it)
+#                                      (see scripts/codex-loop-verify.sh for the check list)
 #   ONZIO_BOT_LOGIN=login              GitHub login the review comments come from
+#
+# After Codex finishes and the runner commits, scripts/codex-loop-verify.sh runs the full
+# check set OUTSIDE the sandbox on that exact commit and nothing is pushed unless it passes.
 #
 # Exit codes: 0 worked, 2 blocked (needs a human), 3 idle (nothing to do), 1 failure.
 # Codex only edits files. The runner does everything that needs git writes, the network
@@ -170,8 +177,13 @@ run_codex() { # worktree prompt-file output-file
   [[ -z "${CODEX_MODEL:-}" ]] || args+=(-m "$CODEX_MODEL")
   # CODEX_LOOP_ENV_FILE (for example the .env.test of a local Supabase) is exported into
   # the Codex process only, so the agent can use the variables without reading the file.
+  # Only the Supabase and public Next lines go to Codex; the Stripe test keys in the same
+  # file are for the runner's verification only. eval of the filtered lines works on macOS
+  # bash 3.2, where sourcing a process substitution does not.
   (
-    if [[ -n "${CODEX_LOOP_ENV_FILE:-}" ]]; then set -a; . "$CODEX_LOOP_ENV_FILE"; set +a; fi
+    if [[ -n "${CODEX_LOOP_ENV_FILE:-}" ]]; then
+      set -a; eval "$(grep -E '^(SUPABASE_|NEXT_PUBLIC_)' "$CODEX_LOOP_ENV_FILE")"; set +a
+    fi
     exec codex exec ${args[@]+"${args[@]}"} -C "$1" -s workspace-write -o "$3" - < "$2"
   )
 }
@@ -186,6 +198,20 @@ commit_all() { # worktree subject body
     git -C "$wt" add -A
     git -C "$wt" commit -q -m "$subject" -m "$body"
   fi
+}
+
+VERIFY_BIN="${CODEX_LOOP_VERIFY_BIN:-$ROOT/scripts/codex-loop-verify.sh}"
+
+# Full verification outside the sandbox. Returns 0 verified (or skipped on request),
+# 1 new failures or a required suite not run, 3 refused (the change alters how checks run).
+verify_gate() { # worktree out-file
+  if [[ "${CODEX_LOOP_VERIFY:-}" == "off" ]]; then
+    printf '## Verification run by the runner\n\nSkipped on request (CODEX_LOOP_VERIFY=off).\n' > "$2"
+    return 0
+  fi
+  local rc=0
+  "$VERIFY_BIN" "$1" "$2" || rc=$?
+  return "$rc"
 }
 
 install_deps() {
@@ -285,6 +311,25 @@ for (( i = 1; i <= MAX_ITERATIONS; i++ )); do
     sha="$(git -C "$wt" rev-parse HEAD)"
     sed "s/RUNNER_SHA/$sha/g" "$out" | scrub > "$work/comment.md"
 
+    vrc=0; verify_gate "$wt" "$work/verify.md" || vrc=$?
+    if (( vrc != 0 )); then
+      # Fail closed: nothing is pushed when verification finds new failures, a required
+      # suite did not run, or the change was refused.
+      if [[ "$PUBLISH" == "1" ]]; then
+        gh pr edit "$pr" --repo "$REPO" --add-label blocked >/dev/null
+        gh pr comment "$pr" --repo "$REPO" --body "Fix round not pushed: verification failed (exit $vrc).
+
+$(scrub < "$work/verify.md")" >/dev/null
+      else
+        echo "$pr $FIX_OID" >> "$LOCAL_FIX_STATE"
+      fi
+      cat "$work/verify.md"
+      CLAIM_REF=""
+      echo "blocked: PR #$pr failed runner verification (exit $vrc); fix committed locally on $branch, not pushed"
+      exit 2
+    fi
+    { printf '\n---\n'; cat "$work/verify.md"; } >> "$work/comment.md"
+
     if [[ "$PUBLISH" == "1" ]]; then
       git -C "$wt" push origin "$branch"
       gh pr comment "$pr" --repo "$REPO" --body "$FIX_MARKER
@@ -344,6 +389,23 @@ $(cat "$work/comment.md")" >/dev/null
   [[ "$(git -C "$wt" rev-list --count origin/main..HEAD)" -gt 0 ]] || die "Codex produced no changes"
   sha="$(git -C "$wt" rev-parse HEAD)"
   tail -n +2 "$out" | awk 'NR == 1 && $0 == "" { next } { print }' | sed "s/RUNNER_SHA/$sha/g" > "$work/pr-body.md"
+
+  vrc=0; verify_gate "$wt" "$work/verify.md" || vrc=$?
+  if (( vrc != 0 )); then
+    # Fail closed: nothing is pushed when verification finds new failures, a required suite
+    # did not run, or the change was refused.
+    if [[ "$PUBLISH" == "1" ]]; then
+      gh issue edit "$n" --repo "$REPO" --remove-label in-progress --add-label blocked >/dev/null
+      gh issue comment "$n" --repo "$REPO" --body "Not published: runner verification failed (exit $vrc) on \`${sha:0:7}\`.
+
+$(scrub < "$work/verify.md")" >/dev/null
+    fi
+    cat "$work/verify.md"
+    CLAIM_REF=""
+    echo "blocked: #$n failed runner verification (exit $vrc); committed locally on $branch, not pushed"
+    exit 2
+  fi
+  { printf '\n---\nThe section above is Codex'"'"'s own report. The table below was produced independently by the runner, outside the sandbox, and is the authoritative one.\n\n'; cat "$work/verify.md"; } >> "$work/pr-body.md"
 
   if [[ "$PUBLISH" == "1" ]]; then
     git -C "$wt" push -u origin "$branch"

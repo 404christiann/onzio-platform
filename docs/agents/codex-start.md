@@ -2,7 +2,15 @@
 
 Two ways in. The rules are the same in both: `docs/agents/codex-loop.md`.
 
-## A. Unattended: the runner (preferred)
+## Preferred: the Codex app orchestrator
+
+Run the loop from a Codex app thread with the prompt in `docs/agents/codex-orchestrator.md`.
+The app is not sandboxed the way `codex exec` is, so workers can run the full suites against
+local Supabase, and the orchestrator produces the independent evidence table with
+`scripts/codex-loop-verify.sh`. Use sections A and B below only for an unattended or
+one-off run.
+
+## A. Unattended: the runner
 
 Run this yourself in a terminal, from a clean checkout, never the dirty main checkout.
 The runner builds each worktree, starts a fresh `codex exec` with the guide and the
@@ -26,8 +34,15 @@ before anything is claimed on GitHub, then exported into the Codex process only:
 export CODEX_LOOP_ENV_FILE=~/Downloads/onzio-platform/.env.test
 ```
 
-The database suites also need the local Supabase running (Docker or Colima up, then
-`supabase start`). The first pilot found it down, so those suites reported "not run".
+The runner then runs architecture, build, database and whole-suite checks itself, outside
+Codex's sandbox, on the committed result, and refuses to push if they fail. The database
+suites need local Supabase running (Docker or Colima up, then `supabase start`); if it is
+down they are reported "NOT RUN", and a change touching `supabase/`, `lib/` or
+`tests/database/` is held back. `CODEX_LOOP_VERIFY=off` skips the runner's checks, and
+`CODEX_LOOP_VERIFY=types,lint,contracts` runs a subset. A change that touches `package.json`,
+`scripts/`, config files or `.github/` is refused (exit 3) because Codex's code would run
+outside the sandbox; `CODEX_LOOP_TRUST_DIFF=1` overrides that after a person has read the
+diff.
 
 ```bash
 scripts/codex-loop.sh --dry-run          # what would run; changes nothing

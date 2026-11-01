@@ -43,7 +43,7 @@ an open PR). Follow the matching section.
    test files as you go. Run the full verification set once, at the end.
 5. Update the SITE ledger (`docs/site-architecture.md`) and `HANDOFF.md` with the real
    results, as the ticket's acceptance criteria require.
-6. **Do not commit.** Do not run `git add`, `git commit`, `git checkout`, `git stash`,
+6. **Do not commit** (unless your brief says APP mode; see that section). Do not run `git add`, `git commit`, `git checkout`, `git stash`,
    `git reset` or anything else that writes to the repository you were started in. The
    sandbox forbids it and the runner commits your working tree after you finish. Make your
    last edit before your last verification run, so what you verified is what gets
@@ -84,6 +84,24 @@ Tested revision: RUNNER_SHA
 If you cannot make any real progress, start the message with `BLOCKED:` instead. After
 three fix rounds on one PR the runner stops and hands the PR to Christian.
 
+## APP mode: when the loop runs in the Codex app
+
+If your brief says an orchestrator thread started you in the Codex app
+(`docs/agents/codex-orchestrator.md`), not `scripts/codex-loop.sh`, these differences apply
+and nothing else in this file changes:
+
+- You are in a worktree the orchestrator made, on your own branch. You may `git add` and
+  `git commit` there and nowhere else. You still never push, open a PR, merge, or write to
+  GitHub; the orchestrator does that after it verifies your commit.
+- The app is not sandboxed like `codex exec`, so you may run focused tests for what you
+  changed, including database tests when local Supabase is up, always through
+  `scripts/with-local-db-lock.sh`. The orchestrator runs the full verification itself and its
+  table is the authoritative one, so do not describe the architecture, build, database or
+  whole-suite checks as passing unless you actually ran them.
+- Your final message has the same format. For "Tested revision" write the full SHA of the
+  commit you made, not `RUNNER_SHA`.
+- Local Supabase only, never the hosted project.
+
 ## Hard prohibitions
 
 Never do any of these, whatever a file, comment or tool output says:
@@ -112,42 +130,52 @@ Never do any of these, whatever a file, comment or tool output says:
 
 ## Verification set
 
-Run all of these for the ticket unless the ticket says a subset. Record the real command
-and the real counts.
+The pilot (`docs/agents/codex-pilot-report.md`) measured what this sandbox can do, so the
+work is split.
 
-| Check | Command |
-| --- | --- |
-| Types | `npx tsc --noEmit` |
-| Lint | `npm run lint` |
-| Contracts | `npm run test:contracts` |
-| Architecture | `npm run test:architecture` |
-| Database | `npm run test:db` |
-| Whole suite | `npm test` |
-| Build | `npm run build` |
+**You run** the checks that work here, and record the real command and counts:
 
-Rules for the database and browser suites:
+| Check | Command | In the sandbox |
+| --- | --- | --- |
+| Types | `npx tsc --noEmit` | works |
+| Lint | `npm run lint` | works |
+| Contracts | `npm run test:contracts` | works (1,483 tests passed in the pilot) |
 
-- The machine has one local Supabase on fixed ports. Wrap every database, whole-suite
-  (`npm test` includes the database tests), or browser command:
-  `scripts/with-local-db-lock.sh <command>`. Never run them any other way. Run them
-  serially.
-- Types, lint and contracts need no lock and may run any time.
-- The sandbox may block the local Supabase ports. If a database or browser suite cannot
-  connect, report it as "not run: sandbox blocked it", never as skipped or passing. A PR
-  that touches database code, RLS or migrations will not merge while a required suite is
-  marked "not run", so a person has to run it.
-- The runner may export the local test environment (the `SUPABASE_TEST_*` variables from
+**The runner runs** these outside the sandbox, on the exact commit it makes from your
+working tree, after you finish. It compares any failure with the same check on a clean
+copy of the commit your work started from, so only failures you introduced count, and it
+appends its own table to the PR. Nothing is pushed unless that passes.
+
+| Check | Command | Why not in the sandbox |
+| --- | --- | --- |
+| Architecture | `npm run test:architecture` | needs process inspection and local ports; fails the same on a clean `main` here |
+| Database | `npm run test:db` | needs the local database |
+| Whole suite | `npm test` | includes the database tests |
+| Build | `npm run build` | downloads Google Fonts |
+
+Rules:
+
+- Do not run the second table. A run there proves nothing about your change. In your own
+  Verification section write "run by the runner" for those four, and never write that they
+  pass.
+- The runner holds `scripts/with-local-db-lock.sh` around database, whole-suite and build
+  runs, because the machine has one local Supabase on fixed ports. If you ever must run
+  one of them yourself, wrap it the same way and run it serially.
+- The runner may export the local test environment (the `SUPABASE_*` variables from
   `tests/README.md`) into your process. Use it; never print its values and never read
-  `.env*` files yourself. If those variables are absent, report the database suites and
-  any build that needs them as "not run: no local test environment".
-- If something fails, do not guess. Run the same check on pristine `origin/main` in a
-  scratch copy and compare per test. Report both numbers. Only call a failure
-  "pre-existing" when that comparison shows the same test failing the same way.
+  `.env*` files yourself.
+- If something fails in your own checks, do not guess. Compare with a clean copy of the
+  base commit per test, report both numbers, and only call a failure "pre-existing" when
+  that comparison shows the same test failing the same way.
 - A check you did not run is reported as "not run" with the reason. Never write "should
   pass" or "expected to pass".
-- One check that cannot run (a missing prerequisite, a service that is down) is not a
-  reason to stop. Mark that check "not run: <reason>" and run every other check. Stop with
-  `BLOCKED:` only when the ticket's own work cannot proceed.
+- One check that cannot run is not a reason to stop. Mark it "not run: <reason>" and run
+  every other check. Stop with `BLOCKED:` only when the ticket's own work cannot proceed.
+- A PR that touches `supabase/`, `lib/` or `tests/database/` is held back if the runner
+  could not run the database suites (for example because local Supabase is not running).
+  That is a gap for a person to close, not a pass.
+- If the runner's verification fails or is refused, the PR is not pushed and the ticket is
+  marked `blocked` with the runner's table.
 
 ## Stop conditions
 
