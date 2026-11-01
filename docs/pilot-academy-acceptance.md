@@ -5,6 +5,15 @@ Status: SITE-05K complete, merged in PR33 at
 [the later local coordination proof](pilot-site-coordination.md). Christian alone reviews,
 merges and deploys.
 
+## Current package follow-up (2026-11-01)
+
+The recorded 706-file v2 package below still verifies against its accepted digest,
+`e52eabfac98ff890f17d063aee3df18c31bfe57040a946094b8f5576e858bd59`, but it no longer
+reconstructs after SITE-07A. The next action is to regenerate the package from the
+post-SITE-07A platform and obtain Christian's acceptance of the new digest before
+continuing reconstruction acceptance. The historical evidence below describes the
+earlier package and remains revision-specific.
+
 ## Scope
 
 This run starts from verified PR32 merge `1d93dc35b249bd197db37b7e98910b0a7493faab`. It

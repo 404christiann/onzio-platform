@@ -27,6 +27,7 @@ const platform = new Set([
   "lib/contract-error.ts", "packages/presentation/index.ts",
 ]);
 const visualLibraries = new Set([
+  // Keep the legacy loader in packages recorded before SITE-07A.
   "lib/academy-page-scroll-lock.ts", "lib/academy-loading-route.ts", "lib/bunny-video.ts", "lib/data.ts",
   "lib/homepage-content.ts", "lib/homepage-story-content.ts", "lib/programs-page-content.ts",
   "lib/shop-kit.ts", "lib/site-flags.ts", "lib/social-links.ts", "lib/standings-content.ts",
