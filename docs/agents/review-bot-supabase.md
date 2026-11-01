@@ -38,7 +38,8 @@ reason, remove `hold` if you already took it (see 4), and stop.
    that already exists on `main` is a stop: applied migrations are immutable.
 4. The migration lock. First check that no other open PR carries the `hold` label; if one
    does, wait. Then add `hold` to this PR and check again: if a second PR now carries it
-   too, two runs raced, so remove yours and wait. `hold` also keeps the Codex loop from
+   too, two runs raced, so remove yours and wait a random 30 to 120 seconds before checking
+   again (a fixed wait would let two runs collide forever). `hold` also keeps the Codex loop from
    pushing to this PR mid-migration.
    Release rule: on any stop **before step 6 (apply)**, whether a failed precondition, a
    breaking migration, a ledger or dry-run mismatch, or tests not run, remove `hold` in
