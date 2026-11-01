@@ -56,8 +56,8 @@ SETUP, once. Report each result in one line and stop if one fails:
    to the current migrations with `supabase migration up --local`. Never `supabase db reset`
    unless Christian says so. If local Supabase cannot run, continue only with tickets that do
    not touch supabase/, lib/ or tests/database/.
-3. export CODEX_LOOP_ENV_FILE=~/Downloads/onzio-platform/.env.test (used only by the verify
-   script; never print it).
+3. export CODEX_LOOP_ENV_FILE=~/.codex/onzio-local-env/.env.test (used only by the verify
+   script; never print it). The vetted local env files all come from that one folder.
 4. Confirm you can git commit in a worktree, run ps, and open a local port. Report what you
    cannot do.
 
@@ -75,8 +75,15 @@ THE LOOP. GitHub is the source of truth. Repeat until a stop condition:
    mode in that PR's worktree. Three fix rounds per PR; then label it blocked and tell
    Christian.
 3. Then tickets. Claim the lowest-numbered ready ticket (label in-progress and a comment).
-   Create ~/.codex/worktrees/onzio-ticket-<n> on branch agent/site<n>-<slug> from origin/main,
-   run npm ci, and start a worker in TICKET mode. At most two workers at once. Anything that
+   Create ~/.codex/worktrees/onzio-ticket-<n> on branch agent/site<n>-<slug> from origin/main.
+   Set it up in seconds, not minutes: run scripts/provision-worktree-env.sh <worktree>
+   (it copies .env.local and .env.test from ~/.codex/onzio-local-env after checking they are
+   loopback-only, never prints values, and refuses otherwise; do not copy them by hand and do
+   not read them); and if its package-lock.json is identical to the loop worktree's, clone node_modules with
+   cp -cR (instant on APFS) instead of npm ci, otherwise run npm ci. Start a worker in
+   TICKET mode. Keep two workers going whenever two tickets are ready: page tickets rarely
+   touch the database, so only their database, whole-suite and build runs wait on the lock.
+   Verify the first worker's commit while the second works. At most two workers at once. Anything that
    runs the database suites, the whole suite or the build goes through
    scripts/with-local-db-lock.sh.
 4. Worker brief, by pointer: mode, ticket or PR number, branch, worktree path, "follow

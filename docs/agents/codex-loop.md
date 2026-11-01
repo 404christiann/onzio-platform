@@ -98,6 +98,12 @@ and nothing else in this file changes:
   `scripts/with-local-db-lock.sh`. The orchestrator runs the full verification itself and its
   table is the authoritative one, so do not describe the architecture, build, database or
   whole-suite checks as passing unless you actually ran them.
+- Run the cheap, targeted checks before you hand back, because a full verification takes
+  tens of minutes and a failure it finds costs a whole second round. Always run
+  `npx vitest run tests/architecture/<area>*.test.ts` for each area you touched (for the
+  Academy site, `academy-site-*`) and `npx vitest run --changed origin/main`. The ticket
+  #48 verification spent 68 minutes to report a literal `href="/contact"` that the
+  route-table architecture test finds in seconds.
 - Your final message has the same format. For "Tested revision" write the full SHA of the
   commit you made, not `RUNNER_SHA`.
 - Local Supabase only, never the hosted project.
@@ -148,9 +154,9 @@ appends its own table to the PR. Nothing is pushed unless that passes.
 
 | Check | Command | Why not in the sandbox |
 | --- | --- | --- |
-| Architecture | `npm run test:architecture` | needs process inspection and local ports; fails the same on a clean `main` here |
+| Architecture | `npm run test:architecture` | needs process inspection and local ports; fails the same on a clean `main` here. The runner skips the `pilot-*` files when your change touches nothing they depend on |
 | Database | `npm run test:db` | needs the local database |
-| Whole suite | `npm test` | includes the database tests |
+| Whole suite | `npm test` | includes the database tests; in the runner's table it covers only the files not already in the contracts, architecture and database rows, so nothing runs twice |
 | Build | `npm run build` | downloads Google Fonts |
 
 Rules:

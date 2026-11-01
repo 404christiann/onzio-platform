@@ -15,6 +15,8 @@ const stubNpm = `#!/bin/sh
 # working copy (.stub/<script>.exit, .out, .json), so the base commit and the change differ.
 case "$1" in test) script=suite ;; *) script="$2" ;; esac
 echo "HOME=$HOME"
+echo "ARGS=$*"
+echo "SUPABASE_LOCAL=\${SUPABASE_LOCAL-unset}"
 d=.stub
 [ -f "$d/$script.out" ] && cat "$d/$script.out"
 for a in "$@"; do case "$a" in --outputFile=*) out="\${a#--outputFile=}";; esac; done
@@ -27,7 +29,8 @@ exit "$code"
 `;
 // The types stub also fails if an ignored leftover folder is present in its working directory,
 // the way tsc picked up stale copies of old code under test-results/.
-const stubNpx = stubNpm.replace('case "$1" in test) script=suite ;; *) script="$2" ;; esac', 'script=types\n[ -d test-results ] && { echo "error: leaked test-results"; exit 1; }');
+// "npx vitest run <files>" has its own stub files (.stub/vitest.*): the baseline and rerun use it.
+const stubNpx = stubNpm.replace('case "$1" in test) script=suite ;; *) script="$2" ;; esac', 'case "$1" in vitest) script=vitest ;; *) script=types; [ -d test-results ] && { echo "error: leaked test-results"; exit 1; } ;; esac');
 
 const git = (cwd, ...args) => execFileSync("git", ["-C", cwd, "-c", "user.name=t", "-c", "user.email=t@t.invalid", ...args], { encoding: "utf8", stdio: "pipe" });
 const root = mkdtempSync(join(tmpdir(), "codex-verify-test-"));
@@ -71,6 +74,7 @@ function run(fx, { checks, env = {}, up = true } = {}) {
   delete e.CODEX_LOOP_TRUST_DIFF; delete e.CODEX_LOOP_VERIFY;
   if (checks) e.CODEX_LOOP_VERIFY = checks;
   if (env.allowStale) e.CODEX_LOOP_ALLOW_STALE_SCRIPT = "1";
+  delete e.CODEX_LOOP_PILOT_TESTS; if (env.pilot) e.CODEX_LOOP_PILOT_TESTS = "1";
   const result = spawnSync("bash", [join(fx.repo, "scripts/codex-loop-verify.sh"), fx.repo, out], { env: e, encoding: "utf8", timeout: 120000 });
   return { status: result.status, stderr: result.stderr, md: existsSync(out) ? readFileSync(out, "utf8") : "" };
 }
@@ -218,5 +222,87 @@ test("the runner refuses CODEX_LOOP_VERIFY=off for a database-touching change bu
     const result = spawnSync("bash", ["-c", `${fn}\nverify_gate "$1" "$2"`, "_", fx.repo, out], { env: { ...process.env, CODEX_LOOP_VERIFY: "off" }, encoding: "utf8" });
     assert.equal(result.status, expected, `${file}: ${result.stderr}`);
     assert.match(readFileSync(out, "utf8"), expected ? /Not skipped/ : /Skipped on request/);
+  }
+});
+
+// ---- speed: the baseline reruns only failing files; the whole suite does not repeat other rows
+const failing = file => JSON.stringify({ numTotalTests: 1, numPassedTests: 0, numFailedTests: 1, numPendingTests: 0, testResults: [{ name: `/x/${file}`, status: "failed", assertionResults: [{ status: "failed", fullName: "rule" }] }] });
+const logOf = (r, name, which = 1) => readFileSync(join(r.stderr.match(/logs kept in (\S+) \(baseline: (\S+)\)/)[which], `${name}.log`), "utf8");
+
+test("the baseline reruns only the files that failed on the change, not the whole check", () => {
+  const f = failing("tests/architecture/a.test.ts");
+  const fx = fixture({ base: { ".stub/vitest.json": f, ".stub/vitest.exit": "1" }, change: { ".stub/test:architecture.json": f, ".stub/test:architecture.exit": "1" } });
+  const r = run(fx, { checks: "architecture" });
+  assert.equal(r.status, 0, r.md);
+  assert.match(row(r.md, "Architecture"), /SAME AS BASELINE/);
+  const base = logOf(r, "architecture", 2);
+  assert.match(base, /ARGS=vitest run tests\/architecture\/a\.test\.ts /);
+  assert.doesNotMatch(base, /test:architecture/);
+});
+
+test("a failure that is new in a file and fails again on rerun is a NEW FAILURE", () => {
+  const f = failing("tests/architecture/a.test.ts");
+  const fx = fixture({ change: { ".stub/test:architecture.json": f, ".stub/test:architecture.exit": "1", ".stub/vitest.json": f, ".stub/vitest.exit": "1" } });
+  const r = run(fx, { checks: "architecture" });
+  assert.equal(r.status, 1, r.md);
+  assert.match(row(r.md, "Architecture"), /NEW FAILURES/);
+});
+
+test("database failures are rerun and compared with SUPABASE_LOCAL=1, as npm run test:db runs them", () => {
+  const f = failing("tests/database/a.test.ts");
+  const fx = fixture({ base: { ".stub/vitest.json": f, ".stub/vitest.exit": "1" }, change: { ".stub/test:db.json": f, ".stub/test:db.exit": "1", "lib/x.ts": "export {};\n" } });
+  const r = run(fx, { checks: "db,suite" });
+  assert.match(logOf(r, "db", 2), /SUPABASE_LOCAL=1/);
+});
+
+test("the whole suite does not run the contracts, architecture and database files again, and the row says so", () => {
+  const r = run(fixture());
+  assert.equal(r.status, 0, r.stderr);
+  const suite = logOf(r, "suite");
+  for (const dir of ["contracts", "architecture", "database"]) assert.ok(suite.includes(`--exclude=tests/${dir}/**`), dir);
+  assert.match(row(r.md, "Whole suite"), /ran as their own rows in this table and are not run twice/);
+});
+
+test("the whole suite on its own runs everything", () => {
+  const r = run(fixture(), { checks: "suite" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.doesNotMatch(logOf(r, "suite"), /--exclude/);
+  assert.doesNotMatch(row(r.md, "Whole suite"), /not run twice/);
+});
+
+// ---- the pilot architecture files only run when the change can affect them
+const archLog = r => logOf(r, "architecture");
+
+test("the pilot architecture files are skipped for a change that touches nothing they depend on, and the row says so", () => {
+  const r = run(fixture({ change: { "app/page.tsx": "export {};\n" } }), { checks: "architecture" });
+  assert.equal(r.status, 0, r.md);
+  assert.match(archLog(r), /--exclude=tests\/architecture\/pilot-\*\.test\.ts/);
+  assert.match(row(r.md, "Architecture"), /pilot-\* files were skipped/);
+});
+
+test("the pilot architecture files run when the change touches a pilot path, shared test code, homepage-editor lib or packages", () => {
+  for (const file of ["tests/architecture/pilot-x.test.ts", "tests/helpers/contract.ts", "tests/fixtures/entities.ts", "lib/homepage-editor/capabilities.ts", "packages/presentation/index.ts", "docs/pilot-reconstruction.txt"]) {
+    const r = run(fixture({ change: { [file]: "x\n" } }), { checks: "architecture" });
+    assert.doesNotMatch(archLog(r), /--exclude/, file);
+    assert.doesNotMatch(row(r.md, "Architecture"), /files were skipped/, file);
+  }
+});
+
+test("markdown, including HANDOFF.md at the root, does not bring the pilot architecture files back", () => {
+  const r = run(fixture({ change: { "HANDOFF.md": "entry\n", "app/page.tsx": "export {};\n" } }), { checks: "architecture" });
+  assert.match(archLog(r), /--exclude=tests\/architecture\/pilot-/);
+});
+
+test("CODEX_LOOP_PILOT_TESTS=1 runs the pilot architecture files for any change", () => {
+  const r = run(fixture({ change: { "app/page.tsx": "export {};\n" } }), { checks: "architecture", env: { pilot: true } });
+  assert.doesNotMatch(archLog(r), /--exclude/);
+});
+
+test("a very large change that touches a pilot dependency still runs the pilot files (regression: grep -q closed the pipe, pipefail made the gate skip them)", () => {
+  const change = { "app/aaa-pilot-first.ts": "export {};\n" };
+  for (let i = 0; i < 4000; i++) change[`app/generated/file-${String(i).padStart(4, "0")}.ts`] = "x\n";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const r = run(fixture({ change }), { checks: "architecture" });
+    assert.doesNotMatch(archLog(r), /--exclude/, `attempt ${attempt}`);
   }
 });
