@@ -26,7 +26,7 @@ Vercel project: `onzio-platform`, team `404christianns-projects`.
 ## Preconditions
 
 All must hold. If any fails, do not apply and do not merge. Comment on the PR with the
-reason and stop.
+reason, remove `hold` if you already took it (see 4), and stop.
 
 1. Your review at the PR's current head reports no High or Medium findings. Record that
    head as `<reviewed sha>`. Everything below is for that exact commit only; if the head
@@ -36,10 +36,15 @@ reason and stop.
    `git diff --name-only --diff-filter=A origin/main...HEAD -- supabase/migrations`.
 3. The PR only **adds** migration files. Any edit, rename or deletion of a migration file
    that already exists on `main` is a stop: applied migrations are immutable.
-4. No other open PR carries the `hold` label. You put `hold` on this PR before step 1 and
-   remove it only after step 9 passes (the Codex loop skips PRs labeled `hold`, so it cannot
-   push a fix mid-migration). If another PR already has `hold`, wait; do not run two
-   migration merges at once.
+4. The migration lock. First check that no other open PR carries the `hold` label; if one
+   does, wait. Then add `hold` to this PR and check again: if a second PR now carries it
+   too, two runs raced, so remove yours and wait. `hold` also keeps the Codex loop from
+   pushing to this PR mid-migration.
+   Release rule: on any stop **before step 6 (apply)**, whether a failed precondition, a
+   breaking migration, a ledger or dry-run mismatch, or tests not run, remove `hold` in
+   that same run. A refusal must never stall other migration merges or stop the fix the
+   refusal asked for. From step 6 onward production has changed, so keep `hold` until the
+   PR is merged and step 9 passes, or until a person clears it.
 5. Your credentials are linked to `ioalthwsdrlzrubomrow`, and nothing else.
 6. The PR's Verification section shows `npm run test:db` and `npm test` as run and
    passing, and its `Tested revision` equals `<reviewed sha>`. "Not run" for either, or a
@@ -133,7 +138,7 @@ Run these in order. Record each result for the PR comment.
 ## The PR comment you leave
 
 After step 9 (or at any stop), post one comment: the PR number, the migration versions,
-each precondition's result, the backup timestamp, the dry-run file list, the ledger
+whether `hold` was kept or removed and why, each precondition's result, the backup timestamp, the dry-run file list, the ledger
 checks, the snapshot before and after, the deployment ids, and the smoke results, each
 with a timestamp. Include no credentials, connection strings, dump contents, row data,
 emails or tokens.

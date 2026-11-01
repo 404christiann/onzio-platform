@@ -107,7 +107,7 @@ next_ticket() {
 has_actionable_findings() {
   awk '
     { l = tolower($0) }
-    l ~ /^##+ +(critical|high|medium)([ :(]|$)/ { insec = 1; next }
+    l ~ /^##+ +(critical|high|medium)([ :(\/]|-severity|$)/ { insec = 1; next }
     l ~ /^##+ / { insec = 0; next }
     insec && $0 !~ /^[[:space:]]*$/ && l !~ /^[[:space:]]*[-*_ ]*(none|n\/a|no issues?|no findings?)[^a-z]*$/ { found = 1 }
     END { exit found ? 0 : 1 }'

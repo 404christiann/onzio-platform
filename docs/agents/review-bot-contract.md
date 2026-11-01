@@ -47,6 +47,9 @@ or Medium findings. If it reports any, Codex fixes them and the cycle repeats.
   by itself, so the bot must run the whole procedure in
   `docs/agents/review-bot-supabase.md` before every merge of a PR that adds migrations.
   That procedure is part of the merge, not an option.
+- As of 2026-11-01 Christian reports the bot is merging PRs for him. Whether it already has
+  the production Supabase access and follows `review-bot-supabase.md` for migration PRs is
+  part of its setup, not something this repository can check.
 - Christian will give the bot access to the production Supabase project (ref
   `ioalthwsdrlzrubomrow`) so it can apply migrations itself. That access belongs to the
   bot only. Codex and Claude Code stay barred from any hosted Supabase operation by
