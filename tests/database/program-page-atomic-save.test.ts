@@ -131,7 +131,7 @@ describe("Programs public-page transactions", () => {
     expect((await load()).program.external_cta_href).toBe("/");
   });
 
-  it("rejects all Programs RPCs when the tenant has no presentation document", async () => {
+  it("maintains Programs for a tenant with no presentation document", async () => {
     const before = await load();
     const emptyClubId = randomUUID();
     await db.query("reset role");
@@ -139,12 +139,19 @@ describe("Programs public-page transactions", () => {
       [emptyClubId, `no-design-${emptyClubId}`]);
     await db.query("insert into onzio.club_members(club_id,user_id,role,status) values($1,$2,'owner','active')", [emptyClubId, USER_IDS.ownerAal2]);
     await actor();
+    const call = async (sql: string, ...args: unknown[]) => (await db.query(sql, args)).rows[0].data;
     const createRequest = { ...request(before), programId: null, expected: { programUpdatedAt: null, gallery: [] } };
-    const directoryRequest = { operationId: randomUUID(), expected: [], programs: [] };
-    await rejects(() => db.query("select onzio.load_program_page($1)", [emptyClubId]), "PAGE_UNAVAILABLE");
-    await rejects(() => db.query("select onzio.save_program_page($1,$2::jsonb)", [emptyClubId, JSON.stringify(createRequest)]), "PAGE_UNAVAILABLE");
-    await rejects(() => db.query("select onzio.load_program_directory($1)", [emptyClubId]), "PAGE_UNAVAILABLE");
-    await rejects(() => db.query("select onzio.save_program_directory($1,$2::jsonb)", [emptyClubId, JSON.stringify(directoryRequest)]), "PAGE_UNAVAILABLE");
+    expect(await call("select onzio.load_program_page($1) as data", emptyClubId)).toEqual({ program: null, gallery: [] });
+    const created = await call("select onzio.save_program_page($1,$2::jsonb) as data", emptyClubId, JSON.stringify(createRequest));
+    expect(created.program).toMatchObject({ slug: createRequest.program.slug, display_title: "Original program" });
+    expect(created.gallery).toEqual([]);
+    const listed = await call("select onzio.load_program_directory($1) as data", emptyClubId);
+    expect(listed.programs.map((row: any) => row.id)).toEqual([created.program.id]);
+    const directoryRequest = { operationId: randomUUID(), expected: listed.programs.map((row: any) => ({ id: row.id, updatedAt: row.updated_at })),
+      programs: [{ id: created.program.id, sortOrder: 0, status: "hidden" }] };
+    const hidden = await call("select onzio.save_program_directory($1,$2::jsonb) as data", emptyClubId, JSON.stringify(directoryRequest));
+    expect(hidden.programs.map((row: any) => row.status)).toEqual(["hidden"]);
+    expect(await call("select onzio.save_program_directory($1,$2::jsonb) as data", emptyClubId, JSON.stringify(directoryRequest))).toEqual(hidden);
   });
 
   it("stages public order and visibility under one directory Save and rejects a stale list", async () => {
@@ -158,7 +165,7 @@ describe("Programs public-page transactions", () => {
     await rejects(() => saveDirectory({ ...payload, operationId: randomUUID() }), "CONTENT_CHANGED");
   });
 
-  it("recovers page and directory receipts after the Programs design disappears while preserving authorization", async () => {
+  it("recovers page and directory receipts and keeps maintaining content after a switch to clubhouse", async () => {
     const payload = request(await load(), { display_title: "Confirmed page" });
     const pageReceipt = await save(payload);
     const before = await directory();
@@ -170,13 +177,19 @@ describe("Programs public-page transactions", () => {
     expect((await db.query("select onzio.load_program_directory($1,$2) as data", [clubId, directoryPayload.operationId])).rows[0].data.operation.receipt).toEqual(directoryReceipt);
     expect(await save(payload)).toEqual(pageReceipt);
     expect(await saveDirectory(directoryPayload)).toEqual(directoryReceipt);
-    await rejects(() => load(), "PAGE_UNAVAILABLE");
-    await rejects(() => directory(), "PAGE_UNAVAILABLE");
-    await rejects(() => save({ ...payload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
-    await rejects(() => saveDirectory({ ...directoryPayload, operationId: randomUUID() }), "PAGE_UNAVAILABLE");
+    const latest = await load();
+    expect(latest.program.display_title).toBe("Confirmed page");
+    const freshPage = await save(request(latest, { display_title: "Saved under clubhouse" }));
+    expect(freshPage.program.display_title).toBe("Saved under clubhouse");
+    const current = await directory();
+    const freshDirectory = await saveDirectory({ operationId: randomUUID(), expected: current.programs.map((row: any) => ({ id: row.id, updatedAt: row.updated_at })),
+      programs: current.programs.map((row: any, index: number) => ({ id: row.id, sortOrder: index, status: row.id === programId ? "hidden" : row.status })) });
+    expect(freshDirectory.programs.find((row: any) => row.id === programId).status).toBe("hidden");
     await rejects(() => save({ ...payload, program: { ...payload.program, body: "Different" } }), "OPERATION_REUSED");
     await rejects(() => saveDirectory({ ...directoryPayload, programs: directoryPayload.programs.map((item: any, index: number) =>
       index === 0 ? { ...item, status: item.status === "active" ? "hidden" : "active" } : item) }), "OPERATION_REUSED");
+    expect(await save(payload)).toEqual(pageReceipt);
+    expect(await saveDirectory(directoryPayload)).toEqual(directoryReceipt);
     await db.query("reset role");
     await db.query("update onzio.clubs set lifecycle='archived',public_access='suspended' where id=$1", [clubId]);
     await actor();
