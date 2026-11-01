@@ -268,6 +268,10 @@ $(cat "$work/comment.md")" >/dev/null
   echo "== #$n $title"
 
   git -C "$ROOT" fetch origin --quiet
+  # A ticket worktree is cut from origin/main, so main must already carry the loop's own
+  # tooling. Refuse before claiming or creating anything.
+  git -C "$ROOT" cat-file -e origin/main:scripts/with-local-db-lock.sh 2>/dev/null \
+    || die "origin/main has no scripts/with-local-db-lock.sh yet; merge the loop PR first"
   [[ ! -e "$wt" ]] || die "$wt already exists; remove it deliberately and rerun"
   ! git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" || die "branch $branch already exists"
 
