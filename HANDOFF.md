@@ -1,3 +1,10 @@
+## 2026-11-01 - The #43 failures were a stale script copy; the verify script now refuses to run stale
+
+- The orchestrator's second verification of #43 (commit `36674dc`, base `89899eb`) still reported 9 Types and 1 Build failure pointing at `test-results/pilot/...`, although PR #64 had made the script check a clean checkout. Cause: the orchestrator ran `scripts/codex-loop-verify.sh` from its own coordinator worktrees (`~/.codex/worktrees/onzio-codex-orchestrator` and `-20261031`), still at `da3bb0e` with no clean-checkout code, while only #43's branch was refreshed. The failing paths named `onzio-platform-t43`, showing `tsc` ran in the #43 folder.
+- Confirmed by running the current script on the same commit: Types PASS, Lint PASS, Build PASS. The earlier diagnosis of the stale `test-results/` folder was right; the fix had simply not been in the copy that ran.
+- The verify script now compares its own copy of `scripts/codex-loop-verify.sh` and `scripts/with-local-db-lock.sh` with `origin/main` and exits 64 if they differ, unless `CODEX_LOOP_ALLOW_STALE_SCRIPT=1`. `docs/agents/codex-orchestrator.md` tells the orchestrator to move its own worktree to the new `origin/main` on every refresh. Regression test added (25 total).
+- Not run: the orchestrator on #43 with the refreshed script. Its coordinator worktrees must be updated by hand once, since the stale copies do not have this guard.
+
 ## 2026-11-01 - First orchestrator run on #43: verify now checks a clean checkout
 
 - The orchestrator ran #43 (`agent/site07-academy-shell`) and behaved correctly: the verify script exited 3, then after an override exited 1, so nothing was pushed, no PR was opened, and #43 was labeled blocked with the table posted. The evidence was good: Lint PASS, Contracts 1,494 of 1,494, Database 804 of 804, Architecture same as the clean base (the same 9 macOS failures), Whole suite PASS with one flaky test rerun clean.

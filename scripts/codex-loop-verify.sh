@@ -36,6 +36,18 @@ RES="$(mktemp -d)"            # results for the change
 BASE_RES="$(mktemp -d)"       # results for the baseline copy
 
 command -v jq >/dev/null || { echo "verify: jq not found" >&2; exit 64; }
+
+# A copy of this script that differs from origin/main is usually a stale coordinator worktree
+# running last week's checks: the first orchestrator run on #43 reported failures that a newer
+# version had already fixed. Refuse instead of producing evidence from old logic. A person who
+# is deliberately testing a changed script can set CODEX_LOOP_ALLOW_STALE_SCRIPT=1.
+git -C "$ROOT" fetch origin --quiet 2>/dev/null || true
+if [[ "${CODEX_LOOP_ALLOW_STALE_SCRIPT:-0}" != "1" ]] \
+   && ! git -C "$ROOT" diff --quiet origin/main -- scripts/codex-loop-verify.sh scripts/with-local-db-lock.sh; then
+  echo "verify: this copy of the verify script differs from origin/main (stale worktree?)." >&2
+  echo "verify: run 'git -C $ROOT checkout --detach origin/main' and try again." >&2
+  exit 64
+fi
 [[ -z "$(git -C "$WT" status --porcelain)" ]] || { echo "verify: $WT has uncommitted changes" >&2; exit 64; }
 [[ -x "$WT/node_modules/.bin/vitest" && -x "$WT/node_modules/.bin/tsc" ]] \
   || { echo "verify: $WT has no installed dependencies (run npm ci there first)" >&2; exit 64; }

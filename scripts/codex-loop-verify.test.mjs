@@ -70,6 +70,7 @@ function run(fx, { checks, env = {}, up = true } = {}) {
   const e = { ...process.env, PATH: `${fx.bin}:${process.env.PATH}`, CODEX_LOOP_ENV_FILE: fx.envFile, CODEX_LOOP_WORKTREES: fx.worktrees };
   delete e.CODEX_LOOP_TRUST_DIFF; delete e.CODEX_LOOP_VERIFY;
   if (checks) e.CODEX_LOOP_VERIFY = checks;
+  if (env.allowStale) e.CODEX_LOOP_ALLOW_STALE_SCRIPT = "1";
   const result = spawnSync("bash", [join(fx.repo, "scripts/codex-loop-verify.sh"), fx.repo, out], { env: e, encoding: "utf8", timeout: 120000 });
   return { status: result.status, stderr: result.stderr, md: existsSync(out) ? readFileSync(out, "utf8") : "" };
 }
@@ -130,6 +131,19 @@ test("the clean checkout used for verification is removed afterwards", () => {
 test("middleware.ts is app code, not check configuration, and is not refused", () => {
   const r = run(fixture({ change: { "middleware.ts": "export {};\n" } }), { checks: "types" });
   assert.equal(r.status, 0, r.md);
+});
+
+test("a copy of the script that differs from origin/main is refused (regression: a stale coordinator worktree reported failures a newer script had fixed)", () => {
+  const fx = fixture();
+  const other = join(fx.dir, "other");
+  execFileSync("git", ["clone", "-q", join(fx.dir, "origin.git"), other], { stdio: "pipe" });
+  writeFileSync(join(other, "scripts/codex-loop-verify.sh"), `${readFileSync(join(other, "scripts/codex-loop-verify.sh"), "utf8")}\n# newer logic\n`);
+  git(other, "commit", "-qam", "newer verify script"); git(other, "push", "-q", "origin", "main");
+  const stale = run(fx, { checks: "types" });
+  assert.equal(stale.status, 64);
+  assert.match(stale.stderr, /differs from origin\/main/);
+  const forced = run(fx, { checks: "types", env: { allowStale: true } });
+  assert.equal(forced.status, 0, forced.stderr);
 });
 
 test("a worktree without installed dependencies is refused, not reported as passing", () => {
