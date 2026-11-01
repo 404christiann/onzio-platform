@@ -3,9 +3,9 @@ import { Client } from "pg";
 import { expect, test } from "@playwright/test";
 import {
   parsePresentationDocument,
-  switchPresentationTemplate,
   type PresentationDocument,
 } from "@/packages/presentation";
+import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
 
 // Clubhouse is used (rather than the default academy fixture) because its
 // shared "shared.story" shortcut renders unconditionally; academy's shared
@@ -60,9 +60,8 @@ async function readOriginalState(db: Client): Promise<OriginalState & { configur
 }
 
 async function publishClubhouse(db: Client, source: PresentationDocument, createdBy: string) {
-  const switched = switchPresentationTemplate(source, { id: "clubhouse", version: 1 });
   const id = randomUUID();
-  const configuration = parsePresentationDocument(switched.document, { surface: "production" });
+  const configuration = parsePresentationDocument(presentationDocumentForTemplate(source, "clubhouse"), { surface: "production" });
   const digest = createHash("sha256").update(JSON.stringify(configuration)).digest("hex");
   const versionResult = await db.query(
     "select coalesce(max(version), 0) + 1 as version from onzio.presentation_documents where club_id = $1",
