@@ -2,8 +2,8 @@
 
 - The bot review of `0eded344` confirmed the screenshot/resource evidence and package records, then found that the evidence spec's `homepage-editor-` filename made the normal homepage Playwright config collect it without its capture environment. Renamed it to `tests/browser/site07-shell-evidence.spec.ts`, outside that config's `homepage-editor*.spec.ts` match. No app behavior changed; editor Playback's transparent header remains as captured and undecided.
 - Incorporated refreshed `origin/main` at `14876f830af15081f58265927b8ce04dc5710947`; resolved the `HANDOFF.md` merge conflict by preserving both the SITE-07 evidence entry and the verifier-refresh record from main. The PR conflict status still needs confirmation after publishing this merge.
-- Verification for this follow-up revision: pending. The prior `0eded344` run against base `89899eba` exited 0 with Types, Lint, Contracts, Build and Database passing; Architecture and Whole suite matched the clean baseline.
-- Exact next action: finish and commit this follow-up, refresh the coordinator to `origin/main`, and rerun the verifier. Push only on exit 0, then wait for the bot on the resulting head.
+- The homepage Playwright config now lists 64 tests across nine files and excludes the renamed SITE-07 capture spec. The full browser suite was not run because `http://alpha.localhost:3110/admin/login` refused the loopback connection. The previous verifier run for `0eded344` exited 0 against base `89899eba`; that result does not cover this merge/follow-up revision.
+- Follow-up commit: `6f5724e` merges refreshed `origin/main` and isolates the evidence spec. Exact next action: refresh the coordinator to `origin/main` and rerun the verifier. Push only on exit 0, then wait for the bot on the resulting head.
 
 ## 2026-11-01 - PR #66 / issue #43 FIX: Academy shell browser evidence
 
