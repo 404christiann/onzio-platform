@@ -9,6 +9,15 @@ The runner builds each worktree, starts a fresh `codex exec` with the guide and 
 ticket already in the prompt, commits, and (with publishing on) pushes and opens the PR.
 You paste nothing.
 
+If `codex exec` fails with "model is not supported when using Codex with a ChatGPT
+account", the model in `~/.codex/config.toml` is not one the CLI accepts for your account.
+Set `CODEX_MODEL` to one it does (`gpt-6-astra` and `gpt-5.6-luna` both answered a probe
+on 2026-11-01) instead of editing your config:
+
+```bash
+export CODEX_MODEL=gpt-6-astra
+```
+
 ```bash
 scripts/codex-loop.sh --dry-run          # what would run; changes nothing
 scripts/codex-loop.sh --fix --dry-run    # PRs with open High/Medium findings

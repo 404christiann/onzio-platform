@@ -1,3 +1,10 @@
+## 2026-11-01 - Codex loop pilot first run, and a model override
+
+- The first pilot run of the Codex loop (issue #59) failed at the first Codex call, not in the loop: `codex exec` read `model = "gpt-6-luna"` from `~/.codex/config.toml` and the API answered `model_not_found` ("not supported when using Codex with a ChatGPT account"). Everything before that worked: the runner claimed #59, built a clean worktree from `main`, ran `npm ci` (411 packages), and on the failure relabeled #59 `blocked` with a comment and left a clean worktree. Nothing was committed or pushed.
+- Probed with one-word read-only calls: `gpt-6-astra` and `gpt-5.6-luna` both answer through the CLI. Added `CODEX_MODEL` to `scripts/codex-loop.sh` (passed as `-m`), a hint in the failure message, and a note in `docs/agents/codex-start.md`. The user's Codex config is unchanged.
+- Verification: `bash -n`; with a stub `codex` that records its arguments, `-m <model>` is passed when `CODEX_MODEL` is set and absent when it is not. Not run: a full pilot, which has still not completed.
+- Next: reset #59, run the pilot with `CODEX_MODEL=gpt-6-astra CODEX_LOOP_MAX=1 scripts/codex-loop.sh`, and read `docs/agents/codex-pilot-report.md` from its worktree.
+
 ## 2026-10-31 - Codex ticket loop rules and runner
 
 - Christian wants Codex to implement the SITE tickets in a loop while the review bot (`onzio-coder`, "onzio-bot") reviews each pushed PR. He has said the bot may merge once it reports no High or Medium findings, and that Codex fixes High and Medium findings. Added the strict rule set `docs/agents/codex-loop.md`, the bot interface `docs/agents/review-bot-contract.md`, the runner `scripts/codex-loop.sh` with its skip list, and `scripts/with-local-db-lock.sh`. Documentation and scripts only; no application code, migration, or hosted change.
