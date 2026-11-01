@@ -26,8 +26,9 @@ node --test scripts/codex-loop-verify.test.mjs
 The script is built to be fast because ticket #48's run took 68 minutes in the verifier
 alone: a failing check is compared with the base by rerunning only its failing files, and
 the whole-suite run skips the contracts, architecture and database files that already ran
-as their own rows. The tests pin both (a baseline that reran the whole check, and a suite
-that ran those files twice, fail them).
+as their own rows. The `pilot-*` architecture files (about 80% of that suite's time) are
+skipped unless the change touches a path they depend on or `CODEX_LOOP_PILOT_TESTS=1`. The
+tests pin all three behaviors.
 
 ## Configure local database tests
 

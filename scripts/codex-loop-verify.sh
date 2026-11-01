@@ -125,7 +125,7 @@ check_cmd() { # name -> prints: timeout lock(0/1) vitest(0/1) command...
     types)        echo "600 0 0 npx tsc --noEmit" ;;
     lint)         echo "600 0 0 npm run lint" ;;
     contracts)    echo "900 0 1 npm run test:contracts --" ;;
-    architecture) echo "900 0 1 npm run test:architecture --" ;;
+    architecture) echo "900 0 1 npm run test:architecture -- $ARCH_EXCLUDE" ;;
     build)        echo "1200 1 0 npm run build" ;;
     db)           echo "1800 1 1 npm run test:db --" ;;
     suite)        echo "2400 1 1 npm test -- $SUITE_EXCLUDE" ;;
@@ -136,6 +136,17 @@ check_cmd() { # name -> prints: timeout lock(0/1) vitest(0/1) command...
 # checks. Those three already ran as their own rows, so the whole-suite run covers the rest
 # of the files and the rows together are the whole suite. One run of each, not two. The
 # form `--exclude=dir/**` has no space and cannot be glob-expanded by the shell into files.
+# The pilot architecture files (pilot-*.test.ts) are about 80% of the architecture run's
+# time (ticket #48: 9m57s). They build throwaway repositories and test scripts/pilot-*, which
+# import only the paths in PILOT_DEPS, so a change that touches none of those cannot change
+# their result. They run when it does, and whenever CODEX_LOOP_PILOT_TESTS=1.
+PILOT_DEPS='pilot|^scripts/|^tests/(fixtures|helpers)/|^lib/homepage-editor/|^packages/|^[^/]+$'
+ARCH_EXCLUDE=""; ARCH_NOTE=""
+# Markdown never changes their result (every ticket edits HANDOFF.md, a root file).
+if [[ "${CODEX_LOOP_PILOT_TESTS:-0}" != "1" ]] && ! grep -vE '\.md$' <<<"$CHANGED" | grep -qE "$PILOT_DEPS"; then
+  ARCH_EXCLUDE="--exclude=tests/architecture/pilot-*.test.ts"
+  ARCH_NOTE="the pilot-* files were skipped: this change touches nothing they depend on (CODEX_LOOP_PILOT_TESTS=1 runs them)"
+fi
 SUITE_EXCLUDE=""; SUITE_NOTE=""
 for _n in contracts architecture db; do
   case ",$CHECKS," in *",$_n,"*)
@@ -219,7 +230,7 @@ IFS=',' read -r -a LIST <<<"$CHECKS"
 for n in "${LIST[@]}"; do
   check_cmd "$n" >/dev/null || { echo "verify: unknown check $n" >&2; exit 64; }
   label="$n"; case "$n" in types) label="Types";; lint) label="Lint";; contracts) label="Contracts";; architecture) label="Architecture";; build) label="Build";; db) label="Database";; suite) label="Whole suite";; esac
-  cmdtxt="$(check_cmd "$n" | cut -d' ' -f4- | sed 's/ --$//')"
+  cmdtxt="$(check_cmd "$n" | cut -d' ' -f4- | sed -E 's/ -- ?$//')"
   skip=""
   if needs_env "$n" && [[ -n "$env_reason" ]]; then skip="$env_reason"
   elif needs_live_db "$n" && [[ -n "$db_reason" ]]; then skip="$db_reason"; fi
@@ -232,6 +243,7 @@ for n in "${LIST[@]}"; do
   exec_check "$CHECK_DIR" "$RES" "$n"
   rc="$(cat "$RES/$n.exit")"; secs="$(cat "$RES/$n.secs")"; counts="$(cat "$RES/$n.counts")"
   [[ "$n" == "suite" && -n "$SUITE_NOTE" ]] && counts="${counts:-exit $rc}; $SUITE_NOTE"
+  [[ "$n" == "architecture" && -n "$ARCH_NOTE" ]] && counts="${counts:-exit $rc}; $ARCH_NOTE"
   if [[ "$rc" == "0" ]]; then
     printf '| %s | `%s` | PASS | %s%s (%ss) |\n' "$label" "$cmdtxt" "${counts:-exit 0}" "" "$secs" >> "$RES/rows"
     continue
@@ -281,7 +293,7 @@ if (( REQ_DB )); then
   for n in db suite; do
     case ",$CHECKS," in *",$n,"*) continue ;; esac
     label="Database"; [[ "$n" == "suite" ]] && label="Whole suite"
-    cmdtxt="$(check_cmd "$n" | cut -d' ' -f4- | sed 's/ --$//')"
+    cmdtxt="$(check_cmd "$n" | cut -d' ' -f4- | sed -E 's/ -- ?$//')"
     printf '| %s | `%s` | NOT RUN | not selected by CODEX_LOOP_VERIFY, but this change touches supabase/, lib/ or tests/database/ |\n' "$label" "$cmdtxt" >> "$RES/rows"
     REQUIRED_MISSING=1
   done

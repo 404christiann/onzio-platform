@@ -80,7 +80,13 @@ are not new policy for the bot to weigh; Christian can strike one by editing thi
   "NOT RUN" database row (for example local Supabase was down), or a missing Database or
   Whole suite row, on such a PR is a gap for a person to close, not a pass. The Whole suite
   row covers every vitest file not already in the Contracts, Architecture and Database rows,
-  and its detail says so, so those rows plus it are the whole suite and nothing runs twice. The runner always
+  and its detail says so, so those rows plus it are the whole suite and nothing runs twice.
+  The Architecture row skips the `pilot-*` test files when the change touches nothing they
+  depend on (any path named pilot, `scripts/`, `tests/fixtures/`, `tests/helpers/`,
+  `lib/homepage-editor/`, `packages/`, root files other than Markdown), and its detail says
+  so. Those files test the pilot scripts on throwaway repositories, not the app's source, so
+  a change outside those paths cannot alter them. Christian decided this on 2026-11-01. Run
+  them anyway with `CODEX_LOOP_PILOT_TESTS=1`. The runner always
   writes both rows for such a change and refuses `CODEX_LOOP_VERIFY=off` for it.
 
 ## Not yet decided

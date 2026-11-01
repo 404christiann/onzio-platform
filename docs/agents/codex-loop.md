@@ -154,7 +154,7 @@ appends its own table to the PR. Nothing is pushed unless that passes.
 
 | Check | Command | Why not in the sandbox |
 | --- | --- | --- |
-| Architecture | `npm run test:architecture` | needs process inspection and local ports; fails the same on a clean `main` here |
+| Architecture | `npm run test:architecture` | needs process inspection and local ports; fails the same on a clean `main` here. The runner skips the `pilot-*` files when your change touches nothing they depend on |
 | Database | `npm run test:db` | needs the local database |
 | Whole suite | `npm test` | includes the database tests; in the runner's table it covers only the files not already in the contracts, architecture and database rows, so nothing runs twice |
 | Build | `npm run build` | downloads Google Fonts |

@@ -74,6 +74,7 @@ function run(fx, { checks, env = {}, up = true } = {}) {
   delete e.CODEX_LOOP_TRUST_DIFF; delete e.CODEX_LOOP_VERIFY;
   if (checks) e.CODEX_LOOP_VERIFY = checks;
   if (env.allowStale) e.CODEX_LOOP_ALLOW_STALE_SCRIPT = "1";
+  delete e.CODEX_LOOP_PILOT_TESTS; if (env.pilot) e.CODEX_LOOP_PILOT_TESTS = "1";
   const result = spawnSync("bash", [join(fx.repo, "scripts/codex-loop-verify.sh"), fx.repo, out], { env: e, encoding: "utf8", timeout: 120000 });
   return { status: result.status, stderr: result.stderr, md: existsSync(out) ? readFileSync(out, "utf8") : "" };
 }
@@ -267,4 +268,32 @@ test("the whole suite on its own runs everything", () => {
   assert.equal(r.status, 0, r.stderr);
   assert.doesNotMatch(logOf(r, "suite"), /--exclude/);
   assert.doesNotMatch(row(r.md, "Whole suite"), /not run twice/);
+});
+
+// ---- the pilot architecture files only run when the change can affect them
+const archLog = r => logOf(r, "architecture");
+
+test("the pilot architecture files are skipped for a change that touches nothing they depend on, and the row says so", () => {
+  const r = run(fixture({ change: { "app/page.tsx": "export {};\n" } }), { checks: "architecture" });
+  assert.equal(r.status, 0, r.md);
+  assert.match(archLog(r), /--exclude=tests\/architecture\/pilot-\*\.test\.ts/);
+  assert.match(row(r.md, "Architecture"), /pilot-\* files were skipped/);
+});
+
+test("the pilot architecture files run when the change touches a pilot path, shared test code, homepage-editor lib or packages", () => {
+  for (const file of ["tests/architecture/pilot-x.test.ts", "tests/helpers/contract.ts", "tests/fixtures/entities.ts", "lib/homepage-editor/capabilities.ts", "packages/presentation/index.ts", "docs/pilot-reconstruction.txt"]) {
+    const r = run(fixture({ change: { [file]: "x\n" } }), { checks: "architecture" });
+    assert.doesNotMatch(archLog(r), /--exclude/, file);
+    assert.doesNotMatch(row(r.md, "Architecture"), /files were skipped/, file);
+  }
+});
+
+test("markdown, including HANDOFF.md at the root, does not bring the pilot architecture files back", () => {
+  const r = run(fixture({ change: { "HANDOFF.md": "entry\n", "app/page.tsx": "export {};\n" } }), { checks: "architecture" });
+  assert.match(archLog(r), /--exclude=tests\/architecture\/pilot-/);
+});
+
+test("CODEX_LOOP_PILOT_TESTS=1 runs the pilot architecture files for any change", () => {
+  const r = run(fixture({ change: { "app/page.tsx": "export {};\n" } }), { checks: "architecture", env: { pilot: true } });
+  assert.doesNotMatch(archLog(r), /--exclude/);
 });
