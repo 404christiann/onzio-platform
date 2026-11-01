@@ -2,8 +2,9 @@
 
 - The bot review of `0eded344` confirmed the screenshot/resource evidence and package records, then found that the evidence spec's `homepage-editor-` filename made the normal homepage Playwright config collect it without its capture environment. Renamed it to `tests/browser/site07-shell-evidence.spec.ts`, outside that config's `homepage-editor*.spec.ts` match. No app behavior changed; editor Playback's transparent header remains as captured and undecided.
 - Incorporated refreshed `origin/main` at `14876f830af15081f58265927b8ce04dc5710947`; resolved the `HANDOFF.md` merge conflict by preserving both the SITE-07 evidence entry and the verifier-refresh record from main. The PR conflict status still needs confirmation after publishing this merge.
-- The homepage Playwright config now lists 64 tests across nine files and excludes the renamed SITE-07 capture spec. The full browser suite was not run because `http://alpha.localhost:3110/admin/login` refused the loopback connection. The previous verifier run for `0eded344` exited 0 against base `89899eba`; that result does not cover this merge/follow-up revision.
-- Follow-up commit: `6f5724e` merges refreshed `origin/main` and isolates the evidence spec. Exact next action: refresh the coordinator to `origin/main` and rerun the verifier. Push only on exit 0, then wait for the bot on the resulting head.
+- The homepage Playwright config lists 64 tests across nine files and excludes the renamed SITE-07 capture spec. The full browser suite was not run because `http://alpha.localhost:3110/admin/login` refused the loopback connection.
+- Follow-up commit `6f5724e` merges refreshed `origin/main` and isolates the evidence spec. Verification on `fe652ccbb60c43a52e5b4449a21816800ef22a94` against base `14876f830af15081f58265927b8ce04dc5710947` exited 0: Types PASS (7s); Lint PASS (3s); Contracts 1,494/1,494 PASS (14s); Architecture SAME AS BASELINE (253 passed, 9 failed, 1 skipped; 262s); Build PASS (24s); Database 804/804 PASS (82s); Whole suite SAME AS BASELINE (2,973 passed, 9 failed, 1 skipped; 371s).
+- Exact next action: commit this HANDOFF update, refresh the coordinator to `origin/main`, rerun the verifier on the resulting exact head, and push only on exit 0. Then update the PR verification table and wait for the bot.
 
 ## 2026-11-01 - PR #66 / issue #43 FIX: Academy shell browser evidence
 
