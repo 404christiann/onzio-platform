@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdtemp, readFile, realpath, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { Client } from "pg";
 import { z } from "zod";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
@@ -34,15 +33,143 @@ async function protectedFingerprint(db: Client) {
   return JSON.stringify(values);
 }
 
+const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
+const protectedBaseline = z.object({ protectedSha256: sha256, immutableTrigger: z.literal("O") }).strict();
+const recoveryBaseline = z.discriminatedUnion("scope", [
+  protectedBaseline.extend({ scope: z.literal("base") }),
+  protectedBaseline.extend({
+    scope: z.literal("academy"), clubs: z.array(z.uuid()),
+    tenant: z.object({ content: sha256, billing: sha256, editor: sha256, authority: sha256 }).strict(),
+    schemaSha256: sha256,
+  }),
+]);
+const recoveryRecordSchema = z.object({
+  version: z.literal(2), ownerPid: z.number().int().positive(),
+  clubId: z.uuid(), schema: z.string().regex(/^site_coordination_[a-f0-9]{32}$/),
+  documents: z.object({ a: z.uuid(), b: z.uuid(), legacy: z.uuid() }).strict(),
+  stage: z.enum(["prepared", "populating", "populated", "cleaning", "cleanup-failed", "verified-clean"]),
+  baseline: recoveryBaseline,
+}).strict().superRefine((record, context) => {
+  if (new Set(Object.values(record.documents)).size !== 3) context.addIssue({ code: "custom", message: "Recovery document IDs must be distinct" });
+  if (["populating", "populated"].includes(record.stage) && record.baseline.scope !== "academy") context.addIssue({ code: "custom", message: "Populated recovery requires the Academy baseline" });
+  if (record.baseline.scope === "academy" && (new Set(record.baseline.clubs).size !== record.baseline.clubs.length || record.baseline.clubs.includes(record.clubId))) context.addIssue({ code: "custom", message: "Unrelated recovery clubs must be distinct and exclude the fixture" });
+});
+type RecoveryRecord = z.infer<typeof recoveryRecordSchema>;
+const hashProtected = (value: string) => createHash("sha256").update(value).digest("hex");
+const schemaOwner = (clubId: string) => `onzio-academy-proof:${clubId}`;
+
+async function recoveryPath(file: string, existing = true) {
+  assert.equal(basename(file), "recovery.json", "Recovery requires its named journal");
+  const parent = dirname(file);
+  const directory = await lstat(parent);
+  assert(directory.isDirectory() && !directory.isSymbolicLink(), "Recovery directory must be a private regular directory");
+  assert(/^onzio-academy-proof-[A-Za-z0-9]+$/.test(basename(parent)), "Recovery requires its owned directory");
+  assert.equal(directory.mode & 0o777, 0o700, "Recovery directory must have mode 700");
+  assert.equal(directory.uid, process.getuid?.(), "Recovery directory must belong to the current user");
+  assert.equal(await realpath(parent), parent, "Recovery path must be canonical");
+  if (existing) {
+    const info = await lstat(file);
+    assert(info.isFile() && !info.isSymbolicLink(), "Recovery journal must be a regular file");
+    assert.equal(info.mode & 0o777, 0o600, "Recovery journal must have mode 600");
+    assert.equal(info.uid, process.getuid?.(), "Recovery journal must belong to the current user");
+  }
+}
+
+async function writeRecovery(file: string, value: RecoveryRecord, existing = true) {
+  const record = recoveryRecordSchema.parse(value);
+  await recoveryPath(file, existing);
+  const temporary = join(dirname(file), `.${randomUUID()}.tmp`);
+  try {
+    await writeFile(temporary, `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600, flag: "wx" });
+    await rename(temporary, file);
+  } finally { await rm(temporary, { force: true }); }
+  return record;
+}
+
+async function assertRecoveryBaseline(db: Client, record: RecoveryRecord) {
+  assert.equal(hashProtected(await protectedFingerprint(db)), record.baseline.protectedSha256, "Alpha/Bravo changed during coordination proof");
+  if (record.baseline.scope === "academy") {
+    const clubs = (await db.query("select id from onzio.clubs where id<>$1 order by id", [record.clubId])).rows.map(row => row.id);
+    assert.deepEqual(clubs, record.baseline.clubs, "Unrelated club inventory changed during full-site proof");
+    assert.deepEqual(await academyTenantFingerprint(db, record.baseline.clubs, true), record.baseline.tenant, "Unrelated tenant state changed during full-site proof");
+    assert.equal(await academySchemaFingerprint(db, record.schema), record.baseline.schemaSha256, "Application schema changed during full-site proof");
+  }
+}
+
+async function cleanRecordedProof(file: string, input: RecoveryRecord) {
+  const record = await writeRecovery(file, { ...input, stage: "cleaning" });
+  const db = new Client(config);
+  const failures: unknown[] = [];
+  try {
+    await db.connect();
+    await db.query("set statement_timeout='8s'");
+    await db.query("begin");
+    try {
+      await db.query("lock table onzio.presentation_documents in access exclusive mode");
+      assert.deepEqual((await db.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows, [{ tgenabled: record.baseline.immutableTrigger }]);
+      const clubs = (await db.query("select id,kind,slug from onzio.clubs where id=$1", [record.clubId])).rows;
+      const schemas = (await db.query("select obj_description(oid,'pg_namespace') as owner from pg_namespace where nspname=$1", [record.schema])).rows;
+      if (clubs.length || schemas.length) {
+        assert.deepEqual(clubs, [{ id: record.clubId, kind: "test", slug: "pilot" }], "Recovery target is not its disposable club");
+        assert.deepEqual(schemas, [{ owner: schemaOwner(record.clubId) }], "Recovery schema does not belong to its club");
+        assert.deepEqual((await db.query("select hostname,is_primary,active,environment,verified_at is not null as verified from onzio.club_domains where club_id=$1", [record.clubId])).rows,
+          [{ hostname: "pilot.localhost", is_primary: true, active: true, environment: "production", verified: true }], "Recovery domain differs from its owned fixture");
+        assert.deepEqual((await db.query("select id from onzio.presentation_documents where club_id=$1 order by id", [record.clubId])).rows.map(row => row.id), Object.values(record.documents).sort(), "Recovery documents differ from its inventory");
+        await db.query(`drop schema ${record.schema} cascade`);
+        await removeAcademyContent(db, record.clubId);
+        await db.query("delete from onzio.presentation_state where club_id=$1", [record.clubId]);
+        await db.query("alter table onzio.presentation_documents disable trigger presentation_documents_immutable");
+        await db.query("delete from onzio.presentation_documents where club_id=$1", [record.clubId]);
+        await db.query("alter table onzio.presentation_documents enable trigger presentation_documents_immutable");
+        for (const table of ["homepage_hero_content", "homepage_story_section", "club_domains", "club_members", "audit_events"]) await db.query(`delete from onzio.${table} where club_id=$1`, [record.clubId]);
+        await db.query("delete from onzio.clubs where id=$1", [record.clubId]);
+      }
+      await assertRecoveryBaseline(db, record);
+      await db.query("commit");
+    } catch (error) {
+      try { await db.query("rollback"); } catch (rollbackError) { throw new AggregateError([error, rollbackError], "Recovery and rollback failed"); }
+      throw error;
+    }
+    assert.equal((await db.query("select count(*)::int as n from onzio.clubs where id=$1", [record.clubId])).rows[0].n, 0);
+    assert.equal((await db.query("select count(*)::int as n from pg_namespace where nspname=$1", [record.schema])).rows[0].n, 0);
+    assert.equal((await db.query("select count(*)::int as n from onzio.presentation_documents where club_id=$1", [record.clubId])).rows[0].n, 0);
+    assert.equal((await db.query("select count(*)::int as n from onzio.club_domains where club_id=$1", [record.clubId])).rows[0].n, 0);
+    assert.deepEqual((await db.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows, [{ tgenabled: record.baseline.immutableTrigger }]);
+  } catch (error) { failures.push(error); }
+  try { await db.end(); } catch (error) { failures.push(error); }
+  if (failures.length) {
+    try { await writeRecovery(file, { ...record, stage: "cleanup-failed" }); } catch (error) { failures.push(error); }
+    if (failures.length === 1) throw failures[0];
+    throw new AggregateError(failures, "Coordination recovery failed");
+  }
+  return writeRecovery(file, { ...record, stage: "verified-clean" });
+}
+
+export async function recoverCoordinationProof(file: string): Promise<void> {
+  assertSafeTestEnvironment();
+  await recoveryPath(file);
+  const value: unknown = JSON.parse(await readFile(file, "utf8"));
+  assert(!(typeof value === "object" && value !== null && "version" in value && value.version === 1), "Version 1 journals require manual recovery because their verification baseline was not persisted");
+  const record = recoveryRecordSchema.parse(value);
+  let alive = true;
+  try { process.kill(record.ownerPid, 0); }
+  catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ESRCH") alive = false;
+    else throw error;
+  }
+  assert(!alive, "Cannot recover a live proof owner");
+  await cleanRecordedProof(file, record);
+}
+
 export async function openCoordinationProof() {
   assertSafeTestEnvironment();
   const db = new Client(config);
   await db.connect();
-  let initial: string;
+  let initialProtectedSha256: string;
   let initialTrigger: { tgenabled: string }[];
   try {
     await db.query("set statement_timeout='8s'");
-    initial = await protectedFingerprint(db);
+    initialProtectedSha256 = hashProtected(await protectedFingerprint(db));
     initialTrigger = (await db.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows;
     assert.deepEqual(initialTrigger, [{ tgenabled: "O" }], "Presentation immutability must be enabled before local proof");
   } catch (error) {
@@ -53,21 +180,28 @@ export async function openCoordinationProof() {
   const clubId = randomUUID();
   const documents = { a: randomUUID(), b: randomUUID(), legacy: randomUUID() };
   const clients: Client[] = [];
-  const journalDirectory = await mkdtemp(join(tmpdir(), "onzio-academy-proof-")).catch(async error => { await db.end(); throw error; });
+  const journalDirectory = await mkdtemp(join(tmpdir(), "onzio-academy-proof-")).then(path => realpath(path)).catch(async error => { await db.end(); throw error; });
   const recoveryFile = join(journalDirectory, "recovery.json");
   let lifecycle: "open" | "cleaning" | "cleanup-failed" | "closed" = "open";
   let cleanup: Promise<void> | undefined;
   let dbClosed = false;
   let fullParameters: AcademyProofParameters | undefined;
   let fullInitial: { clubs: string[]; fingerprint: Awaited<ReturnType<typeof academyTenantFingerprint>>; schema: string } | undefined;
-  const journal = (stage: string) => writeFile(recoveryFile, `${JSON.stringify({ version: 1, clubId, schema, documents, stage }, null, 2)}\n`, { mode: 0o600 });
-  await writeFile(recoveryFile, `${JSON.stringify({ version: 1, clubId, schema, documents, stage: "prepared" }, null, 2)}\n`, { mode: 0o600, flag: "wx" }).catch(async error => { await db.end(); throw error; });
+  let record: RecoveryRecord = {
+    version: 2, ownerPid: process.pid, clubId, schema, documents, stage: "prepared",
+    baseline: { scope: "base", protectedSha256: initialProtectedSha256, immutableTrigger: "O" },
+  };
+  const journal = async (stage: RecoveryRecord["stage"], baseline = record.baseline) => {
+    record = await writeRecovery(recoveryFile, { ...record, stage, baseline });
+  };
+  await writeRecovery(recoveryFile, record, false).catch(async error => { await db.end(); throw error; });
   async function close(): Promise<void> {
     if (lifecycle === "closed") return;
     if (cleanup) return cleanup;
     lifecycle = "cleaning";
     cleanup = (async () => {
-      await journal("cleaning");
+      const errors: unknown[] = [];
+      try { await journal("cleaning"); } catch (error) { errors.push(error); }
       const closingClients = [...clients];
       const outcomes = await Promise.allSettled(closingClients.map(async client => {
         await client.query("rollback").catch(() => undefined);
@@ -75,46 +209,20 @@ export async function openCoordinationProof() {
       }));
       outcomes.forEach((outcome, index) => {
         if (outcome.status === "fulfilled") clients.splice(clients.indexOf(closingClients[index]), 1);
+        else errors.push(outcome.reason);
       });
       if (!dbClosed) {
-        try { await db.query("rollback"); } finally { await db.end(); dbClosed = true; }
+        try { await db.query("rollback"); } catch (error) { errors.push(error); }
+        try { await db.end(); dbClosed = true; } catch (error) { errors.push(error); }
       }
-      assert(outcomes.every(outcome => outcome.status === "fulfilled"), "Coordination proof clients failed to close");
-      const cleanupDb = new Client(config);
-      try {
-        await cleanupDb.connect();
-        await cleanupDb.query("set statement_timeout='8s'");
-        await cleanupDb.query("begin");
-        try {
-          await cleanupDb.query("lock table onzio.presentation_documents in access exclusive mode");
-          await cleanupDb.query(`drop schema if exists ${schema} cascade`);
-          await removeAcademyContent(cleanupDb, clubId);
-          await cleanupDb.query("delete from onzio.presentation_state where club_id=$1", [clubId]);
-          await cleanupDb.query("alter table onzio.presentation_documents disable trigger presentation_documents_immutable");
-          await cleanupDb.query("delete from onzio.presentation_documents where club_id=$1", [clubId]);
-          await cleanupDb.query("alter table onzio.presentation_documents enable trigger presentation_documents_immutable");
-          for (const table of ["homepage_hero_content", "homepage_story_section", "club_domains", "club_members", "audit_events"]) {
-            await cleanupDb.query(`delete from onzio.${table} where club_id=$1`, [clubId]);
-          }
-          await cleanupDb.query("delete from onzio.clubs where id=$1", [clubId]);
-          assert.equal(await protectedFingerprint(cleanupDb), initial, "Alpha/Bravo changed during coordination proof");
-          if (fullInitial) {
-            assert.deepEqual(await academyTenantFingerprint(cleanupDb, fullInitial.clubs, true), fullInitial.fingerprint, "Unrelated tenant state changed during full-site proof");
-            assert.equal(await academySchemaFingerprint(cleanupDb, schema), fullInitial.schema, "Application schema changed during full-site proof");
-          }
-          await cleanupDb.query("commit");
-        } catch (error) { await cleanupDb.query("rollback"); throw error; }
-        assert.equal((await cleanupDb.query("select count(*)::int as n from onzio.clubs where id=$1", [clubId])).rows[0].n, 0);
-        assert.equal((await cleanupDb.query("select count(*)::int as n from pg_namespace where nspname=$1", [schema])).rows[0].n, 0);
-        assert.deepEqual((await cleanupDb.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows, initialTrigger);
-      } finally { await cleanupDb.end(); }
-      await journal("verified-clean");
+      if (errors.length) {
+        try { await journal("cleanup-failed"); } catch (error) { errors.push(error); }
+        if (errors.length === 1) throw errors[0];
+        throw new AggregateError(errors, "Coordination proof clients or journal failed to close");
+      }
+      record = await cleanRecordedProof(recoveryFile, record);
       lifecycle = "closed";
-    })().catch(async error => {
-      lifecycle = "cleanup-failed";
-      try { await journal("cleanup-failed"); } catch (journalError) { throw new AggregateError([error, journalError], "Cleanup failed and its recovery journal could not be updated"); }
-      throw error;
-    }).finally(() => { cleanup = undefined; });
+    })().catch(error => { lifecycle = "cleanup-failed"; throw error; }).finally(() => { cleanup = undefined; });
     return cleanup;
   }
   try {
@@ -140,6 +248,7 @@ export async function openCoordinationProof() {
         from onzio.${table} t where club_id=$2`, [clubId, CLUB_IDS.alpha]);
     }
     await db.query((await readFile(resolve("tests/fixtures/site-coordination/schema.sql"), "utf8")).replaceAll("PROOF_SCHEMA", schema));
+    await db.query(`comment on schema ${schema} is '${schemaOwner(clubId)}'`);
     await db.query("commit");
     async function connection(role: "service_role" | "authenticated" | "anon" | "postgres" = "service_role") {
       assert(["service_role", "authenticated", "anon", "postgres"].includes(role), "Unsupported local proof role");
@@ -171,7 +280,7 @@ export async function openCoordinationProof() {
       assert(!fullParameters && !fullInitial, "Full Academy fixture can only be populated once");
       const clubs = z.array(z.object({ id: z.uuid() })).parse((await db.query("select id from onzio.clubs where id<>$1 order by id", [clubId])).rows).map(row => row.id);
       fullInitial = { clubs, fingerprint: await academyTenantFingerprint(db, clubs, true), schema: await academySchemaFingerprint(db, schema) };
-      await journal("populating");
+      await journal("populating", { scope: "academy", protectedSha256: initialProtectedSha256, immutableTrigger: "O", clubs: fullInitial.clubs, tenant: fullInitial.fingerprint, schemaSha256: fullInitial.schema });
       fullParameters = await populateAcademyContent(db, clubId);
       await journal("populated");
       return fullParameters;
