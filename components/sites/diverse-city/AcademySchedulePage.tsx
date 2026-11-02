@@ -154,7 +154,7 @@ export default function AcademySchedulePage() {
               ))}
             </div>
             {fixtures.length > 0 && (
-              <p className="font-display font-bold text-sm tracking-widest uppercase text-center mt-10 px-6" style={{ color: "#1E3653" }}>
+              <p className="font-display font-bold text-sm tracking-widest uppercase text-center mt-10 px-6 text-[var(--color-black)]">
                 Match details and venues are subject to change.
               </p>
             )}

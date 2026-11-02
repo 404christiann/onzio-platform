@@ -170,7 +170,7 @@ function LegacyRosterPage() {
             >
               The Squad
             </h1>
-        <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
+            <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
           </div>
 
           <div className="px-6 lg:px-10 max-w-7xl mx-auto pb-10">
