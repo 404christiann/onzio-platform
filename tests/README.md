@@ -418,10 +418,19 @@ To retire selectors in a SITE-08 change:
    form test rejects any other layout.
 4. Run the test again and commit the code and the smaller list together.
 
-Never raise a count or add a file. The initial inventory is 461 mentions in 61 files,
-including 51 mentions in the presentation package. The earlier unmerged inventory was
-455 application mentions; merged shell and Programs changes reduced that scope to 410.
-See [the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
+After the first introduction, never raise a count or add a file. The reconciled initial
+inventory is 455 mentions in 63 files, including 51 presentation-package mentions.
+The 461-mention, 61-file recovery snapshot at `eb82ba3` remains in
+[the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
+Accepted Competition changes remove 17 mentions, Sponsors and Shop add five outer
+adapter mentions, and locally accepted registration pages add six outer adapter
+mentions across two more files. The guard itself adds no application selector.
+
+To read the current inventory totals without changing the allowlist:
+
+```bash
+npx tsx -e 'import {scanRepositoryTemplateSelectors} from "./tests/helpers/template-selectors"; const table=scanRepositoryTemplateSelectors(process.cwd()); console.log({files:Object.keys(table).length,mentions:Object.values(table).reduce((sum,row)=>sum+Object.values(row).reduce((sum,count)=>sum+count,0),0)});'
+```
 
 Rewrite the code so the branch is not needed.
 The test also compares the JSON with current `origin/main` and rejects increased
@@ -436,9 +445,14 @@ It has no required selector file or minimum count. Throwaway repository tests pr
 tracked, untracked, and new-directory scan coverage, excluded tests, real Git baseline
 history, and the actual architecture guard with no remaining selectors.
 
-The recovered initial snapshot describes `eb82ba3`. It still needs reconciliation
-against current main after #49, #51 and #52 are accepted on main, before the guard's
-first publication. This follow-up does not refresh that inventory.
+The reconciled source is locally accepted registration ref
+`e4a710413386cf77e12bcc13ec5d38c9823c6b09`, which includes merged Competition and
+Sponsors/Shop changes. Issue #52 is closed for local acceptance; PR #74 remains draft
+and production release approval is pending. Local acceptance does not require a
+production merge. The scanned source in this guard integration matches that ref
+exactly. The report preserves the original `ada583e` to `eb82ba3` recovery comparison
+and records every reconciliation stage and drift. Full pilot-inclusive verification
+and exact final-head independent review still precede the guard's publication.
 
 Binding analysis uses an isolated one-source TypeScript Program with `noLib`,
 `noResolve`, `types: []`, JavaScript support and JSX preservation. Its virtual

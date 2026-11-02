@@ -23,6 +23,15 @@
     "literal:academy@1": 1,
     "read:presentationTemplateKey": 1
   },
+  "app/%5Fclubs/[slug]/register/[formSlug]/confirmation/page.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx": {
+    "id:academy": 2,
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
   "app/%5Fclubs/[slug]/sponsors/page.tsx": {
     "literal:academy@1": 1,
     "read:presentationTemplateKey": 1
@@ -33,18 +42,16 @@
     "read:presentationTemplateKey": 2
   },
   "app/(public)/roster/page.tsx": {
-    "flag:isAcademy": 9,
-    "literal:academy@1": 2,
+    "literal:academy@1": 1,
     "literal:clubhouse@1": 1,
     "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 4
+    "read:presentationTemplateKey": 3
   },
   "app/(public)/schedule/[fixtureId]/page.tsx": {
     "literal:editorial@1": 1,
     "read:presentationTemplateKey": 1
   },
   "app/(public)/schedule/page.tsx": {
-    "flag:isAcademy": 6,
     "literal:academy@1": 1,
     "literal:clubhouse@1": 1,
     "literal:editorial@1": 1,
@@ -57,8 +64,9 @@
     "read:presentationTemplateKey": 3
   },
   "app/(public)/sponsors/page.tsx": {
+    "literal:academy@1": 2,
     "literal:clubhouse@1": 1,
-    "read:presentationTemplateKey": 1
+    "read:presentationTemplateKey": 4
   },
   "app/(public)/stats/page.tsx": {
     "literal:clubhouse@1": 1,

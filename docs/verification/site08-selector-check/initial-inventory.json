@@ -1,191 +1,411 @@
 {
-  "previousSource": "ada583e",
-  "currentSource": "eb82ba3e344000e72839088a39fd46e00b1536b3",
-  "reason": "Initial guard recovery after already-merged Academy shell/page moves and Programs policy. Presentation package enters scan after dead switching APIs were deleted by PR57. No application selector was added by issue44.",
-  "previousScope": "application code excluding presentation package",
-  "currentScope": "application code including presentation package",
-  "applicationCount": 410,
+  "recordedAt": "2026-11-02T18:55:40.240Z",
+  "previousSource": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+  "currentSource": "e4a710413386cf77e12bcc13ec5d38c9823c6b09",
+  "scannerSource": "f52040c336c24735b3ab14f5a7fcd44266f46cb9",
+  "reason": "Reconcile the first guard inventory with locally accepted page implementation inputs. Main includes accepted Competition and Sponsors/Shop changes. The exact reviewed and fully verified registration ref is locally accepted and closed, while PR74 remains draft and its production release approval is pending. Issue44 changes no application selector.",
+  "previousScope": "Non-test JavaScript/TypeScript source across the repository, including the presentation package.",
+  "currentScope": "The same scope, evaluated by the unchanged compiler-symbol scanner.",
+  "nonPresentationSourceCount": 404,
   "presentationPackageCount": 51,
   "before": {
     "files": 61,
-    "count": 455
+    "count": 461
   },
   "after": {
-    "files": 61,
-    "count": 461
+    "files": 63,
+    "count": 455
+  },
+  "allowlistSha256": "ea645ded5e6814e8fdd05e5e95b1f5c083820e15c7bb552853ea9ebb396e4b87",
+  "acceptedInputs": [
+    {
+      "source": "89670652fa7467e5e6e64e0c39f1aa5f9a58d848",
+      "issue": 50,
+      "status": "accepted and merged in PR71"
+    },
+    {
+      "source": "d8775887c4f137cbb15750ea5e20b698c4e1ea60",
+      "issue": 49,
+      "status": "accepted and merged in PR72 through Christian-authorized bot workflow"
+    },
+    {
+      "source": "e4a710413386cf77e12bcc13ec5d38c9823c6b09",
+      "issue": 52,
+      "status": "local acceptance complete; PR74 draft; production release approval pending",
+      "evidence": "https://github.com/404christiann/onzio-platform/issues/52#issuecomment-6585449530"
+    }
+  ],
+  "stages": [
+    {
+      "name": "recovered",
+      "source": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "files": 61,
+      "count": 461
+    },
+    {
+      "name": "competition",
+      "source": "89670652fa7467e5e6e64e0c39f1aa5f9a58d848",
+      "files": 61,
+      "count": 444
+    },
+    {
+      "name": "main",
+      "source": "d8775887c4f137cbb15750ea5e20b698c4e1ea60",
+      "files": 61,
+      "count": 449
+    },
+    {
+      "name": "registration",
+      "source": "e4a710413386cf77e12bcc13ec5d38c9823c6b09",
+      "files": 63,
+      "count": 455
+    }
+  ],
+  "stageDrift": {
+    "competitionFromRecovered": {
+      "added": [],
+      "stale": [
+        {
+          "path": "app/(public)/roster/page.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 2,
+          "found": 1
+        },
+        {
+          "path": "app/(public)/roster/page.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 4,
+          "found": 3
+        },
+        {
+          "path": "app/(public)/roster/page.tsx",
+          "signature": "flag:isAcademy",
+          "allowed": 9,
+          "found": 0
+        },
+        {
+          "path": "app/(public)/schedule/page.tsx",
+          "signature": "flag:isAcademy",
+          "allowed": 6,
+          "found": 0
+        }
+      ]
+    },
+    "sponsorsFromCompetition": {
+      "added": [
+        {
+          "path": "app/(public)/sponsors/page.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 0,
+          "found": 2
+        },
+        {
+          "path": "app/(public)/sponsors/page.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 1,
+          "found": 4
+        }
+      ],
+      "stale": []
+    },
+    "registrationFromMain": {
+      "added": [
+        {
+          "path": "app/%5Fclubs/[slug]/register/[formSlug]/confirmation/page.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 0,
+          "found": 1
+        },
+        {
+          "path": "app/%5Fclubs/[slug]/register/[formSlug]/confirmation/page.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 0,
+          "found": 1
+        },
+        {
+          "path": "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx",
+          "signature": "id:academy",
+          "allowed": 0,
+          "found": 2
+        },
+        {
+          "path": "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 0,
+          "found": 1
+        },
+        {
+          "path": "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 0,
+          "found": 1
+        }
+      ],
+      "stale": []
+    }
   },
   "drift": {
     "added": [
       {
-        "path": "components/TenantPageLoading.tsx",
+        "path": "app/%5Fclubs/[slug]/register/[formSlug]/confirmation/page.tsx",
         "signature": "read:presentationTemplateKey",
         "allowed": 0,
         "found": 1
       },
       {
-        "path": "components/TenantPageLoading.tsx",
+        "path": "app/%5Fclubs/[slug]/register/[formSlug]/confirmation/page.tsx",
         "signature": "literal:academy@1",
         "allowed": 0,
         "found": 1
       },
       {
-        "path": "components/admin/homepage/HomepageEditor.tsx",
+        "path": "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx",
         "signature": "read:presentationTemplateKey",
-        "allowed": 2,
-        "found": 3
+        "allowed": 0,
+        "found": 1
       },
       {
-        "path": "components/admin/homepage/HomepageEditor.tsx",
+        "path": "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx",
         "signature": "literal:academy@1",
         "allowed": 0,
         "found": 1
       },
       {
-        "path": "components/sites/diverse-city/FontScope.tsx",
-        "signature": "read:data-font-pack",
+        "path": "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx",
+        "signature": "id:academy",
         "allowed": 0,
-        "found": 1
+        "found": 2
       },
       {
-        "path": "packages/presentation/index.ts",
-        "signature": "literal:cinematic@1",
-        "allowed": 0,
-        "found": 8
+        "path": "app/(public)/sponsors/page.tsx",
+        "signature": "read:presentationTemplateKey",
+        "allowed": 1,
+        "found": 4
       },
       {
-        "path": "packages/presentation/index.ts",
-        "signature": "literal:heritage@1",
-        "allowed": 0,
-        "found": 9
-      },
-      {
-        "path": "packages/presentation/index.ts",
-        "signature": "literal:clubhouse@1",
-        "allowed": 0,
-        "found": 11
-      },
-      {
-        "path": "packages/presentation/index.ts",
+        "path": "app/(public)/sponsors/page.tsx",
         "signature": "literal:academy@1",
-        "allowed": 0,
-        "found": 12
-      },
-      {
-        "path": "packages/presentation/index.ts",
-        "signature": "literal:editorial@1",
-        "allowed": 0,
-        "found": 9
-      },
-      {
-        "path": "packages/presentation/index.ts",
-        "signature": "read:templateKey",
         "allowed": 0,
         "found": 2
       }
     ],
     "stale": [
       {
-        "path": "app/%5Fclubs/[slug]/layout.tsx",
+        "path": "app/(public)/roster/page.tsx",
         "signature": "read:presentationTemplateKey",
         "allowed": 4,
         "found": 3
       },
       {
-        "path": "app/%5Fclubs/[slug]/layout.tsx",
-        "signature": "read:templateKey",
+        "path": "app/(public)/roster/page.tsx",
+        "signature": "literal:academy@1",
         "allowed": 2,
         "found": 1
       },
       {
-        "path": "components/Footer.tsx",
+        "path": "app/(public)/roster/page.tsx",
         "signature": "flag:isAcademy",
-        "allowed": 4,
+        "allowed": 9,
         "found": 0
       },
       {
-        "path": "components/Hero.tsx",
-        "signature": "read:presentationTemplateKey",
+        "path": "app/(public)/schedule/page.tsx",
+        "signature": "flag:isAcademy",
         "allowed": 6,
-        "found": 1
-      },
-      {
-        "path": "components/Hero.tsx",
-        "signature": "flag:isAcademy",
-        "allowed": 2,
-        "found": 0
-      },
-      {
-        "path": "components/Hero.tsx",
-        "signature": "literal:academy@1",
-        "allowed": 4,
-        "found": 0
-      },
-      {
-        "path": "components/Nav.tsx",
-        "signature": "read:presentationTemplateKey",
-        "allowed": 6,
-        "found": 1
-      },
-      {
-        "path": "components/Nav.tsx",
-        "signature": "flag:isAcademy",
-        "allowed": 16,
-        "found": 0
-      },
-      {
-        "path": "components/Nav.tsx",
-        "signature": "literal:academy@1",
-        "allowed": 4,
-        "found": 0
-      },
-      {
-        "path": "app/api/admin/programs-directory/route.ts",
-        "signature": "flag:pageUnavailable",
-        "allowed": 1,
-        "found": 0
-      },
-      {
-        "path": "app/api/admin/programs-directory/route.ts",
-        "signature": "literal:academy@1",
-        "allowed": 1,
-        "found": 0
-      },
-      {
-        "path": "app/api/admin/programs-directory/route.ts",
-        "signature": "read:presentationTemplateKey",
-        "allowed": 1,
-        "found": 0
-      },
-      {
-        "path": "app/api/admin/programs-page/route.ts",
-        "signature": "flag:pageUnavailable",
-        "allowed": 1,
-        "found": 0
-      },
-      {
-        "path": "app/api/admin/programs-page/route.ts",
-        "signature": "literal:academy@1",
-        "allowed": 1,
-        "found": 0
-      },
-      {
-        "path": "app/api/admin/programs-page/route.ts",
-        "signature": "read:presentationTemplateKey",
-        "allowed": 1,
-        "found": 0
-      },
-      {
-        "path": "components/AcademyRouteLoadingSkeleton.tsx",
-        "signature": "literal:academy@1",
-        "allowed": 1,
-        "found": 0
-      },
-      {
-        "path": "components/AcademyRouteLoadingSkeleton.tsx",
-        "signature": "read:presentationTemplateKey",
-        "allowed": 1,
         "found": 0
       }
     ]
+  },
+  "recoveryComparisonSha256": "e62c9505f1feb1ed50606f41e33d3c05110dd29d3fe6f43ce5a2f4cbd2de3427",
+  "recoveryComparison": {
+    "previousSource": "ada583e",
+    "currentSource": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+    "reason": "Initial guard recovery after already-merged Academy shell/page moves and Programs policy. Presentation package enters scan after dead switching APIs were deleted by PR57. No application selector was added by issue44.",
+    "previousScope": "application code excluding presentation package",
+    "currentScope": "application code including presentation package",
+    "applicationCount": 410,
+    "presentationPackageCount": 51,
+    "before": {
+      "files": 61,
+      "count": 455
+    },
+    "after": {
+      "files": 61,
+      "count": 461
+    },
+    "drift": {
+      "added": [
+        {
+          "path": "components/TenantPageLoading.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 0,
+          "found": 1
+        },
+        {
+          "path": "components/TenantPageLoading.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 0,
+          "found": 1
+        },
+        {
+          "path": "components/admin/homepage/HomepageEditor.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 2,
+          "found": 3
+        },
+        {
+          "path": "components/admin/homepage/HomepageEditor.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 0,
+          "found": 1
+        },
+        {
+          "path": "components/sites/diverse-city/FontScope.tsx",
+          "signature": "read:data-font-pack",
+          "allowed": 0,
+          "found": 1
+        },
+        {
+          "path": "packages/presentation/index.ts",
+          "signature": "literal:cinematic@1",
+          "allowed": 0,
+          "found": 8
+        },
+        {
+          "path": "packages/presentation/index.ts",
+          "signature": "literal:heritage@1",
+          "allowed": 0,
+          "found": 9
+        },
+        {
+          "path": "packages/presentation/index.ts",
+          "signature": "literal:clubhouse@1",
+          "allowed": 0,
+          "found": 11
+        },
+        {
+          "path": "packages/presentation/index.ts",
+          "signature": "literal:academy@1",
+          "allowed": 0,
+          "found": 12
+        },
+        {
+          "path": "packages/presentation/index.ts",
+          "signature": "literal:editorial@1",
+          "allowed": 0,
+          "found": 9
+        },
+        {
+          "path": "packages/presentation/index.ts",
+          "signature": "read:templateKey",
+          "allowed": 0,
+          "found": 2
+        }
+      ],
+      "stale": [
+        {
+          "path": "app/%5Fclubs/[slug]/layout.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 4,
+          "found": 3
+        },
+        {
+          "path": "app/%5Fclubs/[slug]/layout.tsx",
+          "signature": "read:templateKey",
+          "allowed": 2,
+          "found": 1
+        },
+        {
+          "path": "components/Footer.tsx",
+          "signature": "flag:isAcademy",
+          "allowed": 4,
+          "found": 0
+        },
+        {
+          "path": "components/Hero.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 6,
+          "found": 1
+        },
+        {
+          "path": "components/Hero.tsx",
+          "signature": "flag:isAcademy",
+          "allowed": 2,
+          "found": 0
+        },
+        {
+          "path": "components/Hero.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 4,
+          "found": 0
+        },
+        {
+          "path": "components/Nav.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 6,
+          "found": 1
+        },
+        {
+          "path": "components/Nav.tsx",
+          "signature": "flag:isAcademy",
+          "allowed": 16,
+          "found": 0
+        },
+        {
+          "path": "components/Nav.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 4,
+          "found": 0
+        },
+        {
+          "path": "app/api/admin/programs-directory/route.ts",
+          "signature": "flag:pageUnavailable",
+          "allowed": 1,
+          "found": 0
+        },
+        {
+          "path": "app/api/admin/programs-directory/route.ts",
+          "signature": "literal:academy@1",
+          "allowed": 1,
+          "found": 0
+        },
+        {
+          "path": "app/api/admin/programs-directory/route.ts",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 1,
+          "found": 0
+        },
+        {
+          "path": "app/api/admin/programs-page/route.ts",
+          "signature": "flag:pageUnavailable",
+          "allowed": 1,
+          "found": 0
+        },
+        {
+          "path": "app/api/admin/programs-page/route.ts",
+          "signature": "literal:academy@1",
+          "allowed": 1,
+          "found": 0
+        },
+        {
+          "path": "app/api/admin/programs-page/route.ts",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 1,
+          "found": 0
+        },
+        {
+          "path": "components/AcademyRouteLoadingSkeleton.tsx",
+          "signature": "literal:academy@1",
+          "allowed": 1,
+          "found": 0
+        },
+        {
+          "path": "components/AcademyRouteLoadingSkeleton.tsx",
+          "signature": "read:presentationTemplateKey",
+          "allowed": 1,
+          "found": 0
+        }
+      ]
+    }
   }
 }

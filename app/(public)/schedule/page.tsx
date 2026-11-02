@@ -6,29 +6,21 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import FixtureRow from "@/components/FixtureRow";
-import AcademyFixtureRow from "@/components/AcademyFixtureRow";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import AcademySchedulePage from "@/components/sites/diverse-city/AcademySchedulePage";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
 import EditorialSchedule from "@/components/editorial/EditorialSchedule";
-import { AcademyScheduleLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/**
- * Returns the UTC Date of the fixture's kickoff, treating the game time
- * as America/Los_Angeles (PST/PDT). A game is only "past" once it has
- * actually started in LA time.
- */
-function fixtureDateTime(fixture: Fixture): Date {
+function fixtureKickoffInstantFromLosAngelesLocalTime(fixture: Fixture): Date {
   const [year, month, day] = fixture.date.split("-").map(Number);
 
   let hours = 0, minutes = 0;
 
-  // DB stores 24-hour "HH:MM" — try that first
   const match24 = (fixture.time ?? "").match(/^(\d{1,2}):(\d{2})$/);
-  // Fallback: legacy "8:00 PM" format
   const match12 = (fixture.time ?? "").match(/(\d+):(\d+)\s*(AM|PM)/i);
 
   if (match24) {
@@ -41,8 +33,6 @@ function fixtureDateTime(fixture: Fixture): Date {
     if (match12[3].toUpperCase() === "AM" && hours === 12) hours  = 0;
   }
 
-  // Shift from America/Los_Angeles → UTC so comparisons against Date.now() work
-  // correctly regardless of where the browser or server is located.
   const approxUTC = new Date(Date.UTC(year, month - 1, day, hours, minutes));
   const utcStr = approxUTC.toLocaleString("en-US", { timeZone: "UTC" });
   const laStr  = approxUTC.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
@@ -52,7 +42,9 @@ function fixtureDateTime(fixture: Fixture): Date {
 }
 
 function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
-  const idx = fixtures.findIndex((f) => fixtureDateTime(f) > now);
+  const idx = fixtures.findIndex(
+    (fixture) => fixtureKickoffInstantFromLosAngelesLocalTime(fixture) > now,
+  );
   return idx === -1 ? fixtures.length : idx;
 }
 
@@ -60,13 +52,12 @@ export default function SchedulePage() {
   const club = useClubContext();
   if (club.presentationTemplateKey === "editorial@1") return <EditorialSchedule />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSchedulePage />;
+  if (club.presentationTemplateKey === "academy@1") return <AcademySchedulePage />;
   return <LegacySchedulePage />;
 }
 
 function LegacySchedulePage() {
-  const club = useClubContext();
   const clubId = useClubId();
-  const isAcademy = club.presentationTemplateKey === "academy@1";
   const heroRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +67,6 @@ function LegacySchedulePage() {
   const [error, setError]       = useState<string | null>(null);
   const [now, setNow]           = useState(() => new Date());
 
-  // Tick every 30 seconds so past/next status updates live
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
@@ -121,9 +111,7 @@ function LegacySchedulePage() {
   return (
     <div style={{ backgroundColor: "var(--color-white)" }}>
 
-      {/* Loading */}
-      {loading && isAcademy && <AcademyScheduleLoadingSkeleton />}
-      {loading && !isAcademy && (
+      {loading && (
         <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
           <p
             className="font-display font-black uppercase tracking-widest"
@@ -134,7 +122,6 @@ function LegacySchedulePage() {
         </div>
       )}
 
-      {/* Error */}
       {error && !loading && (
         <div className="flex items-center justify-center" style={{ minHeight: "100vh" }}>
           <p
@@ -146,85 +133,53 @@ function LegacySchedulePage() {
         </div>
       )}
 
-      {/* Content */}
       {!loading && !error && (
         <>
-          {/* Hero */}
           <div
             ref={heroRef}
             className="pt-36 pb-14 px-6 lg:px-10 max-w-7xl mx-auto"
             style={{ opacity: 0 }}
           >
-            {isAcademy ? (
-              <>
-                <p className="font-nav text-sm font-bold uppercase text-[#FF1616] sm:text-base">
-                  {seasonLabel} Season
-                </p>
-                <h1 className="mt-5 font-display text-[4rem] font-black uppercase italic leading-none text-[#1E3653] sm:text-[6.5rem] lg:text-[9rem]">
-                  Fixtures
-                </h1>
-                <div className="mt-8 h-1 w-14 bg-[#FF1616] sm:w-20" />
-              </>
-            ) : (
-              <>
-                <p
-                  className="font-display font-bold tracking-widest uppercase mb-3"
-                  style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
-                >
-                  {seasonLabel} Season
-                </p>
-                <h1
-                  className="font-display font-black uppercase leading-none"
-                  style={{ fontSize: "clamp(4rem, 10vw, 8rem)", color: "var(--color-black)" }}
-                >
-                  Fixtures
-                </h1>
-                <div className="w-16 h-1 mt-6" style={{ backgroundColor: "var(--color-red)" }} />
-              </>
-            )}
+            <p
+              className="mb-3 font-display font-bold uppercase tracking-widest"
+              style={{ color: "var(--color-red)", fontSize: "clamp(0.85rem, 1.5vw, 1.1rem)" }}
+            >
+              {seasonLabel} Season
+            </p>
+            <h1
+              className="font-display font-black uppercase leading-none"
+              style={{ fontSize: "clamp(4rem, 10vw, 8rem)", color: "var(--color-black)" }}
+            >
+              Fixtures
+            </h1>
+            <div className="mt-6 h-1 w-16 bg-[var(--color-red)]" />
           </div>
 
-          {/* Fixture list */}
           <div
             ref={listRef}
             className="max-w-7xl mx-auto pb-32"
             style={{ opacity: 0 }}
           >
-            {/* Column headers */}
-            {isAcademy ? (
-              <div className="hidden grid-cols-[44px_240px_minmax(0,1fr)_160px] items-center border-b-2 border-[#1E3653] px-5 pb-4 md:grid">
-                <span aria-hidden="true" />
-                <span className="font-nav text-sm font-bold uppercase text-[#1E3653]">
-                  Date · Time
-                </span>
-                <span className="font-nav text-sm font-bold uppercase text-[#1E3653]">
-                  Opponent
-                </span>
-                <span aria-hidden="true" />
-              </div>
-            ) : (
-              <div
-                className="hidden sm:flex items-center px-6 md:px-8 py-3"
-                style={{ borderBottom: "2px solid var(--color-black)" }}
+            <div
+              className="hidden items-center px-6 py-3 sm:flex md:px-8"
+              style={{ borderBottom: "2px solid var(--color-black)" }}
+            >
+              <span className="w-8 flex-shrink-0" />
+              <span
+                className="w-44 flex-shrink-0 font-display text-sm font-black uppercase tracking-widest"
+                style={{ color: "var(--color-black)" }}
               >
-                <span className="w-8 flex-shrink-0" />
-                <span
-                  className="font-display font-black text-sm tracking-widest uppercase w-44 flex-shrink-0"
-                  style={{ color: "var(--color-black)" }}
-                >
-                  Date · Time
-                </span>
-                <span
-                  className="font-display font-black text-sm tracking-widest uppercase flex-1 px-6"
-                  style={{ color: "var(--color-black)" }}
-                >
-                  Opponent
-                </span>
-              </div>
-            )}
+                Date · Time
+              </span>
+              <span
+                className="flex-1 px-6 font-display text-sm font-black uppercase tracking-widest"
+                style={{ color: "var(--color-black)" }}
+              >
+                Opponent
+              </span>
+            </div>
 
-            {/* Rows */}
-            <div style={isAcademy ? undefined : { borderTop: "1px solid rgba(0,0,0,0.07)" }}>
+            <div style={{ borderTop: "1px solid rgba(0,0,0,0.07)" }}>
               {fixtures.length === 0 ? (
                 <div className="px-6 py-14 text-center">
                   <h2 className="font-display text-2xl font-black uppercase text-[var(--color-black)]">
@@ -235,27 +190,16 @@ function LegacySchedulePage() {
                   </p>
                 </div>
               ) : fixtures.map((fixture, i) => (
-                isAcademy ? (
-                  <AcademyFixtureRow
-                    key={i}
-                    fixture={fixture}
-                    isNext={i === nextMatchIdx}
-                    isPast={i < nextMatchIdx}
-                    index={i}
-                  />
-                ) : (
-                  <FixtureRow
-                    key={i}
-                    fixture={fixture}
-                    isNext={i === nextMatchIdx}
-                    isPast={i < nextMatchIdx}
-                    index={i}
-                  />
-                )
+                <FixtureRow
+                  key={i}
+                  fixture={fixture}
+                  isNext={i === nextMatchIdx}
+                  isPast={i < nextMatchIdx}
+                  index={i}
+                />
               ))}
             </div>
 
-            {/* Footer note */}
             {fixtures.length > 0 && <p
               className="font-display font-bold text-sm tracking-widest uppercase text-center mt-10 px-6"
               style={{ color: "var(--color-black)" }}

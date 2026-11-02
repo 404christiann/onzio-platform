@@ -19,7 +19,7 @@ function formatDifference(value: number) {
   return value > 0 ? `+${value}` : String(value);
 }
 
-export default function AcademyLeagueStandingsTable({
+export default function AcademyStandingsTable({
   settings,
   rows,
 }: {

@@ -1,0 +1,1155 @@
+{
+  "schemaVersion": 1,
+  "builds": [
+    {
+      "name": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3"
+    },
+    {
+      "name": "head",
+      "sha": "7e63a840a99ecde818af75a6bb8b70af2575b8cd"
+    }
+  ],
+  "routes": [
+    "/sponsors",
+    "/shop"
+  ],
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "captures": [
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/sponsors",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "headerDomSha256": "bee814d3cae81eae1124e262484015ba217c0ab1493b9eff69bd205337fcde83",
+      "mainDomSha256": "50d6981bba7efbe9a60b8fb4366576a96b819fe60479434fa8a4353a29f71199",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "site_social_links": 1,
+          "programs": 1,
+          "contact_profile": 1,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": null,
+      "shopFixtureReads": [],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "base-desktop-sponsors.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/shop",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "headerDomSha256": "b6e77859795c64536a0d139320791b92b83c7f1cbdfc0da310925b6a4d378ddf",
+      "mainDomSha256": "1d091a5e9436e7178bf461a5684a59282935d7af43254a10efa87f2fe17e4f35",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "View home kit",
+          "href": "/shop"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "shop_kit_section": 3,
+          "shop_kit_photos": 3,
+          "site_social_links": 1,
+          "contact_profile": 1,
+          "programs": 1,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": "tests/browser/homepage-editor-home-kit.spec.ts: Home kit pilot",
+      "shopFixtureReads": [
+        "shop_kit_photos:eq.away",
+        "shop_kit_photos:eq.home",
+        "shop_kit_photos:eq.third",
+        "shop_kit_section:eq.away",
+        "shop_kit_section:eq.home",
+        "shop_kit_section:eq.third"
+      ],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "base-desktop-shop.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/sponsors",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "headerDomSha256": "bee814d3cae81eae1124e262484015ba217c0ab1493b9eff69bd205337fcde83",
+      "mainDomSha256": "50d6981bba7efbe9a60b8fb4366576a96b819fe60479434fa8a4353a29f71199",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 1,
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": null,
+      "shopFixtureReads": [],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "base-phone-sponsors.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/shop",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "headerDomSha256": "b6e77859795c64536a0d139320791b92b83c7f1cbdfc0da310925b6a4d378ddf",
+      "mainDomSha256": "1d091a5e9436e7178bf461a5684a59282935d7af43254a10efa87f2fe17e4f35",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "View home kit",
+          "href": "/shop"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "site_social_links": 1,
+          "contact_profile": 1,
+          "programs": 1,
+          "shop_kit_section": 3,
+          "shop_kit_photos": 3,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": "tests/browser/homepage-editor-home-kit.spec.ts: Home kit pilot",
+      "shopFixtureReads": [
+        "shop_kit_photos:eq.away",
+        "shop_kit_photos:eq.home",
+        "shop_kit_photos:eq.third",
+        "shop_kit_section:eq.away",
+        "shop_kit_section:eq.home",
+        "shop_kit_section:eq.third"
+      ],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "base-phone-shop.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "7e63a840a99ecde818af75a6bb8b70af2575b8cd",
+      "route": "/sponsors",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "headerDomSha256": "bee814d3cae81eae1124e262484015ba217c0ab1493b9eff69bd205337fcde83",
+      "mainDomSha256": "50d6981bba7efbe9a60b8fb4366576a96b819fe60479434fa8a4353a29f71199",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 1,
+          "site_social_links": 1,
+          "contact_profile": 1,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": null,
+      "shopFixtureReads": [],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "head-desktop-sponsors.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "7e63a840a99ecde818af75a6bb8b70af2575b8cd",
+      "route": "/shop",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "headerDomSha256": "b6e77859795c64536a0d139320791b92b83c7f1cbdfc0da310925b6a4d378ddf",
+      "mainDomSha256": "1d091a5e9436e7178bf461a5684a59282935d7af43254a10efa87f2fe17e4f35",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "View home kit",
+          "href": "/shop"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "site_social_links": 1,
+          "programs": 1,
+          "contact_profile": 1,
+          "shop_kit_section": 3,
+          "shop_kit_photos": 3,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": "tests/browser/homepage-editor-home-kit.spec.ts: Home kit pilot",
+      "shopFixtureReads": [
+        "shop_kit_photos:eq.away",
+        "shop_kit_photos:eq.home",
+        "shop_kit_photos:eq.third",
+        "shop_kit_section:eq.away",
+        "shop_kit_section:eq.home",
+        "shop_kit_section:eq.third"
+      ],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "head-desktop-shop.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "7e63a840a99ecde818af75a6bb8b70af2575b8cd",
+      "route": "/sponsors",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "headerDomSha256": "bee814d3cae81eae1124e262484015ba217c0ab1493b9eff69bd205337fcde83",
+      "mainDomSha256": "50d6981bba7efbe9a60b8fb4366576a96b819fe60479434fa8a4353a29f71199",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "site_social_links": 1,
+          "programs": 1,
+          "contact_profile": 1,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": null,
+      "shopFixtureReads": [],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "head-phone-sponsors.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "7e63a840a99ecde818af75a6bb8b70af2575b8cd",
+      "route": "/shop",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "headerDomSha256": "b6e77859795c64536a0d139320791b92b83c7f1cbdfc0da310925b6a4d378ddf",
+      "mainDomSha256": "1d091a5e9436e7178bf461a5684a59282935d7af43254a10efa87f2fe17e4f35",
+      "footerDomSha256": "8ba679b46579ea60b6ec50c11e01c337a2188409fa0e436de1f97bbe0a135d9f",
+      "linkList": [
+        {
+          "text": "AF",
+          "href": "/"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Home",
+          "href": "/"
+        },
+        {
+          "text": "About",
+          "href": "/club/about"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Fixtures",
+          "href": "/schedule"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Alpha Pathway",
+          "href": "/programs/alpha-academy-pathway"
+        },
+        {
+          "text": "Store",
+          "href": "/shop"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "View home kit",
+          "href": "/shop"
+        },
+        {
+          "text": "Club",
+          "href": "/club/about"
+        },
+        {
+          "text": "Programs",
+          "href": "/programs"
+        },
+        {
+          "text": "Roster",
+          "href": "/roster"
+        },
+        {
+          "text": "Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Sponsors",
+          "href": "/sponsors"
+        },
+        {
+          "text": "Contact",
+          "href": "/contact"
+        },
+        {
+          "text": "Tryouts",
+          "href": "/tryouts"
+        },
+        {
+          "text": "Powered by",
+          "href": "https://onziofutbol.com/"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 1,
+          "site_social_links": 1,
+          "contact_profile": 1,
+          "shop_kit_section": 3,
+          "shop_kit_photos": 3,
+          "program_media": 1
+        }
+      },
+      "shopFixtureSource": "tests/browser/homepage-editor-home-kit.spec.ts: Home kit pilot",
+      "shopFixtureReads": [
+        "shop_kit_photos:eq.away",
+        "shop_kit_photos:eq.home",
+        "shop_kit_photos:eq.third",
+        "shop_kit_section:eq.away",
+        "shop_kit_section:eq.home",
+        "shop_kit_section:eq.third"
+      ],
+      "pageErrors": [],
+      "resourceErrors": [],
+      "screenshot": "head-phone-shop.jpg"
+    }
+  ]
+}

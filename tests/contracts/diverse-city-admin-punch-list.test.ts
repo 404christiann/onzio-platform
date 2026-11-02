@@ -19,9 +19,11 @@ const SCHEDULE_ADMIN = "app/admin/(protected)/schedule/page.tsx";
 const DATA_ROUTE = "app/api/admin/data/route.ts";
 const AUTHORIZE_ROUTE = "app/api/admin/media/authorize/route.ts";
 const ACADEMY_NEXT_MATCH = "components/AcademyNextMatch.tsx";
+const ACADEMY_FIXTURE_ROW =
+  "components/sites/diverse-city/AcademyFixtureRow.tsx";
 const PUBLIC_SCHEDULE = "app/(public)/schedule/page.tsx";
 const ADMIN_CLIENT = "lib/admin-client.ts";
-const ACADEMY_SHOP_PAGE = "components/AcademyShopPage.tsx";
+const ACADEMY_SHOP_PAGE = "components/sites/diverse-city/AcademyShopPage.tsx";
 const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
@@ -76,9 +78,9 @@ describe("Diverse City admin punch list", () => {
     // neither of which reads any sponsor column, so the editor collected data
     // that could never appear. Same shape as DCFC-D130.
     it("confirms the academy fixture components never render match sponsors", () => {
-      const academy =
-        source("components/AcademyNextMatch.tsx") +
-        source("components/AcademyFixtureRow.tsx");
+      const fixtureRow = source(ACADEMY_FIXTURE_ROW);
+      expect(fixtureRow).toContain("export default function AcademyFixtureRow");
+      const academy = source(ACADEMY_NEXT_MATCH) + fixtureRow;
       for (const field of [
         "sponsor_name",
         "sponsor_logo_url",
