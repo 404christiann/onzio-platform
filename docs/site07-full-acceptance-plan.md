@@ -221,3 +221,18 @@ source inventories, including `tests/helpers/pilot-coordination-fixture.ts`. Pro
 worker owns the finite document helper, coordinator/proof scripts, database fixture
 helper and related tests. Coordinator owns shared records, final integration/review,
 reviewable executable diff, digest presentation and the serial runtime lane.
+
+## Implementation preflight status
+
+The complete implementation is present with package and fixture/driver reviews.
+Source format @3 and current-service boundaries pass 72 independent pure checks.
+Coordinator pure checks pass 95 and types. The actual matrix has 17 public routes and
+11 mounted previews. Preflight corrected the real status-token shape, hidden Academy
+Sponsors Footer tab, per-hop document admission and Staff redirect behavior. Final
+fixes wait for actual Programs load completion before phone selection and preserve
+primary plus concurrent cleanup failures. Independent fix review is clean and final
+types, lint and 23 focused document/network checks pass.
+
+These results do not establish SQL or browser acceptance. The real database regression,
+fresh builds, actual packages, owned servers and full browser matrix remain unrun.
+The executable diff and exact new A/B digests retain their separate human gates.

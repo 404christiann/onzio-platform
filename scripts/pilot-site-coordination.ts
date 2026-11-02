@@ -6,6 +6,7 @@ import type { Client } from "pg";
 import { z } from "zod";
 import { homepageRendererForClub, resolveHomepageBindings, resolveHomepageCapabilities } from "../lib/homepage-editor/capabilities";
 import { parsePresentationDocument } from "../packages/presentation";
+import { academyProofDocumentPath, academyProofParametersSchema, type AcademyProofDocument } from "./pilot-academy-documents";
 import { reconstructionInputs } from "./pilot-reconstruction-build";
 import { assertOwnedPilotScope, type OwnedPilotScope } from "./pilot-proof-servers";
 import { readPilotReconstructionIdentity, verifyPilotReconstructionInputs, verifyPilotSource } from "./pilot-source-package";
@@ -28,6 +29,7 @@ const configSchema = z.object({
   releases: z.array(z.object({ directory: z.string().min(1), digest: digestSchema, documentId: z.uuid() }).strict()).min(1),
   workers: z.array(z.object({ name: z.string().min(1), releases: z.record(digestSchema, z.string().min(1)) }).strict()).min(1),
   currentPlatformSlot: z.string().min(1),
+  documentParameters: academyProofParametersSchema,
   runtime: z.object({
     node: z.string(), modules: z.string(), platform: z.string(), arch: z.string(), next: z.string(), nodeModules: z.string(),
   }).strict(),
@@ -37,7 +39,7 @@ type Assignment = z.infer<typeof eventSchema>;
 export type PilotSiteConfiguration = z.infer<typeof configSchema>;
 export type PilotSiteTransition = { expected: string | null; target: string | { legacy: string }; action?: "publish" | "rollback" };
 export type PilotSiteResolution =
-  | { kind: "published"; event: Assignment; worker: string; origin: string; document: (path: "/" | "/admin/homepage") => string }
+  | { kind: "published"; event: Assignment; worker: string; origin: string; document: (document: AcademyProofDocument) => string }
   | { kind: "legacy"; event: Assignment }
   | { kind: "missing" | "invalid" | "unavailable" | "lookup-failed" };
 
@@ -55,7 +57,7 @@ export async function createPilotSiteCoordinator(scope: OwnedPilotScope, db: Cli
   await scope.verify();
   const accepted = config.releases.map(spec => {
     const { manifest, digest } = verifyPilotSource(spec.directory, spec.digest);
-    if (manifest.format !== "onzio-pilot-source@2") throw new Error("COORDINATION_REQUIRES_V2");
+    if (manifest.format !== "onzio-pilot-source@3") throw new Error("COORDINATION_REQUIRES_COMPLETE_ACADEMY");
     return { ...spec, manifest, digest };
   });
   if (new Set(accepted.map(item => item.digest)).size !== accepted.length || new Set(config.workers.map(worker => worker.name)).size !== config.workers.length) throw new Error("DUPLICATE_COORDINATION_IDENTITY");
@@ -167,7 +169,7 @@ export async function createPilotSiteCoordinator(scope: OwnedPilotScope, db: Cli
     const server = capability && scope.servers[capability.slot];
     if (!worker || !server) return { kind: "unavailable" };
     return { kind: "published", event, worker: worker.name, origin: server.origin,
-      document: path => `${server.origin}${z.enum(["/", "/admin/homepage"]).parse(path)}` };
+      document: document => `${server.origin}${academyProofDocumentPath(document, config.documentParameters)}` };
   }
   return {
     clubId: config.clubId, snapshot,

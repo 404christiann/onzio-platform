@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { resolve } from "node:path";
 import { Client } from "pg";
 import { z } from "zod";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
+import { academyTenantFingerprint, academySchemaFingerprint, populateAcademyContent, removeAcademyContent } from "./academy-coordination-content";
+import type { AcademyProofParameters } from "../../scripts/pilot-academy-documents";
 import { assertSafeTestEnvironment } from "./environment";
 
 const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
@@ -49,34 +53,69 @@ export async function openCoordinationProof() {
   const clubId = randomUUID();
   const documents = { a: randomUUID(), b: randomUUID(), legacy: randomUUID() };
   const clients: Client[] = [];
-  let closed = false;
-  async function close() {
-    if (closed) return;
-    closed = true;
-    try {
-      const outcomes = await Promise.allSettled(clients.map(async client => {
-        try { await client.query("rollback"); } finally { await client.end(); }
+  const journalDirectory = await mkdtemp(join(tmpdir(), "onzio-academy-proof-")).catch(async error => { await db.end(); throw error; });
+  const recoveryFile = join(journalDirectory, "recovery.json");
+  let lifecycle: "open" | "cleaning" | "cleanup-failed" | "closed" = "open";
+  let cleanup: Promise<void> | undefined;
+  let dbClosed = false;
+  let fullParameters: AcademyProofParameters | undefined;
+  let fullInitial: { clubs: string[]; fingerprint: Awaited<ReturnType<typeof academyTenantFingerprint>>; schema: string } | undefined;
+  const journal = (stage: string) => writeFile(recoveryFile, `${JSON.stringify({ version: 1, clubId, schema, documents, stage }, null, 2)}\n`, { mode: 0o600 });
+  await writeFile(recoveryFile, `${JSON.stringify({ version: 1, clubId, schema, documents, stage: "prepared" }, null, 2)}\n`, { mode: 0o600, flag: "wx" }).catch(async error => { await db.end(); throw error; });
+  async function close(): Promise<void> {
+    if (lifecycle === "closed") return;
+    if (cleanup) return cleanup;
+    lifecycle = "cleaning";
+    cleanup = (async () => {
+      await journal("cleaning");
+      const closingClients = [...clients];
+      const outcomes = await Promise.allSettled(closingClients.map(async client => {
+        await client.query("rollback").catch(() => undefined);
+        await client.end();
       }));
+      outcomes.forEach((outcome, index) => {
+        if (outcome.status === "fulfilled") clients.splice(clients.indexOf(closingClients[index]), 1);
+      });
+      if (!dbClosed) {
+        try { await db.query("rollback"); } finally { await db.end(); dbClosed = true; }
+      }
       assert(outcomes.every(outcome => outcome.status === "fulfilled"), "Coordination proof clients failed to close");
-      await db.query("rollback");
-      await db.query("begin");
+      const cleanupDb = new Client(config);
       try {
-        await db.query("lock table onzio.presentation_documents in access exclusive mode");
-        await db.query(`drop schema if exists ${schema} cascade`);
-        await db.query("delete from onzio.presentation_state where club_id=$1", [clubId]);
-        await db.query("alter table onzio.presentation_documents disable trigger presentation_documents_immutable");
-        await db.query("delete from onzio.presentation_documents where club_id=$1", [clubId]);
-        await db.query("alter table onzio.presentation_documents enable trigger presentation_documents_immutable");
-        for (const table of ["homepage_hero_content", "homepage_story_section", "club_domains", "club_members", "audit_events"]) {
-          await db.query(`delete from onzio.${table} where club_id=$1`, [clubId]);
-        }
-        await db.query("delete from onzio.clubs where id=$1", [clubId]);
-        assert.equal(await protectedFingerprint(db), initial, "Alpha/Bravo changed during coordination proof");
-        await db.query("commit");
-      } catch (error) { await db.query("rollback"); throw error; }
-      assert.equal((await db.query("select count(*)::int as n from onzio.clubs where id=$1", [clubId])).rows[0].n, 0);
-      assert.deepEqual((await db.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows, initialTrigger);
-    } finally { await db.end(); }
+        await cleanupDb.connect();
+        await cleanupDb.query("set statement_timeout='8s'");
+        await cleanupDb.query("begin");
+        try {
+          await cleanupDb.query("lock table onzio.presentation_documents in access exclusive mode");
+          await cleanupDb.query(`drop schema if exists ${schema} cascade`);
+          await removeAcademyContent(cleanupDb, clubId);
+          await cleanupDb.query("delete from onzio.presentation_state where club_id=$1", [clubId]);
+          await cleanupDb.query("alter table onzio.presentation_documents disable trigger presentation_documents_immutable");
+          await cleanupDb.query("delete from onzio.presentation_documents where club_id=$1", [clubId]);
+          await cleanupDb.query("alter table onzio.presentation_documents enable trigger presentation_documents_immutable");
+          for (const table of ["homepage_hero_content", "homepage_story_section", "club_domains", "club_members", "audit_events"]) {
+            await cleanupDb.query(`delete from onzio.${table} where club_id=$1`, [clubId]);
+          }
+          await cleanupDb.query("delete from onzio.clubs where id=$1", [clubId]);
+          assert.equal(await protectedFingerprint(cleanupDb), initial, "Alpha/Bravo changed during coordination proof");
+          if (fullInitial) {
+            assert.deepEqual(await academyTenantFingerprint(cleanupDb, fullInitial.clubs, true), fullInitial.fingerprint, "Unrelated tenant state changed during full-site proof");
+            assert.equal(await academySchemaFingerprint(cleanupDb, schema), fullInitial.schema, "Application schema changed during full-site proof");
+          }
+          await cleanupDb.query("commit");
+        } catch (error) { await cleanupDb.query("rollback"); throw error; }
+        assert.equal((await cleanupDb.query("select count(*)::int as n from onzio.clubs where id=$1", [clubId])).rows[0].n, 0);
+        assert.equal((await cleanupDb.query("select count(*)::int as n from pg_namespace where nspname=$1", [schema])).rows[0].n, 0);
+        assert.deepEqual((await cleanupDb.query("select tgenabled from pg_trigger where tgrelid='onzio.presentation_documents'::regclass and tgname='presentation_documents_immutable'")).rows, initialTrigger);
+      } finally { await cleanupDb.end(); }
+      await journal("verified-clean");
+      lifecycle = "closed";
+    })().catch(async error => {
+      lifecycle = "cleanup-failed";
+      try { await journal("cleanup-failed"); } catch (journalError) { throw new AggregateError([error, journalError], "Cleanup failed and its recovery journal could not be updated"); }
+      throw error;
+    }).finally(() => { cleanup = undefined; });
+    return cleanup;
   }
   try {
     await db.query("begin");
@@ -127,7 +166,36 @@ export async function openCoordinationProof() {
     async function transition(expected: string | null, generation: string, digest: string | null, client = db, action = "publish", legacy: string | null = null, club: string = clubId, actor: string = USER_IDS.ownerAal2) {
       return z.uuid().parse((await client.query(`select ${schema}.transition($1,$2,$3,$4,$5,$6,$7) as data`, [club, expected, generation, digest, legacy, actor, action])).rows[0].data);
     }
-    return { db, schema, clubId, documents, connection, close, snapshot, registerRelease, registerWorker, replaceFleet, transition };
-  } catch (error) { await close(); throw error; }
+    async function populateAcademy() {
+      assert.equal(lifecycle, "open", "Cannot populate a closing coordination fixture");
+      assert(!fullParameters && !fullInitial, "Full Academy fixture can only be populated once");
+      const clubs = z.array(z.object({ id: z.uuid() })).parse((await db.query("select id from onzio.clubs where id<>$1 order by id", [clubId])).rows).map(row => row.id);
+      fullInitial = { clubs, fingerprint: await academyTenantFingerprint(db, clubs, true), schema: await academySchemaFingerprint(db, schema) };
+      await journal("populating");
+      fullParameters = await populateAcademyContent(db, clubId);
+      await journal("populated");
+      return fullParameters;
+    }
+    async function checkpoint() {
+      assert(fullParameters && fullInitial, "Populate the complete Academy fixture before preservation checks");
+      return { club: await academyTenantFingerprint(db, [clubId]), unrelated: await academyTenantFingerprint(db, fullInitial.clubs, true), schema: await academySchemaFingerprint(db, schema) };
+    }
+    async function assertPreserved(before: Awaited<ReturnType<typeof checkpoint>>) {
+      assert.deepEqual(await checkpoint(), before, "Rollback changed content, billing, editor receipts, unrelated tenants or schema");
+    }
+    async function assignmentAuthority() {
+      return { state: await snapshot(), epoch: z.uuid().parse((await db.query("select epoch from onzio_private.homepage_assignment_epochs where club_id=$1", [clubId])).rows[0].epoch) };
+    }
+    async function invalidAssignment() {
+      const pointer = (await db.query("select published_document_id from onzio.presentation_state where club_id=$1", [clubId])).rows[0].published_document_id;
+      const wrong = pointer === documents.legacy ? documents.a : documents.legacy;
+      await db.query("update onzio.presentation_state set published_document_id=$2 where club_id=$1", [clubId, wrong]);
+      return async () => { await db.query("update onzio.presentation_state set published_document_id=$2 where club_id=$1", [clubId, pointer]); };
+    }
+    return { db, schema, clubId, documents, recoveryFile, connection, close, snapshot, registerRelease, registerWorker, replaceFleet, transition, populateAcademy, checkpoint, assertPreserved, assignmentAuthority, invalidAssignment };
+  } catch (error) {
+    try { await close(); } catch (cleanupError) { throw new AggregateError([error, cleanupError], "Coordination proof setup and cleanup failed"); }
+    throw error;
+  }
 }
 export type CoordinationProof = Awaited<ReturnType<typeof openCoordinationProof>>;
