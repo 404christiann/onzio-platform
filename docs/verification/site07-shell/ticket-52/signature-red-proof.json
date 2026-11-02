@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "baselineSourceSha": "89670652fa7467e5e6e64e0c39f1aa5f9a58d848",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "input": "Mouse pointer stroke in the required synthetic signature canvas; no intentional Clear interaction.",
+  "expectedAutomaticClearClicks": 0,
+  "observedAutomaticClearClicks": 1,
+  "submissionObservation": {
+    "nativeFieldsValid": true,
+    "registrationPostObserved": false,
+    "alert": "Unable to continue: registration field required."
+  },
+  "screenshot": "signature-red-baseline-desktop.jpg",
+  "screenshotLimit": "The image shows a visibly drawn stroke from a preceding run on the same baseline. Native click-count and rejected-submission observations were recorded in separate diagnostic runs.",
+  "sharedFixCommit": "de10518490f518bb2c26eff5a4dceb0c96bbbc3a",
+  "focusedRegression": {
+    "path": "tests/contracts/registration-signature-markup.test.ts",
+    "before": "1 failed, 1 passed; signature canvas was nested in a forwarding label.",
+    "after": "2 passed; signature is a named group and ordinary fields retain native labels."
+  },
+  "limits": [
+    "Local synthetic Alpha fixtures only.",
+    "All failed/interrupted fixture rows were recovered; the persisted interrupted snapshot and restored rows had the same hash.",
+    "No Stripe or email API was contacted.",
+    "The original baseline did not complete paid-registration acceptance; the coordinator will build a separate control revision containing only the shared fix."
+  ]
+}

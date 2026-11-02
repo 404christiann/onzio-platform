@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { createClient } from "@supabase/supabase-js";
 import WebSocket from "ws";
 import { expect, test, type Page } from "@playwright/test";
@@ -67,14 +68,21 @@ async function registrationFixtures() {
   }
   const formId = randomUUID(), priceId = randomUUID();
   const slug = `site52-${formId.slice(0, 8)}`;
+  const snapshotFile = join(tmpdir(), `onzio-site52-original-${formId}.json`);
+  await writeFile(snapshotFile, `${JSON.stringify({ schemaVersion: 1, clubId, formId, rows: original }, null, 2)}\n`, { mode: 0o600, flag: "wx" });
   const restore = async () => {
+    await checkResult(await client.from("registration_forms").update({ status: "closed" }).eq("club_id", clubId).eq("id", formId));
     for (const table of ["registrations", "registration_form_fields", "registration_price_options", "registration_forms"]) {
       await checkResult(await client.from(table).delete().eq("club_id", clubId).eq(table === "registration_forms" ? "id" : "form_id", formId));
     }
     await checkResult(await client.from("club_stripe_connect").delete().eq("club_id", clubId));
     if (originalConnect.length) await checkResult(await client.from("club_stripe_connect").insert(originalConnect));
     const restored = await snapshotRegistrationRows();
-    expect(digest(JSON.stringify(restored)), "exact original registration, dependent, and Connect rows including timestamps").toBe(digest(JSON.stringify(original)));
+    const originalSha256 = digest(JSON.stringify(original));
+    const restoredSha256 = digest(JSON.stringify(restored));
+    await writeFile(`${snapshotFile}.restored.json`, `${JSON.stringify({ originalSha256, restoredSha256, formId, clubId }, null, 2)}\n`, { mode: 0o600 });
+    expect(restoredSha256, "exact original registration, dependent, and Connect rows including timestamps").toBe(originalSha256);
+    return { originalSha256, restoredSha256, snapshotFile };
   };
   try {
     await checkResult(await client.from("club_stripe_connect").upsert({ club_id: clubId,
@@ -122,6 +130,12 @@ async function fillRegistration(page: Page) {
   await page.getByRole("checkbox", { name: "I accept the synthetic registration waiver." }).check();
 }
 
+test("restores a published local registration fixture before browser interactions", async () => {
+  const fixture = await registrationFixtures();
+  const cleanup = await fixture.restore();
+  expect(cleanup.restoredSha256).toBe(cleanup.originalSha256);
+});
+
 test("registration, waiver, signature and test-payment browser transport remain equivalent", async ({ browser }) => {
   test.setTimeout(240_000);
   await mkdir(evidenceDir, { recursive: true });
@@ -129,115 +143,162 @@ test("registration, waiver, signature and test-payment browser transport remain 
   const records: Array<Record<string, unknown>> = [];
   type Resources = { fonts: { count: number; body: number; transfer: number }; restReads: Record<string, number> };
   const baseline = new Map<string, { markup: string; resources: Resources; screenshot: string }>();
+  let cleanup: Awaited<ReturnType<typeof fixture.restore>> | undefined;
+  let primaryFailure: unknown;
   try {
     for (const build of builds) for (const viewport of viewports) {
       const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, serviceWorkers: "block", reducedMotion: "reduce" });
-      const blocked: string[] = [], pageErrors: string[] = [], resourceErrors: string[] = [];
-      const expectedStatusResponses: Array<{ status: number; path: string; token: string }> = [];
-      const restReads: Record<string, number> = {};
-      let submission: Record<string, unknown> | null = null;
-      await context.routeWebSocket("**/*", socket => socket.close());
-      await context.route("**/*", async route => {
-        const request = route.request(), url = new URL(request.url());
-        if (url.hostname === "checkout.stripe.test" && request.method() === "GET") {
-          return route.fulfill({ status: 200, contentType: "text/html", body: "<h1>Synthetic Stripe test checkout destination</h1>" });
-        }
-        const loopback = url.hostname.endsWith(".localhost") || ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
-        if (!loopback || !["GET", "HEAD", "OPTIONS"].includes(request.method())) {
-          blocked.push(`${request.method()} ${url.origin}${url.pathname}`);
-          return route.abort("blockedbyclient");
-        }
-        return route.continue();
-      });
-      await context.route("**/_vercel/insights/script.js", route => route.fulfill({ status: 200, contentType: "application/javascript", body: "" }));
-      await context.route("**/api/register", async route => {
-        expect(route.request().method()).toBe("POST");
-        submission = route.request().postDataJSON();
-        return route.fulfill({ status: 201, json: { checkoutUrl: "https://checkout.stripe.test/cs_test_site52" } });
-      });
-      await context.route("**/api/register/status?**", route => {
-        const token = new URL(route.request().url()).searchParams.get("token");
-        const status = token?.replace("site52-", "") ?? "unknown";
-        return route.fulfill({ status: status === "unknown" ? 404 : 200, json: { status } });
-      });
-      const page = await context.newPage();
-      page.on("pageerror", error => pageErrors.push(error.message));
-      page.on("response", response => {
-        if (response.status() < 400) return;
-        const url = new URL(response.url());
-        if (response.status() === 404 && url.pathname === "/api/register/status" && url.searchParams.get("token") === "site52-unknown") {
-          expectedStatusResponses.push({ status: 404, path: url.pathname, token: "site52-unknown" });
-        } else resourceErrors.push(`${response.status()} ${url.pathname}`);
-      });
-      page.on("requestfinished", request => {
-        const table = new URL(request.url()).pathname.match(/^\/rest\/v1\/([a-z_]+)$/)?.[1];
-        if (request.method() === "GET" && table) restReads[table] = (restReads[table] ?? 0) + 1;
-      });
-      const capture = async (state: string) => {
-        await page.evaluate(() => document.fonts.ready);
-        const content = await page.evaluate(() => ({
-          markup: document.querySelector("main")?.outerHTML ?? "",
-          dialog: document.querySelector('[role="dialog"]')?.outerHTML ?? "",
-          fonts: performance.getEntriesByType("resource").filter((r): r is PerformanceResourceTiming => new URL(r.name).pathname.endsWith(".woff2")).reduce((total, r) => ({ count: total.count + 1, body: total.body + r.decodedBodySize, transfer: total.transfer + r.transferSize }), { count: 0, body: 0, transfer: 0 }),
+      try {
+        const blocked: string[] = [], pageErrors: string[] = [], resourceErrors: string[] = [];
+        const expectedStatusResponses: Array<{ status: number; path: string; token: string }> = [];
+        const restReads: Record<string, number> = {};
+        let submission: Record<string, unknown> | null = null;
+        await context.routeWebSocket("**/*", socket => socket.close());
+        await context.route("**/*", async route => {
+          const request = route.request(), url = new URL(request.url());
+          if (url.hostname === "checkout.stripe.test" && request.method() === "GET") {
+            return route.fulfill({ status: 200, contentType: "text/html", body: "<h1>Synthetic Stripe test checkout destination</h1>" });
+          }
+          const loopback = url.hostname.endsWith(".localhost") || ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+          if (!loopback || !["GET", "HEAD", "OPTIONS"].includes(request.method())) {
+            blocked.push(`${request.method()} ${url.origin}${url.pathname}`);
+            return route.abort("blockedbyclient");
+          }
+          return route.continue();
+        });
+        await context.route("**/_vercel/insights/script.js", route => route.fulfill({ status: 200, contentType: "application/javascript", body: "" }));
+        await context.route("**/api/register", async route => {
+          expect(route.request().method()).toBe("POST");
+          submission = route.request().postDataJSON();
+          return route.fulfill({ status: 201, json: { checkoutUrl: "https://checkout.stripe.test/cs_test_site52" } });
+        });
+        await context.route("**/api/register/status?**", route => {
+          const token = new URL(route.request().url()).searchParams.get("token");
+          const status = token?.replace("site52-", "") ?? "unknown";
+          return route.fulfill({ status: status === "unknown" ? 404 : 200, json: { status } });
+        });
+        const page = await context.newPage();
+        page.on("pageerror", error => pageErrors.push(error.message));
+        page.on("response", response => {
+          if (response.status() < 400) return;
+          const url = new URL(response.url());
+          if (response.status() === 404 && url.pathname === "/api/register/status" && url.searchParams.get("token") === "site52-unknown") {
+            expectedStatusResponses.push({ status: 404, path: url.pathname, token: "site52-unknown" });
+          } else resourceErrors.push(`${response.status()} ${url.pathname}`);
+        });
+        page.on("requestfinished", request => {
+          const table = new URL(request.url()).pathname.match(/^\/rest\/v1\/([a-z_]+)$/)?.[1];
+          if (request.method() === "GET" && table) restReads[table] = (restReads[table] ?? 0) + 1;
+        });
+        const capture = async (state: string) => {
+          await page.evaluate(() => document.fonts.ready);
+          const content = await page.evaluate(() => ({
+            markup: document.querySelector("main")?.outerHTML ?? "",
+            dialog: document.querySelector('[role="dialog"]')?.outerHTML ?? "",
+            header: document.querySelector("header")?.outerHTML ?? "",
+            footer: document.querySelector("footer")?.outerHTML ?? "",
+            links: [...document.querySelectorAll("a[href]")].map(link => {
+              const target = new URL((link as HTMLAnchorElement).href);
+              return { text: link.textContent?.replace(/\s+/g, " ").trim(), href: target.origin === location.origin ? `${target.pathname}${target.search}${target.hash}` : target.href };
+            }),
+            fonts: performance.getEntriesByType("resource").filter((r): r is PerformanceResourceTiming => new URL(r.name).pathname.endsWith(".woff2")).reduce((total, r) => ({ count: total.count + 1, body: total.body + r.decodedBodySize, transfer: total.transfer + r.transferSize }), { count: 0, body: 0, transfer: 0 }),
+          }));
+          const normalize = (value: string) => value.replaceAll(new URL(build.origin).origin, "http://alpha.localhost").replace(/headlessui-[^"\s]+/g, "headlessui-id");
+          const markup = JSON.stringify({ main: normalize(content.markup), dialog: normalize(content.dialog), header: normalize(content.header), footer: normalize(content.footer), links: content.links });
+          const resources = { fonts: content.fonts, restReads: { ...restReads } };
+          const screenshotName = `${build.name}-${viewport.name}-${state}.jpg`;
+          const screenshot = digest(await page.screenshot({ path: join(evidenceDir, screenshotName), type: "jpeg", quality: 62, fullPage: true, animations: "disabled" }));
+          const key = `${viewport.name}-${state}`;
+          if (build.name === "base") baseline.set(key, { markup: digest(markup), resources, screenshot });
+          else {
+            expect(digest(markup), `${key} markup`).toBe(baseline.get(key)?.markup);
+            const expected = baseline.get(key)?.resources;
+            expect(resources.restReads, `${key} resource reads`).toEqual(expected?.restReads);
+            expect(resources.fonts.count, `${key} font count`).toBeLessThanOrEqual(expected?.fonts.count ?? 0);
+            expect(resources.fonts.body, `${key} font bytes`).toBeLessThanOrEqual(expected?.fonts.body ?? 0);
+            expect(resources.fonts.transfer, `${key} font transfer`).toBeLessThanOrEqual(expected?.fonts.transfer ?? 0);
+            expect(screenshot, `${key} screenshot`).toBe(baseline.get(key)?.screenshot);
+          }
+          records.push({ build: build.name, sha: build.sha, viewport, state, markupSha256: digest(markup), resources, headerDomSha256: digest(normalize(content.header)), footerDomSha256: digest(normalize(content.footer)), links: content.links, expectedStatusResponses: [...expectedStatusResponses], screenshot: screenshotName, screenshotSha256: screenshot });
+        };
+        const response = await page.goto(new URL(`/register/${fixture.slug}?checkout=cancelled`, build.origin).toString(), { waitUntil: "networkidle" });
+        expect(response?.status()).toBe(200);
+        await expect(page.getByRole("heading", { name: "Academy registration evidence" })).toBeVisible();
+        await expect(page.getByRole("status")).toHaveText("Checkout was cancelled. Your registration was not completed.");
+        await capture("registration");
+        await page.getByRole("button", { name: "Register now", exact: true }).click();
+        await expect(page.getByRole("dialog").getByRole("heading", { name: "Academy registration evidence", exact: true })).toBeVisible();
+        await expect(page.getByLabel("Registrant name", { exact: false })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Submit registration", exact: true })).toBeDisabled();
+        const clearSignature = page.getByRole("button").filter({ hasText: /^Clear$/ });
+        await clearSignature.evaluate(button => button.addEventListener("click", () => {
+          button.setAttribute("data-evidence-clear-clicks", String(Number(button.getAttribute("data-evidence-clear-clicks") ?? "0") + 1));
         }));
-        const markup = `${content.markup}${content.dialog}`.replaceAll(new URL(build.origin).origin, "http://alpha.localhost").replace(/headlessui-[^"\s]+/g, "headlessui-id");
-        const resources = { fonts: content.fonts, restReads: { ...restReads } };
-        const screenshotName = `${build.name}-${viewport.name}-${state}.jpg`;
-        const screenshot = digest(await page.screenshot({ path: join(evidenceDir, screenshotName), type: "jpeg", quality: 62, fullPage: true, animations: "disabled" }));
-        const key = `${viewport.name}-${state}`;
-        if (build.name === "base") baseline.set(key, { markup: digest(markup), resources, screenshot });
-        else {
-          expect(digest(markup), `${key} markup`).toBe(baseline.get(key)?.markup);
-          const expected = baseline.get(key)?.resources;
-          expect(resources.restReads, `${key} resource reads`).toEqual(expected?.restReads);
-          expect(resources.fonts.count, `${key} font count`).toBeLessThanOrEqual(expected?.fonts.count ?? 0);
-          expect(resources.fonts.body, `${key} font bytes`).toBeLessThanOrEqual(expected?.fonts.body ?? 0);
-          expect(resources.fonts.transfer, `${key} font transfer`).toBeLessThanOrEqual(expected?.fonts.transfer ?? 0);
-          expect(screenshot, `${key} screenshot`).toBe(baseline.get(key)?.screenshot);
+        await fillRegistration(page);
+        const automaticClearClicks = Number(await clearSignature.getAttribute("data-evidence-clear-clicks") ?? "0");
+        await writeFile(join(tmpdir(), `onzio-site52-signature-${fixture.formId}-${build.name}-${viewport.name}.json`), `${JSON.stringify({ automaticClearClicks }, null, 2)}\n`, { mode: 0o600 });
+        expect(automaticClearClicks, "drawing a signature must not activate its Clear button").toBe(0);
+        await expect(page.getByRole("checkbox", { name: "I accept the synthetic registration waiver." })).toBeChecked();
+        await expect(page.getByRole("button", { name: "Submit registration", exact: true })).toBeEnabled();
+        await page.getByRole("button", { name: "Submit registration", exact: true }).focus();
+        await page.mouse.move(1, 1);
+        await expect.poll(() => page.getByRole("checkbox", { name: "I accept the synthetic registration waiver." }).evaluate(input => ({
+          checked: (input as HTMLInputElement).checked,
+          hovered: input.matches(":hover"), active: input.matches(":active"), focused: input.matches(":focus"),
+          opacity: getComputedStyle(input).opacity,
+        }))).toEqual({ checked: true, hovered: false, active: false, focused: false, opacity: "1" });
+        await page.evaluate(() => Promise.all(document.getAnimations().filter(animation =>
+          animation.playState === "running" && animation.effect?.getTiming().iterations !== Infinity,
+        ).map(animation => animation.finished)));
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        await capture("waiver-and-signature");
+        const invalidFields = await page.getByRole("dialog").locator("form").evaluate(form =>
+          [...(form as HTMLFormElement).elements].filter((element): element is HTMLInputElement => element instanceof HTMLInputElement)
+            .filter(element => element.willValidate && !element.checkValidity())
+            .map(element => ({ label: element.closest("label")?.textContent?.trim(), message: element.validationMessage })),
+        );
+        expect(invalidFields, "filled registration satisfies native browser validation").toEqual([]);
+        await page.getByRole("button", { name: "Submit registration", exact: true }).click();
+        await expect.poll(() => submission, { message: "valid signed registration sends its submission" }).not.toBeNull();
+        await expect(page.getByRole("heading", { name: "Synthetic Stripe test checkout destination" })).toBeVisible();
+        const payload = submission as Record<string, unknown> | null;
+        expect(payload).toMatchObject({ formSlug: fixture.slug, priceOptionId: fixture.priceId, participantType: "adult", waiverAccepted: true });
+        expect(payload?.answers).toMatchObject({ registrant_name: "Alex Evidence", registrant_email: "alex@evidence.test", consent_signature: expect.stringMatching(/^data:image\/png;base64,/) });
+        expect(Object.keys(payload ?? {}).sort()).toEqual(["answers", "formSlug", "participantType", "priceOptionId", "waiverAccepted"]);
+        for (const [status, heading] of [
+          ["pending", "Confirming registration"], ["paid", "Registration confirmed"],
+          ["refunded", "Registration refunded"], ["expired", "Registration expired"],
+          ["unknown", "Registration not found"], ["missing-token", "Registration not found"],
+        ]) {
+          const tokenQuery = status === "missing-token" ? "" : `?token=site52-${status}`;
+          await page.goto(new URL(`/register/${fixture.slug}/confirmation${tokenQuery}`, build.origin).toString(), { waitUntil: "networkidle" });
+          await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+          await capture(`confirmation-${status}`);
         }
-        records.push({ build: build.name, sha: build.sha, viewport, state, markupSha256: digest(markup), resources, expectedStatusResponses: [...expectedStatusResponses], screenshot: screenshotName, screenshotSha256: screenshot });
-      };
-      const response = await page.goto(new URL(`/register/${fixture.slug}?checkout=cancelled`, build.origin).toString(), { waitUntil: "networkidle" });
-      expect(response?.status()).toBe(200);
-      await expect(page.getByRole("heading", { name: "Academy registration evidence" })).toBeVisible();
-      await expect(page.getByRole("status")).toHaveText("Checkout was cancelled. Your registration was not completed.");
-      await capture("registration");
-      await page.getByRole("button", { name: "Register now", exact: true }).click();
-      await expect(page.getByRole("dialog")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Submit registration", exact: true })).toBeDisabled();
-      await fillRegistration(page);
-      await expect(page.getByRole("button", { name: "Submit registration", exact: true })).toBeEnabled();
-      await capture("waiver-and-signature");
-      await page.getByRole("button", { name: "Submit registration", exact: true }).click();
-      await expect(page.getByRole("heading", { name: "Synthetic Stripe test checkout destination" })).toBeVisible();
-      const payload = submission as Record<string, unknown> | null;
-      expect(payload).toMatchObject({ formSlug: fixture.slug, priceOptionId: fixture.priceId, participantType: "adult", waiverAccepted: true });
-      expect(payload?.answers).toMatchObject({ registrant_name: "Alex Evidence", registrant_email: "alex@evidence.test", consent_signature: expect.stringMatching(/^data:image\/png;base64,/) });
-      expect(Object.keys(payload ?? {}).sort()).toEqual(["answers", "formSlug", "participantType", "priceOptionId", "waiverAccepted"]);
-      for (const [status, heading] of [
-        ["pending", "Confirming registration"], ["paid", "Registration confirmed"],
-        ["refunded", "Registration refunded"], ["expired", "Registration expired"],
-        ["unknown", "Registration not found"], ["missing-token", "Registration not found"],
-      ]) {
-        const tokenQuery = status === "missing-token" ? "" : `?token=site52-${status}`;
-        await page.goto(new URL(`/register/${fixture.slug}/confirmation${tokenQuery}`, build.origin).toString(), { waitUntil: "networkidle" });
-        await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
-        await capture(`confirmation-${status}`);
+        await checkResult(await client.from("registration_forms").update({ status: "closed" }).eq("club_id", clubId).eq("id", fixture.formId));
+        await page.goto(new URL(`/register/${fixture.slug}`, build.origin).toString(), { waitUntil: "networkidle" });
+        await expect(page.getByRole("heading", { name: "Registration closed", exact: true })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Register now", exact: true })).toHaveCount(0);
+        await capture("registration-closed");
+        await checkResult(await client.from("registration_forms").update({ status: "open" }).eq("club_id", clubId).eq("id", fixture.formId));
+        expect(expectedStatusResponses).toEqual([{ status: 404, path: "/api/register/status", token: "site52-unknown" }]);
+        expect(pageErrors).toEqual([]); expect(resourceErrors).toEqual([]); expect(blocked).toEqual([]);
+      } finally {
+        await context.close();
       }
-      await checkResult(await client.from("registration_forms").update({ status: "closed" }).eq("club_id", clubId).eq("id", fixture.formId));
-      await page.goto(new URL(`/register/${fixture.slug}`, build.origin).toString(), { waitUntil: "networkidle" });
-      await expect(page.getByRole("heading", { name: "Registration closed", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Register now", exact: true })).toHaveCount(0);
-      await capture("registration-closed");
-      await checkResult(await client.from("registration_forms").update({ status: "open" }).eq("club_id", clubId).eq("id", fixture.formId));
-      expect(expectedStatusResponses).toEqual([{ status: 404, path: "/api/register/status", token: "site52-unknown" }]);
-      expect(pageErrors).toEqual([]); expect(resourceErrors).toEqual([]); expect(blocked).toEqual([]);
-      await context.close();
     }
+  } catch (error) {
+    primaryFailure = error;
+    throw error;
   } finally {
-    await fixture.restore();
+    try {
+      cleanup = await fixture.restore();
+    } catch (cleanupFailure) {
+      if (primaryFailure) throw new AggregateError([primaryFailure, cleanupFailure], "Registration browser proof and fixture restoration both failed.");
+      throw cleanupFailure;
+    }
   }
-  await writeFile(join(evidenceDir, "registration-capture.json"), `${JSON.stringify({ builds: builds.map(({ name, sha }) => ({ name, sha })), records,
+  await writeFile(join(evidenceDir, "registration-capture.json"), `${JSON.stringify({ builds: builds.map(({ name, sha }) => ({ name, sha })), records, cleanup,
     limits: ["Synthetic Alpha test club only, loopback Supabase. Unique form fixtures are removed and the original test Connect row is restored. Exact original registration and dependent rows, including timestamps, are checked by hash.", "Registration submission response, Stripe test checkout destination, and paid status response are browser interceptions. No Stripe or email API is contacted.", "Real SQL ledger behavior is verified separately by the registration database suites; this browser proof does not establish hosted Checkout or webhook acceptance."],
   }, null, 2)}\n`);
 });
