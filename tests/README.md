@@ -452,15 +452,16 @@ A parameter initializer, including a closure created there, cannot see declarati
 that exist only inside that function body. The compiler APIs can nevertheless
 resolve a default's identifier to a body function declaration. The scanner corrects
 that discrepancy only when every declaration of the resolved symbol is inside the
-owning function body. It calls public `resolveName` at the function's parent with
+owning function body. A matching named function expression retains its own name
+binding. Other identifiers call public `resolveName` at the function's parent with
 `SymbolFlags.Value`, repeating the check for enclosing parameter initializers.
 Ordinary reads, shorthand values and assignment targets use this correction.
 Parameter bindings and a closure's own shadows remain visible. An unresolved name
 gets no fallback. Native JavaScript controls establish that the outer
 `"academy@1"` key makes the default true despite a body `function key() {}`;
 its inverse and missing-outer-binding controls retain false and `ReferenceError`.
-The focused suite retains all previous 93 cases and adds 16 controls for this
-boundary, including nested defaults, destructuring and closures. This evidence
+The focused suite has 115 cases, including parameter defaults, destructuring,
+closures, named expression self-bindings and own-parameter precedence. This evidence
 covers those fixtures, not all JavaScript or TypeScript binding behavior.
 
 Limits.
