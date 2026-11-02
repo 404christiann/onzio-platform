@@ -82,7 +82,7 @@ describe("academy Header Stays loading", () => {
 
   it("uses the same quiet loading treatment for client reads", () => {
     const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
-    expect(read("components/AcademyShopPage.tsx")).toContain("<AcademyInteriorLoadingSkeleton shop />");
+    expect(read("components/sites/diverse-city/AcademyShopPage.tsx")).toContain("<AcademyInteriorLoadingSkeleton shop />");
     expect(read("components/sites/diverse-city/AcademyRosterPage.tsx")).toContain(
       "loading && <AcademyRosterLoadingSkeleton />",
     );

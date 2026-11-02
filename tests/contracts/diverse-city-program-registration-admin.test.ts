@@ -372,7 +372,7 @@ describe("academy@1 program surfaces render stored content, not literals", () =>
 
   it("keeps no club's name written into a shared academy@1 template", () => {
     for (const path of [
-      "components/AcademySponsorsPage.tsx",
+      "components/sites/diverse-city/AcademySponsorsPage.tsx",
       "components/sites/diverse-city/AcademyProgramDetailPage.tsx",
       "components/sites/diverse-city/AcademyProgramsPage.tsx",
       "components/sites/diverse-city/AcademyContactPage.tsx",

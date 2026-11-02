@@ -23,7 +23,7 @@ const ACADEMY_FIXTURE_ROW =
   "components/sites/diverse-city/AcademyFixtureRow.tsx";
 const PUBLIC_SCHEDULE = "app/(public)/schedule/page.tsx";
 const ADMIN_CLIENT = "lib/admin-client.ts";
-const ACADEMY_SHOP_PAGE = "components/AcademyShopPage.tsx";
+const ACADEMY_SHOP_PAGE = "components/sites/diverse-city/AcademyShopPage.tsx";
 const ROSTER_ADMIN = "app/admin/(protected)/roster/page.tsx";
 const PROGRAMS_ADMIN = "app/admin/(protected)/programs/page.tsx";
 const TRYOUTS_ADMIN = "app/admin/(protected)/tryouts/page.tsx";
