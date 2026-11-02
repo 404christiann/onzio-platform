@@ -29,6 +29,19 @@ const viewports = [
   { name: "phone", width: 390, height: 844 },
 ] as const;
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
+const shopFixture = {
+  source: "tests/browser/homepage-editor-home-kit.spec.ts: Home kit pilot",
+  section: {
+    id: "home-kit-pilot", club_id: "11111111-1111-4111-8111-111111111111", surface: "shop", kit_variant: "home",
+    eyebrow: "Club store", title: "Home kit pilot", description: "The current home kit.",
+    bullet_points: ["Club crest", "Match fit"], store_note: "Available from the club store.",
+    cta_label: "View home kit", cta_link: "/shop", updated_at: "2026-10-20T00:00:00Z",
+  },
+  photos: [
+    { id: "front", surface: "shop", kit_variant: "home", url: "/images/shop/rosecityshirt1.webp", sort_order: 0, created_at: "2026-10-20T00:00:00Z" },
+    { id: "back", surface: "shop", kit_variant: "home", url: "/images/shop/rosecityshirt2.jpeg", sort_order: 1, created_at: "2026-10-20T00:00:00Z" },
+  ],
+};
 type PageResources = {
   fonts: { count: number; decodedBodyBytes: number; transferBytes: number };
   restReads: Record<string, number>;
@@ -68,6 +81,7 @@ test("capture and compare Academy Sponsors and Shop pages at desktop and phone s
         const page = await context.newPage();
         const pageErrors: string[] = [];
         const resourceErrors: Array<{ status: number; path: string }> = [];
+        const shopFixtureReads: string[] = [];
         page.on("pageerror", error => pageErrors.push(error.message));
         page.on("response", response => {
           if (response.status() >= 400) resourceErrors.push({ status: response.status(), path: new URL(response.url()).pathname });
@@ -79,11 +93,43 @@ test("capture and compare Academy Sponsors and Shop pages at desktop and phone s
           const table = url.pathname.match(/^\/rest\/v1\/([a-z_]+)$/)?.[1];
           if (table) restReads[table] = (restReads[table] ?? 0) + 1;
         });
+        if (routePath === "/shop") {
+          await page.route("**/rest/v1/shop_kit_*", async route => {
+            const request = route.request();
+            const url = new URL(request.url());
+            if (request.method() !== "GET" || url.hostname !== "127.0.0.1") {
+              blockedRequests.push(`shop fixture refused ${request.method()} ${url.origin}${url.pathname}`);
+              return route.abort("blockedbyclient");
+            }
+            const table = url.pathname.split("/").at(-1);
+            const variant = url.searchParams.get("kit_variant");
+            if (
+              !["shop_kit_section", "shop_kit_photos"].includes(table ?? "") ||
+              url.searchParams.get("club_id") !== "eq.11111111-1111-4111-8111-111111111111" ||
+              url.searchParams.get("surface") !== "eq.shop" ||
+              !["eq.home", "eq.third", "eq.away"].includes(variant ?? "")
+            ) {
+              blockedRequests.push(`unexpected shop fixture query ${url.pathname}`);
+              return route.abort("blockedbyclient");
+            }
+            shopFixtureReads.push(`${table}:${variant}`);
+            const rows = variant === "eq.home"
+              ? table === "shop_kit_section" ? [shopFixture.section] : shopFixture.photos
+              : [];
+            return route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(rows) });
+          });
+        }
         const response = await page.goto(new URL(routePath, build.origin).toString(), { waitUntil: "load" });
         expect(response?.status(), `${build.name} ${routePath}`).toBe(200);
         await expect(page.locator("main h1").first()).toBeVisible();
         await expect(page.locator("header").first()).toBeVisible();
         await expect(page.locator("footer").first()).toBeVisible();
+        if (routePath === "/shop") {
+          expect(shopFixtureReads.toSorted()).toEqual([
+            "shop_kit_photos:eq.away", "shop_kit_photos:eq.home", "shop_kit_photos:eq.third",
+            "shop_kit_section:eq.away", "shop_kit_section:eq.home", "shop_kit_section:eq.third",
+          ]);
+        }
         await page.waitForTimeout(1800);
         const state = await page.evaluate(() => {
           const markup = (selector: string) => document.querySelector(selector)?.outerHTML ?? "";
@@ -140,6 +186,8 @@ test("capture and compare Academy Sponsors and Shop pages at desktop and phone s
           footerDomSha256: digest(comparableState.footer),
           linkList: state.links,
           resources,
+          shopFixtureSource: routePath === "/shop" ? shopFixture.source : null,
+          shopFixtureReads: routePath === "/shop" ? [...shopFixtureReads].sort() : [],
           pageErrors,
           resourceErrors,
           screenshot,
@@ -153,5 +201,5 @@ test("capture and compare Academy Sponsors and Shop pages at desktop and phone s
     }
   }
 
-  await writeFile(join(evidenceDir, "sponsors-shop-capture.json"), `${JSON.stringify(captures, null, 2)}\n`);
+  await writeFile(join(evidenceDir, "sponsors-shop-capture.json"), `${JSON.stringify({ schemaVersion: 1, builds: builds.map(({ name, sha }) => ({ name, sha })), routes, viewports, captures }, null, 2)}\n`);
 });
