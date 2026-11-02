@@ -428,6 +428,51 @@ describe("template selector detection", () => {
     });
   });
 
+  it("keeps an own parameter binding visible in its default", () => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      function render(key = key) { function key() {} use(key); }
+    `;
+    expect(() => new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, () => {},
+    )).toThrow(ReferenceError);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1 });
+  });
+
+  it("resolves a destructured parameter default outside its body function binding", () => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      function render({ selected = key.startsWith("academy") } = {}) {
+        function key() {} use(selected);
+      }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1,
+    });
+  });
+
+  it("assigns from a default to the outer binding instead of a body function", () => {
+    const source = `
+      let key = "other";
+      function render(selected = (key = club.presentationTemplateKey)) {
+        function key() {} use(typeof key);
+      }
+      render();
+      use(key);
+    `;
+    const observed: unknown[] = [];
+    new Function("club", "use", source)(
+      { presentationTemplateKey: "academy@1" }, (value: unknown) => observed.push(value),
+    );
+    expect(observed).toEqual(["function", "academy@1"]);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 2 });
+  });
+
   it("keeps body function derivation out of unrelated defaults and shorthand values", () => {
     const source = `
       const key = "other";

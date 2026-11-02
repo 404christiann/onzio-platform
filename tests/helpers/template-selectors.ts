@@ -88,11 +88,39 @@ function unwrap(node: ts.Node): ts.Node {
 
 type TemplateBindings = { checker: ts.TypeChecker; derived: Set<ts.Symbol> };
 
+function parameterVisibleSymbol(
+  node: ts.Identifier,
+  symbol: ts.Symbol | undefined,
+  checker: ts.TypeChecker,
+): ts.Symbol | undefined {
+  let inInitializer = false;
+  for (let child: ts.Node = node, parent = child.parent; parent; child = parent, parent = parent.parent) {
+    if ((ts.isParameter(parent) || ts.isBindingElement(parent)) && parent.initializer === child) {
+      inInitializer = true;
+    }
+    if (!ts.isParameter(parent)) continue;
+    const owner = parent.parent;
+    if (inInitializer && ts.isFunctionLike(owner) && "body" in owner && owner.body) {
+      const body = owner.body;
+      const declarations = symbol?.declarations;
+      // The checker can expose body functions to defaults, but JavaScript keeps that environment separate.
+      if (declarations?.length && declarations.every((declaration) =>
+        declaration.pos >= body.pos && declaration.end <= body.end
+      )) {
+        symbol = checker.resolveName(node.text, owner.parent, ts.SymbolFlags.Value, false);
+      }
+    }
+    inInitializer = false;
+  }
+  return symbol;
+}
+
 function isDerivedReference(node: ts.Identifier, bindings: TemplateBindings): boolean {
   const symbol = ts.isShorthandPropertyAssignment(node.parent)
     ? bindings.checker.getShorthandAssignmentValueSymbol(node.parent)
     : bindings.checker.getSymbolAtLocation(node);
-  return symbol !== undefined && bindings.derived.has(symbol);
+  const visible = parameterVisibleSymbol(node, symbol, bindings.checker);
+  return visible !== undefined && bindings.derived.has(visible);
 }
 
 function isTemplateValue(node: ts.Node, bindings: TemplateBindings): boolean {
@@ -167,7 +195,7 @@ function templateBindings(file: ts.SourceFile): TemplateBindings {
   const bindings: TemplateBindings = { checker, derived: new Set() };
   const initializers = new Map<ts.Symbol, ts.Expression[]>();
   const assignedSymbol = (name: ts.Identifier) =>
-    checker.resolveName(name.text, name, ts.SymbolFlags.Value, false);
+    parameterVisibleSymbol(name, checker.resolveName(name.text, name, ts.SymbolFlags.Value, false), checker);
   const addInitializer = (symbol: ts.Symbol | undefined, initializer: ts.Expression | undefined) => {
     if (!symbol || !initializer) return;
     const values = initializers.get(symbol) ?? [];

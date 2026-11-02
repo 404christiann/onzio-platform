@@ -386,8 +386,9 @@ or `*.spec.*` file. Comments are ignored. It counts four kinds of selector per f
   test or lookup on one of those. Destructured aliases, parameter and binding defaults, and aliases wrapped in
   TypeScript assertions or `satisfies` expressions are tracked. Plain identifier
   assignments also seed local aliases. TypeScript's lexical symbols resolve each
-  reference, including shorthand property values, parameter-default environments,
-  catch bindings and function-scoped `var`. Initializers use lexical assignment
+  reference, including shorthand property values, catch bindings and function-scoped
+  `var`. A narrow correction separates parameter initializers from body-only
+  declarations, as described below. Initializers use lexical assignment
   targets because a `var` declared inside a catch can write the catch binding
   rather than the function symbol declared by that `var`. Property names and
   shadowing parameters or bindings are not counted as uses of an outer alias.
@@ -446,6 +447,21 @@ standard library or dependency type graph. Compiler symbol identity replaces the
 custom scope-owner and shadowing rules, which disagreed about parameter defaults
 and catch initializers. The selector API and AST expression classification remain
 unchanged.
+
+A parameter initializer, including a closure created there, cannot see declarations
+that exist only inside that function body. The compiler APIs can nevertheless
+resolve a default's identifier to a body function declaration. The scanner corrects
+that discrepancy only when every declaration of the resolved symbol is inside the
+owning function body. It calls public `resolveName` at the function's parent with
+`SymbolFlags.Value`, repeating the check for enclosing parameter initializers.
+Ordinary reads, shorthand values and assignment targets use this correction.
+Parameter bindings and a closure's own shadows remain visible. An unresolved name
+gets no fallback. Native JavaScript controls establish that the outer
+`"academy@1"` key makes the default true despite a body `function key() {}`;
+its inverse and missing-outer-binding controls retain false and `ReferenceError`.
+The focused suite retains all previous 93 cases and adds 16 controls for this
+boundary, including nested defaults, destructuring and closures. This evidence
+covers those fixtures, not all JavaScript or TypeScript binding behavior.
 
 Limits.
 
