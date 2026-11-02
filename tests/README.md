@@ -365,6 +365,74 @@ and after screenshots, header and footer DOM hashes, link lists and resource gat
 come from guarded production builds of the base and the head revision. Run the
 browser pass under the shared database lock, as with the homepage suites above.
 
+## Template selector ratchet
+
+`tests/architecture/template-selectors.test.ts` runs in `npm run test:architecture`.
+It stops new code from branching on the presentation template while SITE-08
+retires the existing branches. A club-specific behavior belongs in that club's
+site module, not in a template branch.
+
+The check parses every TypeScript and JavaScript file that git does not ignore, including
+untracked source and new top-level directories.
+It skips `tests/`, `lib/__tests__/` and any `*.test.*`
+or `*.spec.*` file. Comments are ignored. It counts four kinds of selector per file and checks retired API references.
+
+- `literal:` a template key string such as `"academy@1"`.
+- `read:` a mention of `presentationTemplateKey`, `templateKey`,
+  `visibleForTemplates` or `hiddenForTemplates`, or of the `data-site-template`
+  and `data-font-pack` attributes that scope styles to a template.
+- `flag:` each use of a value computed only from the template, such as
+  `isAcademy`, `hidesSlugField`, an alias of the key, or a method call, membership
+  test or lookup on one of those. Property names and same-named variables in
+  other blocks are not counted.
+- `id:` a bare template id such as `"academy"` compared with any expression or
+  used as a `case` label.
+
+The presentation package is now scanned because #45 deleted its dead switching APIs.
+References to those deleted APIs, report types, and registry fields produce `retired:`
+entries and always fail, even if the JSON is edited to include them. Identifiers,
+named imports, namespace accesses, static string property accesses, and type references
+are checked. Comments and historical Markdown and SQL remain outside the scan.
+Live font, section, and theme validation stays allowed.
+
+`tests/architecture/template-selector-allowlist.json` maps each file to its exact
+counts. The check fails in both directions. A selector the list does not allow
+fails the first test. A listed selector that code no longer contains fails the
+second, so the list always matches the code. A swap of one selector for another
+fails both.
+
+To retire selectors in a SITE-08 change:
+
+1. Delete the branch and the code that only it used.
+2. Run `npx vitest run tests/architecture/template-selectors.test.ts`. Each
+   failure line names the file, the kind, and the allowlist and code counts.
+3. In the JSON file, lower each count to the code count. Delete a kind at zero,
+   and delete a file when nothing is left. Keep the file sorted. The canonical
+   form test rejects any other layout.
+4. Run the test again and commit the code and the smaller list together.
+
+Never raise a count or add a file. The initial inventory is 461 mentions in 61 files,
+including 51 mentions in the presentation package. The earlier unmerged inventory was
+455 application mentions; merged shell and Programs changes reduced that scope to 410.
+See [the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
+
+Rewrite the code so the branch is not needed.
+The test also compares the JSON with the branch merge-base against `origin/main` and
+rejects increased counts or new entries. The first introduction has no earlier list;
+its exact current-source baseline is reviewed in this package.
+
+Limits.
+
+- Counts are per file. Deleting one branch and adding another of the same kind in
+  the same file keeps the counts equal, so read the diff.
+- A mixed expression such as `isAcademy && menuOpen` is counted where it names the
+  template, and its own name is not tracked afterward.
+- A helper that hides the template behind a function, such as the homepage
+  capabilities resolver, is counted inside the helper and not at its callers.
+- CSS rules keyed on `[data-site-template]` or `[data-font-pack]`, SQL template
+  gates, JSON data, and tenant-slug checks are outside the scan. Those attributes are
+  counted in TypeScript and JSX only.
+
 ## Actual pilot source package
 
 Run `npx vitest run tests/architecture/pilot-source-package.test.ts` for package
