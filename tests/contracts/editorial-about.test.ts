@@ -18,7 +18,7 @@ describe("editorial About page", () => {
     expect(clubhouseIndex).toBeGreaterThan(editorialIndex);
     expect(source).toContain("<EditorialAboutPage content={content.about} />");
     expect(source).toContain("<ClubhouseAboutPage content={content.about} sponsors={sponsors} />");
-    expect(source).toContain("<AboutClubPageClient content={content.about} />");
+    expect(source).toContain("<AcademyAboutPage content={content.about} />");
   });
 
   it("ports the shared About layout with real tenant content and resilient media", () => {
