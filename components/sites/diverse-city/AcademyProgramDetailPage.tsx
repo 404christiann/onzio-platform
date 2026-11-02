@@ -1,7 +1,7 @@
 import Link from "next/link";
 import AcademyProgramRegistrationSlideshow, {
   type RegistrationSlide,
-} from "@/components/AcademyProgramRegistrationSlideshow";
+} from "@/components/sites/diverse-city/AcademyProgramRegistrationSlideshow";
 import ResilientImage from "@/components/ResilientImage";
 import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
 import type { ProgramContent } from "@/lib/queries";
