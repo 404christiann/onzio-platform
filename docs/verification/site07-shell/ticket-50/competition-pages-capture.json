@@ -7,7 +7,7 @@
     },
     {
       "name": "head",
-      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7"
+      "sha": "d81ca71e9b2de24de9c4cc7e6fa770d9a21e3c82"
     }
   ],
   "routes": [
@@ -70,28 +70,35 @@
         },
         "restReads": {
           "site_social_links": 1,
-          "programs": 2,
           "contact_profile": 2,
-          "program_media": 2,
+          "programs": 2,
           "shop_kit_photos": 1,
+          "program_media": 2,
           "shop_kit_section": 1,
-          "league_standings": 2,
           "league_standings_settings": 2,
-          "seasons": 1,
-          "matches": 1,
-          "homepage_story_section": 1,
+          "league_standings": 2,
           "homepage_hero_content": 2,
+          "homepage_story_section": 1,
+          "seasons": 1,
           "homepage_slideshow_photos": 2,
           "homepage_slideshow_settings": 2,
           "behind_the_rose_section": 2,
           "programs_page_content": 1,
-          "site_sponsor_logos": 1
+          "site_sponsor_logos": 1,
+          "matches": 1
         }
       },
       "pageErrors": [],
       "resourceErrors": [],
       "blockedRequests": [],
       "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
@@ -117,14 +124,14 @@
           "transferBytes": 174816
         },
         "restReads": {
-          "contact_profile": 1,
           "site_social_links": 1,
+          "contact_profile": 1,
+          "programs": 1,
           "seasons": 1,
           "staff": 1,
-          "programs": 1,
-          "player_season_stats": 1,
-          "goalkeeper_season_stats": 1,
           "program_media": 1,
+          "goalkeeper_season_stats": 1,
+          "player_season_stats": 1,
           "player_photos": 1,
           "players": 1
         }
@@ -133,6 +140,13 @@
       "resourceErrors": [],
       "blockedRequests": [],
       "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
@@ -161,8 +175,8 @@
           "programs": 1,
           "contact_profile": 1,
           "site_social_links": 1,
-          "seasons": 1,
           "program_media": 1,
+          "seasons": 1,
           "matches": 1
         }
       },
@@ -170,6 +184,13 @@
       "resourceErrors": [],
       "blockedRequests": [],
       "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
@@ -216,29 +237,38 @@
           "transferBytes": 174816
         },
         "restReads": {
+          "site_social_links": 1,
           "programs": 2,
           "contact_profile": 2,
-          "site_social_links": 1,
           "program_media": 2,
-          "shop_kit_photos": 1,
           "shop_kit_section": 1,
-          "league_standings": 2,
+          "shop_kit_photos": 1,
           "league_standings_settings": 2,
+          "league_standings": 2,
           "seasons": 1,
-          "homepage_story_section": 1,
-          "matches": 1,
           "homepage_slideshow_settings": 2,
+          "behind_the_rose_section": 2,
+          "homepage_story_section": 1,
           "homepage_hero_content": 2,
           "homepage_slideshow_photos": 2,
           "site_sponsor_logos": 1,
-          "behind_the_rose_section": 2,
-          "programs_page_content": 1
+          "programs_page_content": 1,
+          "matches": 1
         }
       },
       "pageErrors": [],
       "resourceErrors": [],
       "blockedRequests": [],
       "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
@@ -264,11 +294,11 @@
           "transferBytes": 174816
         },
         "restReads": {
-          "programs": 1,
           "contact_profile": 1,
+          "programs": 1,
           "site_social_links": 1,
-          "staff": 1,
           "seasons": 1,
+          "staff": 1,
           "program_media": 1,
           "goalkeeper_season_stats": 1,
           "player_season_stats": 1,
@@ -280,6 +310,15 @@
       "resourceErrors": [],
       "blockedRequests": [],
       "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
@@ -305,10 +344,10 @@
           "transferBytes": 174816
         },
         "restReads": {
-          "programs": 1,
           "contact_profile": 1,
-          "site_social_links": 1,
           "seasons": 1,
+          "programs": 1,
+          "site_social_links": 1,
           "program_media": 1,
           "matches": 1
         }
@@ -318,13 +357,22 @@
       "blockedRequests": [],
       "blockedMediaRequests": [
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
       "screenshot": "base-phone-schedule.jpg"
     },
     {
       "build": "head",
-      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "sha": "d81ca71e9b2de24de9c4cc7e6fa770d9a21e3c82",
       "route": "/",
       "viewport": {
         "name": "desktop",
@@ -363,23 +411,23 @@
           "transferBytes": 174816
         },
         "restReads": {
-          "programs": 2,
           "site_social_links": 1,
+          "programs": 2,
           "contact_profile": 2,
           "program_media": 2,
           "shop_kit_photos": 1,
           "shop_kit_section": 1,
-          "league_standings_settings": 2,
           "league_standings": 2,
-          "seasons": 1,
+          "league_standings_settings": 2,
+          "homepage_slideshow_settings": 2,
           "homepage_story_section": 1,
-          "matches": 1,
           "homepage_hero_content": 2,
+          "seasons": 1,
           "homepage_slideshow_photos": 2,
           "behind_the_rose_section": 2,
-          "homepage_slideshow_settings": 2,
           "site_sponsor_logos": 1,
-          "programs_page_content": 1
+          "programs_page_content": 1,
+          "matches": 1
         }
       },
       "pageErrors": [],
@@ -393,7 +441,7 @@
     },
     {
       "build": "head",
-      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "sha": "d81ca71e9b2de24de9c4cc7e6fa770d9a21e3c82",
       "route": "/roster",
       "viewport": {
         "name": "desktop",
@@ -411,16 +459,16 @@
           "transferBytes": 174816
         },
         "restReads": {
+          "programs": 1,
           "contact_profile": 1,
           "site_social_links": 1,
-          "programs": 1,
-          "staff": 1,
           "seasons": 1,
+          "staff": 1,
           "program_media": 1,
-          "goalkeeper_season_stats": 1,
           "player_season_stats": 1,
-          "players": 1,
-          "player_photos": 1
+          "goalkeeper_season_stats": 1,
+          "player_photos": 1,
+          "players": 1
         }
       },
       "pageErrors": [],
@@ -434,7 +482,7 @@
     },
     {
       "build": "head",
-      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "sha": "d81ca71e9b2de24de9c4cc7e6fa770d9a21e3c82",
       "route": "/schedule",
       "viewport": {
         "name": "desktop",
@@ -452,12 +500,12 @@
           "transferBytes": 174816
         },
         "restReads": {
-          "programs": 1,
-          "contact_profile": 1,
           "site_social_links": 1,
           "seasons": 1,
-          "program_media": 1,
-          "matches": 1
+          "contact_profile": 1,
+          "programs": 1,
+          "matches": 1,
+          "program_media": 1
         }
       },
       "pageErrors": [],
@@ -471,7 +519,7 @@
     },
     {
       "build": "head",
-      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "sha": "d81ca71e9b2de24de9c4cc7e6fa770d9a21e3c82",
       "route": "/",
       "viewport": {
         "name": "phone",
@@ -511,20 +559,20 @@
         },
         "restReads": {
           "site_social_links": 1,
-          "programs": 2,
           "contact_profile": 2,
+          "programs": 2,
           "program_media": 2,
           "shop_kit_section": 1,
-          "shop_kit_photos": 1,
           "league_standings_settings": 2,
-          "seasons": 1,
-          "league_standings": 2,
-          "homepage_hero_content": 2,
           "homepage_story_section": 1,
+          "shop_kit_photos": 1,
+          "league_standings": 2,
+          "seasons": 1,
           "homepage_slideshow_settings": 2,
-          "homepage_slideshow_photos": 2,
-          "behind_the_rose_section": 2,
+          "homepage_hero_content": 2,
           "site_sponsor_logos": 1,
+          "behind_the_rose_section": 2,
+          "homepage_slideshow_photos": 2,
           "programs_page_content": 1,
           "matches": 1
         }
@@ -542,15 +590,13 @@
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
-        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
-        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
       "screenshot": "head-phone-home.jpg"
     },
     {
       "build": "head",
-      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "sha": "d81ca71e9b2de24de9c4cc7e6fa770d9a21e3c82",
       "route": "/roster",
       "viewport": {
         "name": "phone",
@@ -568,16 +614,16 @@
           "transferBytes": 174816
         },
         "restReads": {
+          "contact_profile": 1,
           "site_social_links": 1,
           "programs": 1,
-          "contact_profile": 1,
           "seasons": 1,
           "staff": 1,
           "program_media": 1,
-          "player_season_stats": 1,
           "goalkeeper_season_stats": 1,
-          "player_photos": 1,
-          "players": 1
+          "player_season_stats": 1,
+          "players": 1,
+          "player_photos": 1
         }
       },
       "pageErrors": [],
@@ -593,15 +639,13 @@
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
-        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
-        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
       ],
       "screenshot": "head-phone-roster.jpg"
     },
     {
       "build": "head",
-      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "sha": "d81ca71e9b2de24de9c4cc7e6fa770d9a21e3c82",
       "route": "/schedule",
       "viewport": {
         "name": "phone",
@@ -619,9 +663,9 @@
           "transferBytes": 174816
         },
         "restReads": {
+          "programs": 1,
           "contact_profile": 1,
           "site_social_links": 1,
-          "programs": 1,
           "seasons": 1,
           "program_media": 1,
           "matches": 1
@@ -631,8 +675,6 @@
       "resourceErrors": [],
       "blockedRequests": [],
       "blockedMediaRequests": [
-        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
-        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
         "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
