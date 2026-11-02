@@ -12,7 +12,7 @@ import ShopPurchaseDetailsContainer from "@/components/ShopPurchaseDetailsContai
 import type { ShopKitVariant } from "@/lib/db-types";
 import { useClubContext } from "@/components/ClubContextProvider";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
-import AcademyShopPage from "@/components/AcademyShopPage";
+import AcademyShopPage from "@/components/sites/diverse-city/AcademyShopPage";
 import EditorialShopPage from "@/components/editorial/EditorialShopPage";
 
 gsap.registerPlugin(ScrollTrigger);

@@ -302,7 +302,7 @@ describe("editorial store kit photo slideshow", () => {
   });
 
   it("never touches academy@1's shop rendering", () => {
-    const academy = read("components/AcademyShopPage.tsx");
+    const academy = read("components/sites/diverse-city/AcademyShopPage.tsx");
     expect(academy).not.toMatch(/EditorialShopKitSlideshow|store-product-slide/);
   });
 });
