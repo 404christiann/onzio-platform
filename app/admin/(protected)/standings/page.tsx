@@ -12,7 +12,7 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
-import AcademyLeagueStandingsTable from "@/components/AcademyLeagueStandingsTable";
+import AcademyLeagueStandingsTable from "@/components/sites/diverse-city/AcademyStandingsTable";
 import type {
   DBLeagueStandingRow,
   DBLeagueStandingsSettings,
