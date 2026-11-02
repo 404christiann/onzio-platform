@@ -15,8 +15,7 @@ import EditorialSchedule from "@/components/editorial/EditorialSchedule";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// Fixture kickoff times are local to Los Angeles, regardless of the browser timezone.
-function fixtureDateTime(fixture: Fixture): Date {
+function fixtureKickoffInstantFromLosAngelesLocalTime(fixture: Fixture): Date {
   const [year, month, day] = fixture.date.split("-").map(Number);
 
   let hours = 0, minutes = 0;
@@ -43,7 +42,9 @@ function fixtureDateTime(fixture: Fixture): Date {
 }
 
 function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
-  const idx = fixtures.findIndex((f) => fixtureDateTime(f) > now);
+  const idx = fixtures.findIndex(
+    (fixture) => fixtureKickoffInstantFromLosAngelesLocalTime(fixture) > now,
+  );
   return idx === -1 ? fixtures.length : idx;
 }
 

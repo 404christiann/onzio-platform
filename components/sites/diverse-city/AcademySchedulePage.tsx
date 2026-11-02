@@ -11,7 +11,7 @@ import type { Fixture } from "@/lib/data";
 
 gsap.registerPlugin(ScrollTrigger);
 
-function fixtureDateTime(fixture: Fixture): Date {
+function fixtureKickoffInstantFromLosAngelesLocalTime(fixture: Fixture): Date {
   const [year, month, day] = fixture.date.split("-").map(Number);
   let hours = 0;
   let minutes = 0;
@@ -36,7 +36,9 @@ function fixtureDateTime(fixture: Fixture): Date {
 }
 
 function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
-  const index = fixtures.findIndex((fixture) => fixtureDateTime(fixture) > now);
+  const index = fixtures.findIndex(
+    (fixture) => fixtureKickoffInstantFromLosAngelesLocalTime(fixture) > now,
+  );
   return index === -1 ? fixtures.length : index;
 }
 
