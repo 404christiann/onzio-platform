@@ -76,6 +76,8 @@ function unwrap(node: ts.Node): ts.Node {
   while (
     ts.isParenthesizedExpression(node) ||
     ts.isAsExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
     ts.isNonNullExpression(node) ||
     (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.ExclamationToken)
   ) {
@@ -182,8 +184,26 @@ function derivesFromTemplate(node: ts.Node, scopes: DerivedScopes): boolean {
 }
 
 function enclosingScope(node: ts.Node): ts.Node {
-  let scope = node.parent;
-  while (!ts.isBlock(scope) && !ts.isSourceFile(scope) && !ts.isModuleBlock(scope)) scope = scope.parent;
+  let declaration = node;
+  while (!ts.isVariableDeclaration(declaration) && !ts.isParameter(declaration)) {
+    declaration = declaration.parent;
+  }
+  const functionScoped =
+    ts.isVariableDeclarationList(declaration.parent) &&
+    !(declaration.parent.flags & ts.NodeFlags.BlockScoped);
+  let scope: ts.Node = declaration.parent;
+  while (
+    !ts.isSourceFile(scope) &&
+    !ts.isModuleBlock(scope) &&
+    !ts.isFunctionLike(scope)
+  ) {
+    if (
+      !functionScoped &&
+      (ts.isBlock(scope) || ts.isCatchClause(scope) || ts.isForStatement(scope) ||
+        ts.isForOfStatement(scope) || ts.isForInStatement(scope))
+    ) return scope;
+    scope = scope.parent;
+  }
   return scope;
 }
 
@@ -191,6 +211,7 @@ function enclosingScope(node: ts.Node): ts.Node {
 // lives, so a same-named variable in another function is neither derived nor counted.
 function derivedScopes(file: ts.SourceFile): DerivedScopes {
   const declarations: { name: string; initializer: ts.Expression; scope: ts.Node }[] = [];
+  const scopes: DerivedScopes = new Map();
   const collect = (node: ts.Node) => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
       declarations.push({
@@ -199,11 +220,26 @@ function derivedScopes(file: ts.SourceFile): DerivedScopes {
         scope: enclosingScope(node),
       });
     }
+    if (
+      ts.isBindingElement(node) &&
+      ts.isObjectBindingPattern(node.parent) &&
+      ts.isIdentifier(node.name) &&
+      !node.dotDotDotToken
+    ) {
+      const property = node.propertyName ?? node.name;
+      const key = ts.isComputedPropertyName(property) ? unwrap(property.expression) : property;
+      if (
+        (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) &&
+        (TEMPLATE_READ_NAMES.has(key.text) || TEMPLATE_FLAG_NAME.test(key.text))
+      ) {
+        const scope = enclosingScope(node);
+        scopes.set(node.name.text, [...(scopes.get(node.name.text) ?? []), scope]);
+      }
+    }
     ts.forEachChild(node, collect);
   };
   collect(file);
 
-  const scopes: DerivedScopes = new Map();
   let grew = true;
   while (grew) {
     grew = false;
@@ -348,16 +384,12 @@ export function scanRepositoryTemplateSelectors(root: string): SelectorTable {
 }
 
 export function readBaselineSelectorAllowlist(root: string, path: string): SelectorTable | null {
-  const base = execFileSync("git", ["merge-base", "HEAD", "origin/main"], {
-    cwd: root,
-    encoding: "utf8",
-  }).trim();
-  const existing = execFileSync("git", ["ls-tree", "--name-only", base, "--", path], {
+  const existing = execFileSync("git", ["ls-tree", "--name-only", "origin/main", "--", path], {
     cwd: root,
     encoding: "utf8",
   }).trim();
   if (!existing) return null;
   return JSON.parse(
-    execFileSync("git", ["show", `${base}:${path}`], { cwd: root, encoding: "utf8" }),
+    execFileSync("git", ["show", `origin/main:${path}`], { cwd: root, encoding: "utf8" }),
   ) as SelectorTable;
 }

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -35,10 +35,8 @@ describe("template selector ratchet", () => {
   const { raw, table: allowlist } = readAllowlist();
   const { added, stale } = diffSelectorTables(found, allowlist);
 
-  it("scans the real application source", () => {
-    expect(Object.keys(found)).toContain("components/Nav.tsx");
-    expect(Object.keys(found).some((path) => path.startsWith("tests/"))).toBe(false);
-    expect(Object.keys(found).length).toBeGreaterThan(40);
+  it("excludes test sources from the real application inventory", () => {
+    expect(Object.keys(found).every(isScannedPath)).toBe(true);
   });
 
   it("adds no template selector outside the allowlist", () => {
@@ -58,7 +56,7 @@ describe("template selector ratchet", () => {
     ).toBe(0);
   });
 
-  it("never increases an allowlist count from the branch base", () => {
+  it("never increases an allowlist count from current main", () => {
     const previous = readBaselineSelectorAllowlist(ROOT, ALLOWLIST_PATH);
     if (!previous) return;
     const increases = diffSelectorTables(allowlist, previous).added;
@@ -149,6 +147,80 @@ describe("template selector detection", () => {
       "read:presentationTemplateKey": 4,
       "flag:key": 1,
     });
+  });
+
+  it("counts every use of a destructured template alias, including a new branch", () => {
+    const before = scan(`render(club.presentationTemplateKey);`);
+    const after = scan(`
+      const { presentationTemplateKey: key } = club;
+      render(key);
+      if (key.startsWith("academy")) use();
+    `);
+    expect(after).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 2 });
+    expect(diffSelectorTables({ "a.ts": after }, { "a.ts": before }).added).toEqual([
+      { path: "a.ts", signature: "flag:key", allowed: 0, found: 2 },
+    ]);
+  });
+
+  it("tracks nested and static string destructured aliases through derived values", () => {
+    expect(scan(`
+      const { nested: { "presentationTemplateKey": key } } = club;
+      const selected = key.startsWith("academy");
+      use(selected);
+    `)).toEqual({
+      "read:presentationTemplateKey": 1,
+      "flag:key": 1,
+      "flag:selected": 1,
+    });
+  });
+
+  it("keeps destructured aliases inside their lexical scope and respects shadows", () => {
+    expect(scan(`
+      {
+        const { presentationTemplateKey: key } = club;
+        use(key);
+        function f(key) { use(key); }
+        { const { key } = unrelated; use(key); }
+        for (const key of unrelated) use(key);
+        try {} catch (key) { use(key); }
+      }
+      use(key);
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+  });
+
+  it("limits loop destructuring aliases to the loop", () => {
+    expect(scan(`
+      for (const { presentationTemplateKey: key } of clubs) use(key);
+      use(key);
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+  });
+
+  it.each([
+    `if (visible) { var { presentationTemplateKey: key } = club; }`,
+    `for (var { presentationTemplateKey: key } of clubs) use();`,
+  ])("keeps var destructuring aliases available in the enclosing function", (declaration) => {
+    expect(scan(`
+      function render() {
+        ${declaration}
+        if (key.startsWith("academy")) use();
+      }
+      use(key);
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+  });
+
+  it("limits parameter destructuring aliases to their function", () => {
+    expect(scan(`
+      function render({ presentationTemplateKey: key }) { use(key); }
+      use(key);
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+  });
+
+  it.each([
+    ["type assertion", `<string>club.presentationTemplateKey`],
+    ["satisfies expression", `club.presentationTemplateKey satisfies string`],
+  ])("tracks aliases wrapped in a %s", (_, expression) => {
+    expect(scan(`const key = ${expression}; if (key.startsWith("academy")) use();`, "lib/example.ts"))
+      .toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
   });
 
   it("counts template lists and constants that alias a template key", () => {
@@ -426,36 +498,148 @@ describe("template selector scan scope", () => {
   });
 });
 
-describe("committed selector baseline", () => {
-  it("reads the branch base rather than a raised working or committed allowlist", () => {
-    const root = mkdtempSync(resolve(tmpdir(), "onzio-selector-baseline-"));
-    const git = (...args: string[]) => execFileSync("git", args, {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    const original: SelectorTable = { "a.ts": { "literal:academy@1": 1 } };
-    const raised: SelectorTable = { "a.ts": { "literal:academy@1": 2 } };
-    try {
-      git("init");
-      git("config", "user.name", "Selector Test");
-      git("config", "user.email", "selector@example.invalid");
-      mkdirSync(resolve(root, "tests/architecture"), { recursive: true });
-      writeFileSync(resolve(root, ALLOWLIST_PATH), canonicalSelectorJson(original));
-      git("add", ".");
-      git("commit", "-m", "initial selector baseline");
+function withSelectorRepository(
+  run: (root: string, git: (...args: string[]) => string, save: (table: SelectorTable) => void) => void,
+) {
+  const root = mkdtempSync(resolve(tmpdir(), "onzio-selector-regression-"));
+  const git = (...args: string[]) => execFileSync("git", args, {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const save = (table: SelectorTable) => {
+    mkdirSync(resolve(root, "tests/architecture"), { recursive: true });
+    writeFileSync(resolve(root, ALLOWLIST_PATH), canonicalSelectorJson(table));
+    git("add", ".");
+    git("commit", "-m", "record selector inventory");
+  };
+  try {
+    git("init");
+    git("config", "user.name", "Selector Test");
+    git("config", "user.email", "selector@example.invalid");
+    git("commit", "--allow-empty", "-m", "before selector guard");
+    git("update-ref", "refs/remotes/origin/main", "HEAD");
+    run(root, git, save);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+describe("selector guard retirement", () => {
+  it("runs the actual architecture guard after every selector is retired", () => {
+    withSelectorRepository((root, git, save) => {
+      mkdirSync(resolve(root, "components"));
+      writeFileSync(resolve(root, "components/Nav.tsx"), "export const Nav = () => null;");
+      save({});
       git("update-ref", "refs/remotes/origin/main", "HEAD");
-      writeFileSync(resolve(root, ALLOWLIST_PATH), canonicalSelectorJson(raised));
+      symlinkSync(resolve(ROOT, "node_modules"), resolve(root, "node_modules"), "dir");
+      writeFileSync(resolve(root, ".gitignore"), "node_modules/\n");
+      const suite = readFileSync(resolve(ROOT, "tests/architecture/template-selectors.test.ts"), "utf8")
+        .replace('"../helpers/template-selectors"', JSON.stringify(resolve(ROOT, "tests/helpers/template-selectors.ts")));
+      writeFileSync(resolve(root, "tests/architecture/template-selectors.test.ts"), suite);
+      const config = resolve(root, "vitest.config.mts");
+      writeFileSync(config, `export default { resolve: { alias: { "@": ${JSON.stringify(ROOT)} } } };`);
+      expect(() => execFileSync(process.execPath, [
+        resolve(ROOT, "node_modules/vitest/vitest.mjs"), "run",
+        "--root", root, "--config", config,
+        "--testNamePattern", "^template selector ratchet",
+      ], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })).not.toThrow();
+    });
+  });
+
+  it("scans tracked, untracked and new-directory source, then permits retirement to zero", () => {
+    withSelectorRepository((root, git) => {
+      const paths = ["components/Nav.tsx", "packages/presentation/index.ts", "new-club/Home.tsx"];
+      for (const path of [...paths, "tests/fixture.ts", "lib/__tests__/fixture.ts", "components/Nav.test.tsx"]) {
+        mkdirSync(resolve(root, path, ".."), { recursive: true });
+        writeFileSync(resolve(root, path), "render(club.presentationTemplateKey);");
+      }
+      git("add", paths[0]);
+      expect(scanRepositoryTemplateSelectors(root)).toEqual(Object.fromEntries(
+        paths.map((path) => [path, { "read:presentationTemplateKey": 1 }]),
+      ));
+      for (const path of paths) writeFileSync(resolve(root, path), "render(club.name);");
+      expect(scanRepositoryTemplateSelectors(root)).toEqual({});
+      expect(diffSelectorTables(scanRepositoryTemplateSelectors(root), {})).toEqual({ added: [], stale: [] });
+    });
+  });
+});
+
+describe("committed selector baseline", () => {
+  const large: SelectorTable = { "a.ts": { "literal:academy@1": 3 } };
+  const small: SelectorTable = { "a.ts": { "literal:academy@1": 1 } };
+
+  it("allows first introduction only while current main has no inventory", () => {
+    withSelectorRepository((root, _, save) => {
+      save(large);
+      expect(readBaselineSelectorAllowlist(root, ALLOWLIST_PATH)).toBeNull();
+    });
+  });
+
+  it("constrains an old branch that cherry-picks the guard after main introduces it", () => {
+    withSelectorRepository((root, git, save) => {
+      const oldBase = git("rev-parse", "HEAD").trim();
+      save(small);
+      const introduction = git("rev-parse", "HEAD").trim();
+      git("update-ref", "refs/remotes/origin/main", introduction);
+      git("checkout", "-b", "old-branch", oldBase);
+      writeFileSync(resolve(root, "old-branch.txt"), "independent change");
       git("add", ".");
-      git("commit", "-m", "raise selector count");
+      git("commit", "-m", "old branch work");
+      git("cherry-pick", introduction);
+      save(large);
+      expect(git("merge-base", "HEAD", "origin/main").trim()).toBe(oldBase);
+      const baseline = readBaselineSelectorAllowlist(root, ALLOWLIST_PATH);
+      expect(baseline).toEqual(small);
+      expect(diffSelectorTables(large, baseline ?? {}).added).toHaveLength(1);
+    });
+  });
+
+  it("uses later main shrinkage instead of an older higher branch-base inventory", () => {
+    withSelectorRepository((root, git, save) => {
+      save(large);
+      const oldBase = git("rev-parse", "HEAD").trim();
+      save(small);
+      git("update-ref", "refs/remotes/origin/main", "HEAD");
+      git("checkout", "-b", "old-branch", oldBase);
+      const baseline = readBaselineSelectorAllowlist(root, ALLOWLIST_PATH);
+      expect(baseline).toEqual(small);
+      expect(diffSelectorTables(large, baseline ?? {}).added).toHaveLength(1);
+    });
+  });
+
+  it("allows a branch to shrink the current main inventory to zero", () => {
+    withSelectorRepository((root, git, save) => {
+      save(small);
+      git("update-ref", "refs/remotes/origin/main", "HEAD");
+      save({});
+      const baseline = readBaselineSelectorAllowlist(root, ALLOWLIST_PATH);
+      expect(baseline).toEqual(small);
+      expect(diffSelectorTables({}, baseline ?? {}).added).toEqual([]);
+    });
+  });
+
+  it("fails closed when current main is unavailable", () => {
+    withSelectorRepository((root, git, save) => {
+      save(small);
+      git("update-ref", "-d", "refs/remotes/origin/main");
+      expect(() => readBaselineSelectorAllowlist(root, ALLOWLIST_PATH)).toThrow();
+    });
+  });
+
+  it("reads current main rather than a raised working or committed allowlist", () => {
+    withSelectorRepository((root, git, save) => {
+      const original: SelectorTable = { "a.ts": { "literal:academy@1": 1 } };
+      const raised: SelectorTable = { "a.ts": { "literal:academy@1": 2 } };
+      save(original);
+      git("update-ref", "refs/remotes/origin/main", "HEAD");
+      save(raised);
       const baseline = readBaselineSelectorAllowlist(root, ALLOWLIST_PATH);
       expect(baseline).toEqual(original);
       expect(diffSelectorTables(raised, baseline ?? {}).added).toEqual([
         { path: "a.ts", signature: "literal:academy@1", allowed: 1, found: 2 },
       ]);
       expect(readBaselineSelectorAllowlist(root, "not-introduced.json")).toBeNull();
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
+    });
   });
 });

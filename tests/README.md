@@ -383,8 +383,9 @@ or `*.spec.*` file. Comments are ignored. It counts four kinds of selector per f
   and `data-font-pack` attributes that scope styles to a template.
 - `flag:` each use of a value computed only from the template, such as
   `isAcademy`, `hidesSlugField`, an alias of the key, or a method call, membership
-  test or lookup on one of those. Property names and same-named variables in
-  other blocks are not counted.
+  test or lookup on one of those. Destructured aliases and aliases wrapped in
+  TypeScript assertions or `satisfies` expressions are tracked. Property names
+  and shadowing parameters or bindings are not counted as uses of an outer alias.
 - `id:` a bare template id such as `"academy"` compared with any expression or
   used as a `case` label.
 
@@ -417,9 +418,21 @@ including 51 mentions in the presentation package. The earlier unmerged inventor
 See [the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
 
 Rewrite the code so the branch is not needed.
-The test also compares the JSON with the branch merge-base against `origin/main` and
-rejects increased counts or new entries. The first introduction has no earlier list;
-its exact current-source baseline is reviewed in this package.
+The test also compares the JSON with current `origin/main` and rejects increased
+counts or new entries. An older branch base cannot bypass a later reduction on main,
+even when the branch predates the guard and cherry-picks its introduction. Missing
+or unreadable Git references fail the check. First introduction is allowed only
+when current `origin/main` genuinely has no inventory file. Keep that reference
+current before verification.
+
+The check permits the last selector to be retired and the allowlist to become `{}`.
+It has no required selector file or minimum count. Throwaway repository tests prove
+tracked, untracked, and new-directory scan coverage, excluded tests, real Git baseline
+history, and the actual architecture guard with no remaining selectors.
+
+The recovered initial snapshot describes `eb82ba3`. It still needs reconciliation
+against current main after the authorized #52 Academy registration adapters land,
+before the guard's first publication. This follow-up does not refresh that inventory.
 
 Limits.
 
