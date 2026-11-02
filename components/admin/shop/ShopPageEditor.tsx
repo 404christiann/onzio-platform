@@ -8,7 +8,7 @@ import {
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import AcademyHomeShopFeature from "@/components/AcademyHomeShopFeature";
-import AcademyShopPage from "@/components/AcademyShopPage";
+import AcademyShopPage from "@/components/sites/diverse-city/AcademyShopPage";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
 import EditorialShopPage from "@/components/editorial/EditorialShopPage";
 import EditorialShell from "@/components/editorial/EditorialShell";
