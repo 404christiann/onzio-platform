@@ -208,6 +208,98 @@ describe("template selector detection", () => {
     `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
   });
 
+  it.each([
+    `var key = club.presentationTemplateKey;`,
+    `var { presentationTemplateKey: key } = club;`,
+  ])("counts a body-level var alias and its new branch", (declaration) => {
+    const before = scan(`function render() { renderKey(club.presentationTemplateKey); }`);
+    const after = scan(`
+      function render() {
+        ${declaration}
+        if (key.startsWith("academy")) use();
+      }
+    `);
+    expect(after).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+    expect(diffSelectorTables({ "a.ts": after }, { "a.ts": before }).added).toEqual([
+      { path: "a.ts", signature: "flag:key", allowed: 0, found: 1 },
+    ]);
+  });
+
+  it.each([
+    `key = club.presentationTemplateKey`,
+    `{ key = club.presentationTemplateKey }`,
+  ])("counts a default binding initializer and its new branch", (parameter) => {
+    const before = scan(`function render() { renderKey(club.presentationTemplateKey); }`);
+    const after = scan(`
+      function render(${parameter}) {
+        if (key.startsWith("academy")) use();
+      }
+      use(key);
+    `);
+    expect(after).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+    expect(diffSelectorTables({ "a.ts": after }, { "a.ts": before }).added).toEqual([
+      { path: "a.ts", signature: "flag:key", allowed: 0, found: 1 },
+    ]);
+  });
+
+  it.each([
+    `var key = unrelated;`,
+    `var { key } = unrelated;`,
+    `if (visible) { var key = unrelated; }`,
+    `for (var key of unrelated) use(key);`,
+  ])("respects a nested function's unrelated var binding", (declaration) => {
+    expect(scan(`
+      function render() {
+        var key = club.presentationTemplateKey;
+        use(key);
+        function nested() {
+          ${declaration}
+          use(key);
+        }
+        use(key);
+      }
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 2 });
+  });
+
+  it.each([
+    `var key = unrelated;`,
+    `if (visible) { var key = unrelated; }`,
+    `for (var key of unrelated) use(key);`,
+    `function key() {}`,
+    `class key {}`,
+  ])("does not derive through an unrelated nested binding", (declaration) => {
+    expect(scan(`
+      const key = club.presentationTemplateKey;
+      use(key);
+      function nested() {
+        ${declaration}
+        const selected = key.startsWith("academy");
+        use(selected);
+      }
+    `)).toEqual({
+      "read:presentationTemplateKey": 1,
+      "flag:key": 1,
+    });
+  });
+
+  it("keeps a named function expression's binding inside that function", () => {
+    expect(scan(`
+      const key = club.presentationTemplateKey;
+      const nested = function key() { use(key); };
+      const selected = key.startsWith("academy");
+      use(selected);
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1 });
+  });
+
+  it("derives defaults from earlier parameters and keeps the aliases inside their function", () => {
+    expect(scan(`
+      function render(key = club.presentationTemplateKey, selected = key.startsWith("academy")) {
+        use(selected);
+      }
+      use(key, selected);
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1 });
+  });
+
   it("limits parameter destructuring aliases to their function", () => {
     expect(scan(`
       function render({ presentationTemplateKey: key }) { use(key); }

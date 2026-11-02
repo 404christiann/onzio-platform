@@ -86,60 +86,26 @@ function unwrap(node: ts.Node): ts.Node {
   return node;
 }
 
-type DerivedScopes = Map<string, ts.Node[]>;
+type Binding = { derived: boolean; initializers: ts.Expression[] };
+type Bindings = Map<ts.Node, Map<string, Binding>>;
 
-function bindsName(name: ts.BindingName, target: string): boolean {
-  if (ts.isIdentifier(name)) return name.text === target;
-  return name.elements.some((element) => !ts.isOmittedExpression(element) && bindsName(element.name, target));
-}
-
-function declaresIn(declarations: readonly ts.VariableDeclaration[], name: string): boolean {
-  return declarations.some((declaration) => bindsName(declaration.name, name));
-}
-
-// A parameter, loop variable, catch variable or inner declaration of the same name
-// hides the derived value, so it is not a reference to it.
-function shadowedBetween(scope: ts.Node, node: ts.Node, name: string): boolean {
-  for (let outer = node.parent; outer && outer !== scope; outer = outer.parent) {
-    if (ts.isFunctionLike(outer) && outer.parameters.some((p) => bindsName(p.name, name))) return true;
-    if (
-      ts.isBlock(outer) &&
-      outer.statements.some(
-        (statement) => ts.isVariableStatement(statement) && declaresIn(statement.declarationList.declarations, name),
-      )
-    ) {
-      return true;
-    }
-    if (
-      (ts.isForStatement(outer) || ts.isForOfStatement(outer) || ts.isForInStatement(outer)) &&
-      outer.initializer &&
-      ts.isVariableDeclarationList(outer.initializer) &&
-      declaresIn(outer.initializer.declarations, name)
-    ) {
-      return true;
-    }
-    if (ts.isCatchClause(outer) && outer.variableDeclaration && bindsName(outer.variableDeclaration.name, name)) {
-      return true;
-    }
+function resolveBinding(name: string, node: ts.Node, bindings: Bindings): Binding | undefined {
+  for (let scope: ts.Node | undefined = node.parent; scope; scope = scope.parent) {
+    const binding = bindings.get(scope)?.get(name);
+    if (binding) return binding;
   }
-  return false;
 }
 
-function isDerivedReference(name: string, node: ts.Node, scopes: DerivedScopes): boolean {
-  return (
-    scopes
-      .get(name)
-      ?.some((scope) => node.pos >= scope.pos && node.end <= scope.end && !shadowedBetween(scope, node, name)) ??
-    false
-  );
+function isDerivedReference(name: string, node: ts.Node, bindings: Bindings): boolean {
+  return resolveBinding(name, node, bindings)?.derived ?? false;
 }
 
-function isTemplateValue(node: ts.Node, scopes: DerivedScopes): boolean {
+function isTemplateValue(node: ts.Node, bindings: Bindings): boolean {
   if (ts.isIdentifier(node)) {
     return (
       TEMPLATE_READ_NAMES.has(node.text) ||
       TEMPLATE_FLAG_NAME.test(node.text) ||
-      isDerivedReference(node.text, node, scopes)
+      isDerivedReference(node.text, node, bindings)
     );
   }
   if (ts.isPropertyAccessExpression(node)) {
@@ -157,84 +123,86 @@ function isTemplateValue(node: ts.Node, scopes: DerivedScopes): boolean {
 // every operand is one. Mixed expressions such as `isAcademy && menuOpen` are
 // counted where they mention the template and do not make their own name a
 // selector, which keeps layout booleans out of the list.
-function derivesFromTemplate(node: ts.Node, scopes: DerivedScopes): boolean {
+function derivesFromTemplate(node: ts.Node, bindings: Bindings): boolean {
   const inner = unwrap(node);
   if (ts.isBinaryExpression(inner)) {
     const operator = inner.operatorToken.kind;
     if (EQUALITY.has(operator)) {
-      return derivesFromTemplate(inner.left, scopes) || derivesFromTemplate(inner.right, scopes);
+      return derivesFromTemplate(inner.left, bindings) || derivesFromTemplate(inner.right, bindings);
     }
     if (LOGICAL.has(operator)) {
-      return derivesFromTemplate(inner.left, scopes) && derivesFromTemplate(inner.right, scopes);
+      return derivesFromTemplate(inner.left, bindings) && derivesFromTemplate(inner.right, bindings);
     }
     return false;
   }
   if (ts.isCallExpression(inner) && ts.isPropertyAccessExpression(inner.expression)) {
     const method = inner.expression;
     return (
-      derivesFromTemplate(method.expression, scopes) ||
+      derivesFromTemplate(method.expression, bindings) ||
       (MEMBERSHIP_METHODS.has(method.name.text) &&
-        inner.arguments.some((argument) => derivesFromTemplate(argument, scopes)))
+        inner.arguments.some((argument) => derivesFromTemplate(argument, bindings)))
     );
   }
-  if (ts.isElementAccessExpression(inner) && derivesFromTemplate(inner.argumentExpression, scopes)) {
+  if (ts.isElementAccessExpression(inner) && derivesFromTemplate(inner.argumentExpression, bindings)) {
     return true;
   }
-  return isTemplateValue(inner, scopes);
+  return isTemplateValue(inner, bindings);
 }
 
-function enclosingScope(node: ts.Node): ts.Node {
-  let declaration = node;
-  while (!ts.isVariableDeclaration(declaration) && !ts.isParameter(declaration)) {
-    declaration = declaration.parent;
-  }
-  const functionScoped =
-    ts.isVariableDeclarationList(declaration.parent) &&
-    !(declaration.parent.flags & ts.NodeFlags.BlockScoped);
-  let scope: ts.Node = declaration.parent;
-  while (
-    !ts.isSourceFile(scope) &&
-    !ts.isModuleBlock(scope) &&
-    !ts.isFunctionLike(scope)
-  ) {
+function enclosingScope(node: ts.Node, functionScoped = false): ts.Node {
+  let scope = node.parent;
+  while (!ts.isSourceFile(scope) && !ts.isModuleBlock(scope) && !ts.isFunctionLike(scope)) {
     if (
       !functionScoped &&
-      (ts.isBlock(scope) || ts.isCatchClause(scope) || ts.isForStatement(scope) ||
-        ts.isForOfStatement(scope) || ts.isForInStatement(scope))
+      (ts.isBlock(scope) || ts.isCatchClause(scope) || ts.isCaseBlock(scope) ||
+        ts.isForStatement(scope) || ts.isForOfStatement(scope) || ts.isForInStatement(scope))
     ) return scope;
     scope = scope.parent;
   }
   return scope;
 }
 
-// Names bound to a template-derived value, with the blocks where each binding
-// lives, so a same-named variable in another function is neither derived nor counted.
-function derivedScopes(file: ts.SourceFile): DerivedScopes {
-  const declarations: { name: string; initializer: ts.Expression; scope: ts.Node }[] = [];
-  const scopes: DerivedScopes = new Map();
-  const collect = (node: ts.Node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      declarations.push({
-        name: node.name.text,
-        initializer: node.initializer,
-        scope: enclosingScope(node),
-      });
+// Every declaration and derived value uses the same owner, including function-scoped var.
+function templateBindings(file: ts.SourceFile): Bindings {
+  const bindings: Bindings = new Map();
+  const bind = (name: string, scope: ts.Node): Binding => {
+    let names = bindings.get(scope);
+    if (!names) bindings.set(scope, names = new Map());
+    let binding = names.get(name);
+    if (!binding) names.set(name, binding = { derived: false, initializers: [] });
+    return binding;
+  };
+  const bindPattern = (name: ts.BindingName, scope: ts.Node, initializer?: ts.Expression) => {
+    if (ts.isIdentifier(name)) {
+      const binding = bind(name.text, scope);
+      if (initializer) binding.initializers.push(initializer);
+      return;
     }
-    if (
-      ts.isBindingElement(node) &&
-      ts.isObjectBindingPattern(node.parent) &&
-      ts.isIdentifier(node.name) &&
-      !node.dotDotDotToken
-    ) {
-      const property = node.propertyName ?? node.name;
-      const key = ts.isComputedPropertyName(property) ? unwrap(property.expression) : property;
-      if (
-        (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) &&
-        (TEMPLATE_READ_NAMES.has(key.text) || TEMPLATE_FLAG_NAME.test(key.text))
-      ) {
-        const scope = enclosingScope(node);
-        scopes.set(node.name.text, [...(scopes.get(node.name.text) ?? []), scope]);
+    for (const element of name.elements) {
+      if (ts.isOmittedExpression(element)) continue;
+      bindPattern(element.name, scope, element.initializer);
+      if (ts.isObjectBindingPattern(name) && ts.isIdentifier(element.name) && !element.dotDotDotToken) {
+        const property = element.propertyName ?? element.name;
+        const key = ts.isComputedPropertyName(property) ? unwrap(property.expression) : property;
+        if (
+          (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) &&
+          (TEMPLATE_READ_NAMES.has(key.text) || TEMPLATE_FLAG_NAME.test(key.text))
+        ) bind(element.name.text, scope).derived = true;
       }
+    }
+  };
+  const collect = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) || ts.isParameter(node)) {
+      const functionScoped = ts.isVariableDeclarationList(node.parent) &&
+        !(node.parent.flags & ts.NodeFlags.BlockScoped);
+      bindPattern(node.name, enclosingScope(node, functionScoped), node.initializer);
+    } else if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) {
+      if (node.name) bind(node.name.text, enclosingScope(node));
+    } else if (ts.isFunctionExpression(node) || ts.isClassExpression(node)) {
+      if (node.name) bind(node.name.text, node);
+    } else if (ts.isImportClause(node) || ts.isNamespaceImport(node) || ts.isImportSpecifier(node) ||
+      ts.isImportEqualsDeclaration(node)) {
+      if (node.name) bind(node.name.text, enclosingScope(node));
     }
     ts.forEachChild(node, collect);
   };
@@ -243,15 +211,16 @@ function derivedScopes(file: ts.SourceFile): DerivedScopes {
   let grew = true;
   while (grew) {
     grew = false;
-    for (const { name, initializer, scope } of declarations) {
-      if (scopes.get(name)?.includes(scope)) continue;
-      if (derivesFromTemplate(initializer, scopes)) {
-        scopes.set(name, [...(scopes.get(name) ?? []), scope]);
-        grew = true;
+    for (const names of bindings.values()) {
+      for (const binding of names.values()) {
+        if (!binding.derived && binding.initializers.some((node) => derivesFromTemplate(node, bindings))) {
+          binding.derived = true;
+          grew = true;
+        }
       }
     }
   }
-  return scopes;
+  return bindings;
 }
 
 function isBareTemplateId(node: ts.Node): node is ts.StringLiteralLike {
@@ -285,7 +254,7 @@ function isDeclarationName(node: ts.Identifier): boolean {
 
 export function findTemplateSelectors(path: string, source: string): SelectorCounts {
   const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, scriptKind(path));
-  const scopes = derivedScopes(file);
+  const bindings = templateBindings(file);
   const counts: SelectorCounts = {};
   const count = (signature: string) => {
     counts[signature] = (counts[signature] ?? 0) + 1;
@@ -312,9 +281,9 @@ export function findTemplateSelectors(path: string, source: string): SelectorCou
       if (TEMPLATE_READ_NAMES.has(name) || TEMPLATE_MARKERS.includes(name)) count(`read:${name}`);
       else if (TEMPLATE_FLAG_NAME.test(name)) {
         const declaresDerived =
-          ts.isVariableDeclaration(node.parent) && node.parent.name === node && scopes.has(name);
+          ts.isVariableDeclaration(node.parent) && node.parent.name === node && isDerivedReference(name, node, bindings);
         if (!declaresDerived) count(`flag:${name}`);
-      } else if (!isDeclarationName(node) && !isPropertyNamePosition(node) && isDerivedReference(name, node, scopes)) {
+      } else if (!isDeclarationName(node) && !isPropertyNamePosition(node) && isDerivedReference(name, node, bindings)) {
         count(`flag:${name}`);
       }
     } else if (ts.isBinaryExpression(node) && EQUALITY.has(node.operatorToken.kind)) {

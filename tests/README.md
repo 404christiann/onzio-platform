@@ -383,9 +383,11 @@ or `*.spec.*` file. Comments are ignored. It counts four kinds of selector per f
   and `data-font-pack` attributes that scope styles to a template.
 - `flag:` each use of a value computed only from the template, such as
   `isAcademy`, `hidesSlugField`, an alias of the key, or a method call, membership
-  test or lookup on one of those. Destructured aliases and aliases wrapped in
-  TypeScript assertions or `satisfies` expressions are tracked. Property names
-  and shadowing parameters or bindings are not counted as uses of an outer alias.
+  test or lookup on one of those. Destructured aliases, parameter and binding defaults, and aliases wrapped in
+  TypeScript assertions or `satisfies` expressions are tracked. One binding index
+  resolves both alias ownership and shadowing, including function-scoped `var`.
+  Property names and shadowing parameters or bindings are not counted as uses of
+  an outer alias.
 - `id:` a bare template id such as `"academy"` compared with any expression or
   used as a `case` label.
 
