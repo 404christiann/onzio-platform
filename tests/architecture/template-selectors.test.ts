@@ -318,6 +318,147 @@ describe("template selector detection", () => {
     });
   });
 
+  it("counts the outer key and derived default before a body function declaration", () => {
+    const before = `const key = club.presentationTemplateKey;`;
+    const source = before + `function render(selected=key.startsWith('academy')){function key(){}use(selected)}`;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    const after = scan(source);
+    expect(after).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1,
+    });
+    expect(diffSelectorTables({ "a.ts": after }, { "a.ts": scan(before) }).added).toEqual([
+      { path: "a.ts", signature: "flag:key", allowed: 0, found: 1 },
+      { path: "a.ts", signature: "flag:selected", allowed: 0, found: 1 },
+    ]);
+  });
+
+  it.each([
+    `var key = "other";`,
+    `let key = "other";`,
+    `const key = "other";`,
+    `class key {}`,
+  ])("keeps the outer key visible to defaults with a body declaration %s", (declaration) => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      function render(selected = key.startsWith("academy")) {
+        ${declaration}
+        use(selected);
+      }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1,
+    });
+  });
+
+  it.each([
+    [`selected = () => key.startsWith("academy")`, `selected()`, { "flag:key": 1 }],
+    [`selected = { key }`, `selected.key.startsWith("academy")`, { "flag:key": 1 }],
+    [
+      `selected = (() => { const chosen = key.startsWith("academy"); return chosen; })()`,
+      `selected`, { "flag:key": 1, "flag:chosen": 1 },
+    ],
+  ])("resolves value reads in parameter initializers and their closures %s", (parameter, value, flags) => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      function render(${parameter}) { function key() {} use(${value}); }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1, ...flags });
+  });
+
+  it("resolves through nested parameter environments before body function bindings", () => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      function render(selected = function nested(value = key.startsWith("academy")) {
+        function key() {} return value;
+      }) { function key() {} use(selected()); }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:value": 1,
+    });
+  });
+
+  it("keeps a closure's own shadow inside a parameter initializer", () => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      function render(selected = (key => ({ key }))("other")) {
+        function key() {} use(selected.key.startsWith("academy"));
+      }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([false]);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1 });
+  });
+
+  it("keeps earlier and own parameters visible despite a body function declaration", () => {
+    const source = `
+      const key = "other";
+      function render(key = club.presentationTemplateKey, selected = key.startsWith("academy")) {
+        function key() {} use(selected);
+      }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1,
+    });
+  });
+
+  it("keeps body function derivation out of unrelated defaults and shorthand values", () => {
+    const source = `
+      const key = "other";
+      function render(selected = key.startsWith("academy"), copy = { key }) {
+        function key() {}
+        key = club.presentationTemplateKey;
+        use(selected, copy.key.startsWith("academy"), key);
+      }
+    `;
+    const observed: unknown[][] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (...values: unknown[]) => observed.push(values),
+    );
+    expect(observed).toEqual([[false, false, "academy@1"]]);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 3 });
+  });
+
+  it("does not expose a body-only key when a default has no outer binding", () => {
+    const source = `
+      function render(selected = key.startsWith("academy")) {
+        function key() {}
+        key = club.presentationTemplateKey;
+        use(selected, key);
+      }
+    `;
+    expect(() => new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, () => {},
+    )).toThrow(ReferenceError);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 3 });
+  });
+
   it("assigns a catch var initializer to the catch binding", () => {
     const source = `
       function render() {
