@@ -445,14 +445,15 @@ It has no required selector file or minimum count. Throwaway repository tests pr
 tracked, untracked, and new-directory scan coverage, excluded tests, real Git baseline
 history, and the actual architecture guard with no remaining selectors.
 
-The reconciled source is locally accepted registration ref
-`e4a710413386cf77e12bcc13ec5d38c9823c6b09`, which includes merged Competition and
-Sponsors/Shop changes. Issue #52 is closed for local acceptance; PR #74 remains draft
-and production release approval is pending. Local acceptance does not require a
-production merge. The scanned source in this guard integration matches that ref
-exactly. The report preserves the original `ada583e` to `eb82ba3` recovery comparison
-and records every reconciliation stage and drift. Full pilot-inclusive verification
-and exact final-head independent review still precede the guard's publication.
+The reconciled source is actual main
+`589f80192b3cfb1b979c239a14976ec769581901`, after Christian-authorized bot merges
+of registration PR #74 and About PR #73. Every scanned source path in this guard
+integration matches that main revision. The prior local registration acceptance
+at `e4a7104` remains recorded separately. Neither merge changes the 455-mention,
+63-file inventory. Local acceptance does not require a production merge.
+The report preserves the original `ada583e` to `eb82ba3` recovery comparison and
+every reconciliation stage and drift. Full pilot-inclusive verification and
+exact final-head independent review still precede the guard's publication.
 
 Binding analysis uses an isolated one-source TypeScript Program with `noLib`,
 `noResolve`, `types: []`, JavaScript support and JSX preservation. Its virtual

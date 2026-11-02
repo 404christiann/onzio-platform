@@ -1,4 +1,4 @@
-import AboutClubPageClient from "@/components/AboutClubPageClient";
+import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
 import { EMPTY_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
@@ -24,5 +24,5 @@ export default async function TenantAboutPage({
     const sponsors = await fetchSiteSponsorLogos("carousel", club.id);
     return <ClubhouseAboutPage content={content.about} sponsors={sponsors} />;
   }
-  return <AboutClubPageClient content={content.about} />;
+  return <AcademyAboutPage content={content.about} />;
 }

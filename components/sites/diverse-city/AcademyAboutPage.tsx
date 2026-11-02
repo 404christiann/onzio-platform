@@ -10,7 +10,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 
 gsap.registerPlugin(ScrollTrigger);
 
-export default function AboutClubPageClient({
+export default function AcademyAboutPage({
   content,
   animate = true,
 }: {

@@ -8,6 +8,17 @@ const source = (path: string) => readFileSync(resolve(root, path), "utf8");
 describe("Academy site page ownership", () => {
   it.each([
     {
+      page: "About",
+      modulePath: "components/sites/diverse-city/AcademyAboutPage.tsx",
+      duplicatePath: "components/AboutClubPageClient.tsx",
+      surfaces: [
+        "app/(public)/club/about/page.tsx",
+        "app/%5Fclubs/[slug]/club/about/page.tsx",
+        "components/admin/about/AboutPageCanvas.tsx",
+        "components/admin/ScaledAboutPreview.tsx",
+      ],
+    },
+    {
       page: "Contact",
       modulePath: "components/sites/diverse-city/AcademyContactPage.tsx",
       duplicatePath: "components/AcademyContactPage.tsx",
