@@ -40,11 +40,16 @@ test("capture Academy homepage, roster and schedule before and after the page mo
     for (const viewport of viewports) {
       const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, serviceWorkers: "block" });
       const blockedRequests: string[] = [];
+      const blockedMediaRequests: string[] = [];
       await context.routeWebSocket("**/*", socket => socket.close());
       await context.route("**/*", async route => {
         const request = route.request();
         const url = new URL(request.url());
         const loopback = url.hostname.endsWith(".localhost") || ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname);
+        if (request.method() === "GET" && url.protocol === "https:" && url.hostname.endsWith(".b-cdn.net") && /^\/[0-9a-f-]+\/play_720p\.mp4$/i.test(url.pathname)) {
+          blockedMediaRequests.push(`${url.hostname}${url.pathname}`);
+          return route.abort("blockedbyclient");
+        }
         if ((url.protocol === "http:" || url.protocol === "https:") && (!loopback || !["GET", "HEAD", "OPTIONS"].includes(request.method()))) {
           blockedRequests.push(`${request.method()} ${url.origin}${url.pathname}`);
           return route.abort("blockedbyclient");
@@ -114,7 +119,7 @@ test("capture Academy homepage, roster and schedule before and after the page mo
         await page.screenshot({ path: join(evidenceDir, screenshot), type: "jpeg", quality: 62, fullPage: true, animations: "disabled" });
         records.push({ build: build.name, sha: build.sha, route: routePath, viewport, status: response?.status() ?? null,
           contentSha256: digest(state.content), mainDomSha256: mainHash, links: state.links, resources, pageErrors, resourceErrors,
-          blockedRequests: [...blockedRequests], screenshot });
+          blockedRequests: [...blockedRequests], blockedMediaRequests: [...blockedMediaRequests], screenshot });
         expect(pageErrors, `${build.name} ${routePath} page errors`).toEqual([]);
         expect(resourceErrors, `${build.name} ${routePath} resource errors`).toEqual([]);
         expect(blockedRequests, `${build.name} ${routePath} blocked requests`).toEqual([]);
@@ -125,6 +130,6 @@ test("capture Academy homepage, roster and schedule before and after the page mo
   }
 
   await writeFile(join(evidenceDir, "competition-pages-capture.json"), `${JSON.stringify({ schemaVersion: 1, builds: builds.map(({ name, sha }) => ({ name, sha })), routes, viewports, records,
-    limits: ["Local synthetic Alpha tenant and loopback Supabase only.", "External requests, service workers, WebSockets, and non-read HTTP requests are blocked."],
+    limits: ["Local synthetic Alpha tenant and loopback Supabase only.", "External requests, service workers, WebSockets, and non-read HTTP requests are blocked.", "Known Bunny playback GETs are aborted and recorded as blocked media; no CDN request reaches the network."],
   }, null, 2)}\n`);
 });
