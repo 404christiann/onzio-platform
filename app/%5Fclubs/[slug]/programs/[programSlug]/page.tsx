@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import AcademyProgramDetailPage from "@/components/AcademyProgramDetailPage";
+import AcademyProgramDetailPage from "@/components/sites/diverse-city/AcademyProgramDetailPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchProgramBySlug, fetchPrograms } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
