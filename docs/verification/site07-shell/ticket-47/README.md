@@ -13,4 +13,4 @@ The before/after screenshots are:
 - `base-desktop-detail.jpg`, `head-desktop-detail.jpg`
 - `base-phone-detail.jpg`, `head-phone-detail.jpg`
 
-The capture used `tests/browser/site07-programs-evidence.spec.ts` and `playwright.site07-programs.config.ts`. No hosted service was contacted.
+The capture used `tests/browser/site07-programs-evidence.spec.ts` and `tests/browser/site07-programs.config.ts`. No hosted service was contacted.
