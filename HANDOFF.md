@@ -7,7 +7,14 @@
 - The comment audit found that a timezone comment was not encoded in the helper name. Commit `eca8299` names the Los Angeles local-time input in both helpers. The first full verifier then found one stale loading-contract assertion. Commit `d81ca71` updates the assertion to follow Academy module ownership; the exact verifier above passes.
 - Files include the Academy Roster, Schedule, and Standings components, public route adapters, the ownership/loading contracts, and [the #50 evidence folder](docs/verification/site07-shell/ticket-50/). The issue remains open and the branch remains local. No push, PR, merge, or hosted operation was performed.
 - Independent final review at docs revision `25f8696` found no unresolved #50 acceptance gap or status inconsistency. It confirmed the #47 and #48 closeout records against live GitHub.
-- Exact next action: Christian reviews the local #50 branch and decides whether to publish it or close the GitHub issue.
+- At that point, the exact next action was for Christian to review the local #50 branch and decide whether to publish it or close the GitHub issue.
+
+## 2026-11-02 - PR #71 review follow-up for issue #50
+
+- The bot review at `92c8261` found that the sponsor and editorial contract checks still read the old one-line `components/AcademyFixtureRow.tsx` re-export. Updated both checks to read `components/sites/diverse-city/AcademyFixtureRow.tsx`, added positive source anchors for the implementation, and removed the unused `components/AcademyFixtureRow.tsx` and `components/AcademyLeagueStandingsTable.tsx` shims. A temporary `sponsorName` mutation made the sponsor guard fail; the unmodified implementation passes.
+- Addressed the low-priority export-name, Academy footer color-token, and Roster divider indentation notes. The empty-schedule capture, duplicated timezone helper, and absent Figma link remain documented review limitations; code inspection found the moved fixture row unchanged, and these items do not block the component move.
+- Focused contracts pass 62/62 across `tests/contracts/diverse-city-admin-punch-list.test.ts` and `tests/contracts/editorial-schedule.test.ts`. Exact-head verification of `a60abfb3e4eb120ac0f71c3a5d63737c6253836d` against `eb82ba3e344000e72839088a39fd46e00b1536b3` exited 0: types, lint, 1,591/1,591 contracts, 26/26 architecture checks, build, and the non-overlapping suite at 422/422 pass. The database row is SAME AS BASELINE at 977/978; the clean base reproduces the same Contact atomic-save failure.
+- PR #71 is open with `ready-for-review`; code fix `a60abfb` and this handoff update are on the branch. The ticket says Christian reviews and merges; no merge or hosted operation was performed. Exact next action: wait for review on the updated head, then Christian reviews and merges if approved.
 
 ## 2026-11-01 - SITE-07 issue #47: Academy Programs page ownership
 
