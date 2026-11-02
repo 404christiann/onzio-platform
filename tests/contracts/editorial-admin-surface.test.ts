@@ -206,7 +206,7 @@ describe("editorial@1 admin surface hides", () => {
     it("uses the real public components for generic, Clubhouse, and Club Logo", () => {
       const preview = source("components/admin/about/AboutPageCanvas.tsx");
       expect(preview).toContain(
-        "<AboutClubPageClient content={props.about} animate={false} />",
+        "<AcademyAboutPage content={props.about} animate={false} />",
       );
       expect(preview).toContain(
         "<ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />",

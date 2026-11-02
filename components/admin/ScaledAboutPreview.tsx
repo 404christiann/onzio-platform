@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import AboutClubPageClient from "@/components/AboutClubPageClient";
+import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
 import ClubLogoPageClient from "@/components/ClubLogoPageClient";
 import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
 import { useClubContext } from "@/components/ClubContextProvider";
@@ -40,9 +40,9 @@ import "@/styles/editorial.css";
  * The real public /club/about route
  * (app/%5Fclubs/[slug]/club/about/page.tsx) branches on
  * club.presentationTemplateKey: editorial@1 tenants (Lions FC) get
- * EditorialAboutPage, everyone else falls through to AboutClubPageClient.
+ * EditorialAboutPage, everyone else falls through to AcademyAboutPage.
  * This preview mirrors that branch instead of always rendering
- * AboutClubPageClient, which previously showed every editorial tenant the
+ * AcademyAboutPage, which previously showed every editorial tenant the
  * default template's layout instead of their own club-colored editorial
  * page. Both components read the same DBAboutPageContent draft, so no data
  * is remapped here. academy@1/clubhouse@1/cinematic@1/heritage@1 and clubs
@@ -155,7 +155,7 @@ export default function ScaledAboutPreview(props: ScaledAboutPreviewProps) {
                 <EditorialAboutPage content={props.content} />
               </div>
             ) : (
-              <AboutClubPageClient content={props.content} animate={false} />
+              <AcademyAboutPage content={props.content} animate={false} />
             )
           ) : (
             <ClubLogoPageClient content={props.content} animate={false} />

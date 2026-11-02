@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import AboutClubPageClient from "@/components/AboutClubPageClient";
+import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
 import ClubLogoPageClient from "@/components/ClubLogoPageClient";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
@@ -221,7 +221,7 @@ export default function AboutPageCanvas(props: Props) {
   } else if (club.presentationTemplateKey === "clubhouse@1") {
     page = <ClubhouseAboutPage content={props.about} sponsors={props.sponsors} />;
   } else {
-    page = <AboutClubPageClient content={props.about} animate={false} />;
+    page = <AcademyAboutPage content={props.about} animate={false} />;
   }
 
   // Editorial omits unpublished sections from its public composition. Keep
