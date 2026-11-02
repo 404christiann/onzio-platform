@@ -22,6 +22,12 @@ The capture spec blocks non-loopback and non-read browser requests, WebSockets a
 
 The scoped runner is `tests/browser/site07-about.config.ts`, which collects only `site07-about-evidence.spec.ts`. Set its `SITE07_ABOUT_BASE_URL`, `SITE07_ABOUT_HEAD_URL`, revision IDs and output directory to the two known local builds. For populated coverage, start both servers with `SITE07_ABOUT_POPULATED_FIXTURE=1` and a Node `--require` of the preload, and set the capture's `SITE07_ABOUT_SCENARIO=populated-fixture`. The fixture changes test-server responses only.
 
+## Main integration
+
+Main `89670652fa7467e5e6e64e0c39f1aa5f9a58d848` was integrated after capture. The About renderer, public and preview callers, shared shell/navigation/footer/loading modules, media/query/content/context/style inputs and package definitions were compared against captured application head `29e0327` and are unchanged. The integration preserves the #50 record alongside this work. The manifests retain the actual captured revisions rather than relabeling those builds as the later integration.
+
+Post-integration TypeScript and lint pass. Seven focused About contract and architecture files pass 91/91; changed tests pass 127/127 across nine files. The final integrated commit's full verification and independent review belong to the coordinator.
+
 ## Remaining acceptance
 
 Both actual-empty and populated-fixture screenshot comparisons pass. Full coordinator verification and independent review remain pending at the final integrated revision. The fixture's feature-image URL is empty, so these screenshots do not establish populated photograph behavior. Public and existing preview callers share the moved component; no new preview surface or editor behavior is introduced.

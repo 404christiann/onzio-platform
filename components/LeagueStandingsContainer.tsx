@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import LeagueStandingsTable from "@/components/LeagueStandingsTable";
-import AcademyLeagueStandingsTable from "@/components/AcademyLeagueStandingsTable";
+import AcademyStandingsSection from "@/components/sites/diverse-city/AcademyStandingsSection";
 import { fetchLeagueStandings } from "@/lib/queries";
 import {
   DEFAULT_STANDINGS_SETTINGS,
   type StandingsTableContent,
 } from "@/lib/standings-content";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
-import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
-import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 export default function LeagueStandingsContainer() {
   const club = useClubContext();
@@ -20,7 +18,6 @@ export default function LeagueStandingsContainer() {
     rows: [],
   });
   const [loading, setLoading] = useState(true);
-  const showLoading = useBoundedAcademyLoading(loading, clubId);
 
   useEffect(() => {
     fetchLeagueStandings(clubId)
@@ -32,8 +29,7 @@ export default function LeagueStandingsContainer() {
   }, [clubId]);
 
   if (club.presentationTemplateKey === "academy@1") {
-    if (showLoading) return <AcademySectionLoadingSkeleton />;
-    return <AcademyLeagueStandingsTable settings={content.settings} rows={content.rows} />;
+    return <AcademyStandingsSection loading={loading} content={content} clubId={clubId} />;
   }
 
   return (
