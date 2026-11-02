@@ -1,3 +1,12 @@
+## 2026-11-02 - SITE-07 issue #49: Academy Sponsors and Shop pages
+
+- Moved Sponsors and Shop modules under `components/sites/diverse-city/`; public routes, the canonical tenant adapters and the admin preview now use the same page components. Added ownership contracts and a guarded before/after browser capture.
+- Browser evidence compares base `eb82ba3` and code head `7e63a84` on two routes at desktop and phone sizes (eight records). Screenshots are byte-identical; DOM and link hashes, font and read counts match, and there are no page or resource errors. The Alpha fixture has no Shop rows, so the read-only `Home kit pilot` fixture supplies the existing six Shop requests and confirms no additional kit-variant reads.
+- Exact-head verification of `fdc4b998a341ce01d77fd0329e9fb4e2c932f5b7` exited 0: types, lint, contracts (1,589/1,589), architecture (26/26), and build pass; the non-overlapping suite passes 422/422. The database row is SAME AS BASELINE at 977/978; clean base reproduces the existing Contact atomic-save failure recorded above. No hosted service was contacted.
+- Independent final review of `fdc4b99` found no code or evidence defects. The issue remains open and this branch remains local; no push, PR, merge, or deployment was performed.
+- Files include the Academy Sponsors/Shop modules and adapters, ownership/capture tests, and `docs/verification/site07-shell/ticket-49/` evidence (screenshots, manifest and README).
+- Exact next action: route the local branch through Christian's review/publishing workflow; keep #50 paused at the unresolved preview-scope question.
+
 ## 2026-11-01 - SITE-07 issue #47: Academy Programs page ownership
 
 - Implemented on branch `agent/site47-academy-programs-pages` from `origin/main` `29c66f3`; code commit `7ac6a06`. Moved the existing Programs list and detail components into `components/sites/diverse-city/`, then updated public adapters and the admin preview to use those same components. Internal detail, contact, and list links now use `academyHref` from the Academy route table. The ProgramCanvasFrame continues to isolate preview interactions, and declining the unsaved-changes prompt leaves the current draft intact.
