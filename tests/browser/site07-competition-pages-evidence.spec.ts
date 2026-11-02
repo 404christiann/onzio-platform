@@ -98,7 +98,9 @@ test("capture Academy homepage, roster and schedule before and after the page mo
           };
         });
         const resources = { fonts: state.fonts, restReads };
-        const normalizedMain = state.mainHtml.replaceAll(new URL(build.origin).origin, "http://alpha.localhost");
+        const normalizedMain = state.mainHtml
+          .replaceAll(new URL(build.origin).origin, "http://alpha.localhost")
+          .replace(/class="([^"]*)"/g, (_, value: string) => `class="${value.trim().split(/\s+/).join(" ")}"`);
         const mainHash = digest(JSON.stringify({ main: normalizedMain, links: state.links }));
         const key = `${routePath}/${viewport.name}`;
         if (build.name === "base") baselines.set(key, { content: state.content, mainHash, links: state.links, errors: resourceErrors, resources });
