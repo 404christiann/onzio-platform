@@ -263,10 +263,10 @@ describe("editorial schedule + match-area: dispatch and classic regression", () 
     );
   });
 
-  it("the classic schedule/match-area components (FixtureRow/NextMatchCard/OpponentCrest/ClubhouseMatchAreaPage) are untouched by editorial concerns", () => {
+  it("classic and Academy fixture components remain untouched by editorial concerns", () => {
     for (const path of [
       "components/FixtureRow.tsx",
-      "components/AcademyFixtureRow.tsx",
+      "components/sites/diverse-city/AcademyFixtureRow.tsx",
       "components/NextMatchCard.tsx",
       "components/OpponentCrest.tsx",
       "components/ClubhouseSchedulePage.tsx",
@@ -274,6 +274,12 @@ describe("editorial schedule + match-area: dispatch and classic regression", () 
     ]) {
       expect(read(path)).not.toMatch(/editorial/i);
     }
+  });
+
+  it("keeps the Academy fixture-row editorial guard attached to the implementation", () => {
+    expect(
+      read("components/sites/diverse-city/AcademyFixtureRow.tsx"),
+    ).toContain("export default function AcademyFixtureRow");
   });
 
   it("fetchSchedule's mapping additively surfaces attendance/scorers without changing any other Fixture field", () => {
