@@ -86,26 +86,21 @@ function unwrap(node: ts.Node): ts.Node {
   return node;
 }
 
-type Binding = { derived: boolean; initializers: ts.Expression[] };
-type Bindings = Map<ts.Node, Map<string, Binding>>;
+type TemplateBindings = { checker: ts.TypeChecker; derived: Set<ts.Symbol> };
 
-function resolveBinding(name: string, node: ts.Node, bindings: Bindings): Binding | undefined {
-  for (let scope: ts.Node | undefined = node.parent; scope; scope = scope.parent) {
-    const binding = bindings.get(scope)?.get(name);
-    if (binding) return binding;
-  }
+function isDerivedReference(node: ts.Identifier, bindings: TemplateBindings): boolean {
+  const symbol = ts.isShorthandPropertyAssignment(node.parent)
+    ? bindings.checker.getShorthandAssignmentValueSymbol(node.parent)
+    : bindings.checker.getSymbolAtLocation(node);
+  return symbol !== undefined && bindings.derived.has(symbol);
 }
 
-function isDerivedReference(name: string, node: ts.Node, bindings: Bindings): boolean {
-  return resolveBinding(name, node, bindings)?.derived ?? false;
-}
-
-function isTemplateValue(node: ts.Node, bindings: Bindings): boolean {
+function isTemplateValue(node: ts.Node, bindings: TemplateBindings): boolean {
   if (ts.isIdentifier(node)) {
     return (
       TEMPLATE_READ_NAMES.has(node.text) ||
       TEMPLATE_FLAG_NAME.test(node.text) ||
-      isDerivedReference(node.text, node, bindings)
+      isDerivedReference(node, bindings)
     );
   }
   if (ts.isPropertyAccessExpression(node)) {
@@ -123,7 +118,7 @@ function isTemplateValue(node: ts.Node, bindings: Bindings): boolean {
 // every operand is one. Mixed expressions such as `isAcademy && menuOpen` are
 // counted where they mention the template and do not make their own name a
 // selector, which keeps layout booleans out of the list.
-function derivesFromTemplate(node: ts.Node, bindings: Bindings): boolean {
+function derivesFromTemplate(node: ts.Node, bindings: TemplateBindings): boolean {
   const inner = unwrap(node);
   if (ts.isBinaryExpression(inner)) {
     const operator = inner.operatorToken.kind;
@@ -149,60 +144,64 @@ function derivesFromTemplate(node: ts.Node, bindings: Bindings): boolean {
   return isTemplateValue(inner, bindings);
 }
 
-function enclosingScope(node: ts.Node, functionScoped = false): ts.Node {
-  let scope = node.parent;
-  while (!ts.isSourceFile(scope) && !ts.isModuleBlock(scope) && !ts.isFunctionLike(scope)) {
-    if (
-      !functionScoped &&
-      (ts.isBlock(scope) || ts.isCatchClause(scope) || ts.isCaseBlock(scope) ||
-        ts.isForStatement(scope) || ts.isForOfStatement(scope) || ts.isForInStatement(scope))
-    ) return scope;
-    scope = scope.parent;
-  }
-  return scope;
-}
-
-// Every declaration and derived value uses the same owner, including function-scoped var.
-function templateBindings(file: ts.SourceFile): Bindings {
-  const bindings: Bindings = new Map();
-  const bind = (name: string, scope: ts.Node): Binding => {
-    let names = bindings.get(scope);
-    if (!names) bindings.set(scope, names = new Map());
-    let binding = names.get(name);
-    if (!binding) names.set(name, binding = { derived: false, initializers: [] });
-    return binding;
+function templateBindings(file: ts.SourceFile): TemplateBindings {
+  const host: ts.CompilerHost = {
+    getSourceFile: (name) => name === file.fileName ? file : undefined,
+    getDefaultLibFileName: () => "",
+    writeFile: () => {},
+    getCurrentDirectory: () => "/",
+    getCanonicalFileName: (name) => name,
+    useCaseSensitiveFileNames: () => true,
+    getNewLine: () => "\n",
+    fileExists: (name) => name === file.fileName,
+    readFile: (name) => name === file.fileName ? file.text : undefined,
   };
-  const bindPattern = (name: ts.BindingName, scope: ts.Node, initializer?: ts.Expression) => {
+  const checker = ts.createProgram([file.fileName], {
+    noLib: true,
+    noResolve: true,
+    types: [],
+    allowJs: true,
+    jsx: ts.JsxEmit.Preserve,
+    target: ts.ScriptTarget.Latest,
+  }, host).getTypeChecker();
+  const bindings: TemplateBindings = { checker, derived: new Set() };
+  const initializers = new Map<ts.Symbol, ts.Expression[]>();
+  const assignedSymbol = (name: ts.Identifier) =>
+    checker.resolveName(name.text, name, ts.SymbolFlags.Value, false);
+  const addInitializer = (symbol: ts.Symbol | undefined, initializer: ts.Expression | undefined) => {
+    if (!symbol || !initializer) return;
+    const values = initializers.get(symbol) ?? [];
+    values.push(initializer);
+    initializers.set(symbol, values);
+  };
+  const bindPattern = (name: ts.BindingName, initializer: ts.Expression | undefined, assignment: boolean) => {
     if (ts.isIdentifier(name)) {
-      const binding = bind(name.text, scope);
-      if (initializer) binding.initializers.push(initializer);
+      addInitializer(assignment ? assignedSymbol(name) : checker.getSymbolAtLocation(name), initializer);
       return;
     }
     for (const element of name.elements) {
       if (ts.isOmittedExpression(element)) continue;
-      bindPattern(element.name, scope, element.initializer);
+      bindPattern(element.name, element.initializer, assignment);
       if (ts.isObjectBindingPattern(name) && ts.isIdentifier(element.name) && !element.dotDotDotToken) {
         const property = element.propertyName ?? element.name;
         const key = ts.isComputedPropertyName(property) ? unwrap(property.expression) : property;
         if (
           (ts.isIdentifier(key) || ts.isStringLiteralLike(key)) &&
           (TEMPLATE_READ_NAMES.has(key.text) || TEMPLATE_FLAG_NAME.test(key.text))
-        ) bind(element.name.text, scope).derived = true;
+        ) {
+          const symbol = assignment ? assignedSymbol(element.name) : checker.getSymbolAtLocation(element.name);
+          if (symbol) bindings.derived.add(symbol);
+        }
       }
     }
   };
   const collect = (node: ts.Node) => {
     if (ts.isVariableDeclaration(node) || ts.isParameter(node)) {
-      const functionScoped = ts.isVariableDeclarationList(node.parent) &&
-        !(node.parent.flags & ts.NodeFlags.BlockScoped);
-      bindPattern(node.name, enclosingScope(node, functionScoped), node.initializer);
-    } else if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) {
-      if (node.name) bind(node.name.text, enclosingScope(node));
-    } else if (ts.isFunctionExpression(node) || ts.isClassExpression(node)) {
-      if (node.name) bind(node.name.text, node);
-    } else if (ts.isImportClause(node) || ts.isNamespaceImport(node) || ts.isImportSpecifier(node) ||
-      ts.isImportEqualsDeclaration(node)) {
-      if (node.name) bind(node.name.text, enclosingScope(node));
+      // A var declaration in a catch creates an outer symbol, but its initializer writes the catch binding.
+      bindPattern(node.name, node.initializer, ts.isVariableDeclaration(node));
+    } else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      const target = unwrap(node.left);
+      if (ts.isIdentifier(target)) addInitializer(assignedSymbol(target), node.right);
     }
     ts.forEachChild(node, collect);
   };
@@ -211,12 +210,10 @@ function templateBindings(file: ts.SourceFile): Bindings {
   let grew = true;
   while (grew) {
     grew = false;
-    for (const names of bindings.values()) {
-      for (const binding of names.values()) {
-        if (!binding.derived && binding.initializers.some((node) => derivesFromTemplate(node, bindings))) {
-          binding.derived = true;
-          grew = true;
-        }
+    for (const [symbol, values] of initializers) {
+      if (!bindings.derived.has(symbol) && values.some((node) => derivesFromTemplate(node, bindings))) {
+        bindings.derived.add(symbol);
+        grew = true;
       }
     }
   }
@@ -253,7 +250,7 @@ function isDeclarationName(node: ts.Identifier): boolean {
 }
 
 export function findTemplateSelectors(path: string, source: string): SelectorCounts {
-  const file = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, scriptKind(path));
+  const file = ts.createSourceFile(resolve("/", path), source, ts.ScriptTarget.Latest, true, scriptKind(path));
   const bindings = templateBindings(file);
   const counts: SelectorCounts = {};
   const count = (signature: string) => {
@@ -281,9 +278,9 @@ export function findTemplateSelectors(path: string, source: string): SelectorCou
       if (TEMPLATE_READ_NAMES.has(name) || TEMPLATE_MARKERS.includes(name)) count(`read:${name}`);
       else if (TEMPLATE_FLAG_NAME.test(name)) {
         const declaresDerived =
-          ts.isVariableDeclaration(node.parent) && node.parent.name === node && isDerivedReference(name, node, bindings);
+          ts.isVariableDeclaration(node.parent) && node.parent.name === node && isDerivedReference(node, bindings);
         if (!declaresDerived) count(`flag:${name}`);
-      } else if (!isDeclarationName(node) && !isPropertyNamePosition(node) && isDerivedReference(name, node, bindings)) {
+      } else if (!isDeclarationName(node) && !isPropertyNamePosition(node) && isDerivedReference(node, bindings)) {
         count(`flag:${name}`);
       }
     } else if (ts.isBinaryExpression(node) && EQUALITY.has(node.operatorToken.kind)) {

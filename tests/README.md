@@ -384,10 +384,13 @@ or `*.spec.*` file. Comments are ignored. It counts four kinds of selector per f
 - `flag:` each use of a value computed only from the template, such as
   `isAcademy`, `hidesSlugField`, an alias of the key, or a method call, membership
   test or lookup on one of those. Destructured aliases, parameter and binding defaults, and aliases wrapped in
-  TypeScript assertions or `satisfies` expressions are tracked. One binding index
-  resolves both alias ownership and shadowing, including function-scoped `var`.
-  Property names and shadowing parameters or bindings are not counted as uses of
-  an outer alias.
+  TypeScript assertions or `satisfies` expressions are tracked. Plain identifier
+  assignments also seed local aliases. TypeScript's lexical symbols resolve each
+  reference, including shorthand property values, parameter-default environments,
+  catch bindings and function-scoped `var`. Initializers use lexical assignment
+  targets because a `var` declared inside a catch can write the catch binding
+  rather than the function symbol declared by that `var`. Property names and
+  shadowing parameters or bindings are not counted as uses of an outer alias.
 - `id:` a bare template id such as `"academy"` compared with any expression or
   used as a `case` label.
 
@@ -433,11 +436,23 @@ tracked, untracked, and new-directory scan coverage, excluded tests, real Git ba
 history, and the actual architecture guard with no remaining selectors.
 
 The recovered initial snapshot describes `eb82ba3`. It still needs reconciliation
-against current main after the authorized #52 Academy registration adapters land,
-before the guard's first publication. This follow-up does not refresh that inventory.
+against current main after #49, #51 and #52 are accepted on main, before the guard's
+first publication. This follow-up does not refresh that inventory.
+
+Binding analysis uses an isolated one-source TypeScript Program with `noLib`,
+`noResolve`, `types: []`, JavaScript support and JSX preservation. Its virtual
+compiler host returns only the supplied source. It reads no filesystem, import,
+standard library or dependency type graph. Compiler symbol identity replaces the
+custom scope-owner and shadowing rules, which disagreed about parameter defaults
+and catch initializers. The selector API and AST expression classification remain
+unchanged.
 
 Limits.
 
+- Alias propagation is local and flow-insensitive. A pure initializer or plain
+  identifier assignment marks that lexical symbol, including references before
+  that write. Later unrelated writes do not clear it. The scanner does not follow
+  property writes, object identity, imported values or calls between functions.
 - Counts are per file. Deleting one branch and adding another of the same kind in
   the same file keeps the counts equal, so read the diff.
 - A mixed expression such as `isAcademy && menuOpen` is counted where it names the

@@ -300,6 +300,117 @@ describe("template selector detection", () => {
     `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1 });
   });
 
+  it("resolves a parameter default before the body var environment", () => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      function render(selected = key.startsWith("academy")) {
+        var key = unrelated;
+        use(selected);
+      }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "unrelated", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, "other", (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1,
+    });
+  });
+
+  it("assigns a catch var initializer to the catch binding", () => {
+    const source = `
+      function render() {
+        try { throw unrelated; } catch (key) {
+          var key = club.presentationTemplateKey;
+          if (key.startsWith("academy")) use(true);
+        }
+      }
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "unrelated", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, "other", (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+  });
+
+  it("keeps body var derivation out of unrelated parameter defaults", () => {
+    expect(scan(`
+      const key = unrelated;
+      function render(selected = key.startsWith("academy")) {
+        var key = club.presentationTemplateKey;
+        use(selected, key);
+      }
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+  });
+
+  it("keeps a catch var initializer out of references before and after the catch", () => {
+    expect(scan(`
+      function render() {
+        use(key);
+        try { throw unrelated; } catch (key) {
+          var key = club.presentationTemplateKey;
+          const selected = key.startsWith("academy");
+          use(selected);
+        }
+        const outside = key.startsWith("academy");
+        use(outside);
+      }
+    `)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1,
+    });
+  });
+
+  it("keeps a catch shadow unrelated to a derived function var", () => {
+    expect(scan(`
+      function render() {
+        var key = club.presentationTemplateKey;
+        use(key);
+        try { throw unrelated; } catch (key) {
+          const selected = key.startsWith("academy");
+          use(selected);
+        }
+        use(key);
+      }
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 2 });
+  });
+
+  it("counts a shorthand property's local value and respects its parameter shadow", () => {
+    expect(scan(`
+      const key = club.presentationTemplateKey;
+      use({ key });
+      function render(key) { use({ key }); }
+    `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1 });
+  });
+
+  it("tracks an identifier assignment through its resolved local binding", () => {
+    expect(scan(`
+      let key;
+      key = club.presentationTemplateKey;
+      const selected = key.startsWith("academy");
+      use(selected);
+      function unrelated(key) { use(key); }
+    `)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 2, "flag:selected": 1,
+    });
+  });
+
+  it("resolves an identifier assignment inside a catch without deriving the outer binding", () => {
+    expect(scan(`
+      let key = unrelated;
+      try { throw unrelated; } catch (key) {
+        key = club.presentationTemplateKey;
+        const selected = key.startsWith("academy");
+        use(selected);
+      }
+      const outside = key.startsWith("academy");
+      use(outside);
+    `)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 2, "flag:selected": 1,
+    });
+  });
+
   it("limits parameter destructuring aliases to their function", () => {
     expect(scan(`
       function render({ presentationTemplateKey: key }) { use(key); }
