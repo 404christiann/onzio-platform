@@ -107,7 +107,9 @@ function parameterVisibleSymbol(
       if (declarations?.length && declarations.every((declaration) =>
         declaration.pos >= body.pos && declaration.end <= body.end
       )) {
-        symbol = checker.resolveName(node.text, owner.parent, ts.SymbolFlags.Value, false);
+        symbol = ts.isFunctionExpression(owner) && owner.name?.text === node.text
+          ? checker.getSymbolAtLocation(owner.name)
+          : checker.resolveName(node.text, owner.parent, ts.SymbolFlags.Value, false);
       }
     }
     inInitializer = false;

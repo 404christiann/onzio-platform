@@ -291,6 +291,54 @@ describe("template selector detection", () => {
     `)).toEqual({ "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1 });
   });
 
+  it.each([
+    ["selected = key", "selected"],
+    ["selected = { key }", "selected.key"],
+    ["selected = () => key", "selected()"],
+    ["selected = () => ({ key })", "selected().key"],
+  ])("keeps a named function expression's self-binding visible to defaults %s", (parameter, value) => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      const render = function key(${parameter}) {
+        function key() {} use(typeof ${value});
+      };
+    `;
+    const observed: string[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: string) => observed.push(value),
+    );
+    expect(observed).toEqual(["function"]);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1 });
+  });
+
+  it("keeps a named expression's own parameter before its self-binding", () => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      const render = function key(key = key) { function key() {} use(key); };
+    `;
+    expect(() => new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, () => {},
+    )).toThrow(ReferenceError);
+    expect(scan(source)).toEqual({ "read:presentationTemplateKey": 1 });
+  });
+
+  it("resolves outside a named expression when the self-binding has another name", () => {
+    const source = `
+      const key = club.presentationTemplateKey;
+      const render = function other(selected = key.startsWith("academy")) {
+        function key() {} use(selected);
+      };
+    `;
+    const observed: boolean[] = [];
+    new Function("club", "use", `${source}; render();`)(
+      { presentationTemplateKey: "academy@1" }, (value: boolean) => observed.push(value),
+    );
+    expect(observed).toEqual([true]);
+    expect(scan(source)).toEqual({
+      "read:presentationTemplateKey": 1, "flag:key": 1, "flag:selected": 1,
+    });
+  });
+
   it("derives defaults from earlier parameters and keeps the aliases inside their function", () => {
     expect(scan(`
       function render(key = club.presentationTemplateKey, selected = key.startsWith("academy")) {
