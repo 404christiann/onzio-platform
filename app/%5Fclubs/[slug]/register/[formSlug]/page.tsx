@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import AcademyRegistrationPage from "@/components/sites/diverse-city/AcademyRegistrationPage";
 import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
 import { ContractError } from "@/lib/contract-error";
 import { toPublicRegistrationForm } from "@/lib/registration-public";
@@ -16,10 +17,15 @@ export default async function RegistrationPage({
 }) {
   const { slug, formSlug } = await params;
   const query = await searchParams;
+  let registrationSite: "academy" | "platform" = "platform";
   try {
     const club = await getClubContextBySlug(slug);
+    registrationSite = club.presentationTemplateKey === "academy@1" ? "academy" : "platform";
     if (club.lifecycle !== "active" || (club.publicAccess !== "live" && club.publicAccess !== "grace")) notFound();
     const form = toPublicRegistrationForm(await loadOpenRegistrationForm(club.id, formSlug));
+    if (registrationSite === "academy") {
+      return <AcademyRegistrationPage state="open" clubName={club.name} form={form} checkoutCancelled={query.checkout === "cancelled"} />;
+    }
     return (
       <section className="mx-auto max-w-3xl px-5 py-14 sm:px-8 sm:py-20">
         <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-red)]">{club.name}</p>
@@ -36,6 +42,7 @@ export default async function RegistrationPage({
       error instanceof ContractError &&
       error.code === "REGISTRATION_FORM_CLOSED"
     ) {
+      if (registrationSite === "academy") return <AcademyRegistrationPage state="closed" />;
       return (
         <section className="mx-auto max-w-3xl px-5 py-14 sm:px-8 sm:py-20">
           <p className="font-display text-xs font-bold uppercase tracking-[0.18em] text-[var(--color-red)]">

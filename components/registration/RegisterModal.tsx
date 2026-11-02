@@ -223,116 +223,122 @@ export default function RegisterModal({ form, open, onClose }: Props) {
                 </fieldset>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
-                {activeFields.map((field) => (
-                  <label
-                    key={field.key}
-                    className={
-                      field.type === "checkbox"
-                        ? "sm:col-span-2 flex items-start gap-3 rounded-lg border border-black/10 p-3"
-                        : "grid gap-1.5"
-                    }
-                  >
-                    {field.type === "checkbox" ? (
-                      <>
-                        <input
-                          type="checkbox"
-                          required={field.required}
-                          checked={answers[field.key] === true}
-                          onChange={(event) =>
-                            setAnswers((current) => ({
-                              ...current,
-                              [field.key]: event.target.checked,
-                            }))
-                          }
-                          className="mt-0.5 size-4 accent-[var(--color-red)]"
-                        />
-                        <span className="font-body text-sm text-black/80">
-                          {field.label}
-                          {field.required ? " *" : ""}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="font-display text-xs font-bold uppercase tracking-wide text-black/70">
-                          {field.label}
-                          {field.required ? " *" : ""}
-                        </span>
-                        {field.type === "dropdown" ? (
-                          <select
-                            required={field.required}
-                            value={
-                              typeof answers[field.key] === "string"
-                                ? String(answers[field.key])
-                                : ""
-                            }
-                            onChange={(event) =>
-                              setAnswers((current) => ({
-                                ...current,
-                                [field.key]: event.target.value,
-                              }))
-                            }
-                            className="min-h-11 rounded-md border border-black/20 bg-white px-3 font-body text-base text-black outline-none focus:border-[var(--color-red)] focus:ring-1 focus:ring-[var(--color-red)]"
-                          >
-                            <option value="">Select one</option>
-                            {(field.options ?? []).map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        ) : field.type === "long_text" ? (
-                          <textarea
-                            required={field.required}
-                            value={
-                              typeof answers[field.key] === "string"
-                                ? String(answers[field.key])
-                                : ""
-                            }
-                            onChange={(event) =>
-                              setAnswers((current) => ({
-                                ...current,
-                                [field.key]: event.target.value,
-                              }))
-                            }
-                            className="min-h-28 resize-y rounded-md border border-black/20 bg-white px-3 py-2 font-body text-base text-black outline-none focus:border-[var(--color-red)] focus:ring-1 focus:ring-[var(--color-red)]"
-                          />
-                        ) : field.type === "signature" ? (
-                          <SignatureInput
-                            id={`registration-${field.key}`}
-                            value={
-                              typeof answers[field.key] === "string"
-                                ? String(answers[field.key])
-                                : ""
-                            }
-                            onChange={(value) =>
-                              setAnswers((current) => ({
-                                ...current,
-                                [field.key]: value,
-                              }))
-                            }
-                          />
-                        ) : (
+                {activeFields.map((field) => {
+                  const signature = field.type === "signature";
+                  const FieldContainer = signature ? "div" : "label";
+                  return (
+                    <FieldContainer
+                      key={field.key}
+                      role={signature ? "group" : undefined}
+                      aria-label={signature ? field.label : undefined}
+                      className={
+                        field.type === "checkbox"
+                          ? "sm:col-span-2 flex items-start gap-3 rounded-lg border border-black/10 p-3"
+                          : "grid gap-1.5"
+                      }
+                    >
+                      {field.type === "checkbox" ? (
+                        <>
                           <input
+                            type="checkbox"
                             required={field.required}
-                            type={inputType(field.type)}
-                            value={textInputValue(answers[field.key])}
+                            checked={answers[field.key] === true}
                             onChange={(event) =>
                               setAnswers((current) => ({
                                 ...current,
-                                [field.key]:
-                                  field.type === "number" &&
-                                  event.target.value !== ""
-                                    ? Number(event.target.value)
-                                    : event.target.value,
+                                [field.key]: event.target.checked,
                               }))
                             }
-                            className="min-h-11 rounded-md border border-black/20 bg-white px-3 font-body text-base text-black outline-none focus:border-[var(--color-red)] focus:ring-1 focus:ring-[var(--color-red)]"
+                            className="mt-0.5 size-4 accent-[var(--color-red)]"
                           />
-                        )}
-                      </>
-                    )}
-                  </label>
-                ))}
+                          <span className="font-body text-sm text-black/80">
+                            {field.label}
+                            {field.required ? " *" : ""}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-display text-xs font-bold uppercase tracking-wide text-black/70">
+                            {field.label}
+                            {field.required ? " *" : ""}
+                          </span>
+                          {field.type === "dropdown" ? (
+                            <select
+                              required={field.required}
+                              value={
+                                typeof answers[field.key] === "string"
+                                  ? String(answers[field.key])
+                                  : ""
+                              }
+                              onChange={(event) =>
+                                setAnswers((current) => ({
+                                  ...current,
+                                  [field.key]: event.target.value,
+                                }))
+                              }
+                              className="min-h-11 rounded-md border border-black/20 bg-white px-3 font-body text-base text-black outline-none focus:border-[var(--color-red)] focus:ring-1 focus:ring-[var(--color-red)]"
+                            >
+                              <option value="">Select one</option>
+                              {(field.options ?? []).map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                            </select>
+                          ) : field.type === "long_text" ? (
+                            <textarea
+                              required={field.required}
+                              value={
+                                typeof answers[field.key] === "string"
+                                  ? String(answers[field.key])
+                                  : ""
+                              }
+                              onChange={(event) =>
+                                setAnswers((current) => ({
+                                  ...current,
+                                  [field.key]: event.target.value,
+                                }))
+                              }
+                              className="min-h-28 resize-y rounded-md border border-black/20 bg-white px-3 py-2 font-body text-base text-black outline-none focus:border-[var(--color-red)] focus:ring-1 focus:ring-[var(--color-red)]"
+                            />
+                          ) : field.type === "signature" ? (
+                            <SignatureInput
+                              id={`registration-${field.key}`}
+                              value={
+                                typeof answers[field.key] === "string"
+                                  ? String(answers[field.key])
+                                  : ""
+                              }
+                              onChange={(value) =>
+                                setAnswers((current) => ({
+                                  ...current,
+                                  [field.key]: value,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <input
+                              required={field.required}
+                              type={inputType(field.type)}
+                              value={textInputValue(answers[field.key])}
+                              onChange={(event) =>
+                                setAnswers((current) => ({
+                                  ...current,
+                                  [field.key]:
+                                    field.type === "number" &&
+                                    event.target.value !== ""
+                                      ? Number(event.target.value)
+                                      : event.target.value,
+                                }))
+                              }
+                              className="min-h-11 rounded-md border border-black/20 bg-white px-3 font-body text-base text-black outline-none focus:border-[var(--color-red)] focus:ring-1 focus:ring-[var(--color-red)]"
+                            />
+                          )}
+                        </>
+                      )}
+                    </FieldContainer>
+                  );
+                })}
               </div>
 
               <fieldset className="mt-7">
