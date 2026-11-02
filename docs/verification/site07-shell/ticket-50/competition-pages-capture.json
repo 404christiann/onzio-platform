@@ -1,0 +1,655 @@
+{
+  "schemaVersion": 1,
+  "builds": [
+    {
+      "name": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3"
+    },
+    {
+      "name": "head",
+      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7"
+    }
+  ],
+  "routes": [
+    "/",
+    "/roster",
+    "/schedule"
+  ],
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "phone",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "records": [
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "contentSha256": "941f3154da69919af19dd2f6afda394740bb7f2730efdf0abd434c7a0d17e754",
+      "mainDomSha256": "21a13ba505a1187337f9c54459a6d6ade3a706ef73a20e3bff24944ab8215023",
+      "links": [
+        {
+          "text": "Next match",
+          "href": "/schedule"
+        },
+        {
+          "text": "Meet the squad",
+          "href": "/roster"
+        },
+        {
+          "text": "Full Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Our Story",
+          "href": "/club/about"
+        },
+        {
+          "text": "01Alpha Pathway→",
+          "href": "/programs/alpha-academy-pathway"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "site_social_links": 1,
+          "programs": 2,
+          "contact_profile": 2,
+          "program_media": 2,
+          "shop_kit_photos": 1,
+          "shop_kit_section": 1,
+          "league_standings": 2,
+          "league_standings_settings": 2,
+          "seasons": 1,
+          "matches": 1,
+          "homepage_story_section": 1,
+          "homepage_hero_content": 2,
+          "homepage_slideshow_photos": 2,
+          "homepage_slideshow_settings": 2,
+          "behind_the_rose_section": 2,
+          "programs_page_content": 1,
+          "site_sponsor_logos": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "base-desktop-home.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/roster",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "contentSha256": "e4bf858e6d0e85414901c1575ad937d73e34b9b537abdcd41b1174b3a5e247d4",
+      "mainDomSha256": "809eb626b6adc665d15088ceb736d149f0eaeb6c203eabab733d759a7e1d7387",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "seasons": 1,
+          "staff": 1,
+          "programs": 1,
+          "player_season_stats": 1,
+          "goalkeeper_season_stats": 1,
+          "program_media": 1,
+          "player_photos": 1,
+          "players": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "base-desktop-roster.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/schedule",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "contentSha256": "7fee90fd0ce890021f76d8e3fc3f7145b48959f2cae6f131395ce11fbb4d415e",
+      "mainDomSha256": "a34417dccbadd9932b3988bbfbcfc38a260f3c70d5665bf8e5f4f2c017ac9781",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 1,
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "seasons": 1,
+          "program_media": 1,
+          "matches": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "base-desktop-schedule.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "contentSha256": "941f3154da69919af19dd2f6afda394740bb7f2730efdf0abd434c7a0d17e754",
+      "mainDomSha256": "21a13ba505a1187337f9c54459a6d6ade3a706ef73a20e3bff24944ab8215023",
+      "links": [
+        {
+          "text": "Next match",
+          "href": "/schedule"
+        },
+        {
+          "text": "Meet the squad",
+          "href": "/roster"
+        },
+        {
+          "text": "Full Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Our Story",
+          "href": "/club/about"
+        },
+        {
+          "text": "01Alpha Pathway→",
+          "href": "/programs/alpha-academy-pathway"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 2,
+          "contact_profile": 2,
+          "site_social_links": 1,
+          "program_media": 2,
+          "shop_kit_photos": 1,
+          "shop_kit_section": 1,
+          "league_standings": 2,
+          "league_standings_settings": 2,
+          "seasons": 1,
+          "homepage_story_section": 1,
+          "matches": 1,
+          "homepage_slideshow_settings": 2,
+          "homepage_hero_content": 2,
+          "homepage_slideshow_photos": 2,
+          "site_sponsor_logos": 1,
+          "behind_the_rose_section": 2,
+          "programs_page_content": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "base-phone-home.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/roster",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "contentSha256": "9eb2a732aadfb231d7aaf476f2032550d184b82a3341a4102f02d4a3859257e3",
+      "mainDomSha256": "809eb626b6adc665d15088ceb736d149f0eaeb6c203eabab733d759a7e1d7387",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 1,
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "staff": 1,
+          "seasons": 1,
+          "program_media": 1,
+          "goalkeeper_season_stats": 1,
+          "player_season_stats": 1,
+          "player_photos": 1,
+          "players": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "base-phone-roster.jpg"
+    },
+    {
+      "build": "base",
+      "sha": "eb82ba3e344000e72839088a39fd46e00b1536b3",
+      "route": "/schedule",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "contentSha256": "728c24787f98d39a2f87ce83c01434368262ebcec08a05a8476b1782f047917b",
+      "mainDomSha256": "a34417dccbadd9932b3988bbfbcfc38a260f3c70d5665bf8e5f4f2c017ac9781",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 1,
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "seasons": 1,
+          "program_media": 1,
+          "matches": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "base-phone-schedule.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "route": "/",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "contentSha256": "941f3154da69919af19dd2f6afda394740bb7f2730efdf0abd434c7a0d17e754",
+      "mainDomSha256": "21a13ba505a1187337f9c54459a6d6ade3a706ef73a20e3bff24944ab8215023",
+      "links": [
+        {
+          "text": "Next match",
+          "href": "/schedule"
+        },
+        {
+          "text": "Meet the squad",
+          "href": "/roster"
+        },
+        {
+          "text": "Full Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Our Story",
+          "href": "/club/about"
+        },
+        {
+          "text": "01Alpha Pathway→",
+          "href": "/programs/alpha-academy-pathway"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 2,
+          "site_social_links": 1,
+          "contact_profile": 2,
+          "program_media": 2,
+          "shop_kit_photos": 1,
+          "shop_kit_section": 1,
+          "league_standings_settings": 2,
+          "league_standings": 2,
+          "seasons": 1,
+          "homepage_story_section": 1,
+          "matches": 1,
+          "homepage_hero_content": 2,
+          "homepage_slideshow_photos": 2,
+          "behind_the_rose_section": 2,
+          "homepage_slideshow_settings": 2,
+          "site_sponsor_logos": 1,
+          "programs_page_content": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "head-desktop-home.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "route": "/roster",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "contentSha256": "e4bf858e6d0e85414901c1575ad937d73e34b9b537abdcd41b1174b3a5e247d4",
+      "mainDomSha256": "809eb626b6adc665d15088ceb736d149f0eaeb6c203eabab733d759a7e1d7387",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "programs": 1,
+          "staff": 1,
+          "seasons": 1,
+          "program_media": 1,
+          "goalkeeper_season_stats": 1,
+          "player_season_stats": 1,
+          "players": 1,
+          "player_photos": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "head-desktop-roster.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "route": "/schedule",
+      "viewport": {
+        "name": "desktop",
+        "width": 1440,
+        "height": 900
+      },
+      "status": 200,
+      "contentSha256": "7fee90fd0ce890021f76d8e3fc3f7145b48959f2cae6f131395ce11fbb4d415e",
+      "mainDomSha256": "a34417dccbadd9932b3988bbfbcfc38a260f3c70d5665bf8e5f4f2c017ac9781",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "programs": 1,
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "seasons": 1,
+          "program_media": 1,
+          "matches": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "head-desktop-schedule.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "route": "/",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "contentSha256": "941f3154da69919af19dd2f6afda394740bb7f2730efdf0abd434c7a0d17e754",
+      "mainDomSha256": "21a13ba505a1187337f9c54459a6d6ade3a706ef73a20e3bff24944ab8215023",
+      "links": [
+        {
+          "text": "Next match",
+          "href": "/schedule"
+        },
+        {
+          "text": "Meet the squad",
+          "href": "/roster"
+        },
+        {
+          "text": "Full Schedule",
+          "href": "/schedule"
+        },
+        {
+          "text": "Our Story",
+          "href": "/club/about"
+        },
+        {
+          "text": "01Alpha Pathway→",
+          "href": "/programs/alpha-academy-pathway"
+        }
+      ],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "site_social_links": 1,
+          "programs": 2,
+          "contact_profile": 2,
+          "program_media": 2,
+          "shop_kit_section": 1,
+          "shop_kit_photos": 1,
+          "league_standings_settings": 2,
+          "seasons": 1,
+          "league_standings": 2,
+          "homepage_hero_content": 2,
+          "homepage_story_section": 1,
+          "homepage_slideshow_settings": 2,
+          "homepage_slideshow_photos": 2,
+          "behind_the_rose_section": 2,
+          "site_sponsor_logos": 1,
+          "programs_page_content": 1,
+          "matches": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "head-phone-home.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "route": "/roster",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "contentSha256": "9eb2a732aadfb231d7aaf476f2032550d184b82a3341a4102f02d4a3859257e3",
+      "mainDomSha256": "809eb626b6adc665d15088ceb736d149f0eaeb6c203eabab733d759a7e1d7387",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "site_social_links": 1,
+          "programs": 1,
+          "contact_profile": 1,
+          "seasons": 1,
+          "staff": 1,
+          "program_media": 1,
+          "player_season_stats": 1,
+          "goalkeeper_season_stats": 1,
+          "player_photos": 1,
+          "players": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "head-phone-roster.jpg"
+    },
+    {
+      "build": "head",
+      "sha": "1a622839a83915af0224bb8c2b1fbae4a0b0f8c7",
+      "route": "/schedule",
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "status": 200,
+      "contentSha256": "728c24787f98d39a2f87ce83c01434368262ebcec08a05a8476b1782f047917b",
+      "mainDomSha256": "a34417dccbadd9932b3988bbfbcfc38a260f3c70d5665bf8e5f4f2c017ac9781",
+      "links": [],
+      "resources": {
+        "fonts": {
+          "count": 5,
+          "decodedBodyBytes": 173316,
+          "transferBytes": 174816
+        },
+        "restReads": {
+          "contact_profile": 1,
+          "site_social_links": 1,
+          "programs": 1,
+          "seasons": 1,
+          "program_media": 1,
+          "matches": 1
+        }
+      },
+      "pageErrors": [],
+      "resourceErrors": [],
+      "blockedRequests": [],
+      "blockedMediaRequests": [
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+        "vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+      ],
+      "screenshot": "head-phone-schedule.jpg"
+    }
+  ],
+  "limits": [
+    "Local synthetic Alpha tenant and loopback Supabase only.",
+    "External requests, service workers, WebSockets, and non-read HTTP requests are blocked.",
+    "Known Bunny playback GETs are aborted and recorded as blocked media; no CDN request reaches the network."
+  ]
+}
