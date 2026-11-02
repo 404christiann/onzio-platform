@@ -73,8 +73,8 @@ describe("DCFC-304 reusable public route acceptance", () => {
     const joined = [
       source("components/sites/diverse-city/AcademyContactPage.tsx"),
       source("components/sites/diverse-city/AcademyTryoutsPage.tsx"),
-      source("components/AcademyProgramsPage.tsx"),
-      source("components/AcademyProgramDetailPage.tsx"),
+      source("components/sites/diverse-city/AcademyProgramsPage.tsx"),
+      source("components/sites/diverse-city/AcademyProgramDetailPage.tsx"),
     ].join("\n");
     expect(joined).toContain('rel="noopener noreferrer"');
     expect(joined).toContain("Third-party registration");

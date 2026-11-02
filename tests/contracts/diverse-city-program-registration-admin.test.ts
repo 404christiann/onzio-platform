@@ -325,7 +325,7 @@ describe("program_media admin data contract", () => {
 });
 
 describe("academy@1 program surfaces render stored content, not literals", () => {
-  const detailPage = source("components/AcademyProgramDetailPage.tsx");
+  const detailPage = source("components/sites/diverse-city/AcademyProgramDetailPage.tsx");
 
   it("no longer hardcodes the registration band copy", () => {
     for (const literal of [
@@ -373,8 +373,8 @@ describe("academy@1 program surfaces render stored content, not literals", () =>
   it("keeps no club's name written into a shared academy@1 template", () => {
     for (const path of [
       "components/AcademySponsorsPage.tsx",
-      "components/AcademyProgramDetailPage.tsx",
-      "components/AcademyProgramsPage.tsx",
+      "components/sites/diverse-city/AcademyProgramDetailPage.tsx",
+      "components/sites/diverse-city/AcademyProgramsPage.tsx",
       "components/sites/diverse-city/AcademyContactPage.tsx",
       "components/sites/diverse-city/AcademyTryoutsPage.tsx",
     ]) {

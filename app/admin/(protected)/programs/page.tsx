@@ -35,8 +35,8 @@ import ProgramCanvasFrame from "@/components/admin/ProgramCanvasFrame";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { submitPageSave } from "@/lib/page-editor-save";
 import type { ProgramPageSaveRequest } from "@/lib/program-page-editor/contract";
-import AcademyProgramsPage from "@/components/AcademyProgramsPage";
-import AcademyProgramDetailPage from "@/components/AcademyProgramDetailPage";
+import AcademyProgramsPage from "@/components/sites/diverse-city/AcademyProgramsPage";
+import AcademyProgramDetailPage from "@/components/sites/diverse-city/AcademyProgramDetailPage";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import {
   SlidingPanel,

@@ -5,6 +5,7 @@ import {
   type ProgramsPageContent,
 } from "@/lib/programs-page-content";
 import type { ProgramContent } from "@/lib/queries";
+import { academyHref } from "./routes";
 
 // Mockup-parity programs index (DCFC-D132 pass): navy hero band with the
 // sky second headline line, flat hairline card grid with numbered image
@@ -70,7 +71,7 @@ export default function AcademyProgramsPage({
             {programs.map((program, index) => (
               <Link
                 key={program.id}
-                href={`/programs/${program.slug}`}
+                href={academyHref("programDetail", { programSlug: program.slug })}
                 className="group bg-[#F9FAFD]"
               >
                 <div className="relative aspect-[16/10] overflow-hidden bg-[#1E3653]">
@@ -133,7 +134,7 @@ export default function AcademyProgramsPage({
               </p>
               {copy.closingCtaLabel ? (
                 <Link
-                  href="/contact"
+                  href={academyHref("contact")}
                   className="mt-7 inline-block bg-[#FF1616] px-7 py-4 font-display text-sm font-bold uppercase text-white transition-colors hover:bg-[#D70000]"
                 >
                   {copy.closingCtaLabel}

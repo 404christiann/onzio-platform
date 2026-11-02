@@ -391,7 +391,7 @@ describe("DCFC-301 protected Programs admin surface", () => {
 
   it("adds an opt-in native registration mechanism with the old CTA fallback", () => {
     const detailSource = readFileSync(
-      resolve(process.cwd(), "components/AcademyProgramDetailPage.tsx"),
+      resolve(process.cwd(), "components/sites/diverse-city/AcademyProgramDetailPage.tsx"),
       "utf8",
     );
     expect(detailSource).toContain("program.nativeRegistration !== null");

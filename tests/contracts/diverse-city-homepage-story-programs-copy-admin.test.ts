@@ -434,7 +434,7 @@ describe("new content tables in the admin data contract", () => {
 describe("academy@1 surfaces render stored content, not literals", () => {
   const story = source("components/DevelopingNextGeneration.tsx");
   const pathway = source("components/AcademyProgramsPathway.tsx");
-  const programsPage = source("components/AcademyProgramsPage.tsx");
+  const programsPage = source("components/sites/diverse-city/AcademyProgramsPage.tsx");
   const footer = source("components/sites/diverse-city/Footer.tsx");
 
   it("no longer hardcodes the homepage story copy", () => {
@@ -504,7 +504,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
     // academy@1 club. This test is the record of that decision — if a later
     // session decides to make them editable, it should change this
     // deliberately rather than by accident.
-    const detail = source("components/AcademyProgramDetailPage.tsx");
+    const detail = source("components/sites/diverse-city/AcademyProgramDetailPage.tsx");
     for (const chrome of [
       "The Program",
       "Grow through the game.",
@@ -522,7 +522,7 @@ describe("academy@1 surfaces render stored content, not literals", () => {
     for (const path of [
       "components/DevelopingNextGeneration.tsx",
       "components/AcademyProgramsPathway.tsx",
-      "components/AcademyProgramsPage.tsx",
+      "components/sites/diverse-city/AcademyProgramsPage.tsx",
       "components/Footer.tsx",
       "components/sites/diverse-city/Footer.tsx",
       "lib/homepage-story-content.ts",

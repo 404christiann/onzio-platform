@@ -20,7 +20,7 @@ export type ProgramRegistrationContent = {
  * Template defaults for the program registration band.
  *
  * These are the approved academy@1 strings that used to be hardcoded inside
- * `components/AcademyProgramDetailPage.tsx`. They live here for the same reason
+ * `components/sites/diverse-city/AcademyProgramDetailPage.tsx`. They live here for the same reason
  * `DEFAULT_STANDINGS_SETTINGS` and `DEFAULT_HOMEPAGE_HERO_CONTENT` do: a club
  * that has never touched a field still renders sensible template chrome, and an
  * empty column stays a legitimate "unset" value instead of a blank page. Any

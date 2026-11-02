@@ -5,6 +5,7 @@ import AcademyProgramRegistrationSlideshow, {
 import ResilientImage from "@/components/ResilientImage";
 import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
 import type { ProgramContent } from "@/lib/queries";
+import { academyHref } from "./routes";
 
 function isExternal(href: string): boolean {
   return href.startsWith("http://") || href.startsWith("https://");
@@ -216,7 +217,7 @@ export default function AcademyProgramDetailPage({
                 {program.body || program.summary}
               </p>
               <Link
-                href="/contact"
+                href={academyHref("contact")}
                 className="mt-8 inline-block bg-[#FF1616] px-7 py-4 font-display text-sm font-bold uppercase text-white transition-colors hover:bg-[#D70000]"
               >
                 Ask About This Program
@@ -276,7 +277,7 @@ export default function AcademyProgramDetailPage({
               {otherPrograms.map((otherProgram) => (
                 <Link
                   key={otherProgram.id}
-                  href={`/programs/${otherProgram.slug}`}
+                  href={academyHref("programDetail", { programSlug: otherProgram.slug })}
                   className="group flex w-fit items-center justify-start gap-3 justify-self-start bg-[#1E3653] px-5 py-3 outline-none transition-colors hover:bg-[#FF1616] focus-visible:bg-[#FF1616] focus-visible:ring-2 focus-visible:ring-[#1E3653] focus-visible:ring-offset-2"
                 >
                   <span className="font-display text-lg font-black uppercase italic leading-tight text-white sm:text-xl">
@@ -294,7 +295,7 @@ export default function AcademyProgramDetailPage({
           ) : (
             <div className="mt-12">
               <Link
-                href="/programs"
+                href={academyHref("programs")}
                 className="group flex w-fit items-center gap-3 bg-[#1E3653] px-5 py-3 transition-colors hover:bg-[#FF1616]"
               >
                 <span className="font-display text-lg font-black uppercase italic leading-tight text-white sm:text-xl">
