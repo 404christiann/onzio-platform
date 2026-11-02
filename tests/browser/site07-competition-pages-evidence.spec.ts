@@ -34,7 +34,7 @@ test("capture Academy homepage, roster and schedule before and after the page mo
   test.setTimeout(150_000);
   await mkdir(evidenceDir, { recursive: true });
   const records: Array<Record<string, unknown>> = [];
-  const baselines = new Map<string, { content: string; errors: Array<{ status: number; path: string }>; resources: unknown }>();
+  const baselines = new Map<string, { content: string; mainHash: string; links: Array<{ text: string; href: string }>; errors: Array<{ status: number; path: string }>; resources: unknown }>();
 
   for (const build of builds) {
     for (const viewport of viewports) {
@@ -77,6 +77,7 @@ test("capture Academy homepage, roster and schedule before and after the page mo
         const state = await page.evaluate(() => {
           const main = document.querySelector("main");
           const content = (main?.innerText ?? "").replace(/\s+/g, " ").trim();
+          const mainHtml = main?.outerHTML ?? "";
           const links = [...document.querySelectorAll("main a[href]")].map(link => {
             const url = new URL((link as HTMLAnchorElement).href);
             return { text: (link.textContent ?? "").replace(/\s+/g, " ").trim(), href: url.origin === location.origin ? `${url.pathname}${url.search}${url.hash}` : url.href };
@@ -86,16 +87,21 @@ test("capture Academy homepage, roster and schedule before and after the page mo
           );
           return {
             content,
+            mainHtml,
             links,
             fonts: { count: fonts.length, decodedBodyBytes: fonts.reduce((sum, item) => sum + item.decodedBodySize, 0), transferBytes: fonts.reduce((sum, item) => sum + item.transferSize, 0) },
           };
         });
         const resources = { fonts: state.fonts, restReads };
+        const normalizedMain = state.mainHtml.replaceAll(new URL(build.origin).origin, "http://alpha.localhost");
+        const mainHash = digest(JSON.stringify({ main: normalizedMain, links: state.links }));
         const key = `${routePath}/${viewport.name}`;
-        if (build.name === "base") baselines.set(key, { content: state.content, errors: resourceErrors, resources });
+        if (build.name === "base") baselines.set(key, { content: state.content, mainHash, links: state.links, errors: resourceErrors, resources });
         else {
           const baseline = baselines.get(key);
           expect(state.content, `${routePath} ${viewport.name} visible content`).toBe(baseline?.content);
+          expect(state.links, `${routePath} ${viewport.name} links`).toEqual(baseline?.links);
+          expect(mainHash, `${routePath} ${viewport.name} rendered main markup and links`).toBe(baseline?.mainHash);
           expect(resourceErrors, `${routePath} ${viewport.name} resource errors`).toEqual(baseline?.errors);
           const expected = baseline?.resources as typeof resources | undefined;
           expect(resources.fonts.count, `${routePath} ${viewport.name} font count`).toBeLessThanOrEqual(expected?.fonts.count ?? 0);
@@ -107,7 +113,7 @@ test("capture Academy homepage, roster and schedule before and after the page mo
         const screenshot = `${build.name}-${viewport.name}-${routeName}.jpg`;
         await page.screenshot({ path: join(evidenceDir, screenshot), type: "jpeg", quality: 62, fullPage: true, animations: "disabled" });
         records.push({ build: build.name, sha: build.sha, route: routePath, viewport, status: response?.status() ?? null,
-          contentSha256: digest(state.content), links: state.links, resources, pageErrors, resourceErrors,
+          contentSha256: digest(state.content), mainDomSha256: mainHash, links: state.links, resources, pageErrors, resourceErrors,
           blockedRequests: [...blockedRequests], screenshot });
         expect(pageErrors, `${build.name} ${routePath} page errors`).toEqual([]);
         expect(resourceErrors, `${build.name} ${routePath} resource errors`).toEqual([]);
