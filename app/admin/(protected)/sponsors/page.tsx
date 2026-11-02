@@ -18,6 +18,7 @@ import {
 } from "@/components/admin/AdminSectionRail";
 import FileUpload from "@/components/admin/FileUpload";
 import SponsorCarousel from "@/components/SponsorCarousel";
+import AcademySponsorsPage from "@/components/sites/diverse-city/AcademySponsorsPage";
 import {
   SlidingPanel,
   type SlidingPanelDirection,
@@ -514,7 +515,9 @@ export default function AdminSponsorsPage() {
 
             <SlidingPanel activeKey={placement} direction={placementDirection}>
             <div data-admin-public-preview>
-            {placement === "carousel" ? (
+            {isAcademy && placement === "carousel" ? (
+              <AcademySponsorsPage sponsors={previewLogos} clubName={club.name} />
+            ) : placement === "carousel" ? (
               <SponsorCarousel sponsors={previewLogos} compact />
             ) : (
               <div

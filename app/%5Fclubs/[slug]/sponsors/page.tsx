@@ -1,5 +1,5 @@
 import SponsorsPage from "@/app/(public)/sponsors/page";
-import AcademySponsorsPage from "@/components/AcademySponsorsPage";
+import AcademySponsorsPage from "@/components/sites/diverse-city/AcademySponsorsPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchSiteSponsorLogos } from "@/lib/queries";
 
