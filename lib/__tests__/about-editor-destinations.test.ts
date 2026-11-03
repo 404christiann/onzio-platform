@@ -14,10 +14,10 @@ describe("About closing button destinations", () => {
     ]);
   });
 
-  it("preserves editorial's existing About destination and valid Tryouts page", () => {
+  it("offers Academy Tryouts when the active site serves that route", () => {
     expect(aboutDestinationOptions(
       ["home", "club", "tryouts", "contact"],
-      "editorial@1",
+      "academy@1",
       true,
     )).toEqual([
       { href: "/", label: "Home" },
@@ -27,14 +27,7 @@ describe("About closing button destinations", () => {
     ]);
   });
 
-  it("does not offer Heritage's advertised Tryouts route while its tenant page returns 404", () => {
-    expect(aboutDestinationOptions(
-      ["home", "tryouts", "club"],
-      "heritage@1",
-      true,
-    )).toEqual([
-      { href: "/", label: "Home" },
-      { href: "/club/about", label: "About" },
-    ]);
+  it("does not infer a retired template for an unassigned club", () => {
+    expect(aboutDestinationOptions(["home", "club", "tryouts"], null, true)).toEqual([]);
   });
 });

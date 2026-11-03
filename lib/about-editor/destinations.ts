@@ -1,4 +1,4 @@
-import { parsePresentationDocument, routeRegistry, templateRegistry, type TemplateKey } from "@/packages/presentation";
+import { activeTemplateRegistration, parsePresentationDocument, routeRegistry, type TemplateKey } from "@/packages/presentation";
 import type { ClubContext } from "@/lib/club-context";
 import { codeSiteAdminForTemplateKey } from "@/lib/code-site-admin";
 import type { SiteRouteOption } from "@/lib/site-routes";
@@ -29,16 +29,15 @@ export function aboutDestinationOptions(
   templateKey: TemplateKey | null,
   storeEnabled: boolean,
 ): SiteRouteOption[] {
-  const template = templateRegistry[templateKey ?? "cinematic@1"];
+  const template = activeTemplateRegistration(templateKey);
+  if (!template) return [];
   const supported = new Set<string>(template.supportedRoutes);
   const result: SiteRouteOption[] = [];
   const seen = new Set<string>();
   for (const key of routeKeys) {
     if (!supported.has(key) || !(key in routeRegistry) || seen.has(key)) continue;
     if (key === "store" && !storeEnabled) continue;
-    // The tenant tryouts route currently renders only these two templates.
-    // Heritage lists the route in its presentation registry but returns 404.
-    if (key === "tryouts" && !codeSiteAdminForTemplateKey(templateKey)?.tryouts.routeVisible && templateKey !== "editorial@1") continue;
+    if (key === "tryouts" && !codeSiteAdminForTemplateKey(templateKey)?.tryouts.routeVisible) continue;
     seen.add(key);
     const route = key as RouteKey;
     result.push({ href: routeRegistry[route].path, label: LABELS[route] });
@@ -46,7 +45,7 @@ export function aboutDestinationOptions(
   return result;
 }
 
-/** Resolve routes from this club's published presentation, with the legacy template fallback. */
+/** Resolve routes from this club's published presentation. */
 export async function loadAboutDestinationOptions(
   supabase: ServerClient,
   club: Pick<ClubContext, "id" | "presentationTemplateKey" | "storeEnabled">,
@@ -60,8 +59,8 @@ export async function loadAboutDestinationOptions(
   if (stateError) throw stateError;
 
   if (!state?.published_document_id) {
-    // Legacy tenants have no published presentation document yet.
-    const template = templateRegistry[club.presentationTemplateKey ?? "cinematic@1"];
+    const template = activeTemplateRegistration(club.presentationTemplateKey);
+    if (!template) return [];
     return aboutDestinationOptions(template.defaultRoutes, club.presentationTemplateKey, club.storeEnabled);
   }
 

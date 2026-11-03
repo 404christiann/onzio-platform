@@ -157,8 +157,7 @@ export function normalizeStandingsSettings(
  * `fallbackToSample` controls what happens when `rows` is empty:
  * - `true` (default): substitute `DEFAULT_STANDINGS_ROWS`, the illustrative
  *   Rose City sample table. Existing callers keep their current behavior.
- * - `false`: return an empty array. Used by previews for templates (academy@1,
- *   editorial@1) whose real standings surface never fabricates placeholder
+ * - `false`: return an empty array. Used by previews for sites such as Diverse City whose real standings surface never fabricates placeholder
  *   rows from this data — the sample table would otherwise show a hardcoded
  *   "Rose City FC" row regardless of which club is actually being edited.
  */

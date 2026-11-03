@@ -139,30 +139,16 @@ describe("strict admin route manifest", () => {
     ).not.toContain("payments");
   });
 
-  it("hides exactly three canonical routes for editorial and keeps Registrations visible", () => {
-    const context = {
-      ...OWNER_ACCESS,
-      presentationTemplateKey: "editorial@1",
-    };
-    const editorialIds = visibleIds(context);
-    const hiddenIds = ADMIN_ROUTE_MANIFEST.map((route) => route.id).filter(
-      (id) => !editorialIds.includes(id),
-    );
-
-    expect(hiddenIds).toEqual([
-      "programs",
-      "match-stats",
-      "analytics",
-    ]);
-    expect(editorialIds).toContain("registrations");
-    expect(editorialIds).toContain("about");
-    expect(navigationIds(context)).toEqual(editorialIds);
+  it("keeps shared routes visible for active sites", () => {
+    for (const presentationTemplateKey of ["academy@1", "clubhouse@1"] as const) {
+      const ids = visibleIds({ ...OWNER_ACCESS, presentationTemplateKey });
+      expect(ids).toEqual(expect.arrayContaining(["match-stats", "analytics", "registrations"]));
+    }
   });
 
   it("shows public page editors only where their tenant public routes render", () => {
     expect(visibleIds(OWNER_ACCESS)).toEqual(expect.arrayContaining(["programs", "tryouts"]));
-    expect(visibleIds({ ...OWNER_ACCESS, presentationTemplateKey: "editorial@1" })).toContain("tryouts");
-    for (const template of ["cinematic@1", "heritage@1", "clubhouse@1", null, "future-template@1"] as const) {
+    for (const template of ["clubhouse@1", null, "future-template@1"] as const) {
       const ids = visibleIds({ ...OWNER_ACCESS, presentationTemplateKey: template });
       expect(ids).not.toContain("programs");
       expect(ids).not.toContain("tryouts");
@@ -173,7 +159,7 @@ describe("strict admin route manifest", () => {
     ["owner", "academy@1"],
     ["admin", "academy@1"],
     ["owner", "clubhouse@1"],
-    ["admin", "editorial@1"],
+    ["admin", "clubhouse@1"],
     ["owner", "future-template@1"],
   ] as const)(
     "keeps Registrations visible for the %s role on %s",
@@ -196,7 +182,7 @@ describe("strict admin route manifest", () => {
 
     const visible = getVisibleAdminRoutes({
       ...ADMIN_ACCESS,
-      presentationTemplateKey: "editorial@1",
+      presentationTemplateKey: "clubhouse@1",
     });
     expect(visible.every((route) => route.searchKeywords.length > 0)).toBe(
       true,
@@ -207,8 +193,8 @@ describe("strict admin route manifest", () => {
 
     const visibleSearchIndex = JSON.stringify(visible);
     expect(visibleSearchIndex).not.toContain("offerings");
-    expect(visibleSearchIndex).not.toContain("game statistics");
-    expect(visibleSearchIndex).not.toContain("player statistics");
+    expect(visibleSearchIndex).toContain("game statistics");
+    expect(visibleSearchIndex).toContain("player statistics");
     expect(visibleSearchIndex).not.toContain("permissions");
     expect(visibleSearchIndex).not.toContain("invoices");
   });
@@ -250,9 +236,9 @@ describe("strict admin route manifest", () => {
       getAdminGroupForPathname("/admin/members", ADMIN_ACCESS),
     ).toBeNull();
     expect(
-      getAdminGroupForPathname("/admin/stats", {
+      getAdminGroupForPathname("/admin/tryouts", {
         ...OWNER_ACCESS,
-        presentationTemplateKey: "editorial@1",
+        presentationTemplateKey: "clubhouse@1",
       }),
     ).toBeNull();
     expect(

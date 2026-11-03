@@ -4,9 +4,8 @@ import ws from "ws";
 
 /**
  * Operator-only CLI for flipping onzio.clubs.store_enabled -- the switch
- * added in Lions E1 that gates editorial@1's public /shop route and
- * "Store" nav item (see app/(public)/shop/page.tsx and
- * components/editorial/EditorialHeader.tsx). Deliberately not wired into
+ * that gates the public Shop route and navigation where a club uses it.
+ * Deliberately not wired into
  * any app route or admin UI: like tier and stripe_price_id, this is
  * operated via a standalone script against the service-role client, never
  * club self-service.
@@ -165,7 +164,7 @@ async function main(): Promise<void> {
     payload: {
       previous_value: currentValue,
       new_value: enabled,
-      reason: "Lions E6 operator toggle for the editorial@1 public store surface",
+      reason: "Operator toggle for the club public store surface",
     },
   });
   if (auditError) throw auditError;

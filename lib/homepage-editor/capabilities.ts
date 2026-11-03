@@ -5,7 +5,7 @@ import type { HeroFields, HomepageSection, PieceId } from "./model";
 
 export type HomepageRenderer = {
   templateKey: TemplateKey | null;
-  slideshowVariant: "none" | "editorial" | "matchday" | "legacy";
+  slideshowVariant: "none" | "matchday" | "legacy";
   heroVariant?: "editable" | "legacy-fixed";
 };
 
@@ -15,14 +15,13 @@ export function homepageRendererForClub(club: { presentationTemplateKey: Templat
   const siteHomepage = codeSiteAdminFor(club)?.homepage;
   return {
     templateKey: key,
-    slideshowVariant: siteHomepage?.slideshowVariant ?? (key === "editorial@1" ? "editorial" : club.slug === "rose-city" ? "legacy" : "matchday"),
-    heroVariant: siteHomepage?.heroVariant ?? (club.slug === "rose-city" && key !== "clubhouse@1" && key !== "editorial@1" ? "legacy-fixed" : "editable"),
+    slideshowVariant: siteHomepage?.slideshowVariant ?? (club.slug === "rose-city" ? "legacy" : "matchday"),
+    heroVariant: siteHomepage?.heroVariant ?? (club.slug === "rose-city" && key !== "clubhouse@1" ? "legacy-fixed" : "editable"),
   };
 }
 
 export function resolveHomepageCapabilities(input: HomepageRenderer) {
   const siteHomepage = codeSiteAdminForTemplateKey(input.templateKey)?.homepage;
-  const editorial = input.templateKey === "editorial@1";
   const clubhouse = input.templateKey === "clubhouse@1";
   const editableSections: HomepageSection[] = [];
   const heroEditableFields: (keyof HeroFields)[] = [];
@@ -30,22 +29,22 @@ export function resolveHomepageCapabilities(input: HomepageRenderer) {
     editableSections.push("hero");
     if (siteHomepage) heroEditableFields.push(...siteHomepage.heroEditableFields);
     else {
-      if (!editorial && !clubhouse) heroEditableFields.push("eyebrow");
+      if (!clubhouse) heroEditableFields.push("eyebrow");
       heroEditableFields.push("headline_line_one", "headline_line_two", "intro", "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href");
     }
   }
   if (siteHomepage) editableSections.push(...siteHomepage.editableSections.filter(section => section !== "hero"));
   else {
     editableSections.push("photos");
-    if (!editorial && !clubhouse) editableSections.push("video");
+    if (!clubhouse) editableSections.push("video");
   }
   return {
     editableSections, heroEditableFields,
-    photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (!editorial && input.slideshowVariant === "legacy"),
+    photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (input.slideshowVariant === "legacy"),
     videoSourceEditable: false as const,
     sharedTargets: {
-      storyText: siteHomepage ? siteHomepage.storyTextTarget : editorial || clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
-      shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: siteHomepage?.shopTargetSurface ?? (editorial || clubhouse ? "shop" as const : "home" as const) },
+      storyText: siteHomepage ? siteHomepage.storyTextTarget : clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
+      shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: siteHomepage?.shopTargetSurface ?? (clubhouse ? "shop" as const : "home" as const) },
       programs: siteHomepage?.programsTarget ?? null,
     },
   };
