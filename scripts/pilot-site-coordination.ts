@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { Client } from "pg";
 import { z } from "zod";
 import { homepageRendererForClub, resolveHomepageBindings, resolveHomepageCapabilities } from "../lib/homepage-editor/capabilities";
-import { parsePresentationDocument } from "../packages/presentation";
+import { parseHistoricalPresentationDocument } from "../packages/presentation";
 import { academyProofDocumentPath, academyProofParametersSchema, type AcademyProofDocument } from "./pilot-academy-documents";
 import { reconstructionInputs } from "./pilot-reconstruction-build";
 import { assertOwnedPilotScope, type OwnedPilotScope } from "./pilot-proof-servers";
@@ -112,7 +112,7 @@ export async function createPilotSiteCoordinator(scope: OwnedPilotScope, db: Cli
     const event = state.event;
     if (!event) return true;
     if (event.clubId !== config.clubId || state.pointer !== event.documentId) return false;
-    try { parsePresentationDocument(event.configuration, { surface: "production" }); } catch { return false; }
+    try { parseHistoricalPresentationDocument(event.configuration, { surface: "production" }); } catch { return false; }
     if (event.legacyId !== null) return event.documentId === event.legacyId;
     const release = accepted.find(item => item.digest === event.digest);
     const bindingFile = release?.manifest.files.find(file => file.path === "bindings/lib/homepage-editor/capabilities.ts");

@@ -7,6 +7,8 @@ export type TemplateKey =
   | "clubhouse@1"
   | "academy@1"
   | "editorial@1";
+export type ActiveTemplateKey = "clubhouse@1" | "academy@1";
+export type RetiredTemplateKey = Exclude<TemplateKey, ActiveTemplateKey>;
 export type TemplateId =
   | "cinematic"
   | "heritage"
@@ -193,23 +195,12 @@ export const fontPacks: Record<string, FontPackRegistration> = {
   "bebas-inter": {
     key: "bebas-inter",
     displayName: "Bebas Neue + Inter",
-    compatibleTemplates: [
-      "cinematic@1",
-      "heritage@1",
-      "clubhouse@1",
-      "academy@1",
-      "editorial@1",
-    ],
-  },
-  "archivo-sora": {
-    key: "archivo-sora",
-    displayName: "Archivo + Sora",
-    compatibleTemplates: ["heritage@1"],
+    compatibleTemplates: ["clubhouse@1", "academy@1"],
   },
   "geist": {
     key: "geist",
     displayName: "Geist",
-    compatibleTemplates: ["clubhouse@1", "editorial@1"],
+    compatibleTemplates: ["clubhouse@1"],
   },
   // DCFC-D104: no existing pack matched the approved academy@1 type stack --
   // Montserrat headings, Inter body/UI, DM Sans desktop navigation.
@@ -219,6 +210,23 @@ export const fontPacks: Record<string, FontPackRegistration> = {
     compatibleTemplates: ["academy@1"],
   },
 } as const;
+
+const historicalFontPacks: Record<string, FontPackRegistration> = {
+  ...fontPacks,
+  "bebas-inter": {
+    ...fontPacks["bebas-inter"],
+    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1", "editorial@1"],
+  },
+  "archivo-sora": {
+    key: "archivo-sora",
+    displayName: "Archivo + Sora",
+    compatibleTemplates: ["heritage@1"],
+  },
+  geist: {
+    ...fontPacks.geist,
+    compatibleTemplates: ["clubhouse@1", "editorial@1"],
+  },
+};
 
 export const routeRegistry = {
   home: { path: "/" },
@@ -263,13 +271,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "shared",
     contentDomain: "matches",
-    compatibleTemplates: [
-      "cinematic@1",
-      "heritage@1",
-      "clubhouse@1",
-      "academy@1",
-      "editorial@1",
-    ],
+    compatibleTemplates: ["clubhouse@1", "academy@1"],
     requiredModule: "schedule",
     requiredEntitlement: "starter",
     cardinality: "single",
@@ -281,13 +283,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "shared",
     contentDomain: "about",
-    compatibleTemplates: [
-      "cinematic@1",
-      "heritage@1",
-      "clubhouse@1",
-      "academy@1",
-      "editorial@1",
-    ],
+    compatibleTemplates: ["clubhouse@1", "academy@1"],
     requiredModule: null,
     requiredEntitlement: null,
     cardinality: "single",
@@ -299,7 +295,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "cinematic",
     contentDomain: "homepage",
-    compatibleTemplates: ["cinematic@1"],
+    compatibleTemplates: [],
     requiredModule: null,
     requiredEntitlement: null,
     cardinality: "single",
@@ -311,33 +307,9 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     version: 1,
     scope: "cinematic",
     contentDomain: "media_assets",
-    compatibleTemplates: ["cinematic@1"],
+    compatibleTemplates: [],
     requiredModule: null,
     requiredEntitlement: null,
-    cardinality: "single",
-    emptyBehavior: "hide",
-    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
-  },
-  "heritage.identity": {
-    type: "heritage.identity",
-    version: 1,
-    scope: "heritage",
-    contentDomain: "site_branding",
-    compatibleTemplates: ["heritage@1"],
-    requiredModule: null,
-    requiredEntitlement: null,
-    cardinality: "single",
-    emptyBehavior: "error",
-    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
-  },
-  "heritage.affiliations": {
-    type: "heritage.affiliations",
-    version: 1,
-    scope: "heritage",
-    contentDomain: "site_sponsor_logos",
-    compatibleTemplates: ["heritage@1"],
-    requiredModule: "affiliations",
-    requiredEntitlement: "starter",
     cardinality: "single",
     emptyBehavior: "hide",
     productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
@@ -456,6 +428,50 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
     emptyBehavior: "hide",
     productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
   },
+};
+
+const historicalSectionRegistry: Record<string, SectionRegistration> = {
+  ...sectionRegistry,
+  "cinematic.hero": {
+    ...sectionRegistry["cinematic.hero"],
+    compatibleTemplates: ["cinematic@1"],
+  },
+  "cinematic.gallery": {
+    ...sectionRegistry["cinematic.gallery"],
+    compatibleTemplates: ["cinematic@1"],
+  },
+  "shared.next-match": {
+    ...sectionRegistry["shared.next-match"],
+    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1", "editorial@1"],
+  },
+  "shared.history": {
+    ...sectionRegistry["shared.history"],
+    compatibleTemplates: ["cinematic@1", "heritage@1", "clubhouse@1", "academy@1", "editorial@1"],
+  },
+  "heritage.identity": {
+    type: "heritage.identity",
+    version: 1,
+    scope: "heritage",
+    contentDomain: "site_branding",
+    compatibleTemplates: ["heritage@1"],
+    requiredModule: null,
+    requiredEntitlement: null,
+    cardinality: "single",
+    emptyBehavior: "error",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
+  "heritage.affiliations": {
+    type: "heritage.affiliations",
+    version: 1,
+    scope: "heritage",
+    contentDomain: "site_sponsor_logos",
+    compatibleTemplates: ["heritage@1"],
+    requiredModule: "affiliations",
+    requiredEntitlement: "starter",
+    cardinality: "single",
+    emptyBehavior: "hide",
+    productionProvenance: ["verified_public_source", "club_supplied", "operator_approved"],
+  },
   "editorial.hero": {
     type: "editorial.hero",
     version: 1,
@@ -482,7 +498,7 @@ export const sectionRegistry: Record<string, SectionRegistration> = {
   },
 };
 
-export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
+const retiredTemplateRegistry: Record<RetiredTemplateKey, TemplateRegistration> = {
   "cinematic@1": {
     id: "cinematic",
     version: 1,
@@ -532,6 +548,19 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "affiliations",
     ],
   },
+  "editorial@1": {
+    id: "editorial",
+    version: 1,
+    key: "editorial@1",
+    displayName: "Lions Editorial",
+    originNote: "Based on the approved Lions editorial concept mockup visual system.",
+    defaultRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
+    supportedRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
+    supportedModules: ["roster", "schedule", "store", "staff", "tryouts", "contact"],
+  },
+};
+
+export const templateRegistry: Record<ActiveTemplateKey, TemplateRegistration> = {
   "clubhouse@1": {
     id: "clubhouse",
     version: 1,
@@ -598,20 +627,17 @@ export const templateRegistry: Record<TemplateKey, TemplateRegistration> = {
       "affiliations",
     ],
   },
-  // Lions editorial concept template (E2). Like clubhouse@1 and academy@1
-  // before it, this is a platform template, not Lions-exclusive -- any club
-  // may be assigned it, following the same extraction precedent.
-  "editorial@1": {
-    id: "editorial",
-    version: 1,
-    key: "editorial@1",
-    displayName: "Lions Editorial",
-    originNote: "Based on the approved Lions editorial concept mockup visual system.",
-    defaultRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
-    supportedRoutes: ["home", "club", "roster", "schedule", "tryouts", "store", "contact"],
-    supportedModules: ["roster", "schedule", "store", "staff", "tryouts", "contact"],
-  },
 };
+
+export function isActiveTemplateKey(key: string | null): key is ActiveTemplateKey {
+  return key !== null && Object.hasOwn(templateRegistry, key);
+}
+
+export function activeTemplateRegistration(key: string | null): TemplateRegistration | null {
+  if (!isActiveTemplateKey(key)) return null;
+  const registrations: Readonly<Record<string, TemplateRegistration>> = templateRegistry;
+  return registrations[key] ?? null;
+}
 
 export function templateKey(
   template: Pick<PresentationDocument["template"], "id" | "version">,
@@ -619,9 +645,42 @@ export function templateKey(
   return `${template.id}@${template.version}` as TemplateKey;
 }
 
+type ValidationCatalog = {
+  templates: Readonly<Partial<Record<TemplateKey, TemplateRegistration>>>;
+  fonts: Readonly<Record<string, FontPackRegistration>>;
+  sections: Readonly<Record<string, SectionRegistration>>;
+};
+
+const activeCatalog: ValidationCatalog = {
+  templates: templateRegistry,
+  fonts: fontPacks,
+  sections: sectionRegistry,
+};
+
+const historicalCatalog: ValidationCatalog = {
+  templates: { ...templateRegistry, ...retiredTemplateRegistry },
+  fonts: historicalFontPacks,
+  sections: historicalSectionRegistry,
+};
+
 export function parsePresentationDocument(
   input: unknown,
   options: { surface: PresentationSurface },
+): PresentationDocument {
+  return parseWithCatalog(input, options, activeCatalog);
+}
+
+export function parseHistoricalPresentationDocument(
+  input: unknown,
+  options: { surface: PresentationSurface },
+): PresentationDocument {
+  return parseWithCatalog(input, options, historicalCatalog);
+}
+
+function parseWithCatalog(
+  input: unknown,
+  options: { surface: PresentationSurface },
+  catalog: ValidationCatalog,
 ): PresentationDocument {
   const parsed = documentSchema.safeParse(input);
   if (!parsed.success) {
@@ -640,7 +699,7 @@ export function parsePresentationDocument(
     );
   }
 
-  const report = validatePresentationDocument(parsed.data, options);
+  const report = validateWithCatalog(parsed.data, options, catalog);
   if (!report.valid) {
     const first = report.errors[0];
     throw new PresentationError(
@@ -656,17 +715,25 @@ export function validatePresentationDocument(
   document: PresentationDocument,
   options: { surface: PresentationSurface },
 ): ValidationReport {
+  return validateWithCatalog(document, options, activeCatalog);
+}
+
+function validateWithCatalog(
+  document: PresentationDocument,
+  options: { surface: PresentationSurface },
+  catalog: ValidationCatalog,
+): ValidationReport {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
   const key = templateKey(document.template);
-  const template = templateRegistry[key];
+  const template = catalog.templates[key];
 
   if (!template) {
     errors.push(issue("PRESENTATION_UNKNOWN_TEMPLATE", "template", "Unknown template."));
     return { valid: false, errors, warnings };
   }
 
-  const fontPack = fontPacks[document.fontPack as keyof typeof fontPacks];
+  const fontPack = catalog.fonts[document.fontPack];
   if (!fontPack || !fontPack.compatibleTemplates.includes(key)) {
     errors.push(
       issue(
@@ -693,7 +760,7 @@ export function validatePresentationDocument(
 
   for (const [index, section] of document.homepage.sections.entries()) {
     const sectionPath = `homepage.sections.${index}`;
-    const registration = sectionRegistry[section.type];
+    const registration = catalog.sections[section.type];
     if (!registration) {
       errors.push(
         issue("PRESENTATION_UNKNOWN_SECTION", `${sectionPath}.type`, "Unknown section type."),
