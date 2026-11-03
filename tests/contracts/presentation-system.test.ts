@@ -387,6 +387,20 @@ function validEditorialDocument() {
   };
 }
 
+function validHeritageDocument() {
+  return {
+    ...validCinematicDocument(),
+    template: { id: "heritage", version: 1 },
+    fontPack: "archivo-sora",
+    homepage: {
+      sections: [
+        { id: "next-match", type: "shared.next-match", enabled: true, emptyBehavior: "hide", config: {} },
+        { id: "history", type: "shared.history", enabled: true, emptyBehavior: "hide", config: {} },
+      ],
+    },
+  };
+}
+
 describe("Phase 9.1 presentation baselines", () => {
   it("records reviewable Rose City and Deportivo baseline inventories", async () => {
     const roseCity = await readFile(
@@ -408,9 +422,13 @@ describe("Phase 9.1 presentation baselines", () => {
 });
 
 describe("Phase 9.2 presentation schema and registries", () => {
-  it("accepts a pinned cinematic document that uses registered sections and tokens", async () => {
-    const { parsePresentationDocument } = await loadPresentation();
-    const parsed = parsePresentationDocument(validCinematicDocument(), {
+  it("reads a pinned cinematic document only through the historical reader", async () => {
+    const { parsePresentationDocument, parseHistoricalPresentationDocument } = await loadPresentation();
+    await expectContractError(
+      () => parsePresentationDocument(validCinematicDocument(), { surface: "production" }),
+      "PRESENTATION_UNKNOWN_TEMPLATE",
+    );
+    const parsed = parseHistoricalPresentationDocument(validCinematicDocument(), {
       surface: "production",
     });
     expect(parsed.template).toEqual({ id: "cinematic", version: 1 });
@@ -419,6 +437,17 @@ describe("Phase 9.2 presentation schema and registries", () => {
       "shared.next-match",
       "cinematic.gallery",
     ]);
+  });
+
+  it("reads a heritage document only through the historical reader", async () => {
+    const { parsePresentationDocument, parseHistoricalPresentationDocument } = await loadPresentation();
+    await expectContractError(
+      () => parsePresentationDocument(validHeritageDocument(), { surface: "production" }),
+      "PRESENTATION_UNKNOWN_TEMPLATE",
+    );
+    const parsed = parseHistoricalPresentationDocument(validHeritageDocument(), { surface: "production" });
+    expect(parsed.template).toEqual({ id: "heritage", version: 1 });
+    expect(parsed.fontPack).toBe("archivo-sora");
   });
 
   it("accepts a pinned clubhouse document for the Lions mockup-derived Pro template", async () => {
@@ -473,9 +502,13 @@ describe("Phase 9.2 presentation schema and registries", () => {
     ]);
   });
 
-  it("accepts a pinned editorial document for the Lions editorial template", async () => {
-    const { parsePresentationDocument } = await loadPresentation();
-    const parsed = parsePresentationDocument(validEditorialDocument(), {
+  it("reads a pinned editorial document only through the historical reader", async () => {
+    const { parsePresentationDocument, parseHistoricalPresentationDocument } = await loadPresentation();
+    await expectContractError(
+      () => parsePresentationDocument(validEditorialDocument(), { surface: "production" }),
+      "PRESENTATION_UNKNOWN_TEMPLATE",
+    );
+    const parsed = parseHistoricalPresentationDocument(validEditorialDocument(), {
       surface: "production",
     });
 
@@ -502,17 +535,14 @@ describe("Phase 9.2 presentation schema and registries", () => {
     const { parsePresentationDocument, validatePresentationDocument, templateRegistry, fontPacks } =
       await loadPresentation();
     const accepted: Record<string, string[]> = {
-      "cinematic@1": ["bebas-inter"],
-      "heritage@1": ["archivo-sora", "bebas-inter"],
       "clubhouse@1": ["geist", "bebas-inter"],
       "academy@1": ["montserrat-inter-dmsans", "bebas-inter"],
-      "editorial@1": ["geist", "bebas-inter"],
     };
     expect(Object.keys(templateRegistry).sort()).toEqual(Object.keys(accepted).sort());
     const source = parsePresentationDocument(validAcademyDocument(), { surface: "production" });
 
     for (const template of Object.values(templateRegistry)) {
-      const document = presentationDocumentForTemplate(source, template.id);
+      const document = presentationDocumentForTemplate(source, template.key === "academy@1" ? "academy" : "clubhouse");
       for (const fontPack of new Set([...Object.keys(fontPacks), ...Object.values(accepted).flat(), "comic-sans"])) {
         const report = validatePresentationDocument(
           { ...document, fontPack },
@@ -534,7 +564,7 @@ describe("Phase 9.2 presentation schema and registries", () => {
     await expectContractError(
       () =>
         parsePresentationDocument(
-          { ...validCinematicDocument(), template: { id: "rose-city", version: 1 } },
+          { ...validAcademyDocument(), template: { id: "rose-city", version: 1 } },
           { surface: "production" },
         ),
       "PRESENTATION_UNKNOWN_TEMPLATE",
@@ -544,7 +574,7 @@ describe("Phase 9.2 presentation schema and registries", () => {
       () =>
         parsePresentationDocument(
           {
-            ...validCinematicDocument(),
+            ...validAcademyDocument(),
             homepage: {
               sections: [
                 {
@@ -566,7 +596,7 @@ describe("Phase 9.2 presentation schema and registries", () => {
       () =>
         parsePresentationDocument(
           {
-            ...validCinematicDocument(),
+            ...validAcademyDocument(),
             navigation: {
               groups: [{ id: "main", label: null, routes: ["home", "debug"] }],
             },
@@ -578,11 +608,19 @@ describe("Phase 9.2 presentation schema and registries", () => {
   });
 
   it("rejects arbitrary CSS, HTML, URLs, and sample provenance on production surfaces", async () => {
-    const { parsePresentationDocument } = await loadPresentation();
+    const { parsePresentationDocument, parseHistoricalPresentationDocument } = await loadPresentation();
+
+    await expectContractError(
+      () => parsePresentationDocument({
+        ...validAcademyDocument(),
+        homepage: { sections: [{ id: "hero-main", type: "academy.hero", enabled: true, emptyBehavior: "error", config: { html: "<script />" } }] },
+      }, { surface: "production" }),
+      "PRESENTATION_UNSAFE_CONFIGURATION",
+    );
 
     await expectContractError(
       () =>
-        parsePresentationDocument(
+        parseHistoricalPresentationDocument(
           {
             ...validCinematicDocument(),
             homepage: {
@@ -609,7 +647,7 @@ describe("Phase 9.2 presentation schema and registries", () => {
   it("returns a deterministic validation report", async () => {
     const { parsePresentationDocument, validatePresentationDocument } =
       await loadPresentation();
-    const source = parsePresentationDocument(validCinematicDocument(), {
+    const source = parsePresentationDocument(validAcademyDocument(), {
       surface: "operator_preview",
     });
 
@@ -623,7 +661,7 @@ describe("Phase 9.2 presentation schema and registries", () => {
 });
 
 describe("browser fixture documents", () => {
-  const templateIds = ["academy", "editorial", "clubhouse", "cinematic", "heritage"] as const;
+  const templateIds = ["academy", "clubhouse"] as const;
 
   it.each(templateIds)(
     "publishes a production-valid %s document from the seeded Academy shape",

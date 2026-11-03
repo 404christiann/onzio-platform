@@ -274,7 +274,12 @@ describe("homepage assignment freshness", () => {
         await db.query("update onzio.clubs set slug=$2 where id=$1", [parityClub, slug]);
         await actor(db);
         const current = await load(db, parityClub);
-        const expected = resolveHomepageBindings({ capabilities: resolveHomepageCapabilities(homepageRendererForClub({ presentationTemplateKey: templateKey, slug })) });
+        const expected = templateKey === "editorial@1"
+          ? {
+            key: "legacy/about-story/shop-kits/compact-hero/no-caption",
+            revision: 1,
+          }
+          : resolveHomepageBindings({ capabilities: resolveHomepageCapabilities(homepageRendererForClub({ presentationTemplateKey: templateKey, slug })) });
         expect(current.design.binding).toEqual({ key: expected.key, revision: expected.revision });
         expect(current.designRevision.length).toBeLessThanOrEqual(200);
       } finally { await db.query("rollback to savepoint parity_case"); }

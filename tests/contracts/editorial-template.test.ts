@@ -11,10 +11,7 @@ async function loadPresentation(): Promise<PresentationExports> {
   return import("@/packages/presentation");
 }
 
-// Pinned snapshots of the pre-existing clubhouse@1 and academy@1 template
-// registrations. This file exists to prove the E2 registry addition was purely
-// additive -- it must not mutate any field on any pre-existing template or
-// section registration.
+// Pinned registrations for the two active templates.
 const CLUBHOUSE_TEMPLATE_SNAPSHOT = {
   id: "clubhouse",
   version: 1,
@@ -119,128 +116,50 @@ const SHARED_HISTORY_SNAPSHOT_MINUS_TEMPLATES = {
   ],
 };
 
-describe("Phase E2 editorial@1 registry isolation", () => {
-  it("leaves the pre-existing clubhouse@1 template registration byte-identical", async () => {
+describe("active template registry", () => {
+  it("keeps the clubhouse@1 registration unchanged", async () => {
     const { templateRegistry } = await loadPresentation();
-    expect(templateRegistry["clubhouse@1"]).toEqual(
-      CLUBHOUSE_TEMPLATE_SNAPSHOT,
-    );
+    expect(templateRegistry["clubhouse@1"]).toEqual(CLUBHOUSE_TEMPLATE_SNAPSHOT);
   });
 
-  it("leaves the pre-existing academy@1 template registration byte-identical", async () => {
+  it("keeps the academy@1 registration unchanged", async () => {
     const { templateRegistry } = await loadPresentation();
     expect(templateRegistry["academy@1"]).toEqual(ACADEMY_TEMPLATE_SNAPSHOT);
   });
 
-  it("registers editorial@1 in the template registry", async () => {
-    const { templateRegistry } = await loadPresentation();
-    expect(templateRegistry["editorial@1"]).toBeDefined();
-    expect(templateRegistry["editorial@1"]?.id).toBe("editorial");
-    expect(templateRegistry["editorial@1"]?.version).toBe(1);
-    expect(templateRegistry["editorial@1"]?.key).toBe("editorial@1");
+  it("exposes only clubhouse and academy for new assignments", async () => {
+    const { templateRegistry, activeTemplateRegistration, isActiveTemplateKey } = await loadPresentation();
+    expect(Object.keys(templateRegistry).sort()).toEqual(["academy@1", "clubhouse@1"]);
+    expect(activeTemplateRegistration("clubhouse@1")).toEqual(CLUBHOUSE_TEMPLATE_SNAPSHOT);
+    expect(activeTemplateRegistration("academy@1")).toEqual(ACADEMY_TEMPLATE_SNAPSHOT);
+    for (const key of ["cinematic@1", "heritage@1", "editorial@1", null]) {
+      expect(isActiveTemplateKey(key)).toBe(false);
+      expect(activeTemplateRegistration(key)).toBeNull();
+    }
   });
 
-  it("additively extends shared.next-match and shared.history to include editorial@1 without changing any other field", async () => {
+  it("preserves shared sections for active templates without retired compatibility", async () => {
     const { sectionRegistry } = await loadPresentation();
-
     const nextMatch = sectionRegistry["shared.next-match"];
-    expect(nextMatch).toBeDefined();
-    const { compatibleTemplates: nextMatchTemplates, ...nextMatchRest } =
-      nextMatch!;
+    const { compatibleTemplates: nextMatchTemplates, ...nextMatchRest } = nextMatch;
     expect(nextMatchRest).toEqual(SHARED_NEXT_MATCH_SNAPSHOT_MINUS_TEMPLATES);
-    expect(nextMatchTemplates).toEqual(
-      expect.arrayContaining([
-        "cinematic@1",
-        "heritage@1",
-        "clubhouse@1",
-        "academy@1",
-        "editorial@1",
-      ]),
-    );
-    expect(nextMatchTemplates).toContain("editorial@1");
+    expect(nextMatchTemplates).toEqual(["clubhouse@1", "academy@1"]);
 
     const history = sectionRegistry["shared.history"];
-    expect(history).toBeDefined();
-    const { compatibleTemplates: historyTemplates, ...historyRest } =
-      history!;
+    const { compatibleTemplates: historyTemplates, ...historyRest } = history;
     expect(historyRest).toEqual(SHARED_HISTORY_SNAPSHOT_MINUS_TEMPLATES);
-    expect(historyTemplates).toEqual(
-      expect.arrayContaining([
-        "cinematic@1",
-        "heritage@1",
-        "clubhouse@1",
-        "academy@1",
-        "editorial@1",
-      ]),
-    );
-    expect(historyTemplates).toContain("editorial@1");
+    expect(historyTemplates).toEqual(["clubhouse@1", "academy@1"]);
   });
 
-  it("does not leak editorial@1 into academy-only or clubhouse-only sections", async () => {
+  it("keeps active sections scoped and cinematic section concepts available for future versions", async () => {
     const { sectionRegistry } = await loadPresentation();
-
-    expect(sectionRegistry["academy.kit-feature"]?.compatibleTemplates).toEqual(
-      ["academy@1"],
-    );
-    expect(
-      sectionRegistry["academy.kit-feature"]?.compatibleTemplates,
-    ).not.toContain("editorial@1");
-
-    expect(sectionRegistry["clubhouse.kits"]?.compatibleTemplates).toEqual([
-      "clubhouse@1",
-    ]);
-    expect(sectionRegistry["clubhouse.kits"]?.compatibleTemplates).not.toContain(
-      "editorial@1",
-    );
-
-    expect(sectionRegistry["clubhouse.hero"]?.compatibleTemplates).toEqual([
-      "clubhouse@1",
-    ]);
-    expect(sectionRegistry["academy.hero"]?.compatibleTemplates).toEqual([
-      "academy@1",
-    ]);
-    expect(sectionRegistry["academy.partners"]?.compatibleTemplates).toEqual([
-      "academy@1",
-    ]);
-    expect(sectionRegistry["academy.standings"]?.compatibleTemplates).toEqual([
-      "academy@1",
-    ]);
-    expect(
-      sectionRegistry["academy.programs-pathway"]?.compatibleTemplates,
-    ).toEqual(["academy@1"]);
-    expect(sectionRegistry["clubhouse.slideshow"]?.compatibleTemplates).toEqual(
-      ["clubhouse@1"],
-    );
-    expect(sectionRegistry["clubhouse.partners"]?.compatibleTemplates).toEqual(
-      ["clubhouse@1"],
-    );
-  });
-
-  it("registers editorial.hero and editorial.slideshow scoped only to editorial@1", async () => {
-    const { sectionRegistry } = await loadPresentation();
-
-    expect(sectionRegistry["editorial.hero"]).toMatchObject({
-      type: "editorial.hero",
-      version: 1,
-      scope: "editorial",
-      contentDomain: "homepage",
-      compatibleTemplates: ["editorial@1"],
-      requiredModule: null,
-      requiredEntitlement: null,
-      cardinality: "single",
-      emptyBehavior: "error",
-    });
-
-    expect(sectionRegistry["editorial.slideshow"]).toMatchObject({
-      type: "editorial.slideshow",
-      version: 1,
-      scope: "editorial",
-      contentDomain: "homepage_slideshow_photos",
-      compatibleTemplates: ["editorial@1"],
-      requiredModule: null,
-      requiredEntitlement: null,
-      cardinality: "single",
-      emptyBehavior: "hide",
-    });
+    expect(sectionRegistry["clubhouse.hero"]?.compatibleTemplates).toEqual(["clubhouse@1"]);
+    expect(sectionRegistry["academy.hero"]?.compatibleTemplates).toEqual(["academy@1"]);
+    expect(sectionRegistry["cinematic.hero"]?.type).toBe("cinematic.hero");
+    expect(sectionRegistry["cinematic.gallery"]?.type).toBe("cinematic.gallery");
+    expect(sectionRegistry["cinematic.hero"]?.compatibleTemplates).toEqual([]);
+    expect(sectionRegistry["cinematic.gallery"]?.compatibleTemplates).toEqual([]);
+    expect(sectionRegistry["heritage.identity"]).toBeUndefined();
+    expect(sectionRegistry["editorial.hero"]).toBeUndefined();
   });
 });

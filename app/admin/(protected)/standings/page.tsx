@@ -86,7 +86,6 @@ export default function AdminStandingsPage() {
   const club = useClubContext();
   const clubId = useClubId();
   const standingsPolicy = codeSiteAdminFor(club)?.standings;
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
   const [settings, setSettings] =
     useState<DBLeagueStandingsSettings>(DEFAULT_STANDINGS_SETTINGS);
   const [rows, setRows] = useState<DraftRow[]>([]);
@@ -379,12 +378,8 @@ export default function AdminStandingsPage() {
   //
   // academy@1's real public standings table renders nothing when there is no
   // real data, so its preview matches by showing the empty state instead.
-  // editorial@1's public standings table
-  // (components/editorial/EditorialStandingsTable.tsx) reads these same rows
-  // and renders nothing when there are none, so it behaves like academy@1
-  // here: the empty state is the honest preview until rows are entered.
   const previewRows = normalizeStandingsRows(rows, {
-    fallbackToSample: standingsPolicy?.useSampleFallback ?? !isEditorial,
+    fallbackToSample: standingsPolicy?.useSampleFallback ?? true,
   });
 
   return (
@@ -747,7 +742,7 @@ export default function AdminStandingsPage() {
               </div>
               <div data-admin-public-preview className="p-5">
                 {/* previewRows is only ever empty for the templates excluded
-                    from the sample fallback above (academy@1, editorial@1);
+                    from the sample fallback above (academy@1);
                     templates that still get DEFAULT_STANDINGS_ROWS always
                     take a table branch, exactly as before. */}
                 {previewRows.length === 0 ? (

@@ -30,12 +30,6 @@ export function CombinedStatsPage() {
   const controls = useRef<StatsEditorControls>(null);
   const tabs = useRef(new Map<StatsView, HTMLButtonElement>());
   const requestedView = useRef<StatsView | null>(null);
-  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
-
-  useEffect(() => {
-    if (isEditorialTemplate) router.replace("/admin");
-  }, [isEditorialTemplate, router]);
-
   useEffect(() => {
     if (switching || requestedView.current !== view) return;
     tabs.current.get(view)?.focus({ preventScroll: true });
@@ -71,8 +65,6 @@ export function CombinedStatsPage() {
     selectedMatchId, onSelectedMatchChange: setSelectedMatchId,
     onViewChange: changeView, controlsRef: controls, onSavingChange: setSaving,
   };
-  if (isEditorialTemplate) return null;
-
   return <AdminPage className="max-w-6xl">
     <AdminPageHeader title="Stats" description="Choose one match or enter the season’s totals."
       actions={<SeasonSelect seasons={seasonState.seasons} loading={seasonState.loading}

@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { codeSiteFor } from "@/lib/code-site";
 import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
-import EditorialContactPage from "@/components/editorial/EditorialContactPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchContactContent } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
@@ -12,12 +11,6 @@ export default async function TenantContactPage({
   params: Promise<{ slug: string }>;
 }) {
   const club = await getClubContextBySlug((await params).slug);
-
-  if (club.presentationTemplateKey === "editorial@1") {
-    const onzio = (await createClient()).schema("onzio");
-    const content = await fetchContactContent(club.id, onzio);
-    return <EditorialContactPage content={content} />;
-  }
 
   if (codeSiteFor(club) !== "diverse-city") notFound();
   const onzio = (await createClient()).schema("onzio");

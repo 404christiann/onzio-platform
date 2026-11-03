@@ -48,7 +48,7 @@ describe("Tryouts public-page Save contract", () => {
     expect(editor).toContain("<AlertDialog.Title");
     expect(editor).toContain("<AlertDialog.Description");
     expect(editor).not.toContain('window.confirm(`Delete');
-    expect(editor).toContain('!codeSiteAdminFor(club)?.tryouts.routeVisible && club.presentationTemplateKey !== "editorial@1"');
+    expect(editor).toContain('!codeSiteAdminFor(club)?.tryouts.routeVisible');
     expect(editor).not.toMatch(/\.from\("tryouts"\)\s*\.(update|delete|insert)/);
     expect(preview).toContain("TryoutsPreviewFrame");
     expect(preview).toContain("editor={onSelect ? { selected, onSelect } : undefined}");

@@ -1,43 +1,26 @@
 {
   "app/%5Fclubs/[slug]/club/about/page.tsx": {
     "literal:clubhouse@1": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 2
-  },
-  "app/%5Fclubs/[slug]/contact/page.tsx": {
-    "literal:editorial@1": 1,
     "read:presentationTemplateKey": 1
   },
   "app/%5Fclubs/[slug]/layout.tsx": {
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 2,
+    "read:presentationTemplateKey": 1,
     "read:templateKey": 1
   },
   "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx": {
     "id:academy": 2
   },
-  "app/%5Fclubs/[slug]/tryouts/page.tsx": {
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
-  },
   "app/(public)/roster/page.tsx": {
     "literal:clubhouse@1": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 2
-  },
-  "app/(public)/schedule/[fixtureId]/page.tsx": {
-    "literal:editorial@1": 1,
     "read:presentationTemplateKey": 1
   },
   "app/(public)/schedule/page.tsx": {
     "literal:clubhouse@1": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 2
+    "read:presentationTemplateKey": 1
   },
   "app/(public)/shop/page.tsx": {
     "literal:clubhouse@1": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 2
+    "read:presentationTemplateKey": 1
   },
   "app/(public)/sponsors/page.tsx": {
     "literal:clubhouse@1": 1,
@@ -47,50 +30,12 @@
     "literal:clubhouse@1": 1,
     "read:presentationTemplateKey": 1
   },
-  "app/admin/(protected)/about/page.tsx": {
-    "flag:isEditorial": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "app/admin/(protected)/analytics/page.tsx": {
-    "flag:isEditorialTemplate": 5,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "app/admin/(protected)/contact/page.tsx": {
-    "literal:editorial@1": 2,
-    "read:presentationTemplateKey": 2
-  },
   "app/admin/(protected)/page.tsx": {
     "read:presentationTemplateKey": 2
   },
   "app/admin/(protected)/programs/page.tsx": {
     "read:presentationTemplateKey": 2,
     "read:templateKey": 2
-  },
-  "app/admin/(protected)/roster/page.tsx": {
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "app/admin/(protected)/schedule/page.tsx": {
-    "flag:isEditorial": 2,
-    "literal:editorial@1": 2,
-    "read:presentationTemplateKey": 2
-  },
-  "app/admin/(protected)/sponsors/page.tsx": {
-    "flag:isEditorial": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "app/admin/(protected)/standings/page.tsx": {
-    "flag:isEditorial": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "app/admin/(protected)/tryouts/page.tsx": {
-    "flag:isEditorial": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
   },
   "components/AdminShell.tsx": {
     "read:presentationTemplateKey": 3
@@ -118,8 +63,7 @@
   },
   "components/HomePageClient.tsx": {
     "literal:clubhouse@1": 1,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 2
+    "read:presentationTemplateKey": 1
   },
   "components/Nav.tsx": {
     "literal:clubhouse@1": 1,
@@ -129,41 +73,17 @@
     "read:data-font-pack": 1,
     "read:templateKey": 3
   },
-  "components/admin/ScaledAboutPreview.tsx": {
-    "literal:editorial@1": 1,
-    "read:data-site-template": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "components/admin/ScaledShopKitPreview.tsx": {
-    "literal:editorial@1": 1,
-    "read:data-site-template": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "components/admin/ScaledSlideshowPreview.tsx": {
-    "read:data-site-template": 1
-  },
-  "components/admin/ScaledTryoutsPreview.tsx": {
-    "flag:isEditorial": 3,
-    "literal:editorial@1": 1,
-    "read:data-site-template": 1,
-    "read:presentationTemplateKey": 1
-  },
   "components/admin/about/AboutPageCanvas.tsx": {
     "literal:clubhouse@1": 1,
-    "literal:editorial@1": 4,
-    "read:data-site-template": 1,
-    "read:presentationTemplateKey": 7,
+    "read:presentationTemplateKey": 2,
     "read:templateKey": 1
   },
   "components/admin/contact/ContactPageCanvas.tsx": {
-    "literal:editorial@1": 2,
-    "read:data-site-template": 1,
-    "read:presentationTemplateKey": 4,
+    "read:presentationTemplateKey": 1,
     "read:templateKey": 1
   },
   "components/admin/homepage/HomepageEditor.tsx": {
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 2,
+    "read:presentationTemplateKey": 1,
     "read:templateKey": 1
   },
   "components/admin/homepage/HomepagePreviewFrame.tsx": {
@@ -171,46 +91,21 @@
   },
   "components/admin/shop/ShopPageEditor.tsx": {
     "flag:isClubhouse": 8,
-    "flag:isEditorial": 8,
     "flag:sharedWithHomepage": 3,
-    "flag:template": 3,
+    "flag:template": 2,
     "literal:clubhouse@1": 1,
-    "literal:editorial@1": 1,
     "read:presentationTemplateKey": 1,
     "read:templateKey": 1
-  },
-  "components/admin/stats/CombinedStatsPage.tsx": {
-    "flag:isEditorialTemplate": 3,
-    "literal:editorial@1": 1,
-    "read:presentationTemplateKey": 1
-  },
-  "components/admin/tryouts/TryoutsPageEditor.tsx": {
-    "flag:isEditorial": 1,
-    "literal:editorial@1": 2,
-    "read:presentationTemplateKey": 2
-  },
-  "components/editorial/EditorialMotion.tsx": {
-    "read:data-site-template": 3
-  },
-  "components/editorial/EditorialShell.tsx": {
-    "read:data-site-template": 1
   },
   "components/sites/diverse-city/FontScope.tsx": {
     "read:data-font-pack": 1
   },
   "lib/about-editor/destinations.ts": {
-    "flag:template": 2,
-    "literal:cinematic@1": 2,
-    "literal:editorial@1": 1,
     "read:presentationTemplateKey": 4,
-    "read:templateKey": 4
+    "read:templateKey": 3
   },
   "lib/admin-route-manifest.ts": {
-    "flag:EDITORIAL_TEMPLATE": 3,
-    "literal:editorial@1": 1,
-    "read:hiddenForTemplates": 4,
-    "read:presentationTemplateKey": 4,
-    "read:visibleForTemplates": 4
+    "read:presentationTemplateKey": 1
   },
   "lib/club-context.ts": {
     "read:presentationTemplateKey": 7,
@@ -222,20 +117,18 @@
   },
   "lib/homepage-editor/capabilities.ts": {
     "flag:clubhouse": 4,
-    "flag:editorial": 5,
-    "flag:key": 4,
+    "flag:key": 2,
     "literal:clubhouse@1": 2,
-    "literal:editorial@1": 3,
     "read:presentationTemplateKey": 2,
-    "read:templateKey": 5
+    "read:templateKey": 4
   },
   "lib/shop-editor/contract.ts": {
     "read:templateKey": 1
   },
   "packages/presentation/index.ts": {
-    "literal:academy@1": 12,
+    "literal:academy@1": 16,
     "literal:cinematic@1": 8,
-    "literal:clubhouse@1": 11,
+    "literal:clubhouse@1": 16,
     "literal:editorial@1": 9,
     "literal:heritage@1": 9,
     "read:templateKey": 2

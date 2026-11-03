@@ -17,12 +17,8 @@ export const LIONS_LOCAL_PRESENTATION_DOCUMENT_ID = deterministicUuid(
 export const LIONS_LOCAL_PRESENTATION_PUBLICATION_ID = deterministicUuid(
   "onzio:lions:presentation-publication:clubhouse@1:published",
 );
-// Lions E7: the clubhouse@1 document/publication IDs above stay defined and
-// exported -- presentation_documents rows are immutable/insert-only by
-// design, so the original clubhouse@1 document this project verified against
-// through E1-E6 remains a valid, permanently orphaned historical row rather
-// than something deleted or repurposed. Only presentation_state now points
-// at the editorial@1 document below.
+// Stable IDs for previously published Editorial records remain available for
+// historical reconciliation. New imports publish the Clubhouse document.
 export const LIONS_LOCAL_EDITORIAL_DOCUMENT_ID = deterministicUuid(
   "onzio:lions:presentation:editorial@1:published",
 );
@@ -32,11 +28,7 @@ export const LIONS_LOCAL_EDITORIAL_PUBLICATION_ID = deterministicUuid(
 export const LIONS_LOCAL_PRESENTATION_ACTOR_ID =
   "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
 
-// Superseded as of Lions E7 (Lions now publishes on editorial@1, see
-// LIONS_EDITORIAL_PRESENTATION_CONFIGURATION below) but kept -- unused,
-// still exported -- as the historical record of the clubhouse@1
-// configuration every prior phase (E1-E6) verified against via the
-// temporary local database switch this phase makes permanent.
+// Active configuration for new local and staging Lions imports.
 export const LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION = {
   schemaVersion: 1,
   template: { id: "clubhouse", version: 1 },
@@ -146,117 +138,6 @@ export const LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION = {
     createdBy: LIONS_LOCAL_PRESENTATION_ACTOR_ID,
     createdAt: "2026-07-30T00:00:00.000Z",
     sourceArtifact: "soccerPlatformMockups:lions",
-  },
-} as const;
-
-// Lions E7: the real, permanent presentation configuration Lions publishes
-// on going forward. theme is carried over unchanged from the clubhouse@1
-// configuration above -- it already encodes Lions' navy/red palette and
-// passes the presentation system's contrast validation inside
-// parsePresentationDocument below, so editorial@1 does not need a new
-// palette. modules/homepage.sections/navigation are edited down to exactly
-// what editorial@1 registers in packages/presentation/index.ts (Lions E2):
-// no sponsors/stats/expandedProfiles/seasons/analytics/affiliations, no
-// clubhouse.kits/clubhouse.partners sections, and the 7-route editorial nav.
-const LIONS_EDITORIAL_PRESENTATION_CONFIGURATION = {
-  schemaVersion: 1,
-  template: { id: "editorial", version: 1 },
-  fontPack: "geist",
-  theme: {
-    surface: {
-      canvas: "#1B2958",
-      elevated: "#FFFFFF",
-      subtle: "#F7F5F1",
-      inverse: "#F0F0F0",
-    },
-    text: {
-      primary: "#F0F0F0",
-      secondary: "#C8CDD8",
-      muted: "#687083",
-      inverse: "#18213A",
-    },
-    action: {
-      primary: "#F0F0F0",
-      primaryHover: "#DADDE5",
-      primaryText: "#1B2958",
-      secondary: "#AD3234",
-    },
-    border: {
-      subtle: "#35426B",
-      strong: "#F0F0F0",
-    },
-    status: {
-      success: "#12A140",
-      warning: "#D69E2E",
-      danger: "#AD3234",
-    },
-    accent: {
-      one: "#AD3234",
-      two: "#F0F0F0",
-    },
-  },
-  modules: {
-    roster: true,
-    schedule: true,
-    store: true,
-    staff: true,
-    tryouts: true,
-    contact: true,
-  },
-  homepage: {
-    sections: [
-      {
-        id: "hero-main",
-        type: "editorial.hero",
-        enabled: true,
-        emptyBehavior: "error",
-        config: {},
-      },
-      {
-        id: "next-match",
-        type: "shared.next-match",
-        enabled: true,
-        emptyBehavior: "hide",
-        config: {},
-      },
-      {
-        id: "matchday-slideshow",
-        type: "editorial.slideshow",
-        enabled: true,
-        emptyBehavior: "hide",
-        config: {},
-      },
-      {
-        id: "club-story",
-        type: "shared.history",
-        enabled: true,
-        emptyBehavior: "hide",
-        config: {},
-      },
-    ],
-  },
-  navigation: {
-    groups: [
-      {
-        id: "main",
-        label: null,
-        routes: [
-          "home",
-          "club",
-          "roster",
-          "schedule",
-          "tryouts",
-          "store",
-          "contact",
-        ],
-      },
-    ],
-  },
-  metadata: {
-    recommendationId: null,
-    createdBy: LIONS_LOCAL_PRESENTATION_ACTOR_ID,
-    createdAt: "2026-08-12T00:00:00.000Z",
-    sourceArtifact: "soccerPlatformMockups:lions-editorial",
   },
 } as const;
 
@@ -737,7 +618,7 @@ export function buildLionsLocalImportRows(
     updated_at: now,
   }));
   const presentationConfiguration = parsePresentationDocument(
-    LIONS_EDITORIAL_PRESENTATION_CONFIGURATION,
+    LIONS_CLUBHOUSE_PRESENTATION_CONFIGURATION,
     { surface: "operator_preview" },
   );
   const presentationDigest = digestJson(presentationConfiguration);
@@ -908,11 +789,11 @@ export function buildLionsLocalImportRows(
     goalkeeperSeasonStats,
     staff,
     presentationDocument: {
-      id: LIONS_LOCAL_EDITORIAL_DOCUMENT_ID,
+      id: LIONS_LOCAL_PRESENTATION_DOCUMENT_ID,
       club_id: clubId,
       version: 1,
       schema_version: 1,
-      template_id: "editorial",
+      template_id: "clubhouse",
       template_version: 1,
       configuration: presentationConfiguration,
       configuration_digest: presentationDigest,
@@ -922,16 +803,16 @@ export function buildLionsLocalImportRows(
     presentationState: {
       club_id: clubId,
       draft_document_id: null,
-      published_document_id: LIONS_LOCAL_EDITORIAL_DOCUMENT_ID,
+      published_document_id: LIONS_LOCAL_PRESENTATION_DOCUMENT_ID,
       updated_by: LIONS_LOCAL_PRESENTATION_ACTOR_ID,
       updated_at: now,
     },
     presentationPublication: {
-      id: LIONS_LOCAL_EDITORIAL_PUBLICATION_ID,
+      id: LIONS_LOCAL_PRESENTATION_PUBLICATION_ID,
       club_id: clubId,
       action: "publish",
       previous_document_id: null,
-      next_document_id: LIONS_LOCAL_EDITORIAL_DOCUMENT_ID,
+      next_document_id: LIONS_LOCAL_PRESENTATION_DOCUMENT_ID,
       next_configuration_digest: presentationDigest,
       validation_result: { valid: true, errors: [], warnings: [] },
       override_reason: null,
@@ -1109,8 +990,8 @@ export function buildLionsLocalImportRows(
         updated_at: now,
       },
     ],
-    // Lions E7: club_identity (Lions E1) content for the editorial@1 pages
-    // built in E3-E6. founded_year/league/division/venue/city/state are kept
+    // Lions identity content retains its previously imported details.
+    // founded_year/league/division/venue/city/state are kept
     // consistent with the fixtures already elsewhere in this file: the
     // "2025 Ohio Valley Division Champions" highlight on aboutPageContent,
     // the "Midwest Premier League" competition and "Scioto Field" venue on

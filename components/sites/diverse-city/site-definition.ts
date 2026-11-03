@@ -1,7 +1,9 @@
+import { academyHref, academyProgramsEditorHref } from "./routes";
+
 export const diverseCitySite = {
   id: "diverse-city",
   admin: {
-    about: { closingCtaHref: "/schedule", showLogoPage: false, chooseClosingCtaDestination: false },
+    about: { closingCtaHref: academyHref("schedule"), showLogoPage: false, chooseClosingCtaDestination: false },
     programs: { routeVisible: true, showSlugField: false, allowCreation: false, showPageCopyEditor: false },
     tryouts: { routeVisible: true, showProgramAndHeroFields: false, showHeroImageField: true },
     contact: { routeVisible: true, showGenericHeroEditor: false, showContactPreviewSkeleton: true },
@@ -22,7 +24,7 @@ export const diverseCitySite = {
       photoCaptionEditable: false,
       storyTextTarget: null,
       shopTargetSurface: "home",
-      programsTarget: { owner: "programs", editorHref: "/admin/programs" },
+      programsTarget: { owner: "programs", editorHref: academyProgramsEditorHref },
     },
   },
 } as const;

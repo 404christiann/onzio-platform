@@ -1476,11 +1476,8 @@ function PlayerFormFields({
   // point for this template; every other template keeps the inline panel.
   // Nothing else depends on it: the panel only renders for an already-saved
   // player and never seeds rows as a side effect of creating one.
-  // editorial@1 has the same dedicated season-stats entry point, so the inline
-  // redundancy is hidden there too.
   const hidesInlineSeasonStats =
-    codeSiteAdminFor(club)?.roster.showInlineSeasonStats === false ||
-    club.presentationTemplateKey === "editorial@1";
+    codeSiteAdminFor(club)?.roster.showInlineSeasonStats === false;
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {

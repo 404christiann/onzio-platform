@@ -561,13 +561,13 @@ describe("academy@1 surfaces render stored content, not literals", () => {
       heroVariant: "editable",
     }).editableSections).toEqual(["hero", "story"]);
     expect(resolveHomepageCapabilities({
-      templateKey: "editorial@1",
-      slideshowVariant: "editorial",
+      templateKey: "clubhouse@1",
+      slideshowVariant: "matchday",
       heroVariant: "editable",
     }).editableSections).toEqual(["hero", "photos"]);
     expect(resolveHomepageCapabilities({
-      templateKey: "editorial@1",
-      slideshowVariant: "editorial",
+      templateKey: "clubhouse@1",
+      slideshowVariant: "matchday",
       heroVariant: "editable",
     }).videoSourceEditable).toBe(false);
 

@@ -4,7 +4,6 @@ import { expect, test } from "@playwright/test";
 import {
   parsePresentationDocument,
   type PresentationDocument,
-  type TemplateId,
 } from "@/packages/presentation";
 import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
 
@@ -26,13 +25,9 @@ function assertSeededPresentation(publishedDocumentId: string | null) {
   }
 }
 
-const TEMPLATE_IDS: TemplateId[] = [
-  "academy",
-  "editorial",
-  "clubhouse",
-  "cinematic",
-  "heritage",
-];
+type ActiveTemplateId = "academy" | "clubhouse";
+
+const TEMPLATE_IDS: ActiveTemplateId[] = ["academy", "clubhouse"];
 
 type OriginalState = {
   draft_document_id: string | null;
@@ -51,7 +46,7 @@ const localDb = () => new Client({
 async function publishFixture(
   db: Client,
   source: PresentationDocument,
-  templateId: TemplateId,
+  templateId: ActiveTemplateId,
   createdBy: string,
 ) {
   const id = randomUUID();
@@ -80,15 +75,12 @@ async function publishFixture(
   return { id, document: configuration };
 }
 
-const expectedPieces: Record<TemplateId, string[]> = {
+const expectedPieces: Record<ActiveTemplateId, string[]> = {
   academy: [
     "hero.eyebrow", "hero.heading", "hero.intro", "hero.cta",
     "story.text", "story.cta",
   ],
-  editorial: ["hero.heading", "hero.intro", "hero.cta", "photos"],
   clubhouse: ["hero.heading", "hero.intro", "hero.cta", "photos"],
-  cinematic: ["hero.eyebrow", "hero.heading", "hero.intro", "hero.cta", "photos", "video"],
-  heritage: ["hero.eyebrow", "hero.heading", "hero.intro", "hero.cta", "photos", "video"],
 };
 
 test("homepage editor mirrors each published template and keeps public pages unannotated", async ({ page }, info) => {
@@ -139,14 +131,9 @@ test("homepage editor mirrors each published template and keeps public pages una
         await expect(preview.locator('[data-homepage-piece="photos"]')).toHaveCount(0);
         await expect(preview.locator('[data-homepage-piece="video"]')).toHaveCount(0);
       }
-      if (templateId === "editorial" || templateId === "clubhouse") {
+      if (templateId === "clubhouse") {
         await expect(preview.locator('[data-homepage-piece="hero.eyebrow"]')).toHaveCount(0);
       }
-      if (templateId === "cinematic" || templateId === "heritage") {
-        await expect(preview.locator('[data-homepage-piece="hero.eyebrow"]')).toHaveCount(1);
-        await expect(preview.locator('[data-homepage-piece="video"]')).toHaveCount(1);
-      }
-
       await page.setViewportSize({ width: frameWidth, height: 900 });
       await page.goto("/");
       await expect(page.locator("h1").first()).toBeVisible();
@@ -197,7 +184,14 @@ test("clean preview matches full public content and typography, including the le
   try {
     for (const template of [...TEMPLATE_IDS, "legacy" as const]) {
       await db.query("update onzio.clubs set slug=$1 where id=$2", [template === "legacy" ? "rose-city" : "alpha", ALPHA_CLUB_ID]);
-      await publishFixture(db, original.configuration, template === "legacy" ? "cinematic" : template, original.updated_by);
+      if (template === "legacy") {
+        await db.query(
+          "update onzio.presentation_state set published_document_id = null, draft_document_id = $1 where club_id = $2",
+          [original.published_document_id, ALPHA_CLUB_ID],
+        );
+      } else {
+        await publishFixture(db, original.configuration, template, original.updated_by);
+      }
       const origin = template === "legacy" ? "http://rose-city.localhost:3110" : "http://alpha.localhost:3110";
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });

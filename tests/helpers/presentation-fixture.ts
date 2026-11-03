@@ -3,19 +3,12 @@ import {
   sectionRegistry,
   templateRegistry,
   type PresentationDocument,
-  type TemplateId,
-  type TemplateKey,
+  type ActiveTemplateKey,
 } from "@/packages/presentation";
 
-const FALLBACKS: Record<TemplateId, { fontPack: string; sections: string[] }> = {
-  cinematic: {
-    fontPack: "bebas-inter",
-    sections: ["cinematic.hero", "shared.next-match", "cinematic.gallery"],
-  },
-  heritage: {
-    fontPack: "archivo-sora",
-    sections: ["heritage.identity", "shared.next-match", "shared.history", "heritage.affiliations"],
-  },
+type ActiveTemplateId = "clubhouse" | "academy";
+
+const FALLBACKS: Record<ActiveTemplateId, { fontPack: string; sections: string[] }> = {
   clubhouse: {
     fontPack: "geist",
     sections: [
@@ -39,17 +32,13 @@ const FALLBACKS: Record<TemplateId, { fontPack: string; sections: string[] }> = 
       "academy.programs-pathway",
     ],
   },
-  editorial: {
-    fontPack: "geist",
-    sections: ["editorial.hero", "shared.next-match", "editorial.slideshow", "shared.history"],
-  },
 };
 
 export function presentationDocumentForTemplate(
   source: PresentationDocument,
-  templateId: TemplateId,
+  templateId: ActiveTemplateId,
 ): PresentationDocument {
-  const key: TemplateKey = `${templateId}@1`;
+  const key: ActiveTemplateKey = `${templateId}@1`;
   const fallback = FALLBACKS[templateId];
   const sections = source.homepage.sections.filter((section) =>
     sectionRegistry[section.type]?.compatibleTemplates?.includes(key),

@@ -7,7 +7,7 @@ import { Client } from "pg";
 import { z } from "zod";
 import ts from "typescript";
 import { homepageHeroSchema } from "@/lib/homepage-editor/contract";
-import { parsePresentationDocument } from "@/packages/presentation";
+import { parseHistoricalPresentationDocument } from "@/packages/presentation";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
 import { assertSafeTestEnvironment } from "./environment";
 
@@ -59,7 +59,7 @@ export async function resolveAssignment(clubId: string, lookup: () => Promise<un
   if (!parsed.success || parsed.data.clubId !== clubId) return { kind: "invalid" };
   const event = parsed.data;
   if (event.legacyId) {
-    try { parsePresentationDocument(event.legacy, { surface: "production" }); }
+    try { parseHistoricalPresentationDocument(event.legacy, { surface: "production" }); }
     catch { return { kind: "invalid" }; }
     return { kind: "legacy", event };
   }

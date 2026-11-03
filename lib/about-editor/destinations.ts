@@ -1,4 +1,4 @@
-import { parsePresentationDocument, routeRegistry, templateRegistry, type TemplateKey } from "@/packages/presentation";
+import { activeTemplateRegistration, parsePresentationDocument, routeRegistry, type ActiveTemplateKey } from "@/packages/presentation";
 import type { ClubContext } from "@/lib/club-context";
 import { codeSiteAdminForTemplateKey } from "@/lib/code-site-admin";
 import type { SiteRouteOption } from "@/lib/site-routes";
@@ -6,6 +6,8 @@ import type { createClient } from "@/lib/supabase-server";
 
 type RouteKey = keyof typeof routeRegistry;
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
+const LEGACY_DEFAULT_ROUTES = ["home", "roster", "schedule", "club", "club-logo", "store"] as const;
+const LEGACY_SUPPORTED_ROUTES = [...LEGACY_DEFAULT_ROUTES, "sponsors"] as const;
 
 const LABELS: Record<RouteKey, string> = {
   home: "Home",
@@ -26,19 +28,17 @@ const LABELS: Record<RouteKey, string> = {
 /** Only routes in a published navigation and supported by its template are offered. */
 export function aboutDestinationOptions(
   routeKeys: readonly string[],
-  templateKey: TemplateKey | null,
+  templateKey: ActiveTemplateKey | null,
   storeEnabled: boolean,
 ): SiteRouteOption[] {
-  const template = templateRegistry[templateKey ?? "cinematic@1"];
-  const supported = new Set<string>(template.supportedRoutes);
+  const template = activeTemplateRegistration(templateKey);
+  const supported = new Set<string>(template?.supportedRoutes ?? LEGACY_SUPPORTED_ROUTES);
   const result: SiteRouteOption[] = [];
   const seen = new Set<string>();
   for (const key of routeKeys) {
     if (!supported.has(key) || !(key in routeRegistry) || seen.has(key)) continue;
     if (key === "store" && !storeEnabled) continue;
-    // The tenant tryouts route currently renders only these two templates.
-    // Heritage lists the route in its presentation registry but returns 404.
-    if (key === "tryouts" && !codeSiteAdminForTemplateKey(templateKey)?.tryouts.routeVisible && templateKey !== "editorial@1") continue;
+    if (key === "tryouts" && !codeSiteAdminForTemplateKey(templateKey)?.tryouts.routeVisible) continue;
     seen.add(key);
     const route = key as RouteKey;
     result.push({ href: routeRegistry[route].path, label: LABELS[route] });
@@ -46,7 +46,7 @@ export function aboutDestinationOptions(
   return result;
 }
 
-/** Resolve routes from this club's published presentation, with the legacy template fallback. */
+/** Resolve routes from this club's published presentation. */
 export async function loadAboutDestinationOptions(
   supabase: ServerClient,
   club: Pick<ClubContext, "id" | "presentationTemplateKey" | "storeEnabled">,
@@ -60,9 +60,8 @@ export async function loadAboutDestinationOptions(
   if (stateError) throw stateError;
 
   if (!state?.published_document_id) {
-    // Legacy tenants have no published presentation document yet.
-    const template = templateRegistry[club.presentationTemplateKey ?? "cinematic@1"];
-    return aboutDestinationOptions(template.defaultRoutes, club.presentationTemplateKey, club.storeEnabled);
+    const template = activeTemplateRegistration(club.presentationTemplateKey);
+    return aboutDestinationOptions(template?.defaultRoutes ?? LEGACY_DEFAULT_ROUTES, club.presentationTemplateKey, club.storeEnabled);
   }
 
   const { data: row, error: documentError } = await onzio

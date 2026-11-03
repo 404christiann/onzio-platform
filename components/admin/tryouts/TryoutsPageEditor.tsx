@@ -71,7 +71,7 @@ function serverPhoneViewport() { return false; }
 
 export default function TryoutsPageEditor() {
   const club = useClubContext();
-  if (!codeSiteAdminFor(club)?.tryouts.routeVisible && club.presentationTemplateKey !== "editorial@1") {
+  if (!codeSiteAdminFor(club)?.tryouts.routeVisible) {
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="This website design does not publish a Tryouts page." />
       <p className="rounded-xl border border-border bg-card p-6 font-body text-sm text-muted-foreground">Choose a supported website design before editing a public Tryouts page.</p>
@@ -83,8 +83,7 @@ export default function TryoutsPageEditor() {
 function TryoutsPageEditorContent() {
   const club = useClubContext();
   const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? !isEditorial;
+  const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? true;
   const showsHeroImage = tryoutsPolicy?.showHeroImageField ?? false;
   const [events, setEvents] = useState<EventDraft[]>([]);
   const [deleted, setDeleted] = useState<DeletedEvent[]>([]);
