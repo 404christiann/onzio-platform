@@ -43,24 +43,24 @@ async function installGuard(
         if (kit.kind === "academy-fixture" && !url.pathname.startsWith("/_vercel/insights/") && !/(^|\.)(b-cdn\.net|bunnycdn\.com|mediadelivery\.net)$/.test(url.hostname)) {
           routeErrors.push(`Unexpected external resource ${url.origin}${url.pathname}`);
         }
-        return route.abort("blockedbyclient");
+        return await route.abort("blockedbyclient");
       }
       if (!["GET", "HEAD", "OPTIONS"].includes(route.request().method())) {
         const read = route.request().method() === "POST" && url.pathname === "/api/admin/data"
           && z.object({ operation: z.literal("select") }).safeParse(route.request().postDataJSON()).success;
-        if (!read) { routeErrors.push(`Blocked mutation ${route.request().method()} ${url.pathname}`); return route.abort("blockedbyclient"); }
+        if (!read) { routeErrors.push(`Blocked mutation ${route.request().method()} ${url.pathname}`); return await route.abort("blockedbyclient"); }
       }
       if (kit.kind === "academy-fixture") assertAcademyRead(url, kit.clubId);
       if (/\/rest\/v1\/shop_kit_(section|photos)$/.test(url.pathname)) {
         assert.equal(url.searchParams.get("club_id"), `eq.${kit.kind === "legacy-home" ? kit.section.club_id : kit.clubId}`);
         if (kit.kind === "legacy-home") {
           assert.equal(url.searchParams.get("kit_variant"), "eq.home");
-          return route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(url.pathname.endsWith("shop_kit_section") ? [kit.section] : kit.photos) });
+          return await route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify(url.pathname.endsWith("shop_kit_section") ? [kit.section] : kit.photos) });
         }
       }
       const documentRequest = route.request().isNavigationRequest() && route.request().resourceType() === "document";
       const denyDocument = () => route.fulfill({ status: 503, contentType: "text/plain", body: "Assignment unavailable. Document participant is not admitted." });
-      if (documentRequest && kit.kind === "academy-fixture" && !await kit.documentAllowed(url.origin)) return denyDocument();
+      if (documentRequest && kit.kind === "academy-fixture" && !await kit.documentAllowed(url.origin)) return await denyDocument();
       const headers = await route.request().allHeaders();
       for (let hop = 0; hop < 20; hop++) {
         if (hop > 0 && credentialsAllowed) {
@@ -73,7 +73,7 @@ async function installGuard(
         const marker = proxy.marker();
         const response = await route.fetch({ url: url.href, headers: { ...headers, [pilotProofProxyMarkerHeader]: marker }, maxRedirects: 0 });
         proxy.confirm(marker);
-        if (![301, 302, 303, 307, 308].includes(response.status())) return route.fulfill({ response });
+        if (![301, 302, 303, 307, 308].includes(response.status())) return await route.fulfill({ response });
         if (route.request().method() === "POST") throw new Error("Read-only POST redirects are blocked");
         const location = response.headers().location;
         assert(location, "Redirect location missing");
@@ -82,14 +82,18 @@ async function installGuard(
         if (kit.kind === "academy-fixture") assertAcademyRead(next, kit.clubId);
         observations.redirects.push({ from: url.href, to: next.href, status: response.status() });
         if (documentRequest && kit.kind === "academy-fixture") {
-          if (!await kit.documentAllowed(next.origin)) return denyDocument();
-          if (next.origin === url.origin) return route.fulfill({ response });
+          if (!await kit.documentAllowed(next.origin)) return await denyDocument();
+          if (next.origin === url.origin) return await route.fulfill({ response });
         }
         if (next.origin !== url.origin) { credentialsAllowed = false; delete headers.authorization; headers.cookie = ""; }
         url = next;
       }
       throw new Error("Too many local redirects");
-    } catch (error) { routeErrors.push(String(error)); return route.abort("blockedbyclient"); }
+    } catch (error) {
+      routeErrors.push(String(error));
+      try { await route.abort("blockedbyclient"); }
+      catch (abortError) { routeErrors.push(`Could not abort failed proof route: ${String(abortError)}`); }
+    }
   });
 }
 

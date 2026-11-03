@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import type { Page } from "@playwright/test";
+import { expect, type Page, type Request } from "@playwright/test";
 
 export function observePilotProofPage(page: Page, imagePaths: readonly string[]) {
   const fonts = new Set<string>();
@@ -11,6 +11,11 @@ export function observePilotProofPage(page: Page, imagePaths: readonly string[])
   const bodyErrors: string[] = [];
   const networkErrors: string[] = [];
   const consoleErrors: string[] = [];
+  const pending = new Map<Request, number>();
+  let lastActivity = Date.now();
+  page.on("request", request => { pending.set(request, Date.now()); lastActivity = Date.now(); });
+  page.on("requestfinished", request => { pending.delete(request); lastActivity = Date.now(); });
+  page.on("requestfailed", request => { pending.delete(request); lastActivity = Date.now(); });
   page.on("pageerror", error => pageErrors.push(error.message));
   page.on("console", message => {
     const location = message.location().url;
@@ -32,8 +37,19 @@ export function observePilotProofPage(page: Page, imagePaths: readonly string[])
       else images.set(path, digest);
     } catch (error) { bodyErrors.push(`${path}: ${String(error)}`); }
   });
-  return async function finish() {
-    await page.waitForLoadState("networkidle");
+  async function waitForIdle() {
+    try {
+      await expect.poll(() => pending.size === 0 && Date.now() - lastActivity >= 500, { timeout: 30_000, intervals: [100] }).toBe(true);
+    } catch (error) {
+      const outstanding = [...pending].map(([request, started]) => {
+        const url = new URL(request.url());
+        return `${request.method()} ${url.pathname} (${Date.now() - started}ms)`;
+      });
+      throw new Error(`Proof page did not become quiet; pending ${JSON.stringify(outstanding)}`, { cause: error });
+    }
+  }
+  const finish = async () => {
+    await waitForIdle();
     await page.removeAllListeners("response", { behavior: "wait" });
     await page.context().close();
     assert.deepEqual(pageErrors, []);
@@ -46,4 +62,5 @@ export function observePilotProofPage(page: Page, imagePaths: readonly string[])
       pageErrors: [...pageErrors], bodyErrors: [...bodyErrors], networkErrors: [...networkErrors], consoleErrors: [...consoleErrors],
     };
   };
+  return Object.assign(finish, { waitForIdle });
 }

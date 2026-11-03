@@ -1,6 +1,8 @@
 # Complete the local Academy acceptance proof
 
 Issue [#53](https://github.com/404christiann/onzio-platform/issues/53) is in progress.
+
+The complete local SQL and browser proof now passes; see `HANDOFF.md`, the SITE-07 #53 status ledger in `docs/site-architecture.md`, and [the ticket-53 proof record](verification/site07-shell/ticket-53/README.md). Final exact-head verification and independent final-head review remain pending. The executable proof diff still requires Christian's specific verifier authorization described below.
 All native prerequisites #47/#48/#49/#50/#51/#52 are locally accepted and closed.
 This plan is not a completed acceptance record. Its private integration combines
 accepted #52 `e4a7104` and #51 `5bb8f7f`. Their production release approvals are

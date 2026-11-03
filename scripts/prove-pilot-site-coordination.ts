@@ -3,8 +3,9 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { chromium, expect, type BrowserContext } from "@playwright/test";
+import { chromium, expect, type BrowserContext, type Request } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 import { z } from "zod";
 import { USER_IDS } from "../tests/fixtures/entities";
 import { openCoordinationProof } from "../tests/helpers/site-coordination-proof";
@@ -118,7 +119,7 @@ async function run() {
       scope.signal.throwIfAborted();
       const origins = Object.values(scope.servers).map(server => server.origin);
       return withPilotProofProxy(origins, async proxy => {
-        const browser = await chromium.launch({ proxy: { server: proxy.server, bypass: "" } });
+        const browser = await chromium.launch({ args: ["--disable-gpu", "--force-color-profile=srgb"], proxy: { server: proxy.server, bypass: "" } });
         const abort = () => { void browser.close(); };
         scope.signal.addEventListener("abort", abort, { once: true });
         const captures: Awaited<ReturnType<typeof capture>>[] = [];
@@ -134,7 +135,7 @@ async function run() {
         const photos = ["/images/shop/rosecityshirt1.webp", "/images/shop/rosecityshirt2.jpeg"].map((url, index) => ({ id: String(index), surface: "home", kit_variant: "home", url, sort_order: index, created_at: section.updated_at }));
         const networkTraces = new WeakMap<BrowserContext, AcademyProofNetworkObservations>();
         async function context(width: number, storageState: StorageState | undefined = auth) {
-          const context = await browser.newContext({ viewport: { width, height: 900 }, storageState, reducedMotion: "reduce", serviceWorkers: "block", proxy: { server: proxy.server, bypass: "" } });
+          const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 1, storageState, reducedMotion: "reduce", serviceWorkers: "block", proxy: { server: proxy.server, bypass: "" } });
           const observations: AcademyProofNetworkObservations = { errors: routeErrors, excludedResources, forwardedDocuments: [], redirects: [] };
           networkTraces.set(context, observations);
           await installAcademyProofGuard(context, origins, proxy, { clubId: proof.clubId, documentAllowed: origin => site.documentAllowed(origin) }, observations);
@@ -191,19 +192,35 @@ async function run() {
         async function captureDocument(label: string, width: number, selected: Published, item: AcademyProofDocumentCase) {
           const session = await context(width);
           try {
-            const page = await session.newPage();
-            const finish = observePilotProofPage(page, photos.map(photo => photo.url));
+            let page = await session.newPage();
+            const staffRedirect = item.document.kind === "public" && item.document.route === "staff";
+            let finish = staffRedirect ? null : observePilotProofPage(page, photos.map(photo => photo.url));
             const reads: Record<string, number> = {};
-            page.on("request", request => {
+            const countReads = (request: Request) => {
               const target = new URL(request.url());
               if (target.pathname.startsWith("/rest/v1/") || target.pathname.startsWith("/api/")) {
                 const key = `${request.method()} ${target.pathname}`;
                 reads[key] = (reads[key] ?? 0) + 1;
               }
-            });
+            };
+            const watchRequests = () => {
+              page.on("request", countReads);
+            };
+            watchRequests();
             const response = await page.goto(selected.document(item.document));
             assert.equal(response?.status(), 200, `${item.id} did not render successfully`);
-            if (item.document.kind === "public" && item.document.route === "staff") {
+            if (staffRedirect) {
+              await page.waitForURL(url => url.pathname === "/roster" && url.hash === "#staff");
+              assert.equal(new URL(page.url()).pathname, "/roster");
+              assert.equal(new URL(page.url()).hash, "#staff");
+              const destination = page.url();
+              await page.waitForLoadState("networkidle");
+              await page.close();
+              page = await session.newPage();
+              finish = observePilotProofPage(page, photos.map(photo => photo.url));
+              watchRequests();
+              const settled = await page.goto(destination);
+              assert.equal(settled?.status(), 200, "Staff destination did not render successfully");
               assert.equal(new URL(page.url()).pathname, "/roster");
               assert.equal(new URL(page.url()).hash, "#staff");
             }
@@ -219,7 +236,9 @@ async function run() {
                 await controls.getByRole("button", { name: item.action, exact: false }).click();
                 if (phoneVisible && await phoneChooser.getAttribute("open") !== null) await phoneChooser.locator("summary").click();
               } else if (item.action) {
-                await page.getByRole("button", { name: item.action, exact: false }).first().click();
+                const action = page.getByRole("button", { name: item.action, exact: false }).first();
+                await action.click();
+                if (["preview.shop", "preview.homeKit"].includes(item.id)) await expect(action).toHaveAttribute("aria-current", "page");
               }
               const device = page.getByRole("button", { name: width === 390 ? "Phone" : "Desktop", exact: true });
               if (await device.count()) await device.first().click();
@@ -227,12 +246,32 @@ async function run() {
             const ready = item.frame
               ? page.frameLocator(`iframe[title$=${JSON.stringify(item.frame)}]`).locator("body")
               : page.locator(item.selector).first();
-            await expect(ready).toBeVisible();
+            await expect(ready).toBeVisible({ timeout: 30_000 });
             const content = item.document.kind === "public" ? page.locator("main").first() : ready;
-            if (item.text) await expect(content).toContainText(item.text, { ignoreCase: true });
-            if (item.id === "public.sponsors" || item.id === "preview.sponsorsCarousel") await expect(content.getByRole("img", { name: "Proof Sponsor", exact: true }).first()).toBeVisible();
+            if (item.text) await expect(content).toContainText(item.text, { ignoreCase: true, timeout: 30_000 });
+            if (item.id === "public.sponsors" || item.id === "preview.sponsorsCarousel") await expect(content.getByRole("img", { name: "Proof Sponsor", exact: true }).first()).toBeVisible({ timeout: 30_000 });
             if (item.document.kind === "preview") {
-              await expect.poll(async () => (await content.innerText()).trim().length).toBeGreaterThan(10);
+              await expect.poll(async () => (await content.innerText()).trim().length, { timeout: 30_000 }).toBeGreaterThan(10);
+              if (["preview.shop", "preview.homeKit"].includes(item.id)) {
+                await expect(content).toContainText("Home kit pilot", { timeout: 30_000 });
+                const kitPhotos = content.locator('[data-shop-editor-target="photos"] img');
+                await expect(kitPhotos).toHaveCount(2, { timeout: 30_000 });
+                await kitPhotos.evaluateAll(async images => {
+                  await Promise.all(images.map(async image => {
+                    if (!(image instanceof HTMLImageElement)) throw new Error("Shop preview photo is not an image");
+                    await image.decode();
+                    if (!image.naturalWidth) throw new Error("Shop preview photo did not decode");
+                  }));
+                });
+                await expect.poll(async () => {
+                  const painted = await Promise.all([0, 1].map(async index => {
+                    const image = await kitPhotos.nth(index).screenshot({ animations: "disabled" });
+                    const stats = await sharp(image).stats();
+                    return Math.max(...stats.channels.slice(0, 3).map((channel: { stdev: number }) => channel.stdev)) > 35;
+                  }));
+                  return painted.every(Boolean);
+                }, { timeout: 20_000, intervals: [250] }).toBe(true);
+              }
             }
             if (label === "rollback-a" && ["public.home", "preview.homepage"].includes(item.id)) await expect(content).toContainText(latestIntro);
             await content.evaluate(async element => {
@@ -240,11 +279,13 @@ async function run() {
               for (const image of Array.from(element.querySelectorAll("img"))) {
                 if (!image.complete) await new Promise<void>((resolve, reject) => { image.addEventListener("load", () => resolve(), { once: true }); image.addEventListener("error", () => reject(new Error("Proof image failed")), { once: true }); });
                 if (!image.naturalWidth) throw new Error("Proof image has no decoded content");
+                await image.decode();
               }
               const animations = element.ownerDocument.getAnimations().filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity);
               await Promise.all(animations.map(animation => animation.finished.catch(() => undefined)));
             });
-            await page.waitForLoadState("networkidle");
+            assert(finish, "Document observer was not installed");
+            await finish.waitForIdle();
             if (item.document.kind === "public") {
               await page.evaluate(async () => {
                 for (let offset = 0; offset < document.documentElement.scrollHeight; offset += window.innerHeight * 0.75) {
@@ -266,11 +307,70 @@ async function run() {
             }, { timeout: 10_000, intervals: [100] }).toBe(true);
             await page.mouse.move(0, 0);
             await content.evaluate(element => new Promise<void>(resolve => element.ownerDocument.defaultView?.requestAnimationFrame(() => element.ownerDocument.defaultView?.requestAnimationFrame(() => resolve()))));
+            if (item.document.kind === "public") {
+              for (const image of [
+                page.locator('header nav a[aria-label$=" Home"] img').first(),
+                ...["US Soccer", "FIFA", "UPSL"].map(name => page.locator(`header nav img[alt=${JSON.stringify(name)}]`)),
+              ]) {
+                await expect(image).toBeVisible({ timeout: 30_000 });
+                await image.evaluate(async element => { await (element as HTMLImageElement).decode(); });
+                await expect.poll(async () => {
+                  const screenshot = await image.screenshot({ animations: "disabled" });
+                  const stats = await sharp(screenshot).stats();
+                  return Math.max(...stats.channels.map((channel: { stdev: number }) => channel.stdev)) > 15;
+                }, { timeout: 20_000, intervals: [250] }).toBe(true);
+              }
+            }
+            if (item.id === "preview.sponsorsCarousel") {
+              const editorLogo = page.getByRole("button", { name: "Remove sponsor logo 1" }).locator("xpath=..").locator("img");
+              await expect(editorLogo).toBeVisible();
+              await editorLogo.evaluate(async image => {
+                await (image as HTMLImageElement).decode();
+                await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+              });
+            }
             const state = await content.evaluate(element => ({ text: element.textContent, markup: element.outerHTML,
               links: Array.from(element.querySelectorAll("a[href]")).map(link => [link.textContent, link.getAttribute("href")]),
               headings: Array.from(element.querySelectorAll("h1,h2,h3")).map(heading => ({ text: heading.textContent, font: getComputedStyle(heading).fontFamily, color: getComputedStyle(heading).color, size: getComputedStyle(heading).fontSize })) }));
             const screenshot = join(output, `${label}-${width}-${item.id}.png`);
-            await page.screenshot({ path: screenshot, fullPage: true, animations: "disabled" });
+            if (item.id === "preview.homeKit") {
+              await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+              const photos = content.locator('[data-shop-editor-target="photos"]');
+              const box = await photos.boundingBox();
+              assert(box, "Home kit photo panel has no visible bounds");
+              const region = {
+                left: Math.floor(box.x + box.width * 0.6),
+                top: Math.floor(box.y + box.height * 0.1),
+                width: Math.floor(box.width * 0.35),
+                height: Math.floor(box.height * 0.6),
+              };
+              let painted = false;
+              let previous: Buffer | null = null;
+              for (let attempt = 0; attempt < 30; attempt++) {
+                const current = await page.screenshot({ fullPage: true, animations: "disabled" });
+                const stats = await sharp(current).extract(region).stats();
+                const secondJerseyVisible = Math.max(...stats.channels.slice(0, 3).map((channel: { stdev: number }) => channel.stdev)) > 35;
+                if (secondJerseyVisible && previous?.equals(current)) {
+                  writeFileSync(screenshot, current);
+                  painted = true;
+                  break;
+                }
+                previous = secondJerseyVisible ? current : null;
+                await page.waitForTimeout(250);
+              }
+              assert(painted, "Home kit preview did not show the second jersey in two identical frames");
+            } else if (item.id === "preview.sponsorsCarousel") {
+              let previous = await page.screenshot({ fullPage: true, animations: "disabled" });
+              let stable = false;
+              for (let attempt = 0; attempt < 5; attempt++) {
+                await content.evaluate(element => new Promise<void>(resolve => element.ownerDocument.defaultView?.requestAnimationFrame(() => element.ownerDocument.defaultView?.requestAnimationFrame(() => resolve()))));
+                const current = await page.screenshot({ fullPage: true, animations: "disabled" });
+                if (current.equals(previous)) { writeFileSync(screenshot, current); stable = true; break; }
+                previous = current;
+              }
+              assert(stable, "Sponsors editor screenshot did not settle to identical frames");
+            } else await page.screenshot({ path: screenshot, fullPage: true, animations: "disabled" });
+            assert(finish, "Document observer was not installed");
             const observation = await finish();
             const manifest = selected.event.digest === acceptedA.digest ? acceptedA.manifest : acceptedB.manifest;
             const retained = new Set(manifest.files.map(file => file.sha256));

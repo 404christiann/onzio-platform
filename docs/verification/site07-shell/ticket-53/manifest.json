@@ -1,0 +1,3358 @@
+{
+  "verdict": "PASS",
+  "sourceReport": "test-results/pilot-site-coordination-bsqp6R/report.json",
+  "sourceReportSha256": "87a2640e39fe14c4f08582d66140d041080f666c6f340b0482d6411e59538bf8",
+  "accepted": {
+    "a": "a490dd00164e0fa64ef6ef956d76d94ff09a19db44fb94dbe04fbdfeeaba96e2",
+    "b": "d0666231ff01e269777d354929c168ae2261f043880d8e6b0e6ab8ccfc5516a8"
+  },
+  "runtime": {
+    "node": "v22.23.4",
+    "modules": "127",
+    "platform": "darwin",
+    "arch": "arm64",
+    "next": "15.5.22",
+    "nodeModules": "/Users/christianalcala/.codex/worktrees/onzio53-source-b/onzio-platform-codex-loop/node_modules"
+  },
+  "requiredDocuments": [
+    "public.home",
+    "public.about",
+    "public.logo",
+    "public.contact",
+    "public.programs",
+    "public.programDetail",
+    "public.register",
+    "public.registerConfirmation",
+    "public.roster",
+    "public.rosterPlayer",
+    "public.schedule",
+    "public.scheduleFixture",
+    "public.shop",
+    "public.sponsors",
+    "public.staff",
+    "public.stats",
+    "public.tryouts",
+    "preview.homepage",
+    "preview.about",
+    "preview.contact",
+    "preview.tryouts",
+    "preview.programs",
+    "preview.programDetail",
+    "preview.shop",
+    "preview.homeKit",
+    "preview.sponsorsCarousel",
+    "preview.standings",
+    "preview.brandingFooter"
+  ],
+  "controlChecks": [
+    "missing-and-explicit-legacy-resolution",
+    "manufactured-plan-rejection",
+    "partial-rollout-rejection",
+    "stale-generation-rejection",
+    "drained-document-denial",
+    "full-route-and-mounted-preview-coverage",
+    "latest-content-billing-schema-rollback-preservation",
+    "visible-invalid-assignment-denial",
+    "authored-ABA-fresh-save-denial",
+    "original-committed-receipt-replay",
+    "operation-reuse-rejection",
+    "current-platform-denial"
+  ],
+  "routeErrors": [],
+  "excludedResources": [
+    "GET http://pilot.localhost:65023/_vercel/insights/script.js",
+    "GET http://pilot.localhost:65024/_vercel/insights/script.js",
+    "GET http://pilot.localhost:65025/_vercel/insights/script.js",
+    "GET https://vz-dab9684b-901.b-cdn.net/e49b4657-7396-48d7-b55b-09d38d892c72/play_720p.mp4",
+    "GET https://vz-dab9684b-901.b-cdn.net/f84f9cbb-4b03-43f8-94f3-33010680533e/play_720p.mp4"
+  ],
+  "recovery": {
+    "path": "/private/tmp/onzio-academy-proof-G2nzrB/recovery.json",
+    "stage": "verified-clean",
+    "sha256": "3536ed4f2ec879ff7ab9800a2f5d2ff9a7192efdf8f4377b8166f224e992fce9"
+  },
+  "captures": [
+    {
+      "label": "a",
+      "width": 1440,
+      "event": "e3d7d4b6-d5ce-4d79-8c9f-efc92f00d5da",
+      "digest": "a490dd00164e0fa64ef6ef956d76d94ff09a19db44fb94dbe04fbdfeeaba96e2",
+      "worker": "old",
+      "public": {
+        "text": "Academyproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px"
+      },
+      "preview": {
+        "text": "Coordinated draft rehearsalproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px",
+        "width": 762
+      },
+      "screenshots": {
+        "a-1440-public.png": "761439ebb4bcd99b8cf46d9fb5caf8fbb069e431c67bea1ad019e898a74d609a",
+        "a-1440-kit.png": "a5dec1cf96b16d23726b4ca34309fa317a99026fe770c68339f4e04cf0beed00",
+        "a-1440-editor.png": "3ef40c33daf4880bfb40449d05ad711e007e17e2d1dbaf1f9a1f846789f6dfe2"
+      },
+      "resourceCounts": {
+        "fonts": 5,
+        "css": 5,
+        "images": 2,
+        "scripts": 39
+      },
+      "errorCounts": {
+        "pageErrors": 0,
+        "bodyErrors": 0,
+        "networkErrors": 0,
+        "consoleErrors": 0
+      },
+      "documents": [
+        {
+          "id": "public.home",
+          "screenshot": "a-1440-public.home.png",
+          "screenshotSha256": "5397023c6a7f56f0feb2be01e41a43241aaee008a97165b88615d25e227e0863",
+          "markupSha256": "adb812c3fcdd1d0c742d6b8d5068633b42906a2660dce798c27ddb08a95ee0e6",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 30
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.about",
+          "screenshot": "a-1440-public.about.png",
+          "screenshotSha256": "2794ba47c078a26a0b1aac15173a6b3be516c60f78b3aa181861b55651f57c3f",
+          "markupSha256": "8f437c0d73f1f67d74676d619202b3f8bc87ab71c40389778e8d318a88791721",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.logo",
+          "screenshot": "a-1440-public.logo.png",
+          "screenshotSha256": "797369bfe00286622735e98dd3a746ab1f7a4f33992afee121adf01b317a3d49",
+          "markupSha256": "4c9f0d1427136162902c9ec8c8ba511fbd88b58a8d8572827f4303e6f45eec45",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.contact",
+          "screenshot": "a-1440-public.contact.png",
+          "screenshotSha256": "bb6da33e424fcfb612d942c3262528f365ae11659c91f534c294cdf3944afbb9",
+          "markupSha256": "d76d9e80cdb5b30d1ca8ebee512dca56dcc3cdbddc18d2001697ed485a1846a0",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programs",
+          "screenshot": "a-1440-public.programs.png",
+          "screenshotSha256": "7f04245ed0689eea65f2543faf04055078550a000014f910437c66d40c494847",
+          "markupSha256": "76a3999a1e2498716480c605d6b771470308419009bd64f77af771870d637b2a",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programDetail",
+          "screenshot": "a-1440-public.programDetail.png",
+          "screenshotSha256": "e2092b3fe3d0eee6c43d23d51a61d774d95004e88755a2a2729372d9fcf6e8d9",
+          "markupSha256": "d0da58715e29796cbb2f7f40cd11f6dc4d478b13849e39ad459aeccbe85c7bed",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.register",
+          "screenshot": "a-1440-public.register.png",
+          "screenshotSha256": "b2dc1eecf1f6ea48dcc4241dd42cf8ba9a37d970555cc14b51367f31a5d8a600",
+          "markupSha256": "adfc68cf900cf9ecc661931dd627be33857494d5be325f6ccdc747a88202e517",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.registerConfirmation",
+          "screenshot": "a-1440-public.registerConfirmation.png",
+          "screenshotSha256": "8b22e130c4b3edab9791e0fb1ccb9e37bda287d27a330714c431bedbd9d4eb0c",
+          "markupSha256": "c02381bfdd25ff2bf3a7f12ad630b12a648c3dd9392fe3b7852a9c7a3c11d29f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.roster",
+          "screenshot": "a-1440-public.roster.png",
+          "screenshotSha256": "31879b0307708a67dafed4c3a1879ec00ddcb37714cd3fcce7610b471396a70c",
+          "markupSha256": "4ad1193d2675b3fc1e0b6a9197d941f043676f6648ca47930b9c56150adb6f9f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.rosterPlayer",
+          "screenshot": "a-1440-public.rosterPlayer.png",
+          "screenshotSha256": "9952dbde767e31dcf6f8afcbc11b52cb509cb723ac12a656edb2539d75ea4e02",
+          "markupSha256": "6f33106aeb258c0764cfef61b28c04515b1169aaf11fea9712df0e9636060fc6",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.schedule",
+          "screenshot": "a-1440-public.schedule.png",
+          "screenshotSha256": "029c3979ac7160df2f8519161da6e3a680be0ab7893fdbc0b6bc3729d2c0b914",
+          "markupSha256": "726334bcb4a705ec050127b37270781313bbf50cbf96cd31ae39b956b07e7efe",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.scheduleFixture",
+          "screenshot": "a-1440-public.scheduleFixture.png",
+          "screenshotSha256": "d095d5c046b655cef1b828e0fa2168c443abfe5e10b260fd93351f2a29b2f6e4",
+          "markupSha256": "e246041fd107fb6d37a59189be147926c5ec5aaef473312883268ee072b244ee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.shop",
+          "screenshot": "a-1440-public.shop.png",
+          "screenshotSha256": "b40dfa22150e6ffe6543c3a4c7d68baca8b5b0f79bd2af0d55e6338b36a40f36",
+          "markupSha256": "38e10f44cd1cd883cf93cac25f78ca1d2d4539db856a44cbd45dff4ef32b0005",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.sponsors",
+          "screenshot": "a-1440-public.sponsors.png",
+          "screenshotSha256": "b0b4d76c3dfcf6a7764673f3d713c2baf091c3a27acecde2be392b51aa7564a2",
+          "markupSha256": "51bb16bf1d5400942c5ad190400984516351c581b5000728045b748884d0fe8f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.staff",
+          "screenshot": "a-1440-public.staff.png",
+          "screenshotSha256": "31879b0307708a67dafed4c3a1879ec00ddcb37714cd3fcce7610b471396a70c",
+          "markupSha256": "4ad1193d2675b3fc1e0b6a9197d941f043676f6648ca47930b9c56150adb6f9f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.stats",
+          "screenshot": "a-1440-public.stats.png",
+          "screenshotSha256": "9a8bab4ab16d8ee40f120d4b9f4505d7862bc097fe4e2980ac1d37370ca49e27",
+          "markupSha256": "4e414ad9f59f1e194406047a115a1b13578c866f9dc3ad827022066080090d25",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.tryouts",
+          "screenshot": "a-1440-public.tryouts.png",
+          "screenshotSha256": "ca7d957305c779e248843dd9bb4f2802dad83c0d4ff9c45b5064f16e0aaef9f9",
+          "markupSha256": "334626e91f5f1301335b449c80c5b042dab71af9118bd1d2bfa0fcf0ec45ccdd",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homepage",
+          "screenshot": "a-1440-preview.homepage.png",
+          "screenshotSha256": "295738c1e46e1f7e24221bae7d6624d47b81f3e357b1a380fc81b3bd896a3f50",
+          "markupSha256": "45a2e4be6953d1ebac8c9dbac49d0a0b30df4bcf8efb545c4ecf52215a19266b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 38
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.about",
+          "screenshot": "a-1440-preview.about.png",
+          "screenshotSha256": "53fa5e09a4045ec45028958d1b6ab85c20400066248e35798aaba0bccc8fa13b",
+          "markupSha256": "ad10e0a7dcca7b04812cf6cfa1e2f1adfbb7f0bd274b1b0f06db709e192d9f2b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 6,
+            "images": 1,
+            "scripts": 31
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.contact",
+          "screenshot": "a-1440-preview.contact.png",
+          "screenshotSha256": "be81baadfbd0f43f1180da23dc131714e94e9e39fb33098e36fcddc49d6962fd",
+          "markupSha256": "af32a950d1ca40ff002660a67b854db8c7a7ddaf250d8bb66e522fa0e219dccf",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 18
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.tryouts",
+          "screenshot": "a-1440-preview.tryouts.png",
+          "screenshotSha256": "a07386043e606c78d3dce0fd7ab650148a646721f7a5aa596e9c16926af9db35",
+          "markupSha256": "4eeac8859befb3f89954d5f6f68a83f915f9bd5626da2ead62e4ddb5e5a0e690",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programs",
+          "screenshot": "a-1440-preview.programs.png",
+          "screenshotSha256": "5ef3e3a280ebeaa0122c554bbc92d23196ac22ae215b3c5f74b32f6d5111e160",
+          "markupSha256": "3a66aa181ee71172857eaafc21634a064f6cad505b8de2e3a542d320cd6e9c8d",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programDetail",
+          "screenshot": "a-1440-preview.programDetail.png",
+          "screenshotSha256": "b02e9f6ae0a736d9d71a5c6c37be11d6ebfb05ef0094e1c2e5838f1f17591179",
+          "markupSha256": "bfeefa9bf7c9e2239943d7d03a00843260e01310eacf0c085fc9d386f09311ee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 1,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.shop",
+          "screenshot": "a-1440-preview.shop.png",
+          "screenshotSha256": "7a5a13f0ea3797b2f12aec1fc4f35ba5295cf896a4917034efbb4b680fb7e3dc",
+          "markupSha256": "c221155f3836f5672c0bad3e20c48eaedabba157c3ee40bdd22c436cfb69e7a2",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homeKit",
+          "screenshot": "a-1440-preview.homeKit.png",
+          "screenshotSha256": "db8008a163b2f0e625431f0b903b6d0f9aec78caa96d52f1866945dd6720bcfa",
+          "markupSha256": "8530109c56fdac6207a9c858f02863fc44e260970036ff04fb51624f36b86b13",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 32
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.sponsorsCarousel",
+          "screenshot": "a-1440-preview.sponsorsCarousel.png",
+          "screenshotSha256": "54b9616b9bb4c1211a340498b75714b3a40432827634f6a54d5a813b527a80d1",
+          "markupSha256": "7973fd4f629017dea32799f1e11f65fbebea91e7b0854cd7b753c4148f7dbd9e",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.standings",
+          "screenshot": "a-1440-preview.standings.png",
+          "screenshotSha256": "79d9ef3f950409634bf6e82dda96871fad38ac5db53f300eb170233a286a3619",
+          "markupSha256": "99b26094a4b28735f0fb8c4c8b0baaea99946dc5f3ec382372ecde3fdb616bdb",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 19
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.brandingFooter",
+          "screenshot": "a-1440-preview.brandingFooter.png",
+          "screenshotSha256": "abef1bc6a7531eb4be0e1a45db591d340c48f071fb4d8b2246d5db1d6fbc95d5",
+          "markupSha256": "81b703624eb05196cd2579ac4cca0c2d0880c08af3ae9180ee97ed874745072c",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "b",
+      "width": 1440,
+      "event": "cd684535-f003-475b-9c7d-caea29428ec8",
+      "digest": "d0666231ff01e269777d354929c168ae2261f043880d8e6b0e6ab8ccfc5516a8",
+      "worker": "new",
+      "public": {
+        "text": "Academyproof home",
+        "color": "rgb(1, 2, 3)",
+        "font": "Geist, \"Geist Fallback\", Arial, sans-serif",
+        "size": "16px"
+      },
+      "preview": {
+        "text": "Coordinated draft rehearsalproof home",
+        "color": "rgb(1, 2, 3)",
+        "font": "Geist, \"Geist Fallback\", Arial, sans-serif",
+        "size": "16px",
+        "width": 762
+      },
+      "screenshots": {
+        "b-1440-public.png": "8fc39c7e0223c5d3d53b8b35d6cfc3abe2ed283785bfb925f77273ed77ebbe99",
+        "b-1440-kit.png": "7c9a7908e833e1ceaef2a513ab102431b4a5c321e79dff4404bfa2fd6231b4ed",
+        "b-1440-editor.png": "496c30830bd630e2a15fa86426523ab1fbf6b4030971f15a9282e07eeef9c742"
+      },
+      "resourceCounts": {
+        "fonts": 4,
+        "css": 5,
+        "images": 2,
+        "scripts": 39
+      },
+      "errorCounts": {
+        "pageErrors": 0,
+        "bodyErrors": 0,
+        "networkErrors": 0,
+        "consoleErrors": 0
+      },
+      "documents": [
+        {
+          "id": "public.home",
+          "screenshot": "b-1440-public.home.png",
+          "screenshotSha256": "c0b568f704e18fc2f2ac66538021aa7eebda17dedb25c31587f0f87396064858",
+          "markupSha256": "18a19fc19a70fe62a1f640fd2c8bb9c8d42f3c0a5300d30e8329ef0c38975f2d",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 2,
+            "scripts": 30
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.about",
+          "screenshot": "b-1440-public.about.png",
+          "screenshotSha256": "e3a6f2a60bfa9822e4b4dae300c23dea73cbd2a5ec65b17d11bb58c97a6e5c05",
+          "markupSha256": "578e07d38551b1ceffbf91770b062d6c7abcd87f51af16b91722c3fe639fc8d3",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.logo",
+          "screenshot": "b-1440-public.logo.png",
+          "screenshotSha256": "88c96c61cd80e9a93280bb8647c613a212c1fc2b73883e76774a3ba16749fb98",
+          "markupSha256": "ce89e5343989a5f6c068ba252fb52da138b9aa82cd7f6bbfa198015366a41c4b",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 2,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.contact",
+          "screenshot": "b-1440-public.contact.png",
+          "screenshotSha256": "ba6a28a622106f9f1a7f5147e73a2164ddd3eafef93f54fe8a9b14e5f27f680e",
+          "markupSha256": "62e55fcddb786a2d80b8d9ba7673dd90fa89af887c22c2fc4e2e84cc09df5e9b",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programs",
+          "screenshot": "b-1440-public.programs.png",
+          "screenshotSha256": "c7c748f06f83205643403ae349959df6d71e58ffd5eede392b7392b0f4e561c8",
+          "markupSha256": "76a3999a1e2498716480c605d6b771470308419009bd64f77af771870d637b2a",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programDetail",
+          "screenshot": "b-1440-public.programDetail.png",
+          "screenshotSha256": "584e7be03f123723479bbfb41584f5fc14e82243f87ac0fe7cfa261f665bcc73",
+          "markupSha256": "e01b766ed13749af94398d9376437c919596b67083d6632a6de85e33cb6a3572",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.register",
+          "screenshot": "b-1440-public.register.png",
+          "screenshotSha256": "6ae26f4c1edd6487fa1a34a82c40b50bbaae2449efa716d029911d1c8c53de2d",
+          "markupSha256": "adfc68cf900cf9ecc661931dd627be33857494d5be325f6ccdc747a88202e517",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.registerConfirmation",
+          "screenshot": "b-1440-public.registerConfirmation.png",
+          "screenshotSha256": "c810d52bb3db7e91842e804a13adf09d4fb9b74e5204baa4f74af8d5f74e0229",
+          "markupSha256": "c02381bfdd25ff2bf3a7f12ad630b12a648c3dd9392fe3b7852a9c7a3c11d29f",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.roster",
+          "screenshot": "b-1440-public.roster.png",
+          "screenshotSha256": "120efc855eba28f5433185cb9b5271f076f8ca2c1b6c59072c0a66b6d9f8f747",
+          "markupSha256": "27fa301bc2a497707f610d955f0c94061b4cf2398feab85b923171ae9421fdec",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.rosterPlayer",
+          "screenshot": "b-1440-public.rosterPlayer.png",
+          "screenshotSha256": "4ae2ed64834018ed6de410f22f0625c4ede4a2b453737dde501d2aaf818cc3ad",
+          "markupSha256": "6f33106aeb258c0764cfef61b28c04515b1169aaf11fea9712df0e9636060fc6",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.schedule",
+          "screenshot": "b-1440-public.schedule.png",
+          "screenshotSha256": "5db6a0a3b4dfdc1f9b2ade90ba5e71ccdd897518b50ed46b2bd1e4e17a23e2e1",
+          "markupSha256": "726334bcb4a705ec050127b37270781313bbf50cbf96cd31ae39b956b07e7efe",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.scheduleFixture",
+          "screenshot": "b-1440-public.scheduleFixture.png",
+          "screenshotSha256": "b5c32eb269558f8b8c31b8df7f1f7cb54048b90b70ddc348c477dbf962934139",
+          "markupSha256": "e246041fd107fb6d37a59189be147926c5ec5aaef473312883268ee072b244ee",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.shop",
+          "screenshot": "b-1440-public.shop.png",
+          "screenshotSha256": "1c69704b8126c012c8ed3f2f009a849e453dae73ace78ea01a9bbe0bf28fe830",
+          "markupSha256": "58d9219d4354f05b88248564907b0bf231e616239f89dbaad1681559e518f9d7",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 2,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.sponsors",
+          "screenshot": "b-1440-public.sponsors.png",
+          "screenshotSha256": "5d51513f3945a38251e876803fdddf7ca516f0405ea55f94fb2828e4466729ff",
+          "markupSha256": "6c16df14ae5b7856b6a1728c5008b12290b0f161f031d6c012283999266bfa35",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.staff",
+          "screenshot": "b-1440-public.staff.png",
+          "screenshotSha256": "120efc855eba28f5433185cb9b5271f076f8ca2c1b6c59072c0a66b6d9f8f747",
+          "markupSha256": "27fa301bc2a497707f610d955f0c94061b4cf2398feab85b923171ae9421fdec",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.stats",
+          "screenshot": "b-1440-public.stats.png",
+          "screenshotSha256": "48ad960e123e5df4daf65d9d4f88efd70f2bbc0dfaa82d51c267929719ae9989",
+          "markupSha256": "4e414ad9f59f1e194406047a115a1b13578c866f9dc3ad827022066080090d25",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.tryouts",
+          "screenshot": "b-1440-public.tryouts.png",
+          "screenshotSha256": "980d8c4f0315f67c8457ad13c7e96983adf026445a3b3edf50770ab3aa23567f",
+          "markupSha256": "334626e91f5f1301335b449c80c5b042dab71af9118bd1d2bfa0fcf0ec45ccdd",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homepage",
+          "screenshot": "b-1440-preview.homepage.png",
+          "screenshotSha256": "d1e100c6620cbcfd8d4f5ab39ac65dc4a5736541014f9613c512ad433c1678ab",
+          "markupSha256": "7e16c9b36463fba2b4b9a4c4578069c4c6a8fb68ba0f812a74be30e0246d1ceb",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 2,
+            "scripts": 38
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.about",
+          "screenshot": "b-1440-preview.about.png",
+          "screenshotSha256": "700cad974ac2fcf4906ffc62e3de6a2d4536fcd3bdd68f9e86ea9f2f3aa36912",
+          "markupSha256": "e6ef1290f3e49d72a285fb3c2f9f2cb19579c59e84ee2b29c31c1376555e9560",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 6,
+            "images": 1,
+            "scripts": 31
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.contact",
+          "screenshot": "b-1440-preview.contact.png",
+          "screenshotSha256": "0deddd372f77c3f3c594f0cd6d3ac41a02bd842e2b82d6af7112547bc68e044f",
+          "markupSha256": "3c65602475a2c9662f24fef378d18ef83fb7c7edef18c9ae4cc5c3bc03ae7ac9",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 0,
+            "scripts": 18
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.tryouts",
+          "screenshot": "b-1440-preview.tryouts.png",
+          "screenshotSha256": "a07386043e606c78d3dce0fd7ab650148a646721f7a5aa596e9c16926af9db35",
+          "markupSha256": "4eeac8859befb3f89954d5f6f68a83f915f9bd5626da2ead62e4ddb5e5a0e690",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 0,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programs",
+          "screenshot": "b-1440-preview.programs.png",
+          "screenshotSha256": "b531232c0da334364ee696e8f63d81527e04817f671fccef3f55b5790d611f1f",
+          "markupSha256": "3a66aa181ee71172857eaafc21634a064f6cad505b8de2e3a542d320cd6e9c8d",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 0,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programDetail",
+          "screenshot": "b-1440-preview.programDetail.png",
+          "screenshotSha256": "4c8c5daba6125fe6a3b591bdf0ca9be0009ad64a9d634ffbe921c661d7830cfd",
+          "markupSha256": "8e998e7186a3585fccfac8c05aa0a00a17c0e5c2a90294cb65a7af41a33264ba",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 1,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.shop",
+          "screenshot": "b-1440-preview.shop.png",
+          "screenshotSha256": "d4dddd97ea539366fdc3966af09d0fa84754dc6f3fc1d901bc86e352c2f5992d",
+          "markupSha256": "16fbd668cd6355b364f42ff404ec8d19a693440605d305922f859bc8b7bd13a9",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 2,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homeKit",
+          "screenshot": "b-1440-preview.homeKit.png",
+          "screenshotSha256": "8eb20df44b54e672ec39d8023fbd224897aa92622fb8e01e759cb77a4c12b91a",
+          "markupSha256": "fe36d090d6df6d78d015c7073b1521ca9de31887e08dbb4e4494c683df01a980",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 2,
+            "scripts": 32
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.sponsorsCarousel",
+          "screenshot": "b-1440-preview.sponsorsCarousel.png",
+          "screenshotSha256": "332237f659e18ac3e14cfe089c3828d20555b7aa8f4095233ced32f1b88fb822",
+          "markupSha256": "6b85717c0fd2e1e9436ca1169bdd21534ed91e3af8cb3b86e4bc8352bc6d68cf",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.standings",
+          "screenshot": "b-1440-preview.standings.png",
+          "screenshotSha256": "553af7394a4f47484cf01d436007b475cd20fd553fd5c979c5990f294f3e59b5",
+          "markupSha256": "f876c4ea828997ce359e9c431253028566fa00e18c1a59534bfb2703993a889e",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 19
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.brandingFooter",
+          "screenshot": "b-1440-preview.brandingFooter.png",
+          "screenshotSha256": "abef1bc6a7531eb4be0e1a45db591d340c48f071fb4d8b2246d5db1d6fbc95d5",
+          "markupSha256": "6d98c1dc2c9ca98527f0bfcb83eb197c71aac884abe9628e14d412eb2a22eb7e",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "rollback-a",
+      "width": 1440,
+      "event": "ed5bf395-1872-4780-8955-dacf6507ac22",
+      "digest": "a490dd00164e0fa64ef6ef956d76d94ff09a19db44fb94dbe04fbdfeeaba96e2",
+      "worker": "new",
+      "public": {
+        "text": "Academyproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px"
+      },
+      "preview": {
+        "text": "Coordinated draft rehearsalproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px",
+        "width": 762
+      },
+      "screenshots": {
+        "rollback-a-1440-public.png": "40e32d1efc257335608ee08435d69ccb80f7cb512bc260e4692df6a31527467e",
+        "rollback-a-1440-kit.png": "a5dec1cf96b16d23726b4ca34309fa317a99026fe770c68339f4e04cf0beed00",
+        "rollback-a-1440-editor.png": "3ef40c33daf4880bfb40449d05ad711e007e17e2d1dbaf1f9a1f846789f6dfe2"
+      },
+      "resourceCounts": {
+        "fonts": 5,
+        "css": 5,
+        "images": 2,
+        "scripts": 39
+      },
+      "errorCounts": {
+        "pageErrors": 0,
+        "bodyErrors": 0,
+        "networkErrors": 0,
+        "consoleErrors": 0
+      },
+      "documents": [
+        {
+          "id": "public.home",
+          "screenshot": "rollback-a-1440-public.home.png",
+          "screenshotSha256": "a1add39e9d597537ff5e9b699222455df7269d04f0d9e5f953d2c8a8fb17f02e",
+          "markupSha256": "e10feb1a76ea3a06fd60109e685fab6884d28da0003ca4f62db3f23dfad5de4f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 30
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.about",
+          "screenshot": "rollback-a-1440-public.about.png",
+          "screenshotSha256": "2794ba47c078a26a0b1aac15173a6b3be516c60f78b3aa181861b55651f57c3f",
+          "markupSha256": "99fd23f49ae9b920116a5a305159d510fb7af6a78d12b86241dde6c36526ec33",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.logo",
+          "screenshot": "rollback-a-1440-public.logo.png",
+          "screenshotSha256": "797369bfe00286622735e98dd3a746ab1f7a4f33992afee121adf01b317a3d49",
+          "markupSha256": "5d182e852f4896ebc458aca52bd208fde6e1bc4a5ffe3cb74da45d1a9ad92d72",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.contact",
+          "screenshot": "rollback-a-1440-public.contact.png",
+          "screenshotSha256": "bb6da33e424fcfb612d942c3262528f365ae11659c91f534c294cdf3944afbb9",
+          "markupSha256": "49f8ac2cbd0f34ae36341ea669acf43efa895b747ab908437226a74df6f822c1",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programs",
+          "screenshot": "rollback-a-1440-public.programs.png",
+          "screenshotSha256": "7f04245ed0689eea65f2543faf04055078550a000014f910437c66d40c494847",
+          "markupSha256": "76a3999a1e2498716480c605d6b771470308419009bd64f77af771870d637b2a",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programDetail",
+          "screenshot": "rollback-a-1440-public.programDetail.png",
+          "screenshotSha256": "e2092b3fe3d0eee6c43d23d51a61d774d95004e88755a2a2729372d9fcf6e8d9",
+          "markupSha256": "cdf63e35c014a6e620fb4e73f5ab4c37885cd5602f5919b3ad26a2d39cb2164b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.register",
+          "screenshot": "rollback-a-1440-public.register.png",
+          "screenshotSha256": "b2dc1eecf1f6ea48dcc4241dd42cf8ba9a37d970555cc14b51367f31a5d8a600",
+          "markupSha256": "adfc68cf900cf9ecc661931dd627be33857494d5be325f6ccdc747a88202e517",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.registerConfirmation",
+          "screenshot": "rollback-a-1440-public.registerConfirmation.png",
+          "screenshotSha256": "8b22e130c4b3edab9791e0fb1ccb9e37bda287d27a330714c431bedbd9d4eb0c",
+          "markupSha256": "c02381bfdd25ff2bf3a7f12ad630b12a648c3dd9392fe3b7852a9c7a3c11d29f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.roster",
+          "screenshot": "rollback-a-1440-public.roster.png",
+          "screenshotSha256": "31879b0307708a67dafed4c3a1879ec00ddcb37714cd3fcce7610b471396a70c",
+          "markupSha256": "5aa02150309a919a874ffc23ebec5943693ca2320fa188f7e792b0d0733c312b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.rosterPlayer",
+          "screenshot": "rollback-a-1440-public.rosterPlayer.png",
+          "screenshotSha256": "9952dbde767e31dcf6f8afcbc11b52cb509cb723ac12a656edb2539d75ea4e02",
+          "markupSha256": "6f33106aeb258c0764cfef61b28c04515b1169aaf11fea9712df0e9636060fc6",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.schedule",
+          "screenshot": "rollback-a-1440-public.schedule.png",
+          "screenshotSha256": "029c3979ac7160df2f8519161da6e3a680be0ab7893fdbc0b6bc3729d2c0b914",
+          "markupSha256": "726334bcb4a705ec050127b37270781313bbf50cbf96cd31ae39b956b07e7efe",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.scheduleFixture",
+          "screenshot": "rollback-a-1440-public.scheduleFixture.png",
+          "screenshotSha256": "d095d5c046b655cef1b828e0fa2168c443abfe5e10b260fd93351f2a29b2f6e4",
+          "markupSha256": "e246041fd107fb6d37a59189be147926c5ec5aaef473312883268ee072b244ee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.shop",
+          "screenshot": "rollback-a-1440-public.shop.png",
+          "screenshotSha256": "b40dfa22150e6ffe6543c3a4c7d68baca8b5b0f79bd2af0d55e6338b36a40f36",
+          "markupSha256": "f74ba2f26b6d6c1318a718caeccad737b67cd51958df5e460d6f78e3ea1f3b1d",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.sponsors",
+          "screenshot": "rollback-a-1440-public.sponsors.png",
+          "screenshotSha256": "b0b4d76c3dfcf6a7764673f3d713c2baf091c3a27acecde2be392b51aa7564a2",
+          "markupSha256": "6ad655e3038efdd218a347ba68087111c40a4af7689cad654bf2cb38bb3c63d3",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.staff",
+          "screenshot": "rollback-a-1440-public.staff.png",
+          "screenshotSha256": "31879b0307708a67dafed4c3a1879ec00ddcb37714cd3fcce7610b471396a70c",
+          "markupSha256": "5aa02150309a919a874ffc23ebec5943693ca2320fa188f7e792b0d0733c312b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.stats",
+          "screenshot": "rollback-a-1440-public.stats.png",
+          "screenshotSha256": "9a8bab4ab16d8ee40f120d4b9f4505d7862bc097fe4e2980ac1d37370ca49e27",
+          "markupSha256": "4e414ad9f59f1e194406047a115a1b13578c866f9dc3ad827022066080090d25",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.tryouts",
+          "screenshot": "rollback-a-1440-public.tryouts.png",
+          "screenshotSha256": "ca7d957305c779e248843dd9bb4f2802dad83c0d4ff9c45b5064f16e0aaef9f9",
+          "markupSha256": "334626e91f5f1301335b449c80c5b042dab71af9118bd1d2bfa0fcf0ec45ccdd",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homepage",
+          "screenshot": "rollback-a-1440-preview.homepage.png",
+          "screenshotSha256": "713a2a84e18a798167e8f55a59da47976a0e7ad7c1aae7dcfc5386e4da2e7eca",
+          "markupSha256": "5be7dbdf9938954562ea7403081cc8646022a2a97d62949df51c83088907eeee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 38
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.about",
+          "screenshot": "rollback-a-1440-preview.about.png",
+          "screenshotSha256": "53fa5e09a4045ec45028958d1b6ab85c20400066248e35798aaba0bccc8fa13b",
+          "markupSha256": "271c72eab97e1e64f1ad4ee8fe810fb7ca49fb038338b9c4463fed923c57654c",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 6,
+            "images": 1,
+            "scripts": 31
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.contact",
+          "screenshot": "rollback-a-1440-preview.contact.png",
+          "screenshotSha256": "be81baadfbd0f43f1180da23dc131714e94e9e39fb33098e36fcddc49d6962fd",
+          "markupSha256": "342fa48ec2c9def89139e7435f045485f3fde3e3a2f1cf41bce28657199517ba",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 18
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.tryouts",
+          "screenshot": "rollback-a-1440-preview.tryouts.png",
+          "screenshotSha256": "a07386043e606c78d3dce0fd7ab650148a646721f7a5aa596e9c16926af9db35",
+          "markupSha256": "4eeac8859befb3f89954d5f6f68a83f915f9bd5626da2ead62e4ddb5e5a0e690",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programs",
+          "screenshot": "rollback-a-1440-preview.programs.png",
+          "screenshotSha256": "5ef3e3a280ebeaa0122c554bbc92d23196ac22ae215b3c5f74b32f6d5111e160",
+          "markupSha256": "3a66aa181ee71172857eaafc21634a064f6cad505b8de2e3a542d320cd6e9c8d",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programDetail",
+          "screenshot": "rollback-a-1440-preview.programDetail.png",
+          "screenshotSha256": "b02e9f6ae0a736d9d71a5c6c37be11d6ebfb05ef0094e1c2e5838f1f17591179",
+          "markupSha256": "a433d68cc4ed2a404e5faa13e49bda9d7ec2e5275e7aa98635002e11754fe7be",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 1,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.shop",
+          "screenshot": "rollback-a-1440-preview.shop.png",
+          "screenshotSha256": "7a5a13f0ea3797b2f12aec1fc4f35ba5295cf896a4917034efbb4b680fb7e3dc",
+          "markupSha256": "5f8fd18358e79bc7501ea21947517d13a26a4a02e27b955cf9b11283eb633e90",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homeKit",
+          "screenshot": "rollback-a-1440-preview.homeKit.png",
+          "screenshotSha256": "db8008a163b2f0e625431f0b903b6d0f9aec78caa96d52f1866945dd6720bcfa",
+          "markupSha256": "ed896c6fe9aa5c2b70e9f0aebd9125ae580689bb2b6016ec623b2226abfb673f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 32
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.sponsorsCarousel",
+          "screenshot": "rollback-a-1440-preview.sponsorsCarousel.png",
+          "screenshotSha256": "54b9616b9bb4c1211a340498b75714b3a40432827634f6a54d5a813b527a80d1",
+          "markupSha256": "35d841791187e003c369fae5ee2f2ecb168b462ec21115c3538a715f341ef465",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.standings",
+          "screenshot": "rollback-a-1440-preview.standings.png",
+          "screenshotSha256": "79d9ef3f950409634bf6e82dda96871fad38ac5db53f300eb170233a286a3619",
+          "markupSha256": "3730aaf2dfd35f395524551aef00d9c9e4cabd6e3254dcc026c7d882a2407235",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 19
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.brandingFooter",
+          "screenshot": "rollback-a-1440-preview.brandingFooter.png",
+          "screenshotSha256": "abef1bc6a7531eb4be0e1a45db591d340c48f071fb4d8b2246d5db1d6fbc95d5",
+          "markupSha256": "198f30a2cc091654ad399167b6e594791392c9312cc2ccb387307f2891068e22",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "a",
+      "width": 390,
+      "event": "ed5bf395-1872-4780-8955-dacf6507ac22",
+      "digest": "a490dd00164e0fa64ef6ef956d76d94ff09a19db44fb94dbe04fbdfeeaba96e2",
+      "worker": "new",
+      "public": {
+        "text": "Academyproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px"
+      },
+      "preview": {
+        "text": "Coordinated draft rehearsalproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px",
+        "width": 388
+      },
+      "screenshots": {
+        "a-390-public.png": "f83dadc40f30439c070d98631b2cf1ea75c7496dd382256b79db1ecf626c9479",
+        "a-390-kit.png": "e366168fdb9770de90cfac3365a2d679afc94366be766350a5d9baff83f1d1f5",
+        "a-390-editor.png": "f4d174485dd828ce22de14953b4c4a923893ffc7175a7209c91c81fc8bf314c1"
+      },
+      "resourceCounts": {
+        "fonts": 5,
+        "css": 5,
+        "images": 2,
+        "scripts": 39
+      },
+      "errorCounts": {
+        "pageErrors": 0,
+        "bodyErrors": 0,
+        "networkErrors": 0,
+        "consoleErrors": 0
+      },
+      "documents": [
+        {
+          "id": "public.home",
+          "screenshot": "a-390-public.home.png",
+          "screenshotSha256": "c1dd907be936350a6c3380641c8b0f213dd7e82950900b95aa060a76972b712b",
+          "markupSha256": "e10feb1a76ea3a06fd60109e685fab6884d28da0003ca4f62db3f23dfad5de4f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 30
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.about",
+          "screenshot": "a-390-public.about.png",
+          "screenshotSha256": "14fd52eeaab37b83462645dab4168e8a8d5a945e447da0471b4aa3f29904bd2e",
+          "markupSha256": "99fd23f49ae9b920116a5a305159d510fb7af6a78d12b86241dde6c36526ec33",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.logo",
+          "screenshot": "a-390-public.logo.png",
+          "screenshotSha256": "67bc3f2af0dd1ec7cd4f9f26dde92accad9d4a1e23cf0d5aec8ac7303f0c9c51",
+          "markupSha256": "5d182e852f4896ebc458aca52bd208fde6e1bc4a5ffe3cb74da45d1a9ad92d72",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.contact",
+          "screenshot": "a-390-public.contact.png",
+          "screenshotSha256": "98a95f2f46331208bde0fbc235368b9c78d8640e6815e23924b0e27cc370657f",
+          "markupSha256": "49f8ac2cbd0f34ae36341ea669acf43efa895b747ab908437226a74df6f822c1",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programs",
+          "screenshot": "a-390-public.programs.png",
+          "screenshotSha256": "9c6968a20302769e5ef8faeb5876aaa1538859c314fe518ffae36df14e363f7f",
+          "markupSha256": "76a3999a1e2498716480c605d6b771470308419009bd64f77af771870d637b2a",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programDetail",
+          "screenshot": "a-390-public.programDetail.png",
+          "screenshotSha256": "908a1738cda758ff54d8df7363b2ffe73b18589d39cb1f75ddba375d2818fe48",
+          "markupSha256": "cdf63e35c014a6e620fb4e73f5ab4c37885cd5602f5919b3ad26a2d39cb2164b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.register",
+          "screenshot": "a-390-public.register.png",
+          "screenshotSha256": "0ab3b019a3ce4f0c462796274cec330f54027d261169d64b263ee082500257b0",
+          "markupSha256": "adfc68cf900cf9ecc661931dd627be33857494d5be325f6ccdc747a88202e517",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.registerConfirmation",
+          "screenshot": "a-390-public.registerConfirmation.png",
+          "screenshotSha256": "e57df08feb249f6a5e8e12656804e90f2ae73d2fc917c119eacf60d46dd23630",
+          "markupSha256": "c02381bfdd25ff2bf3a7f12ad630b12a648c3dd9392fe3b7852a9c7a3c11d29f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.roster",
+          "screenshot": "a-390-public.roster.png",
+          "screenshotSha256": "2b92e592381a139215f8b5cbdaff021049de815c796a709807573d2d11af599c",
+          "markupSha256": "5aa02150309a919a874ffc23ebec5943693ca2320fa188f7e792b0d0733c312b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.rosterPlayer",
+          "screenshot": "a-390-public.rosterPlayer.png",
+          "screenshotSha256": "c8fe8bd70d33ee6a4fda045ffc9b3ef418077b6fffdda4afee6e4bd3b12e444b",
+          "markupSha256": "6f33106aeb258c0764cfef61b28c04515b1169aaf11fea9712df0e9636060fc6",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.schedule",
+          "screenshot": "a-390-public.schedule.png",
+          "screenshotSha256": "026a6029775d757624bff4e92f8829b1b934e9f0947d54a7ccd3a4a74aa92ba4",
+          "markupSha256": "726334bcb4a705ec050127b37270781313bbf50cbf96cd31ae39b956b07e7efe",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.scheduleFixture",
+          "screenshot": "a-390-public.scheduleFixture.png",
+          "screenshotSha256": "8996b0571f7b7eee548dc9bf310612844f29a1c194bdbecf823594c88b998f4d",
+          "markupSha256": "e246041fd107fb6d37a59189be147926c5ec5aaef473312883268ee072b244ee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.shop",
+          "screenshot": "a-390-public.shop.png",
+          "screenshotSha256": "80387dd1c2c665bd1cbb3d349814e23961a1b4d721d8773888a5ebeb28784f00",
+          "markupSha256": "f74ba2f26b6d6c1318a718caeccad737b67cd51958df5e460d6f78e3ea1f3b1d",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.sponsors",
+          "screenshot": "a-390-public.sponsors.png",
+          "screenshotSha256": "f6d06e55b073f4ffd21786935b85c4788cb35f9d87af5a8e05a23aef7a0f41ad",
+          "markupSha256": "6ad655e3038efdd218a347ba68087111c40a4af7689cad654bf2cb38bb3c63d3",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.staff",
+          "screenshot": "a-390-public.staff.png",
+          "screenshotSha256": "2b92e592381a139215f8b5cbdaff021049de815c796a709807573d2d11af599c",
+          "markupSha256": "5aa02150309a919a874ffc23ebec5943693ca2320fa188f7e792b0d0733c312b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.stats",
+          "screenshot": "a-390-public.stats.png",
+          "screenshotSha256": "522fb785d69f4db38d9802001dcde1d7c8bb5fa1cb2d1e435806a6c0ad8f108a",
+          "markupSha256": "4e414ad9f59f1e194406047a115a1b13578c866f9dc3ad827022066080090d25",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.tryouts",
+          "screenshot": "a-390-public.tryouts.png",
+          "screenshotSha256": "4daee0ac5d2a1d255555e8b22eb21b70abfbaa188d4059d0d2826dc6eb9a105b",
+          "markupSha256": "334626e91f5f1301335b449c80c5b042dab71af9118bd1d2bfa0fcf0ec45ccdd",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homepage",
+          "screenshot": "a-390-preview.homepage.png",
+          "screenshotSha256": "3b2c4e205fff85780b775dbadefe539aaf4d1a8c98bf475c19500066c78ae05a",
+          "markupSha256": "5be7dbdf9938954562ea7403081cc8646022a2a97d62949df51c83088907eeee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 38
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.about",
+          "screenshot": "a-390-preview.about.png",
+          "screenshotSha256": "cd3aa424385cbfe6cfe89e66a09f0c3340c7da3f9d4c1bbc7df2ebc995fa3a95",
+          "markupSha256": "271c72eab97e1e64f1ad4ee8fe810fb7ca49fb038338b9c4463fed923c57654c",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 6,
+            "images": 1,
+            "scripts": 25
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.contact",
+          "screenshot": "a-390-preview.contact.png",
+          "screenshotSha256": "56554e4705ea35b15fa62ba3607aec55fe11f9e3187eab03acf474c10b48373a",
+          "markupSha256": "342fa48ec2c9def89139e7435f045485f3fde3e3a2f1cf41bce28657199517ba",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 18
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.tryouts",
+          "screenshot": "a-390-preview.tryouts.png",
+          "screenshotSha256": "3078fa580aa8ea19a8fc050d4b65abe7a6decd7e1c2de6e3468b1579c4427870",
+          "markupSha256": "4eeac8859befb3f89954d5f6f68a83f915f9bd5626da2ead62e4ddb5e5a0e690",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programs",
+          "screenshot": "a-390-preview.programs.png",
+          "screenshotSha256": "0f79df3305faa2e8ae41fbd3a5c02cf182d010aa7a40cf06eeca6619da3374ec",
+          "markupSha256": "3a66aa181ee71172857eaafc21634a064f6cad505b8de2e3a542d320cd6e9c8d",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programDetail",
+          "screenshot": "a-390-preview.programDetail.png",
+          "screenshotSha256": "52ef8f33321d6c92d89d3541db8d862eb6c55881211ac6e73a8ab31c28d01f15",
+          "markupSha256": "a433d68cc4ed2a404e5faa13e49bda9d7ec2e5275e7aa98635002e11754fe7be",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 1,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.shop",
+          "screenshot": "a-390-preview.shop.png",
+          "screenshotSha256": "fe3cdf14e10334a5d2fb8e0a6ab7c071d128b4bdd70b5c39c5c10891619ee428",
+          "markupSha256": "5f8fd18358e79bc7501ea21947517d13a26a4a02e27b955cf9b11283eb633e90",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homeKit",
+          "screenshot": "a-390-preview.homeKit.png",
+          "screenshotSha256": "11ea98bf2eb59d203ade7972684eb51e769800d6b03a100f49e4def759a57311",
+          "markupSha256": "ed896c6fe9aa5c2b70e9f0aebd9125ae580689bb2b6016ec623b2226abfb673f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 32
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.sponsorsCarousel",
+          "screenshot": "a-390-preview.sponsorsCarousel.png",
+          "screenshotSha256": "b6b0da05039f9061ca51e84218dfa28b3609b47e269b64e2b7b149452129c92f",
+          "markupSha256": "35d841791187e003c369fae5ee2f2ecb168b462ec21115c3538a715f341ef465",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.standings",
+          "screenshot": "a-390-preview.standings.png",
+          "screenshotSha256": "9e1034980ecf6b9cc9f396b1ccc4d3032639ef694fbe380969fb629643a12a97",
+          "markupSha256": "3730aaf2dfd35f395524551aef00d9c9e4cabd6e3254dcc026c7d882a2407235",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 19
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.brandingFooter",
+          "screenshot": "a-390-preview.brandingFooter.png",
+          "screenshotSha256": "20225bcab01e8ce33f59e9c77097d6a52881ccb0e59ae304f0317d3584ecd7a1",
+          "markupSha256": "0d78de98bfd8e931fcfa883dfcb8924c2607b7247c246c1a1d48fb23e9a7cfb8",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "b",
+      "width": 390,
+      "event": "364dfd4d-f868-479e-a845-cbf6cb92b52f",
+      "digest": "d0666231ff01e269777d354929c168ae2261f043880d8e6b0e6ab8ccfc5516a8",
+      "worker": "new",
+      "public": {
+        "text": "Academyproof home",
+        "color": "rgb(1, 2, 3)",
+        "font": "Geist, \"Geist Fallback\", Arial, sans-serif",
+        "size": "16px"
+      },
+      "preview": {
+        "text": "Coordinated draft rehearsalproof home",
+        "color": "rgb(1, 2, 3)",
+        "font": "Geist, \"Geist Fallback\", Arial, sans-serif",
+        "size": "16px",
+        "width": 388
+      },
+      "screenshots": {
+        "b-390-public.png": "f0f90e85bb3b8e76cf8b0d3ed88f756dbfcc7422dd3b4d9f19c28982aab67970",
+        "b-390-kit.png": "5d348b5f0b2b03d32b40ff05e39ec4edb20dca353496f42f21aa5221bb410eca",
+        "b-390-editor.png": "f4d174485dd828ce22de14953b4c4a923893ffc7175a7209c91c81fc8bf314c1"
+      },
+      "resourceCounts": {
+        "fonts": 4,
+        "css": 5,
+        "images": 2,
+        "scripts": 39
+      },
+      "errorCounts": {
+        "pageErrors": 0,
+        "bodyErrors": 0,
+        "networkErrors": 0,
+        "consoleErrors": 0
+      },
+      "documents": [
+        {
+          "id": "public.home",
+          "screenshot": "b-390-public.home.png",
+          "screenshotSha256": "2acc6c91f287b4320857e71797f87b52cfd7648cff3aa89f9c44666731c577a6",
+          "markupSha256": "226328eadf03d8f134b5312a676b544d7516456495318767411d61de1fd12aa9",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 2,
+            "scripts": 30
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.about",
+          "screenshot": "b-390-public.about.png",
+          "screenshotSha256": "56628c8b3d98fc416192e255c6417b2ea9878b916de2db3598361b8b8fdf7aa4",
+          "markupSha256": "578e07d38551b1ceffbf91770b062d6c7abcd87f51af16b91722c3fe639fc8d3",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.logo",
+          "screenshot": "b-390-public.logo.png",
+          "screenshotSha256": "bc53d9483ecfcfdb430563035aded2c55b1503d946ada7497501a30ae62e5389",
+          "markupSha256": "ce89e5343989a5f6c068ba252fb52da138b9aa82cd7f6bbfa198015366a41c4b",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 2,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.contact",
+          "screenshot": "b-390-public.contact.png",
+          "screenshotSha256": "0e2ad505e6407a5afc70cebe3466679a00b707360b8c72ad60f610a8a7eef07e",
+          "markupSha256": "62e55fcddb786a2d80b8d9ba7673dd90fa89af887c22c2fc4e2e84cc09df5e9b",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programs",
+          "screenshot": "b-390-public.programs.png",
+          "screenshotSha256": "08d8909f60ef2bc9d3fa23d3624f58c869aa6ea7561ac02a38fcc914f8507de5",
+          "markupSha256": "76a3999a1e2498716480c605d6b771470308419009bd64f77af771870d637b2a",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programDetail",
+          "screenshot": "b-390-public.programDetail.png",
+          "screenshotSha256": "6a2ed3e0a186f31457e77bed2d0e81805babe0fdbdd5557ced264e4744f9abea",
+          "markupSha256": "e01b766ed13749af94398d9376437c919596b67083d6632a6de85e33cb6a3572",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.register",
+          "screenshot": "b-390-public.register.png",
+          "screenshotSha256": "4891ee10b6e0935e8c31c4fb3fc1efe6981059f211fefb67062a9d6dadcd399b",
+          "markupSha256": "adfc68cf900cf9ecc661931dd627be33857494d5be325f6ccdc747a88202e517",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.registerConfirmation",
+          "screenshot": "b-390-public.registerConfirmation.png",
+          "screenshotSha256": "f5c8f4c92043b479ea9531f10fd31fe4541b860ad4cfd9cc6194a04b9bcd4f1f",
+          "markupSha256": "c02381bfdd25ff2bf3a7f12ad630b12a648c3dd9392fe3b7852a9c7a3c11d29f",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.roster",
+          "screenshot": "b-390-public.roster.png",
+          "screenshotSha256": "769af9159ba07443c184f542abf5293d7ac01b89d475d69e7062ab377389bc7d",
+          "markupSha256": "27fa301bc2a497707f610d955f0c94061b4cf2398feab85b923171ae9421fdec",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.rosterPlayer",
+          "screenshot": "b-390-public.rosterPlayer.png",
+          "screenshotSha256": "7e3d75571aa38fd74d950614af614998ebc19b7613295df18d03d2dd6f47d88d",
+          "markupSha256": "6f33106aeb258c0764cfef61b28c04515b1169aaf11fea9712df0e9636060fc6",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.schedule",
+          "screenshot": "b-390-public.schedule.png",
+          "screenshotSha256": "36be59097671c5cd87341edfe126ef825a476ee993c6d96e6c4c77813e158c9d",
+          "markupSha256": "726334bcb4a705ec050127b37270781313bbf50cbf96cd31ae39b956b07e7efe",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.scheduleFixture",
+          "screenshot": "b-390-public.scheduleFixture.png",
+          "screenshotSha256": "afc60d85ea77862c42b4321a0a92786abeb80e81a841547c6979bd252d1ec2bb",
+          "markupSha256": "e246041fd107fb6d37a59189be147926c5ec5aaef473312883268ee072b244ee",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.shop",
+          "screenshot": "b-390-public.shop.png",
+          "screenshotSha256": "28dba9ac4af195ae66587d58a5e9c764d64ff133dc744acf28d403aa4e1f26c8",
+          "markupSha256": "58d9219d4354f05b88248564907b0bf231e616239f89dbaad1681559e518f9d7",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 2,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.sponsors",
+          "screenshot": "b-390-public.sponsors.png",
+          "screenshotSha256": "7c227af0469b9e371a39b158f7b94d2740d68806a100f905f4dc3189446e6632",
+          "markupSha256": "6c16df14ae5b7856b6a1728c5008b12290b0f161f031d6c012283999266bfa35",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.staff",
+          "screenshot": "b-390-public.staff.png",
+          "screenshotSha256": "769af9159ba07443c184f542abf5293d7ac01b89d475d69e7062ab377389bc7d",
+          "markupSha256": "27fa301bc2a497707f610d955f0c94061b4cf2398feab85b923171ae9421fdec",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.stats",
+          "screenshot": "b-390-public.stats.png",
+          "screenshotSha256": "2f7dd73749d478173e7af98e5dcb4e7fbfab7550117f05e96440ac9c6050930f",
+          "markupSha256": "4e414ad9f59f1e194406047a115a1b13578c866f9dc3ad827022066080090d25",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.tryouts",
+          "screenshot": "b-390-public.tryouts.png",
+          "screenshotSha256": "b69c7620cb70ae217f8a8ab1046b92b34951b8ba784f9c4903a44cdaf8845ce8",
+          "markupSha256": "334626e91f5f1301335b449c80c5b042dab71af9118bd1d2bfa0fcf0ec45ccdd",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homepage",
+          "screenshot": "b-390-preview.homepage.png",
+          "screenshotSha256": "76f4f859334b6683dd87068b13c069f564e01b788efe092db6eabedfb425c967",
+          "markupSha256": "1ffeb0f4299748085d70929ff9345b5f71dd47a05694fa85aba19fd711df8b22",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 2,
+            "scripts": 38
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.about",
+          "screenshot": "b-390-preview.about.png",
+          "screenshotSha256": "c5fecc6cff5757d353a3f65469f11bc57aa10cbcafcb720ccb492398e0aeac6c",
+          "markupSha256": "e6ef1290f3e49d72a285fb3c2f9f2cb19579c59e84ee2b29c31c1376555e9560",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 6,
+            "images": 1,
+            "scripts": 25
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.contact",
+          "screenshot": "b-390-preview.contact.png",
+          "screenshotSha256": "4f7201556f01aaa9b11174c194d708be4a8a1e56bf9daf2bd92e0daa8a83c35f",
+          "markupSha256": "3c65602475a2c9662f24fef378d18ef83fb7c7edef18c9ae4cc5c3bc03ae7ac9",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 0,
+            "scripts": 18
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.tryouts",
+          "screenshot": "b-390-preview.tryouts.png",
+          "screenshotSha256": "3078fa580aa8ea19a8fc050d4b65abe7a6decd7e1c2de6e3468b1579c4427870",
+          "markupSha256": "4eeac8859befb3f89954d5f6f68a83f915f9bd5626da2ead62e4ddb5e5a0e690",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 0,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programs",
+          "screenshot": "b-390-preview.programs.png",
+          "screenshotSha256": "92cefaba86096c87f6718d3a56cc0c1143ef8cfcd81a01c40f8fa0f2ff1e3c2c",
+          "markupSha256": "3a66aa181ee71172857eaafc21634a064f6cad505b8de2e3a542d320cd6e9c8d",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 0,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programDetail",
+          "screenshot": "b-390-preview.programDetail.png",
+          "screenshotSha256": "5b324f6758e1f0a56a6fbf382720fab5c05c61d810dd50ade98f617b7bc73a64",
+          "markupSha256": "8e998e7186a3585fccfac8c05aa0a00a17c0e5c2a90294cb65a7af41a33264ba",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 1,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.shop",
+          "screenshot": "b-390-preview.shop.png",
+          "screenshotSha256": "61cd8f3a095c366c729f6f1ff11f249d9e4dcfd6d23322a309944e081402fcb7",
+          "markupSha256": "16fbd668cd6355b364f42ff404ec8d19a693440605d305922f859bc8b7bd13a9",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 2,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homeKit",
+          "screenshot": "b-390-preview.homeKit.png",
+          "screenshotSha256": "e34f318ffb9379a4ff0c039ef86099f2eeef67c2d3297a8483698154617c6615",
+          "markupSha256": "fe36d090d6df6d78d015c7073b1521ca9de31887e08dbb4e4494c683df01a980",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 5,
+            "images": 2,
+            "scripts": 32
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.sponsorsCarousel",
+          "screenshot": "b-390-preview.sponsorsCarousel.png",
+          "screenshotSha256": "41df0dd57058fe6aa8aa4ed4cd6396e82b8a79d739abcdaa6746a83a0e3a9d4a",
+          "markupSha256": "6b85717c0fd2e1e9436ca1169bdd21534ed91e3af8cb3b86e4bc8352bc6d68cf",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.standings",
+          "screenshot": "b-390-preview.standings.png",
+          "screenshotSha256": "da28fc4a2c4a93d1026528f9d533053435cf27e0d63fda4ac7fa85b23c25fb98",
+          "markupSha256": "f876c4ea828997ce359e9c431253028566fa00e18c1a59534bfb2703993a889e",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 1,
+            "scripts": 19
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.brandingFooter",
+          "screenshot": "b-390-preview.brandingFooter.png",
+          "screenshotSha256": "20225bcab01e8ce33f59e9c77097d6a52881ccb0e59ae304f0317d3584ecd7a1",
+          "markupSha256": "7b64a07d0be9a10d71572dbb566be25043155a448d01fc060dc80d8a49fe48bf",
+          "resourceCounts": {
+            "fonts": 4,
+            "css": 3,
+            "images": 0,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "rollback-a",
+      "width": 390,
+      "event": "63bd2624-5d91-4ded-bb53-9a691a221ceb",
+      "digest": "a490dd00164e0fa64ef6ef956d76d94ff09a19db44fb94dbe04fbdfeeaba96e2",
+      "worker": "new",
+      "public": {
+        "text": "Academyproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px"
+      },
+      "preview": {
+        "text": "Coordinated draft rehearsalproof home",
+        "color": "rgb(249, 250, 253)",
+        "font": "Montserrat, \"Montserrat Fallback\", Arial, sans-serif",
+        "size": "16px",
+        "width": 388
+      },
+      "screenshots": {
+        "rollback-a-390-public.png": "f83dadc40f30439c070d98631b2cf1ea75c7496dd382256b79db1ecf626c9479",
+        "rollback-a-390-kit.png": "e366168fdb9770de90cfac3365a2d679afc94366be766350a5d9baff83f1d1f5",
+        "rollback-a-390-editor.png": "f4d174485dd828ce22de14953b4c4a923893ffc7175a7209c91c81fc8bf314c1"
+      },
+      "resourceCounts": {
+        "fonts": 5,
+        "css": 5,
+        "images": 2,
+        "scripts": 39
+      },
+      "errorCounts": {
+        "pageErrors": 0,
+        "bodyErrors": 0,
+        "networkErrors": 0,
+        "consoleErrors": 0
+      },
+      "documents": [
+        {
+          "id": "public.home",
+          "screenshot": "rollback-a-390-public.home.png",
+          "screenshotSha256": "c1dd907be936350a6c3380641c8b0f213dd7e82950900b95aa060a76972b712b",
+          "markupSha256": "e10feb1a76ea3a06fd60109e685fab6884d28da0003ca4f62db3f23dfad5de4f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 30
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.about",
+          "screenshot": "rollback-a-390-public.about.png",
+          "screenshotSha256": "14fd52eeaab37b83462645dab4168e8a8d5a945e447da0471b4aa3f29904bd2e",
+          "markupSha256": "99fd23f49ae9b920116a5a305159d510fb7af6a78d12b86241dde6c36526ec33",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.logo",
+          "screenshot": "rollback-a-390-public.logo.png",
+          "screenshotSha256": "67bc3f2af0dd1ec7cd4f9f26dde92accad9d4a1e23cf0d5aec8ac7303f0c9c51",
+          "markupSha256": "5d182e852f4896ebc458aca52bd208fde6e1bc4a5ffe3cb74da45d1a9ad92d72",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.contact",
+          "screenshot": "rollback-a-390-public.contact.png",
+          "screenshotSha256": "98a95f2f46331208bde0fbc235368b9c78d8640e6815e23924b0e27cc370657f",
+          "markupSha256": "49f8ac2cbd0f34ae36341ea669acf43efa895b747ab908437226a74df6f822c1",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programs",
+          "screenshot": "rollback-a-390-public.programs.png",
+          "screenshotSha256": "9c6968a20302769e5ef8faeb5876aaa1538859c314fe518ffae36df14e363f7f",
+          "markupSha256": "76a3999a1e2498716480c605d6b771470308419009bd64f77af771870d637b2a",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.programDetail",
+          "screenshot": "rollback-a-390-public.programDetail.png",
+          "screenshotSha256": "908a1738cda758ff54d8df7363b2ffe73b18589d39cb1f75ddba375d2818fe48",
+          "markupSha256": "cdf63e35c014a6e620fb4e73f5ab4c37885cd5602f5919b3ad26a2d39cb2164b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.register",
+          "screenshot": "rollback-a-390-public.register.png",
+          "screenshotSha256": "0ab3b019a3ce4f0c462796274cec330f54027d261169d64b263ee082500257b0",
+          "markupSha256": "adfc68cf900cf9ecc661931dd627be33857494d5be325f6ccdc747a88202e517",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.registerConfirmation",
+          "screenshot": "rollback-a-390-public.registerConfirmation.png",
+          "screenshotSha256": "e57df08feb249f6a5e8e12656804e90f2ae73d2fc917c119eacf60d46dd23630",
+          "markupSha256": "c02381bfdd25ff2bf3a7f12ad630b12a648c3dd9392fe3b7852a9c7a3c11d29f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.roster",
+          "screenshot": "rollback-a-390-public.roster.png",
+          "screenshotSha256": "2b92e592381a139215f8b5cbdaff021049de815c796a709807573d2d11af599c",
+          "markupSha256": "5aa02150309a919a874ffc23ebec5943693ca2320fa188f7e792b0d0733c312b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.rosterPlayer",
+          "screenshot": "rollback-a-390-public.rosterPlayer.png",
+          "screenshotSha256": "c8fe8bd70d33ee6a4fda045ffc9b3ef418077b6fffdda4afee6e4bd3b12e444b",
+          "markupSha256": "6f33106aeb258c0764cfef61b28c04515b1169aaf11fea9712df0e9636060fc6",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.schedule",
+          "screenshot": "rollback-a-390-public.schedule.png",
+          "screenshotSha256": "026a6029775d757624bff4e92f8829b1b934e9f0947d54a7ccd3a4a74aa92ba4",
+          "markupSha256": "726334bcb4a705ec050127b37270781313bbf50cbf96cd31ae39b956b07e7efe",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.scheduleFixture",
+          "screenshot": "rollback-a-390-public.scheduleFixture.png",
+          "screenshotSha256": "8996b0571f7b7eee548dc9bf310612844f29a1c194bdbecf823594c88b998f4d",
+          "markupSha256": "e246041fd107fb6d37a59189be147926c5ec5aaef473312883268ee072b244ee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 21
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.shop",
+          "screenshot": "rollback-a-390-public.shop.png",
+          "screenshotSha256": "80387dd1c2c665bd1cbb3d349814e23961a1b4d721d8773888a5ebeb28784f00",
+          "markupSha256": "f74ba2f26b6d6c1318a718caeccad737b67cd51958df5e460d6f78e3ea1f3b1d",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 2,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.sponsors",
+          "screenshot": "rollback-a-390-public.sponsors.png",
+          "screenshotSha256": "f6d06e55b073f4ffd21786935b85c4788cb35f9d87af5a8e05a23aef7a0f41ad",
+          "markupSha256": "6ad655e3038efdd218a347ba68087111c40a4af7689cad654bf2cb38bb3c63d3",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.staff",
+          "screenshot": "rollback-a-390-public.staff.png",
+          "screenshotSha256": "2b92e592381a139215f8b5cbdaff021049de815c796a709807573d2d11af599c",
+          "markupSha256": "5aa02150309a919a874ffc23ebec5943693ca2320fa188f7e792b0d0733c312b",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.stats",
+          "screenshot": "rollback-a-390-public.stats.png",
+          "screenshotSha256": "522fb785d69f4db38d9802001dcde1d7c8bb5fa1cb2d1e435806a6c0ad8f108a",
+          "markupSha256": "4e414ad9f59f1e194406047a115a1b13578c866f9dc3ad827022066080090d25",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 20
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "public.tryouts",
+          "screenshot": "rollback-a-390-public.tryouts.png",
+          "screenshotSha256": "4daee0ac5d2a1d255555e8b22eb21b70abfbaa188d4059d0d2826dc6eb9a105b",
+          "markupSha256": "334626e91f5f1301335b449c80c5b042dab71af9118bd1d2bfa0fcf0ec45ccdd",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 23
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homepage",
+          "screenshot": "rollback-a-390-preview.homepage.png",
+          "screenshotSha256": "3b2c4e205fff85780b775dbadefe539aaf4d1a8c98bf475c19500066c78ae05a",
+          "markupSha256": "5be7dbdf9938954562ea7403081cc8646022a2a97d62949df51c83088907eeee",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 38
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.about",
+          "screenshot": "rollback-a-390-preview.about.png",
+          "screenshotSha256": "cd3aa424385cbfe6cfe89e66a09f0c3340c7da3f9d4c1bbc7df2ebc995fa3a95",
+          "markupSha256": "271c72eab97e1e64f1ad4ee8fe810fb7ca49fb038338b9c4463fed923c57654c",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 6,
+            "images": 1,
+            "scripts": 25
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.contact",
+          "screenshot": "rollback-a-390-preview.contact.png",
+          "screenshotSha256": "56554e4705ea35b15fa62ba3607aec55fe11f9e3187eab03acf474c10b48373a",
+          "markupSha256": "342fa48ec2c9def89139e7435f045485f3fde3e3a2f1cf41bce28657199517ba",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 18
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.tryouts",
+          "screenshot": "rollback-a-390-preview.tryouts.png",
+          "screenshotSha256": "3078fa580aa8ea19a8fc050d4b65abe7a6decd7e1c2de6e3468b1579c4427870",
+          "markupSha256": "4eeac8859befb3f89954d5f6f68a83f915f9bd5626da2ead62e4ddb5e5a0e690",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 24
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programs",
+          "screenshot": "rollback-a-390-preview.programs.png",
+          "screenshotSha256": "0f79df3305faa2e8ae41fbd3a5c02cf182d010aa7a40cf06eeca6619da3374ec",
+          "markupSha256": "3a66aa181ee71172857eaafc21634a064f6cad505b8de2e3a542d320cd6e9c8d",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 0,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.programDetail",
+          "screenshot": "rollback-a-390-preview.programDetail.png",
+          "screenshotSha256": "52ef8f33321d6c92d89d3541db8d862eb6c55881211ac6e73a8ab31c28d01f15",
+          "markupSha256": "a433d68cc4ed2a404e5faa13e49bda9d7ec2e5275e7aa98635002e11754fe7be",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 1,
+            "scripts": 34
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.shop",
+          "screenshot": "rollback-a-390-preview.shop.png",
+          "screenshotSha256": "fe3cdf14e10334a5d2fb8e0a6ab7c071d128b4bdd70b5c39c5c10891619ee428",
+          "markupSha256": "5f8fd18358e79bc7501ea21947517d13a26a4a02e27b955cf9b11283eb633e90",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.homeKit",
+          "screenshot": "rollback-a-390-preview.homeKit.png",
+          "screenshotSha256": "11ea98bf2eb59d203ade7972684eb51e769800d6b03a100f49e4def759a57311",
+          "markupSha256": "ed896c6fe9aa5c2b70e9f0aebd9125ae580689bb2b6016ec623b2226abfb673f",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 5,
+            "images": 2,
+            "scripts": 32
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.sponsorsCarousel",
+          "screenshot": "rollback-a-390-preview.sponsorsCarousel.png",
+          "screenshotSha256": "b6b0da05039f9061ca51e84218dfa28b3609b47e269b64e2b7b149452129c92f",
+          "markupSha256": "35d841791187e003c369fae5ee2f2ecb168b462ec21115c3538a715f341ef465",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 22
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.standings",
+          "screenshot": "rollback-a-390-preview.standings.png",
+          "screenshotSha256": "9e1034980ecf6b9cc9f396b1ccc4d3032639ef694fbe380969fb629643a12a97",
+          "markupSha256": "3730aaf2dfd35f395524551aef00d9c9e4cabd6e3254dcc026c7d882a2407235",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 1,
+            "scripts": 19
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        },
+        {
+          "id": "preview.brandingFooter",
+          "screenshot": "rollback-a-390-preview.brandingFooter.png",
+          "screenshotSha256": "20225bcab01e8ce33f59e9c77097d6a52881ccb0e59ae304f0317d3584ecd7a1",
+          "markupSha256": "0d78de98bfd8e931fcfa883dfcb8924c2607b7247c246c1a1d48fb23e9a7cfb8",
+          "resourceCounts": {
+            "fonts": 5,
+            "css": 3,
+            "images": 0,
+            "scripts": 27
+          },
+          "errorCounts": {
+            "pageErrors": 0,
+            "bodyErrors": 0,
+            "networkErrors": 0,
+            "consoleErrors": 0
+          }
+        }
+      ]
+    }
+  ],
+  "invalidCaptures": [
+    {
+      "width": 1440,
+      "screenshot": "/Users/christianalcala/.codex/worktrees/onzio-ticket-53-final/onzio-platform-codex-loop/test-results/pilot-site-coordination-bsqp6R/invalid-assignment-1440.png",
+      "screenshotSha256": "6edd7807133dc180889f4ff71e0b588dc5cc1525eb99dfbddd0453fbb53eb873",
+      "status": 503
+    },
+    {
+      "width": 390,
+      "screenshot": "/Users/christianalcala/.codex/worktrees/onzio-ticket-53-final/onzio-platform-codex-loop/test-results/pilot-site-coordination-bsqp6R/invalid-assignment-390.png",
+      "screenshotSha256": "8e296d5cd9497a05c487f7f5a573f9c75f98c335d2a776396c53e26b8b6b9544",
+      "status": 503
+    }
+  ],
+  "limits": [
+    "Finite trusted local document guard, not hosted traffic or production dispatch.",
+    "Old document origins retain assets; new document navigation is checked separately.",
+    "All roots share the same canonical prepared dependency tree; installed dependency bytes and native ABI are not attested.",
+    "Owned locks and pre/post verification do not establish continuous or hostile-filesystem immutability.",
+    "All page data and confirmation ledger state are synthetic rows owned by the disposable club; content saves use existing SQL RPCs. No provider transport is exercised.",
+    "Homepage and its mounted preview deliberately show the latest B-era content after rollback; their A visual styles/assets restore while unaffected captures match byte-for-byte.",
+    "The binding contract is still homepage-only; no transition between distinct full-site binding revisions is claimed.",
+    "External media is blocked; no latency, LCP or native-device accessibility claim."
+  ]
+}

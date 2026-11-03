@@ -13,6 +13,7 @@ const billing = new Set(["club_subscriptions", "stripe_events", "club_stripe_con
 const authority = new Set(["onzio.presentation_state", "onzio.audit_events", "onzio_private.homepage_assignment_epochs"]);
 const image = "/images/shop/rosecityshirt1.webp";
 const secondImage = "/images/shop/rosecityshirt2.jpeg";
+const clubLogo = "/images/logo/rosecityLogo.png";
 type Table = keyof Database["onzio"]["Tables"];
 
 async function tenantRelations(db: Client) {
@@ -78,8 +79,8 @@ export async function populateAcademyContent(db: Client, clubId: string): Promis
     await db.query("update onzio.clubs set name='Academy proof club',store_enabled=true where id=$1 and kind='test' and slug='pilot'", [clubId]);
     await db.query("insert into onzio.homepage_hero_content(club_id,headline_line_one,headline_line_two,intro) values($1,'Academy','proof home','A populated local proof homepage.') on conflict(club_id) do update set headline_line_one=excluded.headline_line_one,headline_line_two=excluded.headline_line_two,intro=excluded.intro", [clubId]);
     await db.query("insert into onzio.homepage_story_section(club_id,heading,body_primary,body_secondary,visible) values($1,'Academy proof story','A populated homepage story.','Current club content survives rollback.',true) on conflict(club_id) do update set heading=excluded.heading,body_primary=excluded.body_primary,body_secondary=excluded.body_secondary,visible=true", [clubId]);
-    await insert("site_branding", { club_id: clubId, club_logo_path: image, inverse_logo_path: image, footer_tagline: "Academy proof footer" });
-    await insert("site_social_links", { club_id: clubId, id: "instagram", label: "Proof social", href: "https://instagram.com/academyproof", icon: "instagram" });
+    await insert("site_branding", { club_id: clubId, club_logo_path: clubLogo, inverse_logo_path: clubLogo, footer_tagline: "Academy proof footer" });
+    await insert("site_social_links", { club_id: clubId, id: "instagram", label: "Proof social", href: "https://instagram.com/academyproof", icon: "/images/logo/instagramLogo.svg" });
     for (const placement of ["carousel", "footer"]) await insert("site_sponsor_logos", { club_id: clubId, placement, name: "Proof Sponsor", logo_url: image });
     await insert("about_page_content", { club_id: clubId, hero_title: "Academy proof story", story_paragraphs: ["A populated story for local acceptance."], feature_image_url: image, values_heading: "Proof values", values: [{ title: "Together", description: "A populated Academy value." }], closing_text: "Academy proof closing", closing_cta_label: "Contact", closing_cta_href: "/contact" });
     await insert("club_logo_page_content", { club_id: clubId, annotated_image_url: image, map_image_url: secondImage, features: [{ title: "Proof crest feature", description: "A populated crest detail.", icon_url: image, icon_size: 48, icon_scale: 1, patch_url: image }], color_cards: [{ label: "Proof navy", image_url: image }] });
