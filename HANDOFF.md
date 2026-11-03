@@ -1,3 +1,9 @@
+## 2026-11-02 - SITE-08 #44: owned pilot server cleanup regression
+
+- The pilot server runner could receive `EPERM` while sending TERM to an owned process group that had already become zombie-only, before Node reported the child closed. The local diagnostic reproduced this sequence. `scripts/pilot-proof-servers.ts` now treats TERM `EPERM` as transient only while the direct child is still open. Cleanup still waits for child closure and a separate process-group disappearance check before releasing locks; a live inaccessible group retains the lock.
+- Added a deterministic architecture regression for that timing and retained the live-group fail-closed check. The complete `tests/architecture/pilot-proof-servers.test.ts` suite passes 48/48 in `/private/tmp/onzio44-process-full-current.log`; its exit receipt is `/private/tmp/onzio44-process-full-current.exit`. Independent process-safety review found no remaining blocker in this change. This proof does not complete #44 acceptance.
+- Status remains `in_progress`. Exact next step: commit the reviewed fix, run the complete pilot-inclusive exact-head verifier on the integrated #44 branch, then obtain final-head review and update its publication record. No hosted operation or release occurred.
+
 ## 2026-11-02 - SITE-08 issue #44: refresh inventory after approved page releases
 
 - Status remains `in_progress`. Integrated actual main `589f80192b3cfb1b979c239a14976ec769581901` after Christian-authorized bot merges of registration PR #74 and About PR #73. The HANDOFF prepend was the only conflict. Both complete histories are preserved. Local acceptance remains distinct from production release.

@@ -68,7 +68,7 @@ function ownedServer(root: string, hostname: PilotProofHostname, fail: (error: E
     if (child.pid === undefined) return false;
     try { process.kill(-child.pid, signal); return true; }
     catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "ESRCH") return false;
+      if (error instanceof Error && "code" in error && (error.code === "ESRCH" || error.code === "EPERM" && signal !== 0 && !closed)) return false;
       throw new Error("Could not control owned proof process group");
     }
   }
