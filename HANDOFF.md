@@ -1,3 +1,8 @@
+## 2026-11-03 - Codex loop guides retired
+
+- Christian dropped the verification pilot in #59. The start, worker, and coordinator guides are removed. The loop checks for an explicit readable, nonempty `CODEX_LOOP_GUIDE` before it can claim work. The standalone verifier and Grokbot review contract remain available.
+- Bash syntax, missing and empty guide rejection, both dry runs with a supplied guide, and all 43 verifier and worktree-environment tests passed. Next step is review of the documentation cleanup PR.
+
 ## 2026-11-03 - SITE-08 #44 selector guard closeout on merged main
 
 - Status: local acceptance complete. PR #77 merged the selector guard into `main` at `44bbae4`. The prior exact-head verifier at `7459892` passed types, lint, 1,660 contracts, 378 architecture tests with one existing skip, the production build, and 422 other suite tests. Its database result was 977/978, with the one Contact failure reproduced on clean base. Independent final-head review of #44 found no High or Medium issue; Grokbot's PR #77 review also found none at `b5dcf5c`.

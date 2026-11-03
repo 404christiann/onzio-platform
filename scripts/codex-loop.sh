@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Strict Codex loop. One iteration = one unit of work, one Codex session, fresh context.
-# Rules for Codex live in docs/agents/codex-loop.md; the review-bot interface is in
-# docs/agents/review-bot-contract.md.
+# Set CODEX_LOOP_GUIDE to an explicit local guide before running the loop.
+# The review-bot interface is in docs/agents/review-bot-contract.md.
 #
 #   scripts/codex-loop.sh              TICKET mode: implement the next unblocked ticket
 #   scripts/codex-loop.sh --fix        FIX mode: address High/Medium findings the review bot
@@ -37,7 +37,7 @@ trap 'FAIL_REASON="command failed (line $LINENO): $BASH_COMMAND"' ERR
 REPO="404christiann/onzio-platform"
 ROOT="$(git rev-parse --show-toplevel)"
 SKIP_FILE="$ROOT/scripts/codex-loop.skip"
-GUIDE="$ROOT/docs/agents/codex-loop.md"
+GUIDE="${CODEX_LOOP_GUIDE:-}"
 WORKTREES="${CODEX_LOOP_WORKTREES:-$HOME/.codex/worktrees}"
 LOCAL_FIX_STATE="$WORKTREES/.codex-loop-local-fix"
 MAX_ITERATIONS="${CODEX_LOOP_MAX:-1}"
@@ -80,10 +80,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+[[ -n "$GUIDE" && -f "$GUIDE" && -r "$GUIDE" && -s "$GUIDE" ]] ||
+  die "set CODEX_LOOP_GUIDE to a readable, nonempty guide file"
 command -v gh >/dev/null    || die "gh not found"
 (( DRY_RUN )) || command -v codex >/dev/null || die "codex not found on PATH (nvm installs it under ~/.nvm/versions/node/<version>/bin; add that directory to PATH, which also gives the runner node and npm)"
 command -v jq >/dev/null    || die "jq not found"
-[[ -f "$GUIDE" ]]           || die "missing $GUIDE"
 
 # A local misconfiguration must fail here, before anything is claimed on GitHub. The
 # cleanup trap relabels a claimed ticket blocked, which would hide a real ticket because of
