@@ -1,5 +1,7 @@
 "use client";
 
+import { codeSiteFor } from "@/lib/code-site";
+
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
@@ -23,9 +25,9 @@ export default function ShopPage() {
     useState<ShopKitVariant>("home");
 
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseShopPage />;
-  // academy@1 uses the mockup's compact split layout (Front/Back pill
+  // Diverse City uses the mockup's compact split layout (Front/Back pill
   // toggle, no photo strip / purchase-details cards / closing band).
-  if (club.presentationTemplateKey === "academy@1") return <AcademyShopPage />;
+  if (codeSiteFor(club) === "diverse-city") return <AcademyShopPage />;
   if (club.presentationTemplateKey === "editorial@1") {
     // Operator-only toggle (onzio.clubs.store_enabled, Lions E1). The nav
     // already omits the "Store" link when this is off (EditorialHeader,

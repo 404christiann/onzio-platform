@@ -21,7 +21,7 @@ gsap.registerPlugin(ScrollTrigger);
 const SLIDE_DURATION = 4500;
 type SlideOrientation = "portrait" | "landscape";
 
-export default function PhotoSlideshow() {
+export default function PhotoSlideshow({ loadingSkeleton }: { loadingSkeleton?: "academy" } = {}) {
   const preview = useHomepagePreview();
   const editing = preview !== null;
   const selecting = editing && !preview.playback;
@@ -110,7 +110,7 @@ export default function PhotoSlideshow() {
   }, [usesLegacyRoseCitySlideshow, visibleSlides.length, editing]);
 
   if (preview && !preview.allowedPieces.includes("photos")) return null;
-  if (!editing && showLoading && club.presentationTemplateKey === "academy@1") return <AcademySectionLoadingSkeleton />;
+  if (!editing && showLoading && loadingSkeleton === "academy") return <AcademySectionLoadingSkeleton />;
   if (visibleSlides.length === 0) {
     if (selecting) return <HomepageMissingPiece piece="photos">Photos · Add photo</HomepageMissingPiece>;
     if (slides.length === 0) return null;

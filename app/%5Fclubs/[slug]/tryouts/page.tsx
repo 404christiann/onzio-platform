@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { codeSiteFor } from "@/lib/code-site";
 import AcademyTryoutsPage from "@/components/sites/diverse-city/AcademyTryoutsPage";
 import EditorialTryouts from "@/components/editorial/EditorialTryouts";
 import { getClubContextBySlug } from "@/lib/club-context";
@@ -32,7 +33,7 @@ export default async function TenantTryoutsPage({
     );
   }
 
-  if (club.presentationTemplateKey !== "academy@1") notFound();
+  if (codeSiteFor(club) !== "diverse-city") notFound();
   const onzio = (await createClient()).schema("onzio");
   const [tryouts, contactProfile, content] = await Promise.all([
     fetchTryouts(club.id, onzio),

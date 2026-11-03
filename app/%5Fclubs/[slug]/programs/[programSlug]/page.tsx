@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { codeSiteFor } from "@/lib/code-site";
 import AcademyProgramDetailPage from "@/components/sites/diverse-city/AcademyProgramDetailPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchProgramBySlug, fetchPrograms } from "@/lib/queries";
@@ -11,7 +12,7 @@ export default async function TenantProgramDetailPage({
 }) {
   const { slug, programSlug } = await params;
   const club = await getClubContextBySlug(slug);
-  if (club.presentationTemplateKey !== "academy@1") notFound();
+  if (codeSiteFor(club) !== "diverse-city") notFound();
   const onzio = (await createClient()).schema("onzio");
   // The sibling list feeds the mockup-parity "Explore other programs."
   // button row.

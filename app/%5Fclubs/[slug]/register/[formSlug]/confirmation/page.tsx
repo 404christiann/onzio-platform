@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { codeSiteFor } from "@/lib/code-site";
 import AcademyRegistrationConfirmationPage from "@/components/sites/diverse-city/AcademyRegistrationConfirmationPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
@@ -16,7 +17,7 @@ export default async function RegistrationConfirmationPage({
   const { token } = await searchParams;
   try {
     const club = await getClubContextBySlug((await params).slug);
-    if (club.presentationTemplateKey === "academy@1") {
+    if (codeSiteFor(club) === "diverse-city") {
       return <AcademyRegistrationConfirmationPage token={typeof token === "string" ? token : null} />;
     }
     return <RegistrationConfirmation token={typeof token === "string" ? token : null} />;

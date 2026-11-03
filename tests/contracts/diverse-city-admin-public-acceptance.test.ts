@@ -52,7 +52,7 @@ describe("DCFC-304 reusable public route acceptance", () => {
     ]) {
       expect(joined).toContain(query);
     }
-    expect(joined).toContain('presentationTemplateKey !== "academy@1"');
+    expect(joined).toContain('codeSiteFor(club) !== "diverse-city"');
     expect(source("middleware.ts")).toContain(
       "target.hostname = hostname",
     );

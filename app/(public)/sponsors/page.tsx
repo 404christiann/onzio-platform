@@ -1,5 +1,7 @@
 "use client";
 
+import { codeSiteFor } from "@/lib/code-site";
+
 export const dynamic = "force-dynamic";
 
 import ClubhouseSponsorsPage from "@/components/ClubhouseSponsorsPage";
@@ -14,7 +16,7 @@ export default function SponsorsPage() {
   const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[] | null>(null);
 
   useEffect(() => {
-    if (club.presentationTemplateKey !== "academy@1") return;
+    if (codeSiteFor(club) !== "diverse-city") return;
     let cancelled = false;
     setSponsors(null);
     fetchSiteSponsorLogos("carousel", club.id)
@@ -31,7 +33,7 @@ export default function SponsorsPage() {
   }, [club.id, club.presentationTemplateKey]);
 
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSponsorsPage />;
-  if (club.presentationTemplateKey === "academy@1") {
+  if (codeSiteFor(club) === "diverse-city") {
     return sponsors ? <AcademySponsorsPage sponsors={sponsors} clubName={club.name} /> : null;
   }
   return (

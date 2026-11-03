@@ -1,5 +1,7 @@
 "use client";
 
+import { codeSiteFor } from "@/lib/code-site";
+
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
@@ -69,7 +71,7 @@ export default function RosterPage() {
   const club = useClubContext();
   if (club.presentationTemplateKey === "editorial@1") return <EditorialRoster />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseRosterPage />;
-  if (club.presentationTemplateKey === "academy@1") return <AcademyRosterPage />;
+  if (codeSiteFor(club) === "diverse-city") return <AcademyRosterPage />;
   return <LegacyRosterPage />;
 }
 

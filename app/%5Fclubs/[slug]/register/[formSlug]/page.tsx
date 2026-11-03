@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { codeSiteFor } from "@/lib/code-site";
 import AcademyRegistrationPage from "@/components/sites/diverse-city/AcademyRegistrationPage";
 import RegistrationCtaButton from "@/components/registration/RegistrationCtaButton";
 import { ContractError } from "@/lib/contract-error";
@@ -20,7 +21,7 @@ export default async function RegistrationPage({
   let registrationSite: "academy" | "platform" = "platform";
   try {
     const club = await getClubContextBySlug(slug);
-    registrationSite = club.presentationTemplateKey === "academy@1" ? "academy" : "platform";
+    registrationSite = codeSiteFor(club) === "diverse-city" ? "academy" : "platform";
     if (club.lifecycle !== "active" || (club.publicAccess !== "live" && club.publicAccess !== "grace")) notFound();
     const form = toPublicRegistrationForm(await loadOpenRegistrationForm(club.id, formSlug));
     if (registrationSite === "academy") {

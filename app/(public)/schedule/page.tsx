@@ -1,5 +1,7 @@
 "use client";
 
+import { codeSiteFor } from "@/lib/code-site";
+
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState, useMemo } from "react";
@@ -52,7 +54,7 @@ export default function SchedulePage() {
   const club = useClubContext();
   if (club.presentationTemplateKey === "editorial@1") return <EditorialSchedule />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSchedulePage />;
-  if (club.presentationTemplateKey === "academy@1") return <AcademySchedulePage />;
+  if (codeSiteFor(club) === "diverse-city") return <AcademySchedulePage />;
   return <LegacySchedulePage />;
 }
 

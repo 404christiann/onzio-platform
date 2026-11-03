@@ -5,6 +5,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import DiverseCityHomePage from "@/components/sites/diverse-city/HomePage";
 import type { DBHomepageHeroContent } from "@/lib/db-types";
 import type { HomepageStoryContent } from "@/lib/homepage-story-content";
+import { codeSiteFor } from "@/lib/code-site";
 
 const Hero = nextDynamic(() => import("@/components/Hero"), { ssr: false });
 const NextMatchCard = nextDynamic(() => import("@/components/NextMatchCard"), { ssr: false });
@@ -32,7 +33,7 @@ export default function HomePageClient({
     return <ClubhouseHomePage initialHeroContent={initialHeroContent} />;
   }
   const championsBadge = club.slug === "rose-city" ? <ChampionsBadge /> : null;
-  if (club.presentationTemplateKey === "academy@1") {
+  if (codeSiteFor(club) === "diverse-city") {
     return (
       <DiverseCityHomePage
         initialHeroContent={initialHeroContent}

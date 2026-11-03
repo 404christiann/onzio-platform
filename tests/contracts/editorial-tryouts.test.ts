@@ -72,22 +72,19 @@ describe("editorial tryouts: read-only render", () => {
 });
 
 describe("editorial tryouts: dispatch wiring", () => {
-  it("adds an editorial@1 branch to the tenant tryouts route while keeping the academy@1 guard byte-identical and reachable for every other template", () => {
+  it("keeps the editorial branch before the Diverse City route guard", () => {
     const route = read("app/%5Fclubs/[slug]/tryouts/page.tsx");
     expect(route).toContain('import EditorialTryouts from "@/components/editorial/EditorialTryouts"');
     expect(route).toContain('if (club.presentationTemplateKey === "editorial@1")');
     expect(route).toContain("<EditorialTryouts");
-    // Pinned by tests/contracts/diverse-city-tryouts-admin.test.ts and
-    // tests/contracts/diverse-city-admin-public-acceptance.test.ts -- must
-    // stay exactly this string, still reachable after the editorial branch.
     expect(route).toContain(
-      'if (club.presentationTemplateKey !== "academy@1") notFound();',
+      'if (codeSiteFor(club) !== "diverse-city") notFound();',
     );
     const editorialBranchIndex = route.indexOf(
       'if (club.presentationTemplateKey === "editorial@1")',
     );
     const academyGuardIndex = route.indexOf(
-      'if (club.presentationTemplateKey !== "academy@1") notFound();',
+      'if (codeSiteFor(club) !== "diverse-city") notFound();',
     );
     expect(editorialBranchIndex).toBeGreaterThan(-1);
     expect(academyGuardIndex).toBeGreaterThan(editorialBranchIndex);
@@ -98,7 +95,7 @@ describe("editorial tryouts: dispatch wiring", () => {
     const editorialBranch = route.slice(
       route.indexOf('if (club.presentationTemplateKey === "editorial@1")'),
       route.indexOf(
-        'if (club.presentationTemplateKey !== "academy@1") notFound();',
+        'if (codeSiteFor(club) !== "diverse-city") notFound();',
       ),
     );
     expect(editorialBranch).toContain("fetchTryouts(club.id, onzio)");

@@ -120,17 +120,14 @@ describe("editorial contact: dispatch wiring", () => {
     );
     expect(route).toContain('if (club.presentationTemplateKey === "editorial@1")');
     expect(route).toContain("<EditorialContactPage");
-    // Pinned by tests/contracts/diverse-city-admin-public-acceptance.test.ts
-    // -- must stay exactly this string, still reachable after the editorial
-    // branch.
     expect(route).toContain(
-      'if (club.presentationTemplateKey !== "academy@1") notFound();',
+      'if (codeSiteFor(club) !== "diverse-city") notFound();',
     );
     const editorialBranchIndex = route.indexOf(
       'if (club.presentationTemplateKey === "editorial@1")',
     );
     const academyGuardIndex = route.indexOf(
-      'if (club.presentationTemplateKey !== "academy@1") notFound();',
+      'if (codeSiteFor(club) !== "diverse-city") notFound();',
     );
     expect(editorialBranchIndex).toBeGreaterThan(-1);
     expect(academyGuardIndex).toBeGreaterThan(editorialBranchIndex);
@@ -141,7 +138,7 @@ describe("editorial contact: dispatch wiring", () => {
     const editorialBranch = route.slice(
       route.indexOf('if (club.presentationTemplateKey === "editorial@1")'),
       route.indexOf(
-        'if (club.presentationTemplateKey !== "academy@1") notFound();',
+        'if (codeSiteFor(club) !== "diverse-city") notFound();',
       ),
     );
     expect(editorialBranch).toContain("fetchContactContent(club.id, onzio)");

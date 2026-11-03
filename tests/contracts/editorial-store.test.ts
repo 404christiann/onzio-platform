@@ -34,10 +34,10 @@ function listFilesRecursively(dir: string): string[] {
 }
 
 describe("shop page dispatch wiring", () => {
-  it("adds an editorial@1 branch above clubhouse@1/academy@1, gated on club.storeEnabled with notFound()", () => {
+  it("keeps editorial after clubhouse and Diverse City with the store gate", () => {
     const source = read("app/(public)/shop/page.tsx");
     const clubhouseIndex = source.indexOf('"clubhouse@1"');
-    const academyIndex = source.indexOf('"academy@1"');
+    const academyIndex = source.indexOf('if (codeSiteFor(club) === "diverse-city")');
     const editorialIndex = source.indexOf('"editorial@1"');
 
     expect(clubhouseIndex).toBeGreaterThan(-1);
@@ -52,14 +52,14 @@ describe("shop page dispatch wiring", () => {
     expect(source).toContain("return <EditorialShopPage />;");
   });
 
-  it("leaves the clubhouse@1, academy@1, and legacy Rose City branches byte-identical", () => {
+  it("keeps the clubhouse, Diverse City, and legacy Rose City shop branches", () => {
     const source = read("app/(public)/shop/page.tsx");
 
     expect(source).toContain(
       'if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseShopPage />;',
     );
     expect(source).toContain(
-      'if (club.presentationTemplateKey === "academy@1") return <AcademyShopPage />;',
+      'if (codeSiteFor(club) === "diverse-city") return <AcademyShopPage />;',
     );
 
     // Legacy Rose City fallback JSX, unchanged.

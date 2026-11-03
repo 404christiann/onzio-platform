@@ -14,6 +14,7 @@ import AcademyRouteLoadingSkeleton from "@/components/sites/diverse-city/RouteLo
 import AcademyShell from "@/components/sites/diverse-city/Shell";
 import type { ClubContext } from "@/lib/club-context";
 import type { Metadata } from "next";
+import { codeSiteFor } from "@/lib/code-site";
 
 export async function generateMetadata({
   params,
@@ -96,7 +97,7 @@ export default async function TenantLayout({
 
   // The header remains usable while branding or page content is pending.
   // Programs load independently inside Nav, so they never hold the page.
-  if (club.presentationTemplateKey === "academy@1") {
+  if (codeSiteFor(club) === "diverse-city") {
     return (
       <ClubContextProvider club={club}>
         <Suspense fallback={<AcademyRouteLoadingSkeleton />}>

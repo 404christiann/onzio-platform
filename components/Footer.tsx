@@ -11,6 +11,7 @@ import { DEFAULT_SITE_SOCIAL_LINKS } from "@/lib/social-links";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import AcademyFooter, { type FooterOverrides } from "@/components/sites/diverse-city/Footer";
+import { codeSiteFor } from "@/lib/code-site";
 
 const footerLinks = [
   { label: "Home", href: "/" },
@@ -23,7 +24,7 @@ const footerLinks = [
 /** The Academy footer lives in its site module; every other template renders here. */
 export default function Footer({ overrides }: { overrides?: FooterOverrides } = {}) {
   const club = useClubContext();
-  if (club.presentationTemplateKey === "academy@1") return <AcademyFooter overrides={overrides} />;
+  if (codeSiteFor(club) === "diverse-city") return <AcademyFooter overrides={overrides} />;
   return <TemplateFooter overrides={overrides} />;
 }
 

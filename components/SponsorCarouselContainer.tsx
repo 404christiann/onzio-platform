@@ -8,7 +8,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
-export default function SponsorCarouselContainer() {
+export default function SponsorCarouselContainer({ loadingSkeleton }: { loadingSkeleton?: "academy" } = {}) {
   const club = useClubContext();
   const clubId = club.id;
   const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>([]);
@@ -25,6 +25,6 @@ export default function SponsorCarouselContainer() {
       .finally(() => setLoading(false));
   }, [clubId]);
 
-  if (showLoading && club.presentationTemplateKey === "academy@1") return <AcademySectionLoadingSkeleton height="min-h-48" />;
+  if (showLoading && loadingSkeleton === "academy") return <AcademySectionLoadingSkeleton height="min-h-48" />;
   return <SponsorCarousel sponsors={sponsors} />;
 }
