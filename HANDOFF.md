@@ -1,3 +1,9 @@
+## 2026-11-02 - Production inventory blocks #55 as scoped
+
+- Read-only SQL against Supabase production project `ioalthwsdrlzrubomrow` at 2026-11-03 05:29 UTC found published `editorial@1` for Lions. Lions is onboarding with preview public access and active verified production domains. Diverse City is published on `academy@1`; Rose City has no presentation document. Neither `cinematic@1` nor `heritage@1` appears in hosted presentation documents.
+- This corrects the earlier unverified no-use report. The current #55 candidate `6f7e9ae` rejects retired assignments and would reject Lions' published Editorial document. Status is blocked for acceptance and publication. Keep the branch local while Lions' preview assignment or #55's Editorial scope is resolved. Browser parity, full exact-head verification, and independent review remain open. The production read was not a hosted write or a rollout decision.
+- Exact next step: record the per-template inventory on #46 under its human-recording rule, decide Lions' preview disposition later, then revise and reverify #55 before acceptance. Other local work can proceed separately.
+
 ## 2026-11-02 - SITE-08 #55 local v1 design retirement in progress
 
 - Christian reports no hosted club uses `cinematic@1`, `heritage@1`, or `editorial@1` and authorizes their local removal. This is his report, not a production SQL verification. He expressly keeps `cinematic@2` for Rose City 2027. That separate dirty worktree was inspected read-only and left untouched. Current main/#56 has no `cinematic@2`, so this branch cannot claim its rendering parity. Christian will handle #54 hosted rollout later.
