@@ -81,7 +81,7 @@ async function run() {
         const differences: { id: string; width: number; fields: string[]; pixels: Awaited<ReturnType<typeof pixelDifference>> | null }[] = [];
         async function capture(role: "before" | "after", width: number, item: AcademyProofDocumentCase, storageState: PilotProofStorageState) {
           scope.signal.throwIfAborted();
-          const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 1, storageState,
+          const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: width === 390 ? 2 : 1, storageState,
             reducedMotion: "reduce", serviceWorkers: "block", proxy: { server: proxy.server, bypass: "" } });
           const observations: AcademyProofNetworkObservations = { errors, excludedResources, forwardedDocuments: [], redirects: [] };
           await installAcademyProofGuard(context, origins, proxy,
@@ -189,6 +189,20 @@ async function run() {
             }, { timeout: 10_000, intervals: [100] }).toBe(true);
             await page.mouse.move(0, 0);
             await content.evaluate(element => new Promise<void>(resolve => element.ownerDocument.defaultView?.requestAnimationFrame(() => element.ownerDocument.defaultView?.requestAnimationFrame(() => resolve()))));
+            const images = item.document.kind === "public" ? [
+              page.locator('header nav a[aria-label$=" Home"] img').first(),
+              ...["US Soccer", "FIFA", "UPSL"].map(name => page.locator(`header nav img[alt=${JSON.stringify(name)}]`)),
+              ...(item.id === "public.home" ? [page.locator(".sponsor-carousel-logo img").first()] : []),
+            ] : item.id === "preview.shop" ? [content.locator('[data-shop-editor-target="photos"] img').first()] : [];
+            for (const image of images) {
+              await expect(image).toBeVisible();
+              await image.evaluate(element => (element as HTMLImageElement).decode());
+              await expect.poll(async () => {
+                const stats = await sharp(await image.screenshot({ animations: "disabled" })).stats();
+                return Math.max(...stats.channels.map((channel: { stdev: number }) => channel.stdev)) > 15;
+              }, { timeout: 20_000, intervals: [250] }).toBe(true);
+            }
+            if (images.length) await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
             const state = await content.evaluate(element => ({
               text: (element as HTMLElement).innerText,
               links: Array.from(element.querySelectorAll("a[href]")).filter(link => !!link.getClientRects().length).map(link => [link.textContent, link.getAttribute("href")] as [string | null, string | null]),
@@ -200,7 +214,14 @@ async function run() {
               disabled: element.hasAttribute("disabled") || element.getAttribute("aria-disabled") === "true",
             })));
             const screenshot = join(output, `${role}-${width}-${item.id}.png`);
-            const bytes = await page.screenshot({ path: screenshot, fullPage: true, animations: "disabled" });
+            let bytes = await page.screenshot({ fullPage: true, animations: "disabled" });
+            await expect.poll(async () => {
+              const next = await page.screenshot({ fullPage: true, animations: "disabled" });
+              const equal = bytes.equals(next);
+              bytes = next;
+              return equal;
+            }, { timeout: 10_000, intervals: [250] }).toBe(true);
+            writeFileSync(screenshot, bytes);
             const resource = await finish();
             assert.deepEqual(observations.errors, [], `${role} ${item.id} had guarded route errors`);
             assert.deepEqual(observations.excludedResources.filter(value => !value.includes("/_vercel/insights/") && !/(b-cdn\.net|bunnycdn\.com|mediadelivery\.net)/.test(value)), [], `${role} ${item.id} loaded unexpected external resources`);

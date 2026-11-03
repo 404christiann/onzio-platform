@@ -92,7 +92,7 @@ async function run() {
         const photos = ["/images/shop/rosecityshirt1.webp", "/images/shop/rosecityshirt2.jpeg"].map((url, index) => ({ id: String(index), surface: "home", kit_variant: "home", url, sort_order: index, created_at: section.updated_at }));
         const networkTraces = new WeakMap<BrowserContext, AcademyProofNetworkObservations>();
         async function context(width: number, storageState: StorageState | undefined = auth) {
-          const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 1, storageState, reducedMotion: "reduce", serviceWorkers: "block", proxy: { server: proxy.server, bypass: "" } });
+          const context = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: width === 390 ? 2 : 1, storageState, reducedMotion: "reduce", serviceWorkers: "block", proxy: { server: proxy.server, bypass: "" } });
           const observations: AcademyProofNetworkObservations = { errors: routeErrors, excludedResources, forwardedDocuments: [], redirects: [] };
           networkTraces.set(context, observations);
           await installAcademyProofGuard(context, origins, proxy, { clubId: proof.clubId, documentAllowed: origin => site.documentAllowed(origin) }, observations);
@@ -295,11 +295,12 @@ async function run() {
               const photos = content.locator('[data-shop-editor-target="photos"]');
               const box = await photos.boundingBox();
               assert(box, "Home kit photo panel has no visible bounds");
+              const pixelRatio = await page.evaluate(() => window.devicePixelRatio);
               const region = {
-                left: Math.floor(box.x + box.width * 0.6),
-                top: Math.floor(box.y + box.height * 0.1),
-                width: Math.floor(box.width * 0.35),
-                height: Math.floor(box.height * 0.6),
+                left: Math.floor((box.x + box.width * 0.6) * pixelRatio),
+                top: Math.floor((box.y + box.height * 0.1) * pixelRatio),
+                width: Math.floor(box.width * 0.35 * pixelRatio),
+                height: Math.floor(box.height * 0.6 * pixelRatio),
               };
               let painted = false;
               let previous: Buffer | null = null;
@@ -316,7 +317,7 @@ async function run() {
                 await page.waitForTimeout(250);
               }
               assert(painted, "Home kit preview did not show the second jersey in two identical frames");
-            } else if (item.id === "preview.sponsorsCarousel") {
+            } else if (["public.logo", "preview.shop", "preview.sponsorsCarousel"].includes(item.id)) {
               let previous = await page.screenshot({ fullPage: true, animations: "disabled" });
               let stable = false;
               for (let attempt = 0; attempt < 5; attempt++) {
@@ -325,7 +326,7 @@ async function run() {
                 if (current.equals(previous)) { writeFileSync(screenshot, current); stable = true; break; }
                 previous = current;
               }
-              assert(stable, "Sponsors editor screenshot did not settle to identical frames");
+              assert(stable, `${item.id} screenshot did not settle to identical frames`);
             } else await page.screenshot({ path: screenshot, fullPage: true, animations: "disabled" });
             assert(finish, "Document observer was not installed");
             const observation = await finish();
