@@ -15,6 +15,11 @@
 - On merged `main` `44bbae4`, the selector test passes 116/116. A temporary selector in a new source file failed the real architecture check with two unlisted reads and one unlisted literal. Inflating an existing allowlist count failed the stale-entry check with allowlist 2 versus code 1. Both temporary changes were restored, and 116/116 passed again. The current inventory is 173 mentions across 34 files. The shrink procedure remains in `tests/README.md`.
 - This closeout changes only the handoff and SITE ledger. It does not alter the guard, application, migrations or hosted state. Exact next step: review and merge this documentation PR, then close #44 with the recorded evidence. SITE-08's final shared-template retirement and #54 hosted activation remain separate.
 
+## 2026-11-03 - SITE-07 #54 rollout preparation approved
+
+- Christian gave the go-ahead to prepare the hosted Academy rollout. The [rollout checklist](docs/academy-hosted-activation.md) records owners, sequence, and rollback checks. #80 scopes the hosted release dispatch and the operator's activation and rollback endpoint.
+- Verification for this change is limited to the documented decision and links. Next step is #80 implementation and staging proof before scheduling the production switch.
+
 ## 2026-11-03 - SITE-08 #56 local acceptance passed
 
 - Status remains `in_progress` pending the required human-run verifier and Christian's review. At independently reviewed `0e8d9ccab9b1449b678990631fecee4a605ff309`, types, lint, guarded production build, 1,479 contracts, 421 architecture tests with one existing skip, 981 database tests, and 428 other suite tests passed. The only executable changes after the prior checkpoint are the two browser drivers. The approved A/B source and packages remain byte-identical.
