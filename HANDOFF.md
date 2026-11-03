@@ -1,3 +1,9 @@
+## 2026-11-03 - #59 Codex verification pilot report publication
+
+- Status: historical pilot report recovered without changing its observations. `docs/agents/codex-pilot-report.md` has the same SHA-256 `ffb701b986f39f9702b7fa7b3b5a72435ab03cfee712c3d58bfa6cf120844582` as the reviewed local source. It records the exact seven checks, sandbox probes, baseline comparison, limits and recommendation from the 2026-10-31 workspace-write run. The report does not claim that failed or blocked checks passed.
+- The prior docs-only candidate `bb66524` passed the complete guarded verifier against its then-current base `589f801`: types, lint, 1,660 contracts, production build and 422 other suite tests passed; architecture had three failures versus four on clean base, and database had the same one Contact failure as base. Its independent review was clean. These results belong to that revision. This publication branch starts from merged main `44bbae4` and changes only this top handoff entry and the historical report. No product behavior or hosted state changes.
+- Exact next step: review this docs-only PR and merge it, then close #59 with the report link. The current Codex sandbox limitations in the historical report still require out-of-sandbox verification for normal tickets.
+
 ## 2026-11-03 - SITE-08 #44 selector guard closeout on merged main
 
 - Status: local acceptance complete. PR #77 merged the selector guard into `main` at `44bbae4`. The prior exact-head verifier at `7459892` passed types, lint, 1,660 contracts, 378 architecture tests with one existing skip, the production build, and 422 other suite tests. Its database result was 977/978, with the one Contact failure reproduced on clean base. Independent final-head review of #44 found no High or Medium issue; Grokbot's PR #77 review also found none at `b5dcf5c`.
