@@ -14,6 +14,7 @@ import {
   reduceHomepageEditor,
 } from "@/lib/homepage-editor/model";
 import { homepageDraft, SAVE_OPERATION } from "../fixtures/homepage-editor";
+import { diverseCitySite } from "@/components/sites/diverse-city/site-definition";
 
 const root = process.cwd();
 const source = (path: string) => readFileSync(resolve(root, path), "utf8");
@@ -37,8 +38,6 @@ const DASHBOARD_ADMIN = "app/admin/(protected)/page.tsx";
 const ROUTE_MANIFEST = "lib/admin-route-manifest.ts";
 
 const EDITORIAL_GATE = 'presentationTemplateKey === "editorial@1"';
-const ACADEMY_GATE = 'presentationTemplateKey === "academy@1"';
-const CLUBHOUSE_GATE = 'presentationTemplateKey === "clubhouse@1"';
 
 /**
  * Lions FC (editorial@1) hides admin surfaces its public template never
@@ -104,7 +103,8 @@ describe("editorial@1 admin surface hides", () => {
   describe("route guards: direct URL access redirects editorial@1 to /admin", () => {
     it("programs rejects every template without the public Programs route", () => {
       const page = source(PROGRAMS_ADMIN);
-      expect(page).toContain('const unsupportedTemplate = club.presentationTemplateKey !== "academy@1";');
+      expect(page).toContain('const unsupportedTemplate = !programsPolicy?.routeVisible;');
+      expect(diverseCitySite.admin.programs.routeVisible).toBe(true);
       expect(page).toContain('if (unsupportedTemplate) router.replace("/admin");');
       expect(page).toContain("if (unsupportedTemplate) return null;");
     });
@@ -140,13 +140,14 @@ describe("editorial@1 admin surface hides", () => {
       expect(page).not.toContain("useRouter");
     });
 
-    it("extends the academy club-logo gate with the tryouts !isAcademy && !isEditorial shape", () => {
+    it("hides Club Logo for both sites without that public page", () => {
       const page = source(ABOUT_ADMIN);
-      expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
+      expect(page).toContain('const aboutPolicy = codeSiteAdminFor(club)?.about;');
       expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
       expect(page).toContain(
-        "const hasClubLogoPage = !isAcademy && !isEditorial;",
+        "const hasClubLogoPage = aboutPolicy?.showLogoPage ?? !isEditorial;",
       );
+      expect(diverseCitySite.admin.about.showLogoPage).toBe(false);
       // The page switcher is hidden and the logo Save branch remains
       // unreachable for both templates that lack a public Club Logo page.
       expect(page).toContain('{hasClubLogoPage && <button type="button"');
@@ -154,7 +155,7 @@ describe("editorial@1 admin surface hides", () => {
       expect(page).toContain("await saveAboutEditor(request)");
       expect(page).not.toContain('supabase.from("about_page_content").upsert');
       expect(source("app/api/admin/about-editor/route.ts")).toContain('rpc("save_about_editor"');
-      expect(page).not.toContain("{!isAcademy && (");
+      expect(page).not.toContain("{!aboutPolicy && (");
     });
 
     it("keeps the closing-CTA pin academy-only — Lions gets a route dropdown", () => {
@@ -163,9 +164,10 @@ describe("editorial@1 admin surface hides", () => {
       // closing_cta_href is /club/about, not /schedule, so it must NOT inherit
       // the pin when the club-logo gate widened.
       const save = source("lib/about-editor/save.ts");
-      expect(save).toContain('closing_cta_href: input.academy ? "/schedule" : input.about.closing_cta_href.trim()');
+      expect(save).toContain('closing_cta_href: input.fixedClosingCtaHref ?? input.about.closing_cta_href.trim()');
       expect(save).not.toContain("closing_cta_href: hasClubLogoPage");
-      expect(page).toContain("{isAcademy ? (");
+      expect(page).toContain("{aboutPolicy?.closingCtaHref ? (");
+      expect(diverseCitySite.admin.about.closingCtaHref).toBe("/schedule");
       expect(page).toContain('<NativeSelect\n                          aria-label="Button goes to"');
       expect(page).not.toContain('label="Button Link"');
     });
@@ -330,7 +332,7 @@ describe("editorial@1 admin surface hides", () => {
     it("enforces the hidden photo row and purchase sections at the database boundary", () => {
       const editor = source(SHOP_EDITOR);
       const save = source(SHOP_SAVE);
-      expect(editor).toContain('const generic = !isAcademy && !isClubhouse && !isEditorial;');
+      expect(editor).toContain('const generic = !shopPolicy && !isClubhouse && !isEditorial;');
       expect(save).toContain("(page_surface='home' or template in ('academy@1','clubhouse@1','editorial@1')) and (photo_rows is not null or purchase is not null)");
       expect(source("components/ClubhouseShopPage.tsx")).not.toContain("ShopPhotoStrip");
       expect(source("components/ClubhouseShopPage.tsx")).not.toContain("ShopPurchaseDetailsSection");
@@ -340,10 +342,11 @@ describe("editorial@1 admin surface hides", () => {
 
     it("keeps all three public kit variants for Editorial and Clubhouse while Academy has Home only", () => {
       const editor = source(SHOP_EDITOR);
-      expect(editor).toContain('const isAcademy = template === "academy@1";');
+      expect(editor).toContain('const shopPolicy = codeSiteAdminFor(club)?.shop;');
       expect(editor).toContain('const isClubhouse = template === "clubhouse@1";');
       expect(editor).toContain('const isEditorial = template === "editorial@1";');
-      expect(editor).toContain('const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];');
+      expect(editor).toContain('const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];');
+      expect(diverseCitySite.admin.shop.variants).toEqual(["home"]);
       expect(source("components/editorial/EditorialShopPage.tsx")).toContain('const VARIANT_ORDER: ShopKitVariant[] = ["home", "away", "third"];');
       expect(source("components/ClubhouseShopPage.tsx")).toContain('(["home", "third", "away"] as ShopKitVariant[])');
       expect(source(SHOP_SAVE)).toContain("if (page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away')");
@@ -352,7 +355,7 @@ describe("editorial@1 admin surface hides", () => {
     it("offers no independent Homepage shop page for Clubhouse and Editorial", () => {
       const editor = source(SHOP_EDITOR);
       expect(editor).toContain('const sharedWithHomepage = isClubhouse || isEditorial;');
-      expect(editor).toContain('const hasHomeFeature = !sharedWithHomepage;');
+      expect(editor).toContain('const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;');
       expect(editor).toContain('{hasHomeFeature && <button type="button" aria-current={surface === "home" ? "page" : undefined}');
       expect(editor).toContain('Kit changes on this Shop page also update the homepage store teaser.');
       expect(source(SHOP_SAVE)).toContain("if page_surface='home' and template in ('clubhouse@1','editorial@1') then raise exception 'PAGE_UNAVAILABLE'");
@@ -360,7 +363,8 @@ describe("editorial@1 admin surface hides", () => {
 
     it("constrains the selected page to Shop when the homepage uses Shop data", () => {
       const editor = source(SHOP_EDITOR);
-      expect(editor).toContain('const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>("shop");');
+      expect(editor).toContain('const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>(shopPolicy?.initialSurface ?? "shop");');
+      expect(diverseCitySite.admin.shop.initialSurface).toBe("shop");
       expect(editor).toContain('const surface: ShopSurface = hasHomeFeature ? surfaceChoice : "shop";');
       expect(editor).toContain('const currentVariant: ShopVariant = surface === "home" || !variants.includes(selectedVariant) ? "home" : selectedVariant;');
       expect(editor).toContain('const [drafts, setDrafts] = useState<Partial<Record<ShopSurface, ShopPageDraft>>>({});');
@@ -369,7 +373,7 @@ describe("editorial@1 admin surface hides", () => {
 
     it("keeps Academy and generic homepage Shop features separately editable", () => {
       const editor = source(SHOP_EDITOR);
-      expect(editor).toContain('const hasHomeFeature = !sharedWithHomepage;');
+      expect(editor).toContain('const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;');
       expect(editor).toContain('Homepage shop feature {shopDraftDirty(drafts.home) ? "•" : ""}');
       expect(editor).toContain('surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} />');
       expect(editor).toContain('<ShopKitSectionContainer surface={surface}');
@@ -389,8 +393,9 @@ describe("editorial@1 admin surface hides", () => {
       expect(home).toContain('<ShopKitSection surface="home" fadeImageToWhite />');
       expect(home).toContain('if (club.presentationTemplateKey === "clubhouse@1") {');
       expect(home).toContain('if (club.presentationTemplateKey === "editorial@1") {');
-      expect(source(SHOP_EDITOR)).toContain('const generic = !isAcademy && !isClubhouse && !isEditorial;');
-      expect(source(SHOP_EDITOR)).toContain('const hasHomeFeature = !sharedWithHomepage;');
+      expect(home).toContain('if (codeSiteFor(club) === "diverse-city") {');
+      expect(source(SHOP_EDITOR)).toContain('const generic = !shopPolicy && !isClubhouse && !isEditorial;');
+      expect(source(SHOP_EDITOR)).toContain('const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;');
     });
 
     it("shows only public sections and makes an unavailable Editorial Store read-only", () => {
@@ -408,13 +413,14 @@ describe("editorial@1 admin surface hides", () => {
   });
 
   describe("sponsors admin: footer placement hidden for editorial@1", () => {
-    it("extends the academy gate with OR — academy@1 branch unchanged", () => {
+    it("hides footer placement for the code site and Editorial", () => {
       const page = source(SPONSORS_ADMIN);
-      expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
+      expect(page).toContain('const sponsorsPolicy = codeSiteAdminFor(club)?.sponsors;');
       expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
       expect(page).toContain(
-        "const hidesSponsorFooterTab = isAcademy || isEditorial;",
+        "const hidesSponsorFooterTab = sponsorsPolicy?.showFooterPlacement === false || isEditorial;",
       );
+      expect(diverseCitySite.admin.sponsors.showFooterPlacement).toBe(false);
       // The pill switcher was replaced by an AdminSectionRail whose footer
       // row carries the same gate via the rail's `hidden` flag — dropping it
       // out of the rail and the DOM entirely, not just disabling it.
@@ -432,7 +438,8 @@ describe("editorial@1 admin surface hides", () => {
     it("renders a real Contact canvas for academy and editorial without a dead image upload", () => {
       const page = source(CONTACT_ADMIN);
       const canvas = source("components/admin/contact/ContactPageCanvas.tsx");
-      expect(page).toContain('club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1"');
+      expect(page).toContain('!codeSiteAdminFor(club)?.contact.routeVisible && club.presentationTemplateKey !== "editorial@1"');
+      expect(diverseCitySite.admin.contact.routeVisible).toBe(true);
       expect(page).toContain("<ContactPageCanvas content={content}");
       expect(canvas).toContain("<AcademyContactPage content={content}");
       expect(canvas).toContain("<EditorialContactPage content={content}");
@@ -444,20 +451,21 @@ describe("editorial@1 admin surface hides", () => {
   describe("roster admin: inline season-stat panel hidden for editorial@1", () => {
     it("keeps the gate template-scoped and academy@1 included as before", () => {
       const page = source(ROSTER_ADMIN);
-      expect(page).toContain(
-        `const hidesInlineSeasonStats =\n    club.${ACADEMY_GATE} ||\n    club.${EDITORIAL_GATE};`,
-      );
+      expect(page).toContain('codeSiteAdminFor(club)?.roster.showInlineSeasonStats === false ||');
+      expect(page).toContain(`club.${EDITORIAL_GATE}`);
+      expect(diverseCitySite.admin.roster.showInlineSeasonStats).toBe(false);
     });
   });
 
   describe("schedule admin: match sponsor fields hidden for editorial@1", () => {
-    it("extends the academy gate with OR in both components", () => {
+    it("uses the sponsor-field policy in both schedule forms", () => {
       const page = source(SCHEDULE_ADMIN);
       // SchedulePage and MatchForm each declare the combined gate.
       expect(
-        count(page, "const hidesMatchSponsorFields = isAcademy || isEditorial;"),
+        count(page, "const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false || isEditorial;"),
       ).toBe(2);
-      expect(count(page, `const isAcademy = club.${ACADEMY_GATE};`)).toBe(2);
+      expect(count(page, 'const schedulePolicy = codeSiteAdminFor(club)?.schedule;')).toBe(2);
+      expect(diverseCitySite.admin.schedule.showMatchSponsorFields).toBe(false);
     });
 
     it("gates the sponsor copy-forward, list display, and form fields", () => {
@@ -483,19 +491,21 @@ describe("editorial@1 admin surface hides", () => {
   });
 
   describe("tryouts admin: program association and hero image hidden for editorial@1", () => {
-    it("uses the inverted gate consistently — academy@1 evaluates as before", () => {
+    it("uses the code site field choices while Editorial keeps its own gate", () => {
       const page = source("components/admin/tryouts/TryoutsPageEditor.tsx");
-      expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
+      expect(page).toContain('const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;');
       expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
-      // !isAcademy && !isEditorial is false for academy@1 exactly where the
-      // old !isAcademy was false; default templates stay true.
+      // The code site hides these fields; Editorial hides them through its
+      // template fallback. Other templates keep the original fields.
       expect(page).toContain(
-        "const showsProgramAndHeroFields = !isAcademy && !isEditorial;",
+        "const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? !isEditorial;",
       );
+      expect(diverseCitySite.admin.tryouts.showProgramAndHeroFields).toBe(false);
       // Program association stays hidden where neither public template
       // renders it. The Academy event photo now has its own public owner.
       expect(count(page, "{showsProgramAndHeroFields &&")).toBe(1);
-      expect(page).toContain("const showsHeroImage = isAcademy;");
+      expect(page).toContain("const showsHeroImage = tryoutsPolicy?.showHeroImageField ?? false;");
+      expect(diverseCitySite.admin.tryouts.showHeroImageField).toBe(true);
       expect(page).not.toContain("{!isAcademy && (");
     });
 
@@ -509,11 +519,12 @@ describe("editorial@1 admin surface hides", () => {
   });
 
   describe("standings admin: Rose City sample preview hidden for editorial@1", () => {
-    it("extends the academy gate with AND-NOT — academy@1 branch unchanged", () => {
+    it("keeps sample fallback off for the code site and Editorial", () => {
       const page = source(STANDINGS_ADMIN);
-      expect(page).toContain(`const isAcademy = club.${ACADEMY_GATE};`);
+      expect(page).toContain('const standingsPolicy = codeSiteAdminFor(club)?.standings;');
       expect(page).toContain(`const isEditorial = club.${EDITORIAL_GATE};`);
-      expect(page).toContain("fallbackToSample: !isAcademy && !isEditorial,");
+      expect(page).toContain("fallbackToSample: standingsPolicy?.useSampleFallback ?? !isEditorial,");
+      expect(diverseCitySite.admin.standings.useSampleFallback).toBe(false);
     });
 
     it("shows the empty-state copy instead of a blank panel when the fallback is off", () => {
@@ -577,13 +588,11 @@ describe("editorial@1 admin surface hides", () => {
         STANDINGS_ADMIN,
       ]) {
         const page = source(path);
-        expect(page, path).toContain(path === CONTACT_ADMIN
-          ? 'club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1"'
-          : path === PROGRAMS_ADMIN
-            ? 'presentationTemplateKey !== "academy@1"'
-            : path === SHOP_EDITOR
-              ? 'const isEditorial = template === "editorial@1";'
-              : EDITORIAL_GATE);
+        expect(page, path).toContain(path === ANALYTICS_ADMIN
+          ? EDITORIAL_GATE
+          : path === SHOP_EDITOR
+            ? 'const isEditorial = template === "editorial@1";'
+            : 'codeSiteAdminFor(club)');
         if (path === SHOP_EDITOR) expect(page).toContain('const template = club.presentationTemplateKey;');
         expect(page, path).not.toMatch(/club\.(id|slug)\s*===\s*["']/);
         expect(page, path).not.toMatch(/clubId\s*===\s*["']/);

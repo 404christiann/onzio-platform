@@ -1,4 +1,5 @@
 import type { TemplateKey } from "@/packages/presentation";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import type { HomepageSaveRequest } from "./contract";
 import type { HeroFields, HomepageSection, PieceId } from "./model";
 
@@ -11,35 +12,41 @@ export type HomepageRenderer = {
 /** Derive from trusted club context; preserve the existing public branches. */
 export function homepageRendererForClub(club: { presentationTemplateKey: TemplateKey | null; slug: string }): HomepageRenderer {
   const key = club.presentationTemplateKey;
+  const siteHomepage = codeSiteAdminFor(club)?.homepage;
   return {
     templateKey: key,
-    slideshowVariant: key === "academy@1" ? "none" : key === "editorial@1" ? "editorial" : club.slug === "rose-city" ? "legacy" : "matchday",
-    heroVariant: club.slug === "rose-city" && key !== "academy@1" && key !== "clubhouse@1" && key !== "editorial@1" ? "legacy-fixed" : "editable",
+    slideshowVariant: siteHomepage?.slideshowVariant ?? (key === "editorial@1" ? "editorial" : club.slug === "rose-city" ? "legacy" : "matchday"),
+    heroVariant: siteHomepage?.heroVariant ?? (club.slug === "rose-city" && key !== "clubhouse@1" && key !== "editorial@1" ? "legacy-fixed" : "editable"),
   };
 }
 
 export function resolveHomepageCapabilities(input: HomepageRenderer) {
-  const academy = input.templateKey === "academy@1";
+  const siteHomepage = codeSiteAdminFor({ presentationTemplateKey: input.templateKey })?.homepage;
   const editorial = input.templateKey === "editorial@1";
   const clubhouse = input.templateKey === "clubhouse@1";
   const editableSections: HomepageSection[] = [];
   const heroEditableFields: (keyof HeroFields)[] = [];
   if (input.heroVariant !== "legacy-fixed") {
     editableSections.push("hero");
-    if (!editorial && !clubhouse) heroEditableFields.push("eyebrow");
-    heroEditableFields.push("headline_line_one", "headline_line_two", "intro", "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href");
+    if (siteHomepage) heroEditableFields.push(...siteHomepage.heroEditableFields);
+    else {
+      if (!editorial && !clubhouse) heroEditableFields.push("eyebrow");
+      heroEditableFields.push("headline_line_one", "headline_line_two", "intro", "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href");
+    }
   }
-  if (!academy) editableSections.push("photos");
-  if (academy) editableSections.push("story");
-  if (!academy && !editorial && !clubhouse) editableSections.push("video");
+  if (siteHomepage) editableSections.push(...siteHomepage.editableSections.filter(section => section !== "hero"));
+  else {
+    editableSections.push("photos");
+    if (!editorial && !clubhouse) editableSections.push("video");
+  }
   return {
     editableSections, heroEditableFields,
-    photoCaptionEditable: !academy && !editorial && input.slideshowVariant === "legacy",
+    photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (!editorial && input.slideshowVariant === "legacy"),
     videoSourceEditable: false as const,
     sharedTargets: {
-      storyText: editorial || clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
-      shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: editorial || clubhouse ? "shop" as const : "home" as const },
-      programs: academy ? { owner: "programs" as const, editorHref: "/admin/programs" as const } : null,
+      storyText: siteHomepage ? siteHomepage.storyTextTarget : editorial || clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
+      shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: siteHomepage?.shopTargetSurface ?? (editorial || clubhouse ? "shop" as const : "home" as const) },
+      programs: siteHomepage?.programsTarget ?? null,
     },
   };
 }

@@ -8,6 +8,7 @@ import AdminSaveFeedback from "@/components/admin/AdminSaveFeedback";
 import { ContactContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import ContactPageCanvas, { type ContactCanvasTarget } from "@/components/admin/contact/ContactPageCanvas";
 import { buildContactPagePayload, buildContactProfilePayload, emptyContactDraft, validateContactDraft, type ContactDraft, type ContactPageDraft, type ContactProfileDraft, type ContactValidationErrors } from "@/lib/contact-admin";
 import { type ContactEditorSaveRequest, type ContactEditorSnapshot } from "@/lib/contact-page-editor/contract";
@@ -252,7 +253,7 @@ function ContactEditor() {
   return <AdminPage className="cep-root">
     <AdminSaveFeedback saving={saving} saved={saved} savingLabel="Saving contact content…" successLabel="Contact content saved" />
     <AdminPageHeader eyebrow="Public website" title="Contact" description="Choose a section to edit. Your changes appear on the public page preview before you save." />
-    {loading ? <ContactContentSkeleton label="Loading contact content…" isAcademy={club.presentationTemplateKey === "academy@1"} hidesHeroImageField={club.presentationTemplateKey === "editorial@1"} /> : !loaded ? <div role="alert" className="cep-error">{error || "Unable to load contact content"}<button type="button" onClick={() => void load()}>Try again</button></div> : <>
+    {loading ? <ContactContentSkeleton label="Loading contact content…" showContactPreviewSkeleton={codeSiteAdminFor(club)?.contact.showContactPreviewSkeleton ?? false} hidesHeroImageField={club.presentationTemplateKey === "editorial@1"} /> : !loaded ? <div role="alert" className="cep-error">{error || "Unable to load contact content"}<button type="button" onClick={() => void load()}>Try again</button></div> : <>
       {error && <div role="alert" className="cep-error">{error}</div>}
       {conflict && <div className="cep-error" role="region" aria-label="Review latest Contact page">
         <strong>Another editor saved this page.</strong> Your draft is still here. The latest saved headline is “{conflict.page?.headline || "Untitled"}” and its public email is {conflict.profile?.public_email || "blank"}.
@@ -303,7 +304,7 @@ function ContactEditor() {
 
 export default function AdminContactPage() {
   const club = useClubContext();
-  if (club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1") {
+  if (!codeSiteAdminFor(club)?.contact.routeVisible && club.presentationTemplateKey !== "editorial@1") {
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Contact" description="This website design does not publish a Contact page." /></AdminPage>;
   }
   return <ContactEditor />;

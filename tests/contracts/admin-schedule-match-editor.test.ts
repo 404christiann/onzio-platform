@@ -179,7 +179,7 @@ describe("admin schedule match editor UX", () => {
 
   it("keeps the presented-by section behind the existing template gate", () => {
     expect(matchForm).toContain(
-      "const hidesMatchSponsorFields = isAcademy || isEditorial;",
+      "const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false || isEditorial;",
     );
     const sponsorGateStart = matchForm.indexOf("{!hidesMatchSponsorFields && (");
     expect(sponsorGateStart).toBeGreaterThanOrEqual(0);

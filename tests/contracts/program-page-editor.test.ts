@@ -75,7 +75,7 @@ describe("Programs public-page editor contract", () => {
     expect(page).toContain('fetch("/api/admin/programs-preview-forms", { cache: "no-store" })');
     expect(page).toContain("nativeRegistration: linkedForm");
     expect(route).toContain("requireFreshClubSession");
-    expect(route).toContain('club.presentationTemplateKey !== "academy@1"');
+    expect(route).toContain('!club || codeSiteFor(club) !== "diverse-city"');
     expect(route).toContain('eq("club_id", club.id).eq("status", "open")');
     expect(route).toContain("loadLinkedOpenRegistrationForms");
   });

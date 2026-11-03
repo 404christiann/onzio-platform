@@ -22,6 +22,7 @@ import { OperationsToolbarSkeleton, TryoutsWorkspaceSkeleton } from "@/component
 import { Textarea } from "@/components/ui/textarea";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type {
@@ -78,9 +79,9 @@ function LegacyAdminTryoutsPage() {
   // attached (tryouts.hero_media_asset_id is null for every row), so both are
   // hidden for these templates. Nothing is deleted: the column, the upload
   // pipeline, and every other template's editor are untouched.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
   const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const showsProgramAndHeroFields = !isAcademy && !isEditorial;
+  const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? !isEditorial;
   const heroInput = useRef<HTMLInputElement>(null);
   // The page intro used to sit as a full-width "wall" above the event list,
   // always rendered whether or not you were there to edit it. It now lives

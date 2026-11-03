@@ -10,7 +10,7 @@ describe("About public page save scope", () => {
       page: "about",
       about: { ...DEFAULT_ABOUT_PAGE_CONTENT, hero_title: "  Our club  ", closing_cta_href: "/wrong" },
       logo: { ...DEFAULT_CLUB_LOGO_PAGE_CONTENT, annotated_image_url: "unsaved-logo.png" },
-      academy: true,
+      fixedClosingCtaHref: "/schedule",
       now: NOW,
     });
 
@@ -22,13 +22,13 @@ describe("About public page save scope", () => {
   it("never publishes Rose City fallback content for a new tenant's empty page", () => {
     const about = prepareAboutPageSave({
       page: "about", about: EMPTY_ABOUT_PAGE_CONTENT, logo: EMPTY_CLUB_LOGO_PAGE_CONTENT,
-      academy: false, now: NOW,
+      fixedClosingCtaHref: null, now: NOW,
     });
     expect(about.content).toMatchObject({ story_paragraphs: [], values: [] });
 
     const logo = prepareAboutPageSave({
       page: "logo", about: EMPTY_ABOUT_PAGE_CONTENT, logo: EMPTY_CLUB_LOGO_PAGE_CONTENT,
-      academy: false, now: NOW,
+      fixedClosingCtaHref: null, now: NOW,
     });
     expect(logo.content).toMatchObject({ features: [], color_cards: [] });
   });
@@ -38,7 +38,7 @@ describe("About public page save scope", () => {
       page: "logo",
       about: { ...DEFAULT_ABOUT_PAGE_CONTENT, hero_title: "Unsaved About" },
       logo: { ...DEFAULT_CLUB_LOGO_PAGE_CONTENT, map_image_url: "new-map.png" },
-      academy: false,
+      fixedClosingCtaHref: null,
       now: NOW,
     });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useRef, useState } from "react";
@@ -84,7 +85,7 @@ async function uploadStandingLogo(file: File): Promise<string> {
 export default function AdminStandingsPage() {
   const club = useClubContext();
   const clubId = useClubId();
-  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const standingsPolicy = codeSiteAdminFor(club)?.standings;
   const isEditorial = club.presentationTemplateKey === "editorial@1";
   const [settings, setSettings] =
     useState<DBLeagueStandingsSettings>(DEFAULT_STANDINGS_SETTINGS);
@@ -383,7 +384,7 @@ export default function AdminStandingsPage() {
   // and renders nothing when there are none, so it behaves like academy@1
   // here: the empty state is the honest preview until rows are entered.
   const previewRows = normalizeStandingsRows(rows, {
-    fallbackToSample: !isAcademy && !isEditorial,
+    fallbackToSample: standingsPolicy?.useSampleFallback ?? !isEditorial,
   });
 
   return (
@@ -753,7 +754,7 @@ export default function AdminStandingsPage() {
                   <p className="font-body text-sm text-muted-foreground">
                     Add a team above to see a preview of your standings table.
                   </p>
-                ) : isAcademy ? (
+                ) : standingsPolicy?.preview === "academy-table" ? (
                   <AcademyLeagueStandingsTable settings={settings} rows={previewRows} />
                 ) : (
                   <LeagueStandingsTable settings={settings} rows={previewRows} />

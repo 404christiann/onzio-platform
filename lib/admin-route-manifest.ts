@@ -1,3 +1,6 @@
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
+import type { ClubContext } from "@/lib/club-context";
+
 export type AdminRole = "owner" | "admin";
 
 export type AdminRouteAccessContext = Readonly<{
@@ -149,7 +152,6 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "programs",
     groupId: "website",
     feature: "programs",
-    visibleForTemplates: ["academy@1"],
   },
   {
     id: "tryouts",
@@ -158,7 +160,6 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "tryouts",
     groupId: "website",
     feature: "tryouts",
-    visibleForTemplates: ["academy@1", EDITORIAL_TEMPLATE],
   },
   {
     id: "shop",
@@ -381,6 +382,11 @@ export function isAdminRouteVisible(
   context: AdminRouteAccessContext,
 ): boolean {
   if (!isProtectedAdminRole(context.role)) return false;
+  const siteAdmin = codeSiteAdminFor({
+    presentationTemplateKey: context.presentationTemplateKey as ClubContext["presentationTemplateKey"],
+  });
+  if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
+  if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible && context.presentationTemplateKey !== EDITORIAL_TEMPLATE) return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&

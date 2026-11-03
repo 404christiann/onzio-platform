@@ -127,7 +127,7 @@ describe("admin roster player editor UX", () => {
 
   it("preserves the academy and editorial inline season-stat gate", () => {
     expect(playerFields).toContain(
-      'club.presentationTemplateKey === "academy@1"',
+      'codeSiteAdminFor(club)?.roster.showInlineSeasonStats === false',
     );
     expect(playerFields).toContain(
       'club.presentationTemplateKey === "editorial@1"',

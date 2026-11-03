@@ -17,6 +17,7 @@ import ShopKitSectionContainer from "@/components/ShopKitSectionContainer";
 import ShopPhotoStrip from "@/components/ShopPhotoStrip";
 import ShopPurchaseDetailsSection from "@/components/ShopPurchaseDetailsSection";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import FileUpload from "@/components/admin/FileUpload";
 import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
@@ -58,16 +59,16 @@ function orderPhotos(photos: ShopPhoto[]): ShopPhoto[] {
 export default function ShopPageEditor() {
   const club = useClubContext();
   const template = club.presentationTemplateKey;
-  const isAcademy = template === "academy@1";
+  const shopPolicy = codeSiteAdminFor(club)?.shop;
   const isClubhouse = template === "clubhouse@1";
   const isEditorial = template === "editorial@1";
   const storeUnavailable = isEditorial && !club.storeEnabled;
   const sharedWithHomepage = isClubhouse || isEditorial;
-  const generic = !isAcademy && !isClubhouse && !isEditorial;
-  const hasHomeFeature = !sharedWithHomepage;
-  const variants: ShopVariant[] = isAcademy ? ["home"] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];
+  const generic = !shopPolicy && !isClubhouse && !isEditorial;
+  const hasHomeFeature = shopPolicy?.showHomeFeature ?? !sharedWithHomepage;
+  const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants] : sharedWithHomepage ? SHOP_VARIANTS : ["home", "away"];
 
-  const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>("shop");
+  const [surfaceChoice, setSurfaceChoice] = useState<ShopSurface>(shopPolicy?.initialSurface ?? "shop");
   const surface: ShopSurface = hasHomeFeature ? surfaceChoice : "shop";
   const [snapshots, setSnapshots] = useState<Partial<Record<ShopSurface, ShopSnapshot>>>({});
   const [drafts, setDrafts] = useState<Partial<Record<ShopSurface, ShopPageDraft>>>({});
@@ -291,7 +292,7 @@ export default function ShopPageEditor() {
                   <EditorialShopPage editorContent={content} selectedEditorVariant={currentVariant} onEditorSelectKit={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
                   {!content[currentVariant].photos.length && <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button>}
                 </EditorialShell> : <TemplateFontScope templateKey={template}>
-                  {isAcademy ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
+                  {shopPolicy?.preview === "academy" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
                   {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={setSelectedVariant} />}
                   {generic && <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>

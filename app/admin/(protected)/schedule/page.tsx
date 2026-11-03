@@ -22,6 +22,7 @@ import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import OpponentCrest from "@/components/OpponentCrest";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
 import { useSeasons } from "@/lib/use-seasons";
@@ -240,9 +241,9 @@ export default function SchedulePage() {
   // hidden and nothing is copied forward into a new match for that template.
   // editorial@1's EditorialScheduleMatchCard/EditorialNextMatch also render no
   // sponsor data, so the same applies there.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const schedulePolicy = codeSiteAdminFor(club)?.schedule;
   const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const hidesMatchSponsorFields = isAcademy || isEditorial;
+  const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false || isEditorial;
   const carrySponsor = useCallback(
     (list: Match[], seasonId: string) =>
       hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId),
@@ -907,9 +908,9 @@ function MatchForm({
   // editorial@1's EditorialScheduleMatchCard and EditorialNextMatch also never
   // read sponsor_name, sponsor_logo_url, or sponsor_link, so the same applies
   // there.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const schedulePolicy = codeSiteAdminFor(club)?.schedule;
   const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const hidesMatchSponsorFields = isAcademy || isEditorial;
+  const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false || isEditorial;
 
   function set(field: string, value: string | boolean | number | null) {
     onChange({ ...form, [field]: value });

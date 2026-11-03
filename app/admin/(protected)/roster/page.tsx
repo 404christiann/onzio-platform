@@ -11,6 +11,7 @@ import {
 /* eslint-disable @next/next/no-img-element */
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import { useCallback, useEffect, useMemo, useState, useRef, useId } from "react";
 import guided from "@/components/admin/AdminGuided.module.css";
@@ -1478,7 +1479,7 @@ function PlayerFormFields({
   // editorial@1 has the same dedicated season-stats entry point, so the inline
   // redundancy is hidden there too.
   const hidesInlineSeasonStats =
-    club.presentationTemplateKey === "academy@1" ||
+    codeSiteAdminFor(club)?.roster.showInlineSeasonStats === false ||
     club.presentationTemplateKey === "editorial@1";
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 

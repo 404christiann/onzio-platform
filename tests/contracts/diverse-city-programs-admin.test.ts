@@ -356,7 +356,7 @@ describe("DCFC-301 protected Programs admin surface", () => {
 
   it("keeps the academy@1 slug hide working inside the Content tab", () => {
     expect(pageSource).toContain(
-      'const hidesSlugField = club.presentationTemplateKey === "academy@1"',
+      'const hidesSlugField = programsPolicy ? !programsPolicy.showSlugField : false',
     );
     expect(pageSource).toContain("{hidesSlugField ? (");
     expect(pageSource).toContain("Page address");

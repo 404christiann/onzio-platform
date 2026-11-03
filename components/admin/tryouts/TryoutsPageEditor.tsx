@@ -16,6 +16,7 @@ import { submitPageSave } from "@/lib/page-editor-save";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type { DBContactProfile, DBProgram, DBRegistrationForm, DBTryout, DBTryoutsPageContent } from "@/lib/db-types";
@@ -70,7 +71,7 @@ function serverPhoneViewport() { return false; }
 
 export default function TryoutsPageEditor() {
   const club = useClubContext();
-  if (club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1") {
+  if (!codeSiteAdminFor(club)?.tryouts.routeVisible && club.presentationTemplateKey !== "editorial@1") {
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Tryouts"
       description="This website design does not publish a Tryouts page." />
       <p className="rounded-xl border border-border bg-card p-6 font-body text-sm text-muted-foreground">Choose a supported website design before editing a public Tryouts page.</p>
@@ -81,10 +82,10 @@ export default function TryoutsPageEditor() {
 
 function TryoutsPageEditorContent() {
   const club = useClubContext();
-  const isAcademy = club.presentationTemplateKey === "academy@1";
+  const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
   const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const showsProgramAndHeroFields = !isAcademy && !isEditorial;
-  const showsHeroImage = isAcademy;
+  const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? !isEditorial;
+  const showsHeroImage = tryoutsPolicy?.showHeroImageField ?? false;
   const [events, setEvents] = useState<EventDraft[]>([]);
   const [deleted, setDeleted] = useState<DeletedEvent[]>([]);
   const [pageCopy, setPageCopy] = useState<TryoutsPageDraft>(emptyTryoutsPageDraft);

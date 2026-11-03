@@ -1,5 +1,6 @@
 import { parsePresentationDocument, routeRegistry, templateRegistry, type TemplateKey } from "@/packages/presentation";
 import type { ClubContext } from "@/lib/club-context";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import type { SiteRouteOption } from "@/lib/site-routes";
 import type { createClient } from "@/lib/supabase-server";
 
@@ -37,7 +38,7 @@ export function aboutDestinationOptions(
     if (key === "store" && !storeEnabled) continue;
     // The tenant tryouts route currently renders only these two templates.
     // Heritage lists the route in its presentation registry but returns 404.
-    if (key === "tryouts" && templateKey !== "academy@1" && templateKey !== "editorial@1") continue;
+    if (key === "tryouts" && !codeSiteAdminFor({ presentationTemplateKey: templateKey })?.tryouts.routeVisible && templateKey !== "editorial@1") continue;
     seen.add(key);
     const route = key as RouteKey;
     result.push({ href: routeRegistry[route].path, label: LABELS[route] });
