@@ -92,7 +92,7 @@ it("recovers the original baselines after a cleanup failure and owner exit", asy
       peerCreated = false;
     } catch (error) { await db.query("rollback"); throw error; }
   }
-  async function message() {
+  async function message(phase: "opened" | "populated" | "cleanup-failed") {
     if (!child || !exited) throw new Error("Recovery child has not started");
     const active = child;
     const done = exited;
@@ -101,7 +101,7 @@ it("recovers the original baselines after a cleanup failure and owner exit", asy
       const value = await Promise.race([
         once(active, "message").then(([value]) => value),
         done.then(() => { throw new Error("Recovery child exited before its expected message"); }),
-        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("Recovery child message timed out")), 30_000); }),
+        new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`Recovery child ${phase} message timed out`)), 30_000); }),
       ]);
       if (typeof value === "object" && value !== null && "kind" in value && value.kind === "unexpected-failure") {
         const failure = z.object({ kind: z.literal("unexpected-failure"), phase: z.enum(["opening", "populating", "closing"]), code: z.string().regex(/^(?:[0-9A-Z]{5}|UNKNOWN)$/) }).strict().parse(value);
@@ -120,9 +120,9 @@ it("recovers the original baselines after a cleanup failure and owner exit", asy
       stdio: ["ignore", "ignore", "ignore", "ipc"],
     });
     exited = once(child, "exit");
-    target = z.object({ kind: z.literal("opened"), recoveryFile: z.string(), clubId: z.uuid(), schema: z.string().regex(/^site_coordination_[a-f0-9]{32}$/) }).strict().parse(await message());
+    target = z.object({ kind: z.literal("opened"), recoveryFile: z.string(), clubId: z.uuid(), schema: z.string().regex(/^site_coordination_[a-f0-9]{32}$/) }).strict().parse(await message("opened"));
     await expect(recoverCoordinationProof(target.recoveryFile)).rejects.toThrow("Cannot recover a live proof owner");
-    const populated = message();
+    const populated = message("populated");
     child.send({ action: "populate" });
     expect(await populated).toEqual({ kind: "populated" });
     const persisted = JSON.parse(await readFile(target.recoveryFile, "utf8"));
@@ -130,7 +130,7 @@ it("recovers the original baselines after a cleanup failure and owner exit", asy
     expect((await db.query("select obj_description(oid,'pg_namespace') as owner from pg_namespace where nspname=$1", [target.schema])).rows).toEqual([{ owner: `onzio-academy-proof:${target.clubId}` }]);
     await db.query("begin");
     await db.query("lock table onzio.presentation_documents in access share mode");
-    const failed = message();
+    const failed = message("cleanup-failed");
     child.send({ action: "close" });
     expect(await failed).toEqual({ kind: "cleanup-failed", code: "57014" });
     expect(await exited).toEqual([0, null]);
