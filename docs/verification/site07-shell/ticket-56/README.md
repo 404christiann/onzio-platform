@@ -54,3 +54,28 @@ The final #56 candidate still requires its own parity and full retained-release
 proof. The existing #53 packages reject reconstruction on #56 because the
 attested homepage capability source changed. New A/B package digests require
 Christian's acceptance before they can be used for the full proof.
+
+## Accepted packages and exact comparison status
+
+Christian accepted the following local packages on November 3.
+
+- A from `ad441ee54447d813c9453313713d2b142f8668ee`, digest `e6a83f81b1861d848fcb0101b4afb54e7b9578c0ceb324e34bb1fe85659beca2`.
+- Changed B from `bae65600a982c5caf261a4890e1cbabf2d265b77`, digest `f6e4a02b656252dffde3c6b9af458f65c5d3bc05c0c0bf7dcf337726d6b5b92f`.
+
+The guarded source and three reconstruction builds passed. Package and build
+receipts are in `/private/tmp/onzio56-full-89JbCy/`. The focused browser proof
+at `0539b497414db29e09bfee3469f6db7c591a32e5` checked all 16 pairs. All
+recorded behavior fields match. Thirteen PNGs match exactly. A targeted capture
+that waits for the header and sponsor images to paint matched Program Detail
+and phone home. The phone Shop jersey still differs by 28,133 pixels.
+
+- Focused report and PNGs: `test-results/code-site-parity-m1dqB0/`.
+- Targeted repaint report and PNGs: `test-results/code-site-parity-yofu6b/`.
+- Full rollback captures: `test-results/pilot-site-coordination-fCVPks/`.
+
+The full rollback ran to the phone screenshot comparisons and captured 186
+PNGs. The strict comparison failed on phone Logo. Offline inspection of the
+52 unchanged document pairs also finds the phone Shop difference. The fixtures
+were verified clean. Invalid-assignment captures and the final PASS report
+were not reached in this run. Keep the issue in progress until the remaining
+exact comparisons and the human-run guarded verifier pass.
