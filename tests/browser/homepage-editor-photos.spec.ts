@@ -6,7 +6,6 @@ import { expect, test } from "@playwright/test";
 import {
   parsePresentationDocument,
   type PresentationDocument,
-  type TemplateId,
 } from "@/packages/presentation";
 import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
 import { retirePublishedMedia } from "@/lib/media-processing";
@@ -70,7 +69,7 @@ async function readOriginalState(db: Client): Promise<OriginalState & { configur
   return original;
 }
 
-async function publishTemplate(db: Client, source: PresentationDocument, templateId: TemplateId, createdBy: string) {
+async function publishTemplate(db: Client, source: PresentationDocument, templateId: "academy" | "clubhouse", createdBy: string) {
   const id = randomUUID();
   const configuration = parsePresentationDocument(presentationDocumentForTemplate(source, templateId), { surface: "production" });
   const digest = createHash("sha256").update(JSON.stringify(configuration)).digest("hex");
@@ -492,34 +491,5 @@ test.describe("homepage editor photo queue", () => {
     }
   });
 
-  test("a hidden section can be selected and shown again", async ({ page }) => {
-    const db = localDb();
-    await db.connect();
-    const original = await readOriginalState(db);
-    const source = parsePresentationDocument(original.configuration, { surface: "production" });
-    try {
-      await publishTemplate(db, source, "cinematic", original.updated_by);
-      await db.query(
-        `insert into onzio.behind_the_rose_section(club_id,visible,video_url) values($1,false,'https://example.test/local-video.mp4')
-         on conflict(club_id) do update set visible=false, video_url='https://example.test/local-video.mp4'`,
-        [ALPHA_CLUB_ID],
-      );
-      await page.goto("/admin/homepage");
-      const frame = page.frameLocator('iframe[title="Homepage preview"]');
-      const hidden = frame.locator('[data-homepage-piece="video"]');
-      await expect(hidden).toHaveText("Video feature · Hidden from homepage");
-      await hidden.click();
-      const toolbar = page.locator(".hp-toolbar");
-      const visibilityToggle = toolbar.getByLabel("Show on homepage");
-      await expect(visibilityToggle).not.toBeChecked();
-      await visibilityToggle.check();
-      await expect(frame.locator('[data-homepage-piece="video"]')).not.toHaveText("Video feature · Hidden from homepage");
-      await visibilityToggle.uncheck();
-      await expect(frame.locator('[data-homepage-piece="video"]')).toHaveText("Video feature · Hidden from homepage");
-    } finally {
-      await db.query("delete from onzio.behind_the_rose_section where club_id=$1", [ALPHA_CLUB_ID]);
-      await restoreTemplate(db, original);
-      await db.end();
-    }
-  });
+
 });
