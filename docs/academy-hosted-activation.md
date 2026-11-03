@@ -1,16 +1,16 @@
 # Diverse City Academy rollout
 
-Christian gave the go-ahead on November 3, 2026 to prepare the rollout. The switch will move Diverse City FC to an approved Academy release. Its current site remains the fallback until the switch passes the checks below.
+Christian approved preparation on November 3, 2026. A read-only #80 preflight later the same day found that the public Diverse City site already serves the code-authored Academy shell on the current shared Vercel deployment. No agent switched traffic, assigned a release, or changed hosted data during that preflight. The earlier plan to switch Diverse City from a distinct prior design therefore needs a new target and rollback decision before any production action.
 
-[Decision record in #54](https://github.com/404christiann/onzio-platform/issues/54#issuecomment-6612002195) · [Implementation in #80](https://github.com/404christiann/onzio-platform/issues/80)
+[Decision record in #54](https://github.com/404christiann/onzio-platform/issues/54#issuecomment-6612002195) · [#80 preflight](verification/site07-shell/ticket-80/README.md)
 
 | When | Owner | What must happen |
 | --- | --- | --- |
-| Before scheduling | Christian and the release operator | Confirm the domains and traffic that belong to Diverse City FC. Admit only this club. |
-| Before scheduling | Implementation owner | Finish #80. Prove that staging can serve an approved, retained release, switch to it, and restore the previous release across public pages and editor previews. |
-| Before the production deploy | Release operator | Compare all checked-in migrations, including SITE-06A through 06F, with the live ledger. Stop on a mismatch and resolve it through the production migration procedure. Verify the approved release and rollback target are available to the deployment. |
-| During the agreed window | Release operator | Check that the deployment can serve the new release, record the current assignment, and switch only Diverse City FC through the operator endpoint. Verify the cache serves the selected release and check public routes and editor previews. |
-| If a check fails | Release operator | Restore the recorded assignment and binding. Verify the old site is serving again, including after cache refresh. |
-| After the checks pass | Christian and the release operator | Record the release, the checks, and the rollback target in #54. |
+| Before scheduling | Christian and the release operator | Decide whether a shared-project traffic switch that also affects Rose City is acceptable. Confirm the current tenant domains, aliases, and traffic inventory. |
+| Before scheduling | Implementation owner | Identify a fallback that actually restores the intended Diverse City visual and editor state. Prove the target, both tenants' routes and previews, and an exact way back to the starting deployment. Hosted staging proof remains deferred by Christian. |
+| Before any production change | Release operator | Confirm the exact current deployment and source commit, current alias inventory, production migration parity, and backup requirements. Stop on a mismatch. Do not use an older deployment merely because it is `READY`. |
+| During an approved window | Release operator | Apply only the separately approved, proven change. Check both Diverse City and Rose City public routes and owner editor previews, alias mapping, cache behavior, and runtime errors. |
+| If a check fails | Release operator | Restore the recorded starting deployment by the proven exact method and verify both tenants again. |
+| After checks pass | Christian and the release operator | Record the decision, action, checks, and exact restoration target in #54. |
 
-The local acceptance and rollback evidence is in [PR #77](https://github.com/404christiann/onzio-platform/pull/77). The production window is set after #80 passes staging.
+The #80 preflight does not establish a production rollback path. The older inspected deployment already used Academy styling; Vercel's Hobby rollback is limited to the immediately previous production deployment, and named promotion remains unproven. No production window is ready to schedule.
