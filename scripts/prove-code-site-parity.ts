@@ -88,7 +88,7 @@ async function run() {
             { clubId: proof.clubId, documentAllowed: async origin => origins.includes(origin) }, observations);
           try {
             const page = await context.newPage();
-            await page.clock.setFixedTime(new Date(instant));
+            await page.clock.install({ time: new Date(instant) });
             const finish = observePilotProofPage(page, fixtureImages);
             const reads: Record<string, number> = {};
             page.on("request", (request: Request) => {
@@ -169,6 +169,18 @@ async function run() {
               if (styles !== previousStyles) { previousStyles = styles; stableSince = Date.now(); }
               return Date.now() - settlingStarted >= 1500 && Date.now() - stableSince >= 300;
             }, { timeout: 10_000, intervals: [100] }).toBe(true);
+            if (item.id === "public.roster" || item.id === "public.schedule") {
+              const landmarks = [content.getByRole("heading", { level: 1 }), content.getByText(item.text!, { exact: true }).first()];
+              for (const landmark of landmarks) {
+                await expect(landmark).toBeVisible();
+                await expect.poll(() => landmark.evaluate(node => {
+                  for (let element: Element | null = node; element; element = element.parentElement) {
+                    if (getComputedStyle(element).opacity !== "1") return false;
+                  }
+                  return true;
+                })).toBe(true);
+              }
+            }
             await page.mouse.move(0, 0);
             await content.evaluate(element => new Promise<void>(resolve => element.ownerDocument.defaultView?.requestAnimationFrame(() => element.ownerDocument.defaultView?.requestAnimationFrame(() => resolve()))));
             const state = await content.evaluate(element => ({
