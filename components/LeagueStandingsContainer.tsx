@@ -10,7 +10,7 @@ import {
 } from "@/lib/standings-content";
 import { useClubId } from "@/components/ClubContextProvider";
 
-export default function LeagueStandingsContainer({ tableStyle }: { tableStyle?: "academy" } = {}) {
+export default function LeagueStandingsContainer({ tableStyle }: { tableStyle?: "club-table" } = {}) {
   const clubId = useClubId();
   const [content, setContent] = useState<StandingsTableContent>({
     settings: DEFAULT_STANDINGS_SETTINGS,
@@ -27,7 +27,7 @@ export default function LeagueStandingsContainer({ tableStyle }: { tableStyle?: 
       .finally(() => setLoading(false));
   }, [clubId]);
 
-  if (tableStyle === "academy") {
+  if (tableStyle === "club-table") {
     return <AcademyStandingsSection loading={loading} content={content} clubId={clubId} />;
   }
 

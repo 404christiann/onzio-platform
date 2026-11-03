@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import type { DBBehindTheRoseSection } from "@/lib/db-types";
@@ -8,13 +8,12 @@ import { DEFAULT_BEHIND_THE_ROSE_SECTION } from "@/lib/homepage-content";
 import { fetchHomepageContent } from "@/lib/queries";
 import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import { useClubId } from "@/components/ClubContextProvider";
-import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 gsap.registerPlugin(ScrollTrigger);
 
-export default function BehindTheRose({ loadingSkeleton, revealOnScroll = true }: {
-  loadingSkeleton?: "academy";
+export default function BehindTheRose({ loadingFallback, revealOnScroll = true }: {
+  loadingFallback?: ReactNode;
   revealOnScroll?: boolean;
 } = {}) {
   const preview = useHomepagePreview();
@@ -66,7 +65,7 @@ export default function BehindTheRose({ loadingSkeleton, revealOnScroll = true }
   }, [revealOnScroll, content.visible, editing]);
 
   if (preview && !preview.allowedPieces.includes("video")) return null;
-  if (!editing && showLoading && loadingSkeleton === "academy") return <AcademySectionLoadingSkeleton />;
+  if (!editing && showLoading && loadingFallback !== undefined) return loadingFallback;
   if (!content.visible) return <HomepageMissingPiece piece="video">Video feature · Hidden from homepage</HomepageMissingPiece>;
 
   return (

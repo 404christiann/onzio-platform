@@ -50,11 +50,11 @@ export default function DiverseCityHomePage({ initialHeroContent, initialStoryCo
         {championsBadge}
         <NextMatch />
         <Story initialStoryContent={initialStoryContent} />
-        <Photos loadingSkeleton="academy" />
-        <Sponsors loadingSkeleton="academy" />
-        <Standings tableStyle="academy" />
+        <Photos loadingFallback={<AcademySectionLoadingSkeleton />} />
+        <Sponsors loadingFallback={<AcademySectionLoadingSkeleton height="min-h-48" />} />
+        <Standings tableStyle="club-table" />
         <Programs />
-        <Video loadingSkeleton="academy" revealOnScroll={false} />
+        <Video loadingFallback={<AcademySectionLoadingSkeleton />} revealOnScroll={false} />
       </div>
     </>
   );

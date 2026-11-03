@@ -418,8 +418,13 @@ To retire selectors in a SITE-08 change:
    form test rejects any other layout.
 4. Run the test again and commit the code and the smaller list together.
 
-After the first introduction, never raise a count or add a file. The reconciled initial
-inventory is 455 mentions in 63 files, including 51 presentation-package mentions.
+After the first introduction, never raise a count or add a file. SITE-07 #56 has one
+explicit exception: the new pure `lib/code-site.ts` adapter may record at most one
+`academy@1` literal and two `presentationTemplateKey` reads when the baseline
+does not yet contain that file. All other increases still fail, and once the
+adapter appears on main its counts can only shrink. #56 reduced the inventory
+from 455 mentions in 63 files to 300 in 53 files. The initial inventory
+included 51 presentation-package mentions.
 The 461-mention, 61-file recovery snapshot at `eb82ba3` remains in
 [the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
 Accepted Competition changes remove 17 mentions, Sponsors and Shop add five outer

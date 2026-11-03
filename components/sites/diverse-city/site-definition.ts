@@ -9,9 +9,9 @@ export const diverseCitySite = {
     schedule: { showMatchSponsorFields: false },
     roster: { showInlineSeasonStats: false },
     standings: { useSampleFallback: false, preview: "academy-table" },
-    shop: { variants: ["home"], showHomeFeature: true, preview: "academy", initialSurface: "shop" },
+    shop: { variants: ["home"], showHomeFeature: true, preview: "club-page", initialSurface: "shop" },
     homepage: {
-      previewShell: "academy",
+      previewShell: "site-shell",
       slideshowVariant: "none",
       heroVariant: "editable",
       editableSections: ["hero", "story"],

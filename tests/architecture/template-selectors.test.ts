@@ -18,10 +18,15 @@ import {
 
 const ROOT = process.cwd();
 const ALLOWLIST_PATH = "tests/architecture/template-selector-allowlist.json";
+const CODE_SITE_ADAPTER = "lib/code-site.ts";
+const CODE_SITE_ADAPTER_CEILING: Readonly<Record<string, number>> = {
+  "literal:academy@1": 1,
+  "read:presentationTemplateKey": 2,
+};
 
 const RATCHET_RULE = [
   `${ALLOWLIST_PATH} records every place app code still asks which template a club uses.`,
-  "It can only shrink. To retire a selector, delete its branch, then lower its count here",
+  "It can only shrink after the one-time SITE-07 #56 adapter. To retire a selector, delete its branch, then lower its count here",
   "(delete the entry at zero). See tests/README.md, Template selector ratchet.",
 ].join("\n");
 
@@ -56,11 +61,20 @@ describe("template selector ratchet", () => {
     ).toBe(0);
   });
 
-  it("never increases an allowlist count from current main", () => {
+  it("never increases an allowlist count from current main except the one-time code-site adapter", () => {
     const previous = readBaselineSelectorAllowlist(ROOT, ALLOWLIST_PATH);
     if (!previous) return;
-    const increases = diffSelectorTables(allowlist, previous).added;
+    const adapterIsNew = !previous[CODE_SITE_ADAPTER];
+    const increases = diffSelectorTables(allowlist, previous).added.filter(({ path, signature, found }) =>
+      !(adapterIsNew && path === CODE_SITE_ADAPTER && found <= (CODE_SITE_ADAPTER_CEILING[signature] ?? 0)),
+    );
     expect(increases, formatSelectorDrift(increases)).toEqual([]);
+  });
+
+  it("confines the legacy Academy assignment to the pure code-site adapter", () => {
+    for (const [signature, count] of Object.entries(found[CODE_SITE_ADAPTER] ?? {})) {
+      expect(count, signature).toBeLessThanOrEqual(CODE_SITE_ADAPTER_CEILING[signature] ?? 0);
+    }
   });
 
   it("references no retired presentation API even if the allowlist names it", () => {

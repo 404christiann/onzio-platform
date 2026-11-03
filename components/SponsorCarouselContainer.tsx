@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import SponsorCarousel from "@/components/SponsorCarousel";
 import type { DBSiteSponsorLogo } from "@/lib/db-types";
 import { fetchSiteSponsorLogos } from "@/lib/queries";
 import { useClubContext } from "@/components/ClubContextProvider";
-import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
-export default function SponsorCarouselContainer({ loadingSkeleton }: { loadingSkeleton?: "academy" } = {}) {
+export default function SponsorCarouselContainer({ loadingFallback }: { loadingFallback?: ReactNode } = {}) {
   const club = useClubContext();
   const clubId = club.id;
   const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>([]);
@@ -25,6 +24,6 @@ export default function SponsorCarouselContainer({ loadingSkeleton }: { loadingS
       .finally(() => setLoading(false));
   }, [clubId]);
 
-  if (showLoading && loadingSkeleton === "academy") return <AcademySectionLoadingSkeleton height="min-h-48" />;
+  if (showLoading && loadingFallback !== undefined) return loadingFallback;
   return <SponsorCarousel sponsors={sponsors} />;
 }

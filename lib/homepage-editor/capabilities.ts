@@ -1,5 +1,5 @@
 import type { TemplateKey } from "@/packages/presentation";
-import { codeSiteAdminFor } from "@/lib/code-site-admin";
+import { codeSiteAdminFor, codeSiteAdminForTemplateKey } from "@/lib/code-site-admin";
 import type { HomepageSaveRequest } from "./contract";
 import type { HeroFields, HomepageSection, PieceId } from "./model";
 
@@ -21,7 +21,7 @@ export function homepageRendererForClub(club: { presentationTemplateKey: Templat
 }
 
 export function resolveHomepageCapabilities(input: HomepageRenderer) {
-  const siteHomepage = codeSiteAdminFor({ presentationTemplateKey: input.templateKey })?.homepage;
+  const siteHomepage = codeSiteAdminForTemplateKey(input.templateKey)?.homepage;
   const editorial = input.templateKey === "editorial@1";
   const clubhouse = input.templateKey === "clubhouse@1";
   const editableSections: HomepageSection[] = [];

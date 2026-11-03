@@ -292,7 +292,7 @@ export default function ShopPageEditor() {
                   <EditorialShopPage editorContent={content} selectedEditorVariant={currentVariant} onEditorSelectKit={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
                   {!content[currentVariant].photos.length && <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button>}
                 </EditorialShell> : <TemplateFontScope templateKey={template}>
-                  {shopPolicy?.preview === "academy" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
+                  {shopPolicy?.preview === "club-page" ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
                   {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={setSelectedVariant} />}
                   {generic && <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>
