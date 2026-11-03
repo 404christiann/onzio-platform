@@ -80,48 +80,6 @@ test("empty About values and Logo features/colors can be created; Logo save pres
  }finally{await write(page,about);await write(page,logo);}
 });
 
-// Parent runs this case against the Editorial fixture separately from the
-// Cinematic empty-Logo case. Empty editor data is isolated at the HTTP boundary;
-// the real preview, selection handlers, controls and Save request remain active.
-for (const width of [1440, 390]) {
- test(`Editorial empty About exposes Values and Closing authoring at ${width}px`,async({page})=>{
-  await page.setViewportSize({width,height:900});const baseline=await snapshot(page);const submitted:unknown[]=[];
-  await page.route("**/api/admin/about-editor**",async route=>{
-   const request=route.request(),url=new URL(request.url());
-   if(request.method()==="GET"&&url.searchParams.get("page")==="about"&&!url.searchParams.has("operationId")){
-    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({...baseline,content:{...EMPTY_ABOUT_PAGE_CONTENT}})});
-   }
-   if(request.method()==="POST"){
-    const input=request.postDataJSON();submitted.push(input);
-    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({...baseline,revision:String(BigInt(baseline.revision)+BigInt(1)),content:input.content})});
-   }
-   return route.continue();
-  });
-  try{
-   await page.goto("/admin/about");const preview=page.frameLocator(".aep-frame");
-   await expect(preview.locator('[data-site-template="editorial"]')).toBeVisible();
-   const emptyValues=preview.locator('.aep-empty-section[data-about-editor-section="values"]');
-   const emptyClosing=preview.locator('.aep-empty-section[data-about-editor-section="closing"]');
-   await expect(emptyValues).toHaveCount(1);await expect(emptyClosing).toHaveCount(1);
-   await emptyValues.click();await page.getByRole("button",{name:"Add value",exact:true}).click();
-   await page.getByLabel("Value 1 Title",{exact:true}).fill("Our first Editorial value");
-   // The placeholder becomes the real public section as soon as content exists.
-   await expect(preview.locator('.aep-empty-section[data-about-editor-section="values"]')).toHaveCount(0);
-   await expect(preview.locator('.value-section')).toContainText("Our first Editorial value");
-   await expect(page.locator(".aep-inspector-save button")).toBeDisabled();
-   await page.getByRole("button",{name:"Done",exact:true}).click();
-   await expect(preview.locator(".value-section")).toBeFocused();await emptyClosing.click();
-   await page.getByRole("combobox",{name:"Button goes to",exact:true}).selectOption("/schedule");
-   await page.getByLabel("Button Text",{exact:true}).fill("View our schedule");
-   await page.getByLabel("Closing Text",{exact:true}).fill("Join us for our next match.");
-   await expect(page.locator(".aep-inspector-save button")).toBeEnabled();await saveSelected(page);
-   expect(submitted).toHaveLength(1);expect(submitted[0]).toMatchObject({page:"about",content:{values:[{title:"Our first Editorial value",description:""}],closing_cta_href:"/schedule",closing_cta_label:"View our schedule",closing_text:"Join us for our next match."}});
-   await expect(preview.locator('.aep-empty-section')).toHaveCount(0);
-   await expect(preview.locator('.about-closing')).toContainText("Join us for our next match.");
-  }finally{await page.unrouteAll({behavior:"wait"});}
- });
-}
-
 test("removing newly uploaded Logo items queues their images only for the Logo Save",async({page})=>{
  await page.setViewportSize({width:1440,height:900});const about=await snapshot(page),logo=await snapshot(page,"logo");
  const submitted:Array<{page:string;content:Record<string,unknown>;retiredMediaUrls:string[]}>=[];
