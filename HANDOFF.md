@@ -1,3 +1,7 @@
+## 2026-11-02 - SITE-08 #55 stacked merge recorded
+
+- Christian authorized merging #55's stacked PR if Grokbot found only Low issues. Grokbot reviewed exact head `bf7ea52ac209c56a38fcfa70dbe1619ebe8cdc9b` and reported no High or Medium findings. PR #75 merged into `agent/site56-code-site-ownership` as `dbf93b50656637eadee60e4865b1b54cfbd8407d`; the merge tree is identical to the reviewed head. Main and production did not change. Issue #55 remains open because the full local verifier criterion is still unmet, with inherited #56 database/pilot failures recorded below. This documentation update changes no application or test source. Next: resolve #56's inherited verifier and browser-fixture limits, record #46's per-template production result through Christian, then decide main acceptance and #54 rollout separately.
+
 ## 2026-11-02 - SITE-08 #55 stacked PR and Grokbot review
 
 - PR #75 targets the published #56 base branch `agent/site56-code-site-ownership` at `b76570d`; it does not target main or deploy. Christian authorized this stacked PR and a merge if Grokbot reports only Low findings. Grokbot found a Medium Rose City About-save regression at `ac5f229`; `238c323` restores the null-presentation legacy destination list and prevents an unpublished draft from blocking club context. Grokbot's subsequent review of `4f28eac` reported no High or Medium findings. The final evidence revision still needs a fresh exact-head review before merge.
