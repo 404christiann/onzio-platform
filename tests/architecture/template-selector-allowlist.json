@@ -1,0 +1,337 @@
+{
+  "app/%5Fclubs/[slug]/club/about/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/%5Fclubs/[slug]/contact/page.tsx": {
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/%5Fclubs/[slug]/layout.tsx": {
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 3,
+    "read:templateKey": 1
+  },
+  "app/%5Fclubs/[slug]/programs/[programSlug]/page.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/programs/page.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/register/[formSlug]/confirmation/page.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx": {
+    "id:academy": 2,
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/sponsors/page.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/tryouts/page.tsx": {
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/(public)/roster/page.tsx": {
+    "literal:academy@1": 1,
+    "literal:clubhouse@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 3
+  },
+  "app/(public)/schedule/[fixtureId]/page.tsx": {
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/schedule/page.tsx": {
+    "literal:academy@1": 1,
+    "literal:clubhouse@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 3
+  },
+  "app/(public)/shop/page.tsx": {
+    "literal:academy@1": 1,
+    "literal:clubhouse@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 3
+  },
+  "app/(public)/sponsors/page.tsx": {
+    "literal:academy@1": 2,
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 4
+  },
+  "app/(public)/stats/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/admin/(protected)/about/page.tsx": {
+    "flag:hasClubLogoPage": 5,
+    "flag:isAcademy": 8,
+    "flag:isEditorial": 1,
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/admin/(protected)/analytics/page.tsx": {
+    "flag:isEditorialTemplate": 5,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/admin/(protected)/contact/page.tsx": {
+    "flag:isAcademy": 1,
+    "literal:academy@1": 2,
+    "literal:editorial@1": 2,
+    "read:presentationTemplateKey": 4
+  },
+  "app/admin/(protected)/page.tsx": {
+    "read:presentationTemplateKey": 2
+  },
+  "app/admin/(protected)/programs/page.tsx": {
+    "flag:hidesPageCopyEditor": 2,
+    "flag:hidesProgramCreation": 3,
+    "flag:hidesSlugField": 1,
+    "flag:unsupportedTemplate": 3,
+    "literal:academy@1": 4,
+    "read:presentationTemplateKey": 6,
+    "read:templateKey": 2
+  },
+  "app/admin/(protected)/roster/page.tsx": {
+    "flag:hidesInlineSeasonStats": 1,
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/admin/(protected)/schedule/page.tsx": {
+    "flag:hidesMatchSponsorFields": 4,
+    "flag:isAcademy": 2,
+    "flag:isEditorial": 2,
+    "literal:academy@1": 2,
+    "literal:editorial@1": 2,
+    "read:presentationTemplateKey": 4
+  },
+  "app/admin/(protected)/sponsors/page.tsx": {
+    "flag:hidesSponsorFooterTab": 5,
+    "flag:isAcademy": 1,
+    "flag:isEditorial": 1,
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/admin/(protected)/standings/page.tsx": {
+    "flag:isAcademy": 2,
+    "flag:isEditorial": 1,
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/admin/(protected)/tryouts/page.tsx": {
+    "flag:isAcademy": 1,
+    "flag:isEditorial": 1,
+    "flag:showsProgramAndHeroFields": 5,
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/api/admin/programs-preview-forms/route.ts": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/AdminShell.tsx": {
+    "read:presentationTemplateKey": 3
+  },
+  "components/BehindTheRose.tsx": {
+    "literal:academy@1": 4,
+    "read:presentationTemplateKey": 5
+  },
+  "components/ClubhouseHomePage.tsx": {
+    "literal:clubhouse@1": 1
+  },
+  "components/ClubhouseMatchAreaPage.tsx": {
+    "flag:isClubhouse": 3,
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/ClubhousePlayerProfilePage.tsx": {
+    "flag:isClubhouse": 3,
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/Footer.tsx": {
+    "literal:academy@1": 1,
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "components/Hero.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/HomePageClient.tsx": {
+    "literal:academy@1": 1,
+    "literal:clubhouse@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 3
+  },
+  "components/LeagueStandingsContainer.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/Nav.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/PhotoSlideshow.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/SponsorCarouselContainer.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/TemplateFontScope.tsx": {
+    "literal:academy@1": 1,
+    "read:data-font-pack": 1,
+    "read:templateKey": 3
+  },
+  "components/TenantPageLoading.tsx": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/admin/AdminContentSkeletons.tsx": {
+    "flag:isAcademy": 4
+  },
+  "components/admin/ScaledAboutPreview.tsx": {
+    "literal:editorial@1": 1,
+    "read:data-site-template": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/admin/ScaledShopKitPreview.tsx": {
+    "literal:editorial@1": 1,
+    "read:data-site-template": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/admin/ScaledSlideshowPreview.tsx": {
+    "read:data-site-template": 1
+  },
+  "components/admin/ScaledTryoutsPreview.tsx": {
+    "flag:isEditorial": 3,
+    "literal:editorial@1": 1,
+    "read:data-site-template": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/admin/about/AboutPageCanvas.tsx": {
+    "literal:clubhouse@1": 1,
+    "literal:editorial@1": 4,
+    "read:data-site-template": 1,
+    "read:presentationTemplateKey": 7,
+    "read:templateKey": 1
+  },
+  "components/admin/contact/ContactPageCanvas.tsx": {
+    "literal:editorial@1": 2,
+    "read:data-site-template": 1,
+    "read:presentationTemplateKey": 4,
+    "read:templateKey": 1
+  },
+  "components/admin/homepage/HomepageEditor.tsx": {
+    "literal:academy@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 3,
+    "read:templateKey": 1
+  },
+  "components/admin/homepage/HomepagePreviewFrame.tsx": {
+    "read:data-font-pack": 1
+  },
+  "components/admin/shop/ShopPageEditor.tsx": {
+    "flag:generic": 2,
+    "flag:hasHomeFeature": 2,
+    "flag:isAcademy": 3,
+    "flag:isClubhouse": 8,
+    "flag:isEditorial": 8,
+    "flag:sharedWithHomepage": 3,
+    "flag:template": 4,
+    "literal:academy@1": 1,
+    "literal:clubhouse@1": 1,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 1,
+    "read:templateKey": 1
+  },
+  "components/admin/stats/CombinedStatsPage.tsx": {
+    "flag:isEditorialTemplate": 3,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/admin/tryouts/TryoutsPageEditor.tsx": {
+    "flag:isAcademy": 2,
+    "flag:isEditorial": 1,
+    "flag:showsHeroImage": 2,
+    "flag:showsProgramAndHeroFields": 1,
+    "literal:academy@1": 2,
+    "literal:editorial@1": 2,
+    "read:presentationTemplateKey": 4
+  },
+  "components/editorial/EditorialMotion.tsx": {
+    "read:data-site-template": 3
+  },
+  "components/editorial/EditorialShell.tsx": {
+    "read:data-site-template": 1
+  },
+  "components/sites/diverse-city/FontScope.tsx": {
+    "read:data-font-pack": 1
+  },
+  "lib/about-editor/destinations.ts": {
+    "flag:template": 2,
+    "literal:academy@1": 1,
+    "literal:cinematic@1": 2,
+    "literal:editorial@1": 1,
+    "read:presentationTemplateKey": 4,
+    "read:templateKey": 4
+  },
+  "lib/admin-route-manifest.ts": {
+    "flag:EDITORIAL_TEMPLATE": 3,
+    "literal:academy@1": 2,
+    "literal:editorial@1": 1,
+    "read:hiddenForTemplates": 4,
+    "read:presentationTemplateKey": 4,
+    "read:visibleForTemplates": 5
+  },
+  "lib/club-context.ts": {
+    "read:presentationTemplateKey": 7,
+    "read:templateKey": 2
+  },
+  "lib/homepage-editor/capabilities.ts": {
+    "flag:academy": 5,
+    "flag:clubhouse": 4,
+    "flag:editorial": 5,
+    "flag:key": 6,
+    "literal:academy@1": 3,
+    "literal:clubhouse@1": 2,
+    "literal:editorial@1": 3,
+    "read:presentationTemplateKey": 2,
+    "read:templateKey": 5
+  },
+  "lib/shop-editor/contract.ts": {
+    "read:templateKey": 1
+  },
+  "packages/presentation/index.ts": {
+    "literal:academy@1": 12,
+    "literal:cinematic@1": 8,
+    "literal:clubhouse@1": 11,
+    "literal:editorial@1": 9,
+    "literal:heritage@1": 9,
+    "read:templateKey": 2
+  },
+  "scripts/pilot-site-coordination.ts": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "scripts/prepare-pilot-reconstruction.ts": {
+    "read:data-font-pack": 1
+  }
+}

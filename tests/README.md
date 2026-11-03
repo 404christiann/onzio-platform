@@ -365,6 +365,136 @@ and after screenshots, header and footer DOM hashes, link lists and resource gat
 come from guarded production builds of the base and the head revision. Run the
 browser pass under the shared database lock, as with the homepage suites above.
 
+## Template selector ratchet
+
+`tests/architecture/template-selectors.test.ts` runs in `npm run test:architecture`.
+It stops new code from branching on the presentation template while SITE-08
+retires the existing branches. A club-specific behavior belongs in that club's
+site module, not in a template branch.
+
+The check parses every TypeScript and JavaScript file that git does not ignore, including
+untracked source and new top-level directories.
+It skips `tests/`, `lib/__tests__/` and any `*.test.*`
+or `*.spec.*` file. Comments are ignored. It counts four kinds of selector per file and checks retired API references.
+
+- `literal:` a template key string such as `"academy@1"`.
+- `read:` a mention of `presentationTemplateKey`, `templateKey`,
+  `visibleForTemplates` or `hiddenForTemplates`, or of the `data-site-template`
+  and `data-font-pack` attributes that scope styles to a template.
+- `flag:` each use of a value computed only from the template, such as
+  `isAcademy`, `hidesSlugField`, an alias of the key, or a method call, membership
+  test or lookup on one of those. Destructured aliases, parameter and binding defaults, and aliases wrapped in
+  TypeScript assertions or `satisfies` expressions are tracked. Plain identifier
+  assignments also seed local aliases. TypeScript's lexical symbols resolve each
+  reference, including shorthand property values, catch bindings and function-scoped
+  `var`. A narrow correction separates parameter initializers from body-only
+  declarations, as described below. Initializers use lexical assignment
+  targets because a `var` declared inside a catch can write the catch binding
+  rather than the function symbol declared by that `var`. Property names and
+  shadowing parameters or bindings are not counted as uses of an outer alias.
+- `id:` a bare template id such as `"academy"` compared with any expression or
+  used as a `case` label.
+
+The presentation package is now scanned because #45 deleted its dead switching APIs.
+References to those deleted APIs, report types, and registry fields produce `retired:`
+entries and always fail, even if the JSON is edited to include them. Identifiers,
+named imports, namespace accesses, static string property accesses, and type references
+are checked. Comments and historical Markdown and SQL remain outside the scan.
+Live font, section, and theme validation stays allowed.
+
+`tests/architecture/template-selector-allowlist.json` maps each file to its exact
+counts. The check fails in both directions. A selector the list does not allow
+fails the first test. A listed selector that code no longer contains fails the
+second, so the list always matches the code. A swap of one selector for another
+fails both.
+
+To retire selectors in a SITE-08 change:
+
+1. Delete the branch and the code that only it used.
+2. Run `npx vitest run tests/architecture/template-selectors.test.ts`. Each
+   failure line names the file, the kind, and the allowlist and code counts.
+3. In the JSON file, lower each count to the code count. Delete a kind at zero,
+   and delete a file when nothing is left. Keep the file sorted. The canonical
+   form test rejects any other layout.
+4. Run the test again and commit the code and the smaller list together.
+
+After the first introduction, never raise a count or add a file. The reconciled initial
+inventory is 455 mentions in 63 files, including 51 presentation-package mentions.
+The 461-mention, 61-file recovery snapshot at `eb82ba3` remains in
+[the inventory comparison](../docs/verification/site08-selector-check/initial-inventory.json).
+Accepted Competition changes remove 17 mentions, Sponsors and Shop add five outer
+adapter mentions, and locally accepted registration pages add six outer adapter
+mentions across two more files. The guard itself adds no application selector.
+
+To read the current inventory totals without changing the allowlist:
+
+```bash
+npx tsx -e 'import {scanRepositoryTemplateSelectors} from "./tests/helpers/template-selectors"; const table=scanRepositoryTemplateSelectors(process.cwd()); console.log({files:Object.keys(table).length,mentions:Object.values(table).reduce((sum,row)=>sum+Object.values(row).reduce((sum,count)=>sum+count,0),0)});'
+```
+
+Rewrite the code so the branch is not needed.
+The test also compares the JSON with current `origin/main` and rejects increased
+counts or new entries. An older branch base cannot bypass a later reduction on main,
+even when the branch predates the guard and cherry-picks its introduction. Missing
+or unreadable Git references fail the check. First introduction is allowed only
+when current `origin/main` genuinely has no inventory file. Keep that reference
+current before verification.
+
+The check permits the last selector to be retired and the allowlist to become `{}`.
+It has no required selector file or minimum count. Throwaway repository tests prove
+tracked, untracked, and new-directory scan coverage, excluded tests, real Git baseline
+history, and the actual architecture guard with no remaining selectors.
+
+The reconciled source is actual main
+`589f80192b3cfb1b979c239a14976ec769581901`, after Christian-authorized bot merges
+of registration PR #74 and About PR #73. Every scanned source path in this guard
+integration matches that main revision. The prior local registration acceptance
+at `e4a7104` remains recorded separately. Neither merge changes the 455-mention,
+63-file inventory. Local acceptance does not require a production merge.
+The report preserves the original `ada583e` to `eb82ba3` recovery comparison and
+every reconciliation stage and drift. Full pilot-inclusive verification and
+exact final-head independent review still precede the guard's publication.
+
+Binding analysis uses an isolated one-source TypeScript Program with `noLib`,
+`noResolve`, `types: []`, JavaScript support and JSX preservation. Its virtual
+compiler host returns only the supplied source. It reads no filesystem, import,
+standard library or dependency type graph. Compiler symbol identity replaces the
+custom scope-owner and shadowing rules, which disagreed about parameter defaults
+and catch initializers. The selector API and AST expression classification remain
+unchanged.
+
+A parameter initializer, including a closure created there, cannot see declarations
+that exist only inside that function body. The compiler APIs can nevertheless
+resolve a default's identifier to a body function declaration. The scanner corrects
+that discrepancy only when every declaration of the resolved symbol is inside the
+owning function body. A matching named function expression retains its own name
+binding. Other identifiers call public `resolveName` at the function's parent with
+`SymbolFlags.Value`, repeating the check for enclosing parameter initializers.
+Ordinary reads, shorthand values and assignment targets use this correction.
+Parameter bindings and a closure's own shadows remain visible. An unresolved name
+gets no fallback. Native JavaScript controls establish that the outer
+`"academy@1"` key makes the default true despite a body `function key() {}`;
+its inverse and missing-outer-binding controls retain false and `ReferenceError`.
+The focused suite has 115 cases, including parameter defaults, destructuring,
+closures, named expression self-bindings and own-parameter precedence. This evidence
+covers those fixtures, not all JavaScript or TypeScript binding behavior.
+
+Limits.
+
+- Alias propagation is local and flow-insensitive. A pure initializer or plain
+  identifier assignment marks that lexical symbol, including references before
+  that write. Later unrelated writes do not clear it. The scanner does not follow
+  property writes, object identity, imported values or calls between functions.
+- Counts are per file. Deleting one branch and adding another of the same kind in
+  the same file keeps the counts equal, so read the diff.
+- A mixed expression such as `isAcademy && menuOpen` is counted where it names the
+  template, and its own name is not tracked afterward.
+- A helper that hides the template behind a function, such as the homepage
+  capabilities resolver, is counted inside the helper and not at its callers.
+- CSS rules keyed on `[data-site-template]` or `[data-font-pack]`, SQL template
+  gates, JSON data, and tenant-slug checks are outside the scan. Those attributes are
+  counted in TypeScript and JSX only.
+
 ## Actual pilot source package
 
 Run `npx vitest run tests/architecture/pilot-source-package.test.ts` for package
