@@ -184,9 +184,10 @@ routing, or establish new binding-aware save authorization.
 
 The [coordinated local Academy proof](pilot-site-coordination.md) joins actual
 accepted rendering, assignment events, real save authority and finite local
-fleet activation. Hosted traffic inventory, production authored dispatch/storage,
-deployment/cache coordination and an operator activation endpoint remain
-unimplemented and require separately authorized rollout work.
+fleet activation. The [hosted Academy rollout checklist](academy-hosted-activation.md)
+records Christian's go-ahead to prepare #54. Issue #80 tracks the remaining
+activation and rollback implementation and staging proof. The production switch
+is pending that evidence and an agreed release window.
 
 The [pilot source package guide](pilot-source-package.md) describes retained
 source reconstruction and its remaining runtime ownership limits.
