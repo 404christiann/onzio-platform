@@ -5,6 +5,11 @@
 - Current dispatch in `lib/club-context.ts` and `lib/code-site.ts` selects from the published presentation template key. There is no production release registry, admitted serving fleet, release-digest dispatch, or operator activation endpoint. The local SITE-05 coordination proof cannot establish hosted traffic or cache behavior. Adding an active assignment now would lack the required retained-code and deployment checks.
 - Exact next step: identify the approved Academy activation package and binding, the exact previous live release and binding, and a deployment that retains both. Build fail-closed authored assignment and operator transition code against those verified identities, then prove local public and editor A/B/A behavior. When Christian resumes hosted work, use a protected nonproduction Vercel and Supabase target to prove deployment admission, cache propagation, and rollback before any #54 production switch. Do not treat this documentation update as #80 acceptance.
 
+## 2026-11-03 - Codex loop guides retired
+
+- Christian dropped the verification pilot in #59. The start, worker, and coordinator guides are removed. The loop checks for an explicit readable, nonempty `CODEX_LOOP_GUIDE` before it can claim work. The standalone verifier and Grokbot review contract remain available.
+- Bash syntax, missing and empty guide rejection, both dry runs with a supplied guide, and all 43 verifier and worktree-environment tests passed. Next step is review of the documentation cleanup PR.
+
 ## 2026-11-03 - #59 Codex verification pilot report publication
 
 - Status: historical pilot report recovered without changing its observations. `docs/agents/codex-pilot-report.md` has the same SHA-256 `ffb701b986f39f9702b7fa7b3b5a72435ab03cfee712c3d58bfa6cf120844582` as the reviewed local source. It records the exact seven checks, sandbox probes, baseline comparison, limits and recommendation from the 2026-10-31 workspace-write run. The report does not claim that failed or blocked checks passed.
@@ -16,6 +21,11 @@
 - Status: local acceptance complete. PR #77 merged the selector guard into `main` at `44bbae4`. The prior exact-head verifier at `7459892` passed types, lint, 1,660 contracts, 378 architecture tests with one existing skip, the production build, and 422 other suite tests. Its database result was 977/978, with the one Contact failure reproduced on clean base. Independent final-head review of #44 found no High or Medium issue; Grokbot's PR #77 review also found none at `b5dcf5c`.
 - On merged `main` `44bbae4`, the selector test passes 116/116. A temporary selector in a new source file failed the real architecture check with two unlisted reads and one unlisted literal. Inflating an existing allowlist count failed the stale-entry check with allowlist 2 versus code 1. Both temporary changes were restored, and 116/116 passed again. The current inventory is 173 mentions across 34 files. The shrink procedure remains in `tests/README.md`.
 - This closeout changes only the handoff and SITE ledger. It does not alter the guard, application, migrations or hosted state. Exact next step: review and merge this documentation PR, then close #44 with the recorded evidence. SITE-08's final shared-template retirement and #54 hosted activation remain separate.
+
+## 2026-11-03 - SITE-07 #54 rollout preparation approved
+
+- Christian gave the go-ahead to prepare the hosted Academy rollout. The [rollout checklist](docs/academy-hosted-activation.md) records owners, sequence, and rollback checks. #80 scopes the hosted release dispatch and the operator's activation and rollback endpoint.
+- Verification for this change is limited to the documented decision and links. Next step is #80 implementation and staging proof before scheduling the production switch.
 
 ## 2026-11-03 - SITE-08 #56 local acceptance passed
 
