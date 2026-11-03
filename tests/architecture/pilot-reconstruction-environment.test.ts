@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { academySourceRoots, homepageSourceRootsV2 } from "../../scripts/pilot-academy-source-roots";
 import { packPilotSource } from "../../scripts/pilot-source-package";
 
 const project = resolve(import.meta.dirname, "../..");
@@ -37,6 +38,11 @@ function prepare(options: { file?: Record<string, string>; shell?: Record<string
     retained = join(directory, `retained-${sequence}`);
     cpSync(artifact, retained, { recursive: true });
     const current = JSON.parse(readFileSync(join(retained, "manifest.json"), "utf8"));
+    if (options.compatibility === "v1") {
+      const omitted = academySourceRoots.filter(path => !homepageSourceRootsV2.some(homepage => homepage === path)).map(path => `source/${path}`);
+      for (const path of omitted) rmSync(join(retained, path));
+      current.files = current.files.filter((item: {path: string}) => !omitted.includes(item.path));
+    }
     const manifest = options.compatibility === "v1"
       ? { format: "onzio-pilot-source@1", sourceCommit: current.sourceCommit, files: current.files, platform: current.platform, packages: current.packages }
       : { ...current, format: "onzio-pilot-source@2", packageLockSha256: "malformed" };
@@ -63,7 +69,7 @@ function expectRejected(options: Parameters<typeof prepare>[0], reason: string, 
 }
 
 beforeAll(() => {
-  const roots = ["components/sites/diverse-city/HomePage.tsx", "components/sites/diverse-city/Shell.tsx", "components/sites/diverse-city/RouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
+  const roots = academySourceRoots;
   for (const path of roots) put(source, path, path.endsWith(".css") ? "body { color: navy; }" : "export {};");
   put(source, roots[0], 'import Hero from "./Hero"; export default function Page() { return <Hero initialContent={{}} />; }');
   put(source, "components/sites/diverse-city/Hero.tsx", 'export default function Hero() { return null; }');

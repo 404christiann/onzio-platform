@@ -87,6 +87,7 @@ function configuration(): PilotSiteConfiguration {
       { name: "old", releases: { [fixture.a.digest]: "oldA" } },
       { name: "new", releases: { [fixture.a.digest]: "newA", [fixture.b.digest]: "newB" } },
     ],
+    documentParameters: { programSlug: "proof-program", formSlug: "proof-registration", playerId: clubId, fixtureId: documentA, confirmationToken: "a".repeat(43) },
     currentPlatformSlot: "newB", runtime: pilotRuntimeContract(fixture.b.root),
   };
 }
@@ -172,7 +173,7 @@ describe("accepted pilot coordinator boundaries", () => {
       expect(selected.kind).toBe("published");
       if (selected.kind !== "published") throw new Error("Published fixture expected");
       expect(selected.origin).toBe(scope.servers.oldA.origin);
-      expect(selected.document("/admin/homepage")).toBe(`${scope.servers.oldA.origin}/admin/homepage`);
+      expect(selected.document({ kind: "preview", preview: "homepage" })).toBe(`${scope.servers.oldA.origin}/admin/homepage`);
       data.publish(fixture.b.digest);
       expect(await site.resolve("old")).toEqual({ kind: "unavailable" });
       expect(await site.resolve("missing-worker")).toEqual({ kind: "unavailable" });

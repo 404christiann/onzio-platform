@@ -5,12 +5,13 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { academySourceRoots } from "../../scripts/pilot-academy-source-roots";
 import { packPilotSource, reconstructPilotSource } from "../../scripts/pilot-source-package";
 
 const project = resolve(import.meta.dirname, "../..");
 const loader = createRequire(import.meta.url).resolve("tsx");
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
-const visualRoots = ["components/sites/diverse-city/HomePage.tsx", "components/sites/diverse-city/Shell.tsx", "components/sites/diverse-city/RouteLoadingSkeleton.tsx", "components/ChampionsBadge.tsx", "app/layout.tsx", "styles/globals.css", "tailwind.config.ts", "postcss.config.mjs"];
+const visualRoots = academySourceRoots;
 
 export function coordinationFixture() {
   const directory = mkdtempSync(join(tmpdir(), "onzio-coordination-"));

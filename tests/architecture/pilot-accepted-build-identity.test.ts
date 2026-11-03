@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { academySourceRoots, homepageSourceRootsV2 } from "../../scripts/pilot-academy-source-roots";
 import { reconstructPilotSource } from "../../scripts/pilot-source-package";
 import { withPilotProofServers } from "../../scripts/pilot-proof-servers";
 
@@ -32,7 +33,7 @@ function successful(at: string, script: string, args: string[]) {
 function build(at: string) { successful(at, "run-pilot-reconstruction.ts", ["build"]); }
 function git(...args: string[]) { return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim(); }
 beforeAll(() => {
-  const visual = ['components/sites/diverse-city/HomePage.tsx', 'components/sites/diverse-city/Shell.tsx', 'components/sites/diverse-city/RouteLoadingSkeleton.tsx', 'components/ChampionsBadge.tsx', 'app/layout.tsx', 'styles/globals.css', 'tailwind.config.ts', 'postcss.config.mjs'];
+  const visual = academySourceRoots;
   for (const path of visual) put(root, path, path.endsWith('.css') ? 'body {color:navy}' : 'export {};');
   put(root, 'components/sites/diverse-city/HomePage.tsx', 'import "@/components/ClubContextProvider"; export const visual = "retained A";');
   put(root, 'components/ClubContextProvider.tsx', 'export const authority="current platform";');
@@ -215,6 +216,9 @@ describe("accepted reconstruction through real package and guarded build CLIs", 
   it("keeps historical v1 verification but rejects v1 reconstruction", () => {
     const legacy = join(base, "legacy"); cpSync(accepted.directory, legacy, { recursive: true });
     const manifest = JSON.parse(readFileSync(join(legacy, "manifest.json"), "utf8")); manifest.format = "onzio-pilot-source@1"; delete manifest.packageLockSha256;
+    const omitted = academySourceRoots.filter(path => !homepageSourceRootsV2.some(homepage => homepage === path)).map(path => `source/${path}`);
+    for (const path of omitted) rmSync(join(legacy, path));
+    manifest.files = manifest.files.filter((item: {path: string}) => !omitted.includes(item.path));
     put(legacy, "manifest.json", JSON.stringify(manifest));
     successful(root, "package-pilot-local.ts", ["verify", "--package", legacy, "--digest", hash(JSON.stringify(manifest))]);
     const output = join(base, "legacy-forbidden");

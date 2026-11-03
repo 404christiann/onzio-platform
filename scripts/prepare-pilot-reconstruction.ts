@@ -27,10 +27,11 @@ function replace(path: string, before: string, after: string) {
 }
 replace("components/sites/diverse-city/HomePage.tsx", "<Hero initialContent=", '<p data-pilot-mutation="visual-b">Unretained visual B</p>\n      <Hero initialContent=');
 replace("app/layout.tsx", "const academyHeading = Montserrat({", "const academyHeading = Geist({");
+replace("app/layout.tsx", "  Montserrat,\n", "");
 replace("app/api/admin/homepage/route.ts", 'headers: { "Cache-Control": "no-store" },', 'headers: { "Cache-Control": "no-store", "X-Pilot-Platform-Revision": "current-platform-b" },');
 const stylesheet = join(current, "styles/globals.css");
 writeFileSync(stylesheet, `${readFileSync(stylesheet, "utf8")}\n[data-font-pack="academy"] main h1 { color: rgb(1, 2, 3) !important; }\n`);
-copyFileSync(join(current, "public/images/shop/rosecityshirt2.jpeg"), join(current, "public/images/shop/rosecityshirt1.webp"));
+copyFileSync(join(current, "public/images/shop/rosecityshirt5.webp"), join(current, "public/images/shop/rosecityshirt1.webp"));
 execFileSync("git", ["init", "--quiet"], { cwd: current });
 execFileSync("git", ["add", "."], { cwd: current });
 execFileSync("git", ["-c", "user.name=Local reconstruction", "-c", "user.email=test@example.invalid", "commit", "--quiet", "-m", "Local visual and platform controls"], { cwd: current });
