@@ -17,7 +17,7 @@ function command(expected: "populate" | "close") {
 let phase: "opening" | "populating" | "closing" = "opening";
 
 async function run() {
-  const proof = await openCoordinationProof();
+  const proof = await openCoordinationProof({ cleanupStatementTimeoutMs: 8_000 });
   const populate = command("populate");
   process.send?.({ kind: "opened", recoveryFile: proof.recoveryFile, clubId: proof.clubId, schema: proof.schema });
   await populate;

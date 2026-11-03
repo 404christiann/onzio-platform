@@ -1,5 +1,5 @@
 import { fork, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -9,7 +9,7 @@ import { withPilotProofServers } from "../../scripts/pilot-proof-servers";
 
 const project = resolve(import.meta.dirname, "../..");
 const loader = createRequire(import.meta.url).resolve("tsx");
-const directory = mkdtempSync(join(tmpdir(), "onzio-proof-servers-"));
+const directory = realpathSync(mkdtempSync(join(tmpdir(), "onzio-proof-servers-")));
 let sequence = 0;
 function put(root: string, path: string, value: string) {
   mkdirSync(dirname(join(root, path)), { recursive: true });

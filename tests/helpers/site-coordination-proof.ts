@@ -96,13 +96,13 @@ async function assertRecoveryBaseline(db: Client, record: RecoveryRecord) {
   }
 }
 
-async function cleanRecordedProof(file: string, input: RecoveryRecord) {
+async function cleanRecordedProof(file: string, input: RecoveryRecord, statementTimeoutMs = 60_000) {
   const record = await writeRecovery(file, { ...input, stage: "cleaning" });
   const db = new Client(config);
   const failures: unknown[] = [];
   try {
     await db.connect();
-    await db.query("set statement_timeout='60s'");
+    await db.query("select set_config('statement_timeout',$1,false)", [`${statementTimeoutMs}ms`]);
     await db.query("begin");
     try {
       await db.query("lock table onzio.presentation_documents in access exclusive mode");
@@ -161,7 +161,7 @@ export async function recoverCoordinationProof(file: string): Promise<void> {
   await cleanRecordedProof(file, record);
 }
 
-export async function openCoordinationProof() {
+export async function openCoordinationProof(options: { cleanupStatementTimeoutMs?: number } = {}) {
   assertSafeTestEnvironment();
   const db = new Client(config);
   await db.connect();
@@ -220,7 +220,7 @@ export async function openCoordinationProof() {
         if (errors.length === 1) throw errors[0];
         throw new AggregateError(errors, "Coordination proof clients or journal failed to close");
       }
-      record = await cleanRecordedProof(recoveryFile, record);
+      record = await cleanRecordedProof(recoveryFile, record, options.cleanupStatementTimeoutMs);
       lifecycle = "closed";
     })().catch(error => { lifecycle = "cleanup-failed"; throw error; }).finally(() => { cleanup = undefined; });
     return cleanup;
