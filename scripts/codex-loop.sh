@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # Strict Codex loop. One iteration = one unit of work, one Codex session, fresh context.
-# Set CODEX_LOOP_GUIDE to an explicit local guide before running the loop.
-# The review-bot interface is in docs/agents/review-bot-contract.md.
 #
 #   scripts/codex-loop.sh              TICKET mode: implement the next unblocked ticket
 #   scripts/codex-loop.sh --fix        FIX mode: address High/Medium findings the review bot
