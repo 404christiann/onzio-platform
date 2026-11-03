@@ -79,3 +79,34 @@ PNGs. The strict comparison failed on phone Logo. Offline inspection of the
 were verified clean. Invalid-assignment captures and the final PASS report
 were not reached in this run. Keep the issue in progress until the remaining
 exact comparisons and the human-run guarded verifier pass.
+
+## Complete local rollback pass
+
+The full rollback proof passed on the reviewed executable revision
+`0e8d9ccab9b1449b678990631fecee4a605ff309`. It used the accepted packages above
+and three distinct guarded reconstructions. Each of six captures covered
+28 documents. The run recorded 188 screenshots, 52 exact unchanged document
+pairs, 12 successful controls, zero page or route errors, and visible
+invalid-assignment 503s at both widths. Selected captures were inspected.
+The phone viewport is 390 CSS pixels at 2× device density. The exact PNG
+comparison still applies.
+
+The report is `test-results/pilot-site-coordination-YjPsVC/report.json`,
+SHA-256 `a669e719dca1472e4c30cc65d66931961ef3eda52a3f5321f3d23b1f38ba83ab`.
+The recovery journal is
+`/private/tmp/onzio-academy-proof-4LYbSw/recovery.json`, marked `verified-clean`.
+
+The supplemental reports compare the same guarded before/after builds. Each
+records matching behavior for all 16 pairs and exact PNG equality for 15 pairs.
+The Home sponsor strip differs on desktop in one report and on phone in the
+other, so all 16 pairs have a byte-identical capture across the two runs. Both
+reports keep their FAIL verdict and both fixtures were verified clean.
+
+- Standard run: `test-results/code-site-parity-dtFIZ5/report.json`,
+  SHA-256 `1bcf5e520b14064621380e362150d7c5c185ed120f6d809ee8934453e871b13c`.
+- Diagnostic at 2× on desktop and phone: `test-results/code-site-parity-nPiZzM/report.json`,
+  SHA-256 `6e2c1cda896b0555e0e6404a9f0e3542a4d167e804dafd8a7c6802223e5aefd0`.
+
+Types, lint, build, and all direct suites passed with 3,309 tests and one existing
+skip. The guarded verifier still requires Christian's executable diff review
+and run before closure.
