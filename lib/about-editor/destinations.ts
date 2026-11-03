@@ -6,6 +6,8 @@ import type { createClient } from "@/lib/supabase-server";
 
 type RouteKey = keyof typeof routeRegistry;
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
+const LEGACY_DEFAULT_ROUTES = ["home", "roster", "schedule", "club", "club-logo", "store"] as const;
+const LEGACY_SUPPORTED_ROUTES = [...LEGACY_DEFAULT_ROUTES, "sponsors"] as const;
 
 const LABELS: Record<RouteKey, string> = {
   home: "Home",
@@ -30,8 +32,8 @@ export function aboutDestinationOptions(
   storeEnabled: boolean,
 ): SiteRouteOption[] {
   const template = activeTemplateRegistration(templateKey);
-  if (!template) return [];
-  const supported = new Set<string>(template.supportedRoutes);
+  if (templateKey && !template) return [];
+  const supported = new Set<string>(template?.supportedRoutes ?? LEGACY_SUPPORTED_ROUTES);
   const result: SiteRouteOption[] = [];
   const seen = new Set<string>();
   for (const key of routeKeys) {
@@ -60,8 +62,8 @@ export async function loadAboutDestinationOptions(
 
   if (!state?.published_document_id) {
     const template = activeTemplateRegistration(club.presentationTemplateKey);
-    if (!template) return [];
-    return aboutDestinationOptions(template.defaultRoutes, club.presentationTemplateKey, club.storeEnabled);
+    if (club.presentationTemplateKey && !template) return [];
+    return aboutDestinationOptions(template?.defaultRoutes ?? LEGACY_DEFAULT_ROUTES, club.presentationTemplateKey, club.storeEnabled);
   }
 
   const { data: row, error: documentError } = await onzio

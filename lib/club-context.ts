@@ -107,9 +107,6 @@ const resolveDatabaseContext = cache(
       store_enabled: boolean;
     };
 
-    // These three depend only on club.id/userId, not on each other, so they
-    // run concurrently. Supabase queries resolve to { data, error } objects
-    // rather than throwing, so no leg can reject the Promise.all.
     const [{ data: primary }, membership, presentationTemplateKey] =
       await Promise.all([
         onzio
@@ -168,20 +165,16 @@ async function resolvePublishedPresentationTemplateKey(
     .eq("club_id", clubId)
     .maybeSingle();
   if (stateError) failContract("UNKNOWN_TENANT");
-  let query = onzio
+  if (!state?.published_document_id) return null;
+  const { data, error } = await onzio
     .from("presentation_documents")
     .select("configuration")
-    .eq("club_id", clubId);
-  if (state?.published_document_id) {
-    query = query.eq("id", state.published_document_id);
-  } else {
-    query = query.order("version", { ascending: false }).limit(1);
-  }
-  const { data, error } = await query.maybeSingle();
-  if (error || (state?.published_document_id && !data?.configuration)) {
+    .eq("club_id", clubId)
+    .eq("id", state.published_document_id)
+    .maybeSingle();
+  if (error || !data?.configuration) {
     failContract("UNKNOWN_TENANT");
   }
-  if (!data?.configuration) return null;
   return resolveActivePresentationTemplateKey(data.configuration);
 }
 
@@ -211,9 +204,6 @@ const resolveClubContextBySlug = cache(
       .maybeSingle();
     if (error || !club) failContract("UNKNOWN_TENANT");
 
-    // These three depend only on club.id/userId, not on each other, so they
-    // run concurrently. Supabase queries resolve to { data, error } objects
-    // rather than throwing, so no leg can reject the Promise.all.
     const [{ data: primary }, membership, presentationTemplateKey] =
       await Promise.all([
         onzio
