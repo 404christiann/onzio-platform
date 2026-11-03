@@ -84,8 +84,8 @@ describe("normalizeStandingsRows", () => {
   });
 
   it("never leaks another club's team names through the disabled fallback", () => {
-    // The sample table is Rose City's; academy@1 and editorial@1 previews opt
-    // out of it so DCFC/Lions admins never see "Rose City FC" as their own.
+    // The sample table is Rose City's; Diverse City previews opt
+    // out of it so admins never see "Rose City FC" as their own.
     const sampleNames = DEFAULT_STANDINGS_ROWS.map((item) => item.team_name);
     expect(sampleNames).toContain("Rose City FC");
     expect(

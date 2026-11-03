@@ -312,7 +312,7 @@ function stagingRows(
   // `runtimeAccess === "suspended"`, so "preview" still renders normally for
   // Christian's staging visit. tier stays "pro" and store_enabled stays
   // true (unlike DCFC-503's "starter" target) because the whole point of
-  // this preview is showing the finished pro-tier editorial@1 experience,
+  // this preview is showing the Clubhouse experience,
   // store included.
   const club = {
     ...(translated.club as SourceRow),

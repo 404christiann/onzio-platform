@@ -22,6 +22,7 @@ import { OperationsToolbarSkeleton, TryoutsWorkspaceSkeleton } from "@/component
 import { Textarea } from "@/components/ui/textarea";
 import ScaledTryoutsPreview from "@/components/admin/ScaledTryoutsPreview";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { createClient } from "@/lib/admin-client";
 import type {
@@ -72,15 +73,9 @@ function FieldError({ message }: { message?: string }) {
 // completes integration checks. The route now renders the new editor below.
 function LegacyAdminTryoutsPage() {
   const club = useClubContext();
-  // academy@1 and editorial@1 keep this editor to the fields their public
-  // pages actually show. Program association is not rendered anywhere on
-  // AcademyTryoutsPage or EditorialTryouts, and no hero image has ever been
-  // attached (tryouts.hero_media_asset_id is null for every row), so both are
-  // hidden for these templates. Nothing is deleted: the column, the upload
-  // pipeline, and every other template's editor are untouched.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const showsProgramAndHeroFields = !isAcademy && !isEditorial;
+  // Show only fields used by the active public Tryouts page.
+  const tryoutsPolicy = codeSiteAdminFor(club)?.tryouts;
+  const showsProgramAndHeroFields = tryoutsPolicy?.showProgramAndHeroFields ?? true;
   const heroInput = useRef<HTMLInputElement>(null);
   // The page intro used to sit as a full-width "wall" above the event list,
   // always rendered whether or not you were there to edit it. It now lives
@@ -942,7 +937,7 @@ export { default } from "@/components/admin/tryouts/TryoutsPageEditor";
 // Matches the "GENERAL TEMPLATES ONLY" pill the mockup shows on the
 // Program association label and the Hero image card header for templates
 // that render those fields — the counterpart to the dashed "not shown here"
-// explanation academy@1/editorial@1 get instead. Reuses the tinted-pill
+// explanation academy@1 gets instead. Reuses the tinted-pill
 // convention already used for AdminTabs' active state (bg-primary/10
 // text-primary), just as a badge rather than a tab.
 function TemplateOnlyBadge() {

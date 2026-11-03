@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { authorizeAdminAccess } from "@/lib/authorization";
 import { getClubContext } from "@/lib/club-context";
+import { codeSiteFor } from "@/lib/code-site";
 import { ContractError } from "@/lib/contract-error";
 import { loadLinkedOpenRegistrationForms } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { userId } = await requireFreshClubSession(supabase);
     const club = await getClubContext({ hostname: request.headers.get("host") ?? "", userId });
-    if (!club || club.presentationTemplateKey !== "academy@1") return NextResponse.json({ error: { code: "PAGE_UNAVAILABLE" } }, { status: 404 });
+    if (!club || codeSiteFor(club) !== "diverse-city") return NextResponse.json({ error: { code: "PAGE_UNAVAILABLE" } }, { status: 404 });
     const memberships = club.role ? [{ userId, clubId: club.id, role: club.role, status: "active" }] : [];
     await authorizeAdminAccess({ club, userId, memberships, aal: "aal1", capability: "content" });
     const onzio = supabase.schema("onzio");

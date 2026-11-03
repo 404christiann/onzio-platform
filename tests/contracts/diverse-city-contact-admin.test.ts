@@ -243,11 +243,10 @@ describe("DCFC-302 protected Contact admin surface", () => {
     }
   });
 
-  it("selects real Academy and Editorial page sections with phone and desktop preview", () => {
+  it("selects real Academy page sections with phone and desktop preview", () => {
     expect(pageSource).toContain("Section guide");
     expect(pageSource).toContain("ContactPageCanvas");
     expect(editorSource).toContain("AcademyContactPage");
-    expect(editorSource).toContain("EditorialContactPage");
     expect(editorSource).toContain("previewWidth = phone ? 390 : 1440");
     expect(editorSource).toContain("onKeyDownCapture");
   });

@@ -1,3 +1,5 @@
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
+
 export type AdminRole = "owner" | "admin";
 
 export type AdminRouteAccessContext = Readonly<{
@@ -66,8 +68,6 @@ export type AdminRouteDefinition = Readonly<{
   feature?: AdminRouteFeature;
   ownerOnly?: true;
   billingRequired?: true;
-  hiddenForTemplates?: readonly string[];
-  visibleForTemplates?: readonly string[];
 }>;
 
 export type AdminVisibleRoute = Readonly<{
@@ -122,8 +122,6 @@ export type AdminQuickAction = Readonly<{
   href: `/admin${string}`;
 }>;
 
-const EDITORIAL_TEMPLATE = "editorial@1";
-
 // This manifest intentionally carries no search keywords. Search metadata is
 // attached only after authorization and template filtering, so callers cannot
 // accidentally build a search index from the unfiltered route definitions.
@@ -149,7 +147,6 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "programs",
     groupId: "website",
     feature: "programs",
-    visibleForTemplates: ["academy@1"],
   },
   {
     id: "tryouts",
@@ -158,7 +155,6 @@ export const ADMIN_ROUTE_MANIFEST = [
     iconKey: "tryouts",
     groupId: "website",
     feature: "tryouts",
-    visibleForTemplates: ["academy@1", EDITORIAL_TEMPLATE],
   },
   {
     id: "shop",
@@ -216,7 +212,6 @@ export const ADMIN_ROUTE_MANIFEST = [
     href: "/admin/stats",
     iconKey: "match-stats",
     groupId: "competition",
-    hiddenForTemplates: [EDITORIAL_TEMPLATE],
   },
   {
     id: "standings",
@@ -238,7 +233,6 @@ export const ADMIN_ROUTE_MANIFEST = [
     href: "/admin/analytics",
     iconKey: "analytics",
     groupId: null,
-    hiddenForTemplates: [EDITORIAL_TEMPLATE],
   },
   {
     id: "branding",
@@ -381,22 +375,13 @@ export function isAdminRouteVisible(
   context: AdminRouteAccessContext,
 ): boolean {
   if (!isProtectedAdminRole(context.role)) return false;
+  const siteAdmin = codeSiteAdminFor(context);
+  if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
+  if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&
     (context.role !== "owner" || !context.isBillingAuthorized)
-  ) {
-    return false;
-  }
-  if (
-    context.presentationTemplateKey &&
-    route.hiddenForTemplates?.includes(context.presentationTemplateKey)
-  ) {
-    return false;
-  }
-  if (
-    route.visibleForTemplates &&
-    !route.visibleForTemplates.includes(context.presentationTemplateKey ?? "")
   ) {
     return false;
   }

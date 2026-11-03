@@ -362,9 +362,9 @@ describe("Tryouts page intro copy", () => {
     );
     expect(route).toContain("fetchTryoutsPageContent");
     expect(route).toContain("content={content}");
-    // The route stays academy@1-only, exactly as before.
+    // The route remains available only for the mapped code site.
     expect(route).toContain(
-      'if (club.presentationTemplateKey !== "academy@1") notFound();',
+      'if (codeSiteFor(club) !== "diverse-city") notFound();',
     );
   });
 });

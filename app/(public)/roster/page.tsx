@@ -1,5 +1,7 @@
 "use client";
 
+import { codeSiteFor } from "@/lib/code-site";
+
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +14,6 @@ import { Player, Staff } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import AcademyRosterPage from "@/components/sites/diverse-city/AcademyRosterPage";
 import ClubhouseRosterPage from "@/components/ClubhouseRosterPage";
-import EditorialRoster from "@/components/editorial/EditorialRoster";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -67,9 +68,8 @@ function RosterGroup({ label, players, seasonLabel }: { label: string; players: 
 
 export default function RosterPage() {
   const club = useClubContext();
-  if (club.presentationTemplateKey === "editorial@1") return <EditorialRoster />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseRosterPage />;
-  if (club.presentationTemplateKey === "academy@1") return <AcademyRosterPage />;
+  if (codeSiteFor(club) === "diverse-city") return <AcademyRosterPage />;
   return <LegacyRosterPage />;
 }
 

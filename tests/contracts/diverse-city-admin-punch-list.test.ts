@@ -104,14 +104,10 @@ describe("Diverse City admin punch list", () => {
     it("gates the sponsor inputs behind the academy@1 check", () => {
       const schedule = source(SCHEDULE_ADMIN);
       expect(schedule).toContain(
-        'club.presentationTemplateKey === "academy@1"',
+        'codeSiteAdminFor(club)?.schedule',
       );
-      // The gate later widened to also cover editorial@1 (Lions) via
-      // hidesMatchSponsorFields = isAcademy || isEditorial — an OR extension,
-      // so academy@1 still hides exactly what it hid before. See
-      // editorial-admin-surface.test.ts for the editorial half.
       expect(schedule).toContain(
-        "const hidesMatchSponsorFields = isAcademy || isEditorial;",
+        "const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;",
       );
       expect(schedule).toContain("{!hidesMatchSponsorFields && (");
       // The copy-forward must not seed a hidden field either.
@@ -300,7 +296,8 @@ describe("Diverse City admin punch list", () => {
 
     it("hides both Third and Away kit tabs for academy@1, keeping only Home", () => {
       const shop = source(SHOP_EDITOR);
-      expect(shop).toContain('const variants: ShopVariant[] = isAcademy ? ["home"]');
+      expect(shop).toContain('const variants: ShopVariant[] = shopPolicy ? [...shopPolicy.variants]');
+      expect(source("components/sites/diverse-city/site-definition.ts")).toContain('shop: { variants: ["home"]');
       expect(source(SHOP_MIGRATION)).toContain("(page_surface='home' or template='academy@1') and (variants ? 'third' or variants ? 'away')");
     });
 

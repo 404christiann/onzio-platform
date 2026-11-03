@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import AcademyContactPage from "@/components/sites/diverse-city/AcademyContactPage";
 import { useClubContext } from "@/components/ClubContextProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
-import EditorialContactPage from "@/components/editorial/EditorialContactPage";
-import { fetchClubThemeColors, type ClubThemeColors } from "@/lib/editorial-identity";
 import type { ContactContent } from "@/lib/queries";
-import "@/styles/editorial.css";
 
 export type ContactCanvasTarget = "hero" | "details" | "social";
 
@@ -162,27 +159,7 @@ export default function ContactPageCanvas({ content, phone, selected, onSelect }
   onSelect: (target: ContactCanvasTarget) => void;
 }) {
   const club = useClubContext();
-  const [theme, setTheme] = useState<ClubThemeColors>({
-    primary: club.primaryColor ?? "#1B2958",
-    secondary: club.secondaryColor ?? "#AD3234",
-    accent: club.secondaryColor ?? "#AD3234",
-  });
-  useEffect(() => {
-    if (club.presentationTemplateKey !== "editorial@1") return;
-    let active = true;
-    fetchClubThemeColors(club.id, {
-      primary: club.primaryColor ?? "#1B2958",
-      secondary: club.secondaryColor ?? "#AD3234",
-    }).then((value) => { if (active) setTheme(value); }).catch(() => undefined);
-    return () => { active = false; };
-  }, [club.id, club.primaryColor, club.secondaryColor, club.presentationTemplateKey]);
-
-  const page = club.presentationTemplateKey === "editorial@1"
-    ? <div data-site-template="editorial" style={{
-        "--club-primary": theme.primary, "--club-secondary": theme.secondary,
-        "--club-accent": theme.accent,
-      } as CSSProperties}><EditorialContactPage content={content} /></div>
-    : <AcademyContactPage content={content} clubName={club.name} />;
+  const page = <AcademyContactPage content={content} clubName={club.name} />;
   return <Frame phone={phone} selected={selected} onSelect={onSelect} host={club.primaryDomain}>
     <TemplateFontScope templateKey={club.presentationTemplateKey}>{page}</TemplateFontScope>
   </Frame>;

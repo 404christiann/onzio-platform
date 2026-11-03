@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import AcademyAboutPage from "@/components/sites/diverse-city/AcademyAboutPage";
 import ClubLogoPageClient from "@/components/ClubLogoPageClient";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
-import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import { useClubContext } from "@/components/ClubContextProvider";
 import type { DBAboutPageContent, DBClubLogoPageContent, DBSiteSponsorLogo } from "@/lib/db-types";
-import { fetchClubThemeColors, type ClubThemeColors } from "@/lib/editorial-identity";
-import "@/styles/editorial.css";
 
 export type AboutCanvasTarget =
   | "hero" | "story" | "values" | "closing" | "fixed-hero" | "sponsors"
@@ -194,53 +191,18 @@ function Frame({ children, phone, selected, onSelect, host }: {
 
 export default function AboutPageCanvas(props: Props) {
   const club = useClubContext();
-  const [theme, setTheme] = useState<ClubThemeColors>({
-    primary: club.primaryColor ?? "#1B2958",
-    secondary: club.secondaryColor ?? "#AD3234",
-    accent: club.secondaryColor ?? "#AD3234",
-  });
-  useEffect(() => {
-    if (club.presentationTemplateKey !== "editorial@1" || props.page !== "about") return;
-    let active = true;
-    fetchClubThemeColors(club.id, {
-      primary: club.primaryColor ?? "#1B2958",
-      secondary: club.secondaryColor ?? "#AD3234",
-    }).then((value) => { if (active) setTheme(value); }).catch(() => undefined);
-    return () => { active = false; };
-  }, [club.id, club.primaryColor, club.secondaryColor, club.presentationTemplateKey, props.page]);
-
   let page: ReactNode;
   if (props.page === "logo") {
     page = <ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />;
-  } else if (club.presentationTemplateKey === "editorial@1") {
-    page = <div data-site-template="editorial" style={{
-      "--club-primary": theme.primary,
-      "--club-secondary": theme.secondary,
-      "--club-accent": theme.accent,
-    } as CSSProperties}><EditorialAboutPage content={props.about} /></div>;
   } else if (club.presentationTemplateKey === "clubhouse@1") {
     page = <ClubhouseAboutPage content={props.about} sponsors={props.sponsors} />;
   } else {
     page = <AcademyAboutPage content={props.about} animate={false} />;
   }
 
-  // Editorial omits unpublished sections from its public composition. Keep
-  // their authoring targets in this editor so an empty page can be completed.
-  const emptyEditorialValues = props.page === "about" && club.presentationTemplateKey === "editorial@1" && props.about.values.length === 0;
-  const emptyEditorialClosing = props.page === "about" && club.presentationTemplateKey === "editorial@1" &&
-    !props.about.closing_text && !(props.about.closing_cta_label && props.about.closing_cta_href);
-
   return <Frame phone={props.phone} selected={props.selected} onSelect={props.onSelect} host={club.primaryDomain}>
     <TemplateFontScope templateKey={club.presentationTemplateKey}>
       {page}
-      {(emptyEditorialValues || emptyEditorialClosing) && <div className="aep-empty-sections" aria-label="Unpublished page sections">
-        {emptyEditorialValues && <section data-about-editor-section="values" className="aep-empty-section">
-          <h2>Add club values</h2><p>Choose this section to add your first value.</p>
-        </section>}
-        {emptyEditorialClosing && <section data-about-editor-section="closing" className="aep-empty-section">
-          <h2>Add a closing invitation</h2><p>Choose this section to set the closing message and button destination.</p>
-        </section>}
-      </div>}
     </TemplateFontScope>
   </Frame>;
 }

@@ -10,6 +10,7 @@ import {
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 
@@ -211,25 +212,26 @@ export default function AdminProgramsPage() {
   const router = useRouter();
   // Only academy@1 currently renders a public /programs route. The editor
   // follows that route's actual template gate, including direct URL access.
-  const unsupportedTemplate = club.presentationTemplateKey !== "academy@1";
+  const programsPolicy = codeSiteAdminFor(club)?.programs;
+  const unsupportedTemplate = !programsPolicy?.routeVisible;
   useEffect(() => {
     if (unsupportedTemplate) router.replace("/admin");
   }, [unsupportedTemplate, router]);
   // Diverse City's admins do not hand-write URL slugs; the slug is derived from
   // the navigation label the first time a program is saved and then fixed for
   // the program's lifetime. Every other template keeps the manual field.
-  const hidesSlugField = club.presentationTemplateKey === "academy@1";
+  const hidesSlugField = programsPolicy ? !programsPolicy.showSlugField : false;
   // Diverse City's four programs are fixed for this rollout: the club edits
   // them, it does not add new ones. Hiding the creation entry points leaves the
   // create code path (and lib/slugify.ts) intact for every other template, and
   // for this club should it ever be re-enabled.
-  const hidesProgramCreation = club.presentationTemplateKey === "academy@1";
+  const hidesProgramCreation = programsPolicy ? !programsPolicy.allowCreation : false;
   // Diverse City's pathway band, /programs header, and closing band keep their
   // standard wording; the copy editor is Onzio-managed for this rollout. If
   // nothing is ever saved the public pages fall back to their placeholder copy
   // by design, so hiding the editor is purely subtractive. Every other template
   // keeps the editor.
-  const hidesPageCopyEditor = club.presentationTemplateKey === "academy@1";
+  const hidesPageCopyEditor = programsPolicy ? !programsPolicy.showPageCopyEditor : false;
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
   const [registrationForms, setRegistrationForms] = useState<RegistrationFormOption[]>([]);
   const [openRegistrationForms, setOpenRegistrationForms] = useState<Record<string, PublicRegistrationForm>>({});

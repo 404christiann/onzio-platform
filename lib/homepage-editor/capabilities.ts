@@ -1,45 +1,64 @@
 import type { TemplateKey } from "@/packages/presentation";
+import { codeSiteFor, codeSiteForTemplateKey } from "@/lib/code-site";
 import type { HomepageSaveRequest } from "./contract";
 import type { HeroFields, HomepageSection, PieceId } from "./model";
 
 export type HomepageRenderer = {
   templateKey: TemplateKey | null;
-  slideshowVariant: "none" | "editorial" | "matchday" | "legacy";
+  slideshowVariant: "none" | "matchday" | "legacy";
   heroVariant?: "editable" | "legacy-fixed";
 };
+
+const diverseCityHomepage = {
+  slideshowVariant: "none",
+  heroVariant: "editable",
+  editableSections: ["hero", "story"],
+  heroEditableFields: [
+    "eyebrow", "headline_line_one", "headline_line_two", "intro",
+    "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href",
+  ],
+  photoCaptionEditable: false,
+  shopTargetSurface: "home",
+  programsTarget: { owner: "programs", editorHref: "/admin/programs" },
+} as const;
 
 /** Derive from trusted club context; preserve the existing public branches. */
 export function homepageRendererForClub(club: { presentationTemplateKey: TemplateKey | null; slug: string }): HomepageRenderer {
   const key = club.presentationTemplateKey;
+  const siteHomepage = codeSiteFor(club) === "diverse-city" ? diverseCityHomepage : null;
   return {
     templateKey: key,
-    slideshowVariant: key === "academy@1" ? "none" : key === "editorial@1" ? "editorial" : club.slug === "rose-city" ? "legacy" : "matchday",
-    heroVariant: club.slug === "rose-city" && key !== "academy@1" && key !== "clubhouse@1" && key !== "editorial@1" ? "legacy-fixed" : "editable",
+    slideshowVariant: siteHomepage?.slideshowVariant ?? (club.slug === "rose-city" ? "legacy" : "matchday"),
+    heroVariant: siteHomepage?.heroVariant ?? (club.slug === "rose-city" && key !== "clubhouse@1" ? "legacy-fixed" : "editable"),
   };
 }
 
 export function resolveHomepageCapabilities(input: HomepageRenderer) {
-  const academy = input.templateKey === "academy@1";
-  const editorial = input.templateKey === "editorial@1";
+  const siteHomepage = codeSiteForTemplateKey(input.templateKey) === "diverse-city" ? diverseCityHomepage : null;
   const clubhouse = input.templateKey === "clubhouse@1";
   const editableSections: HomepageSection[] = [];
   const heroEditableFields: (keyof HeroFields)[] = [];
   if (input.heroVariant !== "legacy-fixed") {
     editableSections.push("hero");
-    if (!editorial && !clubhouse) heroEditableFields.push("eyebrow");
-    heroEditableFields.push("headline_line_one", "headline_line_two", "intro", "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href");
+    if (siteHomepage) heroEditableFields.push(...siteHomepage.heroEditableFields);
+    else {
+      if (!clubhouse) heroEditableFields.push("eyebrow");
+      heroEditableFields.push("headline_line_one", "headline_line_two", "intro", "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href");
+    }
   }
-  if (!academy) editableSections.push("photos");
-  if (academy) editableSections.push("story");
-  if (!academy && !editorial && !clubhouse) editableSections.push("video");
+  if (siteHomepage) editableSections.push(...siteHomepage.editableSections.filter(section => section !== "hero"));
+  else {
+    editableSections.push("photos");
+    if (!clubhouse) editableSections.push("video");
+  }
   return {
     editableSections, heroEditableFields,
-    photoCaptionEditable: !academy && !editorial && input.slideshowVariant === "legacy",
+    photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (input.slideshowVariant === "legacy"),
     videoSourceEditable: false as const,
     sharedTargets: {
-      storyText: editorial || clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
-      shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: editorial || clubhouse ? "shop" as const : "home" as const },
-      programs: academy ? { owner: "programs" as const, editorHref: "/admin/programs" as const } : null,
+      storyText: clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
+      shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: siteHomepage?.shopTargetSurface ?? (clubhouse ? "shop" as const : "home" as const) },
+      programs: siteHomepage?.programsTarget ?? null,
     },
   };
 }

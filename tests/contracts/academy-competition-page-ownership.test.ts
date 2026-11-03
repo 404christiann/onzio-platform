@@ -24,7 +24,7 @@ describe("Academy competition page ownership", () => {
     expect(source(module)).toContain("export default function Academy");
     const route = source(publicRoute);
     expect(route).toContain(importLine);
-    expect(route).toContain('if (club.presentationTemplateKey === "academy@1") return ' + render + ";");
+    expect(route).toContain('if (codeSiteFor(club) === "diverse-city") return ' + render + ";");
   });
 
   it("keeps the existing tenant adapters and player and match detail pages in place", () => {

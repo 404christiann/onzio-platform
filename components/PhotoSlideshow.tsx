@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Image from "@/components/ResilientImage";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -13,7 +13,6 @@ import { fetchHomepageContent } from "@/lib/queries";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import { HomepageMissingPiece, useHomepagePiece, useHomepagePreview } from "@/lib/homepage-editor/preview-context";
 import ImageFallback from "@/components/ImageFallback";
-import { AcademySectionLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -21,7 +20,7 @@ gsap.registerPlugin(ScrollTrigger);
 const SLIDE_DURATION = 4500;
 type SlideOrientation = "portrait" | "landscape";
 
-export default function PhotoSlideshow() {
+export default function PhotoSlideshow({ loadingFallback }: { loadingFallback?: ReactNode } = {}) {
   const preview = useHomepagePreview();
   const editing = preview !== null;
   const selecting = editing && !preview.playback;
@@ -110,7 +109,7 @@ export default function PhotoSlideshow() {
   }, [usesLegacyRoseCitySlideshow, visibleSlides.length, editing]);
 
   if (preview && !preview.allowedPieces.includes("photos")) return null;
-  if (!editing && showLoading && club.presentationTemplateKey === "academy@1") return <AcademySectionLoadingSkeleton />;
+  if (!editing && showLoading && loadingFallback !== undefined) return loadingFallback;
   if (visibleSlides.length === 0) {
     if (selecting) return <HomepageMissingPiece piece="photos">Photos · Add photo</HomepageMissingPiece>;
     if (slides.length === 0) return null;

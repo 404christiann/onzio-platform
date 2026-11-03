@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { codeSiteFor } from "@/lib/code-site";
 import AcademyProgramsPage from "@/components/sites/diverse-city/AcademyProgramsPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchPrograms, fetchProgramsPageContent } from "@/lib/queries";
@@ -10,7 +11,7 @@ export default async function TenantProgramsPage({
   params: Promise<{ slug: string }>;
 }) {
   const club = await getClubContextBySlug((await params).slug);
-  if (club.presentationTemplateKey !== "academy@1") notFound();
+  if (codeSiteFor(club) !== "diverse-city") notFound();
   const onzio = (await createClient()).schema("onzio");
   const [programs, content] = await Promise.all([
     fetchPrograms(club.id, onzio),

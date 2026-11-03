@@ -36,9 +36,9 @@ describe("academy Header Stays loading", () => {
   });
 
   it("keeps a visible loading state for other tenant templates", () => {
-    expect(tenantLoadingSource).toContain('if (club?.presentationTemplateKey !== "academy@1") return <OtherTemplatePageLoading />');
+    expect(tenantLoadingSource).toContain('if (!club || codeSiteFor(club) !== "diverse-city") return <OtherTemplatePageLoading />');
     expect(tenantLoadingSource).toContain('aria-label="Loading page"');
-    expect(tenantLoadingSource).not.toContain('if (club?.presentationTemplateKey !== "academy@1") return null');
+    expect(tenantLoadingSource).not.toContain('if (!club || codeSiteFor(club) !== "diverse-city") return null');
     expect(routeSource).not.toContain("presentationTemplateKey");
   });
 

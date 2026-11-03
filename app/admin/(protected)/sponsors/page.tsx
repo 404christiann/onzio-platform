@@ -3,6 +3,7 @@
 import { X, ChevronLeft, ChevronRight, AlertTriangle } from "@/components/admin/icons";
 
 import { useClubContext } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import Image from "@/components/ResilientImage";
 import type { ReactNode } from "react";
@@ -100,13 +101,10 @@ export default function AdminSponsorsPage() {
   // would duplicate the homepage SponsorCarousel), so footer-placement logos
   // are never displayed on an academy@1 site. Hide that placement tab and pin
   // the editor to the carousel; every other template keeps both placements.
-  // editorial@1's EditorialFooter also renders no sponsor strip, so the same
-  // applies there.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const hidesSponsorFooterTab = isAcademy || isEditorial;
+  const sponsorsPolicy = codeSiteAdminFor(club)?.sponsors;
+  const hidesSponsorFooterTab = sponsorsPolicy?.showFooterPlacement === false;
   // Rail rows follow PLACEMENT_ORDER. The footer row carries `hidden` for
-  // academy@1/editorial@1 (same gate as before), which drops it out of the
+  // academy@1, which drops it out of the
   // rail and the DOM entirely — AdminSectionRail never renders a disabled row.
   const sectionItems: AdminSectionRailItem[] = PLACEMENT_ORDER.map((item) => ({
     id: item,

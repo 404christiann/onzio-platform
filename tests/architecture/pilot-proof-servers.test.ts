@@ -1,15 +1,15 @@
 import { fork, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { withPilotProofServers } from "../../scripts/pilot-proof-servers";
 
 const project = resolve(import.meta.dirname, "../..");
 const loader = createRequire(import.meta.url).resolve("tsx");
-const directory = mkdtempSync(join(tmpdir(), "onzio-proof-servers-"));
+const directory = realpathSync(mkdtempSync(join(tmpdir(), "onzio-proof-servers-")));
 let sequence = 0;
 function put(root: string, path: string, value: string) {
   mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -343,6 +343,29 @@ describe("owned proof servers", () => {
     })).rejects.toThrow(/(?:exited|disconnected) unexpectedly/);
     expect(aborted).toBe(true); assertClean(items);
   });
+  it("retains locks until an EPERM-signaled owned group is gone", async () => {
+    const items = roots("stubborn");
+    const originalKill = process.kill.bind(process);
+    let targetPid = 0;
+    let injected = false;
+    const kill = vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+      if (pid === -targetPid && signal === "SIGTERM" && !injected) {
+        injected = true;
+        expect(existsSync(join(items.changed, ".onzio-pilot-build.lock"))).toBe(true);
+        expect(originalKill(pid, 0)).toBe(true);
+        throw Object.assign(new Error("Process group cannot receive TERM"), { code: "EPERM" });
+      }
+      return originalKill(pid, signal);
+    });
+    try {
+      await expect(withPilotProofServers(items, async () => {
+        targetPid = Number(readFileSync(join(items.changed, "output/pid"), "utf8"));
+        throw new Error("capture failed");
+      })).rejects.toThrow("capture failed");
+    } finally { kill.mockRestore(); }
+    expect(injected).toBe(true);
+    assertClean(items);
+  }, 15_000);
   it("cleans up on callback failure and escalates TERM to KILL before releasing locks", async () => {
     const items = roots("stubborn");
     await expect(withPilotProofServers(items, async () => { throw new Error("capture failed"); })).rejects.toThrow("capture failed");

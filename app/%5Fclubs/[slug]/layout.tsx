@@ -6,7 +6,6 @@ import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
-import EditorialShell from "@/components/editorial/EditorialShell";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { loadAcademyShellBranding } from "@/lib/academy-shell-branding";
@@ -14,6 +13,7 @@ import AcademyRouteLoadingSkeleton from "@/components/sites/diverse-city/RouteLo
 import AcademyShell from "@/components/sites/diverse-city/Shell";
 import type { ClubContext } from "@/lib/club-context";
 import type { Metadata } from "next";
+import { codeSiteFor } from "@/lib/code-site";
 
 export async function generateMetadata({
   params,
@@ -79,24 +79,9 @@ export default async function TenantLayout({
     throw error;
   }
 
-  if (club.presentationTemplateKey === "editorial@1") {
-    // editorial@1 is a completely custom shell (own header/motion/main/
-    // footer, see components/editorial/EditorialShell.tsx) -- it does not
-    // reuse Nav/Footer/TemplateFontScope at all, mirroring how the
-    // superseded reference branch built it. Every other template keeps the
-    // exact byte-identical return below.
-    return (
-      <ClubContextProvider club={club}>
-        <ClubBrandingProvider>
-          <EditorialShell>{children}</EditorialShell>
-        </ClubBrandingProvider>
-      </ClubContextProvider>
-    );
-  }
-
   // The header remains usable while branding or page content is pending.
   // Programs load independently inside Nav, so they never hold the page.
-  if (club.presentationTemplateKey === "academy@1") {
+  if (codeSiteFor(club) === "diverse-city") {
     return (
       <ClubContextProvider club={club}>
         <Suspense fallback={<AcademyRouteLoadingSkeleton />}>

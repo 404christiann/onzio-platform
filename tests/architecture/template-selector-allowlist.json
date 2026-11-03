@@ -1,0 +1,143 @@
+{
+  "app/%5Fclubs/[slug]/club/about/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/%5Fclubs/[slug]/layout.tsx": {
+    "read:presentationTemplateKey": 1,
+    "read:templateKey": 1
+  },
+  "app/%5Fclubs/[slug]/register/[formSlug]/page.tsx": {
+    "id:academy": 2
+  },
+  "app/(public)/roster/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/schedule/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/shop/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/(public)/sponsors/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "app/(public)/stats/page.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "app/admin/(protected)/page.tsx": {
+    "read:presentationTemplateKey": 2
+  },
+  "app/admin/(protected)/programs/page.tsx": {
+    "read:presentationTemplateKey": 2,
+    "read:templateKey": 2
+  },
+  "components/AdminShell.tsx": {
+    "read:presentationTemplateKey": 3
+  },
+  "components/ClubhouseHomePage.tsx": {
+    "literal:clubhouse@1": 1
+  },
+  "components/ClubhouseMatchAreaPage.tsx": {
+    "flag:isClubhouse": 3,
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/ClubhousePlayerProfilePage.tsx": {
+    "flag:isClubhouse": 3,
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/Footer.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/Hero.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/HomePageClient.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/Nav.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "components/TemplateFontScope.tsx": {
+    "read:data-font-pack": 1,
+    "read:templateKey": 3
+  },
+  "components/admin/about/AboutPageCanvas.tsx": {
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 2,
+    "read:templateKey": 1
+  },
+  "components/admin/contact/ContactPageCanvas.tsx": {
+    "read:presentationTemplateKey": 1,
+    "read:templateKey": 1
+  },
+  "components/admin/homepage/HomepageEditor.tsx": {
+    "read:presentationTemplateKey": 1,
+    "read:templateKey": 1
+  },
+  "components/admin/homepage/HomepagePreviewFrame.tsx": {
+    "read:data-font-pack": 1
+  },
+  "components/admin/shop/ShopPageEditor.tsx": {
+    "flag:isClubhouse": 8,
+    "flag:sharedWithHomepage": 3,
+    "flag:template": 2,
+    "literal:clubhouse@1": 1,
+    "read:presentationTemplateKey": 1,
+    "read:templateKey": 1
+  },
+  "components/sites/diverse-city/FontScope.tsx": {
+    "read:data-font-pack": 1
+  },
+  "lib/about-editor/destinations.ts": {
+    "read:presentationTemplateKey": 4,
+    "read:templateKey": 3
+  },
+  "lib/admin-route-manifest.ts": {
+    "read:presentationTemplateKey": 1
+  },
+  "lib/club-context.ts": {
+    "read:presentationTemplateKey": 7,
+    "read:templateKey": 2
+  },
+  "lib/code-site.ts": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 2
+  },
+  "lib/homepage-editor/capabilities.ts": {
+    "flag:clubhouse": 4,
+    "flag:key": 2,
+    "literal:clubhouse@1": 2,
+    "read:presentationTemplateKey": 2,
+    "read:templateKey": 4
+  },
+  "lib/shop-editor/contract.ts": {
+    "read:templateKey": 1
+  },
+  "packages/presentation/index.ts": {
+    "literal:academy@1": 16,
+    "literal:cinematic@1": 8,
+    "literal:clubhouse@1": 16,
+    "literal:editorial@1": 9,
+    "literal:heritage@1": 9,
+    "read:templateKey": 2
+  },
+  "scripts/pilot-site-coordination.ts": {
+    "literal:academy@1": 1,
+    "read:presentationTemplateKey": 1
+  },
+  "scripts/prepare-pilot-reconstruction.ts": {
+    "read:data-font-pack": 1
+  }
+}

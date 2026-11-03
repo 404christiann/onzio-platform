@@ -2,6 +2,7 @@
 
 import { useOptionalClubContext } from "@/components/ClubContextProvider";
 import { AcademyRoutePageLoading } from "@/components/sites/diverse-city/RouteLoadingSkeleton";
+import { codeSiteFor } from "@/lib/code-site";
 
 function OtherTemplatePageLoading() {
   return (
@@ -17,6 +18,6 @@ function OtherTemplatePageLoading() {
 /** Route-level fallback for every tenant. Only the legacy template choice lives here. */
 export default function TenantPageLoading() {
   const club = useOptionalClubContext();
-  if (club?.presentationTemplateKey !== "academy@1") return <OtherTemplatePageLoading />;
+  if (!club || codeSiteFor(club) !== "diverse-city") return <OtherTemplatePageLoading />;
   return <AcademyRoutePageLoading />;
 }

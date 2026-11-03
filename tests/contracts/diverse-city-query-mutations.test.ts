@@ -506,16 +506,11 @@ describe("DCFC-204 tenant-scoped public query mappings", () => {
     });
   });
 
-  it("renders the native modal branch in both public tryout templates", async () => {
-    for (const path of [
-      "components/sites/diverse-city/AcademyTryoutsPage.tsx",
-      "components/editorial/EditorialTryouts.tsx",
-    ]) {
-      const component = await readFile(resolve(process.cwd(), path), "utf8");
-      expect(component).toContain("tryout.nativeRegistration");
-      expect(component).toContain("<RegistrationCtaButton");
-      expect(component).toContain(": tryout.action ? (");
-    }
+  it("renders the native modal branch in the Academy public tryouts page", async () => {
+    const component = await readFile(resolve(process.cwd(), "components/sites/diverse-city/AcademyTryoutsPage.tsx"), "utf8");
+    expect(component).toContain("tryout.nativeRegistration");
+    expect(component).toContain("<RegistrationCtaButton");
+    expect(component).toContain(": tryout.action ? (");
   });
 
   it.each([

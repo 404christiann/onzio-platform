@@ -57,7 +57,7 @@ describe("binding-aware browser draft decisions", () => {
   });
 
   it.each([
-    { templateKey: "editorial@1", slideshowVariant: "editorial" },
+    { templateKey: "clubhouse@1", slideshowVariant: "matchday" },
     { templateKey: "academy@1", slideshowVariant: "none" },
     { ...renderer, slideshowVariant: "matchday" },
     { ...renderer, heroVariant: "legacy-fixed" },
@@ -152,13 +152,13 @@ describe("edited local field overlay", () => {
   });
 
   it("never treats About, Shop or Programs shortcuts as local edit rights", () => {
-    const editorial = { templateKey: "editorial@1", slideshowVariant: "editorial" } satisfies HomepageRenderer;
-    const target = resolveHomepageBindings({ capabilities: resolveHomepageCapabilities(editorial) });
+    const clubhouse = { templateKey: "clubhouse@1", slideshowVariant: "matchday" } satisfies HomepageRenderer;
+    const target = resolveHomepageBindings({ capabilities: resolveHomepageCapabilities(clubhouse) });
     const record = v2();
     record.draft.story.heading = "Shared About words";
     expect(overlay(record, homepageDraft(), target)).toBeNull();
     expect(decide({ ...record, binding: { key: target.key, revision: target.revision } }, {
-      design: { ...editorial, binding: { key: target.key, revision: target.revision } }, serverRevision: "revision-2",
+      design: { ...clubhouse, binding: { key: target.key, revision: target.revision } }, serverRevision: "revision-2",
     })).toMatchObject({ kind: "conflict", reason: "UNSUPPORTED_EDIT", allowedAction: "review-only" });
   });
 

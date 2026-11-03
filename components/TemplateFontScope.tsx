@@ -1,4 +1,5 @@
 import type { TemplateKey } from "@/packages/presentation";
+import { codeSiteForTemplateKey } from "@/lib/code-site";
 
 // DCFC-D110 registered a dedicated "montserrat-inter-dmsans" font pack for
 // `academy@1` (Diverse City FC's template) but nothing ever applied it to
@@ -17,7 +18,7 @@ export default function TemplateFontScope({
   templateKey: TemplateKey | null;
   children: React.ReactNode;
 }) {
-  const fontPack = templateKey === "academy@1" ? "academy" : undefined;
+  const fontPack = codeSiteForTemplateKey(templateKey) === "diverse-city" ? "academy" : undefined;
   return (
     <div data-font-pack={fontPack} className="contents">
       {children}

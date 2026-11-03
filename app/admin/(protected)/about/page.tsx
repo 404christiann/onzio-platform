@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight as AdminLinkArrow, IconCaretDown as AdminSelectChevron } from "@/components/admin/icons";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 
@@ -65,15 +66,6 @@ type UploadTarget =
   | { kind: "logoFeaturePatch"; index: number }
   | { kind: "logoFeatureIcon"; index: number };
 
-/**
- * Where academy@1's About closing button points. Operator-owned per DCFC-D007,
- * so it lives in code rather than in an admin free-text field. This is the
- * destination the button already resolved to — `about_page_content
- * .closing_cta_href` is `/schedule` for Diverse City and `/schedule` is also
- * the shipped default in lib/about-content.ts — not a new destination.
- */
-const ACADEMY_ABOUT_CLOSING_CTA_HREF = "/schedule";
-
 function toAboutDraft(content: DBAboutPageContent): DBAboutPageContent {
   return {
     ...content,
@@ -111,27 +103,10 @@ async function uploadAboutImage(
 export default function AdminAboutPage() {
   const clubId = useClubId();
   const club = useClubContext();
-  // DCFC-D007: club owners edit copy, Onzio operators own navigation
-  // destinations. The About closing button follows the precedent already set by
-  // DevelopingNextGeneration's "Our Story" button — the label stays editable,
-  // the destination is fixed in code. academy@1's button already resolves to
-  // /schedule (both the stored value and the shipped default), so pinning it
-  // changes nothing about where the button goes; it only removes a free-text
-  // href field that could save a broken path.
-  const isAcademy = club.presentationTemplateKey === "academy@1";
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  // editorial@1 genuinely has an About page -- components/editorial/
-  // EditorialHeader.tsx's nav and EditorialFooter.tsx both link /club/about,
-  // and app/%5Fclubs/[slug]/club/about/page.tsx renders EditorialAboutPage
-  // from this very editor's about_page_content row. (An earlier revision hid
-  // this whole page for editorial@1 after checking Nav.tsx's lionsNavLinks,
-  // which is dead code for this template -- Lions never mounts Nav.tsx.)
-  //
-  // The Club Logo tab is the part that stays hidden: templateRegistry's
-  // editorial@1 entry lists no "club-logo" in defaultRoutes/supportedRoutes,
-  // and nothing on the editorial site links /club/logo, so its content row is
-  // never read -- exactly the academy@1 situation this gate already covered.
-  const hasClubLogoPage = !isAcademy && !isEditorial;
+  // DCFC-D007: owners edit the label, while Onzio fixes this editor's
+  // destination. The public stored fixture is separate from this save choice.
+  const aboutPolicy = codeSiteAdminFor(club)?.about;
+  const hasClubLogoPage = aboutPolicy?.showLogoPage ?? true;
   const [pageChoice, setPageChoice] = useState<"about" | "logo">("about");
   const [selectedTarget, setSelectedTarget] = useState<AboutCanvasTarget | null>(null);
   const [phonePreview, setPhonePreview] = useState(false);
@@ -183,7 +158,7 @@ export default function AdminAboutPage() {
   const dirtyAbout = ABOUT_SECTIONS.some((section) => dirtySections.has(section));
   const dirtyLogo = LOGO_SECTIONS.some((section) => dirtySections.has(section));
   const dirty = pageChoice === "about" ? dirtyAbout : dirtyLogo;
-  const destinationAvailable = isAcademy || availableDestinations.some((option) => option.href === aboutDraft.closing_cta_href);
+  const destinationAvailable = aboutPolicy?.chooseClosingCtaDestination === false || availableDestinations.some((option) => option.href === aboutDraft.closing_cta_href);
   const [error, setError] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -217,7 +192,7 @@ export default function AdminAboutPage() {
   }, [clubId, loadAttempt, hasClubLogoPage]);
 
   useEffect(() => {
-    if (isAcademy) {
+    if (aboutPolicy && !aboutPolicy.chooseClosingCtaDestination) {
       setAvailableDestinations([]);
       setDestinationsLoaded(true);
       setDestinationError(null);
@@ -244,7 +219,7 @@ export default function AdminAboutPage() {
       if (active) setDestinationError(caught instanceof Error ? caught.message : "Available pages could not be loaded");
     });
     return () => { active = false; };
-  }, [clubId, isAcademy, destinationAttempt]);
+  }, [clubId, aboutPolicy, destinationAttempt]);
 
   function markDirty(section: SectionId) {
     setDirtySections((current) => {
@@ -436,13 +411,13 @@ export default function AdminAboutPage() {
   async function handleSave() {
     if (saving || uploading || conflictedPages.has(pageChoice)) return;
     const pending = pendingOperations[pageChoice];
-    if (!pending && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable)) {
+    if (!pending && pageChoice === "about" && (aboutPolicy?.chooseClosingCtaDestination ?? true) && (!destinationsLoaded || !destinationAvailable)) {
       setError("Choose a page available to this club for the closing button before saving."); return;
     }
     const snapshot = snapshots[pageChoice]; if (!snapshot) return;
     setSaving(true); setError(null); setSaved(false);
     try {
-      const prepared = prepareAboutPageSave({ page: pageChoice, about: aboutDraft, logo: logoDraft, academy: isAcademy, now: new Date().toISOString() });
+      const prepared = prepareAboutPageSave({ page: pageChoice, about: aboutDraft, logo: logoDraft, fixedClosingCtaHref: aboutPolicy?.closingCtaHref ?? null, now: new Date().toISOString() });
       const request = pending ?? aboutEditorSaveSchema.parse({ page: prepared.page, content: aboutPageEditableContent(prepared),
         operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision,
         retiredMediaUrls: pendingDeleteUrls[pageChoice] });
@@ -464,7 +439,7 @@ export default function AdminAboutPage() {
     finally { setSaving(false); }
   }
 
-  const saveDisabled = saving || uploading || loadFailed || conflictedPages.has(pageChoice) || (!dirty && !pendingOperations[pageChoice]) || (!pendingOperations[pageChoice] && pageChoice === "about" && !isAcademy && (!destinationsLoaded || !destinationAvailable));
+  const saveDisabled = saving || uploading || loadFailed || conflictedPages.has(pageChoice) || (!dirty && !pendingOperations[pageChoice]) || (!pendingOperations[pageChoice] && pageChoice === "about" && (aboutPolicy?.chooseClosingCtaDestination ?? true) && (!destinationsLoaded || !destinationAvailable));
   const isLogoSection = pageChoice === "logo";
 
   return (
@@ -606,10 +581,10 @@ export default function AdminAboutPage() {
                         className={ADMIN_INPUT_CLASS}
                       />
                     </Field>
-                    {isAcademy ? (
+                    {aboutPolicy?.closingCtaHref ? (
                       <Field label="Button Goes To" flush>
                         <p className="font-body text-sm text-muted-foreground">
-                          {ACADEMY_ABOUT_CLOSING_CTA_HREF} — the Schedule page.
+                          {aboutPolicy.closingCtaHref} — the Schedule page.
                           Contact Onzio to change where this button goes.
                         </p>
                       </Field>

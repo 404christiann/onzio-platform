@@ -35,6 +35,7 @@ export const academyRoutes = {
   tryouts: { pattern: "/tryouts", loading: "navy" },
 } as const satisfies Record<string, RouteSpec>;
 
+
 export type AcademyRouteId = keyof typeof academyRoutes;
 
 type ParamNames<Pattern extends string> =
