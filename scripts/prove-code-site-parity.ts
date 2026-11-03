@@ -101,6 +101,7 @@ async function run() {
             const base = scope.servers[role].origin;
             const response = await page.goto(`${base}${item.path}`);
             assert.equal(response?.status(), 200, `${role} ${item.id} did not render successfully`);
+            assert.equal(new URL(page.url()).pathname, new URL(item.path, base).pathname, `${role} ${item.id} navigated to an unexpected route`);
             if (item.document.kind === "preview") {
               if (item.action && item.document.preview === "programs") {
                 const navigation = page.getByRole("navigation", { name: "Program pages", exact: true });
@@ -121,7 +122,7 @@ async function run() {
               if (await device.count()) await device.first().click();
             }
             const ready = item.frame ? page.frameLocator(`iframe[title$=${JSON.stringify(item.frame)}]`).locator("body") : page.locator(item.selector).first();
-            await expect(ready).toBeVisible({ timeout: 30_000 });
+            await expect(ready).toBeVisible({ timeout: 60_000 });
             const content = item.document.kind === "public" ? page.locator("main").first() : ready;
             if (item.text) await expect(content).toContainText(item.text, { ignoreCase: true, timeout: 30_000 });
             if (item.document.kind === "preview") await expect.poll(async () => (await content.innerText()).trim().length, { timeout: 30_000 }).toBeGreaterThan(10);

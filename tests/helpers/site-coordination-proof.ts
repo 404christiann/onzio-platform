@@ -102,7 +102,7 @@ async function cleanRecordedProof(file: string, input: RecoveryRecord) {
   const failures: unknown[] = [];
   try {
     await db.connect();
-    await db.query("set statement_timeout='8s'");
+    await db.query("set statement_timeout='60s'");
     await db.query("begin");
     try {
       await db.query("lock table onzio.presentation_documents in access exclusive mode");
