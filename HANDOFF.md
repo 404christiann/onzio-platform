@@ -1,3 +1,8 @@
+## 2026-11-03 - Codex loop guides retired
+
+- Christian dropped the verification pilot in #59. The start, worker, and coordinator guides are removed. The loop checks for an explicit readable, nonempty `CODEX_LOOP_GUIDE` before it can claim work. The standalone verifier and Grokbot review contract remain available.
+- Bash syntax, missing and empty guide rejection, both dry runs with a supplied guide, and all 43 verifier and worktree-environment tests passed. Next step is review of the documentation cleanup PR.
+
 ## 2026-11-03 - #59 Codex verification pilot report publication
 
 - Status: historical pilot report recovered without changing its observations. `docs/agents/codex-pilot-report.md` has the same SHA-256 `ffb701b986f39f9702b7fa7b3b5a72435ab03cfee712c3d58bfa6cf120844582` as the reviewed local source. It records the exact seven checks, sandbox probes, baseline comparison, limits and recommendation from the 2026-10-31 workspace-write run. The report does not claim that failed or blocked checks passed.
