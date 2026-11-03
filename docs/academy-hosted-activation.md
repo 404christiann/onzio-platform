@@ -1,12 +1,12 @@
 # Diverse City Academy rollout
 
-Christian approved preparation on November 3, 2026. A read-only #80 preflight later the same day found that the public Diverse City site already serves the code-authored Academy shell on the current shared Vercel deployment. No agent switched traffic, assigned a release, or changed hosted data during that preflight. The earlier plan to switch Diverse City from a distinct prior design therefore needs a new target and rollback decision before any production action.
+Christian approved preparation on November 3, 2026. A read-only #80 preflight later the same day found that the public Diverse City site already serves the code-authored Academy shell on the current shared Vercel deployment. Christian then accepted a shared-project rollout and rollback affecting Rose City for now, stating that Rose City is not yet a paying customer. This does not approve a specific production change. No agent switched traffic, assigned a release, or changed hosted data during the preflight. The earlier plan to switch Diverse City from a distinct prior design still needs a new target and restoration proof before any production action.
 
 [Decision record in #54](https://github.com/404christiann/onzio-platform/issues/54#issuecomment-6612002195) · [#80 preflight](verification/site07-shell/ticket-80/README.md)
 
 | When | Owner | What must happen |
 | --- | --- | --- |
-| Before scheduling | Christian and the release operator | Decide whether a shared-project traffic switch that also affects Rose City is acceptable. Confirm the current tenant domains, aliases, and traffic inventory. |
+| Before scheduling | Christian and the release operator | The shared-project effect is accepted for now. Confirm the current tenant domains, aliases, and traffic inventory for the specific change. |
 | Before scheduling | Implementation owner | Identify a fallback that actually restores the intended Diverse City visual and editor state. Prove the target, both tenants' routes and previews, and an exact way back to the starting deployment. Hosted staging proof remains deferred by Christian. |
 | Before any production change | Release operator | Confirm the exact current deployment and source commit, current alias inventory, production migration parity, and backup requirements. Stop on a mismatch. Do not use an older deployment merely because it is `READY`. |
 | During an approved window | Release operator | Apply only the separately approved, proven change. Check both Diverse City and Rose City public routes and owner editor previews, alias mapping, cache behavior, and runtime errors. |
