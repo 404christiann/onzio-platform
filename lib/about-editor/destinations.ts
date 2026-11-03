@@ -1,4 +1,4 @@
-import { activeTemplateRegistration, parsePresentationDocument, routeRegistry, type TemplateKey } from "@/packages/presentation";
+import { activeTemplateRegistration, parsePresentationDocument, routeRegistry, type ActiveTemplateKey } from "@/packages/presentation";
 import type { ClubContext } from "@/lib/club-context";
 import { codeSiteAdminForTemplateKey } from "@/lib/code-site-admin";
 import type { SiteRouteOption } from "@/lib/site-routes";
@@ -28,11 +28,10 @@ const LABELS: Record<RouteKey, string> = {
 /** Only routes in a published navigation and supported by its template are offered. */
 export function aboutDestinationOptions(
   routeKeys: readonly string[],
-  templateKey: TemplateKey | null,
+  templateKey: ActiveTemplateKey | null,
   storeEnabled: boolean,
 ): SiteRouteOption[] {
   const template = activeTemplateRegistration(templateKey);
-  if (templateKey && !template) return [];
   const supported = new Set<string>(template?.supportedRoutes ?? LEGACY_SUPPORTED_ROUTES);
   const result: SiteRouteOption[] = [];
   const seen = new Set<string>();
@@ -62,7 +61,6 @@ export async function loadAboutDestinationOptions(
 
   if (!state?.published_document_id) {
     const template = activeTemplateRegistration(club.presentationTemplateKey);
-    if (club.presentationTemplateKey && !template) return [];
     return aboutDestinationOptions(template?.defaultRoutes ?? LEGACY_DEFAULT_ROUTES, club.presentationTemplateKey, club.storeEnabled);
   }
 

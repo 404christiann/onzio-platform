@@ -101,9 +101,13 @@ describe("atomic Contact editor save", () => {
   );
 
   it("advances revision for direct legacy updates and blocks a stale save", async () => {
+    await db.query("reset role");
+    await db.query("insert into onzio.contact_profile (club_id) values ($1) on conflict (club_id) do nothing", [clubId]);
+    await actor();
     const payload = await request();
     await db.query("reset role");
-    await db.query("update onzio.contact_profile set public_email='legacy@example.test' where club_id=$1", [clubId]);
+    const update = await db.query("update onzio.contact_profile set public_email='legacy@example.test' where club_id=$1", [clubId]);
+    expect(update.rowCount).toBe(1);
     await actor();
     await rejects(() => save(payload), "CONTACT_CHANGED");
   });
