@@ -1,5 +1,5 @@
 import type { TemplateKey } from "@/packages/presentation";
-import { codeSiteAdminFor, codeSiteAdminForTemplateKey } from "@/lib/code-site-admin";
+import { codeSiteFor, codeSiteForTemplateKey } from "@/lib/code-site";
 import type { HomepageSaveRequest } from "./contract";
 import type { HeroFields, HomepageSection, PieceId } from "./model";
 
@@ -9,10 +9,23 @@ export type HomepageRenderer = {
   heroVariant?: "editable" | "legacy-fixed";
 };
 
+const diverseCityHomepage = {
+  slideshowVariant: "none",
+  heroVariant: "editable",
+  editableSections: ["hero", "story"],
+  heroEditableFields: [
+    "eyebrow", "headline_line_one", "headline_line_two", "intro",
+    "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href",
+  ],
+  photoCaptionEditable: false,
+  shopTargetSurface: "home",
+  programsTarget: { owner: "programs", editorHref: "/admin/programs" },
+} as const;
+
 /** Derive from trusted club context; preserve the existing public branches. */
 export function homepageRendererForClub(club: { presentationTemplateKey: TemplateKey | null; slug: string }): HomepageRenderer {
   const key = club.presentationTemplateKey;
-  const siteHomepage = codeSiteAdminFor(club)?.homepage;
+  const siteHomepage = codeSiteFor(club) === "diverse-city" ? diverseCityHomepage : null;
   return {
     templateKey: key,
     slideshowVariant: siteHomepage?.slideshowVariant ?? (club.slug === "rose-city" ? "legacy" : "matchday"),
@@ -21,7 +34,7 @@ export function homepageRendererForClub(club: { presentationTemplateKey: Templat
 }
 
 export function resolveHomepageCapabilities(input: HomepageRenderer) {
-  const siteHomepage = codeSiteAdminForTemplateKey(input.templateKey)?.homepage;
+  const siteHomepage = codeSiteForTemplateKey(input.templateKey) === "diverse-city" ? diverseCityHomepage : null;
   const clubhouse = input.templateKey === "clubhouse@1";
   const editableSections: HomepageSection[] = [];
   const heroEditableFields: (keyof HeroFields)[] = [];
@@ -43,7 +56,7 @@ export function resolveHomepageCapabilities(input: HomepageRenderer) {
     photoCaptionEditable: siteHomepage?.photoCaptionEditable ?? (input.slideshowVariant === "legacy"),
     videoSourceEditable: false as const,
     sharedTargets: {
-      storyText: siteHomepage ? siteHomepage.storyTextTarget : clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
+      storyText: clubhouse ? { owner: "about" as const, editorHref: "/admin/about" as const } : null,
       shop: { owner: "shop" as const, editorHref: "/admin/shop" as const, surface: siteHomepage?.shopTargetSurface ?? (clubhouse ? "shop" as const : "home" as const) },
       programs: siteHomepage?.programsTarget ?? null,
     },

@@ -38,3 +38,19 @@ fresh genuine #53 and #56 builds on a reliable local machine, inspect its
 The complete #53 architecture run and full #56 verifier remain deferred under
 Christian's local-development direction. Hosted rollout, PR publication,
 deploy and merge remain separate.
+
+## November 3 resumed comparison
+
+The complete focused run against the two exact roots above captured all 32 PNGs.
+The report was FAIL. Fifteen pairs were byte-identical. The phone homepage differed
+by 2,904 pixels in the sponsor image, and the three request differences were
+insertion order only, with all keys and counts equal. The report and images are
+in `test-results/code-site-parity-T9fi50/`. The owned recovery journal reports
+`verified-clean`.
+
+The next run uses anonymous public captures, owner preview captures, and
+order-independent request-map comparisons. Screenshot equality remains exact.
+The final #56 candidate still requires its own parity and full retained-release
+proof. The existing #53 packages reject reconstruction on #56 because the
+attested homepage capability source changed. New A/B package digests require
+Christian's acceptance before they can be used for the full proof.

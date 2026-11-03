@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import type { AcademyProofDocumentCase } from "./pilot-academy-documents";
 
@@ -44,7 +45,7 @@ export function compareFocusedCodeSiteSnapshots(before: FocusedCodeSiteSnapshot,
   assert.equal(before.width, after.width);
   const differences: string[] = [];
   for (const field of ["screenshotSha256", "text", "links", "headings", "controls", "browserReads", "redirects", "images"] as const) {
-    if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) differences.push(field);
+    if (!isDeepStrictEqual(before[field], after[field])) differences.push(field);
   }
   assert(before.fonts.length > 0 && after.fonts.length > 0, "Both builds must load fonts");
   assert(before.css.length > 0 && after.css.length > 0, "Both builds must load CSS");

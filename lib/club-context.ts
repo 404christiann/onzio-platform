@@ -164,17 +164,29 @@ async function resolvePublishedPresentationTemplateKey(
     .select("published_document_id")
     .eq("club_id", clubId)
     .maybeSingle();
-  if (stateError) failContract("UNKNOWN_TENANT");
-  if (!state?.published_document_id) return null;
-  const { data, error } = await onzio
+  if (stateError && stateError.code !== "42501") failContract("UNKNOWN_TENANT");
+  if (state && !state.published_document_id) return null;
+
+  const publishedId = state?.published_document_id;
+  if (publishedId) {
+    const { data, error } = await onzio
+      .from("presentation_documents")
+      .select("configuration")
+      .eq("club_id", clubId)
+      .eq("id", publishedId)
+      .maybeSingle();
+    if (error || !data) failContract("UNKNOWN_TENANT");
+    return resolveActivePresentationTemplateKey(data.configuration);
+  }
+
+  const { createPublicClient } = await import("@/lib/supabase-server");
+  const { data, error } = await createPublicClient().schema("onzio")
     .from("presentation_documents")
     .select("configuration")
     .eq("club_id", clubId)
-    .eq("id", state.published_document_id)
     .maybeSingle();
-  if (error || !data?.configuration) {
-    failContract("UNKNOWN_TENANT");
-  }
+  if (error) failContract("UNKNOWN_TENANT");
+  if (!data) return null;
   return resolveActivePresentationTemplateKey(data.configuration);
 }
 

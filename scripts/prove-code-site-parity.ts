@@ -194,8 +194,9 @@ async function run() {
         }
         try {
           for (const width of [1440, 390]) for (const item of documents) {
-            const before = await capture("before", width, item, auth);
-            const after = await capture("after", width, item, auth);
+            const storageState = item.document.kind === "public" ? { cookies: [], origins: [] } : auth;
+            const before = await capture("before", width, item, storageState);
+            const after = await capture("after", width, item, storageState);
             captures.before.push(before);
             captures.after.push(after);
             const fields = compareFocusedCodeSiteSnapshots(before, after);
@@ -213,7 +214,7 @@ async function run() {
             builds: scope.servers, fixture: { clubId: proof.clubId, recoveryFile: proof.recoveryFile, instant },
             documents: documents.map(item => item.id), widths: [1440, 390], captures, differences,
             excludedResources: [...new Set(excludedResources)].sort(),
-            limits: ["Focused owner public and admin preview parity only; the complete 28-document and role matrix remains separate.",
+            limits: ["Focused anonymous public and owner admin preview parity only; the complete 28-document and role matrix remains separate.",
               "No A/B/A retention, hosted traffic, provider transport, physical-device, or production acceptance claim."] };
           const reportFile = join(output, "report.json");
           writeFileSync(reportFile, `${JSON.stringify(report, null, 2)}\n`);

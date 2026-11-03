@@ -32,6 +32,13 @@ describe("focused code site parity contract", () => {
     expect(() => codeSiteParityInputSchema.parse({ ...input, afterCommit: accepted53Commit })).toThrow();
   });
 
+  it("compares request counts independently of arrival order", () => {
+    const before = snapshot(), after = snapshot();
+    before.browserReads = { "GET /rest/v1/programs": 2, "GET /rest/v1/matches": 1 };
+    after.browserReads = { "GET /rest/v1/matches": 1, "GET /rest/v1/programs": 2 };
+    expect(compareFocusedCodeSiteSnapshots(before, after)).toEqual([]);
+  });
+
   it("reports every changed visible or behavioral field without tolerances", () => {
     const before = snapshot(), after = snapshot();
     expect(compareFocusedCodeSiteSnapshots(before, after)).toEqual([]);

@@ -1,4 +1,4 @@
-import { academyHref, academyProgramsEditorHref } from "./routes";
+import { academyHref } from "./routes";
 
 export const diverseCitySite = {
   id: "diverse-city",
@@ -12,20 +12,7 @@ export const diverseCitySite = {
     roster: { showInlineSeasonStats: false },
     standings: { useSampleFallback: false, preview: "academy-table" },
     shop: { variants: ["home"], showHomeFeature: true, preview: "club-page", initialSurface: "shop" },
-    homepage: {
-      previewShell: "site-shell",
-      slideshowVariant: "none",
-      heroVariant: "editable",
-      editableSections: ["hero", "story"],
-      heroEditableFields: [
-        "eyebrow", "headline_line_one", "headline_line_two", "intro",
-        "primary_cta_label", "primary_cta_href", "secondary_cta_label", "secondary_cta_href",
-      ],
-      photoCaptionEditable: false,
-      storyTextTarget: null,
-      shopTargetSurface: "home",
-      programsTarget: { owner: "programs", editorHref: academyProgramsEditorHref },
-    },
+    homepage: { previewShell: "site-shell" },
   },
 } as const;
 
