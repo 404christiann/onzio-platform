@@ -184,7 +184,14 @@ test("clean preview matches full public content and typography, including the le
   try {
     for (const template of [...TEMPLATE_IDS, "legacy" as const]) {
       await db.query("update onzio.clubs set slug=$1 where id=$2", [template === "legacy" ? "rose-city" : "alpha", ALPHA_CLUB_ID]);
-      await publishFixture(db, original.configuration, template === "legacy" ? "clubhouse" : template, original.updated_by);
+      if (template === "legacy") {
+        await db.query(
+          "update onzio.presentation_state set published_document_id = null, draft_document_id = $1 where club_id = $2",
+          [original.published_document_id, ALPHA_CLUB_ID],
+        );
+      } else {
+        await publishFixture(db, original.configuration, template, original.updated_by);
+      }
       const origin = template === "legacy" ? "http://rose-city.localhost:3110" : "http://alpha.localhost:3110";
       for (const width of [1440, 390]) {
         await page.setViewportSize({ width, height: 900 });
