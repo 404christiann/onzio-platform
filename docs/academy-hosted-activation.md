@@ -14,3 +14,9 @@ Christian approved preparation on November 3, 2026. A read-only #80 preflight la
 | After checks pass | Christian and the release operator | Record the decision, action, checks, and exact restoration target in #54. |
 
 The #80 preflight does not establish a proven production rollback for the present Academy release. The older inspected deployment already used Academy styling; Vercel's Hobby rollback is limited to the immediately previous production deployment, and named promotion remains unproven. For a future single production deployment, the recorded starting deployment could be the one-step project-wide rollback target if no other production deployment intervenes. That procedure has not been exercised here. No production window is ready to schedule.
+
+## Rose City public hold and 2027 release
+
+On November 3, Christian chose a temporary public-only Rose City lock while its 2027 revamp is prepared. The proposed middleware rule blocks Rose City public pages, direct internal site paths, and new registration submissions with uncached 404 responses. Owner admin routes and inline editing previews remain available. Existing media URLs remain public. The rule has not been merged or deployed, so it does not yet change the live site.
+
+Treat the lock and the 2027 replacement as separate shared-project releases. For each, record the exact starting deployment and an eligible restoration target, then verify Rose City and Diverse City public pages, admin editing, aliases, and cache behavior. The 2027 implementation is currently in a separate dirty checkout behind main; integrate and review it before treating it as a release candidate. Hosted staging remains deferred, so local checks alone cannot satisfy the hosted #54 gate. Christian must approve each specific production change and release window.

@@ -17,6 +17,7 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/contact",
   "/tryouts",
 ]);
+const PUBLIC_SITE_HOLD_SLUGS = new Set(["rose-city"]);
 
 const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
 const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);
@@ -31,6 +32,14 @@ export function isPublicTenantPath(pathname: string): boolean {
     PROGRAM_DETAIL_PATH.test(pathname) ||
     REGISTRATION_PATH.test(pathname)
   );
+}
+
+function isHeldPublicSiteRequest(pathname: string, method: string, slug: string): boolean {
+  const internalPath = pathname.replace(/^\/%5fclubs(?=\/|$)/i, "/_clubs");
+  return isPublicTenantPath(pathname) ||
+    internalPath === `/_clubs/${slug}` ||
+    internalPath.startsWith(`/_clubs/${slug}/`) ||
+    (pathname === "/api/register" && method === "POST");
 }
 
 /** Protected endpoints that must resolve their tenant on fallback deployment hosts. */
@@ -238,6 +247,13 @@ export async function middleware(request: NextRequest) {
     return applyTenantRobotsPolicy(
       NextResponse.redirect(target, 303),
     );
+  }
+
+  if (
+    PUBLIC_SITE_HOLD_SLUGS.has(tenant.slug) &&
+    isHeldPublicSiteRequest(request.nextUrl.pathname, request.method, tenant.slug)
+  ) {
+    return applyTenantRobotsPolicy(notFound());
   }
 
   const requestHeaders = new Headers(request.headers);
