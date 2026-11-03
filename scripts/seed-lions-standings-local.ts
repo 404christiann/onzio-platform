@@ -8,11 +8,7 @@ import { LIONS_LOCAL_TENANT_ID } from "@/lib/migration/lions-media-local-import"
  * Seeds Lions FC's real Spring 2026 Ohio Valley Division table into
  * onzio.league_standings / onzio.league_standings_settings.
  *
- * These nine rows and the surrounding copy were previously hardcoded in
- * components/editorial/EditorialStandingsTable.tsx, which meant the Standings
- * admin page wrote to tables nothing on the public site ever read. That
- * component now reads these tables, so this script carries the existing real
- * numbers across without losing them.
+ * This preserves the nine Lions standings rows for the local club.
  *
  * This is a data seed, not a schema migration -- both tables already exist
  * (supabase/migrations/20260726000200_phase2_content.sql).

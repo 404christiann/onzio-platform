@@ -1,7 +1,6 @@
 "use client";
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
-import { useRouter } from "next/navigation";
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Chart, registerables } from "chart.js";
@@ -191,14 +190,6 @@ const DELTA_TONE_CLASSES: Record<DeltaTone, string> = {
 export default function AnalyticsPage() {
   const clubId = useClubId();
   const club = useClubContext();
-  const router = useRouter();
-  // editorial@1 (Lions) doesn't include Analytics in its Stripe plan -- the
-  // nav item is already hidden in AdminShell.tsx, this blocks direct URL
-  // access too.
-  const isEditorialTemplate = club.presentationTemplateKey === "editorial@1";
-  useEffect(() => {
-    if (isEditorialTemplate) router.replace("/admin");
-  }, [isEditorialTemplate, router]);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [seasonLabel, setSeasonLabel] = useState("");
   const [loading, setLoading] = useState(true);
@@ -208,7 +199,6 @@ export default function AnalyticsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEditorialTemplate) return;
     let active = true;
     setLoading(true);
     setLoadError(null);
@@ -244,7 +234,7 @@ export default function AnalyticsPage() {
     return () => {
       active = false;
     };
-  }, [clubId, isEditorialTemplate, loadAttempt]);
+  }, [clubId, loadAttempt]);
 
   const filtered = useMemo(() => {
     if (posFilter === "All") return allPlayers;
@@ -258,8 +248,6 @@ export default function AnalyticsPage() {
   }, [filtered, selectedId]);
 
   const player = filtered.find((p) => p.id === selectedId) ?? filtered[0] ?? null;
-
-  if (isEditorialTemplate) return null;
 
   if (loading) {
     return (

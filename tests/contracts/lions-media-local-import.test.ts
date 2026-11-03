@@ -67,7 +67,7 @@ describe("local LionsFC media import rows", () => {
       club_id: LIONS_LOCAL_TENANT_ID,
       version: 1,
       schema_version: 1,
-      template_id: "editorial",
+      template_id: "clubhouse",
       template_version: 1,
     });
     expect(first.presentationState).toMatchObject({
@@ -98,9 +98,7 @@ describe("local LionsFC media import rows", () => {
     });
     expect(first.siteSponsorLogos).toHaveLength(6);
 
-    // Lions E7: editorial@1 content tables the E5/E6 pages actually read
-    // from (club_identity, contact_profile, contact_page_content, tryouts,
-    // tryouts_page_content).
+    // Retained identity, contact, and tryouts content remains in the import.
     expect(first.clubIdentity).toMatchObject({
       club_id: LIONS_LOCAL_TENANT_ID,
       short_name: "Lions FC",

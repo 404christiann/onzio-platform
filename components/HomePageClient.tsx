@@ -16,7 +16,6 @@ const LeagueStandings = nextDynamic(() => import("@/components/LeagueStandingsCo
 const ShopKitSection = nextDynamic(() => import("@/components/ShopKitSectionContainer"), { ssr: false });
 const BehindTheRose = nextDynamic(() => import("@/components/BehindTheRose"), { ssr: false });
 const ClubhouseHomePage = nextDynamic(() => import("@/components/ClubhouseHomePage"), { ssr: false });
-const EditorialHome = nextDynamic(() => import("@/components/editorial/EditorialHome"), { ssr: false });
 
 export default function HomePageClient({
   initialHeroContent,
@@ -26,9 +25,6 @@ export default function HomePageClient({
   initialStoryContent?: HomepageStoryContent | null;
 }) {
   const club = useClubContext();
-  if (club.presentationTemplateKey === "editorial@1") {
-    return <EditorialHome initialHeroContent={initialHeroContent} />;
-  }
   if (club.presentationTemplateKey === "clubhouse@1") {
     return <ClubhouseHomePage initialHeroContent={initialHeroContent} />;
   }

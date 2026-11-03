@@ -239,11 +239,8 @@ export default function SchedulePage() {
   const club = useClubContext();
   // See MatchForm: academy@1 never renders match sponsors, so the fields are
   // hidden and nothing is copied forward into a new match for that template.
-  // editorial@1's EditorialScheduleMatchCard/EditorialNextMatch also render no
-  // sponsor data, so the same applies there.
   const schedulePolicy = codeSiteAdminFor(club)?.schedule;
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false || isEditorial;
+  const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;
   const carrySponsor = useCallback(
     (list: Match[], seasonId: string) =>
       hidesMatchSponsorFields ? {} : carrySponsorFromLatestMatch(list, seasonId),
@@ -905,12 +902,8 @@ function MatchForm({
   // dead-admin-surface removal as DCFC-D130. The columns, the upload/cleanup
   // logic, and every other template's editor are untouched — clubhouse@1 still
   // renders these through NextMatchCard.
-  // editorial@1's EditorialScheduleMatchCard and EditorialNextMatch also never
-  // read sponsor_name, sponsor_logo_url, or sponsor_link, so the same applies
-  // there.
   const schedulePolicy = codeSiteAdminFor(club)?.schedule;
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false || isEditorial;
+  const hidesMatchSponsorFields = schedulePolicy?.showMatchSponsorFields === false;
 
   function set(field: string, value: string | boolean | number | null) {
     onChange({ ...form, [field]: value });
@@ -1167,9 +1160,7 @@ function MatchForm({
         </div>
       </MatchFormSection>
 
-      {/* This whole block is hidden for academy@1 and editorial@1 — neither
-          template's fixture cards read the sponsor columns, so their rows
-          never show a "Presented by" line either. */}
+      {/* Academy fixture cards do not show sponsor columns. */}
       {!hidesMatchSponsorFields && (
         <MatchFormSection
           id="sponsor-heading"

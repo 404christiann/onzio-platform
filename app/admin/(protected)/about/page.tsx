@@ -106,19 +106,7 @@ export default function AdminAboutPage() {
   // DCFC-D007: owners edit the label, while Onzio fixes this editor's
   // destination. The public stored fixture is separate from this save choice.
   const aboutPolicy = codeSiteAdminFor(club)?.about;
-  const isEditorial = club.presentationTemplateKey === "editorial@1";
-  // editorial@1 genuinely has an About page -- components/editorial/
-  // EditorialHeader.tsx's nav and EditorialFooter.tsx both link /club/about,
-  // and app/%5Fclubs/[slug]/club/about/page.tsx renders EditorialAboutPage
-  // from this very editor's about_page_content row. (An earlier revision hid
-  // this whole page for editorial@1 after checking Nav.tsx's lionsNavLinks,
-  // which is dead code for this template -- Lions never mounts Nav.tsx.)
-  //
-  // The Club Logo tab is the part that stays hidden: templateRegistry's
-  // editorial@1 entry lists no "club-logo" in defaultRoutes/supportedRoutes,
-  // and nothing on the editorial site links /club/logo, so its content row is
-  // never read -- exactly the academy@1 situation this gate already covered.
-  const hasClubLogoPage = aboutPolicy?.showLogoPage ?? !isEditorial;
+  const hasClubLogoPage = aboutPolicy?.showLogoPage ?? true;
   const [pageChoice, setPageChoice] = useState<"about" | "logo">("about");
   const [selectedTarget, setSelectedTarget] = useState<AboutCanvasTarget | null>(null);
   const [phonePreview, setPhonePreview] = useState(false);

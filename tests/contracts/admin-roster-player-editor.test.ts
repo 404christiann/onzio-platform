@@ -125,12 +125,9 @@ describe("admin roster player editor UX", () => {
     expect(deleteButton).not.toContain("opacity-0");
   });
 
-  it("preserves the academy and editorial inline season-stat gate", () => {
+  it("preserves the Academy inline season-stat gate", () => {
     expect(playerFields).toContain(
       'codeSiteAdminFor(club)?.roster.showInlineSeasonStats === false',
-    );
-    expect(playerFields).toContain(
-      'club.presentationTemplateKey === "editorial@1"',
     );
     expect(playerFields).toContain("playerId && !hidesInlineSeasonStats");
   });
