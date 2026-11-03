@@ -159,6 +159,24 @@ async function run() {
                 window.scrollTo({ top: 0, behavior: "instant" });
               });
             }
+            if (item.id === "public.roster" || item.id === "public.schedule") {
+              const labels = item.id === "public.roster" ? ["Proof Keeper", "Proof Player", "Proof Coach"] : ["Proof Opponent"];
+              const landmarks = [
+                content.getByRole("heading", { level: 1 }),
+                ...labels.map(label => content.getByText(label, { exact: true }).first()),
+              ];
+              for (const landmark of landmarks) {
+                await expect(landmark).toBeVisible();
+                await landmark.evaluate(node => node.scrollIntoView({ block: "center", behavior: "instant" }));
+                await expect.poll(() => landmark.evaluate(node => {
+                  for (let element: Element | null = node; element; element = element.parentElement) {
+                    if (Number(getComputedStyle(element).opacity) === 0) return false;
+                  }
+                  return true;
+                }), { message: `${role} ${item.id} landmark must be painted` }).toBe(true);
+              }
+              await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+            }
             await content.scrollIntoViewIfNeeded();
             const settlingStarted = Date.now();
             let previousStyles = "", stableSince = Date.now();
@@ -169,18 +187,6 @@ async function run() {
               if (styles !== previousStyles) { previousStyles = styles; stableSince = Date.now(); }
               return Date.now() - settlingStarted >= 1500 && Date.now() - stableSince >= 300;
             }, { timeout: 10_000, intervals: [100] }).toBe(true);
-            if (item.id === "public.roster" || item.id === "public.schedule") {
-              const landmarks = [content.getByRole("heading", { level: 1 }), content.getByText(item.text!, { exact: true }).first()];
-              for (const landmark of landmarks) {
-                await expect(landmark).toBeVisible();
-                await expect.poll(() => landmark.evaluate(node => {
-                  for (let element: Element | null = node; element; element = element.parentElement) {
-                    if (getComputedStyle(element).opacity !== "1") return false;
-                  }
-                  return true;
-                })).toBe(true);
-              }
-            }
             await page.mouse.move(0, 0);
             await content.evaluate(element => new Promise<void>(resolve => element.ownerDocument.defaultView?.requestAnimationFrame(() => element.ownerDocument.defaultView?.requestAnimationFrame(() => resolve()))));
             const state = await content.evaluate(element => ({
