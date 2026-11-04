@@ -17,6 +17,7 @@ const messages: Record<string, string> = {
   OPERATION_REUSED: "This save could not be confirmed. Check its status before trying again.",
   INVALID_SHOP_PAYLOAD: "Check the Shop fields and try again.",
   INVALID_SHOP_PHOTO: "A Shop photo is no longer available. Your other changes are still here.",
+  INVALID_SHOP_PRESENTATION: "Check the map and page section settings, then try again.",
   SECTION_UNAVAILABLE: "This section is not shown by your website design.",
   PAGE_UNAVAILABLE: "This page is not available for your website design.",
   NOT_AUTHORIZED: "You no longer have permission to edit this Shop page.",

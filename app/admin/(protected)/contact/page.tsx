@@ -9,6 +9,7 @@ import { ContactContentSkeleton } from "@/components/admin/AdminContentSkeletons
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
 import { useClubContext } from "@/components/ClubContextProvider";
 import ContactPageCanvas, { type ContactCanvasTarget } from "@/components/admin/contact/ContactPageCanvas";
+import CinematicContactEditor from "@/components/admin/contact/CinematicContactEditor";
 import { buildContactPagePayload, buildContactProfilePayload, emptyContactDraft, validateContactDraft, type ContactDraft, type ContactPageDraft, type ContactProfileDraft, type ContactValidationErrors } from "@/lib/contact-admin";
 import { type ContactEditorSaveRequest, type ContactEditorSnapshot } from "@/lib/contact-page-editor/contract";
 import type { ContactContent } from "@/lib/queries";
@@ -303,6 +304,7 @@ function ContactEditor() {
 
 export default function AdminContactPage() {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicContactEditor />;
   if (club.presentationTemplateKey !== "academy@1" && club.presentationTemplateKey !== "editorial@1") {
     return <AdminPage><AdminPageHeader eyebrow="Public website" title="Contact" description="This website design does not publish a Contact page." /></AdminPage>;
   }

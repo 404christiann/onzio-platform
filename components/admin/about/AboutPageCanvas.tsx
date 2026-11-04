@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { createPortal } from "react-dom";
 import AboutClubPageClient from "@/components/AboutClubPageClient";
 import ClubLogoPageClient from "@/components/ClubLogoPageClient";
+import CinematicCrest from "@/components/cinematic/CinematicCrest";
+import CinematicAbout from "@/components/cinematic/CinematicAbout";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
 import TemplateFontScope from "@/components/TemplateFontScope";
@@ -211,7 +213,11 @@ export default function AboutPageCanvas(props: Props) {
 
   let page: ReactNode;
   if (props.page === "logo") {
-    page = <ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />;
+    page = club.presentationTemplateKey === "cinematic@2"
+      ? <CinematicCrest content={props.logo} editorEmptySections />
+      : <ClubLogoPageClient content={props.logo} animate={false} editorEmptySections />;
+  } else if (club.presentationTemplateKey === "cinematic@2") {
+    page = <CinematicAbout content={props.about} editorEmptySections />;
   } else if (club.presentationTemplateKey === "editorial@1") {
     page = <div data-site-template="editorial" style={{
       "--club-primary": theme.primary,

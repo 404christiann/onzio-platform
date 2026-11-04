@@ -1,0 +1,19 @@
+{
+  "title": "Food & Beverage",
+  "subtitle": "Experience Rose City FC live",
+  "detailsHeading": "Details",
+  "detailsBody": "This exclusive partnership with Chick-fil-A® Pasadena allows you to enjoy\nChick-fil-A® at every Rose City FC home game.\nSimply drive-thru Chick-fil-A®, place your order, and enjoy it at the game.\nAdditionally, you’ll receive a Rose City FC ticket to the game\nand automatically be entered into the halftime raffle.",
+  "stepLabels": ["Drive-Thru", "Free Game Ticket", "Enjoy during Game"],
+  "stepNumbers": ["1", "2", "3"],
+  "sections": { "heading": true, "details": true, "steps": true, "map": true, "match": true, "restaurant": true },
+  "artwork": {
+    "mealPass": { "assetId": null, "alt": "Rose City FC meal pass presented by Chick-fil-A, E. Colorado Blvd / Lake & Boylston" },
+    "driveThru": { "assetId": null, "alt": "Chick-fil-A drive-thru illustration" },
+    "freeTicket": { "assetId": null, "alt": "Soccer ball illustration" },
+    "enjoyGame": { "assetId": null, "alt": "Chick-fil-A meal illustration" },
+    "map": { "assetId": null, "alt": "Map showing Chick-fil-A and Niky’s Sports on E Colorado Blvd, Line 187 bus stop, Pasadena City College, and the walking route along S Bonnie Ave to Robinson Stadium and Parking Lot No. 5" },
+    "restaurant": { "assetId": null, "alt": "Original Chick-fil-A Pasadena restaurant photo with the entrance, drive-thru and red Chick-fil-A sign" },
+    "partner": { "assetId": null, "alt": "Chick-fil-A · E. Colorado Blvd / Lake & Boylston" },
+    "background": { "assetId": null, "alt": "Subtle stadium seat illustration" }
+  }
+}

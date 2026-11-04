@@ -1,0 +1,144 @@
+{
+  "localOnly": true,
+  "prepared": true,
+  "reference": "design-explorations/chick-fil-a-2027/reference.jpg",
+  "content": "copy.json",
+  "assets": [
+    {
+      "slot": "mealPass",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/mealPass.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/mealPass.png",
+      "purpose": "homepage-artwork",
+      "surface": "homepage",
+      "kind": "graphic",
+      "sha256": "f364ca694ff24d4bd8e6df061114fa9d2aa2b27dc8d11d09e3f83a97b9913431",
+      "bytes": 60354,
+      "width": 774,
+      "height": 1066,
+      "source": {
+        "file": "assets/originals/chick-fil-a/Chick-fil-A Meal Pass graphic.png",
+        "sha256": "f364ca694ff24d4bd8e6df061114fa9d2aa2b27dc8d11d09e3f83a97b9913431"
+      },
+      "processing": "Original supplied PNG bytes unchanged; publish through normal media pipeline once"
+    },
+    {
+      "slot": "driveThru",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/driveThru.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/driveThru.png",
+      "purpose": "homepage-artwork",
+      "surface": "homepage",
+      "kind": "graphic",
+      "sha256": "d54de3bf647f64698c1555e56c228d558835599c6607a2b2010c49f3f8cc1292",
+      "bytes": 99121,
+      "width": 900,
+      "height": 570,
+      "source": {
+        "file": "assets/originals/chick-fil-a/Chick-fil-A Drive-Thru graphic.png",
+        "sha256": "258a8a38ff0f5c9102b43838d9f0d2992720d55ab3e861e1243db17de404c604"
+      },
+      "processing": "Existing lossless original-icon strip decoded to lossless PNG; embedded caption omitted for editable DOM text. Normal publication performs one normalization."
+    },
+    {
+      "slot": "freeTicket",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/freeTicket.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/freeTicket.png",
+      "purpose": "homepage-artwork",
+      "surface": "homepage",
+      "kind": "graphic",
+      "sha256": "3d94409b6a6d45cb1bb8f5b5cf39ea390ee3f62cecb27f14dff8f7c00792908b",
+      "bytes": 83747,
+      "width": 600,
+      "height": 600,
+      "source": {
+        "file": "assets/originals/chick-fil-a/Chick-fil-A Free Game Ticket graphic.png",
+        "sha256": "1d84de4c1c2b3f0eeef39e84c689fffbd9b4c0b1356124765d83419f7ac5eae8"
+      },
+      "processing": "Existing lossless original-icon strip decoded to lossless PNG; embedded caption omitted for editable DOM text. Normal publication performs one normalization."
+    },
+    {
+      "slot": "enjoyGame",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/enjoyGame.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/enjoyGame.png",
+      "purpose": "homepage-artwork",
+      "surface": "homepage",
+      "kind": "graphic",
+      "sha256": "a4a96dcc8dfdf82752a46d83721e2a4d485fced350304ed7d335a96d2b18399c",
+      "bytes": 111861,
+      "width": 900,
+      "height": 584,
+      "source": {
+        "file": "assets/originals/chick-fil-a/Chick-fil-A Enjoy the game graphic.png",
+        "sha256": "8b0e05c4f4a8ec8c0b1e7c17d98bc6485078939a329a1e6ab2e5a83a0329787f"
+      },
+      "processing": "Existing lossless original-icon strip decoded to lossless PNG; embedded caption omitted for editable DOM text. Normal publication performs one normalization."
+    },
+    {
+      "slot": "map",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/map.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/map.png",
+      "purpose": "homepage-artwork",
+      "surface": "homepage",
+      "kind": "graphic",
+      "sha256": "efbd5e2154135ca1cb4344801611605364d813052acfb2b2aa3345a02c224304",
+      "bytes": 519118,
+      "width": 2484,
+      "height": 1156,
+      "source": {
+        "file": "assets/originals/chick-fil-a/Rose City FC Chick-fil-A Route Zoom Map graphic.jpg",
+        "sha256": "24d540e13c36b0a40e05ec4b3bf2cdce27c91bd143e49124f22e21b90a2cfb12"
+      },
+      "processing": "Original dedicated JPG decoded to lossless PNG without resizing/recoloring; normal graphic publication performs one normalization."
+    },
+    {
+      "slot": "restaurant",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/restaurant.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/restaurant.png",
+      "purpose": "homepage-photo",
+      "surface": "homepage",
+      "kind": "photo",
+      "sha256": "981abfc23bfd318c29f474b6cd29c026a3ced2f46e6c3ad1d9c95c3898b2f1cd",
+      "bytes": 2313985,
+      "width": 2484,
+      "height": 1422,
+      "source": {
+        "file": "assets/originals/chick-fil-a/Chick-fil-A Drive-photo.png",
+        "sha256": "981abfc23bfd318c29f474b6cd29c026a3ced2f46e6c3ad1d9c95c3898b2f1cd"
+      },
+      "processing": "Original supplied PNG bytes unchanged; publish through normal media pipeline once"
+    },
+    {
+      "slot": "partner",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/partner.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/partner.png",
+      "purpose": "homepage-artwork",
+      "surface": "homepage",
+      "kind": "graphic",
+      "sha256": "9a56d557cc0999051fa24ea878afbf58b741867212445187ab017d450315e118",
+      "bytes": 35550,
+      "width": 805,
+      "height": 181,
+      "source": {
+        "file": "assets/originals/Chick-fil-A_Pasadena_Logo_Red_png.png",
+        "sha256": "a483c755c8e2b0133856a2015e9d19def11021b4872918c5ab0fcf6ac3965c6e"
+      },
+      "processing": "Original raster rectangle132,590,805,181 excludes empty canvas; lossless PNG, normal graphic publication once."
+    },
+    {
+      "slot": "background",
+      "path": "assets/rose-city-chick-fil-a-2027/inputs/background.png",
+      "inputPath": "assets/rose-city-chick-fil-a-2027/inputs/background.png",
+      "purpose": "homepage-artwork",
+      "surface": "homepage",
+      "kind": "graphic",
+      "sha256": "e0e64157917c21f10c0fbac67c41767cbd75236a3cef7aa461b80108207245e7",
+      "bytes": 31072,
+      "width": 2467,
+      "height": 1350,
+      "source": {
+        "file": "assets/originals/tickets/Background seat graphic.png",
+        "sha256": "e0e64157917c21f10c0fbac67c41767cbd75236a3cef7aa461b80108207245e7"
+      },
+      "processing": "Original supplied PNG bytes unchanged; publish through normal media pipeline once"
+    }
+  ]
+}

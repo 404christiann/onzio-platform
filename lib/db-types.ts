@@ -74,6 +74,7 @@ export type DBMatch = {
   opponent_short_name: string | null;
   opponent_logo_url: string | null;
   competition: string | null;
+  league_logo_url?: string | null;
   sponsor_name: string | null;
   sponsor_logo_url: string | null;
   sponsor_link: string | null;

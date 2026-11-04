@@ -1,3 +1,134 @@
+## 2026-10-13 — Shop implemented (RC2027-SHOP)
+
+Status: source/local browser acceptance complete; physical-phone and production gates open.
+Approved Shop preview is implemented at /shop and /admin/shop for cinematic@2.
+Shared public/admin renderer preserves reduced lead zoom, tight six original red
+players, Home/Away, purchase cards, approved map crop and existing sponsor carousel.
+All page content/images/framing/visibility have admin controls; sponsor logos use
+the existing Sponsors editor. New settings extend the existing atomic Shop save,
+revision, receipts/recovery and reference-safe media contracts; Homepage remains
+separate. Guarded local seed publishes15 assets and protects unrelated content.
+Actual desktop/phone Save→reload→public checks, real map replacement/conflict rebase,
+player reorder/restore,15 delivered hashes, types/build/lint and1933 tests pass.
+Details/evidence: docs/rose-city-shop-2027-implementation.md and outer
+review-notes/shop-2027/implemented. Tickets chat coordinated all shared windows;
+its final source and Safari/poster/Crest dirty work are preserved. No hosted writes,
+push or deployment. Next: user review; physical-phone and site-wide release gates.
+
+## 2026-10-13 — Crest implemented (RC2027-CREST)
+
+Christian approved the final reference/mobile single-line preview and requested
+implementation. Local public page /club/logo and admin About → Club Logo now
+share CinematicCrest for cinematic@2. Legacy renderer/other templates remain.
+20 exact source-derived graphics were published normally on isolated55321; narrow
+seed refuses existing content/hosted endpoints and verifies unrelated rows.
+All feature descriptions and artwork use the existing atomic Logo edit contract.
+Annotated diagram is a replaceable image; fixed generic heading/subtitle has an
+explicit ownership notice in admin. Stem placeholder is approved. No schema or
+recovery/tenant/media-identity change. Stable map/color geometry and direct native
+image delivery retain the approved layout without lazy-image shifts.
+
+Status: source/local browser acceptance complete; physical-phone gate open.
+Types/build/lint,204 files/1874 tests,20 media validations/delivered checksums,
+actual1280/390/320, six aligned/untruncated phone rows, actual menu→Crest and real
+desktop/phone Save/reload pass. Placeholder restored; final DB query confirms
+feature/media identity and separate About preservation. Evidence:
+outer review-notes/crest-2027/implemented; asset provenance/receipt/verification:
+assets/rose-city-crest-2027. Actual rebuilt app remains at3198. Existing protected
+static preview still has its Crest placeholder; no hosted deployment was updated.
+Safari/poster dirty work and production hold are preserved. Next page awaits
+Christian's choice; physical iPhone and full-site release checks remain open.
+
+## 2026-10-13 — Crest page reference preview (design_review)
+
+Christian supplied the Crest/Identity2027 JPG and Dropbox Our Identity folder;
+all30 originals/metadata/checksum receipts are preserved in the outer workspace.
+Responsive isolated review: http://127.0.0.1:3200/ with Desktop/Phone/reference
+controls. Actual approved cinematic header/footer are reused, with no backend
+or application change. White annotated crest and six feature cards lead into
+the original dark Pasadena map/color graphics. Phone uses readable stacked
+feature copy and two color columns. Christian approved placeholder Stem text
+because it will be editable in admin. No new club history/symbolism invented.
+
+Build and CUA1280/390/320 overflow/assets/font checks pass. Evidence/implementation
+boundaries: outer design-explorations/crest-2027/README.md and review-notes/crest-2027.
+Existing atomic Logo editor permits24 features/six color cards; preserve its
+receipt/recovery/tenant/media contracts when implementing cinematic@2 dispatch
+in both public renderer and AboutPageCanvas. Page heading/diagram-label authoring
+needs an explicit implementation decision. Application implementation awaits
+review; existing Safari/poster dirty work, hosted preview and production hold stay.
+
+## 2026-10-13 — Safari review and image-quality audit; hardware gate remains open
+
+Christian requested final iPhone/Safari review and an image-quality explanation,
+then a handoff to work on the next page in a new conversation. Accepted baseline
+is local commit2f70087 on codex/rose-city-homepage-2027. Review fixes below are
+uncommitted; preserve them. No new conversation has been created or next page
+chosen. Production launch remains explicitly held.
+
+Native Safari tested in Xcode Simulator iPhone17/iOS26.5 on the exact public
+phone bundle: native video visibly loops inline without controls, white menu
+opens, Club drill-in and Back/Close work, pointer opening has no black close
+outline, keyboard opening retains its necessary outline. Landscape rotation
+reproduced hamburger overlap with the cutout. Scoped cinematic CSS now uses
+max(gutter, env(safe-area-inset-left/right)) for header/dialog header/content,
+with20px default/16px narrow gutters, and100 percent WebKit text-size adjustment.
+Landscape header and Close now clear the cutout in native Safari screenshots.
+Tenant generateViewport adds cover and white theme ONLY for cinematic@2;
+actual Next DOM confirms the resulting meta and loaded higher-res poster.
+
+Hardware acceptance remains OPEN: a paired physical phone is available, but
+Mirroring is at its setup screen. Setup/privacy/auth settings were not changed.
+A user question requested the physical Safari checklist and which images are
+blurry; no answer had arrived at this record. Simulator native scroll/drag
+input did not move the page, so touch scrolling, address-bar collapse, landscape
+inner scrolling and VoiceOver are not claimed. Chrome viewport/source checks
+cover sticky/overflow behavior separately. Skill mobile-native explicitly says
+Test on hardware before calling it done. Do not relabel Simulator as physical.
+
+Image audit: six original match photos are1200x670; photo1 is1500x837. Delivered
+sizes match, so detail is already limited in the supplied originals. At1280 CSS
+pixels/DPR2,1200px images have47 percent of ideal pixel width. On390px/DPR3, the
+approved mobile1.2 crop has69 percent of ideal vertical detail. Preview assets
+are WebP92 then normalized again to WebP82. Avoidable extra compression is a
+contributor; larger photographer exports plus a single normalization pass are
+the proper next quality step. Do not synthesize missing detail or silently
+change approved cropping. Ticket original1800x791 is also limited at large
+Retina desktop sizes; raffle2264x3000 and player1500x2068 have more headroom on
+phones. Logo PNGs have adequate density. Hero is native1280x720 MP4; higher
+source/delivery work is separate and no Bunny configuration changed.
+
+Official same-episode maxres poster fetched/visually verified at1280x720 instead
+of480x360, SHA2560c280a7a9ccbfeba7151217719db1a0fe5d6fb0571a8d86fb059005b988be872,
+119139 bytes. Original low-res poster retained. Source input/provenance/manifest
+and normal validator updated; all30 pass. Only this poster was published through
+the real media pipeline on isolated local Supabase55321. CAS-protected row
+update verified every other content column unchanged. Script:
+scripts/update-rose-city-episode-poster-local.ts --execute-local. Seed uses the
+poster checksum in its upload identity to preserve immutable media versions.
+Actual app and hosted preview load1280x720. No hosted database write or global
+media-normalization change. Prepared source provenance remains outside app in
+workspace assets/additional-provenance.json; bundle/input/receipts are in repo.
+
+Protected testing Preview / READY: https://onzio-platform-r5fw865f3-404christianns-projects.vercel.app
+Deployment dpl_BoyYYLthzmxMg9hoHqYWqqMAJNom, protection unchanged. Fixed public
+content/temporary destinations,51 output files, zero functions/credentials;
+not full backend acceptance. Actual rebuilt app: http://rose-city.localhost:3198/.
+Final TypeScript, Next production build,202 files/1870 tests, bundle check/build,
+actual30-input validator and whitespace pass. Native/hosted captures and audit
+JSON: workspace review-notes/iphone-safari-review/. Production preservation:
+phone-testing/safari-review-preservation.json. No push/merge/production launch.
+
+Next-conversation handoff: use this isolated checkout and existing branch;
+read this section, AGENTS.md and docs/rose-city-2027-implementation.md. Preserve
+white sticky navbar, ALL CAPS/Avenir, compact red desktop dropdowns, white phone
+menu, transparent blue/white Foothill marks and the uncommitted review fixes.
+Do not use the dirty original Downloads checkout. Next page is Christian's
+choice; present an isolated responsive design before material new page changes.
+Keep the open physical-phone checklist and larger-photo-source request visible.
+Before launch: remaining content/copy review, temporary destinations, LEMON MILK
+evidence, complete app acceptance and separately authorized hosted rollout.
+
 ## 2026-10-13 — Accepted white sticky navbar, local commit requested
 
 Christian accepted the restored white sticky header and asked to commit it.
@@ -284,3 +415,101 @@ phone/VoiceOver acceptance.
 Local3198 serves the updated build. Existing font-work edits are preserved.
 No push, merge, hosted mutation, data export or deployment. Launch stays on hold.
 Next: review the local homepage; separately authorize any future release.
+
+
+## Tickets page complete locally — 2026-10-13
+
+Approved /tickets and /admin/tickets are implemented only for cinematic@2. Reference-matching composition, larger perk icons, shared Homepage prices/match copy, real Schedule fixture, editable Tickets copy/artwork and external HTTPS purchase field are verified locally. Independent strict atomic save/revision/receipt/media contract uses migration20261014000100. Full details, local publication and208-file/1915-test/browser/persistence evidence: docs/rose-city-tickets-2027-implementation.md. Buy Tickets remains inactive until the actual purchase URL is supplied. No deployment or production launch; physical-device gate and existing font boundary remain. Shop chat owns the next shared integration window.
+
+Tickets reference placement refinement verified: seat legs meet section boundary; desktop subtitle starts after G, phone centered. CSS-only change; combined Shop build includes it. See Tickets implementation document and placement-actual-checks.json.
+
+## Chick-fil-A and Robinson Stadium preview work — 2026-10-13
+
+RC2027-CHICK-FIL-A / RC2027-STADIUM: isolated responsive previews ready for review,
+using two explicitly requested parallel workers and separate ports 3203/3204.
+Exact supplied artwork located; Chick-fil-A steps centered/aligned as requested.
+Shared application integration stays with the main agent after desktop/phone
+approval. Content/editor/schema/runtime unchanged; previous dirty work preserved.
+Both Vite builds pass;1280/390/320 no-overflow checks and main visual review pass.
+Chick-fil-A icon/caption/numeral rows align on desktop and both phone widths.
+Screenshot overviews/browser evidence and isolated footer-copy fit refinement,
+scope, source decisions and exact next step are tracked in
+docs/rose-city-stadium-food-2027-design.md.
+
+Christian accepted both page layouts with typography corrections: Chick-fil-A
+Details now uses his supplied Phosphor CG Regular, and Robinson's four body
+section headers use bold Avenir. Corrections stay in isolated previews and
+preserve approved layout/artwork/centered steps. Font/rendered evidence and the
+accepted-page integration next step are in the scoped design ledger above.
+
+Current Details supersedes the previous CG font: user's replacement archive
+supplies Phosphor W00, now rendered with the meal-pass graphic's sampled
+#CA2F3B red. Current1280/390/320 font/color/alignment evidence is recorded in the
+same scoped ledger; isolated preview only.
+
+
+## 2026-10-13 — Accepted visitor pages integrated locally
+
+Christian explicitly requested subagents to implement the accepted Chick-fil-A
+and Robinson Stadium designs. The two page workers own scoped renderers, content
+models, editors and assets; the main agent owns shared routes, atomic Save/API,
+migrations, generated types, local publication and combined verification. Both
+public routes and independent admin editors now run on local3198.
+
+Migrations20261014001648 and20261014002445 applied only to guarded isolated
+55321/55322 test tenant, without a reset. Eleven media references use seven new
+normal-pipeline publications plus four verified existing Tickets assets. Original
+content/media identities were preserved. Independent strict revisions, actor
+receipts, recovery, RLS and media reference guards cover both pages. Full suite
+passes222 files/1999 tests; combined build, TypeScript and scoped lint pass.
+
+Desktop/phone public verification and normal editor persistence acceptance are
+in progress. A Chrome hidden-srcDoc preview root timing issue was found and
+fixed with a narrow shared guard; final rebuild/retest pending. Physical-device
+and VoiceOver acceptance remain open. No commit, push, hosted write, export or
+deployment; previous Homepage/About/Crest/Tickets/Shop work remains preserved.
+
+
+## Final local acceptance — 2026-10-13
+
+Both accepted visitor pages are complete locally on3198, with public/admin
+routes, independent atomic Save, editable copy/sections/images, supplied W00
+meal-pass red and real Avenir Heavy headings. Desktop/phone-width saves and
+normal meal-pass/photo/map uploads passed; approved copy and phone crops restored.
+Final11 media references/checksums pass; shared original Tickets artwork remains
+published. Final combined build/lint/types pass;222-file/1999-test full suite
+and final7-file/25-test focused rerun pass. Source-freeze pending notes above are
+historical. Canonical integration details and final evidence are in
+docs/rose-city-stadium-food-2027-design.md, under Final local implementation
+acceptance. Physical-device/VoiceOver and existing release gates remain open;
+no commit/push/hosted write/deployment. User local review is the next step.
+
+
+## 2026-10-13 — Approved roster implemented (RC2027-ROSTER)
+
+Actual /roster now uses the approved cinematic cards and original PlayerModal
+with MuseoModerno/Avenir/red styling; mouse-only260ms desktop hover and phone
+tap modal. Real shared tenant roster query/admin data; no hardcoded players or
+zeroes in the renderer. Narrow local rehearsal preserves33 player identities/
+30+3 historical totals/two action photos, creates active2027 with24+3 zeroed
+stat rows for27 active players and copies41 exact normalized assets.
+Build/types/lint,224 files/2004 tests, actual1280/390/320 and independent SQL/
+media/file-preservation checks pass. Other agents' completed pages intact.
+Full ownership/evidence/limitations: docs/rose-city-roster-2027-implementation.md.
+No hosted write/deployment/launch. Physical-phone and site-wide release gates
+remain. Historical fixtures remain in the unchanged source project.
+
+
+## 2026-10-13 — Schedule implemented (RC2027-SCHEDULE)
+
+Approved cinematic@2 /schedule and existing /admin/schedule now support all
+three editable opponent/sponsor/league images, real active-season data, club
+timezone Next, four-card Load more batches and hidden phone numbering. Local
+Schedule-only rehearsal reuses the existing2027 season, with four approved
+copied fixtures and nine normalized logo assets. Real admin Save/reload/public
+replacement, mobile removal/restoration,13-game pagination,226-file/2010-test
+suite, types/build/lint and twelve delivered logo checksums pass. Final roster
+source/table hashes match the starting baseline; other work is preserved.
+Independent local app: http://rose-city.localhost:3211/schedule. Source, migration,
+media ownership, runtime caveat and gates: docs/rose-city-schedule-2027-implementation.md.
+No hosted writes/deployment; physical phone and combined release remain open.

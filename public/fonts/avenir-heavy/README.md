@@ -1,0 +1,1 @@
+Authentic supplied Avenir Heavy face,54460B. Archive: /Users/christianalcala/Downloads/avenir.zip; member: Avenir/Avenir Heavy/Avenir Heavy.ttf. SHA25649f0cde8d6b544858dd74573cc92d34b2f5a2083a01b6dd8421700261732859c. Used only by cinematic Stadium body-section headings; no global or shared font change.

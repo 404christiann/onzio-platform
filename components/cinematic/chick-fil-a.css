@@ -1,0 +1,46 @@
+@font-face{font-family:PhosphorW00Reference;src:url('/fonts/phosphor-w00/Phosphor%20W00.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+.cinematic-site .food-page{--food-red:#ff0018}
+.cinematic-site .food-heading{text-align:right;padding:38px 4.4% 48px;box-shadow:0 4px 8px #0002;position:relative;z-index:1}
+.cinematic-site .food-heading h1{font:900 clamp(30px,3.7vw,54px)/1.05 var(--display);letter-spacing:-.04em;text-transform:uppercase}
+.cinematic-site .food-heading p{font:400 clamp(12px,1.4vw,18px)/1.5 var(--body);text-transform:uppercase;color:var(--food-red);margin-top:5px}
+.cinematic-site .food-details{display:grid;grid-template-columns:31% 1fr;gap:3.4%;padding:0 4.4% 95px;align-items:center}
+.cinematic-site .food-meal-pass{width:100%;height:auto;max-width:330px;justify-self:center}
+.cinematic-site .food-details>div{text-align:right;padding-top:36px}
+.cinematic-site .food-details h2{font:400 40px/1.05 PhosphorW00Reference,sans-serif;font-synthesis:none;letter-spacing:-.025em;text-transform:uppercase;color:#CA2F3B}
+.cinematic-site .food-details p{font:400 clamp(17px,1.7vw,23px)/1.72 var(--body);color:#555;margin-top:2px;white-space:pre-line}
+.cinematic-site .food-steps{box-shadow:0 -3px 8px #0002,0 3px 8px #0002;position:relative;z-index:1;padding:40px 4.4% 27px}
+.cinematic-site .food-steps ol{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.cinematic-site .food-steps li{display:grid;grid-template-rows:155px minmax(44px,1fr) 32px;text-align:center;justify-items:center;align-items:center;min-width:0}
+.cinematic-site .food-step-icon{height:155px;width:100%;display:flex;align-items:center;justify-content:center}
+.cinematic-site .food-step-icon img{height:132px;width:auto;max-width:95%;object-fit:contain}
+.cinematic-site .food-steps li p{font:400 clamp(15px,1.75vw,24px)/1.3 var(--body);letter-spacing:.14em;color:#a5a5a5;align-self:center;margin:0}
+.cinematic-site .food-steps li span{font:900 28px/1 var(--display);color:var(--food-red)}
+.cinematic-site .food-map{box-shadow:0 4px 9px #0002}.cinematic-site .food-map img{width:100%;height:auto;display:block}
+.cinematic-site .food-match-area{padding:85px 9% 110px;background-size:100% auto;background-repeat:no-repeat;background-position:center 80px}
+.cinematic-site .food-match{width:50%;padding:25px;background:white;box-shadow:0 0 12px #0004}
+.cinematic-site .food-match h2{font:900 29px/1.1 var(--display);letter-spacing:-.04em;text-transform:uppercase}
+.cinematic-site .food-match-pending{border-top:1px solid #ddd;margin-top:17px;padding:27px 0 20px;display:flex;flex-direction:column;align-items:center;gap:20px}
+.cinematic-site .food-match-pending img{width:100px;height:auto}.cinematic-site .food-match-pending p{font:400 17px/1.5 var(--body);color:#888;text-align:center;max-width:300px}
+.cinematic-site .food-buy{display:block;width:100%;min-height:58px;background:var(--food-red);color:white;font:400 16px/1.2 var(--body);border:0;text-decoration:none;display:flex;align-items:center;justify-content:center}
+.cinematic-site .food-purchase-note{text-align:center;font:400 12px/1.5 var(--body);color:#888;margin-top:7px}
+.cinematic-site .food-chick-logo{display:block;width:250px;max-width:80%;height:auto;margin:30px auto 10px}
+.cinematic-site .food-restaurant img{display:block;width:100%;height:auto}
+@media(max-width:1000px){.cinematic-site .food-details p{white-space:normal}.cinematic-site .food-details{padding-bottom:65px}.cinematic-site .food-details h2{font-size:34px}.cinematic-site .food-match h2{font-size:24px}}
+@media(max-width:700px){
+.cinematic-site .food-heading{padding:30px 22px 27px;text-align:center}.cinematic-site .food-heading h1{font-size:clamp(26px,6.5vw,40px);line-height:1.13}.cinematic-site .food-heading p{font-size:12px;margin-top:8px}
+.cinematic-site .food-details{display:flex;flex-direction:column;padding:0 max(23px,env(safe-area-inset-left,0px)) 34px;gap:20px}.cinematic-site .food-meal-pass{width:205px;max-width:70%}.cinematic-site .food-details>div{padding-top:0;text-align:center}.cinematic-site .food-details h2{font-size:30px}.cinematic-site .food-details p{font-size:15px;line-height:1.75;margin-top:8px}
+.cinematic-site .food-steps{padding:25px 14px 22px}.cinematic-site .food-steps ol{gap:8px}.cinematic-site .food-steps li{grid-template-rows:77px minmax(42px,1fr) 26px}.cinematic-site .food-step-icon{height:77px}.cinematic-site .food-step-icon img{height:67px;max-width:95%}.cinematic-site .food-steps li p{font-size:11px;line-height:1.35;letter-spacing:.06em;max-width:118px}.cinematic-site .food-steps li span{font-size:22px}
+.cinematic-site .food-match-area{padding:38px max(23px,env(safe-area-inset-left,0px)) 42px;background-size:auto 310px;background-position:center 40px}.cinematic-site .food-match{width:100%;padding:23px}.cinematic-site .food-match h2{font-size:24px}.cinematic-site .food-match-pending{padding:22px 0;gap:16px}.cinematic-site .food-match-pending img{width:83px}.cinematic-site .food-match-pending p{font-size:16px}.cinematic-site .food-buy{min-height:49px;font-size:14px}.cinematic-site .food-chick-logo{width:210px;margin-top:23px}
+}
+@media(max-width:360px){.cinematic-site .food-details{padding-left:18px;padding-right:18px}.cinematic-site .food-steps{padding-left:10px;padding-right:10px}.cinematic-site .food-step-icon img{height:58px}.cinematic-site .food-steps li p{font-size:10px;letter-spacing:0;white-space:normal}.cinematic-site .food-match-area{padding-left:18px;padding-right:18px}.cinematic-site .food-match h2{font-size:22px}}
+
+.cinematic-site .food-details[data-empty-image]{grid-template-columns:1fr;padding-top:45px}
+.cinematic-site .food-buy:disabled{opacity:.6;cursor:default}
+.cinematic-site .food-match-date{font:400 16px/1.5 var(--body);color:#888;margin-top:3px}
+.cinematic-site .food-teams{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #ddd;margin-top:17px;padding:28px 12px 20px}
+.cinematic-site .food-teams>img,.cinematic-site .food-teams>div{width:96px;height:96px;object-fit:contain}.cinematic-site .food-teams>div{--opponent-crest-size:96px}
+.cinematic-site .food-teams strong{font:600 28px/1 var(--body);white-space:nowrap}.cinematic-site .food-venue{text-align:center;color:#888;font:400 16px/1.5 var(--body);margin:17px 0 25px}
+@media(max-width:700px){.cinematic-site .food-teams{padding-left:0;padding-right:0;gap:12px}.cinematic-site .food-teams>img,.cinematic-site .food-teams>div{width:65px;height:65px}.cinematic-site .food-teams>div{--opponent-crest-size:65px}.cinematic-site .food-teams strong{font-size:24px}.cinematic-site .food-venue{font-size:14px}}
+@media(max-width:360px){.cinematic-site .food-teams>img,.cinematic-site .food-teams>div{width:58px;height:58px}.cinematic-site .food-teams>div{--opponent-crest-size:58px}.cinematic-site .food-teams strong{font-size:22px}}
+
+.cinematic-site .food-heading h1,.cinematic-site .food-details h2,.cinematic-site .food-details p,.cinematic-site .food-steps li p{overflow-wrap:anywhere}

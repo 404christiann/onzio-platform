@@ -14,6 +14,12 @@ export function hydrateShopSnapshot(snapshot: ShopSnapshot): ShopSnapshot {
     ...snapshot,
     photos: snapshot.photos.map(hydrate),
     photoRows: snapshot.photoRows.map(hydrate),
+    ...(snapshot.presentation ? { presentation: {
+      ...snapshot.presentation,
+      mapUrl: hydrate({ assetId: snapshot.presentation.mapAssetId, url: "" }).url,
+      mapWidth: snapshot.presentation.mapAssetId ? assets.get(snapshot.presentation.mapAssetId)?.width : undefined,
+      mapHeight: snapshot.presentation.mapAssetId ? assets.get(snapshot.presentation.mapAssetId)?.height : undefined,
+    } } : {}),
     ...(snapshot.operation?.status === "committed"
       ? { operation: { status: "committed" as const, receipt: hydrateShopSnapshot(snapshot.operation.receipt) } }
       : {}),

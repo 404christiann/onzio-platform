@@ -64,6 +64,15 @@ describe("cinematic@2 atomic homepage", () => {
     expect(await save(request)).toEqual(first);
     await reject(() => save({ ...request, sections: { revamp: { ...revamp, match: { ...revamp.match, heading: "Different" } } } }), "OPERATION_REUSED");
   });
+  it("saves the anthem destination while accepting older rows and rejecting unsafe direct writes", async () => {
+    const revamp = content();
+    revamp.navigation.destinations.nationalAnthem = "https://forms.gle/tAezhCRdXH1Z1bMR7";
+    await save(await payload({ revamp }));
+    expect((await load()).content.revamp.navigation.destinations.nationalAnthem).toBe("https://forms.gle/tAezhCRdXH1Z1bMR7");
+    await db.query("update onzio.homepage_revamp_content set content=content #- '{navigation,destinations,nationalAnthem}' where club_id=$1", [clubId]);
+    expect((await load()).content.revamp.navigation.destinations.nationalAnthem).toBeUndefined();
+    await reject(() => db.query("update onzio.homepage_revamp_content set content=jsonb_set(content,'{navigation,destinations,nationalAnthem}','\"javascript:alert(1)\"') where club_id=$1", [clubId]), "INVALID_HOMEPAGE_PAYLOAD");
+  });
   it("accepts seven photos for cinematic2 and retains the six-photo limit for cinematic1", async () => {
     const ids = []; for (let i = 0; i < 7; i++) ids.push(await asset());
     const photos = { items: ids.map((assetId, order) => ({ clientId: `p${order}`, rowId: null, assetId, alt: "Photo", order })) };

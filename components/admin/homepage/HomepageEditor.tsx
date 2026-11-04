@@ -177,6 +177,11 @@ export default function HomepageEditor() {
   const isStory = piece === "story.text" || piece === "story.cta";
   const visibility = isStory ? "story" : piece === "video" ? "video" : null;
   const sharedShortcuts: { label: string; short: string; href: string }[] = [];
+  if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push({ label: "Edit in Tickets", short: "Tickets", href: "/admin/tickets" });
+  if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push(
+    { label: "Edit in Robinson Stadium", short: "Stadium", href: "/admin/stadium" },
+    { label: "Edit in Chick-fil-A", short: "Chick-fil-A", href: "/admin/chick-fil-a" },
+  );
   if (capabilities.sharedTargets.storyText) sharedShortcuts.push({ label: "Edit in About", short: "About", href: "/admin/about" });
   if (capabilities.sharedTargets.programs) sharedShortcuts.push({ label: "Edit in Programs", short: "Programs", href: "/admin/programs" });
   if (capabilities.sharedTargets.shop) sharedShortcuts.push({ label: "Edit in Shop", short: "Shop", href: "/admin/shop" });

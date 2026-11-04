@@ -30,7 +30,7 @@ const rows = [
   ['player2027', 'prepared/player-2027.webp', 'graphic', 'Supplied 2027 City of Roses red player with Foothill Transit jersey sponsor'],
   ['foothillHeader', 'prepared/foothill.png', 'graphic', 'Official horizontal Foothill header wordmark, raster derivative'],
   ['heroPoster', 'prepared/hero-reference-frame.jpg', 'photo', 'Actual approved Bunny clip frame at0.1s; reduced-motion/poster fallback'],
-  ['episodePoster', 'originals/behind-rose-poster.jpg', 'photo', 'Actual Behind the Rose S1E1 official YouTube thumbnail; click loads real episode'],
+  ['episodePoster', 'originals/behind-rose-poster-maxres.jpg', 'photo', 'Actual Behind the Rose S1E1 official YouTube thumbnail; click loads real episode'],
   ['matchSponsor', 'prepared/chickfila.webp', 'graphic', 'Reference match card Chick-fil-A sample sponsor; actual schedule/shared owner must be resolved'],
   ['sponsorChronic', 'originals/chronic-tacos.webp', 'graphic', 'Current carousel sponsor1; near-white lettering darkened only by approved renderer SVG filter, red strip preserved'],
   ['sponsorModern', 'originals/modern-woodmen.webp', 'graphic', 'Current carousel sponsor2; source colors unchanged'],

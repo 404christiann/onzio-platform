@@ -433,6 +433,11 @@ export type AdminDataRequest = z.infer<typeof adminDataRequestSchema>;
 export const ADMIN_SELECT_MEDIA_REFERENCES: Partial<
   Record<AdminTable, ReadonlyArray<{ assetId: string; url: string }>>
 > = {
+  matches: [
+    { assetId: "opponent_logo_asset_id", url: "opponent_logo_url" },
+    { assetId: "sponsor_logo_asset_id", url: "sponsor_logo_url" },
+    { assetId: "league_logo_asset_id", url: "league_logo_url" },
+  ],
   programs: [
     { assetId: "hero_media_asset_id", url: "hero_media_url" },
     { assetId: "detail_media_asset_id", url: "detail_media_url" },

@@ -12,6 +12,7 @@ import { Fixture } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
 import EditorialSchedule from "@/components/editorial/EditorialSchedule";
+import CinematicSchedulePage from "@/components/cinematic/CinematicSchedulePage";
 import { AcademyScheduleLoadingSkeleton } from "@/components/AcademyLoadingSkeleton";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -58,6 +59,7 @@ function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
 
 export default function SchedulePage() {
   const club = useClubContext();
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicSchedulePage />;
   if (club.presentationTemplateKey === "editorial@1") return <EditorialSchedule />;
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseSchedulePage />;
   return <LegacySchedulePage />;

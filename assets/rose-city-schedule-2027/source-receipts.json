@@ -1,0 +1,42 @@
+[
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/opponent0.webp",
+    "source": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/schedule/58ec9d5d-6a91-5b4a-9a88-cb108b4e849e.webp",
+    "sha256": "d97c4b0ba27f131ede3ba2d4119beec4d02104c0565d1313d55b5ca2f03d73bc"
+  },
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/opponent1.webp",
+    "source": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/schedule/53a59541-595e-534b-89c7-119af11e37d7.webp",
+    "sha256": "42539a58b531b96147a990674606138b438e91306b2510ad6d13a25e704dd1e2"
+  },
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/opponent2.webp",
+    "source": "https://ioalthwsdrlzrubomrow.supabase.co/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/schedule/d16ac8eb-3425-5961-9d1e-4655037e1feb.webp",
+    "sha256": "6ae8a2224259d493a6792fbcd1c96beb3fa338355d2193df177b8c9b8f234361"
+  },
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/sponsorFoothill.png",
+    "source": "../../design-explorations/schedule-2027/foothill.png",
+    "sha256": "8a1fc50faf320b1567ee3c04699af8627d1551c09580ae76e1f5df5ebd995754"
+  },
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/sponsorNikys.png",
+    "source": "../../design-explorations/schedule-2027/nikys.png",
+    "sha256": "b908bacce8221e7593cc1989ee699e83f394a6f46842cb6acd42907cdf70d260"
+  },
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/sponsorChickfila.webp",
+    "source": "../../design-explorations/schedule-2027/chickfila.webp",
+    "sha256": "975427e0d6fbf89c55fe070ead44bd05625f3a00d74b02309ce4090209eba3e2"
+  },
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/sponsorTepito.webp",
+    "source": "../../design-explorations/schedule-2027/tepito.webp",
+    "sha256": "6ecc6f1e5b406f5c169e86a944eb2c6935f4b03df9aa70cbd3edb0ab83387930"
+  },
+  {
+    "path": "assets/rose-city-schedule-2027/inputs/league.png",
+    "source": "../../design-explorations/schedule-2027/upsl.png",
+    "sha256": "00add943501bef56884ea84dcff9e496c17db3b64b1a6c147bcc314ee3adf68f"
+  }
+]

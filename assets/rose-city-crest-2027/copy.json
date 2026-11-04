@@ -1,0 +1,32 @@
+[
+  {
+    "title": "The Name",
+    "description": "Rose City Futbol Club’s club crest reflects Pasadena’s rich history and what makes the city special as a global city.",
+    "size": 68
+  },
+  {
+    "title": "The Rose",
+    "description": "The rose symbolizes the world-famous Rose Parade that began January 1, 1890 and has run every year since. Residents, many from the snowy Midwest, covered their horse-drawn wagons in roses to display the area’s vitality in winter.",
+    "size": 56
+  },
+  {
+    "title": "The #23",
+    "description": "Pasadena’s 23 square miles is home to 138,000 residents, the Rose Bowl stadium, and is located at the northern origin of the 110 freeway, the first freeway in the U.S.",
+    "size": 112
+  },
+  {
+    "title": "The #Crown",
+    "description": "The San Gabriel Mountains crown the area with rugged majesty. Hiking trails lead to mountain peaks overseeing the entire Los Angeles basin.",
+    "size": 94
+  },
+  {
+    "title": "The Key",
+    "description": "Pasadena is the most prominent city in the San Gabriel Valley and derives its name from the Chippewa language meaning “Key of the Valley” and “Crown of the Valley.” Pasadena is “key” to artistic, educational and scientific institutions of global renown.",
+    "size": 55
+  },
+  {
+    "title": "The Stem",
+    "description": "Stem description goes here. Add the meaning of this crest detail in the admin portal.",
+    "size": 40
+  }
+]

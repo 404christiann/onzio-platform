@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 /** A real CSS viewport with a React portal; never loads or navigates the live URL. */
-export default function HomepagePreviewFrame({ children, host, playback = false }: { children: ReactNode; host: string; playback?: boolean }) {
+export default function HomepagePreviewFrame({ children, host, playback = false, label = "Homepage" }: { children: ReactNode; host: string; playback?: boolean; label?: string }) {
   const iframe = useRef<HTMLIFrameElement>(null);
   const [body, setBody] = useState<HTMLElement | null>(null);
   useEffect(() => {
@@ -61,7 +61,9 @@ export default function HomepagePreviewFrame({ children, host, playback = false 
     const mount = () => {
       observer?.disconnect();
       const doc = frame.contentDocument;
-      if (!doc) return;
+      // A hidden iframe can expose its document before Chrome creates the
+      // srcDoc roots. Its load event retries mounting once they are available.
+      if (!doc?.documentElement || !doc.head || !doc.body) return;
       doc.documentElement.lang = "en";
       // Only root font classes; admin theme attributes never cross the frame.
       doc.documentElement.className = document.documentElement.className.replace(/\bdark\b/g, "");
@@ -96,8 +98,8 @@ export default function HomepagePreviewFrame({ children, host, playback = false 
     return () => { active = false; observer?.disconnect(); frame.removeEventListener("load", mount); };
   }, []);
   return <div className="hp-browser">
-    <div className="hp-browser-chrome"><span aria-hidden="true">● ● ●</span><span>{host} · Homepage preview</span></div>
-    <iframe ref={iframe} title="Homepage preview" className="hp-preview-frame" srcDoc="<!doctype html><html lang='en'><head></head><body></body></html>" />
+    <div className="hp-browser-chrome"><span aria-hidden="true">● ● ●</span><span>{host} · {label} preview</span></div>
+    <iframe ref={iframe} title={label + " preview"} className="hp-preview-frame" srcDoc="<!doctype html><html lang='en'><head></head><body></body></html>" />
     {body && createPortal(<div data-homepage-preview="true" data-playback={playback} onClickCapture={event => {
       const target = event.target as HTMLElement;
       const blocked = target.closest(playback ? "a,form" : "a,button,iframe");

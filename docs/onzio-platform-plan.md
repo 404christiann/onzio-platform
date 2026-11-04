@@ -1198,3 +1198,30 @@ The platform is accepted when:
 - two synthetic clubs remain isolated end to end
 - staging passes all security and billing flows
 - Rose City serves successfully from Onzio with its data, media, admins, domain, and existing subscription intact
+
+
+## cinematic@2 Tickets owner — 2026-10-13
+
+The Tickets destination uses tenant-scoped cinematic_tickets_content with seven composite tenant/media foreign keys and its own revision/actor receipt transaction. Homepage owns shared prices and match wording; Schedule owns actual fixtures. Tickets owns page copy, graphics and the optional external HTTPS purchase URL. Existing feature/session/lifecycle authorization and reference-safe retirement apply. Schema/API/local verification are documented in docs/rose-city-tickets-2027-implementation.md. Registration/Connect/subscription owners are preserved. Hosted rollout remains separately approved.
+
+
+### Cinematic revision2 Shop ownership (2026-10-13)
+
+Shop settings/map now participate in the existing Shop transaction/revision and
+actor-scoped save receipts. The cinematic-only singleton has tenant/media FKs,
+RLS, strict settings/crop validation and reference-safe retirement; persisted map
+URLs are forbidden. Separate Homepage ownership and every other template retain
+the existing contract. Shared public/admin renderer and local verification:
+`docs/rose-city-shop-2027-implementation.md`.
+
+
+### RC2027-CHICK-FIL-A / RC2027-STADIUM — complete locally (2026-10-13)
+
+Accepted authentic visitor-page designs and supplied typography implemented with
+two user-requested page workers and main-owned atomic integration. Public/admin
+routes, independent content/revision/receipt/media contracts, guarded local
+migrations/import and editors pass desktop/phone-width persistence and normal
+upload checks. Full suite222 files/1999 tests, final build/lint/types pass. See
+docs/rose-city-stadium-food-2027-design.md and the two scoped implementation
+ledgers for final evidence. Physical-device/VoiceOver and existing release gates
+remain open; no hosted mutation or deployment.

@@ -15,7 +15,13 @@ import { getClubContextBySlug } from "@/lib/club-context";
 import { loadAcademyShellBranding } from "@/lib/academy-shell-branding";
 import AcademyRouteLoadingSkeleton, { AcademyPageLoadingSkeleton } from "@/components/AcademyRouteLoadingSkeleton";
 import type { ClubContext } from "@/lib/club-context";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+
+export async function generateViewport({ params }: { params: Promise<{ slug: string }> }): Promise<Viewport> {
+  const club = await getClubContextBySlug((await params).slug);
+  // Safe-area CSS needs cover in the actual app as well as the phone-review bundle.
+  return club.presentationTemplateKey === "cinematic@2" ? { viewportFit: "cover", themeColor: "#ffffff" } : {};
+}
 
 export async function generateMetadata({
   params,

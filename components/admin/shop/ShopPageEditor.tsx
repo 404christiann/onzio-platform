@@ -22,6 +22,9 @@ import FileUpload from "@/components/admin/FileUpload";
 import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
+import CinematicShopCanvas from "./CinematicShopCanvas";
+import CinematicShopFields from "./CinematicShopFields";
+import type { CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
@@ -33,7 +36,7 @@ import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publ
 import "@/styles/editorial.css";
 
 const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };
-type Target = "copy" | "photos" | "cta" | "photoRows" | "purchase" | "fixed" | "kit";
+type Target = "copy" | "photos" | "cta" | "photoRows" | "purchase" | "fixed" | "kit" | "map" | "sponsors" | "page";
 
 function allKitContent(draft: ShopPageDraft, surface: ShopSurface): Record<ShopVariant, ShopKitContent> {
   return Object.fromEntries(SHOP_VARIANTS.map((variant) => {
@@ -61,6 +64,7 @@ export default function ShopPageEditor() {
   const isAcademy = template === "academy@1";
   const isClubhouse = template === "clubhouse@1";
   const isEditorial = template === "editorial@1";
+  const isCinematic = template === "cinematic@2";
   const storeUnavailable = isEditorial && !club.storeEnabled;
   const sharedWithHomepage = isClubhouse || isEditorial;
   const generic = !isAcademy && !isClubhouse && !isEditorial;
@@ -79,6 +83,8 @@ export default function ShopPageEditor() {
   const [selectedVariant, setSelectedVariant] = useState<ShopVariant>("home");
   const [target, setTarget] = useState<Target | null>(null);
   const [phone, setPhone] = useState(false);
+  const uploadClub = useRef(club.id);
+  uploadClub.current = club.id;
   const saveInFlight = useRef(false);
   const [conflicts, setConflicts] = useState<Partial<Record<ShopSurface, ShopSnapshot>>>({});
   const [pendingSaves, setPendingSaves] = useState<Partial<Record<ShopSurface, ReturnType<typeof toShopSaveRequest>>>>({});
@@ -198,6 +204,41 @@ export default function ShopPageEditor() {
     editDraft((page) => ({ ...page, purchase: { ...page.purchase, [field]: value }, purchaseChanged: true }));
   }
 
+  function updatePresentation<K extends keyof CinematicShopPresentation>(field: K, value: CinematicShopPresentation[K]) {
+    editDraft(page => ({ ...page, presentation: { ...page.presentation, [field]: value }, presentationChanged: true }));
+  }
+
+  async function cleanupUnsavedMap(assetId: string | null) {
+    if (!assetId || assetId === snapshot?.presentation?.mapAssetId) return;
+    await fetch("/api/admin/media/cleanup", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assetId }) }).catch(() => undefined);
+  }
+
+  async function uploadMap(files: FileList | null) {
+    if (!files?.[0] || !draft || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const file = files[0], clubId = club.id, previous = draft.presentation.mapAssetId;
+    setUploading(true); setSaveError(null);
+    try {
+      const client = createClient(), path = `map/${crypto.randomUUID()}-${file.name}`;
+      const result = await client.storage.from("shop-artwork").upload(path, file);
+      if (result.error || !result.data) throw new Error(result.error?.message ?? "Could not upload the map.");
+      const publicResult = client.storage.from("shop-artwork").getPublicUrl(path);
+      if (publicResult.error || !publicResult.data.publicUrl) throw new Error("Could not prepare the map.");
+      if (uploadClub.current !== clubId) return;
+      let dimensions: { mapWidth?: number; mapHeight?: number } = {};
+      try { const bitmap = await createImageBitmap(file); dimensions = { mapWidth: bitmap.width, mapHeight: bitmap.height }; bitmap.close(); } catch { /* The finalized asset supplies authoritative dimensions after Save. */ }
+      editDraft(page => ({ ...page, presentation: { ...page.presentation, ...dimensions, mapAssetId: result.data!.assetId, mapUrl: publicResult.data.publicUrl, mapVisible: true }, presentationChanged: true }));
+      await cleanupUnsavedMap(previous);
+    } catch (error) { if (uploadClub.current === clubId) setSaveError(error instanceof Error ? error.message : "Could not upload the map."); }
+    finally { if (uploadClub.current === clubId) setUploading(false); }
+  }
+
+  async function removeMap() {
+    if (!draft || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const assetId = draft.presentation.mapAssetId;
+    editDraft(page => ({ ...page, presentation: { ...page.presentation, mapAssetId: null, mapUrl: "", mapVisible: false }, presentationChanged: true }));
+    await cleanupUnsavedMap(assetId);
+  }
+
   async function savePage() {
     if (!draft || !snapshot || (!dirty && !pendingSaves[surface]) || saveInFlight.current || uploading || conflict) return;
     const request = pendingSaves[surface] ?? toShopSaveRequest(snapshot, draft, crypto.randomUUID());
@@ -285,6 +326,7 @@ export default function ShopPageEditor() {
                 <ToolButton label="Edit kit text" onClick={() => setTarget("copy")} />
                 <ToolButton label="Edit kit photos" onClick={() => setTarget("photos")} />
                 {showExtras && <><ToolButton label="Edit photo row" onClick={() => setTarget("photoRows")} /><ToolButton label="Edit purchase details" onClick={() => setTarget("purchase")} /></>}
+                {isCinematic && surface === "shop" && <><ToolButton label="Edit map" onClick={() => setTarget("map")} /><ToolButton label="Edit sponsors" onClick={() => setTarget("sponsors")} /><ToolButton label="Edit page labels" onClick={() => setTarget("page")} /></>}
               </div>
               <ShopPreviewFrame host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(selection) => setTarget(selection as Target)}>
                 {isEditorial ? <EditorialShell editing>
@@ -293,20 +335,21 @@ export default function ShopPageEditor() {
                 </EditorialShell> : <TemplateFontScope templateKey={template}>
                   {isAcademy ? surface === "shop" ? <AcademyShopPage editorContent={content.home} /> : <AcademyHomeShopFeature editorContent={content.home} /> : null}
                   {isClubhouse && <ClubhouseShopPage editorContent={content} onEditorSelectKit={setSelectedVariant} />}
-                  {generic && <>
+                  {isCinematic && surface === "shop" && <CinematicShopCanvas kits={content} draft={draft} variant={currentVariant} onVariantChange={variant => { setSelectedVariant(variant); setTarget("copy"); }} />}
+                  {generic && !(isCinematic && surface === "shop") && <>
                     <div className={surface === "shop" ? "pt-24 sm:pt-28" : ""} style={{ backgroundColor: "var(--color-white)" }}>
                       <ShopKitSectionContainer surface={surface} headingTag={surface === "shop" ? "h1" : "h2"} fadeImageToWhite editorContent={content} selectedVariant={currentVariant} onVariantChange={(variant) => { setSelectedVariant(variant); setTarget("copy"); }} />
                       {showExtras && draft.photoRows[currentVariant].length > 0 && <ShopPhotoStrip photos={publicPhotoRow(draft.photoRows[currentVariant], currentVariant)} />}
                       {showExtras && hasShopPurchaseDetails(publicPurchase(draft.purchase)) && <ShopPurchaseDetailsSection details={publicPurchase(draft.purchase)} animate={false} />}
                     </div>
                   </>}
-                  {!content[currentVariant].photos.length && <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button>}
+                  {!content[currentVariant].photos.length && !(isCinematic && surface === "shop") && <button type="button" data-shop-editor-target="photos" className="m-4 min-h-24 w-[calc(100%-2rem)] rounded-lg border-2 border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">Add a kit photo to show this product.</button>}
                 </TemplateFontScope>}
               </ShopPreviewFrame>
             </div>
             <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`shop-page-inspector min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
               {target ? <>
-                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
+                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "map" ? "Shop map" : target === "sponsors" ? "Shop sponsors" : target === "page" ? "Page labels and image framing" : target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
                 <fieldset disabled={locked} className="min-w-0">
                 {target === "fixed" ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">This copy belongs to the website design and is managed by Onzio.</p> : null}
                 {(target === "copy" || target === "kit" || target === "cta") && currentKit && <>
@@ -327,9 +370,10 @@ export default function ShopPageEditor() {
                 </>}
                 {target === "photos" && currentKit && <PhotoEditor photos={currentKit.photos} label="kit" uploading={uploading} onUpload={(files) => void uploadPhotos(files, false)} onRemove={(photo) => void removePhoto(photo, false)} onChange={setKitPhotos} />}
                 {target === "photoRows" && showExtras && <PhotoEditor photos={draft.photoRows[currentVariant]} label="photo row" uploading={uploading} onUpload={(files) => void uploadPhotos(files, true)} onRemove={(photo) => void removePhoto(photo, true)} onChange={setRowPhotos} />}
+                {isCinematic && surface === "shop" && (target === "map" || target === "sponsors" || target === "page") && <CinematicShopFields target={target} value={draft.presentation} onChange={updatePresentation} uploading={uploading} onUploadMap={files => void uploadMap(files)} onRemoveMap={() => void removeMap()} />}
                 {target === "purchase" && showExtras && <div className="space-y-3">
                   <TextField label="Section heading" value={draft.purchase.heading} onChange={(value) => updatePurchase("heading", value)} />
-                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => <TextField key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />)}<button type="button" className="min-h-11 text-sm font-semibold text-destructive" onClick={() => updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index))}>Remove card</button></div>)}
+                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => { const Field = isCinematic && field === "body" ? TextAreaField : TextField; return <Field key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />; })}<button type="button" className="min-h-11 text-sm font-semibold text-destructive" onClick={() => updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index))}>Remove card</button></div>)}
                   {draft.purchase.cards.length < 4 && <ToolButton label="Add detail card" onClick={() => updatePurchase("cards", [...draft.purchase.cards, { label: "", title: "", body: "" }])} />}
                   <TextField label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => updatePurchase("cta_eyebrow", value)} />
                   <TextAreaField label="Footer text" value={draft.purchase.cta_text} onChange={(value) => updatePurchase("cta_text", value)} />

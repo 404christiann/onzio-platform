@@ -14,7 +14,7 @@ export const CINEMATIC_NAV_ITEMS = [
   { id: "shop", label: "Shop", href: "/shop" },
   { id: "stadium-group", label: "Stadium", children: [
     { id: "stadium", label: "Stadium", href: "/stadium" },
-    { id: "stadium-parking", label: "Stadium parking", href: "/stadium/parking" },
+    { id: "stadium-parking", label: "Stadium parking", href: "/stadium#parking-lot-no-5" },
     { id: "stadium-guidelines", label: "Stadium guidelines", href: "/stadium/guidelines" },
     { id: "chick-fil-a", label: "Chick-fil-A", href: "/stadium/chick-fil-a" },
     { id: "know-before-you", label: "Know before you", href: "/stadium/know-before-you" },
@@ -38,6 +38,16 @@ export const CINEMATIC_NAV_LABEL_IDS = CINEMATIC_NAV_ITEMS.flatMap(item => [item
 
 const copy = z.string().max(1200);
 const heading = z.string().max(120);
+export function isSafeCinematicDestination(value: string): boolean {
+  if (!value || value.length > 2000) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+const externalDestination = z.string().max(2000).refine(value => value === "" || isSafeCinematicDestination(value), "Enter a valid HTTPS URL.");
 const artworkInput = z.object({ assetId: z.uuid().nullable(), alt: z.string().max(1000) }).strict();
 const artwork = artworkInput.extend({ url: z.string().nullable(), upload: z.enum(["queued", "uploading", "ready", "failed"]).optional(), localFileKey: z.string().optional(), error: z.string().optional() });
 export const cinematicHomepageSaveSchema = z.object({
@@ -47,7 +57,10 @@ export const cinematicHomepageSaveSchema = z.object({
   match: z.object({ heading, buttonLabel: z.string().max(60), buttonHref: z.string().max(2000).regex(/^\/(?!\/)(?:[-A-Za-z0-9_/?#=&%.]*)$/), emptyMessage: copy }).strict(),
   prices: z.object({ heading, rows: z.array(z.object({ id: z.string().min(1).max(60), label: heading, price: z.string().max(60), description: copy, note: copy, accent: z.enum(["none", "aqua", "lime"]) }).strict()).max(10), footnote: copy }).strict().refine(value => new Set(value.rows.map(row => row.id)).size === value.rows.length, "Price row IDs must be unique."),
   championship: z.object({ league: heading, year: z.string().max(20), title: heading, body: copy, trophy: artworkInput }).strict(),
-  navigation: z.object({ labels: z.record(z.string(), z.string().trim().min(1).max(60)).refine(value => Object.keys(value).every(id => CINEMATIC_NAV_LABEL_IDS.includes(id)), "Unknown navigation label.") }).strict(),
+  navigation: z.object({
+    labels: z.record(z.string(), z.string().trim().min(1).max(60)).refine(value => Object.keys(value).every(id => CINEMATIC_NAV_LABEL_IDS.includes(id)), "Unknown navigation label."),
+    destinations: z.object({ tryouts: externalDestination, mediaCredentials: externalDestination, nationalAnthem: externalDestination.default("") }).strict().default({ tryouts: "", mediaCredentials: "", nationalAnthem: "" }),
+  }).strict(),
 }).strict();
 export const cinematicPresentationSchema = z.object({
   headerPartner: artwork, heroPoster: artwork, seatsBackground: artwork, episodePoster: artwork,
@@ -74,7 +87,7 @@ export function defaultCinematicHomepageContent(): CinematicHomepageContent {
     match: { heading: "Next home match", buttonLabel: "Buy tickets", buttonHref: "/tickets", emptyMessage: "The next home match will be announced soon." },
     prices: { heading: "Ticket prices", rows: [], footnote: "" },
     championship: { league: "", year: "", title: "", body: "", trophy: empty() },
-    navigation: { labels: {} },
+    navigation: { labels: {}, destinations: { tryouts: "", mediaCredentials: "", nationalAnthem: "" } },
     presentation: { headerPartner: empty(), heroPoster: empty(), seatsBackground: empty(), episodePoster: empty(), heroVideoGuid: "", heroVideoLibraryId: "", sponsorTreatments: {} },
   };
 }

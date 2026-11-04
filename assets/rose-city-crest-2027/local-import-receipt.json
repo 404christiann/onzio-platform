@@ -1,0 +1,190 @@
+{
+  "localOnly": true,
+  "clubId": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7",
+  "media": {
+    "patch1": {
+      "assetId": "448392e0-eddd-5e75-ae34-c62498cb0f01",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/448392e0-eddd-5e75-ae34-c62498cb0f01.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/448392e0-eddd-5e75-ae34-c62498cb0f01.webp"
+    },
+    "patch2": {
+      "assetId": "834548f2-561b-59b6-a2c7-92e5ce724fbb",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/834548f2-561b-59b6-a2c7-92e5ce724fbb.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/834548f2-561b-59b6-a2c7-92e5ce724fbb.webp"
+    },
+    "patch3": {
+      "assetId": "27d64830-218b-50a1-a96f-61046a8e4907",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/27d64830-218b-50a1-a96f-61046a8e4907.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/27d64830-218b-50a1-a96f-61046a8e4907.webp"
+    },
+    "patch4": {
+      "assetId": "5bbd000b-1aef-5c26-a8fb-5886a21e453c",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/5bbd000b-1aef-5c26-a8fb-5886a21e453c.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/5bbd000b-1aef-5c26-a8fb-5886a21e453c.webp"
+    },
+    "patch5": {
+      "assetId": "f352748e-f2b8-51d0-a612-a942f3d62316",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/f352748e-f2b8-51d0-a612-a942f3d62316.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/f352748e-f2b8-51d0-a612-a942f3d62316.webp"
+    },
+    "patch6": {
+      "assetId": "96ddc2aa-42dc-51e3-aad6-84e36adf4239",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/96ddc2aa-42dc-51e3-aad6-84e36adf4239.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/96ddc2aa-42dc-51e3-aad6-84e36adf4239.webp"
+    },
+    "icon1": {
+      "assetId": "fb42eb80-2a24-5219-a4de-72b90155f168",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/fb42eb80-2a24-5219-a4de-72b90155f168.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/fb42eb80-2a24-5219-a4de-72b90155f168.webp"
+    },
+    "icon2": {
+      "assetId": "871a5921-1454-51fa-ab7a-6345b4d172b1",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/871a5921-1454-51fa-ab7a-6345b4d172b1.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/871a5921-1454-51fa-ab7a-6345b4d172b1.webp"
+    },
+    "icon3": {
+      "assetId": "b74358ec-bed1-562e-afbb-c783a9fb03a8",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/b74358ec-bed1-562e-afbb-c783a9fb03a8.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/b74358ec-bed1-562e-afbb-c783a9fb03a8.webp"
+    },
+    "icon4": {
+      "assetId": "c157ce70-cfa0-5157-a5f6-348463802091",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/c157ce70-cfa0-5157-a5f6-348463802091.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/c157ce70-cfa0-5157-a5f6-348463802091.webp"
+    },
+    "icon5": {
+      "assetId": "9a771a8f-6a16-589b-a6dc-6e82addfe542",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/9a771a8f-6a16-589b-a6dc-6e82addfe542.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/9a771a8f-6a16-589b-a6dc-6e82addfe542.webp"
+    },
+    "map": {
+      "assetId": "315cd514-d253-5b84-a56f-2cc6b03cf969",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/315cd514-d253-5b84-a56f-2cc6b03cf969.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/315cd514-d253-5b84-a56f-2cc6b03cf969.webp"
+    },
+    "color1": {
+      "assetId": "767365ca-16b1-5256-ad61-5ef39290fc41",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/767365ca-16b1-5256-ad61-5ef39290fc41.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/767365ca-16b1-5256-ad61-5ef39290fc41.webp"
+    },
+    "color2": {
+      "assetId": "68f473a4-c170-5287-a347-2297b0268a97",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/68f473a4-c170-5287-a347-2297b0268a97.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/68f473a4-c170-5287-a347-2297b0268a97.webp"
+    },
+    "color3": {
+      "assetId": "e724c2ce-3488-55d7-a804-4657805c367b",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/e724c2ce-3488-55d7-a804-4657805c367b.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/e724c2ce-3488-55d7-a804-4657805c367b.webp"
+    },
+    "color4": {
+      "assetId": "666de7c6-de78-51c7-accc-7b3b25a14378",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/666de7c6-de78-51c7-accc-7b3b25a14378.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/666de7c6-de78-51c7-accc-7b3b25a14378.webp"
+    },
+    "color5": {
+      "assetId": "7b922c8a-8e46-5171-a48c-b75a21bc06cf",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/7b922c8a-8e46-5171-a48c-b75a21bc06cf.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/7b922c8a-8e46-5171-a48c-b75a21bc06cf.webp"
+    },
+    "color6": {
+      "assetId": "f9838824-2fa5-5313-a590-d028f72db7b4",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/f9838824-2fa5-5313-a590-d028f72db7b4.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/f9838824-2fa5-5313-a590-d028f72db7b4.webp"
+    },
+    "icon6": {
+      "assetId": "b297e099-7ffc-5870-aec2-e131550746d8",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/b297e099-7ffc-5870-aec2-e131550746d8.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/b297e099-7ffc-5870-aec2-e131550746d8.webp"
+    },
+    "diagram": {
+      "assetId": "fb583fb5-6ef9-5b40-a56d-d3e2f00b9c6d",
+      "url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/fb583fb5-6ef9-5b40-a56d-d3e2f00b9c6d.webp",
+      "path": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/fb583fb5-6ef9-5b40-a56d-d3e2f00b9c6d.webp"
+    }
+  },
+  "content": {
+    "annotated_image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/fb583fb5-6ef9-5b40-a56d-d3e2f00b9c6d.webp",
+    "map_image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/315cd514-d253-5b84-a56f-2cc6b03cf969.webp",
+    "features": [
+      {
+        "title": "The Name",
+        "description": "Rose City Futbol Club’s club crest reflects Pasadena’s rich history and what makes the city special as a global city.",
+        "patch_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/448392e0-eddd-5e75-ae34-c62498cb0f01.webp",
+        "icon_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/fb42eb80-2a24-5219-a4de-72b90155f168.webp",
+        "icon_size": 68,
+        "icon_scale": 1
+      },
+      {
+        "title": "The Rose",
+        "description": "The rose symbolizes the world-famous Rose Parade that began January 1, 1890 and has run every year since. Residents, many from the snowy Midwest, covered their horse-drawn wagons in roses to display the area’s vitality in winter.",
+        "patch_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/834548f2-561b-59b6-a2c7-92e5ce724fbb.webp",
+        "icon_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/871a5921-1454-51fa-ab7a-6345b4d172b1.webp",
+        "icon_size": 56,
+        "icon_scale": 1
+      },
+      {
+        "title": "The #23",
+        "description": "Pasadena’s 23 square miles is home to 138,000 residents, the Rose Bowl stadium, and is located at the northern origin of the 110 freeway, the first freeway in the U.S.",
+        "patch_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/27d64830-218b-50a1-a96f-61046a8e4907.webp",
+        "icon_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/b74358ec-bed1-562e-afbb-c783a9fb03a8.webp",
+        "icon_size": 112,
+        "icon_scale": 1
+      },
+      {
+        "title": "The #Crown",
+        "description": "The San Gabriel Mountains crown the area with rugged majesty. Hiking trails lead to mountain peaks overseeing the entire Los Angeles basin.",
+        "patch_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/5bbd000b-1aef-5c26-a8fb-5886a21e453c.webp",
+        "icon_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/c157ce70-cfa0-5157-a5f6-348463802091.webp",
+        "icon_size": 94,
+        "icon_scale": 1
+      },
+      {
+        "title": "The Key",
+        "description": "Pasadena is the most prominent city in the San Gabriel Valley and derives its name from the Chippewa language meaning “Key of the Valley” and “Crown of the Valley.” Pasadena is “key” to artistic, educational and scientific institutions of global renown.",
+        "patch_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/f352748e-f2b8-51d0-a612-a942f3d62316.webp",
+        "icon_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/9a771a8f-6a16-589b-a6dc-6e82addfe542.webp",
+        "icon_size": 55,
+        "icon_scale": 1
+      },
+      {
+        "title": "The Stem",
+        "description": "Stem description goes here. Add the meaning of this crest detail in the admin portal.",
+        "patch_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/96ddc2aa-42dc-51e3-aad6-84e36adf4239.webp",
+        "icon_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/b297e099-7ffc-5870-aec2-e131550746d8.webp",
+        "icon_size": 40,
+        "icon_scale": 1
+      }
+    ],
+    "color_cards": [
+      {
+        "label": "Rose Parade Red",
+        "image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/767365ca-16b1-5256-ad61-5ef39290fc41.webp"
+      },
+      {
+        "label": "12AM Midnight",
+        "image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/68f473a4-c170-5287-a347-2297b0268a97.webp"
+      },
+      {
+        "label": "Faded White",
+        "image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/e724c2ce-3488-55d7-a804-4657805c367b.webp"
+      },
+      {
+        "label": "Rose Stem Green",
+        "image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/666de7c6-de78-51c7-accc-7b3b25a14378.webp"
+      },
+      {
+        "label": "Steel",
+        "image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/7b922c8a-8e46-5171-a48c-b75a21bc06cf.webp"
+      },
+      {
+        "label": "Parrot",
+        "image_url": "http://127.0.0.1:55321/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/about/f9838824-2fa5-5313-a590-d028f72db7b4.webp"
+      }
+    ]
+  },
+  "features": 6,
+  "colors": 6,
+  "otherContentPreserved": true,
+  "hostedWrites": false
+}

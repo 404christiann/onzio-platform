@@ -1,8 +1,8 @@
 {
-  "validatedAt": "2026-10-13T14:51:37.896Z",
+  "validatedAt": "2026-10-13T20:25:56.114Z",
   "validator": "lib/media-validation.ts",
   "validatorSha256": "b478b2f00a10191c2920b16d97ae74d3514e5fb89a03160fb932e12e0ca2d383",
-  "manifestSha256": "0ab3eef6c0cacb36d82d598a6e0d178b7ee6f30f5bdb8f18b993860e428ce0b2",
+  "manifestSha256": "95f4141bba84629d1418adcb8df85300b5c6739b62eae5267527f4a1b9fc0d3f",
   "count": 30,
   "hostedOrDatabaseWrites": false,
   "validated": [
@@ -145,9 +145,9 @@
       "logicalName": "episodePoster",
       "safe": true,
       "format": "jpeg",
-      "width": 480,
-      "height": 360,
-      "bytes": 14733,
+      "width": 1280,
+      "height": 720,
+      "bytes": 119139,
       "hasAlpha": false
     },
     {

@@ -223,3 +223,26 @@ matching local authenticated browser state. Never commit browser auth state.
 - Shared phone focus: `lib/__tests__/page-editor-focus.test.ts` checks stable target recovery after iframe blur/node replacement, duplicate Tryouts labels, detached frames and normal outer triggers. These narrow DOM facades complement the unchanged real browser focus-trap/Escape/Done tests in `public-page-editor-phone.spec.ts`; they do not establish native focus/keyboard acceptance.
 
 - Phone canvas obstruction: the independent Tryouts first-selection case in `public-page-editor-phone.spec.ts` verifies the iframe target's outer-page center stays above the persistent Save strip before the actual click opens tools. This catches outer overlays that iframe-local hit testing misses; existing modal/focus/keyboard assertions remain unchanged.
+
+
+## cinematic@2 Tickets page
+
+With the isolated local test environment explicitly exported, run `npx vitest run tests/contracts/cinematic-tickets-content.test.ts tests/contracts/cinematic-tickets-recovery.test.ts tests/contracts/cinematic-tickets-route.test.ts tests/database/cinematic-tickets-save.test.ts`. Contracts cover strict URL/media/template/tenant boundaries, independent revisions, stale/direct writes, actor receipts, exact response-loss retry and partial/semantic draft recovery. Normal media publication and actual CUA desktop/phone Save/reload/public reflection evidence are recorded in docs/rose-city-tickets-2027-implementation.md. No hosted tests/seeds.
+
+
+Cinematic revision2 Shop coverage: `tests/contracts/cinematic-shop-editor.test.ts`,
+`tests/contracts/cinematic-shop-renderer.test.ts`, and
+`tests/database/cinematic-shop-save.test.ts` cover authored/empty renderer parity,
+settings draft/recovery, tenant/template isolation, atomic map save/rollback,
+receipts and reference-safe media retirement. Actual local admin/public desktop
+and phone evidence is documented in `docs/rose-city-shop-2027-implementation.md`.
+
+
+## Cinematic 2027 roster
+
+`npx vitest run tests/contracts/cinematic-roster-renderer.test.ts tests/contracts/cinematic-roster-import.test.ts tests/contracts/player-modal-media.test.ts tests/contracts/roster-media-resilience.test.ts` verifies shared data rendering, existing modal media behavior, preservation of historical totals and a new zero-stat active cohort. Import fixtures are synthetic; tests never contact a hosted project. Actual local source/media/SQL/browser acceptance is recorded in docs/rose-city-roster-2027-implementation.md and outer review-notes/roster-2027/implemented.
+
+
+## Cinematic Schedule and editable league logo
+
+`npx vitest run tests/contracts/cinematic-schedule.test.ts tests/contracts/admin-schedule-match-editor.test.ts tests/database/schedule-league-logo.test.ts` covers club-timezone Next (including away and invalid/played fixtures), saved logos, empty/removed-media states,13-game first-page bounds, stable order and local tenant/media/reference safeguards. Browser acceptance additionally exercises all three actual upload/replace/remove → Save/reload/public paths and4→8→12→13 pagination. Tests use isolated local fixtures; no hosted tests. Full evidence and limitations: docs/rose-city-schedule-2027-implementation.md.

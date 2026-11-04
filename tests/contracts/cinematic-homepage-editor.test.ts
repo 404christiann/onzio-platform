@@ -26,6 +26,8 @@ describe("cinematic@2 homepage editor", () => {
   it("saves navigation and ticket visibility but never sends readonly presentation or preview URLs", () => {
     const content = defaultCinematicHomepageContent();
     content.ticket.visible = false; content.navigation.labels["stadium-group"] = "Robinson Stadium";
+    content.navigation.destinations.tryouts = "https://docs.google.com/forms/d/tryouts/viewform?edit_requested=true";
+    content.navigation.destinations.nationalAnthem = "https://forms.gle/tAezhCRdXH1Z1bMR7";
     content.raffle.url = "https://foreign.test/forged.png";
     content.presentation.heroVideoGuid = "readonly";
     const edited = reduceHomepageEditor(state(), { type: "revamp-changed", content });
@@ -33,6 +35,8 @@ describe("cinematic@2 homepage editor", () => {
     const request = buildHomepageSaveRequest(edited, renderer, SAVE_OPERATION);
     expect(request.sections.revamp?.ticket.visible).toBe(false);
     expect(request.sections.revamp?.navigation.labels["stadium-group"]).toBe("Robinson Stadium");
+    expect(request.sections.revamp?.navigation.destinations.tryouts).toBe(content.navigation.destinations.tryouts);
+    expect(request.sections.revamp?.navigation.destinations.nationalAnthem).toBe(content.navigation.destinations.nationalAnthem);
     expect(request.sections.revamp).not.toHaveProperty("presentation");
     expect(request.sections.revamp?.raffle).not.toHaveProperty("url");
     expect(cinematicHomepageSaveSchema.safeParse({ ...request.sections.revamp, presentation: content.presentation }).success).toBe(false);
@@ -40,10 +44,24 @@ describe("cinematic@2 homepage editor", () => {
   it("rejects unknown navigation IDs, external ticket destinations and repeated ticket row IDs", () => {
     const input = cinematicHomepageSaveContent(defaultCinematicHomepageContent());
     expect(cinematicHomepageSaveSchema.safeParse({ ...input, navigation: { labels: { injected: "Injected" } } }).success).toBe(false);
+    expect(cinematicHomepageSaveSchema.safeParse({ ...input, navigation: { labels: {}, destinations: { tryouts: "javascript:alert(1)", mediaCredentials: "" } } }).success).toBe(false);
+    expect(cinematicHomepageSaveSchema.safeParse({ ...input, navigation: { labels: {}, destinations: { tryouts: "https://user:password@example.com/", mediaCredentials: "" } } }).success).toBe(false);
+    expect(cinematicHomepageSaveSchema.safeParse({ ...input, navigation: { labels: {}, destinations: { ...input.navigation.destinations, nationalAnthem: "javascript:alert(1)" } } }).success).toBe(false);
     expect(cinematicHomepageSaveSchema.safeParse({ ...input, match: { ...input.match, buttonHref: "https://foreign.test" } }).success).toBe(false);
     expect(cinematicHomepageSaveSchema.safeParse({ ...input, match: { ...input.match, buttonHref: "//foreign.test/tickets" } }).success).toBe(false);
     const row = { id: "duplicate", label: "Seat", price: "$5", description: "", note: "", accent: "none" };
     expect(cinematicHomepageSaveSchema.safeParse({ ...input, prices: { ...input.prices, rows: [row, row] } }).success).toBe(false);
+  });
+  it("loads older navigation records with empty form destinations", () => {
+    const input = cinematicHomepageSaveContent(defaultCinematicHomepageContent());
+    const parsed = cinematicHomepageSaveSchema.parse({ ...input, navigation: { labels: { home: "Club home" } } });
+    expect(parsed.navigation.destinations).toEqual({ tryouts: "", mediaCredentials: "", nationalAnthem: "" });
+    const twoForms = cinematicHomepageSaveSchema.parse({ ...input, navigation: { labels: {}, destinations: { tryouts: "https://example.com/tryouts", mediaCredentials: "https://example.com/media" } } });
+    expect(twoForms.navigation.destinations).toEqual({ tryouts: "https://example.com/tryouts", mediaCredentials: "https://example.com/media", nationalAnthem: "" });
+    const older = defaultCinematicHomepageContent();
+    older.navigation = { labels: { home: "Club home" } } as unknown as typeof older.navigation;
+    const snapshot = hydrateHomepageSnapshot({ revision: "1", designRevision: "d", content: { ...homepageDraft(), revamp: older }, media: [] });
+    expect(snapshot.content.revamp?.navigation.destinations).toEqual({ tryouts: "", mediaCredentials: "", nationalAnthem: "" });
   });
   it("clones artwork edits and blocks save until replacement media is ready", () => {
     const initial = state(); const content = structuredClone(initial.draft.revamp!);

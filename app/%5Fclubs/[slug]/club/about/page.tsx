@@ -1,4 +1,5 @@
 import AboutClubPageClient from "@/components/AboutClubPageClient";
+import CinematicAbout from "@/components/cinematic/CinematicAbout";
 import ClubhouseAboutPage from "@/components/ClubhouseAboutPage";
 import EditorialAboutPage from "@/components/editorial/EditorialAboutPage";
 import { EMPTY_ABOUT_PAGE_CONTENT } from "@/lib/about-content";
@@ -17,6 +18,9 @@ export default async function TenantAboutPage({
     console.error("TenantAboutPage:", error);
     return { about: EMPTY_ABOUT_PAGE_CONTENT };
   });
+  if (club.presentationTemplateKey === "cinematic@2") {
+    return <CinematicAbout content={content.about} />;
+  }
   if (club.presentationTemplateKey === "editorial@1") {
     return <EditorialAboutPage content={content.about} />;
   }

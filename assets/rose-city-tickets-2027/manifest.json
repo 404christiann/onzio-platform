@@ -1,0 +1,69 @@
+{
+  "localOnly": true,
+  "reference": "references/tickets-2027/reference.jpg",
+  "assets": {
+    "banner": {
+      "inputPath": "assets/rose-city-tickets-2027/inputs/banner.png",
+      "sourcePath": "assets/originals/tickets/Rose City FC Tickets Banner 2027.jpg",
+      "sourceSha256": "7a28e5710950a524c577e8b8dfed690aaeab6aeef80cdc2ecac933af66c00170",
+      "sha256": "f7a77be9c86e87ada81b9e548ff8ed76abb8d0698c9b305103d1c3a2489f295a",
+      "width": 1730,
+      "height": 825,
+      "processing": "Lossless PNG preparation; original dimensions preserved"
+    },
+    "seat": {
+      "inputPath": "assets/rose-city-tickets-2027/inputs/seat.png",
+      "sourcePath": "assets/originals/tickets/Seat graphic.png",
+      "sourceSha256": "463734327ecb893a9c33ada4a15e45279dd2fff72ece6a29b0194fefca5b6dd7",
+      "sha256": "aa9b7ff3adf42e8671c5a14f8541b677842bafb7084d37e8daaecd016fe143c8",
+      "width": 931,
+      "height": 1060,
+      "processing": "Lossless PNG preparation; original dimensions preserved"
+    },
+    "card": {
+      "inputPath": "assets/rose-city-tickets-2027/inputs/card.png",
+      "sourcePath": "assets/originals/tickets/credit card graphic.png",
+      "sourceSha256": "ebb58711bdef09e8859d8aac86eda384e6cb9c3ec1dc96bf1bdbdf9a5f0f3046",
+      "sha256": "8186bf202fd568ea634375a51beeb3902d619f56204ce6dcff78050ba42c9749",
+      "width": 477,
+      "height": 390,
+      "processing": "Lossless PNG preparation; original dimensions preserved"
+    },
+    "raffle": {
+      "inputPath": "assets/rose-city-tickets-2027/inputs/raffle.png",
+      "sourcePath": "assets/originals/tickets/Raffle Ticket graphic.png",
+      "sourceSha256": "4b1ae5d73820cba5b2b8a7d77988423168d0ae111847a26493a911664cc56d95",
+      "sha256": "fd4d17680a46853326fea1c96efb85cda5a3a9eb821c0fe93f17dbe5397efd3c",
+      "width": 569,
+      "height": 270,
+      "processing": "Lossless PNG preparation; original dimensions preserved"
+    },
+    "bus": {
+      "inputPath": "assets/rose-city-tickets-2027/inputs/bus.png",
+      "sourcePath": "assets/originals/tickets/Foothill Transit Bus graphic.png",
+      "sourceSha256": "a726a8e36bb757d82232ea043c0107fe49cbdf1d53fa829646910d5d5d79049d",
+      "sha256": "1af70e9fd4a68946075691f331ac5485397c2941a3f6ff91ccc23ed0b283ddfa",
+      "width": 1339,
+      "height": 430,
+      "processing": "Lossless PNG preparation; original dimensions preserved"
+    },
+    "map": {
+      "inputPath": "assets/rose-city-tickets-2027/inputs/map.png",
+      "sourcePath": "assets/originals/tickets/Rose City FC Bus Route Zoom Map graphic.png",
+      "sourceSha256": "ebf2c31a6b3c852c22300b1dc91f6ea796618029e440daecc70621d2e6b45524",
+      "sha256": "d261039b64d7cfc41edcc055121615a42f02c3cdf92847f16e6dd3f5cbdadadf",
+      "width": 2380,
+      "height": 1216,
+      "processing": "Lossless PNG preparation; original dimensions preserved"
+    },
+    "partner": {
+      "inputPath": "assets/rose-city-tickets-2027/inputs/partner.png",
+      "sourcePath": "assets/originals/Chick-fil-A_Pasadena_Logo_Red_png.png",
+      "sourceSha256": "a483c755c8e2b0133856a2015e9d19def11021b4872918c5ab0fcf6ac3965c6e",
+      "sha256": "9a56d557cc0999051fa24ea878afbf58b741867212445187ab017d450315e118",
+      "width": 805,
+      "height": 181,
+      "processing": "Exact source rectangle, excluding empty canvas"
+    }
+  }
+}

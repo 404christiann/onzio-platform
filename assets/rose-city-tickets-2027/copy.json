@@ -1,0 +1,66 @@
+{
+  "title": "Single Match Tickets",
+  "subtitle": "Experience Rose City FC live at Robinson Stadium",
+  "perksHeading": "Perks",
+  "perkLabels": [
+    "Reserve Seat",
+    "Pay Later",
+    "Automatically entered"
+  ],
+  "includesHeading": "Ticket Includes",
+  "benefits": [
+    {
+      "title": "Raffle Ticket",
+      "detail": "Chance to win cool prizes"
+    },
+    {
+      "title": "Enjoy 10% off Niky’s Sports",
+      "detail": "Pasadena location only"
+    },
+    {
+      "title": "Enjoy 10% off Tepito Coffee",
+      "detail": "E Colorado Blvd location only"
+    }
+  ],
+  "benefitsNote": "Must present physical game ticket",
+  "transitHeading": "Bus to the Match",
+  "transitSubtitle": "Watch Rose City FC live and save on gas",
+  "directionsHeading": "Directions By Foothill Transit",
+  "directionsBody": "Watching Rose City FC games at Robinson Stadium is easy to reach by Foothill Transit.\nTake Line 187 to Colorado Blvd and Sierra Bonita Ave E\nLine 187 to Colorado Blvd and Sierra Bonita Ave E drops you off in front of Pasadena City College.\nThe stadium is about a 5-minute walk from the bus stop.",
+  "parkingHeading": "Parking Lot No 5",
+  "parkingBody": "You may purchase daily parking permits for $2.00 a day from the yellow parking permit machines located on every level of the parking lots throughout the main and CEC campuses. All daily parking permit machines accept $1 bills.",
+  "parkingNote": "*Parking Lot No 5 is on S Bonnie Ave",
+  "purchaseUrl": "",
+  "missingPurchaseLabel": "Ticket link coming soon",
+  "bannerHeightFraction": 0.9115151515151515,
+  "artwork": {
+    "banner": {
+      "assetId": null,
+      "alt": "Rose City FC ticket artwork with Robinson Stadium map"
+    },
+    "seat": {
+      "assetId": null,
+      "alt": "Seat"
+    },
+    "card": {
+      "assetId": null,
+      "alt": "Credit card"
+    },
+    "raffle": {
+      "assetId": null,
+      "alt": "Raffle ticket"
+    },
+    "bus": {
+      "assetId": null,
+      "alt": "Foothill Transit bus"
+    },
+    "map": {
+      "assetId": null,
+      "alt": "Line 187 bus stop and walking route to Robinson Stadium and Parking Lot No. 5"
+    },
+    "partner": {
+      "assetId": null,
+      "alt": "Chick-fil-A · E. Colorado Blvd / Lake & Boylston"
+    }
+  }
+}

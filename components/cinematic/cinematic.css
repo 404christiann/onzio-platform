@@ -129,3 +129,9 @@
 .cinematic-site .club-header{position:sticky;top:0;z-index:10;background:white;color:var(--black);box-shadow:0 1px 0 #1414140d}
 .cinematic-site .nav-item,.cinematic-site .dropdown a,.cinematic-site .mobile-drawer nav a{font-family:var(--body)}
 .cinematic-site .header-partner[data-transparent-mark]{padding:0;border:0;background:transparent}
+/* Landscape iPhone cutouts must not cover the menu or dialog controls. */
+.cinematic-site{-webkit-text-size-adjust:100%;--phone-gutter:20px}
+@media(max-width:1024px){
+  .cinematic-site .club-header,.cinematic-site .mobile-drawer .phone-menu-head,.cinematic-site .phone-content{padding-left:max(var(--phone-gutter),env(safe-area-inset-left,0px));padding-right:max(var(--phone-gutter),env(safe-area-inset-right,0px))}
+}
+@media(max-width:360px){.cinematic-site{--phone-gutter:16px}}

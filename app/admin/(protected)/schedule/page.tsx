@@ -21,6 +21,7 @@ import SeasonSelect from "@/components/admin/SeasonSelect";
 import { ADMIN_INPUT_CLASS } from "@/components/admin/form-styles";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import OpponentCrest from "@/components/OpponentCrest";
+import LeagueLogoUpload from "@/components/admin/schedule/LeagueLogoUpload";
 import { useClubContext } from "@/components/ClubContextProvider";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
@@ -51,6 +52,7 @@ type Match = {
   opponent_short_name: string | null;
   opponent_logo_url: string | null;
   competition: string | null;
+  league_logo_url: string | null;
   sponsor_name: string | null;
   sponsor_logo_url: string | null;
   sponsor_link: string | null;
@@ -102,7 +104,7 @@ function ScheduleListSkeleton() {
 
 function emptyForm(seasonId = ""): FormState {
   return {
-    date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "",
+    date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "", league_logo_url: null,
     sponsor_name: null, sponsor_logo_url: null, sponsor_link: null,
     home: true, venue: "", address: "", city: "", state: "",
     rose_city_score: null, opponent_score: null, season_id: seasonId,
@@ -213,7 +215,7 @@ async function deleteUnusedMatchImageUrls({
 }: {
   bucket: string;
   urls: Array<string | null | undefined>;
-  column: "opponent_logo_url" | "sponsor_logo_url";
+  column: "opponent_logo_url" | "sponsor_logo_url" | "league_logo_url";
   allowedPrefixes: string[];
 }) {
   const supabase = createClient();
@@ -287,7 +289,7 @@ export default function SchedulePage() {
       const supabase = createClient();
       const { data, error: loadError } = await supabase
         .from("matches")
-        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, competition, sponsor_name, sponsor_logo_url, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, season_id")
+        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, opponent_logo_asset_id, competition, league_logo_url, league_logo_asset_id, sponsor_name, sponsor_logo_url, sponsor_logo_asset_id, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, season_id")
         .order("date")
         .order("time");
       if (loadError) setError(loadError.message);
@@ -390,6 +392,7 @@ export default function SchedulePage() {
       date: m.date, time: m.time, opponent: m.opponent,
       opponent_short_name: m.opponent_short_name,
       opponent_logo_url: m.opponent_logo_url, competition: m.competition ?? "",
+      league_logo_url: m.league_logo_url ?? null,
       sponsor_name: m.sponsor_name, sponsor_logo_url: m.sponsor_logo_url,
       sponsor_link: m.sponsor_link,
       home: m.home, venue: m.venue, address: m.address ?? "",
@@ -475,6 +478,12 @@ export default function SchedulePage() {
       ],
       column: "sponsor_logo_url",
       allowedPrefixes: ["match-sponsors/"],
+    });
+    await deleteUnusedMatchImageUrls({
+      bucket: "league-logos",
+      urls: [originalMatch?.league_logo_url !== editForm.league_logo_url ? originalMatch?.league_logo_url : null],
+      column: "league_logo_url",
+      allowedPrefixes: ["match-leagues/"],
     });
     setEditingId(null);
     await load();
@@ -1013,6 +1022,29 @@ function MatchForm({
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>
+          {club.presentationTemplateKey === "cinematic@2" && (
+            <Field id="match-league-logo" label="League logo" optional className="sm:col-span-2">
+              <LeagueLogoUpload
+                inputId="match-league-logo"
+                logoUrl={form.league_logo_url}
+                leagueName={form.competition ?? ""}
+                onUploaded={async (url) => {
+                  if (cleanupDraftUploads) await deleteUnusedMatchImageUrls({
+                    bucket: "league-logos", urls: [form.league_logo_url],
+                    column: "league_logo_url", allowedPrefixes: ["match-leagues/"],
+                  });
+                  onChange({ ...form, league_logo_url: url });
+                }}
+                onRemove={async () => {
+                  if (cleanupDraftUploads) await deleteUnusedMatchImageUrls({
+                    bucket: "league-logos", urls: [form.league_logo_url],
+                    column: "league_logo_url", allowedPrefixes: ["match-leagues/"],
+                  });
+                  onChange({ ...form, league_logo_url: null });
+                }}
+              />
+            </Field>
+          )}
         </div>
       </MatchFormSection>
 

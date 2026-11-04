@@ -1,0 +1,205 @@
+{
+  "localOnly": true,
+  "assets": [
+    {
+      "key": "patch1",
+      "inputWidth": 2703,
+      "inputHeight": 2704,
+      "deliveredWidth": 2703,
+      "deliveredHeight": 2704,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "patch2",
+      "inputWidth": 2703,
+      "inputHeight": 2704,
+      "deliveredWidth": 2703,
+      "deliveredHeight": 2704,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "patch3",
+      "inputWidth": 2703,
+      "inputHeight": 2704,
+      "deliveredWidth": 2703,
+      "deliveredHeight": 2704,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "patch4",
+      "inputWidth": 2703,
+      "inputHeight": 2704,
+      "deliveredWidth": 2703,
+      "deliveredHeight": 2704,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "patch5",
+      "inputWidth": 2703,
+      "inputHeight": 2704,
+      "deliveredWidth": 2703,
+      "deliveredHeight": 2704,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "patch6",
+      "inputWidth": 2703,
+      "inputHeight": 2704,
+      "deliveredWidth": 2703,
+      "deliveredHeight": 2704,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "icon1",
+      "inputWidth": 173,
+      "inputHeight": 183,
+      "deliveredWidth": 173,
+      "deliveredHeight": 183,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "icon2",
+      "inputWidth": 155,
+      "inputHeight": 183,
+      "deliveredWidth": 155,
+      "deliveredHeight": 183,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "icon3",
+      "inputWidth": 335,
+      "inputHeight": 181,
+      "deliveredWidth": 335,
+      "deliveredHeight": 181,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "icon4",
+      "inputWidth": 280,
+      "inputHeight": 181,
+      "deliveredWidth": 280,
+      "deliveredHeight": 181,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "icon5",
+      "inputWidth": 154,
+      "inputHeight": 182,
+      "deliveredWidth": 154,
+      "deliveredHeight": 182,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "map",
+      "inputWidth": 991,
+      "inputHeight": 1281,
+      "deliveredWidth": 991,
+      "deliveredHeight": 1281,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "color1",
+      "inputWidth": 1200,
+      "inputHeight": 821,
+      "deliveredWidth": 1200,
+      "deliveredHeight": 821,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "color2",
+      "inputWidth": 1200,
+      "inputHeight": 821,
+      "deliveredWidth": 1200,
+      "deliveredHeight": 821,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "color3",
+      "inputWidth": 1200,
+      "inputHeight": 821,
+      "deliveredWidth": 1200,
+      "deliveredHeight": 821,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "color4",
+      "inputWidth": 1200,
+      "inputHeight": 821,
+      "deliveredWidth": 1200,
+      "deliveredHeight": 821,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "color5",
+      "inputWidth": 1200,
+      "inputHeight": 821,
+      "deliveredWidth": 1200,
+      "deliveredHeight": 821,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "color6",
+      "inputWidth": 1200,
+      "inputHeight": 821,
+      "deliveredWidth": 1200,
+      "deliveredHeight": 821,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "icon6",
+      "inputWidth": 127,
+      "inputHeight": 163,
+      "deliveredWidth": 127,
+      "deliveredHeight": 163,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    },
+    {
+      "key": "diagram",
+      "inputWidth": 2100,
+      "inputHeight": 1590,
+      "deliveredWidth": 2100,
+      "deliveredHeight": 1590,
+      "checksumVerified": true,
+      "directUrl": true,
+      "published": true
+    }
+  ]
+}

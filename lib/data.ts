@@ -63,6 +63,7 @@ export type Fixture = {
   opponentShortName?: string | null;
   opponentLogoUrl?: string | null;
   competition?: string | null;
+  leagueLogoUrl?: string | null;
   sponsorName?: string | null;
   sponsorLogoUrl?: string | null;
   sponsorLink?: string | null;

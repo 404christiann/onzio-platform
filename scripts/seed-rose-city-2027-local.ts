@@ -48,7 +48,7 @@ for (const [key, surface] of Object.entries(used)) {
   const bytes = await readFile(resolve(source.inputPath));
   if (createHash('sha256').update(bytes).digest('hex') !== source.sha256) throw new Error(`Unreviewed input: ${key}`);
   const validated = await validateMediaUpload({ bytes, metadata: { fileName: basename(source.inputPath), mimeType: source.mimeType, size: bytes.length, kind: source.kind } });
-  const uploadId = id(`asset:${key}`);
+  const uploadId = id(key === "episodePoster" ? `asset:${key}:${source.sha256}` : `asset:${key}`);
   const stagingPath = buildStoragePath({ clubId, surface, assetId: uploadId, extension: validated.extension });
   const { error } = await client.storage.from('onzio-upload-staging').upload(stagingPath, bytes, { contentType: validated.mimeType, upsert: true });
   if (error) throw error;
@@ -82,6 +82,7 @@ content.prices = { heading: 'TICKET PRICES', rows: [
 ], footnote: '$5 each tennis ball' };
 content.championship = { league: 'UPSL SOCAL NORTH CONFERENCE', year: '2024', title: 'CHAMPIONS', body: 'Rose City FC captured the 2024 UPSL SoCal North\nConference Championship, cementing our place as Pasadena’s\npremier club. The journey continues - and the best is still ahead.', trophy: art('trophies',"Rose City FC's conference and national championship trophies, with green club jersey") };
 content.navigation.labels = { 'stadium-group': 'ROBINSON STADIUM', stadium: 'ROBINSON STADIUM' };
+content.navigation.destinations = { tryouts: 'https://docs.google.com/forms/d/1qs_nBHqzLAISgW-B-f2i5Ep5leScHDTHODKf-Bbir0M/viewform?edit_requested=true', mediaCredentials: 'https://forms.gle/jG5yF7kjhC93MLsA6', nationalAnthem: 'https://forms.gle/tAezhCRdXH1Z1bMR7' };
 content.sponsors = { heading: 'POWERED BY OUR PARTNERS' };
 content.presentation = { headerPartner: art('foothillHeader','Foothill Transit'), heroPoster: art('heroPoster','Rose City players preparing their boots on the team bench'), seatsBackground: art('seats',''), episodePoster: art('episodePoster','Rose City players celebrating with their championship trophy'), heroVideoGuid: 'd17c6dc6-ab9a-4b22-a7dd-1e55b4f1ad91', heroVideoLibraryId: '723074', sponsorTreatments: { [id('sponsor:sponsorChronic')]: 'dark-lettering', [id('sponsor:sponsorPackshot')]: 'invert' } };
 await upsert('homepage_revamp_content', { club_id: clubId, ...cinematicHomepageStorageRecord(content) }, 'club_id');

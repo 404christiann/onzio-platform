@@ -20,7 +20,9 @@ export function hydrateHomepageSnapshot<T extends HomepageSnapshot>(snapshot: T)
   };
   const revamp = snapshot.content.revamp;
   const hydratedRevamp: CinematicHomepageContent | undefined = revamp ? {
-    ...revamp, raffle: hydrateArt(revamp.raffle), ticket: { ...hydrateArt(revamp.ticket), visible: revamp.ticket.visible },
+    ...revamp,
+    navigation: { ...revamp.navigation, destinations: { tryouts: revamp.navigation.destinations?.tryouts ?? "", mediaCredentials: revamp.navigation.destinations?.mediaCredentials ?? "", nationalAnthem: revamp.navigation.destinations?.nationalAnthem ?? "" } },
+    raffle: hydrateArt(revamp.raffle), ticket: { ...hydrateArt(revamp.ticket), visible: revamp.ticket.visible },
     championship: { ...revamp.championship, trophy: hydrateArt(revamp.championship.trophy) },
     presentation: { ...revamp.presentation, headerPartner: hydrateArt(revamp.presentation.headerPartner), heroPoster: hydrateArt(revamp.presentation.heroPoster), seatsBackground: hydrateArt(revamp.presentation.seatsBackground), episodePoster: hydrateArt(revamp.presentation.episodePoster) },
   } : undefined;

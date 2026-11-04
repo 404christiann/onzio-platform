@@ -14,6 +14,7 @@ import { useClubContext } from "@/components/ClubContextProvider";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
 import AcademyShopPage from "@/components/AcademyShopPage";
 import EditorialShopPage from "@/components/editorial/EditorialShopPage";
+import CinematicShopPage from "@/components/cinematic/CinematicShopPage";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,6 +22,8 @@ export default function ShopPage() {
   const club = useClubContext();
   const [selectedKitVariant, setSelectedKitVariant] =
     useState<ShopKitVariant>("home");
+
+  if (club.presentationTemplateKey === "cinematic@2") return <CinematicShopPage />;
 
   if (club.presentationTemplateKey === "clubhouse@1") return <ClubhouseShopPage />;
   // academy@1 uses the mockup's compact split layout (Front/Back pill

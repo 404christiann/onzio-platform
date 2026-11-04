@@ -1,0 +1,58 @@
+/* Approved schedule preview, scoped so navigating cannot restyle other pages. */
+.cinematic-site .cinematic-schedule{position:relative;isolation:isolate}
+.cinematic-site .cinematic-schedule::before{content:"";position:absolute;inset:0 0 auto;height:18px;background:linear-gradient(#00000020,#0000000a 7px,transparent);pointer-events:none}
+.cinematic-site .cinematic-schedule .schedule-page{--schedule-red:#ff0018;color:#0b0b0b;padding:66px 5.4% 70px;max-width:1600px;margin:auto}
+.cinematic-site .cinematic-schedule .schedule-heading{text-align:right;margin:0 0 57px}
+.cinematic-site .cinematic-schedule .schedule-heading h1{font:900 clamp(36px,3.9vw,62px)/1.1 var(--display);letter-spacing:-.045em;text-transform:uppercase}
+.cinematic-site .cinematic-schedule .schedule-heading p{font:400 20px/1.4 var(--body);text-transform:uppercase;color:var(--schedule-red);margin-top:4px}
+.cinematic-site .cinematic-schedule .schedule-heading>div{height:3px;width:54px;background:var(--schedule-red);margin:24px 0 0 auto}
+.cinematic-site .cinematic-schedule .schedule-columns,.cinematic-site .cinematic-schedule .fixture-card{display:grid;grid-template-columns:155px minmax(0,1fr) 165px 72px 122px 107px;align-items:center;gap:14px;padding-left:24px;padding-right:18px}
+.cinematic-site .cinematic-schedule .schedule-columns{font:400 14px/1.3 var(--body);text-transform:uppercase;color:#797979;margin-bottom:15px}
+.cinematic-site .cinematic-schedule .schedule-columns>span:nth-child(n+3){text-align:center}
+.cinematic-site .cinematic-schedule .fixture-list{list-style:none;margin:0;padding:0}
+.cinematic-site .cinematic-schedule .fixture-item{position:relative;margin-bottom:32px}
+.cinematic-site .cinematic-schedule .fixture-number{position:absolute;left:-34px;top:53px;font:900 23px/1 var(--display);color:#898989}
+.cinematic-site .cinematic-schedule .fixture-card{min-height:138px;box-shadow:0 2px 17px #0003;background:#fff}
+.cinematic-site .cinematic-schedule .fixture-card[data-next=true]{background:#0c0c0c;color:#fff}
+.cinematic-site .cinematic-schedule .fixture-date{font:400 20px/1.3 var(--body);color:#858585}
+.cinematic-site .cinematic-schedule .fixture-date time{white-space:nowrap}
+.cinematic-site .cinematic-schedule .next-badge{display:block;width:max-content;background:var(--schedule-red);color:#fff;font:400 14px/1 var(--body);text-transform:uppercase;padding:4px 7px;margin-top:8px}
+.cinematic-site .cinematic-schedule .fixture-opponent{display:flex;align-items:center;gap:19px;min-width:0}
+.cinematic-site .cinematic-schedule .fixture-opponent>img{width:62px;height:68px;object-fit:contain;flex-shrink:0}
+.cinematic-site .cinematic-schedule .fixture-opponent>div{min-width:0}
+.cinematic-site .cinematic-schedule .opponent-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.cinematic-site .cinematic-schedule .opponent-title h2{font:900 clamp(24px,2.6vw,39px)/1.15 var(--display);letter-spacing:-.04em;text-transform:uppercase;overflow-wrap:anywhere}
+.cinematic-site .cinematic-schedule .home-away{color:#777;border:1px solid #888;font:400 15px/1.15 var(--body);padding:0 3px;text-transform:uppercase;white-space:nowrap}
+.cinematic-site .cinematic-schedule .fixture-opponent p{color:#747474;font:400 14px/1.4 var(--body);margin-top:6px}
+.cinematic-site .cinematic-schedule .fixture-kickoff{font:400 20px/1.3 var(--body);text-align:center;color:#858585;white-space:nowrap}
+.cinematic-site .cinematic-schedule .mobile-label{display:none}
+.cinematic-site .cinematic-schedule .fixture-league img{width:38px;height:47px;object-fit:contain;margin:auto}
+.cinematic-site .cinematic-schedule .fixture-result{display:flex;align-items:center;justify-content:center;gap:9px;font:900 35px/1 var(--display);letter-spacing:-.055em;white-space:nowrap}
+.cinematic-site .cinematic-schedule .fixture-result strong{font:inherit}
+.cinematic-site .cinematic-schedule .score-separator{display:inline-block;margin-inline:.1em}
+.cinematic-site .cinematic-schedule .result-outcome[data-outcome=W]{color:var(--schedule-red)}
+.cinematic-site .cinematic-schedule .fixture-directions{display:flex;align-items:center;gap:8px;justify-content:center;font:400 15px/1.3 var(--body);color:#777;min-height:44px}
+.cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-date,.cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-kickoff,.cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-opponent p,.cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-directions{color:#fff}
+.cinematic-site .cinematic-schedule .fixture-card[data-next=true] .home-away{color:#ddd;border-color:#bbb}
+.cinematic-site .cinematic-schedule .match-sponsor{display:flex;justify-content:center;align-items:center;gap:12px;min-height:59px;padding-top:18px}
+.cinematic-site .cinematic-schedule .match-sponsor span{font:400 11px/1.2 var(--body);text-transform:uppercase;color:#737373}
+.cinematic-site .cinematic-schedule .match-sponsor img{width:172px;height:35px;object-fit:contain}
+.cinematic-site .cinematic-schedule .schedule-disclaimer{text-align:center;text-transform:uppercase;color:#777;font:400 18px/1.5 var(--body);padding:30px 10px 20px}
+.cinematic-site .cinematic-schedule .schedule-pagination{text-align:center;margin:28px 0 4px}
+.cinematic-site .cinematic-schedule .schedule-pagination .load-more-matches{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:13px 30px;border:1px solid #bdbdbd;border-radius:999px;background:#fff;color:#141414;font:400 16px/1.3 var(--body)}
+.cinematic-site .cinematic-schedule .schedule-pagination p{font:400 13px/1.5 var(--body);color:#686868;margin-top:12px}
+.cinematic-site .cinematic-schedule .fixture-card:focus-visible{outline:2px solid var(--schedule-red);outline-offset:5px}
+@media(max-width:900px){.cinematic-site .cinematic-schedule .fixture-number{display:none}.cinematic-site .cinematic-schedule .schedule-pagination{margin-top:24px}.cinematic-site .cinematic-schedule .schedule-pagination .load-more-matches{width:min(100%,280px)}}
+@media(max-width:1200px) and (min-width:901px){.cinematic-site .cinematic-schedule .schedule-columns,.cinematic-site .cinematic-schedule .fixture-card{grid-template-columns:125px minmax(0,1fr) 130px 47px 97px 88px;gap:10px;padding:0 18px}.cinematic-site .cinematic-schedule .fixture-date,.cinematic-site .cinematic-schedule .fixture-kickoff{font-size:17px}.cinematic-site .cinematic-schedule .fixture-opponent{gap:12px}.cinematic-site .cinematic-schedule .fixture-opponent>img{width:46px;height:54px}.cinematic-site .cinematic-schedule .opponent-title h2{font-size:27px}.cinematic-site .cinematic-schedule .fixture-result{font-size:29px}.cinematic-site .cinematic-schedule .fixture-directions{font-size:13px}.cinematic-site .cinematic-schedule .home-away{font-size:12px}}
+@media(max-width:900px){.cinematic-site .cinematic-schedule .schedule-page{padding:38px max(22px,env(safe-area-inset-left,0px)) 40px}.cinematic-site .cinematic-schedule .schedule-heading{margin-bottom:34px}.cinematic-site .cinematic-schedule .schedule-heading h1{font-size:clamp(36px,9.3vw,54px)}.cinematic-site .cinematic-schedule .schedule-heading p{font-size:16px}.cinematic-site .cinematic-schedule .schedule-heading>div{margin-top:20px;width:46px}.cinematic-site .cinematic-schedule .schedule-columns{display:none}.cinematic-site .cinematic-schedule .fixture-number{display:none}.cinematic-site .cinematic-schedule .fixture-card{grid-template-columns:minmax(0,1fr) auto;gap:18px 16px;padding:22px 20px;min-height:0}.cinematic-site .cinematic-schedule .fixture-date{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:17px}.cinematic-site .cinematic-schedule .next-badge{margin:0}.cinematic-site .cinematic-schedule .fixture-opponent{grid-column:1/-1;gap:15px}.cinematic-site .cinematic-schedule .fixture-opponent>img{width:48px;height:56px}.cinematic-site .cinematic-schedule .opponent-title h2{font-size:clamp(24px,6.5vw,36px)}.cinematic-site .cinematic-schedule .home-away{font-size:12px}.cinematic-site .cinematic-schedule .fixture-opponent p{font-size:13px;line-height:1.45}.cinematic-site .cinematic-schedule .fixture-kickoff{text-align:left;font-size:17px;grid-row:3;grid-column:1}.cinematic-site .cinematic-schedule .mobile-label{display:block;font-size:11px;text-transform:uppercase;margin-bottom:4px;color:#777}.cinematic-site .cinematic-schedule .fixture-league{grid-row:3;grid-column:2}.cinematic-site .cinematic-schedule .fixture-league img{height:35px;width:29px}.cinematic-site .cinematic-schedule .fixture-result{justify-content:flex-start;font-size:30px;grid-row:4;grid-column:1}.cinematic-site .cinematic-schedule .fixture-directions{grid-row:4;grid-column:2;justify-content:flex-end;font-size:14px}.cinematic-site .cinematic-schedule .fixture-item{margin-bottom:25px}.cinematic-site .cinematic-schedule .match-sponsor{gap:9px;padding-top:17px;min-height:48px}.cinematic-site .cinematic-schedule .match-sponsor span{font-size:10px}.cinematic-site .cinematic-schedule .match-sponsor img{width:145px;height:29px}.cinematic-site .cinematic-schedule .schedule-disclaimer{font-size:13px;padding:20px 10px 0}}
+
+.cinematic-site .cinematic-schedule .schedule-opponent-crest{--opponent-crest-size:62px}
+.cinematic-site .cinematic-schedule .fixture-league{text-align:center}
+.cinematic-site .cinematic-schedule .league-name{font:400 12px/1.4 var(--body);overflow-wrap:anywhere}
+.cinematic-site .cinematic-schedule .schedule-empty{text-align:center;padding:50px 20px 100px}
+.cinematic-site .cinematic-schedule .schedule-empty h2{font:900 28px/1.3 var(--display)}
+.cinematic-site .cinematic-schedule .schedule-empty p{margin-top:14px;color:#686868}
+.cinematic-site .cinematic-schedule .schedule-state{padding:80px 24px;text-align:center;min-height:55vh}
+.cinematic-site .cinematic-schedule .schedule-state button{background:white;border:1px solid #bdbdbd;padding:12px 24px;border-radius:999px;margin-top:18px;min-height:44px}
+@media(max-width:1200px) and (min-width:901px){.cinematic-site .cinematic-schedule .schedule-opponent-crest{--opponent-crest-size:46px}}
+@media(max-width:900px){.cinematic-site .cinematic-schedule .schedule-opponent-crest{--opponent-crest-size:48px}}

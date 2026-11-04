@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import CinematicDestination from "@/components/cinematic/CinematicDestination";
+import CinematicContact from "@/components/cinematic/CinematicContact";
 import AcademyContactPage from "@/components/AcademyContactPage";
 import EditorialContactPage from "@/components/editorial/EditorialContactPage";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { fetchContactContent } from "@/lib/queries";
 import { createClient } from "@/lib/supabase-server";
+import { fetchCinematicContactContent } from "@/lib/cinematic-contact-query";
 
 export default async function TenantContactPage({
   params,
@@ -12,7 +14,10 @@ export default async function TenantContactPage({
   params: Promise<{ slug: string }>;
 }) {
   const club = await getClubContextBySlug((await params).slug);
-  if (club.presentationTemplateKey === "cinematic@2") return <CinematicDestination clubId={club.id} labelId="contact" />;
+  if (club.presentationTemplateKey === "cinematic@2") {
+    const content = await fetchCinematicContactContent(club.id, (await createClient()).schema("onzio"));
+    return content ? <CinematicContact content={content} /> : <CinematicDestination clubId={club.id} labelId="contact" />;
+  }
 
   if (club.presentationTemplateKey === "editorial@1") {
     const onzio = (await createClient()).schema("onzio");

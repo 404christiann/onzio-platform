@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cinematicShopContentSchema, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 
 export const shopSurfaceSchema = z.enum(["home", "shop"]);
 export const shopVariantSchema = z.enum(["home", "third", "away"]);
@@ -75,11 +76,12 @@ export const shopSaveRequestSchema = z.object({
     away: z.array(shopPhotoSchema).max(6).optional(),
   }).strict().optional(),
   purchase: shopPurchaseSchema.optional(),
+  presentation: cinematicShopContentSchema.optional(),
 }).strict().superRefine((request, context) => {
-  if (Object.keys(request.variants).length === 0 && !request.photoRows && !request.purchase) {
+  if (Object.keys(request.variants).length === 0 && !request.photoRows && !request.purchase && !request.presentation) {
     context.addIssue({ code: "custom", message: "No Shop changes to save." });
   }
-  if (request.surface === "home" && (request.photoRows || request.purchase || Object.keys(request.variants).some((variant) => variant !== "home"))) {
+  if (request.surface === "home" && (request.photoRows || request.purchase || request.presentation || Object.keys(request.variants).some((variant) => variant !== "home"))) {
     context.addIssue({ code: "custom", message: "Homepage shop feature accepts its home kit only." });
   }
 });
@@ -98,6 +100,7 @@ export type ShopSnapshot = {
   photos: Array<ShopPhoto & { kit_variant: ShopVariant }>;
   photoRows: Array<ShopPhoto & { kit_variant: ShopVariant }>;
   purchase: z.infer<typeof shopPurchaseSchema> | null;
-  media: Array<{ id: string; storage_bucket: string; storage_path: string }>;
+  presentation?: CinematicShopPresentation | null;
+  media: Array<{ id: string; storage_bucket: string; storage_path: string; width?: number; height?: number }>;
   operation?: { status: "not-committed" } | { status: "committed"; receipt: ShopSnapshot };
 };

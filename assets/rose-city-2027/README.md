@@ -54,3 +54,7 @@ Trusted source: workspace assets/originals/foothill-official.svg. Lettering path
 ## Foothill blue-lettering transparent variant
 
 Exact original SVG rasterized at8x, without geometry/fill edits, to public/images/cinematic/foothill-blue.png. Blue SVG/PNG and provenance remain in workspace assets/prepared; app provenance is foothill-blue.provenance.json. Blue is used by the restored white header and mobile dialog; white variant remains saved.
+
+## Safari review: higher-resolution official episode poster
+
+Episode input now uses the same approved YouTube video's maxresdefault.jpg1280x720 (original480x360 retained in the workspace). Exact source copied, no generated detail or resizing. Full source hash/provenance is in manifest.json. All30 inputs pass the existing validator. The local-only scoped update script publishes only this poster and preserves all other content; the seed's poster upload identity includes its checksum. Match originals remain1200x670 (photo1:1500x837); larger photographer exports and avoiding the extra preparation compression pass are the next quality work.

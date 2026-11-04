@@ -1,3 +1,74 @@
+## 2026-10-13 — Safari review and image-quality audit; hardware gate remains open
+
+Christian requested final iPhone/Safari review and an image-quality explanation,
+then a handoff to work on the next page in a new conversation. Accepted baseline
+is local commit2f70087 on codex/rose-city-homepage-2027. Review fixes below are
+uncommitted; preserve them. No new conversation has been created or next page
+chosen. Production launch remains explicitly held.
+
+Native Safari tested in Xcode Simulator iPhone17/iOS26.5 on the exact public
+phone bundle: native video visibly loops inline without controls, white menu
+opens, Club drill-in and Back/Close work, pointer opening has no black close
+outline, keyboard opening retains its necessary outline. Landscape rotation
+reproduced hamburger overlap with the cutout. Scoped cinematic CSS now uses
+max(gutter, env(safe-area-inset-left/right)) for header/dialog header/content,
+with20px default/16px narrow gutters, and100 percent WebKit text-size adjustment.
+Landscape header and Close now clear the cutout in native Safari screenshots.
+Tenant generateViewport adds cover and white theme ONLY for cinematic@2;
+actual Next DOM confirms the resulting meta and loaded higher-res poster.
+
+Hardware acceptance remains OPEN: a paired physical phone is available, but
+Mirroring is at its setup screen. Setup/privacy/auth settings were not changed.
+A user question requested the physical Safari checklist and which images are
+blurry; no answer had arrived at this record. Simulator native scroll/drag
+input did not move the page, so touch scrolling, address-bar collapse, landscape
+inner scrolling and VoiceOver are not claimed. Chrome viewport/source checks
+cover sticky/overflow behavior separately. Skill mobile-native explicitly says
+Test on hardware before calling it done. Do not relabel Simulator as physical.
+
+Image audit: six original match photos are1200x670; photo1 is1500x837. Delivered
+sizes match, so detail is already limited in the supplied originals. At1280 CSS
+pixels/DPR2,1200px images have47 percent of ideal pixel width. On390px/DPR3, the
+approved mobile1.2 crop has69 percent of ideal vertical detail. Preview assets
+are WebP92 then normalized again to WebP82. Avoidable extra compression is a
+contributor; larger photographer exports plus a single normalization pass are
+the proper next quality step. Do not synthesize missing detail or silently
+change approved cropping. Ticket original1800x791 is also limited at large
+Retina desktop sizes; raffle2264x3000 and player1500x2068 have more headroom on
+phones. Logo PNGs have adequate density. Hero is native1280x720 MP4; higher
+source/delivery work is separate and no Bunny configuration changed.
+
+Official same-episode maxres poster fetched/visually verified at1280x720 instead
+of480x360, SHA2560c280a7a9ccbfeba7151217719db1a0fe5d6fb0571a8d86fb059005b988be872,
+119139 bytes. Original low-res poster retained. Source input/provenance/manifest
+and normal validator updated; all30 pass. Only this poster was published through
+the real media pipeline on isolated local Supabase55321. CAS-protected row
+update verified every other content column unchanged. Script:
+scripts/update-rose-city-episode-poster-local.ts --execute-local. Seed uses the
+poster checksum in its upload identity to preserve immutable media versions.
+Actual app and hosted preview load1280x720. No hosted database write or global
+media-normalization change. Prepared source provenance remains outside app in
+workspace assets/additional-provenance.json; bundle/input/receipts are in repo.
+
+Protected testing Preview / READY: https://onzio-platform-r5fw865f3-404christianns-projects.vercel.app
+Deployment dpl_BoyYYLthzmxMg9hoHqYWqqMAJNom, protection unchanged. Fixed public
+content/temporary destinations,51 output files, zero functions/credentials;
+not full backend acceptance. Actual rebuilt app: http://rose-city.localhost:3198/.
+Final TypeScript, Next production build,202 files/1870 tests, bundle check/build,
+actual30-input validator and whitespace pass. Native/hosted captures and audit
+JSON: workspace review-notes/iphone-safari-review/. Production preservation:
+phone-testing/safari-review-preservation.json. No push/merge/production launch.
+
+Next-conversation handoff: use this isolated checkout and existing branch;
+read this section, AGENTS.md and docs/rose-city-2027-implementation.md. Preserve
+white sticky navbar, ALL CAPS/Avenir, compact red desktop dropdowns, white phone
+menu, transparent blue/white Foothill marks and the uncommitted review fixes.
+Do not use the dirty original Downloads checkout. Next page is Christian's
+choice; present an isolated responsive design before material new page changes.
+Keep the open physical-phone checklist and larger-photo-source request visible.
+Before launch: remaining content/copy review, temporary destinations, LEMON MILK
+evidence, complete app acceptance and separately authorized hosted rollout.
+
 ## 2026-10-13 — Restored white navbar, sticky desktop and mobile
 
 Christian rejected the floating transparent/docking direction and requested the

@@ -3,7 +3,7 @@
   "generatedAt": "2026-10-13T14:50:53.092Z",
   "purpose": "Portable reviewed inputs for an isolated local Supabase import through the normal media pipeline; not public asset URLs or a completed content import",
   "assetCount": 30,
-  "inputBytes": 4073375,
+  "inputBytes": 4177781,
   "slideshowSourceOrder": [
     3,
     1,
@@ -580,7 +580,7 @@
         "originalDimensions": null,
         "sourceUrlOrPath": "https://www.foothilltransit.org/themes/custom/fh2020/logo.svg",
         "sourceIds": [],
-        "approvedPreparation": "Official SVG rasterized to500×82 PNG; unchanged horizontal mountain/wave wordmark"
+        "approvedPreparation": "Official SVG rasterized to500\u00d782 PNG; unchanged horizontal mountain/wave wordmark"
       },
       "validation": {
         "decoded": true,
@@ -623,25 +623,25 @@
       "inputPath": "assets/rose-city-2027/inputs/episodePoster.jpg",
       "kind": "photo",
       "mimeType": "image/jpeg",
-      "bytes": 14733,
-      "sha256": "d7709897e82ca7a9ee42055e570bf22879b0a75d7fd28dd2412a6981b1c7a338",
-      "width": 480,
-      "height": 360,
+      "bytes": 119139,
+      "sha256": "0c280a7a9ccbfeba7151217719db1a0fe5d6fb0571a8d86fb059005b988be872",
+      "width": 1280,
+      "height": 720,
       "hasAlpha": false,
       "assignment": "Actual Behind the Rose S1E1 official YouTube thumbnail; click loads real episode",
-      "processing": "Exact copy of approved processed input; no visual/content changes",
+      "processing": "Exact copy of the official max-resolution thumbnail for the same approved episode; no resizing, generated detail or recoloring.",
       "provenance": {
-        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/behind-rose-poster.jpg",
-        "approvedPreviewInputSha256": "d7709897e82ca7a9ee42055e570bf22879b0a75d7fd28dd2412a6981b1c7a338",
-        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/behind-rose-poster.jpg",
-        "originalSha256": "d7709897e82ca7a9ee42055e570bf22879b0a75d7fd28dd2412a6981b1c7a338",
+        "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/behind-rose-poster-maxres.jpg",
+        "approvedPreviewInputSha256": "0c280a7a9ccbfeba7151217719db1a0fe5d6fb0571a8d86fb059005b988be872",
+        "originalReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/originals/behind-rose-poster-maxres.jpg",
+        "originalSha256": "0c280a7a9ccbfeba7151217719db1a0fe5d6fb0571a8d86fb059005b988be872",
         "originalDimensions": [
-          480,
-          360
+          1280,
+          720
         ],
-        "sourceUrlOrPath": "https://i.ytimg.com/vi/fJf_A4LdKDw/hqdefault.jpg",
+        "sourceUrlOrPath": "https://i.ytimg.com/vi/fJf_A4LdKDw/maxresdefault.jpg",
         "sourceIds": [],
-        "approvedPreparation": "Source unchanged; no recoloring or generated logo/subject changes"
+        "approvedPreparation": "Official YouTube1280x720 thumbnail; source unchanged."
       },
       "validation": {
         "decoded": true,
@@ -960,7 +960,7 @@
       "height": 192,
       "hasAlpha": true,
       "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
-      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "processing": "Existing SVG paths rasterized unchanged at192\u00d7192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
       "provenance": {
         "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/instagram.svg",
         "approvedPreviewInputSha256": "990957a20b747bc784733a25a8dee74976502828b1c86764c4476d3116696155",
@@ -989,7 +989,7 @@
       "height": 192,
       "hasAlpha": true,
       "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
-      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "processing": "Existing SVG paths rasterized unchanged at192\u00d7192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
       "provenance": {
         "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/facebook.svg",
         "approvedPreviewInputSha256": "09417fbcaeac1c5cf3ea354d3d0b40b68e70c419eb90619e970318c83349b140",
@@ -1018,7 +1018,7 @@
       "height": 192,
       "hasAlpha": true,
       "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
-      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "processing": "Existing SVG paths rasterized unchanged at192\u00d7192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
       "provenance": {
         "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/tiktok.svg",
         "approvedPreviewInputSha256": "3d62599c1c5a3d79ba26bfb5f589069a1efbad83370d7957b8435333af6691f6",
@@ -1047,7 +1047,7 @@
       "height": 192,
       "hasAlpha": true,
       "assignment": "Unchanged existing icon-path raster mask; approved brand treatment remains renderer-owned",
-      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "processing": "Existing SVG paths rasterized unchanged at192\u00d7192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
       "provenance": {
         "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/assets/prepared/youtube.svg",
         "approvedPreviewInputSha256": "fda1382214c2053a1e11c06f51a087b85372bc5e8b280c2d31e6974fe0209aab",
@@ -1076,7 +1076,7 @@
       "height": 192,
       "hasAlpha": true,
       "assignment": "Unchanged existing X icon-path raster mask; approved black brand treatment remains renderer-owned",
-      "processing": "Existing SVG paths rasterized unchanged at192×192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
+      "processing": "Existing SVG paths rasterized unchanged at192\u00d7192 PNG; no generated paths/recoloring; original SVG is code-native source and is not an upload input",
       "provenance": {
         "approvedPreviewInputReadOnlyPath": "/Users/christianalcala/Documents/ChatGPT/Rose City 2027 Revamp/implementation/onzio-platform/public/images/logo/xLogo.svg",
         "approvedPreviewInputSha256": "a624af5e89f493c901404993815ef36d33c196fe078f1a134568e3745f7b2ee8",

@@ -157,6 +157,338 @@ export type Database = {
           },
         ]
       }
+      cinematic_chick_fil_a_content: {
+        Row: {
+          background_media_asset_id: string | null
+          club_id: string
+          content: Json
+          drive_thru_media_asset_id: string | null
+          enjoy_game_media_asset_id: string | null
+          free_ticket_media_asset_id: string | null
+          map_media_asset_id: string | null
+          meal_pass_media_asset_id: string | null
+          partner_media_asset_id: string | null
+          restaurant_media_asset_id: string | null
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          background_media_asset_id?: string | null
+          club_id: string
+          content: Json
+          drive_thru_media_asset_id?: string | null
+          enjoy_game_media_asset_id?: string | null
+          free_ticket_media_asset_id?: string | null
+          map_media_asset_id?: string | null
+          meal_pass_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          restaurant_media_asset_id?: string | null
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          background_media_asset_id?: string | null
+          club_id?: string
+          content?: Json
+          drive_thru_media_asset_id?: string | null
+          enjoy_game_media_asset_id?: string | null
+          free_ticket_media_asset_id?: string | null
+          map_media_asset_id?: string | null
+          meal_pass_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          restaurant_media_asset_id?: string | null
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_background_media_ass_fkey"
+            columns: ["club_id", "background_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_drive_thru_media_ass_fkey"
+            columns: ["club_id", "drive_thru_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_enjoy_game_media_ass_fkey"
+            columns: ["club_id", "enjoy_game_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_free_ticket_media_as_fkey"
+            columns: ["club_id", "free_ticket_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_map_media_asset_id_fkey"
+            columns: ["club_id", "map_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_meal_pass_media_asse_fkey"
+            columns: ["club_id", "meal_pass_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_partner_media_asset__fkey"
+            columns: ["club_id", "partner_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_chick_fil_a_content_club_id_restaurant_media_ass_fkey"
+            columns: ["club_id", "restaurant_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      cinematic_contact_content: {
+        Row: {
+          club_id: string
+          content: Json
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_contact_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cinematic_shop_content: {
+        Row: {
+          club_id: string
+          content: Json
+          map_media_asset_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          map_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          map_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_map_media_asset_id_fkey"
+            columns: ["club_id", "map_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      cinematic_stadium_content: {
+        Row: {
+          bus_media_asset_id: string | null
+          club_id: string
+          content: Json
+          map_media_asset_id: string | null
+          partner_media_asset_id: string | null
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          bus_media_asset_id?: string | null
+          club_id: string
+          content: Json
+          map_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          bus_media_asset_id?: string | null
+          club_id?: string
+          content?: Json
+          map_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_stadium_content_club_id_bus_media_asset_id_fkey"
+            columns: ["club_id", "bus_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_stadium_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cinematic_stadium_content_club_id_map_media_asset_id_fkey"
+            columns: ["club_id", "map_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_stadium_content_club_id_partner_media_asset_id_fkey"
+            columns: ["club_id", "partner_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      cinematic_tickets_content: {
+        Row: {
+          banner_media_asset_id: string | null
+          bus_media_asset_id: string | null
+          card_media_asset_id: string | null
+          club_id: string
+          content: Json
+          map_media_asset_id: string | null
+          partner_media_asset_id: string | null
+          raffle_media_asset_id: string | null
+          revision: number
+          seat_media_asset_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          banner_media_asset_id?: string | null
+          bus_media_asset_id?: string | null
+          card_media_asset_id?: string | null
+          club_id: string
+          content: Json
+          map_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          raffle_media_asset_id?: string | null
+          revision?: number
+          seat_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          banner_media_asset_id?: string | null
+          bus_media_asset_id?: string | null
+          card_media_asset_id?: string | null
+          club_id?: string
+          content?: Json
+          map_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          raffle_media_asset_id?: string | null
+          revision?: number
+          seat_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_banner_media_asset_id_fkey"
+            columns: ["club_id", "banner_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_bus_media_asset_id_fkey"
+            columns: ["club_id", "bus_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_card_media_asset_id_fkey"
+            columns: ["club_id", "card_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_map_media_asset_id_fkey"
+            columns: ["club_id", "map_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_partner_media_asset_id_fkey"
+            columns: ["club_id", "partner_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_raffle_media_asset_id_fkey"
+            columns: ["club_id", "raffle_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_tickets_content_club_id_seat_media_asset_id_fkey"
+            columns: ["club_id", "seat_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
       club_domains: {
         Row: {
           active: boolean
@@ -1178,6 +1510,8 @@ export type Database = {
           date: string
           home: boolean
           id: string
+          league_logo_asset_id: string | null
+          league_logo_url: string | null
           opponent: string
           opponent_logo_asset_id: string | null
           opponent_logo_url: string | null
@@ -1205,6 +1539,8 @@ export type Database = {
           date: string
           home?: boolean
           id?: string
+          league_logo_asset_id?: string | null
+          league_logo_url?: string | null
           opponent: string
           opponent_logo_asset_id?: string | null
           opponent_logo_url?: string | null
@@ -1232,6 +1568,8 @@ export type Database = {
           date?: string
           home?: boolean
           id?: string
+          league_logo_asset_id?: string | null
+          league_logo_url?: string | null
           opponent?: string
           opponent_logo_asset_id?: string | null
           opponent_logo_url?: string | null
@@ -1256,6 +1594,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "clubs"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "matches_club_id_league_logo_asset_id_fkey"
+            columns: ["club_id", "league_logo_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
           },
           {
             foreignKeyName: "matches_club_id_opponent_logo_asset_id_fkey"
@@ -3046,6 +3391,14 @@ export type Database = {
         Args: { p_club_id: string; p_operation_id?: string; p_page: string }
         Returns: Json
       }
+      load_chick_fil_a_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
+      load_cinematic_contact_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       load_contact_editor: {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
@@ -3068,6 +3421,14 @@ export type Database = {
       }
       load_shop_page: {
         Args: { p_club_id: string; p_operation_id?: string; p_surface: string }
+        Returns: Json
+      }
+      load_stadium_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
+      load_tickets_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
       load_tryouts_page: {
@@ -3119,6 +3480,14 @@ export type Database = {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }
+      save_chick_fil_a_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_cinematic_contact_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
       save_contact_editor: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
@@ -3136,6 +3505,14 @@ export type Database = {
         Returns: Json
       }
       save_shop_page: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_stadium_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_tickets_editor: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

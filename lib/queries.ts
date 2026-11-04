@@ -152,6 +152,7 @@ function mapFixture(row: DBMatch): Fixture {
     opponentScore: row.opponent_score,
     attendance: row.attendance,
     scorers: Array.isArray(row.scorers) ? (row.scorers as string[]) : [],
+    ...(row.league_logo_url === undefined ? {} : { leagueLogoUrl: row.league_logo_url }),
   };
 }
 
@@ -1489,6 +1490,7 @@ export async function fetchSchedule(seasonId?: string, clubId?: string): Promise
     [
       { assetId: "opponent_logo_asset_id", url: "opponent_logo_url" },
       { assetId: "sponsor_logo_asset_id", url: "sponsor_logo_url" },
+      { assetId: "league_logo_asset_id", url: "league_logo_url" },
     ],
   );
   return (rows as unknown as DBMatch[]).map(mapFixture).sort((a, b) => {
@@ -1517,6 +1519,7 @@ export async function fetchFixtureById(
     [
       { assetId: "opponent_logo_asset_id", url: "opponent_logo_url" },
       { assetId: "sponsor_logo_asset_id", url: "sponsor_logo_url" },
+      { assetId: "league_logo_asset_id", url: "league_logo_url" },
     ],
   );
   return rows[0] ? mapFixture(rows[0] as unknown as DBMatch) : null;

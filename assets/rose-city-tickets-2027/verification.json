@@ -1,0 +1,51 @@
+{
+  "localOnly": true,
+  "deliveredChecksums": [
+    {
+      "slot": "banner",
+      "sha256": "a28ac7bcd799266e900063116c86515cb70a3c2f3a6912bd44330925a9ca90c9",
+      "verified": true
+    },
+    {
+      "slot": "seat",
+      "sha256": "239307b2ac8454d2386ad52bd3559010b00b77d81678baed12338dbde712ab34",
+      "verified": true
+    },
+    {
+      "slot": "card",
+      "sha256": "e6f79045d5f396cce68eb1c241e2986b35cb21ae92418582cc6817e54a973bfa",
+      "verified": true
+    },
+    {
+      "slot": "raffle",
+      "sha256": "0d483e61d4a4ce87a6a304e0200f738d48ba7b2b372e75ccbad8f8fe157993cd",
+      "verified": true
+    },
+    {
+      "slot": "bus",
+      "sha256": "668c169142baf7b3e602f2b0c612722b6d71a00f4eba7f85cfeccf779cf84eb6",
+      "verified": true
+    },
+    {
+      "slot": "map",
+      "sha256": "cd7001ece57bb674360d217ba6c84a0262381f1a8595353bb6a4a14afbc24ccc",
+      "verified": true
+    },
+    {
+      "slot": "partner",
+      "sha256": "d7264cf548e97c224086bac05abdb4c15b9338e64b0cc99ca8c6efa60400f8a3",
+      "verified": true
+    }
+  ],
+  "sevenMediaIdentitiesPreserved": true,
+  "typescript": true,
+  "nextBuildAndLint": true,
+  "testFiles": 208,
+  "tests": 1915,
+  "desktopPhoneSaveReload": true,
+  "independentDatabasePersistence": true,
+  "partialUrlDraftRecovery": true,
+  "physicalDeviceAcceptance": false,
+  "hostedWrites": false,
+  "deployment": false
+}
