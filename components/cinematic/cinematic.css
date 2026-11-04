@@ -135,3 +135,81 @@
   .cinematic-site .club-header,.cinematic-site .mobile-drawer .phone-menu-head,.cinematic-site .phone-content{padding-left:max(var(--phone-gutter),env(safe-area-inset-left,0px));padding-right:max(var(--phone-gutter),env(safe-area-inset-right,0px))}
 }
 @media(max-width:360px){.cinematic-site{--phone-gutter:16px}}
+/* Owner footer logo (cinematic@2): replaces the crest, name and tagline. */
+.cinematic-site .footer-logo>img{width:5.8vw;height:auto}
+@media(max-width:1024px){.cinematic-site .footer-logo>img{width:56px}}
+
+/* RC2027-HOME-UPDATE: latest result strip. Desktop sizes scale from Sam's 2416px-wide reference. */
+.cinematic-site .result-strip{background:#fff;text-align:center;padding:3.3vw 3vw 6vw;box-shadow:0 4px 12px #0002;position:relative;z-index:1}
+.cinematic-site .result-competition,.cinematic-site .result-meta{font:400 1.28vw/1.35 var(--body);color:var(--black)}
+.cinematic-site .result-meta{color:#9b9b9b}
+.cinematic-site .result-row{display:grid;grid-template-columns:1fr auto auto auto 1fr;align-items:center;column-gap:1.8vw;margin-top:2.4vw}
+.cinematic-site .result-name{font:600 3.1vw/1 var(--body);letter-spacing:-.01em}
+.cinematic-site .result-name.home{text-align:right}
+.cinematic-site .result-name.away{text-align:left}
+.cinematic-site .result-crest{width:7.9vw;height:7.9vw;--opponent-crest-size:7.9vw;display:grid;place-items:center}
+.cinematic-site .result-crest img{width:100%;height:100%;object-fit:contain}
+.cinematic-site .result-score{display:flex;align-items:center;justify-content:center;gap:1.3vw;min-width:11.8vw;height:5.7vw;padding:0 2.2vw;background:var(--black);color:#fff;border-radius:.45vw;font:600 3.4vw/1 var(--body);font-variant-numeric:tabular-nums}
+.cinematic-site .result-score b{font-weight:700}
+.cinematic-site .result-events{grid-column:1;grid-row:2;justify-self:end;max-width:31vw;margin-top:-2.2vw;text-align:right;font:400 1.2vw/1.45 var(--body);color:var(--black)}
+.cinematic-site .red-card{display:inline-block;width:.5vw;height:.85vw;background:#e10600;margin-right:.3vw;vertical-align:-.08vw}
+
+/* RC2027-HOME-UPDATE: Replay the match. Embedded player matches the Behind the Rose player width (65.1%) and 16:9.
+   Sam's red/black matchup card is the click-to-play cover, or the placeholder when no video is set. */
+.cinematic-site .replay{text-align:center;background:#fff;padding:3vw 0 6.1vw}
+.cinematic-site .replay .eyebrow{font-size:1.7vw;text-transform:uppercase}
+.cinematic-site .replay h2{font:900 5.8vw/1.1 var(--display);letter-spacing:-.04em;text-transform:uppercase;margin:.3vw 0 2.4vw}
+.cinematic-site .replay-card{position:relative;width:65.1%;aspect-ratio:16/9;margin:auto;overflow:hidden;background:var(--black);color:#fff}
+.cinematic-site .replay-card iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.cinematic-site .replay-cover{position:absolute;inset:0;display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:center}
+.cinematic-site button.replay-cover{cursor:pointer}
+.cinematic-site .replay-cover:before{content:'';position:absolute;inset:0;background:var(--red);clip-path:polygon(0 0,65.3% 0,36.6% 100%,0 100%)}
+.cinematic-site .replay-cover:focus-visible{outline:3px solid #fff;outline-offset:-6px}
+.cinematic-site .replay-side{position:absolute;top:47%;width:31%;aspect-ratio:1;transform:translate(-50%,-50%);display:grid;place-items:center;transition:transform 200ms var(--ease-out)}
+.cinematic-site .replay-side.home{left:24.5%}
+.cinematic-site .replay-side.away{left:78%;--opponent-crest-size:calc(65.1vw * .31)}
+.cinematic-site .replay-soon{font:900 1.9vw/1 var(--display);text-transform:uppercase;letter-spacing:-.02em}
+.cinematic-site .replay-side img{width:100%;height:100%;object-fit:contain}
+.cinematic-site .replay-vs{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);font:900 3.4vw/1 var(--display);text-transform:uppercase;letter-spacing:-.03em}
+.cinematic-site .replay-watch{position:absolute;left:50%;bottom:5.5%;transform:translateX(-50%);display:grid;justify-items:center;gap:.7vw}
+.cinematic-site .replay-watch small{font:400 1vw/1 var(--body)}
+.cinematic-site .youtube-mark{display:flex;align-items:center;gap:.35vw;font:700 1.75vw/1 var(--body);letter-spacing:-.04em}
+.cinematic-site .youtube-mark svg{width:2.1vw;height:2.1vw;fill:#f00}
+@media(hover:hover) and (pointer:fine){.cinematic-site button.replay-cover:hover .replay-side{transform:translate(-50%,-50%) scale(1.03)}}
+
+/* RC2027-HOME-UPDATE: "Includes" label in the jersey section. */
+.cinematic-site .includes-label{font:400 1.35vw/1.2 var(--body);color:var(--black);text-transform:uppercase;margin:2vw 0 0 1.6vw}
+.cinematic-site .jersey .includes-label+ul{margin:1vw 0 2.6vw 2.7vw}
+
+
+@media(max-width:1024px){
+ .cinematic-site .result-strip{padding:28px 16px 30px}
+ .cinematic-site .result-competition,.cinematic-site .result-meta{font-size:14px}
+ .cinematic-site .result-row{column-gap:10px;margin-top:18px}
+ .cinematic-site .result-name{font-size:22px}
+ .cinematic-site .result-crest{width:54px;height:54px;--opponent-crest-size:54px}
+ .cinematic-site .result-score{min-width:84px;height:44px;padding:0 12px;gap:8px;border-radius:5px;font-size:24px}
+ .cinematic-site .result-events{grid-column:1/-1;justify-self:center;max-width:none;margin-top:14px;text-align:center;font-size:13px}
+ .cinematic-site .red-card{width:6px;height:10px;margin-right:4px;vertical-align:-1px}
+ .cinematic-site .replay{padding:32px 16px 40px}
+ .cinematic-site .replay .eyebrow{font-size:14px}
+ .cinematic-site .replay h2{font-size:34px;margin:4px 0 18px}
+ .cinematic-site .replay-card{width:100%}
+ .cinematic-site .replay-side.away{--opponent-crest-size:calc((100vw - 32px) * .31)}
+ .cinematic-site .replay-soon{font-size:15px}
+ .cinematic-site .replay-vs{font-size:24px}
+ .cinematic-site .replay-watch{gap:5px}
+ .cinematic-site .replay-watch small{font-size:11px}
+ .cinematic-site .youtube-mark{font-size:16px;gap:4px}
+ .cinematic-site .youtube-mark svg{width:18px;height:18px}
+ .cinematic-site .includes-label{font-size:15px;margin:20px 0 0 12px}
+ .cinematic-site .jersey .includes-label+ul{margin:10px 0 22px 22px}
+}
+@media(max-width:400px){
+ .cinematic-site .result-row{column-gap:7px}
+ .cinematic-site .result-name{font-size:18px}
+ .cinematic-site .result-crest{width:44px;height:44px;--opponent-crest-size:44px}
+ .cinematic-site .result-score{min-width:70px;height:38px;font-size:20px}
+ .cinematic-site .replay h2{font-size:29px}
+}
+.cinematic-site .result-events>span{white-space:nowrap}

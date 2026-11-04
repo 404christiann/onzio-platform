@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isAllowedPublicHref } from "@/lib/public-link";
+import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
 import {
   isValidPublicEmail,
   isValidPublicPhone,
@@ -332,6 +333,16 @@ export const adminDataRequestSchema = z
       .optional(),
   })
   .superRefine((request, context) => {
+    // A match replay is stored only as the canonical YouTube embed link the
+    // Schedule editor produces; the database CHECK mirrors this.
+    if (request.table === "matches" && request.payload && ["insert", "update", "upsert"].includes(request.operation)) {
+      for (const [index, item] of (Array.isArray(request.payload) ? request.payload : [request.payload]).entries()) {
+        const value = item.replay_video_url;
+        if (value !== undefined && value !== null && !(typeof value === "string" && (value === "" || MATCH_REPLAY_EMBED_PATTERN.test(value)))) {
+          context.addIssue({ code: "custom", path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), "replay_video_url"], message: "Replay video must be a YouTube video link" });
+        }
+      }
+    }
     const schema = NEW_DOMAIN_MUTATION_SCHEMAS[
       request.table as keyof typeof NEW_DOMAIN_MUTATION_SCHEMAS
     ];

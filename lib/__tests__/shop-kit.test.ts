@@ -60,7 +60,7 @@ describe("kit photo limit", () => {
 });
 
 describe("editable shop details", () => {
-  it("trims bullet points, removes empty rows, and caps the layout at eight", () => {
+  it("trims bullet points, removes empty rows, and caps the layout at ten", () => {
     expect(cleanKitBulletPoints([
       " First ",
       "",
@@ -72,6 +72,8 @@ describe("editable shop details", () => {
       "Seventh",
       "Eighth",
       "Ninth",
+      "Tenth",
+      "Eleventh",
     ])).toEqual([
       "First",
       "Second",
@@ -81,6 +83,8 @@ describe("editable shop details", () => {
       "Sixth",
       "Seventh",
       "Eighth",
+      "Ninth",
+      "Tenth",
     ]);
   });
 

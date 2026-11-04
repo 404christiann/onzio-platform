@@ -1192,6 +1192,7 @@ export type Database = {
           club_id: string
           content: Json
           episode_poster_media_asset_id: string | null
+          footer_logo_media_asset_id: string | null
           header_partner_media_asset_id: string | null
           hero_poster_media_asset_id: string | null
           presentation_config: Json
@@ -1205,6 +1206,7 @@ export type Database = {
           club_id: string
           content: Json
           episode_poster_media_asset_id?: string | null
+          footer_logo_media_asset_id?: string | null
           header_partner_media_asset_id?: string | null
           hero_poster_media_asset_id?: string | null
           presentation_config?: Json
@@ -1218,6 +1220,7 @@ export type Database = {
           club_id?: string
           content?: Json
           episode_poster_media_asset_id?: string | null
+          footer_logo_media_asset_id?: string | null
           header_partner_media_asset_id?: string | null
           hero_poster_media_asset_id?: string | null
           presentation_config?: Json
@@ -1517,6 +1520,7 @@ export type Database = {
           opponent_logo_url: string | null
           opponent_score: number | null
           opponent_short_name: string | null
+          replay_video_url: string | null
           rose_city_score: number | null
           scorers: Json
           season_id: string
@@ -1546,6 +1550,7 @@ export type Database = {
           opponent_logo_url?: string | null
           opponent_score?: number | null
           opponent_short_name?: string | null
+          replay_video_url?: string | null
           rose_city_score?: number | null
           scorers?: Json
           season_id: string
@@ -1575,6 +1580,7 @@ export type Database = {
           opponent_logo_url?: string | null
           opponent_score?: number | null
           opponent_short_name?: string | null
+          replay_video_url?: string | null
           rose_city_score?: number | null
           scorers?: Json
           season_id?: string

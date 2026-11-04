@@ -54,6 +54,8 @@ export const cinematicHomepageSaveSchema = z.object({
   sponsors: z.object({ heading }).strict(),
   raffle: artworkInput,
   ticket: artworkInput.extend({ visible: z.boolean() }),
+  // Optional so saves and rows from before the footer logo existed still parse.
+  footerLogo: artworkInput.default({ assetId: null, alt: "" }),
   match: z.object({ heading, buttonLabel: z.string().max(60), buttonHref: z.string().max(2000).regex(/^\/(?!\/)(?:[-A-Za-z0-9_/?#=&%.]*)$/), emptyMessage: copy }).strict(),
   prices: z.object({ heading, rows: z.array(z.object({ id: z.string().min(1).max(60), label: heading, price: z.string().max(60), description: copy, note: copy, accent: z.enum(["none", "aqua", "lime"]) }).strict()).max(10), footnote: copy }).strict().refine(value => new Set(value.rows.map(row => row.id)).size === value.rows.length, "Price row IDs must be unique."),
   championship: z.object({ league: heading, year: z.string().max(20), title: heading, body: copy, trophy: artworkInput }).strict(),
@@ -69,21 +71,22 @@ export const cinematicPresentationSchema = z.object({
 }).strict();
 export const cinematicHomepageContentSchema = cinematicHomepageSaveSchema.extend({
   raffle: artwork, ticket: artwork.extend({ visible: z.boolean() }),
+  footerLogo: artwork.default({ assetId: null, url: null, alt: "" }),
   championship: cinematicHomepageSaveSchema.shape.championship.extend({ trophy: artwork }),
   presentation: cinematicPresentationSchema,
 });
 export type CinematicArtwork = z.infer<typeof artwork>;
 export type CinematicHomepageContent = z.infer<typeof cinematicHomepageContentSchema>;
 export type CinematicHomepageSaveContent = z.infer<typeof cinematicHomepageSaveSchema>;
-export type CinematicArtworkSlot = "raffle" | "ticket" | "trophy";
-export const CINEMATIC_ARTWORK_SLOTS: readonly CinematicArtworkSlot[] = ["raffle", "ticket", "trophy"];
+export type CinematicArtworkSlot = "raffle" | "ticket" | "trophy" | "footerLogo";
+export const CINEMATIC_ARTWORK_SLOTS: readonly CinematicArtworkSlot[] = ["raffle", "ticket", "trophy", "footerLogo"];
 
 /** Tenant-neutral until the operator imports the club's approved content. */
 export function defaultCinematicHomepageContent(): CinematicHomepageContent {
   const empty = (): CinematicArtwork => ({ assetId: null, url: null, alt: "" });
   return {
     sponsors: { heading: "Powered by our partners" },
-    raffle: empty(), ticket: { ...empty(), visible: true },
+    raffle: empty(), ticket: { ...empty(), visible: true }, footerLogo: empty(),
     match: { heading: "Next home match", buttonLabel: "Buy tickets", buttonHref: "/tickets", emptyMessage: "The next home match will be announced soon." },
     prices: { heading: "Ticket prices", rows: [], footnote: "" },
     championship: { league: "", year: "", title: "", body: "", trophy: empty() },
@@ -102,6 +105,7 @@ export function cinematicHomepageEditableContent(content: CinematicHomepageConte
   return {
     sponsors: content.sponsors,
     raffle: media(content.raffle), ticket: { ...media(content.ticket), visible: content.ticket.visible },
+    footerLogo: media(content.footerLogo ?? { assetId: null, url: null, alt: "" }),
     match: content.match, prices: content.prices,
     championship: { ...content.championship, trophy: media(content.championship.trophy) },
     navigation: content.navigation,
@@ -112,7 +116,7 @@ export function cinematicHomepageSaveContent(content: CinematicHomepageContent):
 }
 
 export const CINEMATIC_MEDIA_COLUMNS = {
-  raffle: "raffle_media_asset_id", ticket: "ticket_media_asset_id", trophy: "trophy_media_asset_id",
+  raffle: "raffle_media_asset_id", ticket: "ticket_media_asset_id", trophy: "trophy_media_asset_id", footerLogo: "footer_logo_media_asset_id",
   headerPartner: "header_partner_media_asset_id", heroPoster: "hero_poster_media_asset_id",
   seatsBackground: "seats_background_media_asset_id", episodePoster: "episode_poster_media_asset_id",
 } as const;
@@ -121,8 +125,9 @@ export const CINEMATIC_MEDIA_COLUMNS = {
 export function cinematicHomepageStorageRecord(content: CinematicHomepageContent) {
   const editable = cinematicHomepageSaveContent(content);
   return {
-    content: { ...editable, raffle: { alt: editable.raffle.alt }, ticket: { alt: editable.ticket.alt, visible: editable.ticket.visible }, championship: { ...editable.championship, trophy: { alt: editable.championship.trophy.alt } } },
+    content: { ...editable, raffle: { alt: editable.raffle.alt }, ticket: { alt: editable.ticket.alt, visible: editable.ticket.visible }, footerLogo: { alt: editable.footerLogo.alt }, championship: { ...editable.championship, trophy: { alt: editable.championship.trophy.alt } } },
     raffle_media_asset_id: content.raffle.assetId, ticket_media_asset_id: content.ticket.assetId, trophy_media_asset_id: content.championship.trophy.assetId,
+    footer_logo_media_asset_id: content.footerLogo.assetId,
     header_partner_media_asset_id: content.presentation.headerPartner.assetId, hero_poster_media_asset_id: content.presentation.heroPoster.assetId,
     seats_background_media_asset_id: content.presentation.seatsBackground.assetId, episode_poster_media_asset_id: content.presentation.episodePoster.assetId,
     presentation_config: {
@@ -152,6 +157,7 @@ export async function fetchCinematicHomepageContent(clubId: string, client?: typ
   };
   return cinematicHomepageContentSchema.parse({
     ...stored, raffle: resolve("raffle", stored.raffle.alt), ticket: { ...resolve("ticket", stored.ticket.alt), visible: stored.ticket.visible },
+    footerLogo: resolve("footerLogo", stored.footerLogo?.alt ?? ""),
     championship: { ...stored.championship, trophy: resolve("trophy", stored.championship.trophy.alt) },
     presentation: {
       ...Object.fromEntries(["headerPartner", "heroPoster", "seatsBackground", "episodePoster"].map(key => [key, resolve(key as keyof typeof CINEMATIC_MEDIA_COLUMNS, config.artworkAlt?.[key] ?? "")])),

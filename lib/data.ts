@@ -83,6 +83,8 @@ export type Fixture = {
   // Stored as onzio.matches.scorers (jsonb, defaults to `[]`); mapFixture
   // narrows the raw jsonb value to a string[] defensively.
   scorers?: string[];
+  // Canonical YouTube embed link (lib/youtube-embed.ts) for a played match.
+  replayVideoUrl?: string | null;
 };
 
 export type ShopProduct = {

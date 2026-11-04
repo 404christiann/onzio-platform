@@ -23,6 +23,7 @@ export function hydrateHomepageSnapshot<T extends HomepageSnapshot>(snapshot: T)
     ...revamp,
     navigation: { ...revamp.navigation, destinations: { tryouts: revamp.navigation.destinations?.tryouts ?? "", mediaCredentials: revamp.navigation.destinations?.mediaCredentials ?? "", nationalAnthem: revamp.navigation.destinations?.nationalAnthem ?? "" } },
     raffle: hydrateArt(revamp.raffle), ticket: { ...hydrateArt(revamp.ticket), visible: revamp.ticket.visible },
+    footerLogo: hydrateArt(revamp.footerLogo ?? { assetId: null, url: null, alt: "" }),
     championship: { ...revamp.championship, trophy: hydrateArt(revamp.championship.trophy) },
     presentation: { ...revamp.presentation, headerPartner: hydrateArt(revamp.presentation.headerPartner), heroPoster: hydrateArt(revamp.presentation.heroPoster), seatsBackground: hydrateArt(revamp.presentation.seatsBackground), episodePoster: hydrateArt(revamp.presentation.episodePoster) },
   } : undefined;

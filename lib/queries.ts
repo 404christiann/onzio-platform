@@ -153,6 +153,7 @@ function mapFixture(row: DBMatch): Fixture {
     attendance: row.attendance,
     scorers: Array.isArray(row.scorers) ? (row.scorers as string[]) : [],
     ...(row.league_logo_url === undefined ? {} : { leagueLogoUrl: row.league_logo_url }),
+    ...(row.replay_video_url === undefined ? {} : { replayVideoUrl: row.replay_video_url }),
   };
 }
 

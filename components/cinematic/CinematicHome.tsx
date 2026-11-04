@@ -17,7 +17,8 @@ import CinematicHero from "./CinematicHero";
 import CinematicPhotos from "./CinematicPhotos";
 import CinematicSponsors from "./CinematicSponsors";
 import CinematicEpisode from "./CinematicEpisode";
-import { cinematicMatchDate, cinematicMatchTime, nextHomeFixture } from "./next-home-fixture";
+import { cinematicMatchDate, cinematicMatchTime, latestResultFixture, nextHomeFixture } from "./next-home-fixture";
+import { CinematicLatestResult, CinematicReplay } from "./CinematicMatchResult";
 
 export default function CinematicHome({ initialHeroContent }: { initialHeroContent: DBHomepageHeroContent | null }) {
   const club = useClubContext();
@@ -27,6 +28,8 @@ export default function CinematicHome({ initialHeroContent }: { initialHeroConte
   const editing = preview !== null;
   const [loaded, setLoaded] = useState<HomepageContent | null>(null);
   const [fixture, setFixture] = useState<Fixture | null>(null);
+  const [latest, setLatest] = useState<Fixture | null>(null);
+  const [clubLabel, setClubLabel] = useState("");
   const [scheduleLoading, setScheduleLoading] = useState(true);
   const [shop, setShop] = useState<ShopKitContent | null>(null);
   const [sponsors, setSponsors] = useState<DBSiteSponsorLogo[]>([]);
@@ -38,9 +41,9 @@ export default function CinematicHome({ initialHeroContent }: { initialHeroConte
   const championsPiece = useHomepagePiece("revamp.championship");
   useEffect(() => {
     let active = true;
-    setLoaded(null); setFixture(null); setShop(null); setSponsors([]); setScheduleLoading(true);
+    setLoaded(null); setFixture(null); setLatest(null); setShop(null); setSponsors([]); setScheduleLoading(true);
     if (!editing) fetchHomepageContent(club.id).then(value => { if (active) setLoaded(value); }).catch(error => console.error("Cinematic home:", error));
-    Promise.all([fetchSchedule(undefined, club.id), fetchClubIdentity(club.id)]).then(([fixtures, identity]) => { if (active) setFixture(nextHomeFixture(fixtures, new Date(), identity?.timeZone || "UTC")); }).catch(error => console.error("Cinematic next home match:", error)).finally(() => { if (active) setScheduleLoading(false); });
+    Promise.all([fetchSchedule(undefined, club.id), fetchClubIdentity(club.id)]).then(([fixtures, identity]) => { if (active) { setFixture(nextHomeFixture(fixtures, new Date(), identity?.timeZone || "UTC")); setLatest(latestResultFixture(fixtures)); setClubLabel(identity?.initials || ""); } }).catch(error => console.error("Cinematic next home match:", error)).finally(() => { if (active) setScheduleLoading(false); });
     fetchShopKitContent("home", "home", club.id).then(value => { if (active) setShop(value); }).catch(error => console.error("Cinematic shop:", error));
     fetchSiteSponsorLogos("carousel", club.id).then(value => { if (active) setSponsors(value); }).catch(error => console.error("Cinematic sponsors:", error));
     return () => { active = false; };
@@ -67,8 +70,9 @@ export default function CinematicHome({ initialHeroContent }: { initialHeroConte
       {(revamp.ticket.visible || ticketPiece["data-homepage-piece"]) && <div {...ticketPiece}>{revamp.ticket.visible && art(revamp.ticket, "ticket-art")}</div>}
     </>}
     <CinematicPhotos photos={photos} />
+    {latest && <><CinematicLatestResult fixture={latest} clubLabel={clubLabel || club.name} crestUrl={branding.clubLogoUrl} /><CinematicReplay fixture={latest} clubLabel={clubLabel || club.name} crestUrl={branding.clubLogoUrl} /></>}
     {revamp && (revamp.championship.title || revamp.championship.trophy.url || championsPiece["data-homepage-piece"]) && <section {...championsPiece} className="champions"><div className="champion-copy"><p className="eyebrow">{revamp.championship.league}</p><h2>{revamp.championship.year}<br />{revamp.championship.title}</h2><div className="red-rule" /><p className="body-copy">{revamp.championship.body}</p></div>{revamp.championship.trophy.url && <NativeImage src={revamp.championship.trophy.url} alt={revamp.championship.trophy.alt} width={1500} height={1200} loading="lazy" />}</section>}
-    {club.storeEnabled && kit && player && <section {...shopPiece} className="jersey"><div className="player-image"><NativeImage src={player.url} alt={kit.title} loading="lazy" /></div><div className="jersey-copy"><p className="eyebrow">{kit.eyebrow}</p><h2>{kit.title}</h2><div className="red-rule" /><p className="body-copy">{kit.description}</p><ul>{kit.bullet_points.filter(Boolean).map((bullet, index) => <li key={index}>{bullet}</li>)}</ul><p className="store-note">{kit.store_note}</p><Link className="button" href={kit.cta_link || "/shop"}>{kit.cta_label}</Link></div></section>}
+    {club.storeEnabled && kit && player && <section {...shopPiece} className="jersey"><div className="player-image"><NativeImage src={player.url} alt={kit.title} loading="lazy" /></div><div className="jersey-copy"><p className="eyebrow">{kit.eyebrow}</p><h2>{kit.title}</h2><div className="red-rule" /><p className="body-copy">{kit.description}</p>{kit.bullet_points.some(Boolean) && <><p className="includes-label">Includes</p><ul>{kit.bullet_points.filter(Boolean).map((bullet, index) => <li key={index}>{bullet}</li>)}</ul></>}{kit.store_note && <p className="store-note">{kit.store_note}</p>}<Link className="button" href={kit.cta_link || "/shop"}>{kit.cta_label}</Link></div></section>}
     {video && <CinematicEpisode content={video} posterUrl={revamp?.presentation.episodePoster.url} crestUrl={branding.clubLogoUrl} />}
     <CinematicSponsors sponsors={sponsors} treatments={revamp?.presentation.sponsorTreatments ?? {}} heading={revamp?.sponsors.heading ?? ""} />
   </>;

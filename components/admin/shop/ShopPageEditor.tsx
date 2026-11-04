@@ -31,6 +31,7 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import { createClient } from "@/lib/admin-client";
 import type { ShopKitContent } from "@/lib/queries";
 import { hasShopPurchaseDetails } from "@/lib/shop-purchase-details";
+import { MAX_KIT_BULLET_POINTS } from "@/lib/shop-kit";
 import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 import "@/styles/editorial.css";
@@ -359,7 +360,7 @@ export default function ShopPageEditor() {
                     <TextField label="Kit title" value={currentKit.section.title} onChange={(value) => setSectionField("title", value)} />
                     {!isClubhouse && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
                     {!isClubhouse && !isEditorial && <>
-                      <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, 8))} />
+                      <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, MAX_KIT_BULLET_POINTS))} />
                       <TextAreaField label="Store information" value={currentKit.section.store_note} onChange={(value) => setSectionField("store_note", value)} />
                     </>}
                   </div>}

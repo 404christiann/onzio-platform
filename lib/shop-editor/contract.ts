@@ -30,7 +30,7 @@ export const shopSectionSchema = z.object({
   eyebrow: z.string().max(160),
   title: z.string().max(240),
   description: z.string().max(3000),
-  bullet_points: z.array(z.string().max(80)).max(8),
+  bullet_points: z.array(z.string().max(80)).max(10),
   store_note: z.string().max(180),
   cta_label: z.string().max(100),
   cta_link: safePageOrExternalUrl,

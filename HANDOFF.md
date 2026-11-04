@@ -1,3 +1,109 @@
+## 2026-11-04 — RC2027-HOME-UPDATE implemented locally
+
+Christian approved the Home update preview and asked for it to be built. It
+covers Sam's Oct 31 Home result strip, Replay the Match, the jersey copy and
+"Includes" label, and the RCFC footer logo. Full scope, ownership, migrations
+and the open questions for Sam are in
+`docs/rose-city-home-update-2027-implementation.md`.
+
+Christian's decisions:
+
+- **Result strip:** shows the latest finished match, home or away.
+- **Replay:** an embedded YouTube player per match, with a "coming soon"
+  placeholder.
+- **Jersey bullets:** the limit is raised from 8 to 10, because Sam lists nine.
+- **Footer logo:** owner-editable in Homepage → Navigation, falling back to the
+  crest and name when blank.
+
+Built test-first at seams Christian confirmed:
+
+- latest-result selection;
+- the YouTube link rule (in the editor, the admin route and a database
+  constraint);
+- strip and replay rendering;
+- the footer logo slot (contract, database save/load/reject/retire, footer
+  render);
+- the ten-bullet limit (unit and database).
+
+Three local-only migrations (20261104010000/020000/030000) were applied with
+`scripts/apply-rose-city-home-update-migrations-local.ts`. The guarded seed
+`scripts/seed-rose-city-home-update-2027-local.ts` published the sub-mark as the
+footer logo and wrote Sam's jersey copy. The real local Home page, checked in
+Chrome at 1440px, shows:
+
+- the strip, with the latest local sample result (AMSG FC 2–1);
+- the replay placeholder;
+- both crests;
+- nine Includes items with no store note;
+- the RCFC footer logo;
+- no sideways scroll and no console errors.
+
+Verification:
+
+- **Tests:**
+  - The new contract tests pass: latest result, YouTube rule, admin route,
+    Schedule field, footer slot, footer render, strip and replay.
+  - The Shop cap tests pass, and the `fetchSchedule` mapping test passes.
+  - The new database tests pass against the loopback rehearsal: replay
+    constraint, footer save/load/reject/retire and ten bullets. The existing
+    cinematic homepage atomic-save, Shop and league-logo database tests also
+    pass. The atomic-save anthem case timed out once under machine load and
+    passed 8/8 on rerun.
+  - The full contract + legacy suite ran 1,676/1,677. The single failure was
+    the ten-bullet test, captured mid-edit before the constant changed; it now
+    passes.
+- **Static checks:** project-wide `tsc --noEmit` exits 0, and ESLint is clean
+  on every touched file.
+- **Browser:** the real Home page at 390px and 1440px shows the strip with both
+  crests, the replay placeholder, nine Includes items, the RCFC footer logo,
+  no horizontal overflow and no page errors. /shop, /schedule and /club/logo
+  return 200.
+- **Not checked by eye:** the new Schedule and Homepage editor fields. The
+  local admin needs an emailed login code, so they are covered by contract
+  tests only.
+
+No hosted writes, push or deploy. The CLAUDE.md migration gate applies to the
+three new migrations before any hosted release.
+
+Next steps:
+
+- Christian reviews in the owner editors.
+- Sam confirms the score, opponent and "City of Roses" wording.
+- The owner enters the real 2027 fixtures and replay links.
+
+## 2026-11-04 — Sam reference review; Crest Sub-Mark card added locally
+
+The local site was compared page by page with Sam's current Dropbox originals,
+desktop first and then phone. Findings and the package plan are in
+`docs/rose-city-2027-reference-review-2026-11-04.md`. Sam's Home (Oct 31 JPG),
+Shop, Schedule and Crest files are newer than the references the app was built
+from, so their new sections are not implemented. Every other page matches its
+reference.
+
+Christian's decisions:
+
+- Schedule fixtures, the ticket purchase link, the Stem text and the roster
+  photos stay as owner-edited content for later.
+- The footer sub-mark logo goes into the Home update package; it needs a new
+  editable slot and migration.
+- Crest card 7 goes in now.
+
+Card 7 is content only. The Logo page already renders any number of features.
+`scripts/add-rose-city-crest-submark-local.ts --execute-local` published two
+graphics through the normal pipeline. It appended "Sub-Mark" to the local test
+tenant's Logo row with an updated_at guard, which took the features from 6 to 7.
+About, homepage, branding and hero rows were verified unchanged. Inputs, gap
+and receipt are in `assets/rose-city-crest-2027/submark/`. The missing piece is
+the italic "RCFC" wordmark after the icon: Dropbox has no standalone file.
+
+The /club/logo page shows card 7 at 1440px and 390px with no sideways scroll or
+blank images. ESLint passes on the new script, and the project-wide
+`tsc --noEmit` passes.
+
+The port 3198 dev server was hung on /roster at about 95% CPU and was
+restarted, with Christian's OK. No hosted writes, push or deploy.
+Next: RC2027-HOME-UPDATE preview, once Sam confirms the score, opponent and copy.
+
 ## 2026-10-13 — Approved Tickets implemented and verified locally
 
 RC2027-TICKETS: source/local acceptance complete; physical-device acceptance

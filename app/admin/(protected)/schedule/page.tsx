@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/popover";
 import type { SlidingPanelDirection } from "@/components/ui/sliding-panel";
 import { Skeleton } from "@/components/ui/skeleton";
+import { matchReplayEmbedUrl } from "@/lib/youtube-embed";
 
 // ── Types ─────────────────────────────────────
 
@@ -63,6 +64,7 @@ type Match = {
   state: string | null;
   rose_city_score: number | null;
   opponent_score: number | null;
+  replay_video_url: string | null;
   season_id: string;
 };
 
@@ -107,7 +109,7 @@ function emptyForm(seasonId = ""): FormState {
     date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "", league_logo_url: null,
     sponsor_name: null, sponsor_logo_url: null, sponsor_link: null,
     home: true, venue: "", address: "", city: "", state: "",
-    rose_city_score: null, opponent_score: null, season_id: seasonId,
+    rose_city_score: null, opponent_score: null, replay_video_url: null, season_id: seasonId,
   };
 }
 
@@ -289,7 +291,7 @@ export default function SchedulePage() {
       const supabase = createClient();
       const { data, error: loadError } = await supabase
         .from("matches")
-        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, opponent_logo_asset_id, competition, league_logo_url, league_logo_asset_id, sponsor_name, sponsor_logo_url, sponsor_logo_asset_id, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, season_id")
+        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, opponent_logo_asset_id, competition, league_logo_url, league_logo_asset_id, sponsor_name, sponsor_logo_url, sponsor_logo_asset_id, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, replay_video_url, season_id")
         .order("date")
         .order("time");
       if (loadError) setError(loadError.message);
@@ -351,6 +353,9 @@ export default function SchedulePage() {
         return "Sponsor website link must be a valid http or https address.";
       }
     }
+    if (matchReplayEmbedUrl(form.replay_video_url ?? "") === null) {
+      return "Replay video must be a YouTube video link, like https://youtu.be/…";
+    }
     return null;
   }
 
@@ -372,6 +377,7 @@ export default function SchedulePage() {
       sponsor_name: addForm.sponsor_name?.trim() || null,
       sponsor_logo_url: addForm.sponsor_logo_url?.trim() || null,
       sponsor_link: addForm.sponsor_link?.trim() || null,
+      replay_video_url: matchReplayEmbedUrl(addForm.replay_video_url ?? "") || null,
     }]);
     if (e) { setError(e.message); setSaving(false); return; }
     setAddForm({
@@ -398,6 +404,7 @@ export default function SchedulePage() {
       home: m.home, venue: m.venue, address: m.address ?? "",
       city: m.city ?? "", state: m.state ?? "",
       rose_city_score: m.rose_city_score, opponent_score: m.opponent_score,
+      replay_video_url: m.replay_video_url ?? null,
       season_id: m.season_id,
     });
   }
@@ -457,6 +464,7 @@ export default function SchedulePage() {
       sponsor_name: editForm.sponsor_name?.trim() || null,
       sponsor_logo_url: editForm.sponsor_logo_url?.trim() || null,
       sponsor_link: editForm.sponsor_link?.trim() || null,
+      replay_video_url: matchReplayEmbedUrl(editForm.replay_video_url ?? "") || null,
     }).eq("id", editingId);
     if (e) { setError(e.message); setSaving(false); return; }
     await deleteUnusedMatchImageUrls({
@@ -1195,6 +1203,23 @@ function MatchForm({
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>
+
+          {club.presentationTemplateKey === "cinematic@2" && (
+            <div className="sm:col-span-2">
+              <Field id="match-replay-video" label="Replay video (YouTube link)" optional>
+                <input
+                  id="match-replay-video"
+                  type="url"
+                  inputMode="url"
+                  placeholder="e.g. https://youtu.be/…"
+                  value={form.replay_video_url ?? ""}
+                  onChange={(e) => set("replay_video_url", e.target.value)}
+                  className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+                />
+              </Field>
+              <p className="mt-1.5 font-body text-xs text-muted-foreground">Shown as the Replay the Match video on the homepage once this match has a result.</p>
+            </div>
+          )}
         </div>
       </MatchFormSection>
 

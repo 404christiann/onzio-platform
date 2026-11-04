@@ -5,7 +5,7 @@ export function titleLines(title: string): string[] {
   return title.split("\n");
 }
 
-export const MAX_KIT_BULLET_POINTS = 8;
+export const MAX_KIT_BULLET_POINTS = 10;
 export const MAX_KIT_PHOTOS = 6;
 
 export const DEFAULT_KIT_BULLET_POINTS = [
