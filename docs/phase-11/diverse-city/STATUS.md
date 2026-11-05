@@ -1,5 +1,26 @@
 # Diverse City FC Status
 
+## 2026-11-04 - RC2027 resilient icon images
+
+**Agent/package:** Claude Code, ad hoc fix for the RC2027 architecture test (follows
+RC2027-MATCH-SUMMARY and the Shop redesign, `e8cdf22`). **Status:** `implemented locally,
+uncommitted`, on branch `codex/rose-city-resilient-images` (worktree
+`implementation/onzio-platform-images`).
+
+**Completed work:** eight direct `<img>` icon tags now render through `ResilientNativeImage`, so
+"routes application images through resilient components" passes again. Visuals are unchanged.
+
+**Files changed:** `components/cinematic/CinematicMatchResult.tsx`, `CinematicMatchSummary.tsx`,
+`CinematicSchedule.tsx`, `CinematicShop.tsx`, `HANDOFF.md` and this ledger.
+
+**Verification:** architecture 21/21, contracts 1287/1287, `tsc --noEmit` clean. Headless Chromium
+at 390/1440px on Home, Shop, Schedule and a Match Summary page shows no broken images, with icon
+sizes identical to the unchanged 3198 baseline. A temporary before/after server-render diff covered
+the summary/replay-only icons and was then deleted. No database changes.
+
+**Blockers/exact next step:** Christian's OK to commit, then merge into
+`codex/rose-city-homepage-2027`. No push or deploy.
+
 ## 2026-10-12 - Subscription payment-state correction
 
 **Agent/package:** Codex, `BILLING-FAILED-01`. **Status:** `complete`.

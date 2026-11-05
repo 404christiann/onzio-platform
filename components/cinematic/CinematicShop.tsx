@@ -69,7 +69,7 @@ const VIDEO_PATH = "M17 7.00003V8.90003L22.4265 5.10145C23.0893 4.63751 24 5.111
 function CardIcon({ icon }: { icon: ShopCardIcon | undefined }) {
   if (!icon) return null;
   if (icon === "video") return <svg className="shop-info-icon video" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d={VIDEO_PATH} /><path fill="#fff" d="M6.4 9.2 11.6 12l-5.2 2.8z" /></svg>;
-  return <img className={`shop-info-icon ${icon === "jersey" ? "shirt" : icon}`} src={`/rose-city/icons/${icon}.png`} alt="" />;
+  return <NativeImage className={`shop-info-icon ${icon === "jersey" ? "shirt" : icon}`} src={`/rose-city/icons/${icon}.png`} alt="" />;
 }
 
 function RuleHeading({ id, children, side }: { id: string; children: string; side: "left" | "right" }) {

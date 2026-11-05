@@ -34,7 +34,7 @@ function Timeline({ events, fixture, crestUrl, clubLabel }: { events: MatchEvent
       : <><span className="event-player">{event.kind === "goal" ? `Goal: ${event.player}` : event.player}</span>{event.detail && <span className="event-detail">{event.detail}</span>}</>}</span>;
     return <li key={index} className={`summary-event ${event.side}`} aria-label={`${event.minute.replace(/′/g, " minutes")}, ${isClub ? clubLabel : fixture.opponent}, ${KIND_LABEL[event.kind]}`}>
       <div className="event-half club">{isClub && <>{text}<Crest club crestUrl={crestUrl} fixture={fixture} /><span className="event-minute">{event.minute}</span></>}</div>
-      <div className="event-mark">{event.kind === "goal" ? <span className="event-score">{club} : {opponent}</span> : <span className="event-icon"><img src={`${ICON}/${KIND_ICON[event.kind]}.png`} alt="" /></span>}</div>
+      <div className="event-mark">{event.kind === "goal" ? <span className="event-score">{club} : {opponent}</span> : <span className="event-icon"><NativeImage src={`${ICON}/${KIND_ICON[event.kind]}.png`} alt="" /></span>}</div>
       <div className="event-half opponent">{!isClub && <><span className="event-minute">{event.minute}</span><Crest club={false} crestUrl={crestUrl} fixture={fixture} />{text}</>}</div>
     </li>;
   })}</ol>;
@@ -66,10 +66,10 @@ function Information({ fixture, summary, timeZone }: { fixture: Fixture; summary
   const officials = summary?.officials ?? [], kit = summary?.kit ?? [];
   return <section className="summary-section" aria-labelledby="info-title"><h2 id="info-title">Match information</h2>
     <div className="summary-info">
-      <dl className="info-list">{rows.map(([icon, label, value]) => <div key={label}><dt><img src={`${ICON}/${icon}.png`} alt="" />{label}:</dt><dd>{value}</dd></div>)}</dl>
+      <dl className="info-list">{rows.map(([icon, label, value]) => <div key={label}><dt><NativeImage src={`${ICON}/${icon}.png`} alt="" />{label}:</dt><dd>{value}</dd></div>)}</dl>
       {(officials.length > 0 || kit.length > 0) && <div className="info-groups">
-        {officials.length > 0 && <dl><img src={`${ICON}/referee-whistle.png`} alt="" className="group-icon" />{officials.map((person, i) => <div key={i}><dt>{person.role}:</dt><dd>{person.name}</dd></div>)}</dl>}
-        {kit.length > 0 && <dl><img src={`${ICON}/jersey.png`} alt="" className="group-icon" />{kit.map((row, i) => <div key={i}><dt>{row.item} color:</dt><dd>{row.color}</dd></div>)}</dl>}
+        {officials.length > 0 && <dl><NativeImage src={`${ICON}/referee-whistle.png`} alt="" className="group-icon" />{officials.map((person, i) => <div key={i}><dt>{person.role}:</dt><dd>{person.name}</dd></div>)}</dl>}
+        {kit.length > 0 && <dl><NativeImage src={`${ICON}/jersey.png`} alt="" className="group-icon" />{kit.map((row, i) => <div key={i}><dt>{row.item} color:</dt><dd>{row.color}</dd></div>)}</dl>}
       </div>}
     </div>
   </section>;
@@ -95,7 +95,7 @@ export default function CinematicMatchSummary({ fixture, clubLabel, crestUrl, ti
     {heading}
     <div className="summary-score">
       <CinematicLatestResult fixture={fixture} clubLabel={clubLabel} crestUrl={crestUrl} />
-      {video && <a className="summary-youtube" href={video} target="_blank" rel="noopener noreferrer"><span>Watch the match below or on YouTube</span><img src={`${ICON}/youtube-logo.png`} alt="YouTube (opens in a new tab)" /></a>}
+      {video && <a className="summary-youtube" href={video} target="_blank" rel="noopener noreferrer"><span>Watch the match below or on YouTube</span><NativeImage src={`${ICON}/youtube-logo.png`} alt="YouTube (opens in a new tab)" hideOnError /></a>}
     </div>
     <div className="summary-body">
       {summary && summary.events.length > 0 && <section className="summary-section" aria-labelledby="summary-title"><h2 id="summary-title">Summary</h2><Timeline events={summary.events} fixture={fixture} crestUrl={crestUrl} clubLabel={clubLabel} /></section>}
