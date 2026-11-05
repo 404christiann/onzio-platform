@@ -27,7 +27,6 @@ import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
 import { fetchSiteSponsorLogos } from "@/lib/queries";
 import {
   canAddSponsorLogo,
-  defaultSponsorLogosForPlacement,
   diffSponsorLogos,
   MAX_CAROUSEL_SPONSORS,
   MAX_FOOTER_SPONSORS,
@@ -123,12 +122,8 @@ export default function AdminSponsorsPage() {
       return next;
     });
   };
-  const [originalLogos, setOriginalLogos] = useState<DBSiteSponsorLogo[]>(
-    defaultSponsorLogosForPlacement("carousel"),
-  );
-  const [draftLogos, setDraftLogos] = useState<DraftSponsorLogo[]>(
-    toDraft(defaultSponsorLogosForPlacement("carousel")),
-  );
+  const [originalLogos, setOriginalLogos] = useState<DBSiteSponsorLogo[]>([]);
+  const [draftLogos, setDraftLogos] = useState<DraftSponsorLogo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);

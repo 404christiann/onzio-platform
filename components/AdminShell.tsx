@@ -129,8 +129,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       presentationTemplateKey: club.presentationTemplateKey,
       isBillingAuthorized,
       canMutateContent,
+      storeEnabled: club.storeEnabled,
     }),
-    [canMutateContent, club.presentationTemplateKey, club.role, isBillingAuthorized],
+    [canMutateContent, club.presentationTemplateKey, club.role, club.storeEnabled, isBillingAuthorized],
   );
   const navigation = useMemo(
     () => getVisibleAdminNavigation(accessContext),

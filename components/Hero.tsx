@@ -255,19 +255,21 @@ export default function Hero({
           className="flex flex-col sm:flex-row gap-4 w-full justify-center"
           style={{ opacity: editing ? 1 : 0 }}
         >
-          <Link
-            href="/shop"
-            className="font-display font-bold text-sm tracking-widest uppercase px-8 py-4 transition-all duration-200"
-            style={{ backgroundColor: "var(--color-red)", color: "#fff" }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-red-dark)")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-red)")
-            }
-          >
-            Team Store
-          </Link>
+          {club.storeEnabled && (
+            <Link
+              href="/shop"
+              className="font-display font-bold text-sm tracking-widest uppercase px-8 py-4 transition-all duration-200"
+              style={{ backgroundColor: "var(--color-red)", color: "#fff" }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-red-dark)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--color-red)")
+              }
+            >
+              Team Store
+            </Link>
+          )}
           <Link
             href="/roster"
             className="font-display font-bold text-sm tracking-widest uppercase px-8 py-4 border border-white/50 text-white transition-all duration-200 hover:border-white hover:bg-white/10"

@@ -187,6 +187,7 @@ async function AdminDashboardContent() {
     presentationTemplateKey: club.presentationTemplateKey,
     isBillingAuthorized,
     canMutateContent,
+    storeEnabled: club.storeEnabled,
   });
   const data = await loadAdminDashboardData(supabase, club.id);
 

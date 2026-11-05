@@ -12,13 +12,14 @@ import {
   normalizeKitStoreNote,
   titleLines,
 } from "@/lib/shop-kit";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
 import { AcademyShopLoadingSkeleton } from "@/components/sites/diverse-city/LoadingSkeleton";
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 export default function AcademyHomeShopFeature({ editorContent }: { editorContent?: ShopKitContent }) {
   const sharedPiece = useHomepagePiece("shared.shop");
   const clubId = useClubId();
+  const { storeEnabled } = useClubContext();
   const [content, setContent] = useState<ShopKitContent | null>(null);
   const [loading, setLoading] = useState(true);
   const showLoading = useBoundedAcademyLoading(loading, clubId);
@@ -33,6 +34,7 @@ export default function AcademyHomeShopFeature({ editorContent }: { editorConten
       .finally(() => setLoading(false));
   }, [clubId, editorContent]);
 
+  if (!storeEnabled && !editorContent) return null;
   if (showLoading && !editorContent) return <AcademyShopLoadingSkeleton />;
 
   const section = (editorContent ?? content)?.section;

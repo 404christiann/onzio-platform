@@ -7,7 +7,8 @@ import {
   type ShopKitContent,
 } from "@/lib/queries";
 import type { ShopKitSurface, ShopKitVariant } from "@/lib/db-types";
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { availableKitVariants, resolveKitVariant } from "@/lib/shop-kit";
 
 const KIT_VARIANTS: Array<{ id: ShopKitVariant; label: string }> = [
   { id: "home", label: "Home" },
@@ -47,6 +48,25 @@ export default function ShopKitSectionContainer({
       .finally(() => setLoading(false));
   }, [clubId, surface, editorContent]);
 
+  const { storeEnabled } = useClubContext();
+  const kits = editorContent ?? contentByVariant;
+  // Only kits with words and a photo are offered; an empty Away kit is never
+  // stood in for by the Home shirt.
+  const offeredVariants = kits
+    ? availableKitVariants(kits).filter((variant) => KIT_VARIANTS.some((kit) => kit.id === variant))
+    : [];
+  const shownVariant = resolveKitVariant(activeVariant, offeredVariants);
+
+  useEffect(() => {
+    // Keep the page's photo row on the kit actually shown (public page only:
+    // the admin preview must not move the editor off the kit being edited).
+    if (editorContent || !shownVariant || shownVariant === activeVariant) return;
+    setInternalVariant(shownVariant);
+    onVariantChange?.(shownVariant);
+  }, [activeVariant, editorContent, onVariantChange, shownVariant]);
+
+  if (!storeEnabled && !editorContent) return null;
+
   if (loading && !editorContent) {
     return (
       <div
@@ -63,15 +83,11 @@ export default function ShopKitSectionContainer({
     );
   }
 
-  const content =
-    (editorContent ?? contentByVariant)?.[activeVariant]?.section &&
-    (editorContent ?? contentByVariant)![activeVariant].photos.length > 0
-      ? (editorContent ?? contentByVariant)![activeVariant]
-      : (editorContent ?? contentByVariant)?.home;
+  const content = shownVariant ? kits?.[shownVariant] : null;
 
   if (!content?.section || content.photos.length === 0) return null;
 
-  const showVariantTabs = surface === "shop";
+  const showVariantTabs = surface === "shop" && offeredVariants.length > 1;
 
   return (
     <ShopKitSection
@@ -90,8 +106,8 @@ export default function ShopKitSectionContainer({
           }}
           aria-label="Select kit type"
         >
-          {KIT_VARIANTS.map((variant) => {
-            const isSelected = activeVariant === variant.id;
+          {KIT_VARIANTS.filter((variant) => offeredVariants.includes(variant.id)).map((variant) => {
+            const isSelected = shownVariant === variant.id;
             return (
               <button
                 key={variant.id}

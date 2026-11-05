@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   canAddKitPhoto,
   cleanKitBulletPoints,
-  DEFAULT_KIT_BULLET_POINTS,
-  DEFAULT_KIT_STORE_NOTE,
   diffShopKitPhotos,
   kitPhotoAlt,
   kitPhotoDisplayMode,
@@ -84,18 +82,16 @@ describe("editable shop details", () => {
     ]);
   });
 
-  it("uses current defaults when a legacy row has no bullet-point column", () => {
-    expect(normalizeKitBulletPoints(undefined)).toEqual(
-      DEFAULT_KIT_BULLET_POINTS,
-    );
+  it("shows no bullet points when a row has none saved", () => {
+    expect(normalizeKitBulletPoints(undefined)).toEqual([]);
   });
 
   it("preserves an intentionally empty store note", () => {
     expect(normalizeKitStoreNote("")).toBe("");
   });
 
-  it("uses the current store note when a legacy row has no store-note column", () => {
-    expect(normalizeKitStoreNote(undefined)).toBe(DEFAULT_KIT_STORE_NOTE);
+  it("shows no store note when a row has none saved", () => {
+    expect(normalizeKitStoreNote(undefined)).toBe("");
   });
 });
 

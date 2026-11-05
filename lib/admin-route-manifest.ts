@@ -7,6 +7,8 @@ export type AdminRouteAccessContext = Readonly<{
   presentationTemplateKey: string | null;
   isBillingAuthorized: boolean;
   canMutateContent: boolean;
+  /** Operator-only clubs.store_enabled: Shop is hidden everywhere when off. */
+  storeEnabled: boolean;
 }>;
 
 export type AdminRouteGroupId =
@@ -378,6 +380,7 @@ export function isAdminRouteVisible(
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
   if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;
+  if (route.id === "shop" && !context.storeEnabled) return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&

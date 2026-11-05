@@ -4,7 +4,7 @@ export const DEFAULT_SITE_SOCIAL_LINKS: DBSiteSocialLink[] = [
   {
     id: "instagram",
     label: "Instagram",
-    href: "https://www.instagram.com/rosecityfutbolclub/",
+    href: "",
     icon: "/images/logo/instagramLogo.svg",
     sort_order: 0,
     updated_at: "",
@@ -12,7 +12,7 @@ export const DEFAULT_SITE_SOCIAL_LINKS: DBSiteSocialLink[] = [
   {
     id: "facebook",
     label: "Facebook",
-    href: "https://www.facebook.com/search/top?q=rose%20city%20futbol%20club",
+    href: "",
     icon: "/images/logo/facebookLogo.svg",
     sort_order: 1,
     updated_at: "",
@@ -20,7 +20,7 @@ export const DEFAULT_SITE_SOCIAL_LINKS: DBSiteSocialLink[] = [
   {
     id: "tiktok",
     label: "TikTok",
-    href: "https://www.tiktok.com/@rosecityfc",
+    href: "",
     icon: "/images/logo/tiktokLogo.svg",
     sort_order: 2,
     updated_at: "",
@@ -28,7 +28,7 @@ export const DEFAULT_SITE_SOCIAL_LINKS: DBSiteSocialLink[] = [
   {
     id: "x",
     label: "X",
-    href: "https://x.com/RoseCityFutbol",
+    href: "",
     icon: "/images/logo/xLogo.svg",
     sort_order: 3,
     updated_at: "",
@@ -36,7 +36,7 @@ export const DEFAULT_SITE_SOCIAL_LINKS: DBSiteSocialLink[] = [
   {
     id: "youtube",
     label: "YouTube",
-    href: "https://www.youtube.com/@RoseCityFC",
+    href: "",
     icon: "/images/logo/youtubeLogo.svg",
     sort_order: 4,
     updated_at: "",
@@ -47,14 +47,9 @@ export function normalizeSiteSocialLinks(rows: DBSiteSocialLink[]): DBSiteSocial
   const rowById = new Map(rows.map((row) => [row.id, row]));
   return DEFAULT_SITE_SOCIAL_LINKS.map((fallback) => {
     const row = rowById.get(fallback.id);
-    // DEFAULT_SITE_SOCIAL_LINKS is seed/placeholder content for a platform
-    // that has never been configured at all — i.e. no row exists yet for
-    // this club/id. Once a row exists, its own (possibly empty) href is
-    // authoritative: an admin who explicitly clears the field must get a
-    // genuinely blank, hidden link back, not silently reset to the
-    // hardcoded template default. See lib/social-links.ts history /
-    // app/admin/(protected)/branding/page.tsx for the cross-tenant leak
-    // this previously caused (`"".trim() || fallback.href` always won).
+    // DEFAULT_SITE_SOCIAL_LINKS supplies each platform's label and icon with
+    // a blank href, so an unconfigured platform stays hidden. It must never
+    // carry a real club's URLs: those leaked into every new club's admin.
     if (!row) return fallback;
     return {
       ...fallback,

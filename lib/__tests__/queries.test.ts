@@ -278,7 +278,7 @@ describe('fetchShopKitContent', () => {
     await expect(fetchShopKitContent()).resolves.toEqual({ section: null, photos: [] })
   })
 
-  it('uses the current bullet points and store note for a legacy row', async () => {
+  it('shows no bullet points or store note for a row without them', async () => {
     const { bullet_points: _bullets, store_note: _storeNote, ...legacySection } = section
     mockFrom
       .mockReturnValueOnce(chain({ data: [legacySection], error: null }))
@@ -286,17 +286,8 @@ describe('fetchShopKitContent', () => {
 
     const result = await fetchShopKitContent()
 
-    expect(result.section?.bullet_points).toEqual([
-      'Authentic match jersey',
-      'Any name & number',
-      'League patch',
-      'Team sponsor badges',
-      'Raffle ticket included',
-      'Custom name + $10',
-    ])
-    expect(result.section?.store_note).toBe(
-      "Sold exclusively at Niky's Sports\n33 E Colorado Blvd, Pasadena, CA",
-    )
+    expect(result.section?.bullet_points).toEqual([])
+    expect(result.section?.store_note).toBe('')
   })
 
   it('throws with context when the section query fails', async () => {
@@ -441,7 +432,7 @@ describe('fetchSiteSocialLinks', () => {
     expect(result[1].id).toBe('facebook')
   })
 
-  it('falls back to default social links when the query fails', async () => {
+  it('falls back to blank platform links when the query fails', async () => {
     mockFrom.mockReturnValueOnce(chain({
       data: null,
       error: { message: 'social links unavailable' },
@@ -451,7 +442,7 @@ describe('fetchSiteSocialLinks', () => {
 
     expect(result).toHaveLength(5)
     expect(result[0].id).toBe('instagram')
-    expect(result[0].href).toContain('instagram.com')
+    expect(result[0].href).toBe('')
   })
 })
 

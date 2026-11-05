@@ -1,5 +1,4 @@
 import type { DBShopCarouselPhoto, DBShopKitPhoto, DBShopKitSection, DBShopPurchaseDetails, ShopKitVariant } from "@/lib/db-types";
-import { DEFAULT_KIT_BULLET_POINTS, DEFAULT_KIT_STORE_NOTE } from "@/lib/shop-kit";
 import type { ShopPhoto, ShopSaveRequest, ShopSection, ShopSnapshot, ShopVariant } from "./contract";
 
 export type KitDraft = { exists: boolean; section: ShopSection; photos: ShopPhoto[] };
@@ -19,8 +18,8 @@ export function emptyShopSection(): ShopSection {
     eyebrow: "",
     title: "",
     description: "",
-    bullet_points: [...DEFAULT_KIT_BULLET_POINTS],
-    store_note: DEFAULT_KIT_STORE_NOTE,
+    bullet_points: [],
+    store_note: "",
     cta_label: "",
     cta_link: "",
   };

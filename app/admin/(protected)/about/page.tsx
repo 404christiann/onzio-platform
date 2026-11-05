@@ -25,8 +25,6 @@ import { aboutPageEditableContent, prepareAboutPageSave } from "@/lib/about-edit
 import {
   aboutStoragePathFromPublicUrl,
   EMPTY_ABOUT_PAGE_CONTENT, EMPTY_CLUB_LOGO_PAGE_CONTENT,
-  DEFAULT_ABOUT_PAGE_CONTENT,
-  DEFAULT_CLUB_LOGO_PAGE_CONTENT,
   normalizeClubLogoColorCards,
   normalizeAboutValues,
   normalizeClubLogoFeatures,
@@ -129,10 +127,10 @@ export default function AdminAboutPage() {
   };
   const [selectedLogoFeature, setSelectedLogoFeature] = useState(0);
   const [aboutDraft, setAboutDraft] = useState<DBAboutPageContent>(
-    toAboutDraft(DEFAULT_ABOUT_PAGE_CONTENT),
+    toAboutDraft(EMPTY_ABOUT_PAGE_CONTENT),
   );
   const [logoDraft, setLogoDraft] = useState<DBClubLogoPageContent>(
-    toLogoDraft(DEFAULT_CLUB_LOGO_PAGE_CONTENT),
+    toLogoDraft(EMPTY_CLUB_LOGO_PAGE_CONTENT),
   );
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<{ about: string[]; logo: string[] }>({ about: [], logo: [] });
   const [snapshots, setSnapshots] = useState<Partial<Record<"about" | "logo", AboutEditorSnapshot>>>({});
