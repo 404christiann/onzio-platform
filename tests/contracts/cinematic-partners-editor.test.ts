@@ -106,8 +106,11 @@ describe("Partners editor draft", () => {
   });
 
   it("is reachable from Homepage and Sponsors for cinematic@2 owners", () => {
+    // The cinematic@2 shortcut list moved to lib/cinematic-editor-shortcuts.ts (RC2027-ROBINSON-EDITOR).
     const homepage = readFileSync(resolve(process.cwd(), "components/admin/homepage/HomepageEditor.tsx"), "utf8");
-    expect(homepage).toContain('{ label: "Edit in Partners", short: "Partners", href: "/admin/partners" }');
+    expect(homepage).toContain('if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push(...CINEMATIC_PAGE_SHORTCUTS);');
+    const shortcuts = readFileSync(resolve(process.cwd(), "lib/cinematic-editor-shortcuts.ts"), "utf8");
+    expect(shortcuts).toContain('{ label: "Edit in Partners", short: "Partners", href: "/admin/partners" }');
     const sponsors = readFileSync(resolve(process.cwd(), "app/admin/(protected)/sponsors/page.tsx"), "utf8");
     expect(sponsors).toMatch(/presentationTemplateKey === "cinematic@2"[^]*href="\/admin\/partners"/);
   });

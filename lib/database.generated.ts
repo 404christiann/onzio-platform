@@ -546,6 +546,125 @@ export type Database = {
           },
         ]
       }
+      cinematic_robinson_content: {
+        Row: {
+          bus_media_asset_id: string | null
+          club_id: string
+          content: Json
+          lockers_media_asset_id: string | null
+          meal_pass_media_asset_id: string | null
+          partner_media_asset_id: string | null
+          revision: number
+          route_map_media_asset_id: string | null
+          seating_media_asset_id: string | null
+          step_1_media_asset_id: string | null
+          step_2_media_asset_id: string | null
+          step_3_media_asset_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          bus_media_asset_id?: string | null
+          club_id: string
+          content: Json
+          lockers_media_asset_id?: string | null
+          meal_pass_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          revision?: number
+          route_map_media_asset_id?: string | null
+          seating_media_asset_id?: string | null
+          step_1_media_asset_id?: string | null
+          step_2_media_asset_id?: string | null
+          step_3_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bus_media_asset_id?: string | null
+          club_id?: string
+          content?: Json
+          lockers_media_asset_id?: string | null
+          meal_pass_media_asset_id?: string | null
+          partner_media_asset_id?: string | null
+          revision?: number
+          route_map_media_asset_id?: string | null
+          seating_media_asset_id?: string | null
+          step_1_media_asset_id?: string | null
+          step_2_media_asset_id?: string | null
+          step_3_media_asset_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_bus_media_asset_id_fkey"
+            columns: ["club_id", "bus_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_lockers_media_asset_id_fkey"
+            columns: ["club_id", "lockers_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_meal_pass_media_asset_i_fkey"
+            columns: ["club_id", "meal_pass_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_partner_media_asset_id_fkey"
+            columns: ["club_id", "partner_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_route_map_media_asset_i_fkey"
+            columns: ["club_id", "route_map_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_seating_media_asset_id_fkey"
+            columns: ["club_id", "seating_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_step_1_media_asset_id_fkey"
+            columns: ["club_id", "step_1_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_step_2_media_asset_id_fkey"
+            columns: ["club_id", "step_2_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_robinson_content_club_id_step_3_media_asset_id_fkey"
+            columns: ["club_id", "step_3_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
       cinematic_shop_content: {
         Row: {
           club_id: string
@@ -3762,6 +3881,10 @@ export type Database = {
         }
         Returns: Json
       }
+      load_robinson_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       load_shop_page: {
         Args: { p_club_id: string; p_operation_id?: string; p_surface: string }
         Returns: Json
@@ -3860,6 +3983,10 @@ export type Database = {
         Returns: Json
       }
       save_program_page: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_robinson_editor: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

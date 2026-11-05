@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { beforeEach, expect, it, vi } from "vitest";
 import { emptyChickFilAContent } from "@/lib/chick-fil-a-content";
 import { emptyStadiumContent } from "@/lib/stadium-content";
+import { emptyRobinsonContent } from "@/lib/cinematic-robinson-content";
 const mocks = vi.hoisted(() => ({ fresh: vi.fn(), context: vi.fn(), mutate: vi.fn(), access: vi.fn(), rpc: vi.fn(), retire: vi.fn() }));
 vi.mock("@/lib/auth-session", () => ({ requireFreshClubSession: mocks.fresh }));
 vi.mock("@/lib/authorization", () => ({ authorizeMutation: mocks.mutate, authorizeAdminAccess: mocks.access }));
@@ -59,4 +60,18 @@ it("keeps a successful save committed when reference-safe cleanup is queued", as
   const response = await handleVisitorPageRequest(request(emptyStadiumContent()), "stadium", true);
   expect(response.status).toBe(200); expect((await response.json()).cleanupPending).toBe(true);
   expect(mocks.retire).toHaveBeenCalledWith({ clubId: "verified-tenant", actorId: "actor", assetId: id });
+});
+it("saves Robinson Stadium through its own user-scoped RPC, separately from the Foothill Transit (stadium) record", async () => {
+  const response = await handleVisitorPageRequest(request(emptyRobinsonContent()), "robinson", true);
+  expect(response.status).toBe(200);
+  expect(mocks.rpc.mock.calls[0][0]).toBe("save_robinson_editor");
+  expect(mocks.rpc.mock.calls[0][1].p_club_id).toBe("verified-tenant");
+  await handleVisitorPageRequest(new Request("http://rose-city.localhost/api/admin/visitor-pages/robinson"), "robinson", false);
+  expect(mocks.rpc.mock.calls[1][0]).toBe("load_robinson_editor");
+});
+it("refuses Foothill Transit content sent as Robinson and Robinson content sent as Foothill Transit", async () => {
+  expect((await handleVisitorPageRequest(request(emptyStadiumContent()), "robinson", true)).status).toBe(400);
+  expect((await handleVisitorPageRequest(request(emptyRobinsonContent()), "stadium", true)).status).toBe(400);
+  expect((await handleVisitorPageRequest(request({ ...emptyRobinsonContent(), clubId: "foreign" }), "robinson", true)).status).toBe(400);
+  expect(mocks.rpc).not.toHaveBeenCalled();
 });

@@ -1,2 +1,2 @@
-import StadiumEditor from "@/components/admin/stadium/StadiumEditor";
-export default function StadiumPage() { return <StadiumEditor />; }
+import RobinsonStadiumEditor from "@/components/admin/stadium/RobinsonStadiumEditor";
+export default function StadiumPage() { return <RobinsonStadiumEditor />; }

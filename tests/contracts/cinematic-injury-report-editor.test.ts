@@ -171,8 +171,11 @@ describe("Injury Report editor draft", () => {
   });
 
   it("is an admin page reached from the Homepage editor for cinematic@2 owners", () => {
+    // The cinematic@2 shortcut list moved to lib/cinematic-editor-shortcuts.ts (RC2027-ROBINSON-EDITOR).
     const homepage = readFileSync(resolve(process.cwd(), "components/admin/homepage/HomepageEditor.tsx"), "utf8");
-    expect(homepage).toContain('{ label: "Edit in Injury Report", short: "Injury Report", href: "/admin/injury-report" }');
+    expect(homepage).toContain('if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push(...CINEMATIC_PAGE_SHORTCUTS);');
+    const shortcuts = readFileSync(resolve(process.cwd(), "lib/cinematic-editor-shortcuts.ts"), "utf8");
+    expect(shortcuts).toContain('{ label: "Edit in Injury Report", short: "Injury Report", href: "/admin/injury-report" }');
     const page = readFileSync(resolve(process.cwd(), "app/admin/(protected)/injury-report/page.tsx"), "utf8");
     expect(page).toContain("CinematicInjuryReportEditor");
   });

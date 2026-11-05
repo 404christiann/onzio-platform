@@ -55,7 +55,7 @@ export default function StadiumEditor() {
     Promise.all([loadVisitorPageEditor<StadiumContent>("stadium"), createClient().auth.getUser(), fetchCinematicHomepageContent(club.id), loadTicketsEditor()])
       .then(([loaded, user, homepage, tickets]) => {
         if (!active) return;
-        if (!user.data.user) throw new Error("Sign in again to edit Stadium.");
+        if (!user.data.user) throw new Error("Sign in again to edit Foothill Transit.");
         const key = `onzio:stadium:v1:${location.origin}:${user.data.user.id}:${club.id}`;
         recoveryKey.current = key;
         setShared(homepage); setTicketing(tickets.content ?? emptyTicketsContent()); setLoadedClubId(club.id);
@@ -71,7 +71,7 @@ export default function StadiumEditor() {
         setSnapshot(stored ? { ...loaded, revision: stored.revision, designRevision: stored.designRevision } : loaded);
         setDraft(stored?.content ?? loaded.content ?? emptyStadiumContent()); setMedia(stored?.media ?? loaded.media);
         setRetired(stored?.retired ?? []); setPending(stored?.pending ?? null);
-        if (stored) setMessage(stored.pending ? "An earlier save needs confirmation. Retry the same save." : "Your unsaved Stadium draft has been restored.");
+        if (stored) setMessage(stored.pending ? "An earlier save needs confirmation. Retry the same save." : "Your unsaved Foothill Transit draft has been restored.");
       }).catch(error => { if (active) { setMessage(error.message); setFailed(true); } });
     return () => { active = false; epoch.current += 1; };
   }, [club.id, club.presentationTemplateKey]);
@@ -95,33 +95,33 @@ export default function StadiumEditor() {
     setMessage(""); setFailed(false);
   };
   function guardLink(event: MouseEvent<HTMLAnchorElement>) {
-    if (locked || (dirty && !window.confirm("Leave this page? Your unsaved Stadium draft will be kept on this browser."))) event.preventDefault();
+    if (locked || (dirty && !window.confirm("Leave this page? Your unsaved Foothill Transit draft will be kept on this browser."))) event.preventDefault();
   }
   async function save() {
     if (!draft || !snapshot || busy || uploading) return;
     const parsed = stadiumSaveSchema.safeParse(pending ?? { operationId: crypto.randomUUID(), expectedRevision: snapshot.revision, designRevision: snapshot.designRevision, content: draft, retiredMediaAssetIds: [...new Set(retired)] });
     if (!parsed.success) { setFailed(true); setMessage("Review the fields and map crop before saving."); return; }
     const request = parsed.data, generation = epoch.current;
-    setPending(request); setBusy(true); setFailed(false); setMessage("Saving Stadium…");
+    setPending(request); setBusy(true); setFailed(false); setMessage("Saving Foothill Transit…");
     try { if (recoveryKey.current) localStorage.setItem(recoveryKey.current, JSON.stringify({ content: draft, revision: snapshot.revision, designRevision: snapshot.designRevision, pending: request, media, retired })); } catch {}
     const result = await saveVisitorPageEditor<StadiumContent>("stadium", request);
     if (generation !== epoch.current) return;
     setBusy(false);
     if (result.status === "committed") {
       setSnapshot(result.snapshot); setDraft(result.snapshot.content ?? emptyStadiumContent()); setMedia(result.snapshot.media);
-      setRetired([]); setPending(null); setMessage(result.snapshot.cleanupPending ? "Stadium saved. Image cleanup will retry automatically." : "Stadium saved."); clearRecovery();
+      setRetired([]); setPending(null); setMessage(result.snapshot.cleanupPending ? "Foothill Transit saved. Image cleanup will retry automatically." : "Foothill Transit saved."); clearRecovery();
     } else if (result.status === "uncertain") { setPending(result.request); setFailed(true); setMessage(result.message); }
     else { setPending(null); setFailed(true); setMessage(result.message); }
   }
   async function reload() {
-    if (locked || (dirty && !window.confirm("Discard unsaved Stadium edits and load the saved page?"))) return;
+    if (locked || (dirty && !window.confirm("Discard unsaved Foothill Transit edits and load the saved page?"))) return;
     const generation = epoch.current;
     setBusy(true);
     try {
       const loaded = await loadVisitorPageEditor<StadiumContent>("stadium");
       if (generation !== epoch.current) return;
       setSnapshot(loaded); setDraft(loaded.content ?? emptyStadiumContent()); setMedia(loaded.media); setRetired([]); setMessage(""); setFailed(false); clearRecovery();
-    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to reload Stadium."); } }
+    } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to reload Foothill Transit."); } }
     finally { if (generation === epoch.current) setBusy(false); }
   }
   async function upload(slot: StadiumArtworkSlot, file: File) {
@@ -145,7 +145,7 @@ export default function StadiumEditor() {
         copy.artwork[slot].assetId = result.data.assetId;
         return copy;
       });
-      setMessage("Image ready. Save Stadium to use it.");
+      setMessage("Image ready. Save Foothill Transit to use it.");
     } catch (error) { if (generation === epoch.current) { setFailed(true); setMessage(error instanceof Error ? error.message : "Unable to add this image. Choose it again to retry."); } }
     finally { if (generation === epoch.current) setUploading(null); }
   }
@@ -162,11 +162,11 @@ export default function StadiumEditor() {
     ? <textarea className={ADMIN_INPUT_CLASS + " min-h-28"} disabled={locked} value={draft?.[key] ?? ""} maxLength={4000} onChange={event => update(content => { content[key] = event.target.value; })} />
     : <input className={ADMIN_INPUT_CLASS} disabled={locked} value={draft?.[key] ?? ""} maxLength={120} onChange={event => update(content => { content[key] = event.target.value; })} />}</label>;
   const page = draft ? hydrateStadiumContent(draft, media) : null;
-  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title="Stadium" description="This page is unavailable for the current website design." /></AdminPage>;
-  return <AdminPage className="pb-24"><AdminPageHeader title="Stadium" description="Edit the page, travel information and artwork. Save applies all changes together." actions={<Link className="text-primary underline" href="/stadium" target="_blank">Open Stadium page</Link>} />
+  if (club.presentationTemplateKey !== "cinematic@2") return <AdminPage><AdminPageHeader title="Foothill Transit" description="This page is unavailable for the current website design." /></AdminPage>;
+  return <AdminPage className="pb-24"><AdminPageHeader title="Foothill Transit" description="Edit the Foothill Transit bus route page, travel information and artwork. Save applies all changes together." actions={<Link className="text-primary underline" href="/stadium/foothill-transit" target="_blank">Open Foothill Transit page</Link>} />
     <AdminPanel><p className="text-sm text-muted-foreground">Next-match wording comes from <Link className="text-primary underline" href="/admin/homepage" onClick={guardLink}>Homepage</Link>; fixtures come from <Link className="text-primary underline" href="/admin/schedule" onClick={guardLink}>Schedule</Link>. The purchase link and its unavailable message are managed in <Link className="text-primary underline" href="/admin/tickets" onClick={guardLink}>Tickets</Link>.</p></AdminPanel>
     {message && <div className={failed ? "rounded-lg border border-destructive p-4 text-sm" : "rounded-lg border border-border p-4 text-sm"} role={failed ? "alert" : "status"}>{message}</div>}
-    {!draft || loadedClubId !== club.id ? <AdminPanel><p role="status">Loading Stadium…</p>{failed && <Button onClick={() => location.reload()}>Try again</Button>}</AdminPanel> : <>
+    {!draft || loadedClubId !== club.id ? <AdminPanel><p role="status">Loading Foothill Transit…</p>{failed && <Button onClick={() => location.reload()}>Try again</Button>}</AdminPanel> : <>
       <AdminPanel><h2 className="mb-5 text-lg font-semibold">Page and sections</h2><div className="grid gap-5 md:grid-cols-2">{field("Page heading", "title")}{field("Subtitle", "subtitle")}</div><fieldset className="mt-5 space-y-3"><legend className="mb-3 text-sm font-medium">Visible on the page</legend>{VISIBILITY.map(([key, label]) => <label key={key} className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" disabled={locked} checked={draft[key]} onChange={event => update(content => { content[key] = event.target.checked; })} />{label}</label>)}</fieldset></AdminPanel>
       <AdminPanel><h2 className="mb-5 text-lg font-semibold">Stadium information</h2><div className="space-y-6">{draft.sections.map((section, index) => <fieldset key={section.id} className="space-y-4 rounded-lg border border-border p-4"><legend className="px-1 text-sm font-medium">Section {index + 1}</legend>
         <label className="block space-y-2"><span className="text-sm">Heading</span><input className={ADMIN_INPUT_CLASS} disabled={locked} maxLength={120} value={section.heading} onChange={event => update(content => { content.sections[index].heading = event.target.value; })} /></label>
@@ -186,8 +186,8 @@ export default function StadiumEditor() {
       <AdminPanel><h2 className="mb-5 text-lg font-semibold">Phone map layout</h2><label className="block space-y-2"><span className="text-sm">Display the map</span><select className={ADMIN_INPUT_CLASS} disabled={locked} value={draft.phoneMapLayout} onChange={event => update(content => { content.phoneMapLayout = event.target.value as "full" | "split"; })}><option value="full">Show the full image</option><option value="split">Show a route card, then a walking map</option></select></label><p className="mt-3 text-sm text-muted-foreground">Replacement maps start as a full image. Choose two parts only when your artwork contains a separate route card and walking map.</p>
         {draft.phoneMapLayout === "split" && <div className="mt-5 grid gap-6 md:grid-cols-2">{(["phoneCardCrop", "phoneMapCrop"] as const).map((cropKey, index) => <fieldset key={cropKey} className="space-y-4 rounded-lg border border-border p-4"><legend className="px-1 text-sm font-medium">{index === 0 ? "Route card" : "Walking map"} crop</legend><div className="grid grid-cols-2 gap-4">{(["x", "y", "width", "height"] as const).map(key => <label className="block space-y-2" key={key}><span className="text-sm">{({ x: "Left", y: "Top", width: "Width", height: "Height" })[key]} (%)</span><input className={ADMIN_INPUT_CLASS} type="number" min={key === "x" || key === "y" ? 0 : 0.001} max={100} step={0.1} disabled={locked} value={Number((draft[cropKey][key] * 100).toFixed(4))} onChange={event => { if (event.target.value) setCrop(cropKey, key, Number(event.target.value)); }} /></label>)}</div></fieldset>)}</div>}
       </AdminPanel>
-      <AdminPanel><details><summary className="flex min-h-11 cursor-pointer items-center text-lg font-semibold">Preview current edits</summary><div className="my-4 flex gap-3"><Button className="min-h-11" variant={previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(true)}>Phone</Button><Button className="min-h-11" variant={!previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(false)}>Desktop</Button></div><div className="overflow-auto rounded-lg border border-border" style={{ "--hp-viewport": "100dvh" } as CSSProperties}><div style={{ width: previewPhone ? 390 : 1280 }}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="Stadium"><CinematicShell contentOnly initialContent={shared}><CinematicStadium content={page!} ticketing={ticketing} /></CinematicShell></HomepagePreviewFrame></div></div></details></AdminPanel>
-      <div className="sticky bottom-3 z-10 flex flex-wrap gap-3 rounded-xl border border-border bg-background p-4 shadow-lg"><Button className="min-h-11" disabled={busy || !!uploading || (!dirty && !pending && !retired.length)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry same save" : "Save Stadium"}</Button><Button className="min-h-11" variant="outline" disabled={locked} onClick={() => void reload()}>Reload saved page</Button><span className="self-center text-sm text-muted-foreground">{pending ? "Awaiting save confirmation" : dirty ? "Unsaved changes" : "All changes saved"}</span></div>
+      <AdminPanel><details><summary className="flex min-h-11 cursor-pointer items-center text-lg font-semibold">Preview current edits</summary><div className="my-4 flex gap-3"><Button className="min-h-11" variant={previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(true)}>Phone</Button><Button className="min-h-11" variant={!previewPhone ? "default" : "outline"} onClick={() => setPreviewPhone(false)}>Desktop</Button></div><div className="overflow-auto rounded-lg border border-border" style={{ "--hp-viewport": "100dvh" } as CSSProperties}><div style={{ width: previewPhone ? 390 : 1280 }}><HomepagePreviewFrame host={club.primaryDomain ?? club.slug} label="Foothill Transit"><CinematicShell contentOnly initialContent={shared}><CinematicStadium content={page!} ticketing={ticketing} /></CinematicShell></HomepagePreviewFrame></div></div></details></AdminPanel>
+      <div className="sticky bottom-3 z-10 flex flex-wrap gap-3 rounded-xl border border-border bg-background p-4 shadow-lg"><Button className="min-h-11" disabled={busy || !!uploading || (!dirty && !pending && !retired.length)} onClick={() => void save()}>{busy ? "Saving…" : pending ? "Retry same save" : "Save Foothill Transit"}</Button><Button className="min-h-11" variant="outline" disabled={locked} onClick={() => void reload()}>Reload saved page</Button><span className="self-center text-sm text-muted-foreground">{pending ? "Awaiting save confirmation" : dirty ? "Unsaved changes" : "All changes saved"}</span></div>
     </>}
   </AdminPage>;
 }
