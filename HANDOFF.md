@@ -1,3 +1,38 @@
+## 2026-11-04 — News, Partners and the icon image fix merged into the homepage branch
+
+At Christian's request ("Lets merge all of them"), three branches were merged into
+`codex/rose-city-homepage-2027`. Each merge is its own commit:
+
+- `codex/rose-city-news-2027` (`a8a1b5a`), merged as `f0a494e`;
+- `codex/rose-city-partners-2027` (`066a596`), merged as `62dd029`;
+- `codex/rose-city-resilient-images` (`a1df541`), merged as `6f8c6e5`.
+
+Stadium Guidelines and Fan Code of Conduct were already on this branch (`96e7d06`).
+
+How the conflicts were resolved:
+
+- `HANDOFF.md` and `docs/phase-11/diverse-city/STATUS.md`: each package keeps its own whole entry.
+- `lib/database.generated.ts`: regenerated from the isolated local schema
+  (`supabase gen types typescript --db-url <55322> --schema onzio`), which has every migration
+  applied. Every line that is new against all three branches comes from a committed migration: the
+  Shop detail, footer logo and partners foreign keys, plus the policy and partners editor
+  functions.
+- The Homepage editor keeps both the Policies and the Partners shortcuts.
+
+Verification on the merged code:
+
+- `tsc --noEmit` passes, and ESLint reports no warnings or errors.
+- Contract, architecture and unit tests: 218 files, 1,801 tests pass.
+- Database: 46 files, 409 tests pass.
+- On the shared dev server (`rose-city.localhost:3198`), `/news`, `/sponsors`,
+  `/community/partnership`, `/stadium/guidelines`, `/stadium/fan-code`, `/shop`, `/schedule` and
+  `/stadium` return 200. In the browser, `/sponsors` and `/news` show no broken images and no
+  sideways scroll.
+
+Nothing is pushed or deployed. Before any hosted release, the CLAUDE.md migration gate applies to
+the new migrations: `20261104040000`, `20261104050000`, `20261105010000`, `20261105020000` and
+`20261105030000`.
+
 ## 2026-11-04 — RC2027-NEWS implemented locally
 
 Christian approved the News preview (outer `design-explorations/news-2027/`, port 3213) and asked
