@@ -1,3 +1,59 @@
+## 2026-11-04 — RC2027-INJURY-REPORT implemented locally
+
+Christian approved the Injury Report preview (outer `design-explorations/injury-report-2027/`, port
+3215), including the redesigned "No injuries" state, and the four test seams. The page and its
+editor are built for cinematic@2. Scope, rules and evidence are in
+`docs/rose-city-injury-report-2027-implementation.md`.
+
+**Where the work is:** its own worktree, `implementation/onzio-platform-injury`, on branch
+`codex/rose-city-injury-report-2027` from `ecb47d1`. Committed as `2e5f074` with Christian's OK; not pushed, merged or deployed.
+
+What was built:
+
+- **Public page:** `/news/injury-report` replaces the placeholder. It shows:
+  - "Presented by" with the partner logo, or the name as text until a logo is uploaded;
+  - cards for Roster players, in the owner's order;
+  - a "No current injuries" card when there are none;
+  - the photo band, Rehab heading, quote and a click-to-play YouTube video ("Coming soon" without a
+    link);
+  - the partner strip.
+- **Editor:** `/admin/injury-report`, reached from the Homepage editor's new "Edit in Injury
+  Report" shortcut. It edits:
+  - the partner name and logo;
+  - up to 24 entries (an active Roster player, injury, timeline and note), which can be reordered;
+  - the band photo and its description, the Rehab heading, the quote, the attribution and the
+    YouTube link.
+- **Data:** `onzio.cinematic_injury_report_content` and `onzio.cinematic_injury_entries` (composite
+  FK to `onzio.players`), under the `roster` permission, with receipt-based load and save RPCs and
+  advisory lock `734901330`.
+
+Migration `20261105040000_cinematic_injury_report.sql` is applied to the isolated local rehearsal
+only, through `scripts/apply-rose-city-injury-report-migration-local.ts`. The guarded seed
+`scripts/seed-rose-city-injury-report-2027-local.ts` wrote three made-up sample entries for Roster
+players #4, #7 and #9, a sample quote, and the band reusing Home's photo 3.
+
+Verification:
+
+- Contract, unit and architecture: 221 files, 1,831 tests pass.
+- Database: 47 files, 418 tests pass.
+- `tsc` passes, and ESLint is clean on touched files.
+- Real Chrome at 320, 390, 768, 1280 and 1440px: no sideways scroll and no broken images.
+- Editor in headless Chromium as the local owner: save, reload, public page, field messages and
+  390px all checked, then the edit was restored to the seed.
+- Logo and band uploads were not tried in a browser.
+
+Shared files this package touches (expect merge conflicts):
+
+- `HANDOFF.md` and `STATUS.md` (top entries);
+- `lib/database.generated.ts` (two tables and two RPCs);
+- `HomepageEditor.tsx` (one shortcut line);
+- `tests/README.md`;
+- `cinematic-news-pages.test.ts` (the injury-report case now expects the real page).
+
+**Before any hosted release, the CLAUDE.md migration gate applies to `20261105040000`.** Next:
+merge `codex/rose-city-injury-report-2027` into the homepage branch when Christian says so. Sam still owes the MVMNT
+CULTR logo and real report content.
+
 ## 2026-11-04 — News, Partners and the icon image fix merged into the homepage branch
 
 At Christian's request ("Lets merge all of them"), three branches were merged into

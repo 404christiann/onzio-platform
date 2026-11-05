@@ -295,6 +295,100 @@ export type Database = {
           },
         ]
       }
+      cinematic_injury_entries: {
+        Row: {
+          club_id: string
+          id: string
+          injury: string
+          note: string
+          player_id: string
+          sort_order: number
+          timeline: string
+        }
+        Insert: {
+          club_id: string
+          id: string
+          injury: string
+          note?: string
+          player_id: string
+          sort_order: number
+          timeline: string
+        }
+        Update: {
+          club_id?: string
+          id?: string
+          injury?: string
+          note?: string
+          player_id?: string
+          sort_order?: number
+          timeline?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_injury_entries_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "cinematic_injury_report_content"
+            referencedColumns: ["club_id"]
+          },
+          {
+            foreignKeyName: "cinematic_injury_entries_club_id_player_id_fkey"
+            columns: ["club_id", "player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      cinematic_injury_report_content: {
+        Row: {
+          band_media_asset_id: string | null
+          club_id: string
+          content: Json
+          presenter_logo_media_asset_id: string | null
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          band_media_asset_id?: string | null
+          club_id: string
+          content: Json
+          presenter_logo_media_asset_id?: string | null
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          band_media_asset_id?: string | null
+          club_id?: string
+          content?: Json
+          presenter_logo_media_asset_id?: string | null
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_injury_report_conte_club_id_presenter_logo_media_fkey"
+            columns: ["club_id", "presenter_logo_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_injury_report_conten_club_id_band_media_asset_id_fkey"
+            columns: ["club_id", "band_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_injury_report_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cinematic_news_articles: {
         Row: {
           club_id: string
@@ -3632,6 +3726,10 @@ export type Database = {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
+      load_cinematic_injury_report_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       load_cinematic_news_editor: {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
@@ -3730,6 +3828,10 @@ export type Database = {
         Returns: Json
       }
       save_cinematic_contact_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_cinematic_injury_report_editor: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

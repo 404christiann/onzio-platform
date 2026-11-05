@@ -183,6 +183,7 @@ export default function HomepageEditor() {
     { label: "Edit in Chick-fil-A", short: "Chick-fil-A", href: "/admin/chick-fil-a" },
     { label: "Edit Stadium Guidelines & Fan Code", short: "Policies", href: "/admin/policies" },
     { label: "Edit in Partners", short: "Partners", href: "/admin/partners" },
+    { label: "Edit in Injury Report", short: "Injury Report", href: "/admin/injury-report" },
   );
   if (capabilities.sharedTargets.storyText) sharedShortcuts.push({ label: "Edit in About", short: "About", href: "/admin/about" });
   if (capabilities.sharedTargets.programs) sharedShortcuts.push({ label: "Edit in Programs", short: "Programs", href: "/admin/programs" });

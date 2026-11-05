@@ -103,9 +103,10 @@ describe("RC2027-NEWS public pages", () => {
     await expect(NewsArticleRoute({ params: articleParams(SLUG) })).rejects.toThrow("not found");
   });
 
-  it("keeps /news/injury-report on its own page", async () => {
+  it("keeps /news/injury-report on its own page, the Injury Report", async () => {
     const html = renderToStaticMarkup(await NewsArticleRoute({ params: articleParams("injury-report") }));
-    expect(html).toContain("Placeholder injury-report");
+    expect(html).toContain("<h1>Injury Report</h1>");
+    expect(html).not.toContain("news-card");
   });
 
   it("routes article addresses to the tenant's News pages", async () => {
