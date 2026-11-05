@@ -46,8 +46,9 @@ Not pushed, merged or deployed.
 **Blockers/unresolved:** none for local work. Physical-phone/VoiceOver checks are open. Migration
 `20261105050000` needs the CLAUDE.md production migration gate before any hosted deploy.
 
-**Exact next step:** merge `codex/rose-city-robinson-editor-2027` into the homepage branch when
-Christian says so. The merge will conflict in HANDOFF, STATUS, `lib/database.generated.ts` and `HomepageEditor.tsx`.
+**Exact next step:** merged into `codex/rose-city-homepage-2027` as `5156238` (see HANDOFF). Next:
+physical-phone/VoiceOver checks and, only with release approval, the CLAUDE.md migration gate for
+`20261105050000`.
 
 ## 2026-11-04 - Rose City RC2027-INJURY-REPORT (local only)
 

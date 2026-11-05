@@ -1,3 +1,35 @@
+## 2026-11-04 — Robinson Stadium editor merged into the homepage branch
+
+At Christian's request, `codex/rose-city-robinson-editor-2027` (`3b36b7c`) was merged into
+`codex/rose-city-homepage-2027` as `5156238`. The Injury Report work was already on this branch.
+
+How the conflicts were resolved:
+
+- `HANDOFF.md` and `docs/phase-11/diverse-city/STATUS.md`: each package keeps its own whole entry.
+- `components/admin/homepage/HomepageEditor.tsx`: it uses the shared list in
+  `lib/cinematic-editor-shortcuts.ts`, which now also holds "Edit in Injury Report". The Injury
+  Report reachability test (`cinematic-injury-report-editor.test.ts`) and the Robinson admin-route
+  test now read that list. They check the same thing as before.
+- `lib/database.generated.ts` merged on its own. It is identical to a fresh regeneration from the
+  local schema, whose migration ledger matches this branch exactly (through `20261105050000`).
+
+Verification on the merged code:
+
+- `tsc --noEmit` passes, and ESLint passes on the files touched by the merge.
+- Contract, architecture and unit tests: 226 files, 1,857 tests pass.
+- Database: 48 files, 432 tests pass.
+- A temporary dev server on the merged tree loaded these pages with 200: `/stadium` (with the
+  confirmed copy, both dates and the parking anchor), `/stadium/foothill-transit`,
+  `/news/injury-report`, `/news`, `/sponsors` and `/`.
+- The machine was heavily loaded during these checks (load average 24 to 32, and the local
+  Supabase API taking 20 seconds or more). First requests often hit 500s, "socket hang up" or
+  `UNKNOWN_TENANT` from timed-out tenant lookups, including on the untouched homepage. Each page
+  loaded on retry. The shared 3198 server showed the same flakiness.
+
+Nothing is pushed or deployed. Before any hosted release, the CLAUDE.md migration gate applies to
+`20261105040000` (Injury Report) and `20261105050000` (Robinson), along with the earlier
+unreleased migrations.
+
 ## 2026-11-04 — RC2027-ROBINSON-EDITOR implemented locally
 
 Christian approved the plan and the test layers. `/admin/stadium` now edits the Robinson Stadium
