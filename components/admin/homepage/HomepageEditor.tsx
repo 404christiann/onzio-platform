@@ -181,6 +181,7 @@ export default function HomepageEditor() {
   if (snapshot.design.templateKey === "cinematic@2") sharedShortcuts.push(
     { label: "Edit in Robinson Stadium", short: "Stadium", href: "/admin/stadium" },
     { label: "Edit in Chick-fil-A", short: "Chick-fil-A", href: "/admin/chick-fil-a" },
+    { label: "Edit in Partners", short: "Partners", href: "/admin/partners" },
   );
   if (capabilities.sharedTargets.storyText) sharedShortcuts.push({ label: "Edit in About", short: "About", href: "/admin/about" });
   if (capabilities.sharedTargets.programs) sharedShortcuts.push({ label: "Edit in Programs", short: "Programs", href: "/admin/programs" });

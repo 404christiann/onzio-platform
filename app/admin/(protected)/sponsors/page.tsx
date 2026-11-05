@@ -5,6 +5,7 @@ import { X, ChevronLeft, ChevronRight, AlertTriangle } from "@/components/admin/
 import { useClubContext } from "@/components/ClubContextProvider";
 
 import Image from "@/components/ResilientImage";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -368,6 +369,17 @@ export default function AdminSponsorsPage() {
           ) : undefined
         }
       />
+
+      {club.presentationTemplateKey === "cinematic@2" && (
+        <AdminPanel className="mb-6 flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+          <p className="font-body text-sm text-muted-foreground">
+            The Club Partners and Partnership Opportunities pages have their own partner list. They can reuse these logos.
+          </p>
+          <Link href="/admin/partners" className="font-body text-sm font-semibold text-primary underline">
+            Edit Partners pages
+          </Link>
+        </AdminPanel>
+      )}
 
       {loading ? (
         <SponsorsContentSkeleton hidesSponsorFooterTab={hidesSponsorFooterTab} />

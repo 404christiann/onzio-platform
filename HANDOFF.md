@@ -1,3 +1,78 @@
+## 2026-11-04 — RC2027-PARTNERS implemented locally
+
+Christian approved the Club Partners and Partnership Opportunities previews on 2026-11-03. They are
+now built into `/sponsors` and `/community/partnership` for cinematic@2, with owner editing. The
+scope, rules and editor are in `docs/rose-city-partners-2027-implementation.md`.
+
+**Where the work is:** its own worktree, `implementation/onzio-platform-partners`, on branch
+`codex/rose-city-partners-2027` from `e8cdf22`. The shared folder turned out to be used by the
+Policies session as well. Nothing is committed.
+
+Christian's decisions:
+
+- **Styling:** no BoardUI.
+- **Partner list:** one shared partner list for both pages.
+- **Opportunities button:** the owner sets its link; the bar is hidden until a link is saved.
+- **Modern Woodmen:** use the colour logo the Home carousel already uses.
+
+What was built:
+
+- **Public pages:** `CinematicPartners` renders both pages from the approved preview CSS. A partner
+  without a logo shows "Original logo pending". Other designs keep their existing `/sponsors`.
+- **Editor:** a new Partners editor at `/admin/partners`, reached from Homepage → "Edit in
+  Partners" and from the Sponsors editor. It edits each page's copy and an ordered list of up to 24
+  partners (name, role, logo, logo colour). Logos are picked from the Sponsors editor's records or
+  uploaded through the media pipeline; nothing is copied.
+- **Data:** `onzio.cinematic_partners_content` and `onzio.cinematic_partners` (composite tenant FK
+  to `media_assets`). The save is atomic, with revisions and receipts. Logos no partner uses any
+  more go through the reference-safe retirement, so shared logos are kept.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`cinematic-partners-content.test.ts`);
+- public pages (`cinematic-partners-pages.test.ts`);
+- database (`tests/database/cinematic-partners-save.test.ts`);
+- the editor and save route (`cinematic-partners-editor.test.ts`).
+
+Migration `20261105030000_cinematic_partners.sql` is applied to the isolated local rehearsal only,
+through `scripts/apply-rose-city-partners-migration-local.ts`. The guarded seed
+`scripts/seed-rose-city-partners-2027-local.ts` wrote Sam's copy and seven partners. It reuses six
+existing logos and uploads nothing.
+
+Verification:
+
+- **Tests:**
+  - All contract tests pass (159 files, 1317 tests).
+  - The database suite passes (44 files, 397 tests).
+  - The architecture suite fails 1 of 21 tests: `routes application images through resilient
+    components`. It names `CinematicMatchResult`, `CinematicMatchSummary`, `CinematicSchedule` and
+    `CinematicShop`, which are unchanged since `e8cdf22`. This failure predates this package.
+- **Type check and lint:** `tsc --noEmit` passes, and ESLint is clean on every touched file.
+- **Browser checks:** done in the app's built-in browser, on the Partners dev server
+  (`http://rose-city.localhost:3196`). Claude in Chrome would not load any page; every tab stayed
+  on New Tab.
+  - Both pages at 320, 390, 768, 1280 and 1440px: no horizontal overflow, 7 cards, 6 logos, none
+    broken.
+  - At 1280px the grid is 634px tall, the same as the approved preview.
+  - The Opportunities bottom bar is hidden.
+  - Signed in as the local fixture owner through the local mail catcher:
+    - the editor loads with all seven partners, and the logo picker includes the carousel logos;
+    - a subtitle edit and a reorder saved, survived reload and appeared on `/sponsors`;
+    - a second save restored both. The database is back to the seed, and all six shared logos are
+      still published;
+    - the editor at 390px and the Sponsors link were also checked.
+- **Not checked:** logo upload in the browser (it needs a file picker), and a physical phone.
+
+Follow-ups found:
+
+- Nested routes such as `/club/about` and `/community/partnership` leave a hidden duplicate of the
+  page in a `<div hidden id="S:0">` after streaming in dev. Single-level routes don't. Users can't
+  see it, but it predates this package and is worth checking in a production build.
+- The four pre-existing `<img>` uses that break the architecture test.
+
+Next: Christian reviews the real pages and decides whether to commit. Waiting on Sam: the MVMNT
+CULTR logo, the stacked logo versions and the Opportunities button destination.
+
 ## 2026-11-04 — RC2027-MATCH-SUMMARY implemented locally
 
 Christian approved the Match Summary preview and asked for it to be built. The scope, rules and

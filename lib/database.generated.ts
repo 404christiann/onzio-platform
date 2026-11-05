@@ -295,6 +295,80 @@ export type Database = {
           },
         ]
       }
+      cinematic_partners: {
+        Row: {
+          club_id: string
+          id: string
+          logo_media_asset_id: string | null
+          logo_tone: string
+          name: string
+          role: string
+          sort_order: number
+        }
+        Insert: {
+          club_id: string
+          id: string
+          logo_media_asset_id?: string | null
+          logo_tone?: string
+          name: string
+          role?: string
+          sort_order: number
+        }
+        Update: {
+          club_id?: string
+          id?: string
+          logo_media_asset_id?: string | null
+          logo_tone?: string
+          name?: string
+          role?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_partners_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "cinematic_partners_content"
+            referencedColumns: ["club_id"]
+          },
+          {
+            foreignKeyName: "cinematic_partners_club_id_logo_media_asset_id_fkey"
+            columns: ["club_id", "logo_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      cinematic_partners_content: {
+        Row: {
+          club_id: string
+          content: Json
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_partners_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cinematic_shop_content: {
         Row: {
           club_id: string
