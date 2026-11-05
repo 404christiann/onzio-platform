@@ -1,5 +1,46 @@
 # Diverse City FC Status
 
+## 2026-11-04 - Rose City RC2027-INJURY-REPORT (local only)
+
+**Agent/package:** Claude, `RC2027-INJURY-REPORT`. **Status:** `in_progress`: implemented and
+verified locally, waiting on Christian's review and his decision on committing.
+
+**Completed work:** Sam's Injury Report at `/news/injury-report` for cinematic@2, with cards taken
+from Roster players. The owner editor is `/admin/injury-report`. The tables
+`onzio.cinematic_injury_report_content` and `onzio.cinematic_injury_entries` have RPCs and
+receipts. Three made-up sample entries are local seed data only. Diverse City FC (academy@1) is
+unaffected.
+
+**Files changed:**
+
+- migration `20261105040000_cinematic_injury_report.sql`, plus its local apply and seed scripts;
+- `lib/cinematic-injury-report-{content,editor,query}.ts`;
+- `CinematicInjuryReport`, `CinematicInjuryVideo` and `injury-report.css`;
+- the `/news/[articleSlug]` route, `/api/admin/cinematic-injury-report`, and the admin page and
+  editor;
+- the Homepage shortcut and `lib/database.generated.ts`;
+- four new test files, plus one updated News test.
+
+All of it is on branch `codex/rose-city-injury-report-2027`, in worktree
+`implementation/onzio-platform-injury`.
+
+**Verification:**
+
+- Contract, unit and architecture: 221 files, 1,831 tests pass.
+- Database: 47 files, 418 tests pass.
+- `tsc` and lint pass.
+- Real Chrome passed at five widths.
+- The editor passed in headless Chromium as the local fixture owner.
+
+Full detail is in `docs/rose-city-injury-report-2027-implementation.md`.
+
+**Blockers/exact next step:**
+
+- Christian reviews the page and the editor, then decides on committing and merging.
+- Migration `20261105040000` needs the CLAUDE.md production migration gate before any hosted
+  deploy.
+- Sam owes the MVMNT CULTR logo and real report content.
+
 ## 2026-11-04 - Rose City RC2027-NEWS (local only)
 
 **Agent/package:** Claude, `RC2027-NEWS`. **Status:** `in_progress`. Built and verified

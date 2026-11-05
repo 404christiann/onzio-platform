@@ -134,8 +134,10 @@ check.
    Schedule Summary and Rewatch columns. A per-match page with every section of Sam's design.
 3. **RC2027-NEWS.** The card list and article pages, with categories and an
    article editor. Foothill is the first real article.
-4. **RC2027-INJURY-REPORT.** Injury cards taken from Roster players, with
-   sample entries, plus the MVMNT CULTR quote and video fields.
+4. **RC2027-INJURY-REPORT** (implemented locally on 2026-11-04 on branch
+   `codex/rose-city-injury-report-2027`; see `docs/rose-city-injury-report-2027-implementation.md`).
+   Injury cards taken from Roster players, with sample entries, plus the MVMNT CULTR quote and
+   video fields.
 5. **RC2027-POLICIES.** Stadium Guidelines and Code of Conduct as editable
    accordions, using the two answers Sam wrote.
 6. **RC2027-PARTNERS** (implemented locally on 2026-11-04 on branch
