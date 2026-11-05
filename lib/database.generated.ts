@@ -295,6 +295,35 @@ export type Database = {
           },
         ]
       }
+      cinematic_policy_content: {
+        Row: {
+          club_id: string
+          content: Json
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_policy_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cinematic_shop_content: {
         Row: {
           club_id: string

@@ -1,3 +1,81 @@
+## 2026-11-04 — RC2027-POLICIES implemented locally
+
+Christian approved the Stadium Guidelines / Fan Code of Conduct preview (outer
+`design-explorations/policies-2027/`, port 3214) and asked for it to be built. Scope, rules and
+editor are in `docs/rose-city-policies-2027-implementation.md`.
+
+Christian's decisions:
+
+- **Empty rows:** rows without an answer are shown and open to "Details coming soon."
+- **Seed rows:** both pages start with all six of Sam's rows, in his order, including his second,
+  empty "Animals" row. Only Accessibility and Animals have answers. (Christian, later the same day:
+  "Copy the way it looks on Sam reference. Include all of the sections." This replaced the earlier
+  five-row seed.)
+- **Look:** every row with an answer starts open, as in Sam's files. Chevrons are the thinner
+  icons.download `thin` caret; rows, answer text and the title band were tightened to his spacing.
+- **Styling:** no BoardUI.
+- **Editor:** at `/admin/policies`, linked from the Homepage editor's shortcuts.
+
+What was built:
+
+- **Public pages:** `/stadium/guidelines` and `/stadium/fan-code` for cinematic@2. They share one
+  accordion layout with the Contact-style title band.
+- **Editor:** one editor for both pages. It edits the title, red line and section heading, and an
+  ordered list of rows. Each row has a heading and an answer made of subheadings and paragraphs.
+- **Storage:** content lives in the new `onzio.cinematic_policy_content` table.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`tests/contracts/cinematic-policies-content.test.ts`);
+- public pages (`cinematic-policies-pages.test.ts`);
+- the database save (`tests/database/cinematic-policies-save.test.ts`);
+- the editor draft (`cinematic-policies-editor.test.ts`).
+
+Migration `20261105020000_cinematic_policy_pages.sql` is applied to the isolated local rehearsal
+only, with `scripts/apply-rose-city-policies-migration-local.ts`. The guarded seed
+`scripts/seed-rose-city-policies-2027-local.ts` wrote Sam's six rows to both pages. It replaces
+the earlier five-row seed and still refuses to overwrite anything else.
+
+Verification:
+
+- **Tests:**
+  - Contract, unit and architecture: 1,747 of 1,748 pass. The one failure,
+    `platform-architecture.test.ts`, flags direct `<img>` use in the already-committed
+    `CinematicMatchResult`, `CinematicMatchSummary`, `CinematicSchedule` and `CinematicShop`. This
+    package does not touch those files.
+  - Database: 44 files, 394 tests pass.
+- **Type check and lint:** `tsc --noEmit` passes. ESLint is clean on every touched file.
+- **Real Chrome** (`rose-city.localhost:3198`), both pages at 320, 390, 768, 1280 and 1440px:
+  - six rows each, with both answered rows (Accessibility, Animals) open;
+  - four "Details coming soon." rows, which open on click;
+  - no horizontal overflow, no broken images and no console errors.
+  - A global `h1–h6` uppercase rule was overriding the "Parking"/"Seating" subheadings; it is now
+    reset in `policies.css`.
+- **Editor**, checked in headless Chromium with the synthetic local owner (`o***@alpha.local`):
+  - an edit saved, survived reload and appeared on `/stadium/fan-code`;
+  - the Stadium Guidelines page was unchanged by it;
+  - a blank row heading blocked the save with "Fan Code of Conduct, row 6: enter a row heading.";
+  - the 390px editor has no horizontal overflow;
+  - the edit was then undone through the editor, and the seed script confirms the stored content
+    equals Sam's seed again.
+- **Not checked in a browser:** the Homepage editor's new "Policies" shortcut. Local sign-in codes
+  were contended by the other sessions.
+
+After the "copy Sam's look" change: the 17 policy contract tests, `tsc` and ESLint pass again, and
+the real-Chrome check above was rerun on the new layout. At 1242px, "while parked." still wraps to a
+second line where Sam's file fits it on one; the site's body font runs slightly wider than his.
+
+The shared dev server on 3198 briefly returned 500 on several routes, including `/contact` and
+`/tickets`, while other sessions' edits recompiled. It then recovered.
+
+Next steps:
+
+- Christian reviews the real pages and the editor.
+- Sam or the club supplies the three missing answers and real Fan Code rows.
+
+Nothing is committed, pushed or deployed. The CLAUDE.md migration gate applies before any hosted
+release.
+
 ## 2026-11-04 — RC2027-MATCH-SUMMARY implemented locally
 
 Christian approved the Match Summary preview and asked for it to be built. The scope, rules and
