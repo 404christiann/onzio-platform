@@ -36,7 +36,7 @@ async function main() {
     assert((await db.query("select 1 from supabase_migrations.schema_migrations where version='20261105040000'")).rowCount, "Apply the Injury Report migration first.");
     assert((await db.query("select 1 from onzio.media_assets where club_id=$1 and id=$2 and status='published' and deleted_at is null and media_kind='photograph'", [clubId, BAND])).rowCount,
       "The reused band photo must be a published local photograph.");
-    const players = [];
+    const players: string[] = [];
     for (const sample of SAMPLES) {
       const row = (await db.query("select id from onzio.players where club_id=$1 and number=$2 and name=$3 and active", [clubId, sample.number, sample.name])).rows;
       assert.equal(row.length, 1, `Expected one active Roster player #${sample.number} ${sample.name}.`);
