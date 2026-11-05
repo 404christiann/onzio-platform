@@ -1,3 +1,95 @@
+## 2026-11-04 — RC2027-NEWS implemented locally
+
+Christian approved the News preview (outer `design-explorations/news-2027/`, port 3213) and asked
+for it to be built. Scope, rules and the editor are in `docs/rose-city-news-2027-implementation.md`.
+The work is on branch `codex/rose-city-news-2027` in its own worktree
+(`implementation/onzio-platform-news`, from `e8cdf22`), because the parallel sessions shared one
+folder and one dev server.
+
+Christian's decisions:
+
+- **Date:** the Foothill article is dated Friday, Nov 20, 2026 (Sam wrote "Wednesday").
+- **Cover:** the cover is a crop of Sam's mockup until he sends the photo.
+- **Remove:** hides an article and keeps it restorable.
+- **Future dates:** an article with a future date still shows right away.
+- **Styling:** no BoardUI.
+
+What was built:
+
+- **Public pages:** `/news` (Sam's legend, numbered cards newest first, colour bands) and
+  `/news/<address>` (dark header, cover, category, Pacific-time date, paragraphs, button), both
+  with the partner strip. Unknown or removed articles show "not found". `/news/injury-report`
+  keeps its placeholder.
+- **Admin → News** (cinematic@2 only): add, edit, remove and restore articles, with a cover
+  upload, field messages and a phone/desktop preview.
+- **Data:** `onzio.cinematic_news_articles` with RLS, a validator and receipt-based save/load
+  RPCs, plus a new `news` media surface.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`cinematic-news-content.test.ts`);
+- public pages (`cinematic-news-pages.test.ts`);
+- database and save route (`tests/database/cinematic-news.test.ts`,
+  `cinematic-news-admin.test.ts`);
+- the editor (`cinematic-news-editor.test.ts`).
+
+The exact admin-navigation tests now list News; they stay exact.
+
+Migration `20261105010000_cinematic_news.sql` is applied to the isolated local rehearsal only (it
+landed after the Policies and Partners migrations on the local ledger). The guarded seed published
+the Foothill article and its cover; nothing else changed.
+
+**Placeholder articles (follow-up, 2026-11-04).** Christian asked for `/news` to match Sam's
+reference with all five categories, using placeholder text the owner can change in Admin → News.
+`scripts/seed-rose-city-news-2027-placeholders-local.ts --execute-local` (loopback only; it refuses
+unless the Foothill article is the only one) added four articles in Sam's card order. Each has its
+own copy of the locker cover, as in his reference:
+
+1. Community: "Win free Foothill Transit bus passes at every RCFC home game" (Nov 18).
+2. Partner: "Chick-fil-A joins RCFC as an Official Partner" (Nov 16).
+3. News: "Tepito Coffee is brewing at Robinson Stadium this season" (Nov 13).
+4. New Player: "RCFC Welcomes Nick Mendez" (Nov 10), Sam's title.
+
+Chrome checks: the desktop list shows cards 1 to 5 with Sam's headings and colour bands, matching
+the reference. At 320 and 390px the list and all four new articles have no sideways scroll and no
+broken images. The dates are correct in Pacific time, and the button links (`/schedule`,
+`/community/partnership`, `/roster`) load. The receipt is in
+`assets/rose-city-news-2027/local-placeholder-receipt.json`.
+
+Verification:
+
+- **Tests:**
+  - All contract tests pass (160 files, 1,310 tests).
+  - The News database tests pass (6 tests).
+  - The full database run, under load from the parallel sessions, had 16 timeouts in
+    `homepage-atomic-save` and `registration-rls`. Those two files and the News file then passed
+    55/55 on their own.
+- **Type check and lint:** `tsc --noEmit` passes. ESLint is clean on every touched file.
+- **Real Chrome** on `http://rose-city.localhost:3199`, at 320, 390, 768, 1280 and 1440px in
+  exact-width frames:
+  - no horizontal overflow and no broken images on either page;
+  - the date reads "Friday, Nov 20, 2026 at 12:00 PM";
+  - no console errors.
+- **Editor**, run in headless Chromium as the local fixture owner (sign-in code read from the
+  rehearsal's Mailpit):
+  - the sidebar shows News;
+  - a blank article shows field messages;
+  - a subtitle edit saved, survived reload, showed publicly, and was restored;
+  - Remove hid the article from visitors and from the list; Restore brought it back;
+  - the editor fits 390px;
+  - no page errors.
+- **Seed state:** the Foothill article shows Sam's text again and is not removed. Its revision is now 11, after three check runs.
+
+Next steps:
+
+- Christian approved committing (2026-11-04). The work is committed on `codex/rose-city-news-2027`
+  only.
+- Sam sends the original locker-room photo.
+- The branch has to be merged with the Policies and Partners work. Expect conflicts in `HANDOFF.md`,
+  `lib/database.generated.ts`, `lib/admin-route-manifest.ts` and the admin nav tests.
+
+Committed on the branch only. Nothing is pushed, merged or deployed.
+
 ## 2026-11-04 — RC2027-POLICIES implemented locally
 
 Christian approved the Stadium Guidelines / Fan Code of Conduct preview (outer

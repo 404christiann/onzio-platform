@@ -36,12 +36,12 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(18);
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(19);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      18,
+      19,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      18,
+      19,
     );
   });
 
@@ -61,6 +61,7 @@ describe("strict admin route manifest", () => {
           "about",
           "sponsors",
           "contact",
+          "news",
         ],
       },
       {
@@ -139,7 +140,7 @@ describe("strict admin route manifest", () => {
     ).not.toContain("payments");
   });
 
-  it("hides exactly three canonical routes for editorial and keeps Registrations visible", () => {
+  it("hides exactly three canonical routes and the cinematic-only News editor for editorial, and keeps Registrations visible", () => {
     const context = {
       ...OWNER_ACCESS,
       presentationTemplateKey: "editorial@1",
@@ -151,6 +152,7 @@ describe("strict admin route manifest", () => {
 
     expect(hiddenIds).toEqual([
       "programs",
+      "news",
       "match-stats",
       "analytics",
     ]);

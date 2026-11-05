@@ -295,6 +295,134 @@ export type Database = {
           },
         ]
       }
+      cinematic_news_articles: {
+        Row: {
+          club_id: string
+          content: Json
+          cover_media_asset_id: string | null
+          created_at: string
+          id: string
+          published_at: string
+          removed_at: string | null
+          revision: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          cover_media_asset_id?: string | null
+          created_at?: string
+          id?: string
+          published_at: string
+          removed_at?: string | null
+          revision?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          cover_media_asset_id?: string | null
+          created_at?: string
+          id?: string
+          published_at?: string
+          removed_at?: string | null
+          revision?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_news_articles_club_id_cover_media_asset_id_fkey"
+            columns: ["club_id", "cover_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_news_articles_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cinematic_partners: {
+        Row: {
+          club_id: string
+          id: string
+          logo_media_asset_id: string | null
+          logo_tone: string
+          name: string
+          role: string
+          sort_order: number
+        }
+        Insert: {
+          club_id: string
+          id: string
+          logo_media_asset_id?: string | null
+          logo_tone?: string
+          name: string
+          role?: string
+          sort_order: number
+        }
+        Update: {
+          club_id?: string
+          id?: string
+          logo_media_asset_id?: string | null
+          logo_tone?: string
+          name?: string
+          role?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_partners_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "cinematic_partners_content"
+            referencedColumns: ["club_id"]
+          },
+          {
+            foreignKeyName: "cinematic_partners_club_id_logo_media_asset_id_fkey"
+            columns: ["club_id", "logo_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+        ]
+      }
+      cinematic_partners_content: {
+        Row: {
+          club_id: string
+          content: Json
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_partners_content_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cinematic_policy_content: {
         Row: {
           club_id: string
@@ -362,6 +490,48 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_detail_1_media_asset_id_fkey"
+            columns: ["club_id", "detail_1_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_detail_2_media_asset_id_fkey"
+            columns: ["club_id", "detail_2_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_detail_3_media_asset_id_fkey"
+            columns: ["club_id", "detail_3_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_detail_4_media_asset_id_fkey"
+            columns: ["club_id", "detail_4_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_detail_5_media_asset_id_fkey"
+            columns: ["club_id", "detail_5_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_shop_content_club_id_detail_6_media_asset_id_fkey"
+            columns: ["club_id", "detail_6_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
           {
             foreignKeyName: "cinematic_shop_content_club_id_fkey"
             columns: ["club_id"]
@@ -1293,6 +1463,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "homepage_revamp_content_club_id_footer_logo_media_asset_id_fkey"
+            columns: ["club_id", "footer_logo_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
             foreignKeyName: "homepage_revamp_content_club_id_header_partner_media_asset_fkey"
             columns: ["club_id", "header_partner_media_asset_id"]
             isOneToOne: false
@@ -1568,7 +1745,6 @@ export type Database = {
           opponent_score: number | null
           opponent_short_name: string | null
           replay_video_url: string | null
-          summary: Json | null
           rose_city_score: number | null
           scorers: Json
           season_id: string
@@ -1577,6 +1753,7 @@ export type Database = {
           sponsor_logo_url: string | null
           sponsor_name: string | null
           state: string | null
+          summary: Json | null
           time: string
           updated_at: string
           venue: string
@@ -1599,7 +1776,6 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           replay_video_url?: string | null
-          summary?: Json | null
           rose_city_score?: number | null
           scorers?: Json
           season_id: string
@@ -1608,6 +1784,7 @@ export type Database = {
           sponsor_logo_url?: string | null
           sponsor_name?: string | null
           state?: string | null
+          summary?: Json | null
           time: string
           updated_at?: string
           venue?: string
@@ -1630,7 +1807,6 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           replay_video_url?: string | null
-          summary?: Json | null
           rose_city_score?: number | null
           scorers?: Json
           season_id?: string
@@ -1639,6 +1815,7 @@ export type Database = {
           sponsor_logo_url?: string | null
           sponsor_name?: string | null
           state?: string | null
+          summary?: Json | null
           time?: string
           updated_at?: string
           venue?: string
@@ -3455,6 +3632,18 @@ export type Database = {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
+      load_cinematic_news_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
+      load_cinematic_partners_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
+      load_cinematic_policy_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       load_contact_editor: {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
@@ -3541,6 +3730,18 @@ export type Database = {
         Returns: Json
       }
       save_cinematic_contact_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_cinematic_news_article: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_cinematic_partners_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_cinematic_policy_editor: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

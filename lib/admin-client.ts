@@ -247,6 +247,7 @@ const MEDIA_BUCKETS: Record<
   flags: { surface: "roster", kind: "graphic" },
   homepage: { surface: "homepage", kind: "photo" },
   "homepage-artwork": { surface: "homepage", kind: "graphic" },
+  news: { surface: "news", kind: "photo" },
   logos: { surface: "branding", kind: "graphic" },
   logos_v2: { surface: "branding", kind: "graphic" },
   "opponent-logos": { surface: "schedule", kind: "graphic" },
