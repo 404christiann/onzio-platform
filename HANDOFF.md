@@ -243,6 +243,44 @@ Follow-ups found:
 Next: Christian reviews the real pages and decides whether to commit. Waiting on Sam: the MVMNT
 CULTR logo, the stacked logo versions and the Opportunities button destination.
 
+## 2026-11-04 — RC2027 resilient icon images (architecture test fix)
+
+`tests/architecture/platform-architecture.test.ts` → "routes application images through resilient
+components" was failing on direct `<img>` tags added by the Home update and `e8cdf22` (Shop redesign
+and Match Summary). Fixed on branch `codex/rose-city-resilient-images` (worktree
+`implementation/onzio-platform-images`, from `e8cdf22`). Uncommitted, waiting on Christian's OK.
+
+What changed: the eight remaining native `<img>` tags now use `@/components/ResilientNativeImage`,
+which all four files already imported. Same props, so the same image, classes and sizes.
+
+- `CinematicMatchResult.tsx`: the "Watch on YouTube" replay logo.
+- `CinematicMatchSummary.tsx`: timeline event icons, match-information icons, officials and kit
+  group icons, and the YouTube logo. The YouTube logo, the only one with alt text, gets
+  `hideOnError`, so a failed load leaves the link text instead of a photo placeholder.
+- `CinematicSchedule.tsx`: the Watch/Rewatch YouTube icon.
+- `CinematicShop.tsx`: the purchase-details info icons.
+
+Rendered output differs only in attribute order and the component's `data-image-delivery-attempt`
+(plus `data-critical-image` on the YouTube logo). No CSS targets those attributes. Icons that fail
+to load now disappear instead of showing a broken-image glyph.
+
+Verification:
+
+- `npm run test:architecture`: 3 files, 21 tests pass (was 1 failing).
+- `npm run test:contracts`: 156 files, 1287 tests pass. `tsc --noEmit` passes.
+- Headless Chromium (Playwright) on the worktree's dev server (3197) and, as a baseline, the shared
+  3198 server with the unchanged components: Home, Shop, Schedule and a Match Summary page at 390
+  and 1440px. No broken images or failed image requests. Every icon's rendered size matches the
+  baseline exactly.
+- Local data has no match summaries or replay videos, so the timeline, officials/kit, YouTube-logo
+  and Schedule YouTube icons don't render live. For those, a temporary server-render test compared
+  the old and new Summary, Schedule, Replay and Latest Result output with sample data (the Match
+  Summary sample script's data plus a replay URL). Markup was identical apart from the attributes
+  above. The test was deleted and the shared database was not touched.
+
+Next step: Christian decides whether to commit this branch and merge it into
+`codex/rose-city-homepage-2027`.
+
 ## 2026-11-04 — RC2027-MATCH-SUMMARY implemented locally
 
 Christian approved the Match Summary preview and asked for it to be built. The scope, rules and

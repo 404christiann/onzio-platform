@@ -9,7 +9,7 @@ import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
 type MatchProps = { fixture: Fixture; clubLabel: string; crestUrl: string };
 
 /** Sam's white "Watch on YouTube" logo, always on the black side of the replay card. */
-const WATCH_LOGO = <img className="replay-logo" src="/rose-city/icons/watch-on-youtube-white.png" alt="" width={891} height={120} />;
+const WATCH_LOGO = <NativeImage className="replay-logo" src="/rose-city/icons/watch-on-youtube-white.png" alt="" width={891} height={120} />;
 
 const opponentLabel = (fixture: Fixture) => fixture.opponentShortName || fixture.opponent;
 const resultDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric", year: "numeric" });

@@ -66,7 +66,7 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
               <div className="fixture-result">{outcome ? <><span className="result-outcome" data-outcome={outcome}>{outcome}</span><strong aria-label={`${fixture.roseCityScore} to ${fixture.opponentScore}`}>{fixture.roseCityScore}<span className="score-separator" aria-hidden="true">-</span>{fixture.opponentScore}</strong><span className="sr-only">{outcome === "W" ? "Win" : outcome === "L" ? "Loss" : "Draw"}</span></> : <span className="sr-only">Not played</span>}</div>
               <div className="fixture-summary">{played && fixture.id && <Link href={`/schedule/${fixture.id}`}>Match Summary<span className="sr-only"> for {name}, {scheduleDate(fixture.date)}</span></Link>}</div>
               <div className="fixture-watch">{video
-                ? <a href={video} target="_blank" rel="noopener noreferrer" aria-label={`${played ? "Rewatch" : "Watch"} ${name} on YouTube (opens in a new tab)`}><img src={`/rose-city/icons/watch-on-youtube-${isNext ? "white" : "black"}.png`} alt="" /></a>
+                ? <a href={video} target="_blank" rel="noopener noreferrer" aria-label={`${played ? "Rewatch" : "Watch"} ${name} on YouTube (opens in a new tab)`}><NativeImage src={`/rose-city/icons/watch-on-youtube-${isNext ? "white" : "black"}.png`} alt="" /></a>
                 : <span className="watch-soon">{played ? "Replay" : "Stream"} coming soon</span>}</div>
             </article>
             {fixture.sponsorLogoUrl && <div className="match-sponsor"><span>Presented by</span><NativeImage src={fixture.sponsorLogoUrl} alt={fixture.sponsorName || "Match sponsor"} width={172} height={35} /></div>}
