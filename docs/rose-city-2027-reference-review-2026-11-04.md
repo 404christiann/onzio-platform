@@ -138,8 +138,9 @@ check.
    sample entries, plus the MVMNT CULTR quote and video fields.
 5. **RC2027-POLICIES.** Stadium Guidelines and Code of Conduct as editable
    accordions, using the two answers Sam wrote.
-6. **RC2027-PARTNERS** (unchanged), then Know Before You Go and Season Tickets
-   when Sam sends them.
+6. **RC2027-PARTNERS** (implemented locally on 2026-11-04 on branch
+   `codex/rose-city-partners-2027`; see `docs/rose-city-partners-2027-implementation.md`), then Know
+   Before You Go and Season Tickets when Sam sends them.
 
 ### After Match Summary (Christian's plan, 2026-11-04)
 

@@ -24,6 +24,45 @@ as the local fixture owner. Full detail is in the HANDOFF entry.
 work when Christian says so. Migration `20261105010000` needs the CLAUDE.md production migration gate before
 any hosted deploy. Sam still owes the original cover photo.
 
+## 2026-11-04 - RC2027-PARTNERS (Rose City Club Partners and Partnership Opportunities)
+
+**Agent/package:** Claude Code, `RC2027-PARTNERS`. **Status:** `in_progress`: implemented and
+verified locally, waiting on Christian's review and his decision on committing.
+
+**Completed work:** `/sponsors` and `/community/partnership` for cinematic@2, built from the
+approved previews, plus the new `/admin/partners` editor. The editor covers each page's copy and a
+shared, ordered partner list (name, role, logo, logo colour). Logos are shared with the Sponsors
+editor. The work is in worktree `implementation/onzio-platform-partners` on branch
+`codex/rose-city-partners-2027`.
+
+**Files changed:**
+
+- migration `20261105030000_cinematic_partners.sql`, plus its local apply script and seed script;
+- `lib/cinematic-partners-{content,query,editor}.ts`;
+- `CinematicPartners` and `partners.css`;
+- the two public routes, the `/api/admin/cinematic-partners` route and the admin page and editor;
+- the Homepage shortcut and the Sponsors link;
+- the two new tables in `lib/database.generated.ts`;
+- four test files, `tests/README.md`, the implementation doc, the reference review, `HANDOFF.md`
+  and this ledger.
+
+**Verification:**
+
+- Contracts pass (1317 tests) and the database suite passes (397 tests). Architecture passes 20 of
+  21; the one failure predates this package (`<img>` in four files from `e8cdf22`).
+- TypeScript and lint pass.
+- Browser checks at 320, 390, 768, 1280 and 1440px passed. A real owner edit saved, reloaded,
+  showed publicly and was then restored.
+
+**Blockers and unresolved decisions:**
+
+- The MVMNT CULTR logo and Sam's stacked logo versions.
+- The Partnership Opportunities button destination (owner-editable; hidden until set).
+- Nothing is committed, pushed or deployed. The migration gate applies before any hosted release.
+
+**Exact next step:** Christian reviews `http://rose-city.localhost:3196/sponsors`,
+`/community/partnership` and `/admin/partners`, then decides whether to commit.
+
 ## 2026-10-12 - Subscription payment-state correction
 
 **Agent/package:** Codex, `BILLING-FAILED-01`. **Status:** `complete`.

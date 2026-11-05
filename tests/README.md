@@ -246,3 +246,8 @@ and phone evidence is documented in `docs/rose-city-shop-2027-implementation.md`
 ## Cinematic Schedule and editable league logo
 
 `npx vitest run tests/contracts/cinematic-schedule.test.ts tests/contracts/admin-schedule-match-editor.test.ts tests/database/schedule-league-logo.test.ts` covers club-timezone Next (including away and invalid/played fixtures), saved logos, empty/removed-media states,13-game first-page bounds, stable order and local tenant/media/reference safeguards. Browser acceptance additionally exercises all three actual upload/replace/remove → Save/reload/public paths and4→8→12→13 pagination. Tests use isolated local fixtures; no hosted tests. Full evidence and limitations: docs/rose-city-schedule-2027-implementation.md.
+
+
+## Cinematic Partners pages (RC2027-PARTNERS)
+
+`npx vitest run tests/contracts/cinematic-partners-content.test.ts tests/contracts/cinematic-partners-pages.test.ts tests/contracts/cinematic-partners-editor.test.ts` covers the content rules, both public routes (cinematic@2 only, other designs keep `/sponsors`), the save route's logo retirement and the editor draft helpers. With the isolated test environment exported, `npx vitest run tests/database/cinematic-partners-save.test.ts` covers the atomic save, receipts, shared Sponsors logos, reference-safe retirement, invalid content, tenant isolation and public read. It needs migration `20261105030000` on local Supabase. Evidence: `docs/rose-city-partners-2027-implementation.md`.
