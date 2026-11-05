@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { isAllowedPublicHref } from "@/lib/public-link";
 import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
+import { matchSummarySchema } from "@/lib/match-summary";
 import {
   isValidPublicEmail,
   isValidPublicPhone,
@@ -340,6 +341,10 @@ export const adminDataRequestSchema = z
         const value = item.replay_video_url;
         if (value !== undefined && value !== null && !(typeof value === "string" && (value === "" || MATCH_REPLAY_EMBED_PATTERN.test(value)))) {
           context.addIssue({ code: "custom", path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), "replay_video_url"], message: "Replay video must be a YouTube video link" });
+        }
+        // The Match Summary (lib/match-summary.ts); the database CHECK mirrors this.
+        if (item.summary !== undefined && item.summary !== null && !matchSummarySchema.safeParse(item.summary).success) {
+          context.addIssue({ code: "custom", path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), "summary"], message: "Check the match summary fields" });
         }
       }
     }

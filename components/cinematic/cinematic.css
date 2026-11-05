@@ -168,13 +168,11 @@
 .cinematic-site .replay-side{position:absolute;top:47%;width:31%;aspect-ratio:1;transform:translate(-50%,-50%);display:grid;place-items:center;transition:transform 200ms var(--ease-out)}
 .cinematic-site .replay-side.home{left:24.5%}
 .cinematic-site .replay-side.away{left:78%;--opponent-crest-size:calc(65.1vw * .31)}
-.cinematic-site .replay-soon{font:900 1.9vw/1 var(--display);text-transform:uppercase;letter-spacing:-.02em}
+.cinematic-site .replay-soon{font:900 1.9vw/1 var(--display);text-transform:uppercase;letter-spacing:-.02em;white-space:nowrap}
 .cinematic-site .replay-side img{width:100%;height:100%;object-fit:contain}
 .cinematic-site .replay-vs{position:absolute;left:50%;top:47%;transform:translate(-50%,-50%);font:900 3.4vw/1 var(--display);text-transform:uppercase;letter-spacing:-.03em}
-.cinematic-site .replay-watch{position:absolute;left:50%;bottom:5.5%;transform:translateX(-50%);display:grid;justify-items:center;gap:.7vw}
-.cinematic-site .replay-watch small{font:400 1vw/1 var(--body)}
-.cinematic-site .youtube-mark{display:flex;align-items:center;gap:.35vw;font:700 1.75vw/1 var(--body);letter-spacing:-.04em}
-.cinematic-site .youtube-mark svg{width:2.1vw;height:2.1vw;fill:#f00}
+.cinematic-site .replay-watch{position:absolute;left:68%;bottom:6%;transform:translateX(-50%);display:grid;justify-items:center;gap:.6vw;width:24%}
+.cinematic-site .replay-logo{display:block;width:100%;height:auto}
 @media(hover:hover) and (pointer:fine){.cinematic-site button.replay-cover:hover .replay-side{transform:translate(-50%,-50%) scale(1.03)}}
 
 /* RC2027-HOME-UPDATE: "Includes" label in the jersey section. */
@@ -198,10 +196,7 @@
  .cinematic-site .replay-side.away{--opponent-crest-size:calc((100vw - 32px) * .31)}
  .cinematic-site .replay-soon{font-size:15px}
  .cinematic-site .replay-vs{font-size:24px}
- .cinematic-site .replay-watch{gap:5px}
- .cinematic-site .replay-watch small{font-size:11px}
- .cinematic-site .youtube-mark{font-size:16px;gap:4px}
- .cinematic-site .youtube-mark svg{width:18px;height:18px}
+ .cinematic-site .replay-watch{gap:5px;width:34%}
  .cinematic-site .includes-label{font-size:15px;margin:20px 0 0 12px}
  .cinematic-site .jersey .includes-label+ul{margin:10px 0 22px 22px}
 }

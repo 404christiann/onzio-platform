@@ -27,3 +27,8 @@ export function matchReplayEmbedUrl(input: string): string | null {
   const id = videoId(url);
   return id && VIDEO_ID.test(id) ? `https://www.youtube.com/embed/${id}?rel=0` : null;
 }
+
+/** The YouTube watch page for a stored embed link (the match stream or replay), or "" for anything else. */
+export function youtubeWatchUrl(embed: string | null | undefined): string {
+  return embed && MATCH_REPLAY_EMBED_PATTERN.test(embed) ? `https://www.youtube.com/watch?v=${embed.slice(30, 41)}` : "";
+}

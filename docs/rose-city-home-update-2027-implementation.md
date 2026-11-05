@@ -25,6 +25,11 @@ Source: Sam's `Rose City FC Home page 1 2027 Final.jpg` in Dropbox
      nothing plays. Christian decided Sam's graphic only illustrates the idea.
    - The embed loads only after a click. Only the stored canonical embed
      pattern is ever embedded.
+   - Christian asked on 2026-11-04 for Sam's white "Watch on YouTube" logo
+     (`RCFC YouTube website icon white 2027.png`, trimmed copy in
+     `public/rose-city/icons/watch-on-youtube-white.png`) on the black side of
+     the card in both states. The placeholder adds "Coming soon" under it. The
+     same card is used on the Match Summary page.
 3. **City of Roses**: when the list has items, an "Includes" label sits above
    it. The store note is hidden when blank. The copy itself is owner-edited
    Shop kit content.

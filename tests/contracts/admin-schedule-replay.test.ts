@@ -17,20 +17,21 @@ describe("admin schedule replay video field", () => {
 
   it("offers a labelled YouTube field in the Result section for cinematic@2 clubs only", () => {
     expect(result).toContain('club.presentationTemplateKey === "cinematic@2"');
-    expect(result).toContain('<Field id="match-replay-video" label="Replay video (YouTube link)" optional>');
+    // RC2027-MATCH-SUMMARY: the same link is the stream before kickoff and the replay afterwards.
+    expect(result).toContain('<Field id="match-replay-video" label="Stream or replay video (YouTube link)" optional>');
     expect(result).toContain('id="match-replay-video"');
     expect(result).toContain('type="url"');
     expect(result).toContain('value={form.replay_video_url ?? ""}');
   });
   it("refuses links that are not a single YouTube video before saving", () => {
     expect(validate).toContain("matchReplayEmbedUrl(form.replay_video_url ?? \"\") === null");
-    expect(validate).toContain("Replay video must be a YouTube video link");
+    expect(validate).toContain("The stream or replay video must be a YouTube video link");
   });
   it("loads, edits and saves the stored embed link, clearing a blank field", () => {
     expect(schedule).toContain('import { matchReplayEmbedUrl } from "@/lib/youtube-embed";');
     expect(between('.from("matches")\n        .select("', '")')).toContain("replay_video_url");
     expect(between("function startEdit(", "});")).toContain("replay_video_url: m.replay_video_url ?? null");
     expect(schedule.split("replay_video_url: matchReplayEmbedUrl(").length - 1).toBe(2);
-    expect(schedule).toContain("replay_video_url: null, season_id: seasonId");
+    expect(schedule).toContain("replay_video_url: null, attendance: null,");
   });
 });

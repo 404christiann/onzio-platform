@@ -1,3 +1,4 @@
+import { readMatchSummary } from "@/lib/match-summary";
 import { hydrateAboutEditorMedia } from "@/lib/about-editor/media";
 import { supabase } from "@/lib/supabase";
 import { Player, Staff, Fixture, GoalkeeperStats, FieldStats } from "@/lib/data";
@@ -154,6 +155,7 @@ function mapFixture(row: DBMatch): Fixture {
     scorers: Array.isArray(row.scorers) ? (row.scorers as string[]) : [],
     ...(row.league_logo_url === undefined ? {} : { leagueLogoUrl: row.league_logo_url }),
     ...(row.replay_video_url === undefined ? {} : { replayVideoUrl: row.replay_video_url }),
+    ...(row.summary === undefined ? {} : { summary: readMatchSummary(row.summary) }),
   };
 }
 

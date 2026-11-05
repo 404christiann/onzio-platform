@@ -1,3 +1,112 @@
+## 2026-11-04 — RC2027-MATCH-SUMMARY implemented locally
+
+Christian approved the Match Summary preview and asked for it to be built. The scope, rules and
+editor are in `docs/rose-city-match-summary-2027-implementation.md`.
+
+What was built:
+
+- **Schedule:** Summary and Rewatch columns. Each match has one optional YouTube link: the stream
+  before kickoff, the replay afterwards, and a placeholder when blank. Directions now sit under the
+  venue.
+- **Match Summary page:** at `/schedule/<id>` for cinematic@2.
+- **Schedule editor:** a "Match summary" section with attendance, timeline, statistics, officials,
+  kit colors and lineups. Scorers follow the timeline's goals.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`match-summary-content.test.ts`);
+- public pages (`match-summary-pages.test.ts`);
+- database and save route (`tests/database/match-summary.test.ts`, `match-summary-admin.test.ts`);
+- the Schedule editor (`match-summary-editor.test.ts`).
+
+`admin-schedule-replay.test.ts` was updated for the renamed field.
+
+Migration `20261104050000_match_summary.sql` is applied to the isolated local rehearsal only. No
+summary content was seeded.
+
+Verification:
+
+- **Tests:** all contract tests pass (156 files, 1287 tests). The earlier full run, including unit
+  tests, passed 205 files and 1710 tests. The database suite passes (43 files, 388 tests).
+- **Type check and lint:** `tsc --noEmit` passes. ESLint has no errors; the only warnings are
+  `<img>` warnings for the small icons.
+- **Real Chrome checks** of `http://rose-city.localhost:3198` at 390 and 1440px, using temporary
+  sample data that was then removed:
+  - the Schedule links three played matches and shows "Replay coming soon" and "Stream coming
+    soon";
+  - the summary page shows every section;
+  - a match without a summary shows only information and replay;
+  - an upcoming match shows the "after the match" message;
+  - no horizontal overflow, no broken images and no console errors.
+- **Not checked:** the editor fields were not opened in the browser, because the local admin needs
+  an emailed login code.
+
+Next: Christian reviews the real pages. Nothing is committed, pushed or deployed. The Shop update
+and the replay logo change are also uncommitted.
+
+## 2026-11-04 — Replay card logo; Match Summary preview ready for approval
+
+- **Replay card:** the Replay the Match card (Home, and the coming Match Summary) now shows Sam's
+  white "Watch on YouTube" logo on the black side, as Christian asked, both when a video is set and
+  on the "Coming soon" placeholder. Test-first: `tests/contracts/cinematic-match-result.test.ts`.
+  All contract tests pass (152 files, 1267 tests). Checked in Chrome on Home at 1440, 390 and
+  320px, and in the Match Summary preview.
+- **Match Summary preview:** at outer `design-explorations/match-summary-2027/` (port 3212). It
+  covers Sam's Match Summary page and his Oct 30 Schedule with Summary and Rewatch columns. See its
+  README for the decisions, including one optional YouTube link per match (stream before kickoff,
+  replay afterwards). Christian approved everything except the logo, which is now fixed. The
+  build has not started.
+- **Shop update:** still uncommitted.
+
+## 2026-11-04 — RC2027-SHOP-UPDATE implemented locally
+
+Christian approved the Shop preview, including Sam's own icons and the Chick-fil-A route map for
+Map view, and asked for it to be built. The full scope, data rules and the open questions for Sam
+are in `docs/rose-city-shop-update-2027-implementation.md`.
+
+Christian's decisions:
+
+- **Buttons:** Authentic / Replica replace Home/Away on the public page. Away stays editable.
+- **Detail photos:** white boxes until Sam replaces the Real Madrid placeholders.
+- **Prices:** owner-editable.
+- **Map view:** shows Sam's Chick-fil-A Route Zoom Map, whole.
+- **Styling:** no BoardUI; the page uses the existing Shop styles.
+
+Built test-first at the four seams Christian confirmed:
+
+- content rules (`tests/contracts/cinematic-shop-update-content.test.ts`);
+- the public Shop page (`cinematic-shop-update-renderer.test.ts`);
+- the database save (`tests/database/cinematic-shop-update-save.test.ts`);
+- the editor draft (`cinematic-shop-update-editor.test.ts`).
+
+Migration `20261104040000_cinematic_shop_update.sql` is applied to the isolated local rehearsal
+only. The guarded seed `scripts/seed-rose-city-shop-update-2027-local.ts`:
+
+- wrote Sam's copy, sections and route map;
+- retired the old Bus Route map;
+- left every other content table unchanged.
+
+Verification:
+
+- **Tests:** the new contract and database tests pass. All contract and unit tests pass (201
+  files, 1690 tests). The database suite passes (42 files, 387 tests) on a second run; on the first
+  run, `homepage-story-programs-page-content.test.ts` failed 12 tests under load and passed 32/32 on
+  its own.
+- **Type check and lint:** `tsc --noEmit` passes. ESLint shows only a `no-img-element` warning for
+  the small icon images.
+- **Real Chrome checks** of `http://rose-city.localhost:3198/shop` at 320, 390, 768, 1280 and
+  1440px:
+  - no horizontal overflow, and the size chart fits its frame;
+  - six white tiles, four card icons, five care items, and the route map loads;
+  - Replica switches the line and its button is marked pressed;
+  - Buy now keeps the Niky's link;
+  - the only console message is the existing sponsor-carousel shorthand warning.
+- **Not checked:** the new editor fields were not opened in the browser, because the local admin
+  needs an emailed login code.
+
+Next: Christian reviews the real Shop page. Sam supplies the tile photos, an optional camera icon,
+and the Niky's address and replica details. Nothing is committed, pushed or deployed.
+
 ## 2026-11-04 — RC2027-HOME-UPDATE implemented locally
 
 Christian approved the Home update preview and asked for it to be built. It

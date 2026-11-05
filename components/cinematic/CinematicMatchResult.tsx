@@ -5,9 +5,11 @@ import NativeImage from "@/components/ResilientNativeImage";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { MATCH_REPLAY_EMBED_PATTERN } from "@/lib/youtube-embed";
-import { SOCIAL_ICON_PATHS } from "./social-icon-paths";
 
 type MatchProps = { fixture: Fixture; clubLabel: string; crestUrl: string };
+
+/** Sam's white "Watch on YouTube" logo, always on the black side of the replay card. */
+const WATCH_LOGO = <img className="replay-logo" src="/rose-city/icons/watch-on-youtube-white.png" alt="" width={891} height={120} />;
 
 const opponentLabel = (fixture: Fixture) => fixture.opponentShortName || fixture.opponent;
 const resultDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -50,9 +52,9 @@ export function CinematicReplay({ fixture, clubLabel, crestUrl }: MatchProps) {
     <p className="eyebrow">{clubLabel} vs {opponent}</p>
     <h2 id="replay-title">Replay the match</h2>
     <div className="replay-card">
-      {!embed ? <div className="replay-cover" role="img" aria-label={`${title} coming soon`}>{cover(<><small>Replay</small><span className="replay-soon">Coming soon</span></>)}</div>
+      {!embed ? <div className="replay-cover" role="img" aria-label={`${title} coming soon`}>{cover(<>{WATCH_LOGO}<span className="replay-soon">Coming soon</span></>)}</div>
         : playing ? <iframe src={embed} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
-        : <button type="button" className="replay-cover" aria-label={`Play ${title}`} onClick={() => setPlaying(true)}>{cover(<><small>Watch now</small><span className="youtube-mark"><svg viewBox="0 0 20 20" aria-hidden="true"><path d={SOCIAL_ICON_PATHS.youtube[0]} /></svg>YouTube</span></>)}</button>}
+        : <button type="button" className="replay-cover" aria-label={`Play ${title}`} onClick={() => setPlaying(true)}>{cover(WATCH_LOGO)}</button>}
     </div>
   </section>;
 }

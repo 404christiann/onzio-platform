@@ -41,6 +41,61 @@ Christian decided these stay as they are until the club enters the real values:
 - **Roster:** players wear green kits where Sam shows red, and #13 and #23 have
   no photo.
 
+## Decisions from Christian (2026-11-04, after the Home update)
+
+- **About:** Sam approved the current page. There is no missing reference to chase.
+- **Shop redesign:** build Sam's Oct 28 layout now. Show plain white boxes
+  wherever Sam's file has Real Madrid photos, until Sam uploads the real ones.
+  Prices become owner-editable in the admin portal, so the reference prices
+  are not a blocker.
+- **Match Summary:** it belongs under the existing Schedule content, not as a
+  separate menu page.
+- **News:** `/news` opens on the card list (`News page 12 2027.jpg`).
+  Clicking a card opens its article, laid out like the Foothill article.
+- **Match Summary placement and scope:** each finished match in Schedule gets a
+  Summary link to its own page (`/schedule/<match>`). The first version builds
+  every one of Sam's sections (timeline, statistics, match information,
+  replay, lineups, bench, managers) with admin fields. Empty sections are
+  hidden.
+- **Season Tickets:** wait for Sam's design or explanation. It is not on the
+  build list until then.
+- **Injury Report:** use sample injury entries for now, since Sam's mockup
+  repeats one player. The owner replaces them in the admin portal; the sample
+  entries are local seed data only and must not be published as real.
+- **References for the remaining pages** (all byte-identical to the copies
+  archived on 2026-11-03 in outer `assets/originals/remaining-pages/`):
+  Injury Report (`Injury report page 1 2027 Final.jpg`), News list
+  (`News page 12 2027.jpg`), Foothill article
+  (`News x Foothill Transit page 10 28 2027.jpg`), Match Summary
+  (`Match Summary page 12 2027 1.jpg`) and Code of Conduct
+  (`Club Code of Conduct website 2027.jpg`).
+
+What the references show, and what is still placeholder:
+
+- **Injury Report:** "Presented by MVMNT CULTR" header, then injury cards
+  (player photo, name, number, position, injury, timeline, note), a photo band,
+  a "Rehab with MVMNT CULTR" quote, and a YouTube video. The three cards are the
+  same player repeated. The quote is filler text, and the MVMNT CULTR logo file
+  is still missing.
+- **News list:** five color-coded categories (Sponsor/Partner, Partner,
+  Community, New Player, News), then numbered cards with a heading, title,
+  image and category band. Every card reuses the Foothill title and image.
+- **Foothill article:** fully written: title, subtitle, cover, category,
+  date and four paragraphs, plus a "Partner with us" button. The date reads
+  "Wednesday, Nov 20, 2026", but Nov 20, 2026 is a Friday.
+- **Match Summary:** score header, YouTube link, an event timeline (goals,
+  cards, substitutions), 16 team statistics, match information (officials,
+  kit colors, attendance), the replay card, starting XI, bench and managers
+  for both teams. The header says 1–0 but the timeline reaches 3–0; every
+  statistic bar has the same split; every lineup row is "#18 A. Mendez"; both
+  bench and manager columns are labeled RCFC; the title is spelled
+  "Sumarary".
+- **Code of Conduct and Stadium Guidelines:** the same accordion layout with
+  the same text. Only Accessibility and Animals have answers, and Animals
+  appears twice.
+- **Season Tickets:** no reference file, no menu item and no route. The only
+  public mention is "20% off season tickets" in the Home jersey list.
+
 ## Package plan
 
 Each package follows the usual flow: accepted preview → implementation with
@@ -65,6 +120,45 @@ owner editing → local acceptance.
    action on Partnership Opportunities is still undecided.
 5. **Later, when Sam sends content:** News, Injury Report, Match Summary,
    Stadium A–Z, Code of Conduct, Know Before You Go, Season Tickets.
+
+### Updated order (2026-11-04, after Christian's answers)
+
+Each package still goes preview → approval → build with owner editing → local
+check.
+
+1. **RC2027-SHOP-UPDATE** (implemented locally on 2026-11-04; see
+   `docs/rose-city-shop-update-2027-implementation.md`). Sam's Oct 28 layout,
+   with white boxes in place of the Real Madrid photos and editable prices.
+2. **RC2027-MATCH-SUMMARY** (implemented locally on 2026-11-04; see
+   `docs/rose-city-match-summary-2027-implementation.md`), together with the
+   Schedule Summary and Rewatch columns. A per-match page with every section of Sam's design.
+3. **RC2027-NEWS.** The card list and article pages, with categories and an
+   article editor. Foothill is the first real article.
+4. **RC2027-INJURY-REPORT.** Injury cards taken from Roster players, with
+   sample entries, plus the MVMNT CULTR quote and video fields.
+5. **RC2027-POLICIES.** Stadium Guidelines and Code of Conduct as editable
+   accordions, using the two answers Sam wrote.
+6. **RC2027-PARTNERS** (unchanged), then Know Before You Go and Season Tickets
+   when Sam sends them.
+
+### After Match Summary (Christian's plan, 2026-11-04)
+
+Once Match Summary is committed, with Christian's OK, three packages run in parallel. Each gets its
+own session and worktree, branched from that commit:
+
+1. **News:** the card list and article pages. Foothill is the first real article.
+2. **Stadium Guidelines and Code of Conduct:** they share one accordion layout.
+3. **Partners:** Club Partners and Partnership Opportunities. Both previews are already approved.
+
+Then Injury Report, which reuses Roster data, and the Robinson editor, which touches the same
+stadium files as the policy pages.
+
+Risks to manage:
+
+- Christian reviewing several previews at once.
+- Merge conflicts in shared files: `lib/database.generated.ts`, `HANDOFF.md` and migration
+  timestamps.
+- Every session sharing one local database and dev server on port 3198.
 
 ## Smaller visual differences (low priority)
 

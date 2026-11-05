@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import ClubhouseMatchAreaPage from "@/components/ClubhouseMatchAreaPage";
 import EditorialMatchArea from "@/components/editorial/EditorialMatchArea";
+import CinematicMatchSummaryPage from "@/components/cinematic/CinematicMatchSummaryPage";
 import { getClubContext } from "@/lib/club-context";
 
 /**
@@ -42,6 +43,10 @@ export default async function MatchAreaPage({
 
   if (club?.presentationTemplateKey === "editorial@1") {
     return <EditorialMatchArea fixtureId={fixtureId} />;
+  }
+  // RC2027-MATCH-SUMMARY: Sam's Match Summary page for cinematic@2 clubs.
+  if (club?.presentationTemplateKey === "cinematic@2") {
+    return <CinematicMatchSummaryPage fixtureId={fixtureId} />;
   }
   return <ClubhouseMatchAreaPage fixtureId={fixtureId} />;
 }

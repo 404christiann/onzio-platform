@@ -85,6 +85,8 @@ export type Fixture = {
   scorers?: string[];
   // Canonical YouTube embed link (lib/youtube-embed.ts) for a played match.
   replayVideoUrl?: string | null;
+  // RC2027-MATCH-SUMMARY: timeline, statistics, officials, kit colors and lineups.
+  summary?: import("@/lib/match-summary").MatchSummary | null;
 };
 
 export type ShopProduct = {

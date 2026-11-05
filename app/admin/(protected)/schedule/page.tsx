@@ -42,6 +42,8 @@ import {
 import type { SlidingPanelDirection } from "@/components/ui/sliding-panel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { matchReplayEmbedUrl } from "@/lib/youtube-embed";
+import { EMPTY_MATCH_SUMMARY, matchSummaryColumns, readMatchSummary, type MatchSummary } from "@/lib/match-summary";
+import MatchSummaryFields from "@/components/admin/schedule/MatchSummaryFields";
 
 // ── Types ─────────────────────────────────────
 
@@ -65,10 +67,13 @@ type Match = {
   rose_city_score: number | null;
   opponent_score: number | null;
   replay_video_url: string | null;
+  attendance: number | null;
+  /** Stored Match Summary (lib/match-summary.ts); read safely when a match is opened. */
+  summary: unknown;
   season_id: string;
 };
 
-type FormState = Omit<Match, "id">;
+type FormState = Omit<Match, "id" | "summary"> & { summary: MatchSummary };
 
 type ResultFilter = "all" | "home" | "away" | "missing";
 
@@ -109,7 +114,7 @@ function emptyForm(seasonId = ""): FormState {
     date: "", time: "", opponent: "", opponent_short_name: null, opponent_logo_url: null, competition: "", league_logo_url: null,
     sponsor_name: null, sponsor_logo_url: null, sponsor_link: null,
     home: true, venue: "", address: "", city: "", state: "",
-    rose_city_score: null, opponent_score: null, replay_video_url: null, season_id: seasonId,
+    rose_city_score: null, opponent_score: null, replay_video_url: null, attendance: null, summary: structuredClone(EMPTY_MATCH_SUMMARY), season_id: seasonId,
   };
 }
 
@@ -246,6 +251,13 @@ export default function SchedulePage() {
   // sponsor data, so the same applies there.
   const isAcademy = club.presentationTemplateKey === "academy@1";
   const isEditorial = club.presentationTemplateKey === "editorial@1";
+  const isCinematic = club.presentationTemplateKey === "cinematic@2";
+  // Attendance and the Match Summary are edited only for cinematic@2 clubs, so other designs never
+  // overwrite those columns. Scorers follow the timeline's goals (lib/match-summary.ts).
+  function summaryColumnsFor(form: FormState) {
+    const { summary, attendance, ...rest } = form;
+    return isCinematic ? { ...rest, attendance, ...matchSummaryColumns(summary) } : rest;
+  }
   const hidesMatchSponsorFields = isAcademy || isEditorial;
   const carrySponsor = useCallback(
     (list: Match[], seasonId: string) =>
@@ -291,7 +303,7 @@ export default function SchedulePage() {
       const supabase = createClient();
       const { data, error: loadError } = await supabase
         .from("matches")
-        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, opponent_logo_asset_id, competition, league_logo_url, league_logo_asset_id, sponsor_name, sponsor_logo_url, sponsor_logo_asset_id, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, replay_video_url, season_id")
+        .select("id, date, time, opponent, opponent_short_name, opponent_logo_url, opponent_logo_asset_id, competition, league_logo_url, league_logo_asset_id, sponsor_name, sponsor_logo_url, sponsor_logo_asset_id, sponsor_link, home, venue, address, city, state, rose_city_score, opponent_score, replay_video_url, attendance, summary, season_id")
         .order("date")
         .order("time");
       if (loadError) setError(loadError.message);
@@ -354,7 +366,10 @@ export default function SchedulePage() {
       }
     }
     if (matchReplayEmbedUrl(form.replay_video_url ?? "") === null) {
-      return "Replay video must be a YouTube video link, like https://youtu.be/…";
+      return "The stream or replay video must be a YouTube video link, like https://youtu.be/…";
+    }
+    if (form.attendance !== null && (!Number.isInteger(form.attendance) || form.attendance < 0)) {
+      return "Attendance must be a whole number of 0 or higher.";
     }
     return null;
   }
@@ -366,7 +381,7 @@ export default function SchedulePage() {
     setError(null);
     const supabase = createClient();
     const { error: e } = await supabase.from("matches").insert([{
-      ...addForm,
+      ...summaryColumnsFor(addForm),
       address: addForm.address?.trim() || null,
       city: addForm.city?.trim() || null,
       state: addForm.state?.trim() || null,
@@ -405,6 +420,8 @@ export default function SchedulePage() {
       city: m.city ?? "", state: m.state ?? "",
       rose_city_score: m.rose_city_score, opponent_score: m.opponent_score,
       replay_video_url: m.replay_video_url ?? null,
+      attendance: m.attendance ?? null,
+      summary: readMatchSummary(m.summary) ?? structuredClone(EMPTY_MATCH_SUMMARY),
       season_id: m.season_id,
     });
   }
@@ -453,7 +470,7 @@ export default function SchedulePage() {
     const supabase = createClient();
     const originalMatch = matches.find((match) => match.id === editingId);
     const { error: e } = await supabase.from("matches").update({
-      ...editForm,
+      ...summaryColumnsFor(editForm),
       address: editForm.address?.trim() || null,
       city: editForm.city?.trim() || null,
       state: editForm.state?.trim() || null,
@@ -909,8 +926,8 @@ function MatchForm({
   seasons,
   cleanupDraftUploads = false,
 }: {
-  form: Omit<Match, "id">;
-  onChange: (f: Omit<Match, "id">) => void;
+  form: FormState;
+  onChange: (f: FormState) => void;
   seasons: DBSeason[];
   cleanupDraftUploads?: boolean;
 }) {
@@ -1206,7 +1223,7 @@ function MatchForm({
 
           {club.presentationTemplateKey === "cinematic@2" && (
             <div className="sm:col-span-2">
-              <Field id="match-replay-video" label="Replay video (YouTube link)" optional>
+              <Field id="match-replay-video" label="Stream or replay video (YouTube link)" optional>
                 <input
                   id="match-replay-video"
                   type="url"
@@ -1217,11 +1234,34 @@ function MatchForm({
                   className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
                 />
               </Field>
-              <p className="mt-1.5 font-body text-xs text-muted-foreground">Shown as the Replay the Match video on the homepage once this match has a result.</p>
+              <p className="mt-1.5 font-body text-xs text-muted-foreground">Before kickoff, paste the livestream link; YouTube keeps the same link for the replay. It shows on the Schedule, the homepage and this match’s summary. Leave it blank to show “coming soon”.</p>
             </div>
           )}
         </div>
       </MatchFormSection>
+
+      {club.presentationTemplateKey === "cinematic@2" && (
+        <MatchFormSection
+          id="summary-heading"
+          title="Match summary"
+          description="Optional. Fill in what you have after the match; anything left empty is hidden on the Match Summary page."
+        >
+          <Field id="match-attendance" label="Attendance" optional>
+            <input
+              id="match-attendance"
+              type="number"
+              min="0"
+              step="1"
+              inputMode="numeric"
+              placeholder="e.g. 1356"
+              value={form.attendance ?? ""}
+              onChange={(e) => set("attendance", e.target.value === "" ? null : Number(e.target.value))}
+              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+            />
+          </Field>
+          <MatchSummaryFields value={form.summary} clubLabel={club.name} opponentLabel={form.opponent || "Opponent"} onChange={(summary) => onChange({ ...form, summary })} />
+        </MatchFormSection>
+      )}
 
       {/* This whole block is hidden for academy@1 and editorial@1 — neither
           template's fixture cards read the sponsor columns, so their rows

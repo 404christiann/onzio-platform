@@ -1,6 +1,6 @@
 import type { DBShopCarouselPhoto, DBShopKitPhoto, DBShopKitSection, DBShopPurchaseDetails, ShopKitVariant } from "@/lib/db-types";
 import { DEFAULT_KIT_BULLET_POINTS, DEFAULT_KIT_STORE_NOTE } from "@/lib/shop-kit";
-import { EMPTY_CINEMATIC_SHOP_CONTENT, shopContentOnly, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
+import { EMPTY_CINEMATIC_SHOP_CONTENT, shopContentOnly, withShopDefaults, type CinematicShopPresentation } from "@/lib/cinematic-shop-content";
 import type { ShopPhoto, ShopSaveRequest, ShopSection, ShopSnapshot, ShopVariant } from "./contract";
 
 export type KitDraft = { exists: boolean; section: ShopSection; photos: ShopPhoto[] };
@@ -67,7 +67,7 @@ export function draftFromShopSnapshot(snapshot: ShopSnapshot): ShopPageDraft {
     changedVariants: [],
     changedRows: [],
     purchaseChanged: false,
-    presentation: snapshot.presentation ? structuredClone(snapshot.presentation) : { ...EMPTY_CINEMATIC_SHOP_CONTENT },
+    presentation: structuredClone(withShopDefaults(snapshot.presentation ?? EMPTY_CINEMATIC_SHOP_CONTENT)),
     presentationChanged: false,
   };
 }

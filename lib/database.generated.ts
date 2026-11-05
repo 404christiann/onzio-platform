@@ -299,18 +299,36 @@ export type Database = {
         Row: {
           club_id: string
           content: Json
+          detail_1_media_asset_id: string | null
+          detail_2_media_asset_id: string | null
+          detail_3_media_asset_id: string | null
+          detail_4_media_asset_id: string | null
+          detail_5_media_asset_id: string | null
+          detail_6_media_asset_id: string | null
           map_media_asset_id: string | null
           updated_at: string
         }
         Insert: {
           club_id: string
           content: Json
+          detail_1_media_asset_id?: string | null
+          detail_2_media_asset_id?: string | null
+          detail_3_media_asset_id?: string | null
+          detail_4_media_asset_id?: string | null
+          detail_5_media_asset_id?: string | null
+          detail_6_media_asset_id?: string | null
           map_media_asset_id?: string | null
           updated_at?: string
         }
         Update: {
           club_id?: string
           content?: Json
+          detail_1_media_asset_id?: string | null
+          detail_2_media_asset_id?: string | null
+          detail_3_media_asset_id?: string | null
+          detail_4_media_asset_id?: string | null
+          detail_5_media_asset_id?: string | null
+          detail_6_media_asset_id?: string | null
           map_media_asset_id?: string | null
           updated_at?: string
         }
@@ -1521,6 +1539,7 @@ export type Database = {
           opponent_score: number | null
           opponent_short_name: string | null
           replay_video_url: string | null
+          summary: Json | null
           rose_city_score: number | null
           scorers: Json
           season_id: string
@@ -1551,6 +1570,7 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           replay_video_url?: string | null
+          summary?: Json | null
           rose_city_score?: number | null
           scorers?: Json
           season_id: string
@@ -1581,6 +1601,7 @@ export type Database = {
           opponent_score?: number | null
           opponent_short_name?: string | null
           replay_video_url?: string | null
+          summary?: Json | null
           rose_city_score?: number | null
           scorers?: Json
           season_id?: string

@@ -77,6 +77,8 @@ export type DBMatch = {
   league_logo_url?: string | null;
   /** Canonical YouTube embed link for a played match; blank means no replay yet. */
   replay_video_url?: string | null;
+  /** Owner-edited Match Summary (lib/match-summary.ts); null means none. */
+  summary?: unknown;
   sponsor_name: string | null;
   sponsor_logo_url: string | null;
   sponsor_link: string | null;

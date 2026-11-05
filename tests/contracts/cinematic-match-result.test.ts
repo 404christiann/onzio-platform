@@ -39,12 +39,15 @@ describe("cinematic@2 replay the match", () => {
       expect(html).toContain("Coming soon");
       expect(html).not.toContain("<iframe");
       expect(html).not.toContain("<button");
+      // Sam's white "Watch on YouTube" logo sits on the black side of the card.
+      expect(html).toMatch(/<span class="replay-watch">[^]*src="\/rose-city\/icons\/watch-on-youtube-white.png"/);
     }
   });
   it("offers a play cover for a stored YouTube replay without loading the embed first", () => {
     const html = replay({ ...played, replayVideoUrl: "https://www.youtube.com/embed/fJf_A4LdKDw?rel=0" });
     expect(html).toContain('aria-label="Play RCFC vs OCFC match replay"');
-    expect(html).toContain("Watch now");
+    expect(html).toContain('src="/rose-city/icons/watch-on-youtube-white.png"');
+    expect(html).not.toContain("Coming soon");
     expect(html).not.toContain("<iframe");
   });
   it("treats an unexpected link as no replay rather than embedding it", () => {

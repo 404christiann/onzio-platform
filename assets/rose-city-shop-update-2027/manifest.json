@@ -1,0 +1,15 @@
+{
+  "package": "RC2027-SHOP-UPDATE",
+  "assets": {
+    "routeMap": {
+      "source": "Dropbox /Rose City FC x Onzio 2027/Rose City FC Chick-fil-A Route Zoom Map graphic.jpg (id jetk1g_lbVIAAAAAAAW6FQ)",
+      "archivedCopy": "outer assets/originals/chick-fil-a/Rose City FC Chick-fil-A Route Zoom Map graphic.jpg",
+      "sourceSha256": "24d540e13c36b0a40e05ec4b3bf2cdce27c91bd143e49124f22e21b90a2cfb12",
+      "inputPath": "assets/rose-city-shop-update-2027/inputs/route-map.png",
+      "sha256": "efbd5e2154135ca1cb4344801611605364d813052acfb2b2aa3345a02c224304",
+      "width": 2484,
+      "height": 1156,
+      "preparation": "Lossless PNG of the decoded JPEG; every pixel is identical. Graphics must be PNG or WebP."
+    }
+  }
+}

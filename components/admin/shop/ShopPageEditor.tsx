@@ -23,8 +23,8 @@ import { ShopContentSkeleton } from "@/components/admin/AdminContentSkeletons";
 import ResilientImage from "@/components/ResilientImage";
 import ShopPreviewFrame from "./ShopPreviewFrame";
 import CinematicShopCanvas from "./CinematicShopCanvas";
-import CinematicShopFields from "./CinematicShopFields";
-import type { CinematicShopPresentation } from "@/lib/cinematic-shop-content";
+import CinematicShopFields, { type CinematicShopTarget } from "./CinematicShopFields";
+import { SHOP_CARD_ICONS, type CinematicShopPresentation, type ShopCardIcon } from "@/lib/cinematic-shop-content";
 import PageEditorInspector from "@/components/admin/PageEditorInspector";
 import { submitPageSave } from "@/lib/page-editor-save";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
@@ -37,7 +37,8 @@ import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publ
 import "@/styles/editorial.css";
 
 const KIT_LABELS: Record<ShopVariant, string> = { home: "Home kit", third: "Third kit", away: "Away kit" };
-type Target = "copy" | "photos" | "cta" | "photoRows" | "purchase" | "fixed" | "kit" | "map" | "sponsors" | "page";
+const CARD_ICON_LABELS: Record<ShopCardIcon, string> = { "": "No icon", video: "Video camera", jersey: "Jersey", "shipping-box": "Shipping box", "no-access": "No returns" };
+type Target = "copy" | "photos" | "cta" | "photoRows" | "purchase" | "fixed" | "kit" | CinematicShopTarget;
 
 function allKitContent(draft: ShopPageDraft, surface: ShopSurface): Record<ShopVariant, ShopKitContent> {
   return Object.fromEntries(SHOP_VARIANTS.map((variant) => {
@@ -240,6 +241,38 @@ export default function ShopPageEditor() {
     await cleanupUnsavedMap(assetId);
   }
 
+  async function cleanupUnsavedDetail(assetId: string | null) {
+    const saved = snapshot?.presentation;
+    if (!assetId || saved?.mapAssetId === assetId || saved?.details?.some(detail => detail.assetId === assetId)) return;
+    await fetch("/api/admin/media/cleanup", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assetId }) }).catch(() => undefined);
+  }
+
+  // Jersey Details tile photo. Save stays disabled while it uploads.
+  async function uploadDetailPhoto(index: number, files: FileList | null) {
+    if (!files?.[0] || !draft || !draft.presentation.details[index] || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const file = files[0], clubId = club.id, previous = draft.presentation.details[index].assetId;
+    setUploading(true); setSaveError(null);
+    try {
+      const client = createClient(), path = `details/${crypto.randomUUID()}-${file.name}`;
+      const result = await client.storage.from("shop").upload(path, file);
+      if (result.error || !result.data) throw new Error(result.error?.message ?? "Could not upload the photo.");
+      const publicResult = client.storage.from("shop").getPublicUrl(path);
+      if (publicResult.error || !publicResult.data.publicUrl) throw new Error("Could not prepare the photo.");
+      if (uploadClub.current !== clubId) return;
+      const assetId = result.data.assetId, url = publicResult.data.publicUrl;
+      editDraft(page => ({ ...page, presentation: { ...page.presentation, details: page.presentation.details.map((detail, i) => i === index ? { ...detail, assetId, url, width: undefined, height: undefined } : detail) }, presentationChanged: true }));
+      await cleanupUnsavedDetail(previous);
+    } catch (error) { if (uploadClub.current === clubId) setSaveError(error instanceof Error ? error.message : "Could not upload the photo."); }
+    finally { if (uploadClub.current === clubId) setUploading(false); }
+  }
+
+  async function removeDetailPhoto(index: number) {
+    if (!draft || uploading || saveInFlight.current || pendingSaves[surface]) return;
+    const assetId = draft.presentation.details[index]?.assetId ?? null;
+    editDraft(page => ({ ...page, presentation: { ...page.presentation, details: page.presentation.details.map((detail, i) => i === index ? { ...detail, assetId: null, url: "", width: undefined, height: undefined } : detail) }, presentationChanged: true }));
+    await cleanupUnsavedDetail(assetId);
+  }
+
   async function savePage() {
     if (!draft || !snapshot || (!dirty && !pendingSaves[surface]) || saveInFlight.current || uploading || conflict) return;
     const request = pendingSaves[surface] ?? toShopSaveRequest(snapshot, draft, crypto.randomUUID());
@@ -327,7 +360,7 @@ export default function ShopPageEditor() {
                 <ToolButton label="Edit kit text" onClick={() => setTarget("copy")} />
                 <ToolButton label="Edit kit photos" onClick={() => setTarget("photos")} />
                 {showExtras && <><ToolButton label="Edit photo row" onClick={() => setTarget("photoRows")} /><ToolButton label="Edit purchase details" onClick={() => setTarget("purchase")} /></>}
-                {isCinematic && surface === "shop" && <><ToolButton label="Edit map" onClick={() => setTarget("map")} /><ToolButton label="Edit sponsors" onClick={() => setTarget("sponsors")} /><ToolButton label="Edit page labels" onClick={() => setTarget("page")} /></>}
+                {isCinematic && surface === "shop" && <><ToolButton label="Edit prices" onClick={() => setTarget("editions")} /><ToolButton label="Edit jersey details" onClick={() => setTarget("details")} /><ToolButton label="Edit care line" onClick={() => setTarget("attributes")} /><ToolButton label="Edit size chart" onClick={() => setTarget("sizeChart")} /><ToolButton label="Edit map" onClick={() => setTarget("map")} /><ToolButton label="Edit sponsors" onClick={() => setTarget("sponsors")} /><ToolButton label="Edit page labels" onClick={() => setTarget("page")} /></>}
               </div>
               <ShopPreviewFrame host={`${club.primaryDomain}${surface === "shop" ? "/shop" : ""}`} phone={phone} onSelect={(selection) => setTarget(selection as Target)}>
                 {isEditorial ? <EditorialShell editing>
@@ -350,7 +383,7 @@ export default function ShopPageEditor() {
             </div>
             <PageEditorInspector open={Boolean(target)} onClose={() => setTarget(null)} label="Selected Shop section tools" breakpoint={1279} className={`shop-page-inspector min-w-0 ${target ? "rounded-t-2xl border border-border bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl xl:sticky xl:top-24 xl:max-h-[calc(100svh-7rem)] xl:rounded-xl xl:p-4 xl:shadow-none" : "hidden xl:block"}`}>
               {target ? <>
-                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "map" ? "Shop map" : target === "sponsors" ? "Shop sponsors" : target === "page" ? "Page labels and image framing" : target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
+                <div className="mb-4 flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{target === "editions" ? "Jersey prices" : target === "details" ? "Jersey details" : target === "attributes" ? "Color, material and care" : target === "sizeChart" ? "Size chart" : target === "map" ? "Shop map" : target === "sponsors" ? "Shop sponsors" : target === "page" ? "Page labels and image framing" : target === "photos" ? "Kit photos" : target === "photoRows" ? "Shop photo row" : target === "purchase" ? "Purchase details" : target === "fixed" ? "Page copy" : target === "cta" ? "Button" : "Kit details"}</h2><p className="text-xs text-muted-foreground">{surface === "shop" ? "Shop page" : "Homepage shop feature"} · {KIT_LABELS[currentVariant]}</p></div><button type="button" onClick={() => setTarget(null)} className="min-h-11 rounded-lg border border-border px-3 text-sm">Done</button></div>
                 <fieldset disabled={locked} className="min-w-0">
                 {target === "fixed" ? <p className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">This copy belongs to the website design and is managed by Onzio.</p> : null}
                 {(target === "copy" || target === "kit" || target === "cta") && currentKit && <>
@@ -371,10 +404,10 @@ export default function ShopPageEditor() {
                 </>}
                 {target === "photos" && currentKit && <PhotoEditor photos={currentKit.photos} label="kit" uploading={uploading} onUpload={(files) => void uploadPhotos(files, false)} onRemove={(photo) => void removePhoto(photo, false)} onChange={setKitPhotos} />}
                 {target === "photoRows" && showExtras && <PhotoEditor photos={draft.photoRows[currentVariant]} label="photo row" uploading={uploading} onUpload={(files) => void uploadPhotos(files, true)} onRemove={(photo) => void removePhoto(photo, true)} onChange={setRowPhotos} />}
-                {isCinematic && surface === "shop" && (target === "map" || target === "sponsors" || target === "page") && <CinematicShopFields target={target} value={draft.presentation} onChange={updatePresentation} uploading={uploading} onUploadMap={files => void uploadMap(files)} onRemoveMap={() => void removeMap()} />}
+                {isCinematic && surface === "shop" && (["map", "sponsors", "page", "editions", "details", "attributes", "sizeChart"] as const).some(item => item === target) && <CinematicShopFields target={target as CinematicShopTarget} value={draft.presentation} onChange={updatePresentation} uploading={uploading} onUploadMap={files => void uploadMap(files)} onRemoveMap={() => void removeMap()} onUploadDetail={(index, files) => void uploadDetailPhoto(index, files)} onRemoveDetail={index => void removeDetailPhoto(index)} />}
                 {target === "purchase" && showExtras && <div className="space-y-3">
                   <TextField label="Section heading" value={draft.purchase.heading} onChange={(value) => updatePurchase("heading", value)} />
-                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => { const Field = isCinematic && field === "body" ? TextAreaField : TextField; return <Field key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />; })}<button type="button" className="min-h-11 text-sm font-semibold text-destructive" onClick={() => updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index))}>Remove card</button></div>)}
+                  {draft.purchase.cards.map((card, index) => <div key={index} className="space-y-2 rounded-lg border border-border p-3"><p className="text-xs font-semibold">Detail card {index + 1}</p>{(["label", "title", "body"] as const).map((field) => { const Field = isCinematic && field === "body" ? TextAreaField : TextField; return <Field key={field} label={field === "body" ? "Body" : field === "title" ? "Title" : "Label"} value={card[field]} onChange={(value) => updatePurchase("cards", draft.purchase.cards.map((item, i) => i === index ? { ...item, [field]: value } : item))} />; })}{isCinematic && surface === "shop" && <label className="block"><span className={ADMIN_LABEL_CLASS}>Icon</span><select value={draft.presentation.cardIcons[index] ?? ""} onChange={(event) => updatePresentation("cardIcons", draft.purchase.cards.map((_, i) => i === index ? event.target.value as ShopCardIcon : draft.presentation.cardIcons[i] ?? ""))} className={`${ADMIN_INPUT_CLASS} mt-1 min-h-11 w-full`}>{SHOP_CARD_ICONS.map(icon => <option key={icon} value={icon}>{CARD_ICON_LABELS[icon]}</option>)}</select></label>}<button type="button" className="min-h-11 text-sm font-semibold text-destructive" onClick={() => { updatePurchase("cards", draft.purchase.cards.filter((_, i) => i !== index)); if (isCinematic && surface === "shop" && draft.presentation.cardIcons.length > index) updatePresentation("cardIcons", draft.presentation.cardIcons.filter((_, i) => i !== index)); }}>Remove card</button></div>)}
                   {draft.purchase.cards.length < 4 && <ToolButton label="Add detail card" onClick={() => updatePurchase("cards", [...draft.purchase.cards, { label: "", title: "", body: "" }])} />}
                   <TextField label="Footer label" value={draft.purchase.cta_eyebrow} onChange={(value) => updatePurchase("cta_eyebrow", value)} />
                   <TextAreaField label="Footer text" value={draft.purchase.cta_text} onChange={(value) => updatePurchase("cta_text", value)} />
