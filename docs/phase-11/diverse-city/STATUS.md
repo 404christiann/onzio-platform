@@ -3,7 +3,7 @@
 ## 2026-11-04 - Rose City RC2027-INJURY-REPORT (local only)
 
 **Agent/package:** Claude, `RC2027-INJURY-REPORT`. **Status:** `in_progress`: implemented and
-verified locally, waiting on Christian's review and his decision on committing.
+verified locally, and committed as `2e5f074` on its branch with Christian's OK (not pushed or merged).
 
 **Completed work:** Sam's Injury Report at `/news/injury-report` for cinematic@2, with cards taken
 from Roster players. The owner editor is `/admin/injury-report`. The tables
@@ -36,7 +36,7 @@ Full detail is in `docs/rose-city-injury-report-2027-implementation.md`.
 
 **Blockers/exact next step:**
 
-- Christian reviews the page and the editor, then decides on committing and merging.
+- Merge `codex/rose-city-injury-report-2027` when Christian says so.
 - Migration `20261105040000` needs the CLAUDE.md production migration gate before any hosted
   deploy.
 - Sam owes the MVMNT CULTR logo and real report content.
@@ -68,7 +68,7 @@ any hosted deploy. Sam still owes the original cover photo.
 ## 2026-11-04 - RC2027-PARTNERS (Rose City Club Partners and Partnership Opportunities)
 
 **Agent/package:** Claude Code, `RC2027-PARTNERS`. **Status:** `in_progress`: implemented and
-verified locally, waiting on Christian's review and his decision on committing.
+verified locally, and committed as `2e5f074` on its branch with Christian's OK (not pushed or merged).
 
 **Completed work:** `/sponsors` and `/community/partnership` for cinematic@2, built from the
 approved previews, plus the new `/admin/partners` editor. The editor covers each page's copy and a

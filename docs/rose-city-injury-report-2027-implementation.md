@@ -3,8 +3,8 @@
 Status: implemented locally, 2026-11-04. Christian approved the isolated preview
 (outer `design-explorations/injury-report-2027/`, port 3215) and the four test seams, and asked for
 it to be built. The work is on branch `codex/rose-city-injury-report-2027` in its own worktree,
-`implementation/onzio-platform-injury`, branched from `ecb47d1`. Nothing is committed, pushed,
-merged, deployed or written to a hosted service.
+`implementation/onzio-platform-injury`, branched from `ecb47d1`, and committed as `2e5f074` with
+Christian's OK. Nothing is pushed, merged, deployed or written to a hosted service.
 
 Source: Sam's `Injury report page 1 2027 Final.jpg`, archived in outer
 `assets/originals/remaining-pages/injury-report-reference.jpg`.

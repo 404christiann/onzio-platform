@@ -6,7 +6,7 @@ editor are built for cinematic@2. Scope, rules and evidence are in
 `docs/rose-city-injury-report-2027-implementation.md`.
 
 **Where the work is:** its own worktree, `implementation/onzio-platform-injury`, on branch
-`codex/rose-city-injury-report-2027` from `ecb47d1`. Nothing is committed.
+`codex/rose-city-injury-report-2027` from `ecb47d1`. Committed as `2e5f074` with Christian's OK; not pushed, merged or deployed.
 
 What was built:
 
@@ -51,7 +51,7 @@ Shared files this package touches (expect merge conflicts):
 - `cinematic-news-pages.test.ts` (the injury-report case now expects the real page).
 
 **Before any hosted release, the CLAUDE.md migration gate applies to `20261105040000`.** Next:
-Christian reviews the page and the editor and decides on committing. Sam still owes the MVMNT
+merge `codex/rose-city-injury-report-2027` into the homepage branch when Christian says so. Sam still owes the MVMNT
 CULTR logo and real report content.
 
 ## 2026-11-04 — News, Partners and the icon image fix merged into the homepage branch
