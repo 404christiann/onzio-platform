@@ -1,3 +1,25 @@
+## 2026-11-04 — Injury Report merged into the homepage branch
+
+At Christian's request ("Merge it"), `codex/rose-city-injury-report-2027` was merged into
+`codex/rose-city-homepage-2027`:
+
+- `2e5f074` (the package) and `449ba10` (its docs note), merged as `ba4a7c4`;
+- `a52bb5f`, a one-line type fix to the local seed script, merged as `b78edfb`. `tsc` on the merge
+  caught it: the script was written after the package's last type check.
+
+The branch was still at `ecb47d1`, so there were no conflicts.
+
+Verification on the merged code:
+
+- `tsc --noEmit` passes, and ESLint is clean on the Injury Report files and the Homepage editor.
+- Contract, unit and architecture: 221 files, 1,831 tests pass.
+- Database: the Injury Report, News and Partners tests pass (3 files, 24 tests).
+- The shared dev server (`rose-city.localhost:3198`) returns 200 for `/news/injury-report` (with
+  the injury cards), `/news`, `/sponsors` and `/stadium/guidelines`.
+
+Nothing is pushed or deployed. Before any hosted release, the CLAUDE.md migration gate also covers
+`20261105040000`.
+
 ## 2026-11-04 — RC2027-INJURY-REPORT implemented locally
 
 Christian approved the Injury Report preview (outer `design-explorations/injury-report-2027/`, port
