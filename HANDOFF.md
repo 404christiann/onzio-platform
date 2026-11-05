@@ -1,3 +1,57 @@
+## 2026-11-04 — RC2027-ROBINSON-EDITOR implemented locally
+
+Christian approved the plan and the test layers. `/admin/stadium` now edits the Robinson Stadium
+page (`/stadium`, cinematic@2): the story, the Stadium Info rows, Food & Beverage, the directions,
+the seating map and the other images, and whether each section is shown. The public page looks
+exactly as before. Match data still comes from Schedule, and the purchase link from Tickets.
+Today's confirmed copy is the starting content, keeping both the 2001 and the 1999 dates. Full
+detail is in `docs/rose-city-robinson-editor-2027-implementation.md`.
+
+The work is on branch `codex/rose-city-robinson-editor-2027` (from `ecb47d1`), in worktree
+`implementation/onzio-platform-robinson`, on dev server 3195. Committed with Christian's OK; not pushed
+or merged.
+
+What moved:
+
+- `/admin/stadium` used to edit the older Bus Route record, which renders at
+  `/stadium/foothill-transit`. That editor moved, unchanged, to `/admin/foothill-transit`.
+- The Homepage editor now shows both shortcuts. Its cinematic@2 shortcut list moved to
+  `lib/cinematic-editor-shortcuts.ts`.
+- `/stadium` no longer borrows the match switch or the partner logo from the Bus Route record.
+- A cinematic@2 club without a saved Robinson page now sees a neutral "Stadium" heading instead of
+  Rose City's content.
+
+Database (isolated local rehearsal only):
+
+- Migration `20261105050000_cinematic_robinson_page` is applied, via
+  `scripts/apply-rose-city-robinson-migration-local.ts`. It adds new objects only:
+  - `onzio.cinematic_robinson_content`, with nine guarded media FK columns;
+  - receipts, validators, and the `load_robinson_editor` / `save_robinson_editor` RPCs;
+  - advisory lock `734901330`.
+- `scripts/seed-rose-city-robinson-2027-local.ts` stored the confirmed copy. It published the eight
+  static page images through the normal pipeline (the seating diagram at 3000px) and reused the
+  partner logo.
+- `lib/database.generated.ts` only adds the new table and its two RPCs.
+
+Verification:
+
+- Robinson tests: 38 contract tests and 14 database tests. They include an exact markup match
+  against a fixture captured from the static page before the change.
+- Full suites: contract, architecture and unit tests (223 files, 1,827 tests) and database tests
+  (47 files, 423 tests) pass. `tsc` passes, and ESLint passes on the changed files.
+- Real Chrome compared the old page (3198) with the new one (3195) at 320, 390, 768, 1280 and
+  1440px. Document size and 15 landmark positions and sizes were identical at every width.
+- An owner edit saved, survived a reload, appeared publicly, and was undone through the editor. The
+  stored row again exactly equals the confirmed copy.
+- `tests/contracts/cinematic-partners-editor.test.ts` now reads the Partners shortcut from the new
+  shortcuts module. It checks the same thing as before.
+
+Gotcha for every worktree: `public/fonts/avenir-local/Avenir-Medium.ttf` is gitignored. Copy it
+from the main folder, or Chrome uses the system Avenir and some line heights change.
+
+Not done: physical-phone/VoiceOver checks, merging into the homepage branch, and any hosted step.
+Migration `20261105050000` needs the CLAUDE.md production migration gate before any deploy.
+
 ## 2026-11-04 — News, Partners and the icon image fix merged into the homepage branch
 
 At Christian's request ("Lets merge all of them"), three branches were merged into

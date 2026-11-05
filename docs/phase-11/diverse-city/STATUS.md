@@ -1,5 +1,54 @@
 # Diverse City FC Status
 
+## 2026-11-04 - Rose City RC2027-ROBINSON-EDITOR (local only)
+
+**Agent/package:** Claude Code, `RC2027-ROBINSON-EDITOR`. **Status:** `in_progress`: implemented
+and verified locally, and committed on `codex/rose-city-robinson-editor-2027` with Christian's OK.
+Not pushed, merged or deployed.
+
+**Completed work:**
+
+- Owner editing of the Robinson Stadium page (`/stadium`, cinematic@2) from `/admin/stadium`: the
+  story, the Stadium Info rows (Yes/No), Food & Beverage, the directions (with stable anchors), the
+  seating map and the other images, and a "Show on page" switch per section.
+- The public page is unchanged.
+- The Bus Route editor moved to `/admin/foothill-transit`, with a new Homepage shortcut.
+- The confirmed copy is seeded locally, keeping both the 2001 and the 1999 dates.
+
+**Files changed:** worktree `implementation/onzio-platform-robinson`, branch
+`codex/rose-city-robinson-editor-2027`:
+
+- migration `20261105050000_cinematic_robinson_page.sql`, with
+  `scripts/apply-rose-city-robinson-migration-local.ts` and
+  `scripts/seed-rose-city-robinson-2027-local.ts`;
+- `lib/cinematic-robinson-{content,query,editor}.ts`, `lib/robinson-reference-content.ts` and
+  `lib/cinematic-editor-shortcuts.ts`;
+- `lib/visitor-page-route.ts` and `lib/visitor-page-editor.ts`;
+- `components/cinematic/CinematicRobinson.tsx`;
+- `components/admin/stadium/RobinsonStadiumEditor.tsx`, and the labels in `StadiumEditor.tsx`;
+- `HomepageEditor.tsx`;
+- the routes `app/%5Fclubs/[slug]/stadium/page.tsx`, `app/admin/(protected)/stadium/page.tsx` and
+  `app/admin/(protected)/foothill-transit/page.tsx`;
+- `lib/database.generated.ts`;
+- tests: `cinematic-robinson-*` (contracts and database), `visitor-page-api` and
+  `cinematic-partners-editor`, plus the fixture `tests/fixtures/robinson/reference-2027.html`;
+- the doc `docs/rose-city-robinson-editor-2027-implementation.md`.
+
+**Verification:**
+
+- 223 contract, architecture and unit files (1,827 tests) and 47 database files (423 tests) pass.
+- `tsc` and ESLint pass.
+- Real Chrome at 320, 390, 768, 1280 and 1440px: the old and new pages have identical layout
+  geometry.
+- An owner edit saved, survived a reload, appeared publicly and was undone. The stored content
+  matches the confirmed copy exactly.
+
+**Blockers/unresolved:** none for local work. Physical-phone/VoiceOver checks are open. Migration
+`20261105050000` needs the CLAUDE.md production migration gate before any hosted deploy.
+
+**Exact next step:** merge `codex/rose-city-robinson-editor-2027` into the homepage branch when
+Christian says so. The merge will conflict in HANDOFF, STATUS, `lib/database.generated.ts` and `HomepageEditor.tsx`.
+
 ## 2026-11-04 - Rose City RC2027-NEWS (local only)
 
 **Agent/package:** Claude, `RC2027-NEWS`. **Status:** `in_progress`. Built and verified

@@ -6,6 +6,7 @@ import { getClubContext } from "@/lib/club-context";
 import { ContractError } from "@/lib/contract-error";
 import { chickFilASaveSchema } from "@/lib/chick-fil-a-content";
 import { stadiumSaveSchema } from "@/lib/stadium-content";
+import { robinsonSaveSchema } from "@/lib/cinematic-robinson-content";
 import { retirePublishedMedia } from "@/lib/media-processing";
 import { createClient } from "@/lib/supabase-server";
 import type { VisitorPageSnapshot } from "@/lib/visitor-page-editor";
@@ -13,6 +14,7 @@ import type { VisitorPageSnapshot } from "@/lib/visitor-page-editor";
 const pages = {
   "chick-fil-a": { schema: chickFilASaveSchema, load: "load_chick_fil_a_editor", save: "save_chick_fil_a_editor" },
   stadium: { schema: stadiumSaveSchema, load: "load_stadium_editor", save: "save_stadium_editor" },
+  robinson: { schema: robinsonSaveSchema, load: "load_robinson_editor", save: "save_robinson_editor" },
 } as const;
 const messages: Record<string, string> = {
   INVALID_VISITOR_PAYLOAD: "Review the page fields and image framing.",
@@ -38,7 +40,7 @@ export async function handleVisitorPageRequest(request: Request, page: string, m
     const origin = request.headers.get("origin");
     if ((origin && origin !== external.origin) || request.headers.get("sec-fetch-site") === "cross-site") return failure("NOT_AUTHORIZED", 403);
   }
-  let payload: z.infer<typeof chickFilASaveSchema> | z.infer<typeof stadiumSaveSchema> | undefined;
+  let payload: z.infer<typeof chickFilASaveSchema> | z.infer<typeof stadiumSaveSchema> | z.infer<typeof robinsonSaveSchema> | undefined;
   const operationId = new URL(request.url).searchParams.get("operationId");
   if (mutation) {
     try {
