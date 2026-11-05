@@ -1,0 +1,15 @@
+{
+  "package": "RC2027-NEWS",
+  "assets": {
+    "foothillCover": {
+      "source": "Dropbox /Rose City FC x Onzio 2027/Rose City FC News x Foothill Transit  page 10 28 2027.jpg (id jetk1g_lbVIAAAAAAAW8kA)",
+      "archivedCopy": "outer assets/originals/remaining-pages/foothill-article-reference.jpg",
+      "sourceSha256": "c547df3151e538d5469cff1d88401aa4cc3846958bf7c897b7d69169fc86f79e",
+      "inputPath": "assets/rose-city-news-2027/inputs/foothill-cover.jpg",
+      "sha256": "c86f3c08716dd4bd6cec84dfee8e3ca360f56b79689fe9f5315a43e957f2d60c",
+      "width": 2287,
+      "height": 1237,
+      "preparation": "The locker-room cover cropped from Sam's article mockup (x 95, y 739, 2287x1237) after converting it from Pro Display XDR to sRGB; JPEG quality 92. Interim until Sam sends the original photo (Christian, 2026-11-04)."
+    }
+  }
+}

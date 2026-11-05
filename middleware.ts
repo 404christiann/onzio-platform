@@ -22,6 +22,8 @@ const PUBLIC_TENANT_PATHS = new Set([
 
 const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
 const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);
+// RC2027-NEWS article addresses; the page checks the template and the article.
+const NEWS_ARTICLE_PATH = /^\/news\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const REGISTRATION_PATH =
   /^\/register\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/confirmation)?$/;
 
@@ -33,6 +35,7 @@ function isPublicTenantPath(pathname: string): boolean {
   return (
     /^\/roster\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
     /^\/schedule\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathname) ||
+    NEWS_ARTICLE_PATH.test(pathname) ||
     PROGRAM_DETAIL_PATH.test(pathname) ||
     REGISTRATION_PATH.test(pathname)
   );

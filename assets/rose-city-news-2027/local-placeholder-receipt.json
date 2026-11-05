@@ -1,0 +1,37 @@
+{
+  "localOnly": true,
+  "clubId": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7",
+  "placeholderText": true,
+  "articles": [
+    {
+      "id": "5de022c2-bea2-4d49-848d-efd084645c11",
+      "url": "/news/win-free-foothill-transit-bus-passes-at-every-rcfc-home-game",
+      "category": "community",
+      "publishedAt": "2026-11-18T20:00:00.000Z",
+      "coverAssetId": "32bc8146-1326-5e7c-ab44-84fdca714039"
+    },
+    {
+      "id": "02adac7f-303a-4d60-acd3-cb352c09d774",
+      "url": "/news/chick-fil-a-joins-rcfc-as-an-official-partner",
+      "category": "partner",
+      "publishedAt": "2026-11-16T20:00:00.000Z",
+      "coverAssetId": "ff553f50-45a8-596d-a0c3-c2b9ef863213"
+    },
+    {
+      "id": "780930d6-41ac-4b6e-9aae-c856783691ac",
+      "url": "/news/tepito-coffee-is-brewing-at-robinson-stadium-this-season",
+      "category": "news",
+      "publishedAt": "2026-11-13T20:00:00.000Z",
+      "coverAssetId": "bccf6133-8d74-5c26-a561-265453813a39"
+    },
+    {
+      "id": "373adb3c-54a3-4a2f-b9a3-0453ca54939e",
+      "url": "/news/rcfc-welcomes-nick-mendez",
+      "category": "new-player",
+      "publishedAt": "2026-11-10T20:00:00.000Z",
+      "coverAssetId": "8c06f1ef-cb15-5f61-a0bb-cba20b3295c6"
+    }
+  ],
+  "otherContentPreserved": true,
+  "hostedWrites": false
+}

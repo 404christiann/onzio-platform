@@ -295,6 +295,60 @@ export type Database = {
           },
         ]
       }
+      cinematic_news_articles: {
+        Row: {
+          club_id: string
+          content: Json
+          cover_media_asset_id: string | null
+          created_at: string
+          id: string
+          published_at: string
+          removed_at: string | null
+          revision: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          cover_media_asset_id?: string | null
+          created_at?: string
+          id?: string
+          published_at: string
+          removed_at?: string | null
+          revision?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          cover_media_asset_id?: string | null
+          created_at?: string
+          id?: string
+          published_at?: string
+          removed_at?: string | null
+          revision?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_news_articles_club_id_cover_media_asset_id_fkey"
+            columns: ["club_id", "cover_media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_news_articles_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cinematic_shop_content: {
         Row: {
           club_id: string
@@ -3426,6 +3480,10 @@ export type Database = {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
+      load_cinematic_news_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       load_contact_editor: {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
@@ -3512,6 +3570,10 @@ export type Database = {
         Returns: Json
       }
       save_cinematic_contact_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_cinematic_news_article: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

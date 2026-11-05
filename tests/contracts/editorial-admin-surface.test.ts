@@ -60,7 +60,8 @@ describe("editorial@1 admin surface hides", () => {
       const hidden = ADMIN_ROUTE_MANIFEST.map((route) => route.id).filter(
         (id) => !getVisibleAdminRoutes(context).some((route) => route.id === id),
       );
-      expect(hidden).toEqual(["programs", "match-stats", "analytics"]);
+      // News is a cinematic@2-only editor (RC2027-NEWS), so it is hidden here too.
+      expect(hidden).toEqual(["programs", "news", "match-stats", "analytics"]);
     });
 
     it("keeps /admin/about in the nav — editorial@1 really does have an About page", () => {
@@ -95,8 +96,9 @@ describe("editorial@1 admin surface hides", () => {
         isBillingAuthorized: true,
         canMutateContent: true,
       });
+      // Every route except the cinematic@2-only News editor (RC2027-NEWS).
       expect(visible.map((route) => route.id)).toEqual(
-        ADMIN_ROUTE_MANIFEST.map((route) => route.id),
+        ADMIN_ROUTE_MANIFEST.map((route) => route.id).filter((id) => id !== "news"),
       );
     });
   });

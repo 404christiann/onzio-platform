@@ -5,6 +5,7 @@ export const MEDIA_SURFACES = [
   "branding",
   "contact",
   "homepage",
+  "news",
   "programs",
   "roster",
   "schedule",

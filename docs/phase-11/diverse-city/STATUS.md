@@ -1,5 +1,29 @@
 # Diverse City FC Status
 
+## 2026-11-04 - Rose City RC2027-NEWS (local only)
+
+**Agent/package:** Claude, `RC2027-NEWS`. **Status:** `in_progress`. Built and verified
+locally and committed on branch `codex/rose-city-news-2027` with Christian's OK (not pushed or
+merged).
+
+**Completed work:** Sam's News list and article pages for cinematic@2, an owner News editor, the
+`onzio.cinematic_news_articles` table and RPCs, a `news` media surface, and the seeded Foothill
+Transit article. Diverse City FC (academy@1) is unaffected: its admin sidebar is unchanged.
+Four local placeholder articles (Community, Partner, News, New Player) were added so `/news` shows
+all five of Sam's reference cards, per Christian. Their text is placeholder copy for the owner to
+replace in Admin → News.
+
+**Files changed:** see `docs/rose-city-news-2027-implementation.md` (branch
+`codex/rose-city-news-2027`, worktree `implementation/onzio-platform-news`).
+
+**Verification:** all contract tests pass (160 files, 1,310 tests); News database tests pass (6);
+TypeScript and lint pass. Real Chrome passed at five widths. The editor passed in headless Chromium
+as the local fixture owner. Full detail is in the HANDOFF entry.
+
+**Blockers/exact next step:** merge `codex/rose-city-news-2027` with the Policies and Partners
+work when Christian says so. Migration `20261105010000` needs the CLAUDE.md production migration gate before
+any hosted deploy. Sam still owes the original cover photo.
+
 ## 2026-10-12 - Subscription payment-state correction
 
 **Agent/package:** Codex, `BILLING-FAILED-01`. **Status:** `complete`.

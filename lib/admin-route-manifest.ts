@@ -23,6 +23,7 @@ export type AdminRouteId =
   | "about"
   | "sponsors"
   | "contact"
+  | "news"
   | "seasons"
   | "roster"
   | "schedule"
@@ -43,6 +44,7 @@ export type AdminRouteIconKey =
   | "about"
   | "sponsors"
   | "contact"
+  | "news"
   | "seasons"
   | "roster"
   | "schedule"
@@ -190,6 +192,14 @@ export const ADMIN_ROUTE_MANIFEST = [
     feature: "contact",
   },
   {
+    id: "news",
+    label: "News",
+    href: "/admin/news",
+    iconKey: "news",
+    groupId: "website",
+    visibleForTemplates: ["cinematic@2"],
+  },
+  {
     id: "seasons",
     label: "Seasons",
     href: "/admin/seasons",
@@ -281,6 +291,7 @@ export const ADMIN_NAVIGATION_MANIFEST = [
       "about",
       "sponsors",
       "contact",
+      "news",
     ],
   },
   {
@@ -348,6 +359,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   about: ["website", "about", "club story"],
   sponsors: ["website", "sponsors", "partners"],
   contact: ["website", "contact", "email", "phone"],
+  news: ["website", "news", "articles", "announcements"],
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
