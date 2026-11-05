@@ -190,7 +190,7 @@ function ClubhouseKitHome() {
     photo: { url: string };
   }>;
 
-  if (kits.length === 0) return null;
+  if (!club.storeEnabled || kits.length === 0) return null;
 
   return (
     <section {...shopPiece} className="clubhouse-kit-home">

@@ -9,6 +9,7 @@ import type { DBSiteSocialLink, DBSiteSponsorLogo, SiteSocialPlatform } from "@/
 import { fetchSiteSocialLinks, fetchSiteSponsorLogos } from "@/lib/queries";
 import { DEFAULT_SITE_SOCIAL_LINKS } from "@/lib/social-links";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { withoutShopLinks } from "@/lib/store-visibility";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import AcademyFooter, { type FooterOverrides } from "@/components/sites/diverse-city/Footer";
 import { codeSiteFor } from "@/lib/code-site";
@@ -31,6 +32,7 @@ export default function Footer({ overrides }: { overrides?: FooterOverrides } = 
 function TemplateFooter({ overrides }: { overrides?: FooterOverrides }) {
   const club = useClubContext();
   const clubId = club.id;
+  const visibleFooterLinks = withoutShopLinks(footerLinks, club.storeEnabled);
   const { clubLogoUrl, inverseLogoUrl } = useClubBranding();
   const [partners, setPartners] = useState<DBSiteSponsorLogo[]>([]);
   const [socialLinks, setSocialLinks] =
@@ -123,7 +125,7 @@ function TemplateFooter({ overrides }: { overrides?: FooterOverrides }) {
             <span>{club.name}</span>
           </Link>
           <ul>
-            {footerLinks
+            {visibleFooterLinks
               .filter((link) => link.label !== "Club")
               .map((link) => (
                 <li key={link.href}>
@@ -208,7 +210,7 @@ function TemplateFooter({ overrides }: { overrides?: FooterOverrides }) {
 
         {/* Nav Links */}
         <ul className="flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-3">
-          {footerLinks.map((link) => (
+          {visibleFooterLinks.map((link) => (
             <li key={link.href}>
               {link.href.startsWith("mailto:") ? (
                 <a

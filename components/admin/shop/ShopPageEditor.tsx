@@ -7,6 +7,7 @@ import {
 } from "@/components/admin/icons";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import AcademyHomeShopFeature from "@/components/AcademyHomeShopFeature";
 import AcademyShopPage from "@/components/sites/diverse-city/AcademyShopPage";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
@@ -55,6 +56,13 @@ function orderPhotos(photos: ShopPhoto[]): ShopPhoto[] {
 
 export default function ShopPageEditor() {
   const club = useClubContext();
+  const router = useRouter();
+  // The Shop switch (clubs.store_enabled) is Onzio's. While it is off the
+  // public Shop does not exist, so the editor follows it, including direct URLs.
+  const storeOff = !club.storeEnabled;
+  useEffect(() => {
+    if (storeOff) router.replace("/admin");
+  }, [storeOff, router]);
   const template = club.presentationTemplateKey;
   const shopPolicy = codeSiteAdminFor(club)?.shop;
   const isClubhouse = template === "clubhouse@1";

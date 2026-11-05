@@ -54,13 +54,8 @@ export default function BrandingPage() {
   // Platform ids that are genuinely this club's own data: either a row
   // already existed in site_social_links when the page loaded, or the admin
   // has actually edited that field's input during this session. Every other
-  // platform is only showing DEFAULT_SITE_SOCIAL_LINKS as an unsaved
-  // onboarding suggestion (see lib/social-links.ts). saveSocialLinks must
-  // only persist ids in this set — otherwise saving (e.g. just to fix one
-  // platform, or just to change the tagline) would silently write the
-  // hardcoded Rose City FC sample URLs into every OTHER, untouched platform
-  // for this club, which is the same cross-tenant leak this whole fix is
-  // for, just triggered on save instead of on keystroke.
+  // platform is an unconfigured, blank field. saveSocialLinks persists only
+  // ids in this set, so saving the tagline never creates empty rows.
   const [configuredSocialIds, setConfiguredSocialIds] = useState<
     Set<SiteSocialPlatform>
   >(new Set());
@@ -93,9 +88,8 @@ export default function BrandingPage() {
       // fetchSiteSocialLinks(clubId) returns raw DB rows (so the public
       // Footer never fabricates a link for a platform that isn't
       // configured). The admin edit UI wants the opposite: always show all
-      // known platforms, seeding defaults only for ones with no row yet,
-      // while keeping an existing row's own href — including a genuinely
-      // blank one — untouched.
+      // known platforms, blank for ones with no row yet, while keeping an
+      // existing row's own href — including a genuinely blank one — untouched.
       .then((rows) => {
         setSocialLinks(normalizeSiteSocialLinks(rows));
         setConfiguredSocialIds(new Set(rows.map((row) => row.id)));
@@ -207,8 +201,7 @@ export default function BrandingPage() {
       ),
     );
     // The admin has now genuinely interacted with this platform, so its
-    // value (even if left equal to the suggested default, or cleared to
-    // blank) is real data to persist on save — not an unsaved suggestion.
+    // value (even if cleared to blank) is real data to persist on save.
     setConfiguredSocialIds((current) => {
       if (current.has(id)) return current;
       const next = new Set(current);
@@ -235,11 +228,7 @@ export default function BrandingPage() {
       const supabase = createClient();
       const now = new Date().toISOString();
       // Only persist platforms that are genuinely this club's own data
-      // (configuredSocialIds — see its declaration above). A platform the
-      // admin never touched is still showing DEFAULT_SITE_SOCIAL_LINKS'
-      // hardcoded Rose City FC sample URL purely as an onboarding
-      // suggestion; upserting it here would silently publish another
-      // club's real social links on this club's public footer.
+      // (configuredSocialIds — see its declaration above).
       const rows = normalizeSiteSocialLinks(socialLinks)
         .filter((link) => configuredSocialIds.has(link.id))
         .map((link) => ({
@@ -291,11 +280,8 @@ export default function BrandingPage() {
   //   field's own "Leave empty to keep the standard wording" copy) — the
   //   raw "" would otherwise render a blank tagline in the preview only.
   // - socialLinks passes through only configuredSocialIds, the same gate
-  //   saveSocialLinks uses. Untouched platforms are still showing
-  //   DEFAULT_SITE_SOCIAL_LINKS' Rose City FC sample URLs as unsaved
-  //   onboarding suggestions; the real public footer (raw DB rows via
-  //   fetchSiteSocialLinks) shows nothing for them, so neither may the
-  //   preview.
+  //   saveSocialLinks uses, matching the public footer (raw DB rows via
+  //   fetchSiteSocialLinks).
   const footerPreviewOverrides = useMemo(
     () => ({
       tagline: resolveFooterTagline(footerTagline),
@@ -447,7 +433,7 @@ export default function BrandingPage() {
               ))}
             </ul>
             <p className="mt-4 rounded-lg border border-border bg-muted/50 px-3.5 py-3 font-body text-xs leading-relaxed text-muted-foreground">
-              Six surfaces from one file, which is why the contrast check sits beside the picker.
+              One file updates all six places, so check that it reads well on light and dark backgrounds before you save.
             </p>
           </AdminPanel>
         </aside>

@@ -1,5 +1,76 @@
 # Diverse City FC Status
 
+## 2026-11-05 - Admin platform bug fixes found during the admin redesign research
+
+**Agent/package:** Claude Code, ad hoc `ADMIN-PLATFORM-FIXES-01` (bugs found
+while reading the admin for the stageshow redesign; no Diverse City epic
+package). **Status:** `in_progress` (local code and suites done; not reviewed,
+not merged, not deployed).
+
+**Completed work:** each reported bug was rechecked on current `main`
+(`246cf71`); the redesign research had read a branch 165 commits older.
+
+1. Contact hero image field inverted: **not a bug on main.** The upload field
+   was removed in `5b07964` (PR #10). `app/admin/(protected)/contact/page.tsx`
+   now only says the design controls the hero image. Remaining product
+   question (not changed): the Contact admin is shown to every club, but only
+   Diverse City has a public Contact page (`app/_clubs/[slug]/contact/page.tsx`);
+   its details still feed the Tryouts page, so it was left visible.
+2. Rose City sample content for new clubs: **confirmed, fixed.** Public tenant
+   queries were already guarded, but these still leaked: kit bullet points
+   ("Raffle ticket included") and store note (Niky's Sports, Pasadena) on every
+   template including Diverse City; purchase-detail fields and the Niky's buy
+   link on a saved row with blank fields; the new-kit draft in the Shop editor;
+   Rose City social URLs prefilled in Branding; Rose City sponsors/About as the
+   Sponsors/About editors' initial state; the `(public)/club/about` error
+   fallback. All now start blank, per the grill decision "new clubs start empty;
+   never another club's sample content". The legacy no-`clubId` test path is
+   unchanged.
+3. Branding "contrast check" copy: **confirmed, fixed** (no such check exists).
+4. Shop switch half wired: **confirmed, worse on main** (editorial, the only
+   template that honoured `store_enabled`, is retired, so nothing did). Now the
+   tenant `/shop` route 404s, the template/Clubhouse/Diverse City nav and
+   template footer drop Shop, homepage kit blocks and the hero Team Store button
+   hide, the admin hides Shop and the Shop editor redirects to `/admin` when
+   `clubs.store_enabled` is false.
+5. Empty kit shows the Home kit: **confirmed in the generic template** and
+   fixed (`ShopKitSectionContainer`): only kits with words and a photo get a
+   tab, an empty kit is never replaced by the Home shirt, and the photo row
+   follows the kit shown. Clubhouse and Diverse City already skipped empty kits.
+
+**Files changed:** `lib/shop-kit.ts`, `lib/shop-purchase-details.ts`,
+`lib/social-links.ts`, `lib/shop-editor/model.ts`, `lib/admin-route-manifest.ts`,
+new `lib/store-visibility.ts`; `app/_clubs/[slug]/shop/page.tsx`,
+`app/(public)/club/about/page.tsx`, admin `about`, `branding`, `sponsors` and
+dashboard pages; `components/` `Nav`, `Footer`, `Hero`, `ClubhouseHomePage`,
+`AcademyHomeShopFeature`, `ShopKitSectionContainer`,
+`ShopPurchaseDetailsSection`, `AdminShell`, `admin/shop/ShopPageEditor`,
+`sites/diverse-city/Nav`; tests: new
+`tests/contracts/admin-platform-bug-fixes.test.ts`, updated
+`lib/__tests__/shop-kit.test.ts`, `lib/__tests__/queries.test.ts`,
+`tests/contracts/admin-route-manifest.test.ts`,
+`tests/contracts/admin-sidebar-groups.test.ts`. No attested Academy source root
+(`scripts/pilot-academy-source-roots.ts`) changed. No migration.
+
+**Verification:** the new contract file failed before the fixes (missing
+helpers) and passes after. `npx tsc --noEmit` passed. ESLint on every changed
+file passed (`npm run lint` itself stops on a duplicate `@next/next` plugin
+because this worktree is nested inside the main checkout). Contracts 1,505/1,505
+across 128 files; legacy 428/428 across 50 files; architecture 421 passed with the one existing skip across 13 files.
+Database and browser suites not run (no schema change; no local stack started).
+
+**Blockers/unresolved decisions:** before any production deploy, Christian
+should confirm read-only that Diverse City's `clubs.store_enabled` is `true`
+(the 2026-08-12 migration backfilled `true` for clubs existing then, and Diverse
+City was provisioned on 2026-08-07); if it is `false`, this change hides its
+live Store. The shop save RPC still only blocks editorial when the store is off;
+a database gate needs a migration and was left out. Whether the Contact admin
+should hide for clubs without a public Contact page is a product question.
+
+**Exact next step:** independent review of branch
+`claude/epic-haibt-c3f2bb`, then a PR. Run the read-only Diverse City
+`store_enabled` check before any release.
+
 ## 2026-10-12 - Subscription payment-state correction
 
 **Agent/package:** Codex, `BILLING-FAILED-01`. **Status:** `complete`.

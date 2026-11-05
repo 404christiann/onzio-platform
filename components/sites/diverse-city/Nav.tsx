@@ -9,6 +9,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { withoutShopLinks } from "@/lib/store-visibility";
 import { fetchPrograms, type ProgramContent } from "@/lib/queries";
 import { useAcademyPageScrollLock } from "./LoadingSkeleton";
 import { academyNavItems, isNavItemActive } from "./navigation";
@@ -150,7 +151,7 @@ export default function Nav({ loadingAppearance = false }: { loadingAppearance?:
   // The shared /club-logo route has a legacy Rose City fallback. Keep this
   // tenant's initials visible until its scoped branding read has a real URL.
   const displayedLogoUrl = clubLogoUrl;
-  const activeNavLinks = academyNavItems(academyPrograms);
+  const activeNavLinks = withoutShopLinks(academyNavItems(academyPrograms), club.storeEnabled);
 
   return (
     <header

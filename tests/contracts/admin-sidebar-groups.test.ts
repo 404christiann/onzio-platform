@@ -18,6 +18,7 @@ const OWNER_ACCESS: AdminRouteAccessContext = {
   presentationTemplateKey: "academy@1",
   isBillingAuthorized: true,
   canMutateContent: true,
+  storeEnabled: true,
 };
 
 describe("admin sidebar grouped navigation", () => {

@@ -1,4 +1,5 @@
 import type { ShopKitSurface, ShopKitVariant } from "@/lib/db-types";
+import type { ShopKitContent } from "@/lib/queries";
 
 /** Splits raw admin title text into display lines. */
 export function titleLines(title: string): string[] {
@@ -8,18 +9,6 @@ export function titleLines(title: string): string[] {
 export const MAX_KIT_BULLET_POINTS = 8;
 export const MAX_KIT_PHOTOS = 6;
 
-export const DEFAULT_KIT_BULLET_POINTS = [
-  "Authentic match jersey",
-  "Any name & number",
-  "League patch",
-  "Team sponsor badges",
-  "Raffle ticket included",
-  "Custom name + $10",
-];
-
-export const DEFAULT_KIT_STORE_NOTE =
-  "Sold exclusively at Niky's Sports\n33 E Colorado Blvd, Pasadena, CA";
-
 /** Trims, removes empty entries, and caps the list to the public layout limit. */
 export function cleanKitBulletPoints(points: readonly string[]): string[] {
   return points
@@ -28,18 +17,36 @@ export function cleanKitBulletPoints(points: readonly string[]): string[] {
     .slice(0, MAX_KIT_BULLET_POINTS);
 }
 
-/** Keeps public rendering compatible until the additive DB migration is run. */
+/** A kit with no saved points shows none; it never borrows another club's. */
 export function normalizeKitBulletPoints(value: unknown): string[] {
-  if (!Array.isArray(value)) return [...DEFAULT_KIT_BULLET_POINTS];
-  const cleaned = cleanKitBulletPoints(
+  if (!Array.isArray(value)) return [];
+  return cleanKitBulletPoints(
     value.filter((point): point is string => typeof point === "string"),
   );
-  return cleaned.length > 0 ? cleaned : [...DEFAULT_KIT_BULLET_POINTS];
 }
 
-/** Keeps the current store note when the new column is not present yet. */
 export function normalizeKitStoreNote(value: unknown): string {
-  return typeof value === "string" ? value : DEFAULT_KIT_STORE_NOTE;
+  return typeof value === "string" ? value : "";
+}
+
+const KIT_VARIANT_ORDER: readonly ShopKitVariant[] = ["home", "third", "away"];
+
+/** Kits a visitor can pick: those with saved words and at least one photo. */
+export function availableKitVariants(
+  contentByVariant: Record<ShopKitVariant, ShopKitContent>,
+): ShopKitVariant[] {
+  return KIT_VARIANT_ORDER.filter((variant) => {
+    const content = contentByVariant[variant];
+    return Boolean(content?.section) && (content?.photos.length ?? 0) > 0;
+  });
+}
+
+/** The kit to show: the chosen one when it has content, else the first that does. */
+export function resolveKitVariant(
+  selected: ShopKitVariant,
+  available: readonly ShopKitVariant[],
+): ShopKitVariant | null {
+  return available.includes(selected) ? selected : available[0] ?? null;
 }
 
 /** Builds descriptive alt text from the editable title and photo position. */

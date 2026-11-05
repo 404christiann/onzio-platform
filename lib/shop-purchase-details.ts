@@ -50,7 +50,7 @@ export const DEFAULT_SHOP_PURCHASE_DETAILS: DBShopPurchaseDetails = {
 };
 
 export function normalizePurchaseDetailCards(value: unknown): ShopPurchaseDetailCard[] {
-  if (!Array.isArray(value)) return [...DEFAULT_SHOP_PURCHASE_DETAILS.cards];
+  if (!Array.isArray(value)) return [];
 
   const cards = value
     .map((card) => {
@@ -65,7 +65,7 @@ export function normalizePurchaseDetailCards(value: unknown): ShopPurchaseDetail
     .filter((card): card is ShopPurchaseDetailCard => card !== null)
     .slice(0, MAX_PURCHASE_DETAIL_CARDS);
 
-  return cards.length > 0 ? cards : [...DEFAULT_SHOP_PURCHASE_DETAILS.cards];
+  return cards;
 }
 
 export function normalizeShopPurchaseDetails(
@@ -76,15 +76,17 @@ export function normalizeShopPurchaseDetails(
     return EMPTY_SHOP_PURCHASE_DETAILS;
   }
   if (!value) return DEFAULT_SHOP_PURCHASE_DETAILS;
+  // A saved row is the club's own: blank fields stay blank rather than
+  // borrowing the legacy single-tenant (Rose City) copy or store link.
   return {
-    ...DEFAULT_SHOP_PURCHASE_DETAILS,
+    ...EMPTY_SHOP_PURCHASE_DETAILS,
     ...value,
-    heading: value.heading || DEFAULT_SHOP_PURCHASE_DETAILS.heading,
+    heading: value.heading ?? "",
     cards: normalizePurchaseDetailCards(value.cards),
-    cta_eyebrow: value.cta_eyebrow || DEFAULT_SHOP_PURCHASE_DETAILS.cta_eyebrow,
-    cta_text: value.cta_text || DEFAULT_SHOP_PURCHASE_DETAILS.cta_text,
-    cta_label: value.cta_label || DEFAULT_SHOP_PURCHASE_DETAILS.cta_label,
-    cta_link: value.cta_link || DEFAULT_SHOP_PURCHASE_DETAILS.cta_link,
+    cta_eyebrow: value.cta_eyebrow ?? "",
+    cta_text: value.cta_text ?? "",
+    cta_label: value.cta_label ?? "",
+    cta_link: value.cta_link ?? "",
   };
 }
 

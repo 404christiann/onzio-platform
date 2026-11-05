@@ -14,6 +14,7 @@ const OWNER_ACCESS: AdminRouteAccessContext = {
   presentationTemplateKey: "academy@1",
   isBillingAuthorized: true,
   canMutateContent: true,
+  storeEnabled: true,
 };
 
 const ADMIN_ACCESS: AdminRouteAccessContext = {

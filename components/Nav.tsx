@@ -9,6 +9,7 @@ import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { SHOW_SHOP_HERO } from "@/lib/site-flags";
 import { imageDeliveryProps } from "@/lib/image-delivery";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { withoutShopLinks } from "@/lib/store-visibility";
 
 const MIGRATED_LOGO_BASE =
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/onzio-media/32ceba0b-4e25-52c2-bb6b-d82fb87637a7/branding`;
@@ -148,6 +149,8 @@ export default function Nav() {
   // The shared /club-logo route has a legacy Rose City fallback. Keep this
   // tenant's initials visible until its scoped branding read has a real URL.
   const displayedLogoUrl = clubLogoUrl;
+  const clubhouseLinks = withoutShopLinks(lionsNavLinks, club.storeEnabled);
+  const templateLinks = withoutShopLinks(navLinks, club.storeEnabled);
 
   if (club.presentationTemplateKey === "clubhouse@1") {
     const isHomeTop = pathname === "/" && !scrolled;
@@ -195,7 +198,7 @@ export default function Nav() {
           </div>
         </div>
         <nav className="clubhouse-desktop-nav" aria-label="Primary navigation">
-          {lionsNavLinks.map((link) => (
+          {clubhouseLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href ?? "/"}
@@ -220,7 +223,7 @@ export default function Nav() {
         {menuOpen && (
           <div className="clubhouse-mobile-menu">
             <div>
-              {lionsNavLinks.map((link, index) => (
+              {clubhouseLinks.map((link, index) => (
                 <Link key={link.href} href={link.href ?? "/"}>
                   <small>{String(index + 1).padStart(2, "0")}</small>
                   {link.label}
@@ -306,7 +309,7 @@ export default function Nav() {
             they keep hugging the true page edge instead of stopping at the
             1280px box. Logo position is untouched either way. */}
         <ul className="hidden md:flex items-center gap-8 xl:absolute xl:right-[6.5rem] xl:top-1/2 xl:-translate-y-1/2">
-          {navLinks.map((link) => {
+          {templateLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const triggerClassName =
               "font-nav text-sm font-semibold tracking-widest uppercase transition-colors duration-300 relative group/link inline-flex items-center gap-1.5";
@@ -429,7 +432,7 @@ export default function Nav() {
         }`}
       >
         <ul className="flex flex-col px-8 py-6 gap-6">
-          {navLinks.map((link) => {
+          {templateLinks.map((link) => {
             const isActive = isNavItemActive(pathname, link);
             const isExpanded = expandedMobileLink === link.label;
             const labelClassName = `font-body text-lg font-semibold tracking-widest uppercase block py-1 ${
