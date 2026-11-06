@@ -1,14 +1,55 @@
 # Diverse City FC Status
 
+## 2026-11-05 - ADMIN-PLATFORM-FIXES-02 production release record
+
+**Agent/package:** Claude Code, `ADMIN-PLATFORM-FIXES-02` follow-through
+(docs only). **Status:** `complete` for the code and migration release;
+item 14's database gate remains an open decision (below).
+
+**Completed work (recorded from Christian's release, not performed by this
+agent):**
+
+- PR #88 merged to `main` as `ea98a3d`. Vercel production deployment
+  `dpl_94kYpqjxq6Hy6mAEkLPbHfAXgSdy` is READY, target production, from
+  `ea98a3d`.
+- Christian applied `20261105120000_shop_buy_link_email.sql` to production
+  (`ioalthwsdrlzrubomrow`) himself, from a clean worktree of `origin/main`.
+  The dry run listed only that file, then `supabase db push --linked` ran.
+  Afterwards `supabase migration list --linked` showed the remote ledger
+  matching `main` exactly, and a second dry run reported "Remote database is
+  up to date".
+- Ordering, stated plainly: the code deployment started before the migration
+  was applied, because the `CLAUDE.md` production gate ran after the merge
+  instead of before it. The review had judged the code safe without the
+  migration: in that gap only Shop saves with an email buy link failed, as
+  they did before. The first CLI attempts returned 403 because the Supabase
+  CLI was logged into a different account (Sandlot); logging in again fixed
+  it. For the next migration-bearing merge, run the gate before merging.
+
+**Files changed:** this ledger and `HANDOFF.md` only.
+
+**Verification:** the deployment, ledger match and dry-run facts above are
+Christian's release observations relayed to this agent; this agent did not
+query production. **Not verified:** an email buy-link save on the live
+Diverse City admin, and any other signed-in check of the released screens.
+
+**Blockers/unresolved decisions:** item 14's database/save-path gate for the
+Shop switch (conflicts with the SITE-06B Shop content policy; Christian's
+decision). The three small review notes recorded in the entry below stay
+open and non-blocking.
+
+**Exact next step:** Christian (or an owner session) saves the Diverse City
+Shop page once with its email order link to confirm the live fix, and decides
+item 14's gate.
+
 ## 2026-11-05 - ADMIN-PLATFORM-FIXES-02: admin screens that mislead Rose City and Diverse City owners
 
 **Agent/package:** Claude Code, ad hoc `ADMIN-PLATFORM-FIXES-02` (the fix batch
 Christian agreed on 2026-11-05 after the read-only Rose City and Diverse City
 admin reviews, plus PR #87 leftovers). Branch `claude/upbeat-kalam-2375dd`
-from `main` `d0aa99b`. **Status:** `in_progress` (code, tests and local suites
-done on the branch; pushed and opened as PR #88 at Christian's request; not
-reviewed, not merged, not deployed; no
-hosted Supabase, Stripe, Vercel, DNS or email change).
+from `main` `d0aa99b`. **Status:** released; see the release record above
+(PR #88 merged as `ea98a3d` and deployed; migration applied by Christian).
+This agent made no hosted Supabase, Stripe, Vercel, DNS or email change.
 
 **Completed work** (each item was rechecked in code on `d0aa99b` first):
 
