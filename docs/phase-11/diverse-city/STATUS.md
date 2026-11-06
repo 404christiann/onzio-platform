@@ -4,7 +4,7 @@
 
 **Agent/package:** Claude Code, `ADMIN-PLATFORM-FIXES-02` follow-through
 (docs only). **Status:** `complete` for the code and migration release;
-item 14 closed by a relayed decision (below).
+item 14 closed by Christian's decision (below).
 
 **Completed work (recorded from Christian's release, not performed by this
 agent):**
@@ -33,10 +33,10 @@ Christian's release observations relayed to this agent; this agent did not
 query production. **Not verified:** an email buy-link save on the live
 Diverse City admin, and any other signed-in check of the released screens.
 
-**Item 14 decision (relayed, 2026-11-05): do not build the database gate
-for the Shop switch; item closed.** Relayed by the orchestration session from
-a fork of the Diverse City session, where Christian agreed; not confirmed
-with Christian directly by this agent. Reasoning as relayed: while the Shop
+**Item 14 decision (2026-11-05): do not build the database gate for the
+Shop switch; item closed.** Christian confirmed directly on 2026-11-05 that
+there will be no database block on Shop saves while a club's Shop is off.
+His words: "I agree with it." Reasoning: while the Shop
 is off, the public Shop page and the homepage kit block are already hidden,
 so content saved meanwhile cannot reach visitors; allowing saves lets an
 owner prepare kits before Onzio turns the Shop on; and a database block would
@@ -59,15 +59,21 @@ in Shop" shortcut and hero Shop option disappear
 `components/admin/homepage/HomepageFields.tsx:79-83`). No message explains
 why.
 
-**Blockers/unresolved decisions:** open follow-up for Christian to approve:
-a one-line admin notice that the Shop is turned off by Onzio and hidden from
-the public site (for example on the dashboard, or in place of the silent
-`/admin/shop` redirect). The three small review notes recorded in the entry
-below stay open and non-blocking.
+**Approved follow-up (Christian, 2026-11-05; not built, its own later PR):**
+while the Shop is off, owners can open the Shop editor instead of being
+redirected, and a banner at the top says "Your shop is off. Visitors can't
+see it yet." That makes "prepare kits before launch" true in the admin and
+replaces the earlier one-line-notice idea. Expected touch points: the
+redirect in `components/admin/shop/ShopPageEditor.tsx:62-65` and the Shop
+filter in `lib/admin-route-manifest.ts:386` (the menu link would need to
+stay reachable), with their contract tests.
+
+**Blockers/unresolved decisions:** none for this batch. The three small
+review notes recorded in the entry below stay open and non-blocking.
 
 **Exact next step:** Christian (or an owner session) saves the Diverse City
-Shop page once with its email order link to confirm the live fix, and
-approves or declines the Shop-off notice.
+Shop page once with its email order link to confirm the live fix; then the
+Shop-off banner PR above.
 
 ## 2026-11-05 - ADMIN-PLATFORM-FIXES-02: admin screens that mislead Rose City and Diverse City owners
 
