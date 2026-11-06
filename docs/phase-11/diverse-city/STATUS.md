@@ -6,7 +6,8 @@
 Christian agreed on 2026-11-05 after the read-only Rose City and Diverse City
 admin reviews, plus PR #87 leftovers). Branch `claude/upbeat-kalam-2375dd`
 from `main` `d0aa99b`. **Status:** `in_progress` (code, tests and local suites
-done on the branch; not reviewed, not pushed, no PR, not deployed).
+done on the branch; not reviewed, not pushed, no PR, not deployed; no
+hosted Supabase, Stripe, Vercel, DNS or email change).
 
 **Completed work** (each item was rechecked in code on `d0aa99b` first):
 
@@ -87,15 +88,62 @@ designs without those pages.
 `lib/roster-player-age.ts`, `lib/season-label.ts`, migration
 `supabase/migrations/20261105120000_shop_buy_link_email.sql`, tests
 `tests/contracts/admin-platform-fixes-02.test.ts`,
-`tests/database/shop-buy-link-email.test.ts`, extended
-`tests/database/owner-admin-membership.test.ts`, updated
+`tests/database/shop-buy-link-email.test.ts`,
+`tests/browser/alpha-store-enabled.global-setup.ts`, extended
+`tests/database/owner-admin-membership.test.ts`, three Playwright configs
+(`admin-loading`, `homepage`, `public-page-editors`),
+`scripts/homepage-local-auth.mjs`, `tests/README.md`, updated
 `tests/contracts/diverse-city-tryouts-admin.test.ts` (pinned default
 sentence deliberately changed). Academy files touched outside the attested
 roots list: `components/sites/diverse-city/site-definition.ts` and
 `AcademyStandingsTable.tsx`; no file in `scripts/pilot-academy-source-roots.ts`
 changed.
 
-**Verification:** VERIFICATION_PLACEHOLDER
+**Verification:** new `tests/contracts/admin-platform-fixes-02.test.ts`
+(23 cases) failed before the fixes (missing helpers) and passes after.
+`npx tsc --noEmit` passed; ESLint passed on every changed file (run with
+`--no-eslintrc -c .eslintrc.json` because `npm run lint` stops on the nested
+worktree's duplicate `@next/next` plugin). Contracts 1,528/1,528 (129 files);
+legacy 428/428 (50 files); architecture 421 passed with the one existing skip
+(13 files); production build passed. All local runs used loopback Supabase
+under `scripts/with-local-db-lock.sh`; the machine's load average was about
+43 during the first runs.
+
+- **Database, full suite.** Baseline on unchanged `main` schema and tests:
+  888 passed, 94 failed in the About, Contact, Shop and Tryouts
+  content-policy files, every failure a 15 s test or 8 s statement timeout
+  under load. Branch with the new migration applied locally
+  (`supabase migration up --local`): 989 passed, 2 failed (47 files), both
+  15 s timeouts in the "replay the whole migration" cases of
+  `shop-content-policy` and `homepage-content-policy`. Rerun alone, those two
+  files plus `shop-buy-link-email` (9 new cases) and `owner-admin-membership`
+  (1 new case) passed 114/114. The local stack was then restored to `main`'s
+  schema (old `validate_shop_section`, migration row removed).
+- **Browser, first pass on the branch build** (production build at
+  `alpha.localhost:3110`, loopback `.env.local` with email/media provider keys
+  stripped): contact-editor 6/6; admin-guided 48 passed, 10 failed, 5 not run;
+  admin-loading 11/13; homepage 54/63; public-page-editors 29/36.
+- **PR #87 leftovers found and fixed.** About eight failures came from #87's
+  Shop switch: seeded local Alpha (standing in for Diverse City) has
+  `store_enabled=false`, so the Shop editor redirected, the homepage kit hid
+  and "Edit in Shop" disappeared. New
+  `tests/browser/alpha-store-enabled.global-setup.ts` turns it on for the
+  `admin-loading`, `homepage` and `public-page-editors` configs and restores
+  it afterwards. Four failures were missing undocumented setup
+  (`SUPABASE_TEST_DATABASE_URL`, `ADMIN_GUIDED_ADMIN_STORAGE_STATE`):
+  `scripts/homepage-local-auth.mjs admin` now produces the administrator
+  state and `tests/README.md` documents the browser setup.
+- **Rerun of every failing spec file on the branch:** admin-loading 13/13;
+  admin-guided 24/25; homepage 53/54; public-page-editors 33/35. The
+  admin-guided miss (Registrations loading state, a different width each
+  run) then passed 24/24 over three repeats. The remaining three failures
+  reproduce on a `main` build (`d0aa99b`) and are pre-existing: the homepage
+  "legacy branch" preview loads `rose-city.localhost`, whose public site has
+  404'd by design since PR #85; the two About/Logo save cases need the
+  separate legacy fixture already recorded in HANDOFF.
+- **Not verified:** anything hosted or signed in as a real owner; the
+  Diverse City live Shop row (only the imported value is known); native
+  mobile; the admin screens were not inspected by eye beyond these suites.
 
 **Blockers/unresolved decisions:** (a) item 14's database save gate conflicts
 with SITE-06B (above); (b) the migration must pass the `CLAUDE.md`

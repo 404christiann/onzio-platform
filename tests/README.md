@@ -155,6 +155,31 @@ reads are not total SQL queries. Timings are descriptive. Interleave baseline/he
 runs and profile separately before claiming a speedup. See the
 [architecture decision](../docs/site-architecture.md) for the migration gates.
 
+## Local authenticated browser suites
+
+The `admin-guided`, `admin-loading`, `homepage`, `public-page-editors` and
+`contact-editor` Playwright configs run against a production build served at
+`http://alpha.localhost:3110` with a loopback-only `.env.local`, under
+`scripts/with-local-db-lock.sh`. With `.env.test` exported:
+
+```bash
+npx next start -p 3110 &
+node scripts/homepage-local-auth.mjs        # owner: /private/tmp/onzio-homepage-tests/local-auth.json
+node scripts/homepage-local-auth.mjs admin  # administrator: .../local-admin-auth.json
+export ADMIN_GUIDED_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-auth.json
+export ADMIN_GUIDED_ADMIN_STORAGE_STATE=/private/tmp/onzio-homepage-tests/local-admin-auth.json
+export SUPABASE_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+```
+
+Set `ADMIN_LOADING_STORAGE_STATE`, `HOMEPAGE_STORAGE_STATE` and
+`PAGE_EDITOR_STORAGE_STATE` to the owner file too. The members and lifecycle
+specs refuse to run without the administrator state and the loopback database
+URL. Alpha stands in for Diverse City, so the `admin-loading`, `homepage` and
+`public-page-editors` configs turn Alpha's Shop switch on for their run and
+restore it afterwards (`tests/browser/alpha-store-enabled.global-setup.ts`);
+the seeded Alpha has it off. Strip any real email or media provider keys from
+the local `.env.local` before a run.
+
 ## Contact section-guide editor
 
 The approved Contact editor saves `contact_profile` and `contact_page_content`
