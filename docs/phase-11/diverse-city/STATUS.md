@@ -4,7 +4,7 @@
 
 **Agent/package:** Claude Code, `ADMIN-PLATFORM-FIXES-02` follow-through
 (docs only). **Status:** `complete` for the code and migration release;
-item 14's database gate remains an open decision (below).
+item 14 closed by a relayed decision (below).
 
 **Completed work (recorded from Christian's release, not performed by this
 agent):**
@@ -33,14 +33,41 @@ Christian's release observations relayed to this agent; this agent did not
 query production. **Not verified:** an email buy-link save on the live
 Diverse City admin, and any other signed-in check of the released screens.
 
-**Blockers/unresolved decisions:** item 14's database/save-path gate for the
-Shop switch (conflicts with the SITE-06B Shop content policy; Christian's
-decision). The three small review notes recorded in the entry below stay
-open and non-blocking.
+**Item 14 decision (relayed, 2026-11-05): do not build the database gate
+for the Shop switch; item closed.** Relayed by the orchestration session from
+a fork of the Diverse City session, where Christian agreed; not confirmed
+with Christian directly by this agent. Reasoning as relayed: while the Shop
+is off, the public Shop page and the homepage kit block are already hidden,
+so content saved meanwhile cannot reach visitors; allowing saves lets an
+owner prepare kits before Onzio turns the Shop on; and a database block would
+add another dependency on `store_enabled`, the setting behind the 2026-08-14
+outage, to guard a case that harms no one. This keeps the SITE-06B Shop
+content policy (`docs/shop-content-policy.md`) as it is.
+
+Note for that reasoning, checked in code: today the admin does not let an
+owner prepare kits while the Shop is off. `/admin/shop` redirects to
+`/admin` (`components/admin/shop/ShopPageEditor.tsx:62-65`, from PR #87), so
+only the API still accepts those saves.
+
+**Shop-off notice check (requested, nothing built): no.** With
+`store_enabled=false` the admin never tells the owner the Shop is hidden from
+the public site. Shop just disappears from the menu and search
+(`lib/admin-route-manifest.ts:386`), the editor redirects silently
+(`components/admin/shop/ShopPageEditor.tsx:62-65`), and the Homepage "Edit
+in Shop" shortcut and hero Shop option disappear
+(`components/admin/homepage/HomepageEditor.tsx:181`,
+`components/admin/homepage/HomepageFields.tsx:79-83`). No message explains
+why.
+
+**Blockers/unresolved decisions:** open follow-up for Christian to approve:
+a one-line admin notice that the Shop is turned off by Onzio and hidden from
+the public site (for example on the dashboard, or in place of the silent
+`/admin/shop` redirect). The three small review notes recorded in the entry
+below stay open and non-blocking.
 
 **Exact next step:** Christian (or an owner session) saves the Diverse City
-Shop page once with its email order link to confirm the live fix, and decides
-item 14's gate.
+Shop page once with its email order link to confirm the live fix, and
+approves or declines the Shop-off notice.
 
 ## 2026-11-05 - ADMIN-PLATFORM-FIXES-02: admin screens that mislead Rose City and Diverse City owners
 
