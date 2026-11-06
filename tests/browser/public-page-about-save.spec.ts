@@ -1,4 +1,8 @@
+import { createHash, randomUUID } from "node:crypto";
+import { Client } from "pg";
 import { expect, test, type Page } from "@playwright/test";
+import { parsePresentationDocument, type PresentationDocument } from "../../packages/presentation";
+import { presentationDocumentForTemplate } from "../helpers/presentation-fixture";
 import { EMPTY_ABOUT_PAGE_CONTENT, EMPTY_CLUB_LOGO_PAGE_CONTENT } from "../../lib/about-content";
 import { aboutPageEditableContent } from "../../lib/about-editor/save";
 import type { DBAboutPageContent, DBClubLogoPageContent } from "../../lib/db-types";
@@ -58,8 +62,36 @@ async function saveSelected(page:Page){
  const response=page.waitForResponse(result=>result.request().method()==="POST"&&new URL(result.url()).pathname==="/api/admin/about-editor");
  await page.locator(".aep-inspector-save button").click();expect((await response).ok()).toBe(true);
 }
-// Run this case against a synthetic Cinematic club with empty collections. It
-// intentionally asserts those prerequisites rather than skipping an absent page.
+// The Club Logo cases need a design that publishes the Club Logo page. They
+// were written for Cinematic, retired in PR #55, and Academy (local Alpha's
+// seeded design) deliberately has no Logo page. So each case temporarily
+// publishes Clubhouse for Alpha and restores the seeded presentation after.
+// The first case still asserts its empty-collection prerequisites.
+const ALPHA_CLUB_ID="11111111-1111-4111-8111-111111111111";
+const localDb=()=>new Client({host:"127.0.0.1",port:54322,user:"postgres",password:"postgres",database:"postgres"});
+let restorePresentation:(()=>Promise<void>)|null=null;
+async function publishClubhouseForAlpha(){
+ const db=localDb();await db.connect();
+ try{
+  const original=(await db.query<{draft_document_id:string|null;published_document_id:string|null;updated_by:string;configuration:PresentationDocument}>(
+   "select s.draft_document_id,s.published_document_id,s.updated_by,d.configuration from onzio.presentation_state s join onzio.presentation_documents d on d.id=s.published_document_id where s.club_id=$1",[ALPHA_CLUB_ID])).rows[0];
+  if(!original)throw new Error("Local Alpha has no published presentation to switch from.");
+  const configuration=parsePresentationDocument(presentationDocumentForTemplate(original.configuration,"clubhouse"),{surface:"production"});
+  const id=randomUUID(),digest=createHash("sha256").update(JSON.stringify(configuration)).digest("hex");
+  const version=Number((await db.query("select coalesce(max(version),0)+1 as version from onzio.presentation_documents where club_id=$1",[ALPHA_CLUB_ID])).rows[0].version);
+  await db.query(`insert into onzio.presentation_documents(id,club_id,version,schema_version,template_id,template_version,configuration,configuration_digest,created_by)
+   values($1,$2,$3,1,'clubhouse',1,$4::jsonb,$5,$6)`,[id,ALPHA_CLUB_ID,version,JSON.stringify(configuration),digest,original.updated_by]);
+  await db.query("update onzio.presentation_state set published_document_id=$1 where club_id=$2",[id,ALPHA_CLUB_ID]);
+  restorePresentation=async()=>{
+   const restore=localDb();await restore.connect();
+   try{await restore.query("update onzio.presentation_state set draft_document_id=$1,published_document_id=$2,updated_by=$3 where club_id=$4",[original.draft_document_id,original.published_document_id,original.updated_by,ALPHA_CLUB_ID]);}
+   finally{await restore.end();}
+  };
+ }finally{await db.end();}
+}
+test.describe("Club Logo page cases (Alpha temporarily on Clubhouse)",()=>{
+test.beforeEach(async()=>{await publishClubhouseForAlpha();});
+test.afterEach(async()=>{const restore=restorePresentation;restorePresentation=null;if(restore)await restore();});
 test("empty About values and Logo features/colors can be created; Logo save preserves About draft",async({page})=>{
  await page.setViewportSize({width:1440,height:900});const about=await snapshot(page),logo=await snapshot(page,"logo");
  expect(about.content?.values??[]).toEqual([]);expect(logo.content?.features??[]).toEqual([]);expect(logo.content?.color_cards??[]).toEqual([]);
@@ -126,4 +158,5 @@ test("removing newly uploaded Logo items queues their images only for the Logo S
   expect(submitted).toHaveLength(2);expect(submitted[1]).toMatchObject({page:"logo",content:{features:[],color_cards:[]}});
   expect(submitted[1].retiredMediaUrls.map(url=>url.split("?")[0])).toEqual(uploaded);
  }finally{await page.unrouteAll({behavior:"wait"});}
+});
 });

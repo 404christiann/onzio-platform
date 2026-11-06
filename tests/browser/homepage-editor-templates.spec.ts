@@ -6,6 +6,7 @@ import {
   type PresentationDocument,
 } from "@/packages/presentation";
 import { presentationDocumentForTemplate } from "@/tests/helpers/presentation-fixture";
+import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 
 const ALPHA_CLUB_ID = "11111111-1111-4111-8111-111111111111";
 /** seed.sql publishes exactly this Academy document for Alpha. Every spec here
@@ -203,6 +204,16 @@ test("clean preview matches full public content and typography, including the le
         const size = await preview.locator("html").evaluate(() => ({ width: innerWidth, height: innerHeight }));
         expect(await preview.locator("html").evaluate(() => document.compatMode)).toBe("CSS1Compat");
         await publicPage.setViewportSize(size);
+        // The legacy branch is Rose City's design, chosen by slug. While Rose
+        // City's public site is held (PR #85) its public homepage is a 404 by
+        // design, so assert the hold and keep the editor-preview checks above;
+        // the full comparison resumes on its own once the hold is lifted.
+        if (template === "legacy" && PUBLIC_SITE_HOLD_SLUGS.has("rose-city")) {
+          const held = await publicPage.goto(`${origin}/`);
+          expect(held?.status()).toBe(404);
+          expect(held?.headers()["x-robots-tag"]).toContain("noindex");
+          continue;
+        }
         await publicPage.goto(`${origin}/`);
         await expect(publicPage.locator(template === "legacy" ? "main section" : "h1").first()).toBeVisible();
         await preview.locator("html").evaluate(async () => { await document.fonts.ready; });
