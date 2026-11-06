@@ -1,12 +1,87 @@
 # Diverse City FC Status
 
+## 2026-11-05 - MAIN-BROWSER-TEST-FIXES: three browser checks that failed on clean main
+
+**Agent/package:** Claude Code, `MAIN-BROWSER-TEST-FIXES` (Christian
+approved: "Ok, send it"). Branch `claude/fix-main-browser-tests` from `main`
+`deffccc`. **Status:** `in_progress` (fixes and local runs done; PR open, not
+merged, not deployed; no migration, no production change).
+
+**Each failure, confirmed on a clean `main` build (`deffccc`) first:**
+
+1. `admin-guided-stats-discard.spec.ts`, 1440px season: failed 2 of 3
+   repeats with "All changes saved" matched twice. Cause, from the failing
+   trace's page snapshot: the second copy sits in `<body> > <div id="S:0"
+   hidden>`, React's holding area for server-streamed HTML that has not been
+   swapped in yet. The test acts while the initial stream is still
+   finishing; the hidden copy is never shown to users and is removed when
+   the stream completes, but Playwright's strict text match counts hidden
+   elements. Any added delay hides the race (instrumented runs passed
+   12/12). **Product correct, test too broad:** the check is now scoped to
+   the visible tab panel (`getByRole("tabpanel")`).
+2. `public-page-about-save.spec.ts`, the two Club Logo cases: both timed out
+   waiting for a "Club Logo page" button. They were written for a Cinematic
+   club (retired in PR #55), and local Alpha is Academy, which has no Logo
+   page by design (`showLogoPage: false`). **Test setup stale:** each case
+   now publishes Clubhouse for Alpha (an active design with the About values
+   section and the Club Logo page) and restores the seeded presentation
+   afterwards; the first case still asserts its empty-collection
+   prerequisites.
+3. `homepage-editor-templates.spec.ts`, legacy branch: the legacy design is
+   Rose City's, chosen by slug, so the test renames Alpha to `rose-city`;
+   PR #85's public hold returns an uncached, noindex 404 for that slug by
+   design, so the public comparison could not run. **Product correct, test
+   stale:** the hold list moved to `lib/public-site-hold.ts` (shared by
+   `middleware.ts` and the test, same behavior); while Rose City is held the
+   legacy step keeps its admin-preview checks and asserts the public 404
+   and noindex header, and the full comparison resumes on its own once the
+   hold is lifted.
+
+No test was skipped or deleted. None of the three needed a migration, a
+production change or a product decision.
+
+**Also recorded:** Christian confirmed on 2026-11-05 that a live Diverse City
+Shop save with the email order link works ("looks good"); removed from "not
+verified" in the release entry below.
+
+**Files changed:** `lib/public-site-hold.ts` (new), `middleware.ts`,
+`tests/browser/admin-guided-stats-discard.spec.ts`,
+`tests/browser/public-page-about-save.spec.ts`,
+`tests/browser/homepage-editor-templates.spec.ts`, this ledger and
+`HANDOFF.md`.
+
+**Verification:** local production builds of clean `main` (`deffccc`) and this
+branch, loopback Supabase, under `scripts/with-local-db-lock.sh`.
+
+| Check | `main` (before) | Branch (after) |
+|---|---|---|
+| Stats discard spec | 10/12 (1440px season failed 2 of 3 repeats) | 20/20 (5 repeats) |
+| About/Logo save spec | 5/7 (both Logo cases time out) | 7/7 |
+| Homepage templates spec | 1/2 (legacy branch) | 2/2 |
+
+Full configs on the branch afterwards: public-page-editors 37/37,
+admin-guided 63/63, contact-editor 6/6, homepage 62/63. The homepage miss
+(`homepage-editor-photos` "Leave without saving", a navigation timing check)
+then passed 15/15 on both the branch and `main` over three repeats, so it
+is a load flake in an untouched file. TypeScript, ESLint on changed files,
+contracts 1,533/1,533, `tests/contracts/rose-city-public-lock.test.ts`
+15/15, `tests/architecture/template-selectors.test.ts` 116/116 and the
+production build passed. Alpha's Shop switch and seeded presentation were
+back as they started after every run. The local Supabase stack had stopped
+(colima `onzio-local` down); Christian restarted the VM and this agent ran
+`supabase start` locally (data intact).
+
+**Blockers/unresolved decisions:** none.
+
+**Exact next step:** review and merge of the PR.
+
 ## 2026-11-05 - SHOP-OFF-BANNER: owners can prepare the Shop while it is off
 
 **Agent/package:** Claude Code, `SHOP-OFF-BANNER` (the follow-up Christian
 approved after `ADMIN-PLATFORM-FIXES-02` item 14; his words: "Yes, build
 it"). Branch `claude/shop-off-banner` from `main` `3c88826`. **Status:**
-`in_progress` (code, tests and local suites done; PR open, not merged, not
-deployed; no migration).
+merged to `main` as `deffccc` (PR #91); no migration. Its production
+deployment was not checked by this agent.
 
 **Completed work:**
 
@@ -97,8 +172,9 @@ agent):**
 
 **Verification:** the deployment, ledger match and dry-run facts above are
 Christian's release observations relayed to this agent; this agent did not
-query production. **Not verified:** an email buy-link save on the live
-Diverse City admin, and any other signed-in check of the released screens.
+query production. **Live check (Christian, 2026-11-05):** a live Diverse City
+Shop save with the email order link works ("looks good"). Not verified by
+this agent: any other signed-in check of the released screens.
 
 **Item 14 decision (2026-11-05): do not build the database gate for the
 Shop switch; item closed.** Christian confirmed directly on 2026-11-05 that
@@ -138,9 +214,9 @@ stay reachable), with their contract tests.
 **Blockers/unresolved decisions:** none for this batch. The three small
 review notes recorded in the entry below stay open and non-blocking.
 
-**Exact next step:** Christian (or an owner session) saves the Diverse City
-Shop page once with its email order link to confirm the live fix. The
-Shop-off banner is built in the `SHOP-OFF-BANNER` entry above.
+**Exact next step:** none for this batch. Christian confirmed the live email
+order-link save on 2026-11-05, and the Shop-off banner shipped in PR #91
+(`SHOP-OFF-BANNER` entry above).
 
 ## 2026-11-05 - ADMIN-PLATFORM-FIXES-02: admin screens that mislead Rose City and Diverse City owners
 

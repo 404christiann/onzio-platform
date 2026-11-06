@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { normalizeHostname } from "@/lib/tenant";
+import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 
 const PUBLIC_TENANT_PATHS = new Set([
   "/",
@@ -17,7 +18,6 @@ const PUBLIC_TENANT_PATHS = new Set([
   "/contact",
   "/tryouts",
 ]);
-const PUBLIC_SITE_HOLD_SLUGS = new Set(["rose-city"]);
 
 const PROGRAM_SLUG_PATTERN = "[a-z][a-z0-9-]*";
 const PROGRAM_DETAIL_PATH = new RegExp(`^/programs/${PROGRAM_SLUG_PATTERN}$`);

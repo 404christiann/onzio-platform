@@ -68,7 +68,10 @@ for (const width of [390, 1440]) for (const initialView of ["match", "season"] a
       await page.getByRole("button", { name: "Discard changes", exact: true }).click();
       await expect.poll(() => held).toBe(true);
       await expect(goals).toHaveValue(baseline);
-      await expect(page.getByText("All changes saved", { exact: true })).toBeVisible();
+      // Scope to the visible tab panel: while the initial server stream is
+      // still finishing, React can briefly keep a hidden copy of the page in
+      // <div id="S:..." hidden>, which an unscoped text match also counts.
+      await expect(page.getByRole("tabpanel").getByText("All changes saved", { exact: true })).toBeVisible();
       await expect.poll(() => unloadWarns(page)).toBe(false);
       await expect(page.getByRole("tab", { name: initialView === "match" ? "Match stats" : "Season stats", exact: true })).toHaveAttribute("aria-selected", "true");
       release();
