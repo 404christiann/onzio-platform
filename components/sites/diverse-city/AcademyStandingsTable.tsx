@@ -37,16 +37,18 @@ export default function AcademyStandingsTable({
 
   return (
     <section
-      aria-label={settings.title}
+      aria-label={settings.title || settings.eyebrow || "League standings"}
       className="bg-[#F9FAFD] px-4 py-20 text-[#141414] sm:px-6 lg:px-10 lg:py-10"
     >
       <div className="mx-auto max-w-7xl">
         <p className="font-nav text-sm font-bold uppercase text-[#FF1616] sm:text-base">
           {settings.eyebrow}
         </p>
-        <h2 className="mt-5 font-display text-[2.8rem] font-black uppercase italic leading-none text-[#141414] sm:text-[4rem] xl:whitespace-nowrap">
-          {settings.title}
-        </h2>
+        {settings.title && (
+          <h2 className="mt-5 font-display text-[2.8rem] font-black uppercase italic leading-none text-[#141414] sm:text-[4rem] xl:whitespace-nowrap">
+            {settings.title}
+          </h2>
+        )}
         {settings.intro && (
           <p className="font-body mt-3 max-w-xl text-sm leading-relaxed text-[rgba(20,20,20,0.62)] sm:text-base">
             {settings.intro}

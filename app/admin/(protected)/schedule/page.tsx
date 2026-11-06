@@ -821,7 +821,7 @@ export default function SchedulePage() {
           {editForm.home ? "vs" : "@"} {editForm.opponent || "Opponent"}
           {editForm.date ? ` · ${formatShortDate(editForm.date)}` : ""}
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">This removes the match from your schedule. This cannot be undone.</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">This removes the match from your schedule and deletes the player stats entered for it on the Stats page. Season totals you typed yourself are not changed. This cannot be undone.</p>
         {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
         <div className="mt-6 flex flex-wrap gap-3">
           <button ref={deleteCancelRef} type="button" disabled={Boolean(deletingId)}

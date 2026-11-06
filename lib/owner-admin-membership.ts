@@ -104,13 +104,13 @@ export async function assertClubOwnerSession(
   return { actorId: claims.sub, clubId, client };
 }
 
-export async function listClubAdmins(session: ClubOwnerSession) {
+async function listActiveMembers(session: ClubOwnerSession, role: "owner" | "admin") {
   const memberships = await session.client
     .schema("onzio")
     .from("club_members")
     .select("user_id,status,created_at")
     .eq("club_id", session.clubId)
-    .eq("role", "admin")
+    .eq("role", role)
     .eq("status", "active")
     .order("created_at", { ascending: true });
   if (memberships.error) failContract("MEMBERSHIP_READ_FAILED");
@@ -128,6 +128,23 @@ export async function listClubAdmins(session: ClubOwnerSession) {
       };
     }),
   );
+}
+
+export async function listClubAdmins(session: ClubOwnerSession) {
+  return await listActiveMembers(session, "admin");
+}
+
+/**
+ * Every active owner of the club, the signed-in one included (admin redesign
+ * decision 0013: a club can have more than one owner, and an owner with full
+ * rights must never be invisible to the others). Owners are read-only here:
+ * only Onzio adds, removes or transfers an owner.
+ */
+export async function listClubOwners(session: ClubOwnerSession) {
+  return (await listActiveMembers(session, "owner")).map((owner) => ({
+    ...owner,
+    isYou: owner.userId === session.actorId,
+  }));
 }
 
 export async function addClubAdmin(

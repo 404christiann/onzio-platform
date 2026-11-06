@@ -1,6 +1,7 @@
 "use client";
 
-import { useClubId } from "@/components/ClubContextProvider";
+import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import Image from "@/components/ResilientImage";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,18 +28,23 @@ import {
 } from "@/lib/social-links";
 import { deleteStoragePaths } from "@/lib/storage-cleanup";
 import { createClient } from "@/lib/admin-client";
+import {
+  GRAPHIC_UPLOAD_ACCEPT,
+  GRAPHIC_UPLOAD_TYPES_LABEL,
+  isGraphicUploadType,
+} from "@/lib/media-upload-types";
 
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
-const ALLOWED_LOGO_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function fileExtension(file: File): string {
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  return "jpg";
+  return file.type === "image/webp" ? "webp" : "png";
 }
 
 export default function BrandingPage() {
   const clubId = useClubId();
+  // Only designs whose footer prints the tagline (academy@1) show or save it;
+  // elsewhere the field would edit nothing visible.
+  const showFooterTagline = codeSiteAdminFor(useClubContext())?.branding.showFooterTagline ?? false;
   const { clubLogoPath, clubLogoUrl, inverseLogoUrl, setClubLogoPath } = useClubBranding();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -127,8 +133,8 @@ export default function BrandingPage() {
     setSaved(false);
 
     if (!file) return;
-    if (!ALLOWED_LOGO_TYPES.has(file.type)) {
-      setError("Choose a PNG, JPG, or WebP image.");
+    if (!isGraphicUploadType(file.type)) {
+      setError(`Choose a ${GRAPHIC_UPLOAD_TYPES_LABEL} image.`);
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
@@ -214,7 +220,7 @@ export default function BrandingPage() {
   async function saveSocialLinks() {
     if (savingSocialLinks) return;
 
-    const taglineError = validateFooterTagline(footerTagline);
+    const taglineError = showFooterTagline ? validateFooterTagline(footerTagline) : null;
     if (taglineError) {
       setSocialError(taglineError);
       return;
@@ -249,10 +255,12 @@ export default function BrandingPage() {
         if (saveError) throw new Error(saveError.message);
       }
 
-      const { error: taglineSaveError } = await supabase
-        .from("site_branding")
-        .upsert({ footer_tagline: footerTagline.trim(), updated_at: now });
-      if (taglineSaveError) throw new Error(taglineSaveError.message);
+      if (showFooterTagline) {
+        const { error: taglineSaveError } = await supabase
+          .from("site_branding")
+          .upsert({ footer_tagline: footerTagline.trim(), updated_at: now });
+        if (taglineSaveError) throw new Error(taglineSaveError.message);
+      }
 
       setSocialLinks(normalizeSiteSocialLinks(rows));
       setSocialSaved(true);
@@ -321,7 +329,7 @@ export default function BrandingPage() {
               Main club logo
             </h2>
             <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
-              For the cleanest result, use a square PNG with a transparent background. PNG, JPG, and WebP files up to 5 MB are accepted.
+              For the cleanest result, use a square PNG with a transparent background. {GRAPHIC_UPLOAD_TYPES_LABEL} files up to 5 MB are accepted.
             </p>
           </div>
 
@@ -363,7 +371,7 @@ export default function BrandingPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept={GRAPHIC_UPLOAD_ACCEPT}
                   className="hidden"
                   onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
                 />
@@ -447,15 +455,18 @@ export default function BrandingPage() {
               Footer
             </p>
             <h2 id="footer-social-heading" className="mt-2 font-body text-2xl font-semibold normal-case text-foreground">
-              Tagline and social links
+              {showFooterTagline ? "Tagline and social links" : "Social links"}
             </h2>
             <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
-              Edit the club tagline beside the crest and the URLs used by the social icons in the public website footer.
+              {showFooterTagline
+                ? "Edit the club tagline beside the crest and the URLs used by the social icons in the public website footer."
+                : "Edit the URLs used by the social icons in the public website footer."}
             </p>
           </div>
 
           <div className="grid gap-7 lg:grid-cols-2">
             <div className="min-w-0">
+              {showFooterTagline ? (
               <div className="mb-6">
                 <label
                   htmlFor="footer-tagline"
@@ -479,6 +490,7 @@ export default function BrandingPage() {
                   line. Leave empty to keep the standard wording shown here.
                 </p>
               </div>
+              ) : null}
 
               <div>
                 <span className={ADMIN_LABEL_CLASS}>Social links</span>
@@ -527,9 +539,11 @@ export default function BrandingPage() {
                   <Footer overrides={footerPreviewOverrides} />
                 </ScaledPagePreview>
               </div>
-              <p className="mt-3 rounded-lg border border-border bg-muted/50 px-3.5 py-3 font-body text-xs leading-relaxed text-muted-foreground">
-                The tagline field arrives pre-filled with the resolved template default, so clearing it back to blank is what restores the standard wording.
-              </p>
+              {showFooterTagline ? (
+                <p className="mt-3 rounded-lg border border-border bg-muted/50 px-3.5 py-3 font-body text-xs leading-relaxed text-muted-foreground">
+                  The tagline field arrives pre-filled with the resolved template default, so clearing it back to blank is what restores the standard wording.
+                </p>
+              ) : null}
             </div>
           </div>
 

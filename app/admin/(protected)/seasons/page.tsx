@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { DBSeason } from "@/lib/db-types";
 import { createClient } from "@/lib/admin-client";
 import { cn } from "@/lib/utils";
+import { nextSeasonAfter } from "@/lib/season-label";
 
 type SeasonDeleteState = { deletable: boolean; reason: string; matchCount: number; statRowCount: number };
 
@@ -138,14 +139,11 @@ export default function SeasonsPage() {
     setSaving(true);
     setError(null);
     const supabase = createClient();
-    const latest = seasons[0];
-    const nextStart = latest.start_year + 1;
-    const nextEnd = latest.end_year + 1;
-    const nextLabel = `${nextStart}–${String(nextEnd).slice(2)}`;
+    const next = nextSeasonAfter(seasons[0]);
 
     const { data: newSeason, error: seasonError } = await supabase
       .from("seasons")
-      .insert([{ label: nextLabel, start_year: nextStart, end_year: nextEnd, active: false }])
+      .insert([{ label: next.label, start_year: next.start_year, end_year: next.end_year, active: false }])
       .select()
       .single();
     if (seasonError || !newSeason) {
@@ -224,9 +222,7 @@ export default function SeasonsPage() {
   }
 
   const activeSeason = seasons.find((season) => season.active);
-  const nextLabel = seasons.length > 0
-    ? `${seasons[0].start_year + 1}–${String(seasons[0].end_year + 1).slice(2)}`
-    : "";
+  const nextLabel = seasons.length > 0 ? nextSeasonAfter(seasons[0]).label : "";
 
   return (
     <AdminPage className="max-w-4xl">
@@ -267,7 +263,7 @@ export default function SeasonsPage() {
           <div><p className="font-body text-muted-foreground" style={{ fontSize: "0.75rem" }}>Active Season</p><div className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-28" /> : activeSeason?.label ?? "Not set"}</div></div>
           <div><p className="font-body text-muted-foreground" style={{ fontSize: "0.75rem" }}>Season Records</p><div className="font-body font-semibold text-foreground" style={{ fontSize: "1.25rem" }}>{loading ? <Skeleton className="my-1 h-6 w-8" /> : seasons.length}</div></div>
         </div>
-        <p className="font-body text-xs text-muted-foreground sm:max-w-sm sm:text-right">The active season is what Roster, Schedule, Match Stats and Standings all read. Changing it changes every one of those pages.</p>
+        <p className="font-body text-xs text-muted-foreground sm:max-w-sm sm:text-right">The active season is what Roster, Schedule and Match Stats read. Changing it changes each of those pages. Standings is one league table that does not change with the season.</p>
       </AdminPageToolbar>
 
       {error && <p className="font-body text-sm mb-4 text-destructive">Error: {error}</p>}

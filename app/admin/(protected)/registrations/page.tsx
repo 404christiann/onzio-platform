@@ -28,6 +28,7 @@ import {
 import {
   buildCoreRegistrationFields,
   isRegistrationSignatureValue,
+  NEW_REGISTRATION_FORM_PARTICIPANT_MODE,
   type RegistrationFieldType,
   type RegistrationParticipantMode,
   type RegistrationParticipantScope,
@@ -120,7 +121,7 @@ function blank(clubName: string): Draft {
     title: "",
     slug: "",
     description: "",
-    participantMode: "adult_only",
+    participantMode: NEW_REGISTRATION_FORM_PARTICIPANT_MODE,
     waiver: buildDefaultRegistrationWaiverText(clubName),
     custom: [],
     prices: [{ label: "Registration", amount: "", active: true, position: 0 }],

@@ -202,11 +202,13 @@ describe("Tryouts page intro copy", () => {
     ).toEqual(DEFAULT_TRYOUTS_PAGE_CONTENT);
   });
 
-  it("reproduces the previously hardcoded sentences byte for byte", () => {
-    // A club with no row must render exactly what AcademyTryoutsPage used to
-    // hardcode; anything else is a silent copy change at deploy time.
+  it("pins the template default sentences byte for byte", () => {
+    // A club with no row renders exactly these; anything else is a silent copy
+    // change at deploy time. ADMIN-PLATFORM-FIXES-02 deliberately replaced the
+    // with-tryouts sentence, which wrongly said sign-up always went through
+    // the club's "external provider" even when an Onzio form is linked.
     expect(DEFAULT_TRYOUTS_PAGE_CONTENT.introWithTryouts).toBe(
-      "Review current club evaluations below. Registration, waivers, and participant information stay with the club's external provider.",
+      "Review current club evaluations below. Each tryout shows how to register.",
     );
     expect(DEFAULT_TRYOUTS_PAGE_CONTENT.introNoTryouts).toBe(
       "Tryout dates and locations are still being finalized. Register your interest below to stay informed once details are announced.",

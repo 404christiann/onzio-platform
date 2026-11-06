@@ -308,15 +308,16 @@ export default function ShopPageEditor() {
                     {!isClubhouse && <TextAreaField label="Description" value={currentKit.section.description} onChange={(value) => setSectionField("description", value)} />}
                     {!isClubhouse && <>
                       <TextAreaField label="Bullet points, one per line" value={currentKit.section.bullet_points.join("\n")} onChange={(value) => setSectionField("bullet_points", value.split("\n").slice(0, 8))} />
+                      {surface === "shop" && shopPolicy?.shopPageShows ? <p className="text-xs text-muted-foreground">Your Shop page shows the first {shopPolicy.shopPageShows.bullets} bullet points, each split at its first colon into a label and a value (for example “Sizes: Youth and adult”). Any more are saved but not shown.</p> : null}
                       <TextAreaField label="Store information" value={currentKit.section.store_note} onChange={(value) => setSectionField("store_note", value)} />
                     </>}
                   </div>}
                   {!isClubhouse && <div className="mt-4 space-y-3 border-t border-border pt-4">
                     <TextField label="Button text" value={currentKit.section.cta_label} onChange={(value) => setSectionField("cta_label", value)} />
-                    {surface === "home" ? <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">The homepage button opens this club’s Shop page.</p> : <TextField label="Purchase website" type="url" value={currentKit.section.cta_link} onChange={(value) => setSectionField("cta_link", value)} help="Use the full https:// address from your store or merchandise partner." />}
+                    {surface === "home" ? <p className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">The homepage button opens this club’s Shop page.</p> : <TextField label="Buy link" value={currentKit.section.cta_link} onChange={(value) => setSectionField("cta_link", value)} help="The full https:// address of your store or merchandise partner, or an email address if supporters order by email." />}
                   </div>}
                 </>}
-                {target === "photos" && currentKit && <PhotoEditor photos={currentKit.photos} label="kit" uploading={uploading} onUpload={(files) => void uploadPhotos(files, false)} onRemove={(photo) => void removePhoto(photo, false)} onChange={setKitPhotos} />}
+                {target === "photos" && currentKit && <PhotoEditor photos={currentKit.photos} label="kit" uploading={uploading} onUpload={(files) => void uploadPhotos(files, false)} onRemove={(photo) => void removePhoto(photo, false)} onChange={setKitPhotos} shownCount={surface === "shop" ? shopPolicy?.shopPageShows?.photos : shopPolicy?.homeFeatureShows?.photos} shownWhere={surface === "shop" ? "Your Shop page" : "The homepage shop feature"} />}
                 {target === "photoRows" && showExtras && <PhotoEditor photos={draft.photoRows[currentVariant]} label="photo row" uploading={uploading} onUpload={(files) => void uploadPhotos(files, true)} onRemove={(photo) => void removePhoto(photo, true)} onChange={setRowPhotos} />}
                 {target === "purchase" && showExtras && <div className="space-y-3">
                   <TextField label="Section heading" value={draft.purchase.heading} onChange={(value) => updatePurchase("heading", value)} />
@@ -351,12 +352,15 @@ function TextAreaField({ label, value, onChange }: { label: string; value: strin
   return <label className="block"><span className={ADMIN_LABEL_CLASS}>{label}</span><textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className={`${ADMIN_INPUT_CLASS} mt-1 min-h-24 w-full text-base`} /></label>;
 }
 
-function PhotoEditor({ photos, label, uploading, onUpload, onRemove, onChange }: {
+function PhotoEditor({ photos, label, uploading, onUpload, onRemove, onChange, shownCount, shownWhere }: {
   photos: ShopPhoto[]; label: string; uploading: boolean;
   onUpload: (files: FileList | null) => void; onRemove: (photo: ShopPhoto) => void; onChange: (photos: ShopPhoto[]) => void;
+  /** How many photos the public surface actually shows, when it shows fewer than it saves. */
+  shownCount?: number; shownWhere?: string;
 }) {
   return <div className="space-y-3">
     <p className="text-xs text-muted-foreground">{photos.length}/6 photos. Use the arrows to set the order shown to visitors.</p>
+    {shownCount ? <p className="text-xs text-muted-foreground">{shownWhere} shows the first {shownCount} photos (front, then back). Any more are saved but not shown.</p> : null}
     {photos.map((photo, index) => <div key={photo.rowId ?? photo.assetId ?? index} className="flex items-center gap-2 rounded-lg border border-border p-2">
       <ResilientImage src={photo.url} alt={`${label} ${index + 1}`} width={56} height={56} className="h-14 w-14 rounded-md object-cover" />
       <span className="flex-1 text-xs">Photo {index + 1}</span>

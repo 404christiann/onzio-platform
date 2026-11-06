@@ -7,6 +7,7 @@ import {
   addClubAdmin,
   assertClubOwnerSession,
   listClubAdmins,
+  listClubOwners,
   removeClubAdmin,
 } from "@/lib/owner-admin-membership";
 import { createClient } from "@/lib/supabase-server";
@@ -42,7 +43,12 @@ function failure(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    return NextResponse.json({ admins: await listClubAdmins(await ownerSession(request)) });
+    const session = await ownerSession(request);
+    const [owners, admins] = await Promise.all([
+      listClubOwners(session),
+      listClubAdmins(session),
+    ]);
+    return NextResponse.json({ owners, admins });
   } catch (error) {
     return failure(error);
   }

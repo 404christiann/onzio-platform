@@ -380,6 +380,9 @@ export function isAdminRouteVisible(
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
   if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;
+  // Only designs that publish a Contact page get the Contact editor; its
+  // details are used nowhere else on other designs.
+  if (route.id === "contact" && !siteAdmin?.contact.routeVisible) return false;
   if (route.id === "shop" && !context.storeEnabled) return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (

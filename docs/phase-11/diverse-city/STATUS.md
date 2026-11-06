@@ -1,5 +1,111 @@
 # Diverse City FC Status
 
+## 2026-11-05 - ADMIN-PLATFORM-FIXES-02: admin screens that mislead Rose City and Diverse City owners
+
+**Agent/package:** Claude Code, ad hoc `ADMIN-PLATFORM-FIXES-02` (the fix batch
+Christian agreed on 2026-11-05 after the read-only Rose City and Diverse City
+admin reviews, plus PR #87 leftovers). Branch `claude/upbeat-kalam-2375dd`
+from `main` `d0aa99b`. **Status:** `in_progress` (code, tests and local suites
+done on the branch; not reviewed, not pushed, no PR, not deployed).
+
+**Completed work** (each item was rechecked in code on `d0aa99b` first):
+
+1. Standings: a blank Table Title now saves and renders blank instead of
+   "UPSL SoCal North" (Rose City's league); the read path no longer substitutes
+   it either, and `DEFAULT_STANDINGS_SETTINGS` lost the Rose City title and
+   intro. Public tables skip an empty heading. The field hint says the title
+   is also the competition line on the academy homepage Next Match card.
+2. `/club-logo` (browser tab icon and link-preview image) returns an uncached
+   404 when a club has no saved logo instead of redirecting to the Rose City
+   crest.
+3. Branding and Sponsors no longer promise JPG: one shared list
+   (`lib/media-upload-types.ts`, PNG or WebP) drives the server graphic check,
+   both pickers, their copy and a clear client message. The server rule
+   (graphics are PNG/WebP) is unchanged.
+4. Contact admin is hidden from the sidebar and search for designs without a
+   public Contact page (`lib/admin-route-manifest.ts`, using the existing
+   `contact.routeVisible` policy). The Contact route and its content policy are
+   unchanged.
+5. Branding shows and saves the footer tagline only where the footer prints it
+   (`academy@1`, new `branding.showFooterTagline` policy); other designs see
+   "Social links" only and a save no longer writes the tagline.
+6. Deleting a game: the confirm now says its player stats on the Stats page
+   are deleted too and typed season totals are not changed (matches the
+   `on delete cascade` from `matches`).
+7. Roster age: the form explains "Players under 14 aren't supported yet" (and
+   the 80 ceiling) with `min`/`max` on the input, matching the database check,
+   instead of failing at save.
+8. Shop buy link may be an email (decision 0008 amended): the kit section's
+   link accepts `mailto:` with one address and an optional query, in the zod
+   contract and in SQL (new migration `20261105120000_shop_buy_link_email.sql`,
+   replaces only `onzio_private.validate_shop_section`). A typed bare email is
+   saved as `mailto:`. The field is now "Buy link" with matching help. The
+   purchase-details closing button stays web-only. Diverse City's imported
+   order-by-email link therefore no longer blocks every Shop-page save.
+9. Shop editor (academy) says the Shop page shows the first 2 photos and the
+   first 2 bullet points (split at the first colon) and the homepage feature
+   the first 2 photos; extras are saved but not shown. Nothing is limited.
+10. Program registration and Tryouts default wording no longer claims sign-up
+    goes through an "external provider/partner". This changes the live
+    Diverse City wording wherever those fields are blank (the import did not
+    store them).
+11. New sign-up forms default to "Minor or adult" (`both`) instead of "Adult
+    only": it turns nobody away (a parent registers a child, an adult registers
+    themselves), and a youth academy that also runs adult and Special Olympics
+    programs needs both; the owner narrows it per form. The database column
+    default is unchanged (the admin always sends the mode).
+12. Seasons: "Start next season" after a single-year season (2026 to 2026)
+    labels it "2027", not "2027–27" (split seasons still "2026–27"). The
+    toolbar no longer claims Standings follows the active season.
+13. Team access lists every active owner (decision 0013): the owner-only GET
+    now returns `owners` too; other owners show as "Owner" with "Only Onzio can
+    change owners" and no Remove (the server already refused owner removal).
+    The heading is "People who can sign in".
+14. Shop switch gaps: the homepage hero button picker no longer offers Shop
+    while `store_enabled` is off, and the Homepage "Edit in Shop" shortcut is
+    hidden then. **Deferred: the database/save-path gate.** The recorded
+    SITE-06B policy (`docs/shop-content-policy.md`, "Authorized owners and
+    admins may maintain valid Shop content when ... the public Store is
+    disabled") and its SQL and route contracts
+    (`tests/database/shop-content-policy.test.ts` "Shop content independent
+    of current display", including `academy`) require saves to keep working
+    with the Store off. Adding the gate would reverse that decision, so it
+    needs Christian's call; no migration was written for it.
+15. Sponsors help: "Sponsor logos shown on your homepage and your Sponsors
+    page" (no slideshow claim).
+16. PR #87 leftovers: database and browser suites run locally; results below.
+
+**Out of scope (noted, not built):** club time zone (decision 0014), tab
+renaming, season names such as "Spring 2026", youth teams/age groups. Also
+left: the Standings admin preview still shows the six-team Rose City sample
+table to non-academy clubs with no rows; Schedule "Competition" and short
+name are editable but unused on these sites; Sponsors saves are three
+separate writes; the hero picker still lists Contact/Tryouts/Programs for
+designs without those pages.
+
+**Files changed:** see the commit; new `lib/media-upload-types.ts`,
+`lib/roster-player-age.ts`, `lib/season-label.ts`, migration
+`supabase/migrations/20261105120000_shop_buy_link_email.sql`, tests
+`tests/contracts/admin-platform-fixes-02.test.ts`,
+`tests/database/shop-buy-link-email.test.ts`, extended
+`tests/database/owner-admin-membership.test.ts`, updated
+`tests/contracts/diverse-city-tryouts-admin.test.ts` (pinned default
+sentence deliberately changed). Academy files touched outside the attested
+roots list: `components/sites/diverse-city/site-definition.ts` and
+`AcademyStandingsTable.tsx`; no file in `scripts/pilot-academy-source-roots.ts`
+changed.
+
+**Verification:** VERIFICATION_PLACEHOLDER
+
+**Blockers/unresolved decisions:** (a) item 14's database save gate conflicts
+with SITE-06B (above); (b) the migration must pass the `CLAUDE.md`
+production gate (`supabase migration list --linked`, dry-run, push) before
+any deploy of this branch; nothing was applied to hosted Supabase.
+
+**Exact next step:** Christian reviews, decides item 14's gate, then approves
+push and PR. Before release, apply `20261105120000_shop_buy_link_email.sql`
+to production through the gate first.
+
 ## 2026-11-05 - Admin platform bug fixes found during the admin redesign research
 
 **Agent/package:** Claude Code, ad hoc `ADMIN-PLATFORM-FIXES-01` (bugs found

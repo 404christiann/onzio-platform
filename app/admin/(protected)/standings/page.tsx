@@ -256,7 +256,8 @@ export default function AdminStandingsPage() {
         ...settings,
         id: 1,
         eyebrow: settings.eyebrow.trim() || DEFAULT_STANDINGS_SETTINGS.eyebrow,
-        title: settings.title.trim() || DEFAULT_STANDINGS_SETTINGS.title,
+        // A blank title stays blank; it never borrows a default league name.
+        title: settings.title.trim(),
         intro: settings.intro.trim(),
         updated_at: now,
       };
@@ -501,8 +502,14 @@ export default function AdminStandingsPage() {
                 <input
                   value={settings.title}
                   onChange={(event) => updateSetting("title", event.target.value)}
+                  aria-describedby="standings-title-help"
                   className={ADMIN_INPUT_CLASS}
                 />
+                <span id="standings-title-help" className="mt-1 block font-body text-xs text-muted-foreground">
+                  {standingsPolicy?.titleShowsOnNextMatch
+                    ? "Usually your league name. It also shows as the competition on your homepage Next Match card. Leave it blank to show no title."
+                    : "Usually your league name. Leave it blank to show no title."}
+                </span>
               </label>
               <label className="block">
                 <span className={ADMIN_LABEL_CLASS}>Intro</span>
