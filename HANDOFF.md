@@ -1,3 +1,8 @@
+## 2026-11-05 - SHOP-OFF-BANNER owners can prepare the Shop while it is off
+
+- Status: `in_progress` on branch `claude/shop-off-banner` from `main` `3c88826`; PR open, not merged, not deployed; no migration. Christian approved ("Yes, build it"). While `store_enabled` is off, `/admin/shop` opens instead of redirecting, under "Your shop is off. Visitors can't see it yet."; saves work (SITE-06B already allowed them); Shop stays in the admin menu so owners can reach it. Public Shop surfaces stay gated.
+- Verification: new contract file red 3/4 then 4/4; contracts 1,533/1,533; legacy 428/428; tsc, lint, build passed. New browser spec (Shop off: banner, no redirect, menu, real save, signed-out visitor sees not-found, full cleanup) 2/2; public-page-editors otherwise 34/36 and admin-guided 62/63, all remaining misses also failing on a `main` build; admin-loading 13/13. Found: public `/shop` with the Shop off renders not-found with status 200 (loading-stream behavior from #87), not a true 404. Details in the Diverse City STATUS ledger. Exact next step: review and merge the PR.
+
 ## 2026-11-05 - ADMIN-PLATFORM-FIXES-02 production release
 
 - Status: `complete` for code and migration. PR #88 merged to `main` as `ea98a3d`; Vercel production deployment `dpl_94kYpqjxq6Hy6mAEkLPbHfAXgSdy` is READY from `ea98a3d`. Christian applied `20261105120000_shop_buy_link_email.sql` to production (`ioalthwsdrlzrubomrow`) from a clean `origin/main` worktree: dry run listed only that file, `supabase db push --linked` ran, `supabase migration list --linked` then matched `main` exactly and a second dry run reported the remote up to date.

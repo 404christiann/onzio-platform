@@ -79,9 +79,12 @@ describe("the Shop switch (clubs.store_enabled)", () => {
     storeEnabled: true,
   };
 
-  it("hides Shop in the admin when the club's shop is off", () => {
+  it("keeps Shop in the admin either way; the editor shows a banner while the shop is off", () => {
+    // Changed 2026-11-05 (Christian, "Yes, build it"): owners prepare kits
+    // before launch, so the admin no longer hides Shop when the switch is off.
+    // The public surfaces below stay gated. See tests/contracts/shop-off-banner.test.ts.
     expect(getVisibleAdminRoutes(owner).map((route) => route.id)).toContain("shop");
-    expect(getVisibleAdminRoutes({ ...owner, storeEnabled: false }).map((route) => route.id)).not.toContain("shop");
+    expect(getVisibleAdminRoutes({ ...owner, storeEnabled: false }).map((route) => route.id)).toContain("shop");
   });
 
   it("drops Shop links from public navigation when the shop is off", () => {
