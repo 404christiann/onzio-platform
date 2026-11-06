@@ -37,6 +37,7 @@ import { getRosterImageSrc, isRosterPlaceholderLogo, rosterImageForStorage } fro
 import { cn } from "@/lib/utils";
 import { deleteStorageUrls } from "@/lib/storage-cleanup";
 import { NATIONALITIES } from "@/lib/nationalities";
+import { PLAYER_MAX_AGE, PLAYER_MIN_AGE, playerAgeError } from "@/lib/roster-player-age";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import {
   SlidingPanel,
@@ -291,7 +292,8 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
     if (!f.height.trim())      return "Height is required.";
     if (!f.weight.trim())      return "Weight is required.";
     if (f.number <= 0)         return "Jersey number must be greater than 0.";
-    if (f.age <= 0)            return "Age must be greater than 0.";
+    const ageError = playerAgeError(f.age);
+    if (ageError)              return ageError;
     return null;
   }
 
@@ -1561,8 +1563,12 @@ function PlayerFormFields({
               onChange={(e) => set("weight", e.target.value)} className={ADMIN_INPUT_CLASS} />
           </PlayerField>
           <PlayerField id="player-age" label="Age" required>
-            <input id="player-age" type="number" required min={1} value={form.age || ""}
+            <input id="player-age" type="number" required min={PLAYER_MIN_AGE} max={PLAYER_MAX_AGE} value={form.age || ""}
+              aria-describedby="player-age-help"
               onChange={(e) => set("age", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
+            <p id="player-age-help" className="mt-1 text-xs text-muted-foreground">
+              {PLAYER_MIN_AGE} to {PLAYER_MAX_AGE}. Players under {PLAYER_MIN_AGE} aren&rsquo;t supported yet.
+            </p>
           </PlayerField>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

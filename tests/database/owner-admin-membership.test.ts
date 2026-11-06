@@ -4,6 +4,7 @@ import {
   addClubAdmin,
   assertClubOwnerSession,
   listClubAdmins,
+  listClubOwners,
   removeClubAdmin,
 } from "@/lib/owner-admin-membership";
 import { expectContractError } from "../helpers/contract";
@@ -203,6 +204,66 @@ describe("club owner admin membership", () => {
     );
 
     await expect(findIdentity()).resolves.toBeUndefined();
+  });
+
+  it("lists every active owner to each owner, read-only (decision 0013)", async () => {
+    const { service } = createLocalClients();
+    const clubId = randomUUID();
+    const people = ["owner", "second-owner", "removed-owner", "admin"].map((label) => ({
+      label,
+      id: randomUUID(),
+      email: `${label}-${clubId}@onzio.local`,
+    }));
+    for (const person of people) {
+      const created = await service.auth.admin.createUser({ id: person.id, email: person.email, email_confirm: true });
+      if (created.error) throw created.error;
+    }
+    const club = await service.from("clubs").insert({
+      id: clubId,
+      slug: `two-owners-${clubId.slice(0, 8)}`,
+      name: "Two Owners Contract FC",
+      lifecycle: "active",
+      public_access: "preview",
+      tier: "starter",
+    });
+    if (club.error) throw club.error;
+    const [owner, secondOwner, removedOwner, admin] = people;
+    const memberships = await service.from("club_members").insert([
+      { club_id: clubId, user_id: owner.id, role: "owner", status: "active" },
+      { club_id: clubId, user_id: secondOwner.id, role: "owner", status: "active" },
+      { club_id: clubId, user_id: removedOwner.id, role: "owner", status: "removed", removed_at: new Date().toISOString() },
+      { club_id: clubId, user_id: admin.id, role: "admin", status: "active" },
+    ]);
+    if (memberships.error) throw memberships.error;
+    cleanups.push(async () => {
+      await service.from("audit_events").delete().eq("club_id", clubId);
+      await service.from("club_members").delete().eq("club_id", clubId);
+      await service.from("clubs").delete().eq("id", clubId);
+      for (const person of people) await service.auth.admin.deleteUser(person.id, false);
+    });
+
+    const session = await assertClubOwnerSession(accessToken(owner.id, owner.email), clubId, {
+      client: service,
+      verifyAccessToken: async () => ({
+        sub: owner.id,
+        amr: [{ method: "otp", timestamp: Math.floor(Date.now() / 1_000) }],
+      }),
+    });
+    const owners = await listClubOwners(session);
+    expect(owners.map(({ userId, email, isYou }) => ({ userId, email, isYou })).sort((a, b) => a.email.localeCompare(b.email))).toEqual(
+      [
+        { userId: owner.id, email: owner.email, isYou: true },
+        { userId: secondOwner.id, email: secondOwner.email, isYou: false },
+      ].sort((a, b) => a.email.localeCompare(b.email)),
+    );
+    expect((await listClubAdmins(session)).map((member) => member.userId)).toEqual([admin.id]);
+    await expectContractError(
+      () => removeClubAdmin(session, secondOwner.id),
+      "OWNER_TRANSFER_OPERATOR_REQUIRED",
+    );
+    const unchanged = await service.from("club_members").select("role,status")
+      .eq("club_id", clubId).eq("user_id", secondOwner.id).single();
+    expect(unchanged.data).toEqual({ role: "owner", status: "active" });
   });
 
   it("rejects a non-owner even with a valid fresh token", async () => {

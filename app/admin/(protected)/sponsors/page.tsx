@@ -18,6 +18,11 @@ import {
   type AdminSectionRailItem,
 } from "@/components/admin/AdminSectionRail";
 import FileUpload from "@/components/admin/FileUpload";
+import {
+  GRAPHIC_UPLOAD_ACCEPT,
+  GRAPHIC_UPLOAD_TYPES_LABEL,
+  isGraphicUploadType,
+} from "@/lib/media-upload-types";
 import SponsorCarousel from "@/components/SponsorCarousel";
 import {
   SlidingPanel,
@@ -49,6 +54,11 @@ const inputClass =
   "w-full rounded-lg border border-input bg-background px-3 py-2.5 font-body text-sm text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 async function uploadSponsorLogo(file: File, placement: SponsorLogoPlacement): Promise<string> {
+  // The media server accepts only PNG or WebP for sponsor logos; say so here
+  // instead of letting a JPG fail after upload.
+  if (!isGraphicUploadType(file.type)) {
+    throw new Error(`${file.name} is not a ${GRAPHIC_UPLOAD_TYPES_LABEL} image. Sponsor logos must be ${GRAPHIC_UPLOAD_TYPES_LABEL}.`);
+  }
   const supabase = createClient();
   const extension = file.name.split(".").pop() ?? "png";
   const path = `site-sponsors/${placement}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
@@ -396,7 +406,7 @@ export default function AdminSponsorsPage() {
                 </p>
                 <p className="font-body mt-1 text-xs text-muted-foreground">
                   {placement === "carousel"
-                    ? "Scrolling sponsor logos shown after the homepage slideshow."
+                    ? "Sponsor logos shown on your homepage and your Sponsors page."
                     : "Static sponsor logos shown in the website footer."}
                 </p>
               </div>
@@ -478,7 +488,8 @@ export default function AdminSponsorsPage() {
               <FileUpload
                 className="col-span-2 sm:col-span-3"
                 label="Add sponsor logos"
-                accept="image/*"
+                accept={GRAPHIC_UPLOAD_ACCEPT}
+                hint={`${GRAPHIC_UPLOAD_TYPES_LABEL}, up to 5 MB`}
                 multiple
                 onUpload={(files) => void handleUpload(files)}
                 uploading={uploading}
@@ -487,7 +498,7 @@ export default function AdminSponsorsPage() {
               <input
                 ref={replaceFileRef}
                 type="file"
-                accept="image/*"
+                accept={GRAPHIC_UPLOAD_ACCEPT}
                 className="hidden"
                 onChange={(event) => handleReplaceUpload(event.target.files)}
               />

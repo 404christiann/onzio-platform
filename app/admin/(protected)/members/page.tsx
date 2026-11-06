@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 
 type AdminMember = { userId: string; email: string };
+type OwnerMember = AdminMember & { isYou: boolean };
 
 type MessageTone = "success" | "destructive" | "warning";
 
@@ -166,6 +167,7 @@ export default function MembersPage() {
   const club = useClubContext();
   const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
   const [admins, setAdmins] = useState<AdminMember[]>([]);
+  const [owners, setOwners] = useState<OwnerMember[]>([]);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<MembershipMessage | null>(null);
 
@@ -179,8 +181,8 @@ export default function MembersPage() {
   // owner row is derived entirely from client-side identity —
   // `club.role` from useClubContext() and the signed-in email from
   // supabase.auth.getUser() — the same pattern AdminShell.tsx already uses.
-  // It adds no request to `listClubAdmins()`, which intentionally only
-  // returns role="admin" memberships.
+  // Other active owners come from the owner-only GET (`owners`), so a second
+  // owner is never hidden from this one.
   useEffect(() => {
     const supabase = createClient();
     void supabase.auth.getUser().then(({ data }) => {
@@ -197,6 +199,7 @@ export default function MembersPage() {
       );
     }
     setAdmins(body.admins);
+    setOwners(Array.isArray(body.owners) ? body.owners : []);
   }
 
   useEffect(() => {
@@ -247,7 +250,10 @@ export default function MembersPage() {
   }
 
   const showOwnerRow = club.role === "owner";
-  const totalAdminCount = admins.length + (showOwnerRow ? 1 : 0);
+  // Every other active owner (decision 0013). Only Onzio adds or removes an
+  // owner, so these rows never offer Remove.
+  const otherOwners = owners.filter((owner) => !owner.isYou);
+  const totalAdminCount = admins.length + otherOwners.length + (showOwnerRow ? 1 : 0);
 
   return (
     <AdminPage className="max-w-4xl">
@@ -288,7 +294,7 @@ export default function MembersPage() {
 
       <section className="space-y-3" aria-labelledby="current-administrators-heading">
         <h2 id="current-administrators-heading" className="text-base font-semibold text-foreground">
-          Current administrators · {totalAdminCount}
+          People who can sign in · {totalAdminCount}
         </h2>
         {showOwnerRow && (
           <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
@@ -308,6 +314,22 @@ export default function MembersPage() {
             </span>
           </div>
         )}
+        {otherOwners.map((owner) => (
+          <div key={owner.userId} className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
+            <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
+              <AvatarChip email={owner.email} variant="owner" />
+              <div className="min-w-0">
+                <span className="block min-w-0 truncate text-sm">{owner.email}</span>
+                <span className="mt-1 inline-block text-xs font-semibold text-primary">
+                  Owner
+                </span>
+              </div>
+            </div>
+            <span className="max-w-full flex-none break-words whitespace-normal rounded-full border border-border px-3 py-1.5 text-right text-xs text-muted-foreground">
+              Only Onzio can change owners
+            </span>
+          </div>
+        ))}
         {admins.map((admin) => (
           <div key={admin.userId} className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
             <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">

@@ -1,4 +1,5 @@
 import type { DBShopCarouselPhoto, DBShopKitPhoto, DBShopKitSection, DBShopPurchaseDetails, ShopKitVariant } from "@/lib/db-types";
+import { normalizeKitBuyLink } from "./contract";
 import type { ShopPhoto, ShopSaveRequest, ShopSection, ShopSnapshot, ShopVariant } from "./contract";
 
 export type KitDraft = { exists: boolean; section: ShopSection; photos: ShopPhoto[] };
@@ -75,7 +76,11 @@ export function toShopSaveRequest(snapshot: ShopSnapshot, draft: ShopPageDraft, 
   for (const variant of draft.changedVariants) {
     const kit = draft.variants[variant];
     variants[variant] = {
-      section: { ...kit.section, bullet_points: kit.section.bullet_points.map((point) => point.trim()).filter(Boolean) },
+      section: {
+        ...kit.section,
+        bullet_points: kit.section.bullet_points.map((point) => point.trim()).filter(Boolean),
+        cta_link: normalizeKitBuyLink(kit.section.cta_link),
+      },
       photos: kit.photos.map((photo, order) => ({ rowId: photo.rowId, assetId: photo.assetId, order })),
     };
   }

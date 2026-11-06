@@ -6,9 +6,10 @@ import type {
 export const DEFAULT_STANDINGS_SETTINGS: DBLeagueStandingsSettings = {
   id: 1,
   eyebrow: "League standings",
-  title: "UPSL SoCal North",
-  intro:
-    "Follow Rose City FC through the current league table. Club staff can update every row from the admin portal.",
+  // No default league name or intro: a blank title stays blank rather than
+  // naming another club's league (it also feeds the academy Next Match card).
+  title: "",
+  intro: "",
   updated_at: "",
 };
 
@@ -148,7 +149,7 @@ export function normalizeStandingsSettings(
   return {
     ...row,
     eyebrow: row.eyebrow?.trim() || DEFAULT_STANDINGS_SETTINGS.eyebrow,
-    title: row.title?.trim() || DEFAULT_STANDINGS_SETTINGS.title,
+    title: row.title?.trim() ?? "",
     intro: typeof row.intro === "string" ? row.intro : DEFAULT_STANDINGS_SETTINGS.intro,
   };
 }

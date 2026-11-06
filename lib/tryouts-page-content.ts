@@ -20,14 +20,16 @@ export const TRYOUTS_PAGE_LIMITS = {
 } as const;
 
 /**
- * Approved wording, previously hardcoded in AcademyTryoutsPage.
+ * Template wording, first hardcoded in AcademyTryoutsPage. The with-tryouts
+ * sentence no longer names an "external provider" (ADMIN-PLATFORM-FIXES-02):
+ * a tryout may sign up through an Onzio form, a club link or email.
  *
  * Neither sentence names the club, so unlike the programs-page defaults these
  * need no `clubName` interpolation to stay tenant-neutral.
  */
 export const DEFAULT_TRYOUTS_PAGE_CONTENT: TryoutsPageContent = {
   introWithTryouts:
-    "Review current club evaluations below. Registration, waivers, and participant information stay with the club's external provider.",
+    "Review current club evaluations below. Each tryout shows how to register.",
   introNoTryouts:
     "Tryout dates and locations are still being finalized. Register your interest below to stay informed once details are announced.",
 };

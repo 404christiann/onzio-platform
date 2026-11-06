@@ -7,6 +7,7 @@ import { defaultHomepageStoryContent } from "@/lib/homepage-story-content";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { siteRouteOptionsWithFallback } from "@/lib/site-routes";
+import { useClubContext } from "@/components/ClubContextProvider";
 import type { HomepageDraft, PieceId } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PIECE_LABELS } from "@/lib/homepage-editor/preview-context";
 
@@ -75,10 +76,11 @@ function RouteField({ label, id, value, disabled, programs, onChange }: {
   programs: Program[];
   onChange: (value: string) => void;
 }) {
+  const { storeEnabled } = useClubContext();
   return (
     <Field label={label} id={id}>
       <NativeSelect chevronIcon={AdminSelectChevron} id={id} className={selectClass} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-        {siteRouteOptionsWithFallback(programs, value).map((option) => (
+        {siteRouteOptionsWithFallback(programs, value, { storeEnabled }).map((option) => (
           <NativeSelectOption key={`${id}-${option.href}`} value={option.href}>{option.label}</NativeSelectOption>
         ))}
       </NativeSelect>

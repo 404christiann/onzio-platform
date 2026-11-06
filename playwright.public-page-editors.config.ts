@@ -9,6 +9,8 @@ if (!process.env.PAGE_EDITOR_STORAGE_STATE) {
 }
 
 export default defineConfig({
+  // Alpha stands in for Diverse City, whose Shop switch is on.
+  globalSetup: "./tests/browser/alpha-store-enabled.global-setup.ts",
   outputDir: "test-results/public-page-editors",
   testDir: "./tests/browser",
   testMatch: ["public-page-about-viewport.spec.ts", "public-page-about-save.spec.ts", "public-page-editor-recovery.spec.ts", "public-page-editor-phone.spec.ts"],

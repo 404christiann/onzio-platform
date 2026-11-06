@@ -53,8 +53,15 @@ export function programRouteOptions(
 export function siteRouteOptionsWithFallback(
   programs: ReadonlyArray<{ slug: string; navLabel: string; displayTitle: string }>,
   current: string,
+  // While Onzio's Shop switch (clubs.store_enabled) is off the public /shop
+  // 404s, so it is not offered as a new destination. Defaults to on so other
+  // callers keep the full list.
+  { storeEnabled = true }: { storeEnabled?: boolean } = {},
 ): SiteRouteOption[] {
-  const options = [...STATIC_SITE_ROUTES, ...programRouteOptions(programs)];
+  const options = [
+    ...STATIC_SITE_ROUTES.filter((route) => storeEnabled || route.href !== "/shop"),
+    ...programRouteOptions(programs),
+  ];
   const trimmed = current.trim();
   if (!trimmed) {
     return [{ href: "", label: "Use template default" }, ...options];

@@ -178,7 +178,7 @@ export default function HomepageEditor() {
   const sharedShortcuts: { label: string; short: string; href: string }[] = [];
   if (capabilities.sharedTargets.storyText) sharedShortcuts.push({ label: "Edit in About", short: "About", href: "/admin/about" });
   if (capabilities.sharedTargets.programs) sharedShortcuts.push({ label: "Edit in Programs", short: "Programs", href: "/admin/programs" });
-  if (capabilities.sharedTargets.shop) sharedShortcuts.push({ label: "Edit in Shop", short: "Shop", href: "/admin/shop" });
+  if (capabilities.sharedTargets.shop && club.storeEnabled) sharedShortcuts.push({ label: "Edit in Shop", short: "Shop", href: "/admin/shop" });
   const sharedHref = piece === "shared.story" ? "/admin/about" : piece === "shared.programs" ? "/admin/programs" : "/admin/shop";
   const sharedLabel = piece === "shared.story" ? "Edit in About" : piece === "shared.programs" ? "Edit in Programs" : "Edit in Shop";
   const select = (target: PieceId) => { captureAnchor(target); dispatch({ type: "piece-selected", piece: target }); };

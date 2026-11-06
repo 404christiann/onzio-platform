@@ -1,5 +1,176 @@
 # Diverse City FC Status
 
+## 2026-11-05 - ADMIN-PLATFORM-FIXES-02: admin screens that mislead Rose City and Diverse City owners
+
+**Agent/package:** Claude Code, ad hoc `ADMIN-PLATFORM-FIXES-02` (the fix batch
+Christian agreed on 2026-11-05 after the read-only Rose City and Diverse City
+admin reviews, plus PR #87 leftovers). Branch `claude/upbeat-kalam-2375dd`
+from `main` `d0aa99b`. **Status:** `in_progress` (code, tests and local suites
+done on the branch; pushed and opened as PR #88 at Christian's request; not
+reviewed, not merged, not deployed; no
+hosted Supabase, Stripe, Vercel, DNS or email change).
+
+**Completed work** (each item was rechecked in code on `d0aa99b` first):
+
+1. Standings: a blank Table Title now saves and renders blank instead of
+   "UPSL SoCal North" (Rose City's league); the read path no longer substitutes
+   it either, and `DEFAULT_STANDINGS_SETTINGS` lost the Rose City title and
+   intro. Public tables skip an empty heading. The field hint says the title
+   is also the competition line on the academy homepage Next Match card.
+2. `/club-logo` (browser tab icon and link-preview image) returns an uncached
+   404 when a club has no saved logo instead of redirecting to the Rose City
+   crest.
+3. Branding and Sponsors no longer promise JPG: one shared list
+   (`lib/media-upload-types.ts`, PNG or WebP) drives the server graphic check,
+   both pickers, their copy and a clear client message. The server rule
+   (graphics are PNG/WebP) is unchanged.
+4. Contact admin is hidden from the sidebar and search for designs without a
+   public Contact page (`lib/admin-route-manifest.ts`, using the existing
+   `contact.routeVisible` policy). The Contact route and its content policy are
+   unchanged.
+5. Branding shows and saves the footer tagline only where the footer prints it
+   (`academy@1`, new `branding.showFooterTagline` policy); other designs see
+   "Social links" only and a save no longer writes the tagline.
+6. Deleting a game: the confirm now says its player stats on the Stats page
+   are deleted too and typed season totals are not changed (matches the
+   `on delete cascade` from `matches`).
+7. Roster age: the form explains "Players under 14 aren't supported yet" (and
+   the 80 ceiling) with `min`/`max` on the input, matching the database check,
+   instead of failing at save.
+8. Shop buy link may be an email (decision 0008 amended): the kit section's
+   link accepts `mailto:` with one address and an optional query, in the zod
+   contract and in SQL (new migration `20261105120000_shop_buy_link_email.sql`,
+   replaces only `onzio_private.validate_shop_section`). A typed bare email is
+   saved as `mailto:`. The field is now "Buy link" with matching help. The
+   purchase-details closing button stays web-only. Diverse City's imported
+   order-by-email link therefore no longer blocks every Shop-page save.
+9. Shop editor (academy) says the Shop page shows the first 2 photos and the
+   first 2 bullet points (split at the first colon) and the homepage feature
+   the first 2 photos; extras are saved but not shown. Nothing is limited.
+10. Program registration and Tryouts default wording no longer claims sign-up
+    goes through an "external provider/partner". This changes the live
+    Diverse City wording wherever those fields are blank (the import did not
+    store them).
+11. New sign-up forms default to "Minor or adult" (`both`) instead of "Adult
+    only": it turns nobody away (a parent registers a child, an adult registers
+    themselves), and a youth academy that also runs adult and Special Olympics
+    programs needs both; the owner narrows it per form. The database column
+    default is unchanged (the admin always sends the mode).
+12. Seasons: "Start next season" after a single-year season (2026 to 2026)
+    labels it "2027", not "2027–27" (split seasons still "2026–27"). The
+    toolbar no longer claims Standings follows the active season.
+13. Team access lists every active owner (decision 0013): the owner-only GET
+    now returns `owners` too; other owners show as "Owner" with "Only Onzio can
+    change owners" and no Remove (the server already refused owner removal).
+    The heading is "People who can sign in".
+14. Shop switch gaps: the homepage hero button picker no longer offers Shop
+    while `store_enabled` is off, and the Homepage "Edit in Shop" shortcut is
+    hidden then. **Deferred: the database/save-path gate.** The recorded
+    SITE-06B policy (`docs/shop-content-policy.md`, "Authorized owners and
+    admins may maintain valid Shop content when ... the public Store is
+    disabled") and its SQL and route contracts
+    (`tests/database/shop-content-policy.test.ts` "Shop content independent
+    of current display", including `academy`) require saves to keep working
+    with the Store off. Adding the gate would reverse that decision, so it
+    needs Christian's call; no migration was written for it.
+15. Sponsors help: "Sponsor logos shown on your homepage and your Sponsors
+    page" (no slideshow claim).
+16. PR #87 leftovers: database and browser suites run locally; results below.
+
+**Out of scope (noted, not built):** club time zone (decision 0014), tab
+renaming, season names such as "Spring 2026", youth teams/age groups. Also
+left: the Standings admin preview still shows the six-team Rose City sample
+table to non-academy clubs with no rows; Schedule "Competition" and short
+name are editable but unused on these sites; Sponsors saves are three
+separate writes; the hero picker still lists Contact/Tryouts/Programs for
+designs without those pages.
+
+**Files changed:** see the commit; new `lib/media-upload-types.ts`,
+`lib/roster-player-age.ts`, `lib/season-label.ts`, migration
+`supabase/migrations/20261105120000_shop_buy_link_email.sql`, tests
+`tests/contracts/admin-platform-fixes-02.test.ts`,
+`tests/database/shop-buy-link-email.test.ts`,
+`tests/browser/alpha-store-enabled.global-setup.ts`, extended
+`tests/database/owner-admin-membership.test.ts`, three Playwright configs
+(`admin-loading`, `homepage`, `public-page-editors`),
+`scripts/homepage-local-auth.mjs`, `tests/README.md`, updated
+`tests/contracts/diverse-city-tryouts-admin.test.ts` (pinned default
+sentence deliberately changed). Academy files touched outside the attested
+roots list: `components/sites/diverse-city/site-definition.ts` and
+`AcademyStandingsTable.tsx`; no file in `scripts/pilot-academy-source-roots.ts`
+changed.
+
+**Verification:** new `tests/contracts/admin-platform-fixes-02.test.ts`
+(23 cases) failed before the fixes (missing helpers) and passes after.
+`npx tsc --noEmit` passed; ESLint passed on every changed file (run with
+`--no-eslintrc -c .eslintrc.json` because `npm run lint` stops on the nested
+worktree's duplicate `@next/next` plugin). Contracts 1,528/1,528 (129 files);
+legacy 428/428 (50 files); architecture 421 passed with the one existing skip
+(13 files); production build passed. All local runs used loopback Supabase
+under `scripts/with-local-db-lock.sh`; the machine's load average was about
+43 during the first runs.
+
+- **Database, full suite.** Baseline on unchanged `main` schema and tests:
+  888 passed, 94 failed in the About, Contact, Shop and Tryouts
+  content-policy files, every failure a 15 s test or 8 s statement timeout
+  under load. Branch with the new migration applied locally
+  (`supabase migration up --local`): 989 passed, 2 failed (47 files), both
+  15 s timeouts in the "replay the whole migration" cases of
+  `shop-content-policy` and `homepage-content-policy`. Rerun alone, those two
+  files plus `shop-buy-link-email` (9 new cases) and `owner-admin-membership`
+  (1 new case) passed 114/114. The local stack was then restored to `main`'s
+  schema (old `validate_shop_section`, migration row removed).
+- **Browser, first pass on the branch build** (production build at
+  `alpha.localhost:3110`, loopback `.env.local` with email/media provider keys
+  stripped): contact-editor 6/6; admin-guided 48 passed, 10 failed, 5 not run;
+  admin-loading 11/13; homepage 54/63; public-page-editors 29/36.
+- **PR #87 leftovers found and fixed.** About eight failures came from #87's
+  Shop switch: seeded local Alpha (standing in for Diverse City) has
+  `store_enabled=false`, so the Shop editor redirected, the homepage kit hid
+  and "Edit in Shop" disappeared. New
+  `tests/browser/alpha-store-enabled.global-setup.ts` turns it on for the
+  `admin-loading`, `homepage` and `public-page-editors` configs and restores
+  it afterwards. Four failures were missing undocumented setup
+  (`SUPABASE_TEST_DATABASE_URL`, `ADMIN_GUIDED_ADMIN_STORAGE_STATE`):
+  `scripts/homepage-local-auth.mjs admin` now produces the administrator
+  state and `tests/README.md` documents the browser setup.
+- **Rerun of every failing spec file on the branch:** admin-loading 13/13;
+  admin-guided 24/25; homepage 53/54; public-page-editors 33/35. The
+  admin-guided miss (Registrations loading state, a different width each
+  run) then passed 24/24 over three repeats. The remaining three failures
+  reproduce on a `main` build (`d0aa99b`) and are pre-existing: the homepage
+  "legacy branch" preview loads `rose-city.localhost`, whose public site has
+  404'd by design since PR #85; the two About/Logo save cases need the
+  separate legacy fixture already recorded in HANDOFF.
+- **Not verified:** anything hosted or signed in as a real owner; the
+  Diverse City live Shop row (only the imported value is known); native
+  mobile; the admin screens were not inspected by eye beyond these suites.
+
+**Blockers/unresolved decisions:** (a) item 14's database save gate conflicts
+with SITE-06B (above); (b) the migration must pass the `CLAUDE.md`
+production gate (`supabase migration list --linked`, dry-run, push) before
+any deploy of this branch; nothing was applied to hosted Supabase.
+
+**PR #88 review (onzio-bot, `bc12a8a`):** no High; one Medium claimed that
+Branding and Sponsors upload straight to storage, so the JPG ban would block
+uploads that work. Not upheld: both pages use `createClient()` from
+`lib/admin-client.ts`, whose `storage.upload()` maps `logos_v2`/`sponsors` to
+`kind: "graphic"` and calls `/api/admin/media/authorize`, which already
+refuses JPEG for graphics; a contract case now pins that path. Lows left as
+is: the Homepage shared-piece button defaulting to Shop is unreachable while
+the Store is off (the kit pieces do not render); `mailto:` query shapes are
+owner-entered and React-escaped. The merge bot stopped (label `blocked`) on
+two human items: its rule that any function replace needs a person (this one
+is same-signature and loosening only), and the missing runner table from
+`scripts/codex-loop-verify.sh`, which refuses this diff (it touches
+`scripts/` and root Playwright configs) unless a person sets
+`CODEX_LOOP_TRUST_DIFF=1`. Its box also lacks the `supabase` and `vercel` CLIs.
+
+**Exact next step:** Christian clears the function-replace stop, runs the
+verifier with `CODEX_LOOP_TRUST_DIFF=1` on the PR head and pastes its table,
+and decides item 14's gate. Before release, apply `20261105120000_shop_buy_link_email.sql`
+to production through the gate first.
+
 ## 2026-11-05 - Admin platform bug fixes found during the admin redesign research
 
 **Agent/package:** Claude Code, ad hoc `ADMIN-PLATFORM-FIXES-01` (bugs found
