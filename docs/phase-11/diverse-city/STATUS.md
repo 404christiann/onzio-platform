@@ -6,7 +6,8 @@
 Christian agreed on 2026-11-05 after the read-only Rose City and Diverse City
 admin reviews, plus PR #87 leftovers). Branch `claude/upbeat-kalam-2375dd`
 from `main` `d0aa99b`. **Status:** `in_progress` (code, tests and local suites
-done on the branch; not reviewed, not pushed, no PR, not deployed; no
+done on the branch; pushed and opened as PR #88 at Christian's request; not
+reviewed, not merged, not deployed; no
 hosted Supabase, Stripe, Vercel, DNS or email change).
 
 **Completed work** (each item was rechecked in code on `d0aa99b` first):
@@ -150,8 +151,8 @@ with SITE-06B (above); (b) the migration must pass the `CLAUDE.md`
 production gate (`supabase migration list --linked`, dry-run, push) before
 any deploy of this branch; nothing was applied to hosted Supabase.
 
-**Exact next step:** Christian reviews, decides item 14's gate, then approves
-push and PR. Before release, apply `20261105120000_shop_buy_link_email.sql`
+**Exact next step:** review of PR #88 and Christian's decision on item 14's
+gate. Before release, apply `20261105120000_shop_buy_link_email.sql`
 to production through the gate first.
 
 ## 2026-11-05 - Admin platform bug fixes found during the admin redesign research
