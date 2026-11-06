@@ -7,7 +7,10 @@ export type AdminRouteAccessContext = Readonly<{
   presentationTemplateKey: string | null;
   isBillingAuthorized: boolean;
   canMutateContent: boolean;
-  /** Operator-only clubs.store_enabled: Shop is hidden everywhere when off. */
+  /**
+   * Operator-only clubs.store_enabled. The public Shop is hidden when off, but
+   * the admin keeps Shop so owners can prepare kits under the Shop-off banner.
+   */
   storeEnabled: boolean;
 }>;
 
@@ -383,7 +386,6 @@ export function isAdminRouteVisible(
   // Only designs that publish a Contact page get the Contact editor; its
   // details are used nowhere else on other designs.
   if (route.id === "contact" && !siteAdmin?.contact.routeVisible) return false;
-  if (route.id === "shop" && !context.storeEnabled) return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&

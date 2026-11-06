@@ -1,5 +1,72 @@
 # Diverse City FC Status
 
+## 2026-11-05 - SHOP-OFF-BANNER: owners can prepare the Shop while it is off
+
+**Agent/package:** Claude Code, `SHOP-OFF-BANNER` (the follow-up Christian
+approved after `ADMIN-PLATFORM-FIXES-02` item 14; his words: "Yes, build
+it"). Branch `claude/shop-off-banner` from `main` `3c88826`. **Status:**
+`in_progress` (code, tests and local suites done; PR open, not merged, not
+deployed; no migration).
+
+**Completed work:**
+
+- While a club's Shop is off (`store_enabled=false`), `/admin/shop` no longer
+  redirects to `/admin`. The editor opens with a banner at the top: "Your shop
+  is off. Visitors can't see it yet." (`SHOP_OFF_BANNER` in
+  `lib/store-visibility.ts`, shown in `components/admin/shop/ShopPageEditor.tsx`
+  with the admin's icons.download Shop icon). Saving works as before: the
+  route and `save_shop_page` already accept Shop saves with the Shop off
+  (SITE-06B), so no database or route change was needed.
+- **Menu decision:** Shop stays in the admin menu and search while the Shop is
+  off (`lib/admin-route-manifest.ts` no longer filters it). Without that, an
+  owner could only reach the editor by typing the address; the banner explains
+  the state once they are there.
+- Public site unchanged: `/shop`, the nav and footer links, the homepage kit
+  block and the hero Team Store button stay gated on `store_enabled`. The
+  Homepage editor's "Edit in Shop" shortcut and the hero Shop option stay
+  hidden while the Shop is off (the homepage kit block does not render then).
+
+**Files changed:** `components/admin/shop/ShopPageEditor.tsx`,
+`lib/admin-route-manifest.ts`, `lib/store-visibility.ts`,
+`playwright.public-page-editors.config.ts`, new
+`tests/contracts/shop-off-banner.test.ts`, new
+`tests/browser/public-page-editor-shop-off.spec.ts`, updated
+`tests/contracts/admin-platform-bug-fixes.test.ts` (its "hides Shop in the
+admin" case now reflects the approved change), `tests/README.md`, this ledger
+and `HANDOFF.md`.
+
+**Verification:** the new contract file failed 3/4 before the change (the
+public-gating guard already passed) and passes 4/4 after; the five related
+contract files pass 67/67. `npx tsc --noEmit` and ESLint on changed files
+passed; contracts 1,533/1,533 (130 files); legacy 428/428; production build
+passed. Browser, local production build under the shared lock: the new spec
+turns local Alpha's Shop off, adds a throwaway kit, checks the banner, that
+the editor stays on `/admin/shop`, that Shop is in the menu, saves through the
+real editor and route (title changed in the database), and checks a
+signed-out visitor gets the not-found page with none of the kit; it then
+removes its rows and restores the switch. It passed 2/2 (repeat 2).
+public-page-editors otherwise 34/36 (the two About/Logo save cases that also
+fail on `main`), admin-loading 13/13, admin-guided 62/63. The one admin-guided
+miss (`admin-guided-stats-discard` 1440px season, two Stats save bars on
+screen) fails the same way on a `main` build (2 of 3 repeats), so it is
+pre-existing and unrelated. The local stack was brought up to `main` by
+applying the already-merged `20261105120000_shop_buy_link_email.sql` locally
+(it had been reverted there after PR #88's test run).
+
+**Found, not changed:** with the Shop off, public `/shop` shows "This page
+could not be found" with Next's 404 marker and `x-robots-tag: noindex`, but
+the HTTP status is 200, not 404: the tenant layout's `loading.tsx` starts the
+stream before the page calls `notFound()`. This predates this work (PR #87);
+earlier notes calling it a 404 were imprecise. Possible follow-up: gate the
+Shop route before streaming (for example in middleware) if a true 404 status
+matters.
+
+**Blockers/unresolved decisions:** none. Not verified: hosted behavior and a
+real owner session.
+
+**Exact next step:** review and merge of the PR, then a production deploy
+(no migration needed).
+
 ## 2026-11-05 - ADMIN-PLATFORM-FIXES-02 production release record
 
 **Agent/package:** Claude Code, `ADMIN-PLATFORM-FIXES-02` follow-through
@@ -72,8 +139,8 @@ stay reachable), with their contract tests.
 review notes recorded in the entry below stay open and non-blocking.
 
 **Exact next step:** Christian (or an owner session) saves the Diverse City
-Shop page once with its email order link to confirm the live fix; then the
-Shop-off banner PR above.
+Shop page once with its email order link to confirm the live fix. The
+Shop-off banner is built in the `SHOP-OFF-BANNER` entry above.
 
 ## 2026-11-05 - ADMIN-PLATFORM-FIXES-02: admin screens that mislead Rose City and Diverse City owners
 

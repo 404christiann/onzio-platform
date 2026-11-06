@@ -177,7 +177,8 @@ specs refuse to run without the administrator state and the loopback database
 URL. Alpha stands in for Diverse City, so the `admin-loading`, `homepage` and
 `public-page-editors` configs turn Alpha's Shop switch on for their run and
 restore it afterwards (`tests/browser/alpha-store-enabled.global-setup.ts`);
-the seeded Alpha has it off. Strip any real email or media provider keys from
+the seeded Alpha has it off. `public-page-editor-shop-off.spec.ts` turns it
+off again for its own case and restores it. Strip any real email or media provider keys from
 the local `.env.local` before a run.
 
 ## Contact section-guide editor

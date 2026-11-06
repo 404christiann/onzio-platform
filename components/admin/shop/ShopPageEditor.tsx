@@ -3,11 +3,11 @@
 import {
   X as AdminRemoveIcon,
   ChevronUp as AdminOrderUp,
-  ChevronDown as AdminOrderDown
+  ChevronDown as AdminOrderDown,
+  IconShop,
 } from "@/components/admin/icons";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import AcademyHomeShopFeature from "@/components/AcademyHomeShopFeature";
 import AcademyShopPage from "@/components/sites/diverse-city/AcademyShopPage";
 import ClubhouseShopPage from "@/components/ClubhouseShopPage";
@@ -28,6 +28,7 @@ import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-st
 import { createClient } from "@/lib/admin-client";
 import type { ShopKitContent } from "@/lib/queries";
 import { hasShopPurchaseDetails } from "@/lib/shop-purchase-details";
+import { SHOP_OFF_BANNER } from "@/lib/store-visibility";
 import { shopSaveRequestSchema, type ShopPhoto, type ShopSection, type ShopSnapshot, type ShopSurface, type ShopVariant } from "@/lib/shop-editor/contract";
 import { draftFromShopSnapshot, rebaseShopDraft, publicKit, publicPhotoRow, publicPurchase, SHOP_VARIANTS, shopDraftDirty, toShopSaveRequest, type ShopPageDraft } from "@/lib/shop-editor/model";
 
@@ -56,13 +57,10 @@ function orderPhotos(photos: ShopPhoto[]): ShopPhoto[] {
 
 export default function ShopPageEditor() {
   const club = useClubContext();
-  const router = useRouter();
   // The Shop switch (clubs.store_enabled) is Onzio's. While it is off the
-  // public Shop does not exist, so the editor follows it, including direct URLs.
+  // public Shop does not exist, but owners can still prepare and save kits
+  // here under a banner that says visitors can't see them yet.
   const storeOff = !club.storeEnabled;
-  useEffect(() => {
-    if (storeOff) router.replace("/admin");
-  }, [storeOff, router]);
   const template = club.presentationTemplateKey;
   const shopPolicy = codeSiteAdminFor(club)?.shop;
   const isClubhouse = template === "clubhouse@1";
@@ -247,6 +245,12 @@ export default function ShopPageEditor() {
     <AdminPage className="min-w-0">
       <AdminPageHeader eyebrow="Public website" title="Shop" description="Choose a public page, then tap what you want to edit." />
       <div className="mt-5 space-y-4">
+        {storeOff && (
+          <p className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm font-medium text-foreground">
+            <IconShop size={18} className="flex-none text-warning" />
+            {SHOP_OFF_BANNER}
+          </p>
+        )}
         <AdminPanel className="flex flex-wrap items-center gap-3 p-3 sm:p-4">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" aria-label="Public page">
             <button type="button" aria-current={surface === "shop" ? "page" : undefined} disabled={saving} onClick={() => { setSurfaceChoice("shop"); setTarget(null); }} className={`min-h-11 rounded-lg px-4 text-sm font-semibold ${surface === "shop" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>Shop page {shopDraftDirty(drafts.shop) ? "•" : ""}</button>
