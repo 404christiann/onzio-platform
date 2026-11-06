@@ -72,6 +72,25 @@ describe("3. Logo and sponsor uploads match what the server accepts", () => {
     }
   });
 
+  it("routes Branding and Sponsors uploads through the media server's graphic rule", () => {
+    // Both pages upload with the admin client, whose storage.upload() maps the
+    // bucket to a media kind and calls /api/admin/media/authorize, which refuses
+    // JPEG for `graphic`. So a JPG logo already failed before this change; the
+    // pickers now say so up front instead of after the upload.
+    const adminClient = source("lib/admin-client.ts");
+    expect(adminClient).toContain('logos_v2: { surface: "branding", kind: "graphic" }');
+    expect(adminClient).toContain('sponsors: { surface: "branding", kind: "graphic" }');
+    expect(adminClient).toContain('"/api/admin/media/authorize"');
+    expect(adminClient).toContain("kind: configuration.kind");
+    const authorize = source("app/api/admin/media/authorize/route.ts");
+    expect(authorize).toMatch(/kind === "graphic" &&\s*parsed\.data\.mimeType === "image\/jpeg"/);
+    for (const page of ["app/admin/(protected)/branding/page.tsx", "app/admin/(protected)/sponsors/page.tsx"]) {
+      const text = source(page);
+      expect(text).toContain('import { createClient } from "@/lib/admin-client";');
+      expect(text).not.toMatch(/from "@\/lib\/supabase(-server)?"/);
+    }
+  });
+
   it("stops promising JPG on Branding and Sponsors", () => {
     const branding = source("app/admin/(protected)/branding/page.tsx");
     expect(branding).not.toMatch(/JPG|image\/jpeg/);

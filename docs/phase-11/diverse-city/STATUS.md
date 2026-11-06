@@ -151,8 +151,24 @@ with SITE-06B (above); (b) the migration must pass the `CLAUDE.md`
 production gate (`supabase migration list --linked`, dry-run, push) before
 any deploy of this branch; nothing was applied to hosted Supabase.
 
-**Exact next step:** review of PR #88 and Christian's decision on item 14's
-gate. Before release, apply `20261105120000_shop_buy_link_email.sql`
+**PR #88 review (onzio-bot, `bc12a8a`):** no High; one Medium claimed that
+Branding and Sponsors upload straight to storage, so the JPG ban would block
+uploads that work. Not upheld: both pages use `createClient()` from
+`lib/admin-client.ts`, whose `storage.upload()` maps `logos_v2`/`sponsors` to
+`kind: "graphic"` and calls `/api/admin/media/authorize`, which already
+refuses JPEG for graphics; a contract case now pins that path. Lows left as
+is: the Homepage shared-piece button defaulting to Shop is unreachable while
+the Store is off (the kit pieces do not render); `mailto:` query shapes are
+owner-entered and React-escaped. The merge bot stopped (label `blocked`) on
+two human items: its rule that any function replace needs a person (this one
+is same-signature and loosening only), and the missing runner table from
+`scripts/codex-loop-verify.sh`, which refuses this diff (it touches
+`scripts/` and root Playwright configs) unless a person sets
+`CODEX_LOOP_TRUST_DIFF=1`. Its box also lacks the `supabase` and `vercel` CLIs.
+
+**Exact next step:** Christian clears the function-replace stop, runs the
+verifier with `CODEX_LOOP_TRUST_DIFF=1` on the PR head and pastes its table,
+and decides item 14's gate. Before release, apply `20261105120000_shop_buy_link_email.sql`
 to production through the gate first.
 
 ## 2026-11-05 - Admin platform bug fixes found during the admin redesign research
