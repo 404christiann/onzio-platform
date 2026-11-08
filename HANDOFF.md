@@ -1,8 +1,9 @@
 ## 2026-11-08 - ADMIN-RE-01 foundation migration for the reimagined admin
 
 - **Status:** `in_progress` on branch `claude/admin-re-01-foundation` from
-  `main` `9890eee`. It's pushed, with no PR, and not applied to production.
-  Christian approved starting it.
+  `main` `9890eee`. It's applied to production, and the PR is open for the
+  review bot. Christian gave the go on 2026-11-08, on the condition that a
+  person with no saved name still displays properly.
 - **What it adds:** the migration
   `20261108120000_admin_reimagined_foundation.sql` puts four columns on
   `onzio.clubs`:
@@ -14,18 +15,23 @@
   It also adds `onzio.club_members.display_name`. Diverse City is set to
   Chicago, and both live clubs are marked confirmed. All additive, with no
   grants or policies.
+- **The no-name case:** `lib/admin-greeting.ts`, pulled forward from RE-04.
+  - The greeting is "Hi Marco", or "Welcome back" when no name is saved.
+  - In lists, a person shows as their saved name, or otherwise their email.
 - **Verification:**
   - Local apply passed, and the database types match.
   - tsc and ESLint are clean.
   - Contracts: 1,540/1,540.
-  - Unit suites: 2,389 passed, 1 skipped.
+  - Unit suites: 2,389 passed, 1 skipped, plus 3/3 greeting tests.
   - Database suite: 1,001/1,001.
-  - Production: the read-only `migration list --linked` matches `main`, and
-    the dry run would push only this migration.
-- **Waiting on Christian:** the go for `GATE-DATA-DC-TZ` and `GATE-MIGRATE`
-  (`supabase db push --linked`). Then the PR.
-- **Exact next step:** apply on Christian's go, confirm with `migration list
-  --linked`, open the PR, then start `ADMIN-RE-02`.
+- **Production:**
+  - The dry run listed only this migration, and `db push --linked` applied
+    it.
+  - `migration list --linked` now shows `20261108120000` on Remote.
+  - Rows read back: Diverse City is on Chicago, Rose City on Los Angeles,
+    and both are confirmed. Every club is on `classic`.
+  - diversecityfc.com returns 200.
+- **Exact next step:** the bot merges the PR, then start `ADMIN-RE-02`.
 
 ## 2026-11-08 - ADMIN-RE-00 build plan for the reimagined club admin
 
