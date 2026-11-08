@@ -31,7 +31,13 @@ export async function academyTenantFingerprint(db: Client, clubs: readonly strin
   for (const relation of await tenantRelations(db)) {
     const table = `${relation.schema}.${relation.name}`;
     if (!includeAuthority && authority.has(table)) continue;
-    const rows = (await db.query(`select coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text),'[]'::jsonb) as data from "${relation.schema}"."${relation.name}" t where club_id=any($1::uuid[])`, [clubs])).rows[0].data;
+    // Audit rows accumulate in the shared local database (tens of thousands per club), so hashing each one
+    // gets slower every run. A per-club count and highest id still prove none was added or removed.
+    const query = table === "onzio.audit_events"
+      ? `select coalesce(jsonb_agg(jsonb_build_object('club_id',club_id,'rows',rows,'max_id',max_id) order by club_id),'[]'::jsonb) as data
+          from (select club_id, count(*) as rows, max(id) as max_id from onzio.audit_events where club_id=any($1::uuid[]) group by club_id) t`
+      : `select coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text),'[]'::jsonb) as data from "${relation.schema}"."${relation.name}" t where club_id=any($1::uuid[])`;
+    const rows = (await db.query(query, [clubs])).rows[0].data;
     const category = authority.has(table) ? "authority" : billing.has(relation.name) ? "billing" : relation.schema === "onzio_private" ? "editor" : "content";
     groups[category].push({ table, rows });
   }

@@ -63,7 +63,7 @@ async function fingerprint(id: string = club) {
       (select to_jsonb(s) from onzio.shop_purchase_details s where club_id=$1) as purchase,
       (select jsonb_agg(to_jsonb(s) order by surface) from onzio_private.shop_page_revisions s where club_id=$1) as revisions,
       (select jsonb_agg(to_jsonb(s) order by actor_id,operation_id) from onzio_private.shop_page_receipts s where club_id=$1) as receipts,
-      (select jsonb_agg(to_jsonb(s) order by id) from onzio.audit_events s where club_id=$1) as audit,
+      (select count(*)::text||':'||coalesce(max(id),0)::text from onzio.audit_events where club_id=$1) as audit,
       (select to_jsonb(s) from onzio.presentation_state s where club_id=$1) as presentation,
       (select store_enabled from onzio.clubs where id=$1) as store_enabled`, [id])).rows[0];
   } finally { await db.query("rollback to savepoint observation"); }

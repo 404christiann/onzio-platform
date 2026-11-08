@@ -1,8 +1,13 @@
 # Review bot contract
 
-What `scripts/codex-loop.sh --fix` relies on from the review bot, and what it takes for
-granted about merging. The bot is operated by Christian, not by this repository. Change
-this file when the bot changes, in the same PR.
+The review format the bot is expected to follow, and what this repository takes for granted
+about merging. The bot is operated by Christian, not by this repository. Change this file
+when the bot changes, in the same PR.
+
+`scripts/codex-loop.sh` (the Codex runner that read these reviews and pushed fix rounds),
+its skip list and `scripts/codex-loop-verify.sh` were removed on 2026-11-08 at Christian's
+request. Where this file says "the loop", it describes how that runner read reviews; the
+format is kept because it is still the bot's output contract.
 
 ## What the loop reads
 
@@ -26,13 +31,6 @@ head commit the review covers.
   Low findings are never actioned. Anything the bot wants fixed before merge must be
   under one of the three headings; text outside them is invisible to the loop.
 - A clean review has no non-empty Critical, High or Medium section.
-
-## What the loop writes
-
-- A comment starting `<!-- codex-loop-fix-round -->` for each pushed fix round, so rounds
-  can be counted. The cap is three per PR (`CODEX_LOOP_FIX_ROUNDS`).
-- The `blocked` label on a PR after the cap, a `BLOCKED:` run, or a runner failure.
-- It never approves, merges, closes or enables auto-merge.
 
 ## Merge criterion, as stated by Christian
 
@@ -73,21 +71,12 @@ are not new policy for the bot to weigh; Christian can strike one by editing thi
   `gh pr merge <N> --match-head-commit <reviewed sha>`. If the head moves, the review no
   longer counts and the bot stops.
 - A PR that touches `supabase/`, data access under `lib/`, or RLS does not merge while a
-  required suite is not run or has new failures. The runner now runs the full check set
-  outside the Codex sandbox (`scripts/codex-loop-verify.sh`), compares failures with a clean
-  copy of the base commit, and puts its table in the PR body under "Verification run by the
-  runner". It does not push when that fails, so a PR the bot sees has passed it. A
-  "NOT RUN" database row (for example local Supabase was down), or a missing Database or
-  Whole suite row, on such a PR is a gap for a person to close, not a pass. The Whole suite
-  row covers every vitest file not already in the Contracts, Architecture and Database rows,
-  and its detail says so, so those rows plus it are the whole suite and nothing runs twice.
-  The Architecture row skips the `pilot-*` test files when the change touches nothing they
-  depend on (any path named pilot, `scripts/`, `tests/fixtures/`, `tests/helpers/`,
-  `lib/homepage-editor/`, `packages/`, root files other than Markdown), and its detail says
-  so. Those files test the pilot scripts on throwaway repositories, not the app's source, so
-  a change outside those paths cannot alter them. Christian decided this on 2026-11-01. Run
-  them anyway with `CODEX_LOOP_PILOT_TESTS=1`. The runner always
-  writes both rows for such a change and refuses `CODEX_LOOP_VERIFY=off` for it.
+  required suite is not run or has new failures. `scripts/codex-loop-verify.sh` was removed
+  on 2026-11-08 (Christian: no longer needed), so the PR author now runs the suites that
+  cover the change (at least `npm run test:db` for database or RLS work, wrapped in
+  `scripts/with-local-db-lock.sh`) and lists what ran, with results, in the PR body. A
+  database suite that is not run, or a PR body that lists no run, on such a PR is a gap
+  for a person to close, not a pass.
 
 ## Not yet decided
 
