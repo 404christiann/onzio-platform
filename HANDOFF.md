@@ -28,11 +28,32 @@
   `site-coordination-proof.ts` leaves a temp folder per run.
 - **Exact next step:** the bot reviews and merges.
 
+## 2026-11-08 - ADMIN-RE-03 club time zone helpers and the admin "today"
+
+- **Status:** `in_progress` on branch `claude/admin-re-03-club-time` from
+  `main` `3e70cc7`, with the PR open. No migration.
+- **Visible change:** Diverse City's public schedule and Next match now pick
+  the next game in Chicago time. Printed kickoff times are unchanged. The
+  admin dashboard's "Upcoming" list starts from the club's "today".
+- **How:**
+  - `lib/club-time.ts`: `clubToday`, `clubKickoffInstant` (handles daylight
+    saving), `isKickoffPast` and `formatClubDate` / `formatClubTime`.
+  - `ClubTimeZoneProvider`, filled by the fail-safe, time-boxed
+    `readPublicClubTimeZone` in the tenant layout. It's never in
+    `ClubContext`.
+- **Verification:**
+  - New and updated tests pass, with the club-time tests run under
+    `TZ=Asia/Tokyo`.
+  - Contracts, the unit suite (478) and tsc are green.
+  - Not checked in a browser. The verify table is in the PR.
+- **Follow-up:** the Lions clubhouse pages and `FixtureRow` still use the
+  visitor's browser zone.
+- **Exact next step:** the bot merges, then `ADMIN-RE-04`.
+
 ## 2026-11-08 - ADMIN-RE-02 the admin switch and the automatic time zone
 
-- **Status:** `in_progress` on branch `claude/admin-re-02-switch` from
-  `main` `aa61605`, with the PR open. No migration, and nothing visible
-  changes.
+- **Status:** `complete`. The bot merged PR #95 as `3e70cc7`, and the
+  deploy is Ready.
 - **What it adds:**
   - `readAdminPortal`, fail-safe to the classic admin, plus
     `AdminPortalProvider` / `useAdminPortal()` wrapping the unchanged

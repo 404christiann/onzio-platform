@@ -11,40 +11,19 @@ import FixtureRow from "@/components/FixtureRow";
 import { fetchActiveSeason, fetchSchedule } from "@/lib/queries";
 import { Fixture } from "@/lib/data";
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
+import { clubKickoffInstant } from "@/lib/club-time";
 import AcademySchedulePage from "@/components/sites/diverse-city/AcademySchedulePage";
 import ClubhouseSchedulePage from "@/components/ClubhouseSchedulePage";
 
 gsap.registerPlugin(ScrollTrigger);
 
-function fixtureKickoffInstantFromLosAngelesLocalTime(fixture: Fixture): Date {
-  const [year, month, day] = fixture.date.split("-").map(Number);
-
-  let hours = 0, minutes = 0;
-
-  const match24 = (fixture.time ?? "").match(/^(\d{1,2}):(\d{2})$/);
-  const match12 = (fixture.time ?? "").match(/(\d+):(\d+)\s*(AM|PM)/i);
-
-  if (match24) {
-    hours   = parseInt(match24[1]);
-    minutes = parseInt(match24[2]);
-  } else if (match12) {
-    hours   = parseInt(match12[1]);
-    minutes = parseInt(match12[2]);
-    if (match12[3].toUpperCase() === "PM" && hours !== 12) hours += 12;
-    if (match12[3].toUpperCase() === "AM" && hours === 12) hours  = 0;
-  }
-
-  const approxUTC = new Date(Date.UTC(year, month - 1, day, hours, minutes));
-  const utcStr = approxUTC.toLocaleString("en-US", { timeZone: "UTC" });
-  const laStr  = approxUTC.toLocaleString("en-US", { timeZone: "America/Los_Angeles" });
-  const offsetMs = new Date(utcStr).getTime() - new Date(laStr).getTime();
-
-  return new Date(Date.UTC(year, month - 1, day, hours, minutes) + offsetMs);
-}
-
-function getNextMatchIndex(fixtures: Fixture[], now: Date): number {
+// ADMIN-RE-03: kickoff is the stored wall clock read in the club's own zone
+// (it was hardcoded to Los Angeles, so Diverse City's games flipped an hour
+// early or late against Chicago).
+function getNextMatchIndex(fixtures: Fixture[], now: Date, timeZone: string): number {
   const idx = fixtures.findIndex(
-    (fixture) => fixtureKickoffInstantFromLosAngelesLocalTime(fixture) > now,
+    (fixture) => clubKickoffInstant(fixture.date, fixture.time, timeZone) > now,
   );
   return idx === -1 ? fixtures.length : idx;
 }
@@ -58,6 +37,7 @@ export default function SchedulePage() {
 
 function LegacySchedulePage() {
   const clubId = useClubId();
+  const timeZone = useClubTimeZone();
   const heroRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -104,8 +84,8 @@ function LegacySchedulePage() {
   }, [loading]);
 
   const nextMatchIdx = useMemo(
-    () => getNextMatchIndex(fixtures, now),
-    [fixtures, now]
+    () => getNextMatchIndex(fixtures, now, timeZone),
+    [fixtures, now, timeZone]
   );
 
   return (

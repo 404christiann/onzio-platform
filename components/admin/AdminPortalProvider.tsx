@@ -6,6 +6,7 @@ import {
   type AdminPortalSettings,
 } from "@/lib/admin-portal";
 import { isValidTimeZone } from "@/lib/club-time";
+import { ClubTimeZoneProvider } from "@/components/ClubTimeZoneProvider";
 
 // ADMIN-RE-02: the club's admin switch, slice flags and time zone for every
 // admin page. Outside the provider (or before RE-05 renders anything from it)
@@ -66,5 +67,11 @@ export function AdminPortalProvider({
       .catch(() => undefined);
   }, [isOwner, settings.timeZoneConfirmed]);
 
-  return <AdminPortalContext.Provider value={current}>{children}</AdminPortalContext.Provider>;
+  // ADMIN-RE-03: admin pages and the previews they render (NextMatchCard,
+  // AcademyNextMatch) read the club's zone through useClubTimeZone().
+  return (
+    <AdminPortalContext.Provider value={current}>
+      <ClubTimeZoneProvider timeZone={current.timeZone}>{children}</ClubTimeZoneProvider>
+    </AdminPortalContext.Provider>
+  );
 }

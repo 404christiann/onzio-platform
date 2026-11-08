@@ -1,6 +1,7 @@
 "use client";
 
 import guided from "@/components/admin/AdminGuided.module.css";
+import { formatClubDate } from "@/lib/club-time";
 import {
   IconCaretDown as AdminSelectChevron,
   ChevronDownIcon,
@@ -128,50 +129,27 @@ function formatDateInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-const MONTH_GROUP_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
-/** "2026-03-15" -> "March 2026". Parsed as UTC so the label never shifts a
- * day relative to the plain date string stored on the match. Falls back to
- * a literal "Undated" bucket for a match saved without a date. */
+/** "2026-03-15" -> "March 2026". Never shifts a day relative to the plain date
+ * stored on the match (lib/club-time.ts). Falls back to a literal "Undated"
+ * bucket for a match saved without a date. */
 function monthGroupKey(dateValue: string): string {
-  if (!dateValue) return "Undated";
-  const parsed = new Date(`${dateValue}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return "Undated";
-  return MONTH_GROUP_FORMATTER.format(parsed);
+  return formatClubDate(dateValue, "month-year") ?? "Undated";
 }
 
 function hasResult(match: Pick<Match, "rose_city_score" | "opponent_score">): boolean {
   return match.rose_city_score !== null && match.opponent_score !== null;
 }
 
-const WEEKDAY_SHORT_FORMATTER = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" });
-const DAY_FORMATTER = new Intl.DateTimeFormat("en-US", { day: "2-digit", timeZone: "UTC" });
-const MONTH_SHORT_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
-
-function parseUtcDate(dateValue: string): Date | null {
-  if (!dateValue) return null;
-  const parsed = new Date(`${dateValue}T00:00:00Z`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
 /** "2026-03-14" -> "Sat 14". Used in the row list, where the month is
  * already established by the group header above it. */
 function formatRowDate(dateValue: string): string {
-  const parsed = parseUtcDate(dateValue);
-  if (!parsed) return "No date";
-  return `${WEEKDAY_SHORT_FORMATTER.format(parsed)} ${DAY_FORMATTER.format(parsed)}`;
+  return formatClubDate(dateValue, "weekday-day") ?? "No date";
 }
 
 /** "2026-03-14" -> "Sat 14 Mar". Used in the edit panel, which has no
  * surrounding month context of its own. */
 function formatShortDate(dateValue: string): string {
-  const parsed = parseUtcDate(dateValue);
-  if (!parsed) return "No date";
-  return `${WEEKDAY_SHORT_FORMATTER.format(parsed)} ${DAY_FORMATTER.format(parsed)} ${MONTH_SHORT_FORMATTER.format(parsed)}`;
+  return formatClubDate(dateValue, "weekday-day-month") ?? "No date";
 }
 
 /** "18:00" -> "6:00 PM" */

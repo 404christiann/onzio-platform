@@ -5,10 +5,12 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { ClubContextProvider } from "@/components/ClubContextProvider";
 import { ClubBrandingProvider } from "@/components/ClubBrandingProvider";
+import { ClubTimeZoneProvider } from "@/components/ClubTimeZoneProvider";
 import TemplateFontScope from "@/components/TemplateFontScope";
 import { ContractError } from "@/lib/contract-error";
 import { getClubContextBySlug } from "@/lib/club-context";
 import { loadAcademyShellBranding } from "@/lib/academy-shell-branding";
+import { readPublicClubTimeZone } from "@/lib/public-club-time-zone";
 import AcademyRouteLoadingSkeleton from "@/components/sites/diverse-city/RouteLoadingSkeleton";
 import AcademyShell from "@/components/sites/diverse-city/Shell";
 import type { ClubContext } from "@/lib/club-context";
@@ -79,27 +81,34 @@ export default async function TenantLayout({
     throw error;
   }
 
+  // ADMIN-RE-03: fail-safe and time-boxed; Los Angeles if the read fails.
+  const timeZone = await readPublicClubTimeZone(club.id);
+
   // The header remains usable while branding or page content is pending.
   // Programs load independently inside Nav, so they never hold the page.
   if (codeSiteFor(club) === "diverse-city") {
     return (
       <ClubContextProvider club={club}>
-        <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
-          <AcademyBrandedShell club={club}>{children}</AcademyBrandedShell>
-        </Suspense>
+        <ClubTimeZoneProvider timeZone={timeZone}>
+          <Suspense fallback={<AcademyRouteLoadingSkeleton />}>
+            <AcademyBrandedShell club={club}>{children}</AcademyBrandedShell>
+          </Suspense>
+        </ClubTimeZoneProvider>
       </ClubContextProvider>
     );
   }
 
   return (
     <ClubContextProvider club={club}>
-      <ClubBrandingProvider>
-        <TemplateFontScope templateKey={club.presentationTemplateKey}>
-          <Nav />
-          <main>{children}</main>
-          <Footer />
-        </TemplateFontScope>
-      </ClubBrandingProvider>
+      <ClubTimeZoneProvider timeZone={timeZone}>
+        <ClubBrandingProvider>
+          <TemplateFontScope templateKey={club.presentationTemplateKey}>
+            <Nav />
+            <main>{children}</main>
+            <Footer />
+          </TemplateFontScope>
+        </ClubBrandingProvider>
+      </ClubTimeZoneProvider>
     </ClubContextProvider>
   );
 }
