@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { clubToday, DEFAULT_CLUB_TIME_ZONE } from "@/lib/club-time";
 import {
   buildRegistrationMix,
   type RegistrationMixItem,
@@ -73,19 +74,13 @@ function failed<T>(message: string): DashboardSection<T> {
 export async function loadAdminDashboardData(
   supabase: SupabaseClient,
   clubId: string,
+  timeZone: string = DEFAULT_CLUB_TIME_ZONE,
 ): Promise<AdminDashboardData> {
   const onzio = supabase.schema("onzio");
-  // "Today" in the server's local timezone, matching how fixture/tryout dates
-  // are entered and displayed (plain YYYY-MM-DD, local — see formatDateInput
-  // in app/admin/(protected)/schedule/page.tsx). toISOString() would compute
-  // the UTC date, which drops tonight's events off "Upcoming Fixtures &
-  // Events" hours before local midnight for US-timezone clubs.
-  const now = new Date();
-  const today = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-");
+  // ADMIN-RE-03: "today" is the club's own calendar date (decision 0014). The
+  // server's local date put tonight's Chicago games on the wrong side of
+  // midnight on a UTC server, and UTC dropped them hours early.
+  const today = clubToday(timeZone);
 
   const activeSeasonPromise = onzio
     .from("seasons")

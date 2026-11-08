@@ -5,6 +5,8 @@ import Image from "@/components/ResilientImage";
 import { useEffect, useState } from "react";
 import { useClubBranding } from "@/components/ClubBrandingProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
+import { clubKickoffInstant, clubToday } from "@/lib/club-time";
 import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import {
@@ -17,12 +19,6 @@ import { AcademyMatchLoadingSkeleton } from "@/components/sites/diverse-city/Loa
 import { useBoundedAcademyLoading } from "@/lib/use-bounded-academy-loading";
 
 
-/** Converts the stored local match date and 24-hour time into a Date. */
-function fixtureToDate(dateStr: string, timeStr: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const [hours, minutes] = (timeStr ?? "00:00").split(":").map(Number);
-  return new Date(year, month - 1, day, hours || 0, minutes || 0);
-}
 
 /** "2026-09-05" → "September 5, 2026" */
 function formatMatchDate(dateStr: string): string {
@@ -45,6 +41,7 @@ function formatMatchTime(timeStr: string): string {
 
 export default function AcademyNextMatch() {
   const club = useClubContext();
+  const timeZone = useClubTimeZone();
   const { clubLogoUrl } = useClubBranding();
   const [nextFixture, setNextFixture] = useState<Fixture | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,11 +79,12 @@ export default function AcademyNextMatch() {
       )
       .then((fixtures) => {
         const now = Date.now();
-        const todayStr = new Date().toISOString().split("T")[0];
+        // ADMIN-RE-03: the club's "today" and kickoff, not UTC's or the visitor's.
+        const todayStr = clubToday(timeZone);
         const next =
           fixtures.find((fixture) => {
             if (!fixture.date || fixture.date < todayStr) return false;
-            const kickoff = fixtureToDate(fixture.date, fixture.time ?? "00:00");
+            const kickoff = clubKickoffInstant(fixture.date, fixture.time, timeZone);
             return !Number.isNaN(kickoff.getTime()) && kickoff.getTime() > now;
           }) ?? null;
         setNextFixture(next);
@@ -96,7 +94,7 @@ export default function AcademyNextMatch() {
         setNextFixture(null);
       })
       .finally(() => setLoading(false));
-  }, [club.id]);
+  }, [club.id, timeZone]);
 
   if (showLoading) return <AcademyMatchLoadingSkeleton />;
 

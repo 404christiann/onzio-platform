@@ -1,3 +1,4 @@
+import { readAdminPortal } from "@/lib/admin-portal";
 import {
   ChevronRight,
   IconSchedule,
@@ -189,7 +190,8 @@ async function AdminDashboardContent() {
     canMutateContent,
     storeEnabled: club.storeEnabled,
   });
-  const data = await loadAdminDashboardData(supabase, club.id);
+  const { timeZone } = await readAdminPortal(supabase, club.id);
+  const data = await loadAdminDashboardData(supabase, club.id, timeZone);
 
   return (
     <AdminPage>

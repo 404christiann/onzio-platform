@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildRegistrationMix } from "@/lib/admin-dashboard-mix";
+import { loadAdminDashboardData } from "@/lib/admin-dashboard-data";
 
 describe("buildRegistrationMix", () => {
   const forms = Array.from({ length: 7 }, (_, index) => ({
@@ -40,5 +41,49 @@ describe("buildRegistrationMix", () => {
 
   it("returns an empty mix when no current form has paid rows", () => {
     expect(buildRegistrationMix(forms, [])).toEqual([]);
+  });
+});
+
+describe("loadAdminDashboardData uses the club's today (ADMIN-RE-03)", () => {
+  // A chainable stand-in for the Supabase client: every builder call returns the
+  // chain, awaiting it gives an empty result, and gte() calls are recorded.
+  function recordingClient() {
+    const gteCalls: Array<[string, unknown]> = [];
+    const empty = { data: [], error: null, count: 0 };
+    const chain: Record<string, unknown> = new Proxy(
+      {},
+      {
+        get(_target, property) {
+          if (property === "then") return (resolve: (value: unknown) => void) => resolve(empty);
+          if (property === "maybeSingle" || property === "single") {
+            return () => Promise.resolve({ data: null, error: null });
+          }
+          if (property === "gte") {
+            return (column: string, value: unknown) => {
+              gteCalls.push([column, value]);
+              return chain;
+            };
+          }
+          return () => chain;
+        },
+      },
+    );
+    return { client: { schema: () => chain }, gteCalls };
+  }
+
+  it.each([
+    // 2026-03-15 06:30 UTC: already the 15th in Chicago, still the 14th in Los Angeles.
+    ["America/Chicago", "2026-03-15"],
+    ["America/Los_Angeles", "2026-03-14"],
+  ])("in %s, upcoming events start from %s", async (timeZone, expected) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-15T06:30:00Z"));
+    try {
+      const { client, gteCalls } = recordingClient();
+      await loadAdminDashboardData(client as never, "club-id", timeZone);
+      expect(gteCalls).toContainEqual(["event_date", expected]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
