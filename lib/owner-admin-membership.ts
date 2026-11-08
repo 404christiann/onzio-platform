@@ -3,6 +3,7 @@ import {
   isClubSessionFresh,
   verifyAccessTokenClaims,
 } from "@/lib/auth-session";
+import { isValidTimeZone } from "@/lib/club-time";
 import { failContract } from "@/lib/contract-error";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
 
@@ -300,4 +301,63 @@ export async function removeClubAdmin(
     throw error;
   }
   return { userId: parsedUserId, status: "removed" as const };
+}
+
+/**
+ * ADMIN-RE-02, decision 1: the club's time zone is set automatically from an
+ * owner's browser, once. Writes only while time_zone_set_at is null, so a zone
+ * Onzio or an earlier owner already confirmed is never overridden, and two
+ * owners signing in at once can't both win. Returns whether this call saved it.
+ */
+export async function setClubTimeZoneOnce(
+  session: ClubOwnerSession,
+  timeZone: string,
+): Promise<{ saved: boolean; timeZone: string }> {
+  if (!isValidTimeZone(timeZone)) failContract("INVALID_TIME_ZONE");
+
+  const current = await session.client
+    .schema("onzio")
+    .from("clubs")
+    .select("time_zone,time_zone_set_at")
+    .eq("id", session.clubId)
+    .maybeSingle();
+  if (current.error || !current.data) failContract("CLUB_TIME_ZONE_READ_FAILED");
+  if (current.data.time_zone_set_at !== null) {
+    return { saved: false, timeZone: current.data.time_zone as string };
+  }
+
+  const update = await session.client
+    .schema("onzio")
+    .from("clubs")
+    .update({ time_zone: timeZone, time_zone_set_at: new Date().toISOString() })
+    .eq("id", session.clubId)
+    .is("time_zone_set_at", null)
+    .select("time_zone");
+  if (update.error) failContract("CLUB_TIME_ZONE_WRITE_FAILED");
+  if (!update.data || update.data.length === 0) {
+    // Another owner's browser confirmed it between the read and the write.
+    return { saved: false, timeZone: current.data.time_zone as string };
+  }
+
+  const audit = await session.client
+    .schema("onzio")
+    .from("audit_events")
+    .insert({
+      club_id: session.clubId,
+      actor_user_id: session.actorId,
+      actor_type: "user",
+      operation: "club_time_zone_set",
+      resource_type: "club",
+      resource_id: session.clubId,
+      payload: { previous_value: current.data.time_zone, new_value: timeZone, source: "owner_browser" },
+    });
+  if (audit.error) {
+    await session.client
+      .schema("onzio")
+      .from("clubs")
+      .update({ time_zone: current.data.time_zone, time_zone_set_at: null })
+      .eq("id", session.clubId);
+    failContract("CLUB_TIME_ZONE_AUDIT_FAILED");
+  }
+  return { saved: true, timeZone };
 }

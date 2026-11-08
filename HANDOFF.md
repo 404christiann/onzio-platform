@@ -1,8 +1,29 @@
+## 2026-11-08 - ADMIN-RE-02 the admin switch and the automatic time zone
+
+- **Status:** `in_progress` on branch `claude/admin-re-02-switch` from
+  `main` `aa61605`, with the PR open. No migration, and nothing visible
+  changes.
+- **What it adds:**
+  - `readAdminPortal`, fail-safe to the classic admin, plus
+    `AdminPortalProvider` / `useAdminPortal()` wrapping the unchanged
+    `AdminShell`.
+  - The owner-only `POST /api/admin/club-time-zone`. It's backed by
+    `setClubTimeZoneOnce`, which writes only while no zone is confirmed and
+    audits the change.
+  - `lib/club-time.ts` `isValidTimeZone`, which rejects made-up zones.
+  - The operator script `scripts/set-club-admin-portal.ts` (portal, flags,
+    time zone): dry run by default, audited, reconciled.
+- **Verification:**
+  - New unit 20/20, contract 11/11 and database 3/3.
+  - The operator script was dry-run, executed, refused and restored on local
+    `alpha`.
+  - The full verify table is in the PR.
+- **Exact next step:** the bot merges, then `ADMIN-RE-03`.
+
 ## 2026-11-08 - ADMIN-RE-01 foundation migration for the reimagined admin
 
-- **Status:** `in_progress` on branch `claude/admin-re-01-foundation` from
-  `main` `9890eee`. It's applied to production, and the PR is open for the
-  review bot. Christian gave the go on 2026-11-08, on the condition that a
+- **Status:** `complete`. PR #94 merged as `aa61605`, the migration is
+  applied in production, and the deploy is Ready. Christian gave the go on 2026-11-08, on the condition that a
   person with no saved name still displays properly.
 - **What it adds:** the migration
   `20261108120000_admin_reimagined_foundation.sql` puts four columns on

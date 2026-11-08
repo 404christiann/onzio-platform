@@ -1,12 +1,98 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-02: the admin switch and the automatic time zone
+
+**Agent/package:** Claude Code, `ADMIN-RE-02`. Christian said "Yes, start it".
+Branch `claude/admin-re-02-switch` from `main` `aa61605`. **Status:**
+`in_progress`. It's built and tested locally, and the PR is open for the
+review bot. There's no migration, and nothing visible changes.
+
+**Completed work:**
+
+- **`lib/admin-portal.ts`:** `readAdminPortal(supabase, clubId)` reads
+  `admin_portal`, `admin_flags`, `time_zone` and `time_zone_set_at` with the
+  signed-in user's client.
+  - Any error, a missing row, a thrown client or an unexpected value falls
+    back to the classic admin.
+  - A failed read counts as "time zone confirmed", so it never triggers the
+    automatic set.
+  - Tenant resolution still never reads these columns.
+- **`components/admin/AdminPortalProvider.tsx`:** the context plus a
+  `useAdminPortal()` hook. `app/admin/(protected)/layout.tsx` reads the
+  settings and wraps the unchanged `AdminShell`, so both values still render
+  the classic admin.
+- **The automatic time zone (decision 1):**
+  - On an owner's first visit, while the club's zone isn't confirmed, the
+    provider posts the browser's zone once to the new owner-only route
+    `POST /api/admin/club-time-zone`.
+  - The route takes the club from the host and session, and rejects extra
+    fields.
+  - The write is `setClubTimeZoneOnce` in `lib/owner-admin-membership.ts`,
+    inside the existing service-role boundary. It validates the zone, writes
+    only while `time_zone_set_at` is null (two owners can't both win), and
+    audits `club_time_zone_set`. If the audit fails, it rolls the write back.
+- **`lib/club-time.ts`:** `isValidTimeZone` is a shape check matching the
+  column constraint, plus `Intl.DateTimeFormat`. It rejects `Mars/Phobos`,
+  which was the bot's Low note on PR #94. RE-03 extends this file.
+- **`scripts/set-club-admin-portal.ts`:** Onzio's operator script, modelled
+  on `scripts/set-club-store-enabled.ts`. It takes `--portal`, `--on`/`--off`
+  flags and `--time-zone`.
+  - It's a dry run by default, and a non-loopback target needs
+    `--confirm-project`.
+  - Every input is validated, and unknown options are refused.
+  - Setting a zone also confirms it.
+  - Writes are audited (`manual.club_admin_portal_set`) and reconciled.
+- **The plan's RE-02 and RE-03 entries now say what was built where.**
+
+**Files changed:**
+- `lib/admin-portal.ts`, `lib/club-time.ts`, `lib/owner-admin-membership.ts`
+- `components/admin/AdminPortalProvider.tsx`
+- `app/admin/(protected)/layout.tsx`
+- `app/api/admin/club-time-zone/route.ts`
+- `scripts/set-club-admin-portal.ts`
+- tests: `tests/contracts/admin-portal-switch.test.ts`,
+  `tests/database/admin-club-time-zone.test.ts`,
+  `lib/__tests__/admin-portal.test.ts`, `lib/__tests__/club-time.test.ts`
+- docs: `docs/admin-portal-redesign-plan.md`, this file, `HANDOFF.md`
+
+**Verification (local):**
+
+- The new unit tests passed: 20/20 (time zone validator and fail-safe
+  reader).
+- The new contract test passed: 11/11.
+- The new database test passed: 3/3. It covers saving once and auditing, a
+  second browser not moving the zone, an Onzio-confirmed zone never being
+  overridden, and a fake zone being rejected before any write.
+- `tsc` is clean.
+- Operator script on local `alpha`:
+  - The dry run printed current versus target and wrote nothing.
+  - `--execute` reconciled to `reimagined`, `{"season": true}`, Chicago,
+    confirmed.
+  - Running it again said "Already set correctly".
+  - It refused, each with a clear message: `--portal=beta`, `Mars/Phobos`, a
+    flag in both `--on` and `--off`, a call with nothing to change, and a
+    production URL without `--confirm-project`.
+  - Alpha was then restored to classic, `{}`, Los Angeles and unconfirmed,
+    and the test audit row was removed.
+- The full `scripts/codex-loop-verify.sh` table is in the PR.
+
+**Blockers and decisions:** none. No migration, so there's no
+`GATE-MIGRATE` for this step. Merging deploys code that reads the columns
+RE-01 already applied in production.
+
+**Exact next step:** the review bot reviews and merges the PR. Then
+`ADMIN-RE-03` (club time zone helpers and admin "today").
+
 ## 2026-11-08 - ADMIN-RE-01: foundation migration for the reimagined admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-01`. Christian approved starting
 it: "Yes, start it", relayed by the orchestration session. Branch
 `claude/admin-re-01-foundation` from `main` `9890eee`. **Status:**
-`in_progress`. The migration is applied to production, and the PR is open for
-the review bot. Christian gave the go on 2026-11-08 ("You can apply it if you
+`complete`. The migration is applied to production, and PR #94 merged to
+`main` as `aa61605` on 2026-11-08 (merged by Claude Code on Christian's "Yes,
+merge it", after the bot couldn't reach the database to finish its own gate).
+The production deploy is Ready, and diversecityfc.com plus its admin login
+return 200. Christian gave the go on 2026-11-08 ("You can apply it if you
 can handle that case"), on the condition that a person with no saved name
 still displays properly. That's handled below.
 
