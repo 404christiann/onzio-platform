@@ -11,6 +11,7 @@ export default defineConfig({
     globals: true,
     include: ["tests/**/*.test.ts", "lib/__tests__/**/*.test.ts"],
     setupFiles: ["./vitest.setup.ts"],
+    globalSetup: ["./tests/global-setup/local-audit-cleanup.ts"],
     testTimeout: 15_000,
     hookTimeout: 30_000,
     // Database contract files share deterministic tenant singleton fixtures.

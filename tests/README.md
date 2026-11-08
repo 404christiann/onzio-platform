@@ -22,6 +22,14 @@ repository:
 node --test scripts/provision-worktree-env.test.mjs
 ```
 
+## Leftover local test data
+
+A `test:db` run removes the audit rows it adds for the shared test clubs when it ends
+(`tests/global-setup/local-audit-cleanup.ts`), so the local database no longer grows from it.
+Older leftovers stay. They no longer slow the suites, but you can clear them from the local
+database with `delete from onzio.audit_events where club_id in (<Alpha, Bravo, Charlie ids from
+tests/fixtures/entities.ts>)`. Never run that against a hosted database.
+
 ## Configure local database tests
 
 The database suite needs a running local Supabase **and** the test environment

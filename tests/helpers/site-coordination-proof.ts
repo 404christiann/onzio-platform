@@ -168,6 +168,15 @@ export async function recoverCoordinationProof(file: string): Promise<void> {
   await cleanRecordedProof(file, record);
 }
 
+// A closed proof keeps its recovery journal in a temp folder so a crashed run can be recovered.
+// Once the journal says verified-clean nothing is left to recover, so the folder is removed. Any
+// other stage keeps the folder, because it may be the only way to clean up after a failed run.
+export async function discardVerifiedCleanJournal(file: string): Promise<void> {
+  await recoveryPath(file);
+  const record = recoveryRecordSchema.parse(JSON.parse(await readFile(file, "utf8")));
+  if (record.stage === "verified-clean") await rm(dirname(file), { recursive: true, force: true });
+}
+
 export async function openCoordinationProof(options: { cleanupStatementTimeoutMs?: number } = {}) {
   assertSafeTestEnvironment();
   const db = new Client(config);

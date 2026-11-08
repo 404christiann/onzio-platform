@@ -1,3 +1,20 @@
+## 2026-11-08 - Local database tests stop leaving audit rows and temp folders behind
+
+- **Status:** `in_progress` on branch `agent/test-leftover-cleanup` from
+  `main` `effb5a3`, with the PR open. No migration and no app code change.
+- **What changed:**
+  - `tests/global-setup/local-audit-cleanup.ts` (vitest `globalSetup`)
+    removes the audit rows a local database run added for the shared test
+    clubs when the run ends. It never touches older rows and never fails a
+    run.
+  - `discardVerifiedCleanJournal` removes a coordination proof's temp folder
+    once its journal is `verified-clean`.
+- **Verification:** `test:db` 1,004/1,004 three times. Audit and temp-folder
+  counts are identical before and after a run. Details are in `STATUS.md`.
+- **Not done:** Playwright suites and the two `scripts/prove-*` scripts still
+  leave rows or folders.
+- **Exact next step:** the bot reviews and merges.
+
 ## 2026-11-08 - Faster, steadier local database tests, and the Codex runner removed
 
 - **Status:** `in_progress` on branch `agent/test-db-speed` from `main`

@@ -11,7 +11,7 @@ import { chmod, readFile, stat, writeFile } from "node:fs/promises";
 import { expect, it } from "vitest";
 import { academySchemaFingerprint } from "../helpers/academy-coordination-content";
 import { USER_IDS } from "../fixtures/entities";
-import { coordinationDigests, openCoordinationProof, recoverCoordinationProof } from "../helpers/site-coordination-proof";
+import { coordinationDigests, discardVerifiedCleanJournal, openCoordinationProof, recoverCoordinationProof } from "../helpers/site-coordination-proof";
 
 it("populates its own complete Academy, preserves current content and billing through rollback, and verifies cleanup", async () => {
   const proof = await openCoordinationProof();
@@ -66,6 +66,7 @@ it("populates its own complete Academy, preserves current content and billing th
   if (failures.length > 1) throw new AggregateError(failures, "Full-site regression and cleanup both failed");
   expect(JSON.parse(await readFile(proof.recoveryFile, "utf8")).stage).toBe("verified-clean");
   await expect(proof.close()).resolves.toBeUndefined();
+  await discardVerifiedCleanJournal(proof.recoveryFile);
 }, 60_000);
 
 it("recovers the original baselines after a cleanup failure and owner exit", async () => {
@@ -202,6 +203,7 @@ it("recovers the original baselines after a cleanup failure and owner exit", asy
     if (changedControl) await db.query(`drop table ${control}.changed_after_baseline`);
     if (peerCreated) await removePeer();
     if (target && !fixtureVerifiedClean) await recoverCoordinationProof(target.recoveryFile);
+    if (target) await discardVerifiedCleanJournal(target.recoveryFile);
     if (controlCreated) await db.query(`drop schema ${control}`);
   } catch (error) { failures.push(error); }
   try { await db.end(); } catch (error) { failures.push(error); }
@@ -224,6 +226,7 @@ it("closes live connections after a journal failure and retries from the unchang
     await chmod(dirname(proof.recoveryFile), 0o700);
     await proof.close();
     expect(JSON.parse(await readFile(proof.recoveryFile, "utf8")).stage).toBe("verified-clean");
+    await discardVerifiedCleanJournal(proof.recoveryFile);
   } catch (error) { failures.push(error); }
   if (failures.length === 1) throw failures[0];
   if (failures.length > 1) throw new AggregateError(failures, "Journal-failure regression and cleanup both failed");

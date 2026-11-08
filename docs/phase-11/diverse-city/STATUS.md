@@ -1,5 +1,63 @@
 # Diverse City FC Status
 
+## 2026-11-08 - Local database tests stop leaving audit rows and temp folders behind
+
+**Agent/package:** Claude Code. No work-package ID: Christian asked for the
+follow-up cleanup listed in the previous entry. Branch
+`agent/test-leftover-cleanup` from `main` `effb5a3`. **Status:**
+`in_progress`. It's built and tested locally, and the PR is open for the
+review bot. There is no migration and no app code change.
+
+**What was leaking:** one full `test:db` run left about 708 Alpha audit rows
+(962 counting Bravo, Charlie and rows with no club) that nothing removed, plus
+one temp folder per coordination proof (201 in the system temp folder).
+
+**Completed work:**
+
+- `tests/global-setup/local-audit-cleanup.ts`, registered as a vitest
+  `globalSetup`: when a run targets the local database it records the highest
+  audit id first, and at the end deletes only the audit rows added since for
+  Alpha, Bravo, Charlie, rows with no club and rows of clubs that no longer
+  exist. Rows that were there before the run are never touched. It does
+  nothing without `SUPABASE_LOCAL=1`, uses only the loopback database, and
+  never fails a run (it logs and skips instead).
+- `discardVerifiedCleanJournal` in `tests/helpers/site-coordination-proof.ts`
+  removes a proof's recovery folder once its journal says `verified-clean`,
+  and keeps it in every other stage. `site-coordination.test.ts` and
+  `site-coordination-full-site.test.ts` call it after they finish reading the
+  journal.
+- One-off: I removed the 201 existing temp folders (200 verified-clean, plus
+  my own stale journal for the `pilot` club I hand-cleaned earlier).
+
+**Files changed:** `vitest.config.ts`, the new global setup,
+`tests/helpers/site-coordination-proof.ts`, the two coordination tests,
+`tests/README.md`, this file and `HANDOFF.md`.
+
+**Verification (local database, under the lock):**
+
+- `test:db` three times on the current tree: 49 of 49 files, 1,004 of 1,004
+  tests, 154 to 178s.
+- Measured inside the lock: Alpha, no-club and total audit counts before and
+  after one run are identical (59,960 / 2,534 / 80,799). The run removed 962
+  rows it had added. Temp folders: 201 before and 201 after (nothing added).
+- Type-check and lint clean. Architecture result is in the PR.
+- I did not delete the older audit rows already in the database (about
+  59,960 for Alpha). Nothing depends on them now.
+
+**Blockers or unresolved decisions:**
+
+- The bulk of the old audit rows came from browser suites and scripts and
+  older suite versions, in repeated bursts of 2,788 or 2,832 rows on 1 and 2
+  November. Playwright suites were not measured or changed, and they do not
+  use this cleanup.
+- Anyone using the database by hand while a `test:db` run is going loses the
+  audit rows that action created for the shared test clubs.
+- `scripts/prove-pilot-site-coordination.ts` and
+  `scripts/prove-code-site-parity.ts` still leave their journal folders.
+
+**Exact next step:** the bot reviews and merges the PR. Then decide whether
+the Playwright suites should get the same cleanup.
+
 ## 2026-11-08 - Faster, steadier local database tests, and the Codex runner removed
 
 **Agent/package:** Claude Code. No work-package ID: Christian asked for it
