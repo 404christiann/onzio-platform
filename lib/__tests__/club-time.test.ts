@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { clubTimeZoneOrDefault, DEFAULT_CLUB_TIME_ZONE, isValidTimeZone } from "../club-time";
+import {
+  clubKickoffInstant,
+  clubTimeZoneOrDefault,
+  clubToday,
+  DEFAULT_CLUB_TIME_ZONE,
+  formatClubDate,
+  formatClubTime,
+  isKickoffPast,
+  isValidTimeZone,
+  parseKickoffTime,
+} from "../club-time";
 
 describe("isValidTimeZone", () => {
   it.each([
@@ -31,5 +41,101 @@ describe("clubTimeZoneOrDefault", () => {
     expect(clubTimeZoneOrDefault("America/Chicago")).toBe("America/Chicago");
     expect(clubTimeZoneOrDefault("Mars/Phobos")).toBe(DEFAULT_CLUB_TIME_ZONE);
     expect(clubTimeZoneOrDefault(undefined)).toBe("America/Los_Angeles");
+  });
+});
+
+describe("clubToday", () => {
+  // 2026-03-15 04:30 UTC is 11:30 PM on the 14th in Chicago and 9:30 PM in Los Angeles.
+  const lateSaturday = new Date("2026-03-15T04:30:00Z");
+  // 2026-03-15 06:30 UTC is already the 15th in Chicago (1:30 AM) but still the 14th in Los Angeles.
+  const afterChicagoMidnight = new Date("2026-03-15T06:30:00Z");
+
+  it("uses the club's own midnight, not the server's or UTC's", () => {
+    expect(clubToday("America/Chicago", lateSaturday)).toBe("2026-03-14");
+    expect(clubToday("America/Los_Angeles", lateSaturday)).toBe("2026-03-14");
+    expect(clubToday("America/Chicago", afterChicagoMidnight)).toBe("2026-03-15");
+    expect(clubToday("America/Los_Angeles", afterChicagoMidnight)).toBe("2026-03-14");
+    expect(clubToday("UTC", lateSaturday)).toBe("2026-03-15");
+  });
+
+  it("falls back to Los Angeles for a bad zone", () => {
+    expect(clubToday("Mars/Phobos", afterChicagoMidnight)).toBe("2026-03-14");
+  });
+});
+
+describe("clubKickoffInstant", () => {
+  it("reads the stored wall clock in the club's zone", () => {
+    expect(clubKickoffInstant("2026-01-10", "18:00", "America/Chicago").toISOString()).toBe("2026-01-11T00:00:00.000Z");
+    expect(clubKickoffInstant("2026-01-10", "18:00", "America/Los_Angeles").toISOString()).toBe("2026-01-11T02:00:00.000Z");
+    expect(clubKickoffInstant("2026-01-10", "6:00 PM", "America/Chicago").toISOString()).toBe("2026-01-11T00:00:00.000Z");
+  });
+
+  it("follows daylight saving on both change days", () => {
+    // Spring forward 2026-03-08: Chicago goes from UTC-6 to UTC-5 at 2 AM.
+    expect(clubKickoffInstant("2026-03-07", "10:00", "America/Chicago").toISOString()).toBe("2026-03-07T16:00:00.000Z");
+    expect(clubKickoffInstant("2026-03-08", "10:00", "America/Chicago").toISOString()).toBe("2026-03-08T15:00:00.000Z");
+    // Fall back 2026-11-01: Chicago goes from UTC-5 to UTC-6 at 2 AM.
+    expect(clubKickoffInstant("2026-10-31", "10:00", "America/Chicago").toISOString()).toBe("2026-10-31T15:00:00.000Z");
+    expect(clubKickoffInstant("2026-11-01", "10:00", "America/Chicago").toISOString()).toBe("2026-11-01T16:00:00.000Z");
+  });
+
+  it("treats a missing or TBD time as midnight and an unreadable date as invalid", () => {
+    expect(clubKickoffInstant("2026-01-10", null, "America/Chicago").toISOString()).toBe("2026-01-10T06:00:00.000Z");
+    expect(clubKickoffInstant("2026-01-10", "TBD", "America/Chicago").toISOString()).toBe("2026-01-10T06:00:00.000Z");
+    expect(Number.isNaN(clubKickoffInstant("", "18:00", "America/Chicago").getTime())).toBe(true);
+  });
+});
+
+describe("isKickoffPast", () => {
+  const now = new Date("2026-01-11T00:30:00Z"); // 6:30 PM in Chicago, 4:30 PM in Los Angeles
+
+  it("answers in the club's zone", () => {
+    expect(isKickoffPast("2026-01-10", "18:00", "America/Chicago", 0, now)).toBe(true);
+    expect(isKickoffPast("2026-01-10", "18:00", "America/Los_Angeles", 0, now)).toBe(false);
+  });
+
+  it("waits for the grace period", () => {
+    expect(isKickoffPast("2026-01-10", "18:00", "America/Chicago", 45, now)).toBe(false);
+    expect(isKickoffPast("2026-01-10", "18:00", "America/Chicago", 30, now)).toBe(true);
+  });
+
+  it("is never past for an unreadable date", () => {
+    expect(isKickoffPast("not-a-date", "18:00", "America/Chicago", 0, now)).toBe(false);
+  });
+});
+
+describe("parseKickoffTime", () => {
+  it.each([
+    ["18:00", 18, 0],
+    ["09:05", 9, 5],
+    ["18:00:00", 18, 0],
+    ["6:00 PM", 18, 0],
+    ["12:15 am", 0, 15],
+    ["12:30 PM", 12, 30],
+    ["TBD", 0, 0],
+    ["25:00", 0, 0],
+    ["", 0, 0],
+  ])("%s -> %i:%i", (input, hours, minutes) => {
+    expect(parseKickoffTime(input)).toEqual({ hours, minutes });
+  });
+});
+
+describe("formatClubDate and formatClubTime", () => {
+  it("prints the stored date without shifting a day", () => {
+    expect(formatClubDate("2026-12-31")).toBe("Dec 31");
+    expect(formatClubDate("2026-03-14", "weekday-day")).toBe("Sat 14");
+    expect(formatClubDate("2026-03-14", "weekday-day-month")).toBe("Sat 14 Mar");
+    expect(formatClubDate("2026-03-14", "month-year")).toBe("March 2026");
+    expect(formatClubDate("2026-03-14", "long")).toBe("March 14, 2026");
+    expect(formatClubDate("")).toBeNull();
+    expect(formatClubDate("2026-3-4")).toBeNull();
+  });
+
+  it("prints the stored time as 12-hour", () => {
+    expect(formatClubTime("18:00")).toBe("6:00 PM");
+    expect(formatClubTime("00:05")).toBe("12:05 AM");
+    expect(formatClubTime("12:00")).toBe("12:00 PM");
+    expect(formatClubTime("TBD")).toBe("");
+    expect(formatClubTime(null)).toBe("");
   });
 });

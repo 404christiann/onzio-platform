@@ -1,11 +1,104 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-03: club time zone helpers and the admin "today"
+
+**Agent/package:** Claude Code, `ADMIN-RE-03`. Christian said "Yes, start it".
+Branch `claude/admin-re-03-club-time` from `main` `3e70cc7`. **Status:**
+`in_progress`. It's built and tested locally, and the PR is open for the
+review bot. There's no migration.
+
+**What visitors and admins will notice (release record, plan decision 5):**
+
+- Diverse City's public schedule and its home page's Next match now decide
+  "which game is next" and "has it kicked off" in Chicago time. Before, the
+  schedule assumed Los Angeles, which flipped games two hours late. Next match
+  used UTC's date and the visitor's own clock.
+- Kickoff times still print exactly as entered: "6:00 PM" stays "6:00 PM".
+- Rose City and Lions behave as before, because both are on Los Angeles.
+- The old admin dashboard's "Upcoming" list now starts from the club's own
+  "today" instead of the server's.
+
+**Completed work:**
+
+- **`lib/club-time.ts`** gains:
+  - `clubToday`.
+  - `clubKickoffInstant`: the stored wall clock read in the club's zone, with
+    daylight saving handled.
+  - `isKickoffPast`, with a grace period.
+  - `parseKickoffTime`, which reads "18:00", "6:00 PM" or TBD.
+  - `formatClubDate`, with five styles including the short "Dec 31", and
+    never shifting a day.
+  - `formatClubTime`.
+- **Where the zone comes from:**
+  - The new `ClubTimeZoneProvider` / `useClubTimeZone()`.
+  - The tenant layout (`app/%5Fclubs/[slug]/layout.tsx`) fills it from the
+    new `lib/public-club-time-zone.ts`. That read uses the public client, has
+    a 1.5 s budget, and falls back to Los Angeles on any failure. It's never
+    part of `ClubContext` or tenant resolution.
+  - Admin pages get the zone from `AdminPortalProvider`.
+- **Switched to the club's zone:**
+  - `app/(public)/schedule/page.tsx`
+  - `components/sites/diverse-city/AcademySchedulePage.tsx` (both dropped
+    the hardcoded Los Angeles helper)
+  - `components/NextMatchCard.tsx` and `components/AcademyNextMatch.tsx`
+    (dropped the UTC "today" and browser-local kickoff)
+  - `lib/admin-dashboard-data.ts` (takes the zone; the dashboard page passes
+    it from `readAdminPortal`)
+- **The admin schedule's three date labels** now come from `formatClubDate`,
+  with identical output.
+
+**Files changed:**
+- `lib/club-time.ts`, `lib/public-club-time-zone.ts`,
+  `lib/admin-dashboard-data.ts`
+- `components/ClubTimeZoneProvider.tsx`,
+  `components/admin/AdminPortalProvider.tsx`, `components/NextMatchCard.tsx`,
+  `components/AcademyNextMatch.tsx`,
+  `components/sites/diverse-city/AcademySchedulePage.tsx`
+- `app/%5Fclubs/[slug]/layout.tsx`, `app/(public)/schedule/page.tsx`,
+  `app/admin/(protected)/page.tsx`, `app/admin/(protected)/schedule/page.tsx`
+- tests: `lib/__tests__/club-time.test.ts`,
+  `lib/__tests__/public-club-time-zone.test.ts`,
+  `lib/__tests__/admin-dashboard-data.test.ts`,
+  `tests/contracts/admin-club-time.test.ts`
+- docs: `docs/admin-portal-redesign-plan.md`, this file, `HANDOFF.md`
+
+**Verification (local):**
+
+- `club-time` tests: 33/33, run with the machine set to `TZ=Asia/Tokyo` to
+  prove the server's zone doesn't matter. They cover:
+  - the midnight edge in Chicago versus Los Angeles
+  - both 2026 daylight-saving change days
+  - a bad zone falling back
+  - the kickoff grace period
+  - 12- and 24-hour times
+  - the date styles
+- The public read's fail-safe tests: 6/6. They cover an error, a missing
+  row, a fake zone, a thrown client, and a hung read cut off at the 1.5 s
+  budget.
+- The dashboard's "today": Chicago and Los Angeles at 06:30 UTC on Mar 15.
+- Contracts: 1,551 plus the new `admin-club-time` file, all passing.
+- The unit suite: 478/478.
+- `tsc` is clean, and lint shows only the existing sponsors-page warning.
+- **Not checked in a browser.** The full verification table, including the
+  build, is in the PR.
+
+**Follow-up (not in this step):** the Lions clubhouse pages
+(`ClubhouseSchedulePage`, `ClubhouseHomePage`, `ClubhouseMatchAreaPage`) and
+`FixtureRow` still read kickoff in the visitor's browser zone. Lions is on
+Los Angeles, so it only shows for visitors outside Pacific time.
+
+**Blockers and decisions:** none.
+
+**Exact next step:** the review bot reviews and merges the PR. Then
+`ADMIN-RE-04` (people's names).
+
 ## 2026-11-08 - ADMIN-RE-02: the admin switch and the automatic time zone
 
 **Agent/package:** Claude Code, `ADMIN-RE-02`. Christian said "Yes, start it".
 Branch `claude/admin-re-02-switch` from `main` `aa61605`. **Status:**
-`in_progress`. It's built and tested locally, and the PR is open for the
-review bot. There's no migration, and nothing visible changes.
+`complete`. The review bot merged PR #95 as `3e70cc7` on 2026-11-08, with no
+High or Medium findings. The production deploy is Ready, and diversecityfc.com
+plus its admin login return 200.
 
 **Completed work:**
 

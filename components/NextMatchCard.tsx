@@ -12,18 +12,13 @@ import OpponentCrest from "@/components/OpponentCrest";
 import type { Fixture } from "@/lib/data";
 import { fetchSchedule } from "@/lib/queries";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { useClubTimeZone } from "@/components/ClubTimeZoneProvider";
+import { clubKickoffInstant, clubToday } from "@/lib/club-time";
 
 gsap.registerPlugin(ScrollTrigger);
 
 /** Full opponent names longer than this fall back to the admin-set short name, if one is set. */
 const MAX_TEAM_NAME_LENGTH = 16;
-
-/** Converts the stored local match date and 24-hour time into a Date. */
-function fixtureToDate(dateStr: string, timeStr: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  const [hours, minutes] = (timeStr ?? "00:00").split(":").map(Number);
-  return new Date(year, month - 1, day, hours || 0, minutes || 0);
-}
 
 function ordinal(day: number): string {
   const suffixes = ["th", "st", "nd", "rd"];
@@ -56,6 +51,7 @@ function formatMatchTime(timeStr: string): string {
 export default function NextMatchCard() {
   const editing = useHomepagePreview() !== null;
   const club = useClubContext();
+  const timeZone = useClubTimeZone();
   const clubId = club.id;
   const { clubLogoUrl } = useClubBranding();
   const sectionRef = useRef<HTMLElement>(null);
@@ -66,11 +62,12 @@ export default function NextMatchCard() {
     fetchSchedule(undefined, clubId)
       .then((fixtures) => {
         const now = Date.now();
-        const todayStr = new Date().toISOString().split("T")[0];
+        // ADMIN-RE-03: the club's "today" and kickoff, not UTC's or the visitor's.
+        const todayStr = clubToday(timeZone);
         const next =
           fixtures.find((fixture) => {
             if (!fixture.date || fixture.date < todayStr) return false;
-            const kickoff = fixtureToDate(fixture.date, fixture.time ?? "00:00");
+            const kickoff = clubKickoffInstant(fixture.date, fixture.time, timeZone);
             return !Number.isNaN(kickoff.getTime()) && kickoff.getTime() > now;
           }) ?? null;
 
@@ -81,7 +78,7 @@ export default function NextMatchCard() {
         setNextFixture(null);
       })
       .finally(() => setLoading(false));
-  }, [clubId]);
+  }, [clubId, timeZone]);
 
   useEffect(() => {
     if (loading || editing) return;
