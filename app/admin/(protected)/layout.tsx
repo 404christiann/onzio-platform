@@ -2,8 +2,10 @@ import type { Viewport } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
+import { AdminPortalProvider } from "@/components/admin/AdminPortalProvider";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { requireFreshClubSession } from "@/lib/auth-session";
+import { readAdminPortal } from "@/lib/admin-portal";
 import {
   ADMIN_THEME_COOKIE_NAME,
   resolveAdminTheme,
@@ -51,6 +53,9 @@ export default async function ProtectedLayout({
     redirect("/admin/login?error=not_authorized");
   }
 
+  // ADMIN-RE-02: fail-safe; any read problem keeps the classic admin.
+  const portal = await readAdminPortal(supabase, club.id);
+
   const cookieStore = await cookies();
   const initialTheme = resolveAdminTheme(
     cookieStore.get(ADMIN_THEME_COOKIE_NAME)?.value,
@@ -58,7 +63,9 @@ export default async function ProtectedLayout({
 
   return (
     <AdminThemeProvider initialTheme={initialTheme}>
-      <AdminShell>{children}</AdminShell>
+      <AdminPortalProvider settings={portal} isOwner={club.role === "owner"}>
+        <AdminShell>{children}</AdminShell>
+      </AdminPortalProvider>
     </AdminThemeProvider>
   );
 }
