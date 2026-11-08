@@ -1,5 +1,94 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-04: people's names, and members route hardening
+
+**Agent/package:** Claude Code, `ADMIN-RE-04`, started by the orchestration
+session (Christian asked for packages to run in parallel where the plan
+allows; RE-04 depends only on RE-01). Branch `claude/admin-re-04-names-a3a3ad`,
+rebased onto `main` `8a2fbd8` (after RE-03, #97 and #98). **Status:** `in_progress`. Built and tested locally,
+PR open for the review bot. No migration (`club_members.display_name` is
+already live from RE-01), and nothing visible changes until a name is saved.
+
+**Completed work:**
+
+- **`POST /api/admin/members`, new action `set-name { userId?, displayName }`:**
+  - Any active owner or admin may name themselves (no `userId`, or their
+    own). Only an owner may name someone else, and only someone active in
+    this club.
+  - The club comes from the host and session, never the body; extra fields
+    such as `club_id` are ignored.
+  - `add` now trims and caps the email at 254 characters, the same as
+    `emailSchema` in `lib/owner-admin-membership.ts` (the break-ui gap).
+  - `add`, `remove` and `GET` stay owner-only, unchanged.
+- **`lib/owner-admin-membership.ts`:**
+  - `assertClubMemberSession`: the same fresh-session and active-membership
+    check as `assertClubOwnerSession`, for an owner or an admin, returning
+    the role. Both share one check, so the owner path is unchanged. A
+    non-member gets `CLUB_MEMBER_REQUIRED`.
+  - `setMemberDisplayName`: validates the name, checks who may name whom,
+    writes it, and audits `membership_renamed` with only `{ self, had_name }`.
+    The name itself is never in the audit. If the audit fails, the old name
+    is put back.
+  - `listActiveMembers` now returns `displayName` (null when none is saved),
+    so the owners and admins lists carry names.
+  - Service-role use stays inside this file.
+- **`lib/admin-greeting.ts`:** `normalizeDisplayName` and
+  `DISPLAY_NAME_MAX_LENGTH = 120`. It trims, folds line breaks and runs of
+  spaces into one space, and counts characters the way Postgres
+  `char_length` does, so anything it accepts also passes the database check
+  `club_members_display_name_length`. `adminGreeting` and `memberLabel` from
+  RE-01 are reused, not recreated.
+- **`app/admin/(protected)/members/page.tsx` (old page, minimal):** each
+  person shows their saved name with the email underneath, or just the email
+  when no name is saved (`memberLabel`). Avatar initials come from the name
+  when there is one. The two new error codes have plain messages.
+- **Not in this package:** a "What should we call you?" form. The API is
+  ready; the home (RE-05) and the full UI (RE-18) use it.
+
+**Files changed:**
+- `app/api/admin/members/route.ts`, `lib/owner-admin-membership.ts`,
+  `lib/admin-greeting.ts`, `app/admin/(protected)/members/page.tsx`
+- tests: new `tests/contracts/admin-members-names.test.ts`, extended
+  `tests/database/owner-admin-membership.test.ts`
+- docs: this file, `HANDOFF.md`
+
+**Verification (local):**
+
+- New contract test `tests/contracts/admin-members-names.test.ts`: 12/12.
+  It calls the real route with its collaborators mocked: an admin naming
+  themselves goes through the any-member check and never the owner one; a
+  `club_id` in the body is ignored; a non-member gets `CLUB_MEMBER_REQUIRED`;
+  a blank name gets 400; malformed bodies are refused before the session is
+  read; a 254-character email is accepted and 255 refused; `add` and
+  `remove` stay owner-only. It also checks name length counted the Postgres
+  way (120 emoji pass, 121 fail) and that the audit payload has no name.
+- `tests/database/owner-admin-membership.test.ts`: 5/5, with one new test on
+  local Supabase. It covers: an admin names themselves and reads it back
+  under RLS with their own session; an owner names another admin, and the
+  lists carry the names (null when unnamed); an admin can't name another
+  admin or the owner; nobody can name a removed member or an outsider; 120
+  characters saves, 121 and blank are refused, and the database check
+  refuses them too; the four audit rows are `membership_renamed` with only
+  `{ self, had_name }`, and no name appears anywhere in them.
+- `admin-platform-fixes-02` section 13, `platform-auth`, `admin-portal-switch`
+  and the architecture boundary test pass unchanged.
+- `scripts/codex-loop-verify.sh` was removed in #97, so the full suites were
+  run by hand on the PR head in a clean worktree; the results are in the PR
+  body.
+- Environment note: in a worktree nested inside the main checkout, with
+  `node_modules` symlinked, `academy-registration-page` and
+  `payment-failed-card` fail with a duplicate-React `useContext` error. Both
+  pass on this branch and on `main` in a worktree outside the checkout, so
+  it's the folder layout, not the code.
+
+**Blockers and decisions:** none. No migration, so no `GATE-MIGRATE`.
+`tests/contracts/admin-platform-fixes-02.test.ts` section 13 needed no
+change: the list shape only gained a field.
+
+**Exact next step:** the review bot reviews and merges the PR. RE-05 (the
+new home, "Hi Andrea") can start once RE-02, RE-03 and RE-04 are all merged;
+the orchestration session coordinates that.
+
 ## 2026-11-08 - Local database tests stop leaving audit rows and temp folders behind
 
 **Agent/package:** Claude Code. No work-package ID: Christian asked for the

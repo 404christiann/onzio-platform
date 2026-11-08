@@ -1,3 +1,26 @@
+## 2026-11-08 - ADMIN-RE-04 people's names, and members route hardening
+
+- **Status:** `in_progress` on branch `claude/admin-re-04-names-a3a3ad`,
+  rebased onto `main` `8a2fbd8`, with the PR open. No migration, and nothing visible
+  changes until a name is saved.
+- **What it adds:**
+  - `POST /api/admin/members` action `set-name`: anyone active names
+    themselves, only an owner names someone else. The club comes from host
+    and session. `add` caps the email at 254.
+  - `assertClubMemberSession` and `setMemberDisplayName` in
+    `lib/owner-admin-membership.ts`; the audit event `membership_renamed`
+    carries no name. The members lists return `displayName`.
+  - `normalizeDisplayName` in `lib/admin-greeting.ts`, matching the database
+    check (1-120 characters after trimming).
+  - The old members page shows saved names, falling back to the email.
+- **Verification:**
+  - New contract test 12/12, `owner-admin-membership` database test 5/5,
+    and section 13 of `admin-platform-fixes-02` unchanged and green.
+  - Full suites run by hand on the PR head (the verify script was removed
+    in #97); results are in the PR body.
+- **Exact next step:** the bot merges, then RE-05 once RE-02, 03 and 04 are
+  all on `main`.
+
 ## 2026-11-08 - Local database tests stop leaving audit rows and temp folders behind
 
 - **Status:** `in_progress` on branch `agent/test-leftover-cleanup` from
