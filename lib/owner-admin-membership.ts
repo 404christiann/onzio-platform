@@ -3,6 +3,7 @@ import {
   isClubSessionFresh,
   verifyAccessTokenClaims,
 } from "@/lib/auth-session";
+import { normalizeDisplayName } from "@/lib/admin-greeting";
 import { isValidTimeZone } from "@/lib/club-time";
 import { failContract } from "@/lib/contract-error";
 import { createServiceRoleClient } from "@/lib/supabase-service-role";
@@ -24,6 +25,18 @@ export type ClubOwnerSession = {
   actorId: string;
   clubId: string;
   client: ServiceClient;
+};
+
+/** Any active owner or admin of the club, with their role (ADMIN-RE-04). */
+export type ClubMemberSession = ClubOwnerSession & { role: "owner" | "admin" };
+
+type SessionCheckOptions = {
+  client?: ServiceClient;
+  now?: Date;
+  verifyAccessToken?: (accessToken: string) => Promise<{
+    sub: string;
+    amr: unknown;
+  }>;
 };
 
 const emailSchema = z.string().trim().email().max(254).transform((value) =>
@@ -62,18 +75,13 @@ async function writeOwnerAudit(
   if (result.error) failContract("MEMBERSHIP_AUDIT_FAILED");
 }
 
-export async function assertClubOwnerSession(
+async function assertActiveMembership(
   accessToken: string,
   clubId: string,
-  options?: {
-    client?: ServiceClient;
-    now?: Date;
-    verifyAccessToken?: (accessToken: string) => Promise<{
-      sub: string;
-      amr: unknown;
-    }>;
-  },
-): Promise<ClubOwnerSession> {
+  roles: Array<"owner" | "admin">,
+  failureCode: string,
+  options?: SessionCheckOptions,
+): Promise<ClubMemberSession> {
   const client = options?.client ?? createServiceRoleClient();
   const claims = options?.verifyAccessToken
     ? await options.verifyAccessToken(accessToken)
@@ -91,7 +99,7 @@ export async function assertClubOwnerSession(
     .select("role,status,clubs!inner(lifecycle)")
     .eq("club_id", clubId)
     .eq("user_id", claims.sub)
-    .eq("role", "owner")
+    .in("role", roles)
     .eq("status", "active")
     .maybeSingle();
   const club = membership.data?.clubs as unknown as
@@ -99,17 +107,57 @@ export async function assertClubOwnerSession(
     | Array<{ lifecycle?: string }>
     | undefined;
   const lifecycle = Array.isArray(club) ? club[0]?.lifecycle : club?.lifecycle;
-  if (membership.error || !membership.data || lifecycle === "archived") {
-    failContract("OWNER_REQUIRED");
+  const role = membership.data?.role;
+  if (
+    membership.error ||
+    !membership.data ||
+    lifecycle === "archived" ||
+    (role !== "owner" && role !== "admin")
+  ) {
+    failContract(failureCode);
   }
-  return { actorId: claims.sub, clubId, client };
+  return { actorId: claims.sub, clubId, client, role };
+}
+
+export async function assertClubOwnerSession(
+  accessToken: string,
+  clubId: string,
+  options?: SessionCheckOptions,
+): Promise<ClubOwnerSession> {
+  const { actorId, client } = await assertActiveMembership(
+    accessToken,
+    clubId,
+    ["owner"],
+    "OWNER_REQUIRED",
+    options,
+  );
+  return { actorId, clubId, client };
+}
+
+/**
+ * ADMIN-RE-04: the same fresh-session and active-membership check as
+ * assertClubOwnerSession, for things any owner or admin may do for themselves,
+ * such as saving their own name.
+ */
+export async function assertClubMemberSession(
+  accessToken: string,
+  clubId: string,
+  options?: SessionCheckOptions,
+): Promise<ClubMemberSession> {
+  return await assertActiveMembership(
+    accessToken,
+    clubId,
+    ["owner", "admin"],
+    "CLUB_MEMBER_REQUIRED",
+    options,
+  );
 }
 
 async function listActiveMembers(session: ClubOwnerSession, role: "owner" | "admin") {
   const memberships = await session.client
     .schema("onzio")
     .from("club_members")
-    .select("user_id,status,created_at")
+    .select("user_id,status,created_at,display_name")
     .eq("club_id", session.clubId)
     .eq("role", role)
     .eq("status", "active")
@@ -124,6 +172,7 @@ async function listActiveMembers(session: ClubOwnerSession, role: "owner" | "adm
       return {
         userId: membership.user_id,
         email: identity.data.user?.email ?? "Unavailable",
+        displayName: (membership.display_name as string | null) ?? null,
         status: membership.status,
         createdAt: membership.created_at,
       };
@@ -301,6 +350,65 @@ export async function removeClubAdmin(
     throw error;
   }
   return { userId: parsedUserId, status: "removed" as const };
+}
+
+/**
+ * ADMIN-RE-04: save what the admin calls a person. Anyone active in the club may
+ * name themselves; only an owner may name someone else, and only someone active
+ * in this club. The audit event never carries the name (no PII in audit).
+ */
+export async function setMemberDisplayName(
+  session: ClubMemberSession,
+  input: { userId?: string; displayName: string },
+): Promise<{ userId: string; displayName: string }> {
+  const displayName = normalizeDisplayName(input.displayName);
+  if (displayName === null) failContract("INVALID_DISPLAY_NAME");
+  const targetId = input.userId === undefined
+    ? session.actorId
+    : z.string().uuid().parse(input.userId);
+  const self = targetId === session.actorId;
+  if (!self && session.role !== "owner") failContract("OWNER_REQUIRED");
+
+  const membership = await session.client
+    .schema("onzio")
+    .from("club_members")
+    .select("status,display_name")
+    .eq("club_id", session.clubId)
+    .eq("user_id", targetId)
+    .maybeSingle();
+  if (membership.error) failContract("MEMBERSHIP_READ_FAILED");
+  if (!membership.data || membership.data.status !== "active") {
+    failContract("MEMBERSHIP_REQUIRED");
+  }
+  const previous = (membership.data.display_name as string | null) ?? null;
+
+  const update = await session.client
+    .schema("onzio")
+    .from("club_members")
+    .update({ display_name: displayName, updated_at: new Date().toISOString() })
+    .eq("club_id", session.clubId)
+    .eq("user_id", targetId)
+    .eq("status", "active")
+    .select("user_id");
+  if (update.error) failContract("MEMBERSHIP_MUTATION_FAILED");
+  if (!update.data || update.data.length === 0) failContract("MEMBERSHIP_REQUIRED");
+
+  try {
+    await writeOwnerAudit(session, {
+      operation: "membership_renamed",
+      userId: targetId,
+      payload: { self, had_name: previous !== null },
+    });
+  } catch (error) {
+    await session.client
+      .schema("onzio")
+      .from("club_members")
+      .update({ display_name: previous })
+      .eq("club_id", session.clubId)
+      .eq("user_id", targetId);
+    throw error;
+  }
+  return { userId: targetId, displayName };
 }
 
 /**
