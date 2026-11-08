@@ -1,5 +1,57 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-00: build plan for the reimagined club admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-00`. Christian approved the plan
+("I approve it") and answered its open decisions. Branch
+`claude/admin-reimagined-build-plan` from `main` `ab2e439`. **Status:**
+`in_progress`. PR #93 is open. This is a documentation change only: no
+code, no migration, no production change.
+
+**Completed work:**
+
+- **Wrote the build plan.** Claude Fable drafted it after reading `main` and
+  the design workspace (`~/Downloads/onzio-admin-reimagined`), and Claude
+  Code spot-checked its main claims at `main`.
+- **Put the plan at the top of `docs/admin-portal-redesign-plan.md`.** The
+  August 2026 shell plan stays below it for history.
+- **The plan has 23 packages,** `ADMIN-RE-01` to `ADMIN-RE-23`.
+  - **First slice:** the foundation migration, the per-club switch, club
+    time, people's names, the new home, Enter a score, Add a game, See
+    registrations, and Edit my website under the new edit bar.
+  - **Switch-on:** Rose City first, then Diverse City.
+  - **Later slices:** the rest of the admin, then retiring the classic admin.
+- **Named stops:** `GATE-MIGRATE`, `GATE-DEPLOY`, `GATE-FLIP-RC`,
+  `GATE-FLIP-DC` and `GATE-DATA-DC-TZ`.
+- **Christian's decisions are recorded in the plan.** The main ones:
+  - Each club's time zone is set automatically from the owner's browser.
+  - The public schedule moves to club time in `ADMIN-RE-03`.
+  - No per-browser "old admin" link.
+  - No BoardUI.
+
+**Files changed:** `docs/admin-portal-redesign-plan.md`, this file and
+`HANDOFF.md`.
+
+**Verification:** documentation only. Paths cited in the plan were checked at
+`main` `ab2e439`. No tests run, because no code changed.
+
+**Blockers:** none. Production facts the plan couldn't verify (Rose City's
+admin hostname, current text lengths, the deploy-on-merge behavior) are listed
+in the plan's "What I could not verify" section. They're checked inside each
+package's gates.
+
+**Review round 1 (onzio-bot):** two Medium findings, both fixed.
+
+- **Gate wording now matches the standing review-bot rule.** The bot runs
+  the migration procedure and merges, and merging deploys. The club switches
+  stay human stops.
+- **The public schedule and Next match move to club time in `ADMIN-RE-03`.**
+  Risk 7 and `ADMIN-RE-21` now say the same, and the Next match files are
+  named.
+
+**Exact next step:** merge PR #93, then start `ADMIN-RE-01`, the
+foundation migration, on a fresh branch from `main`.
+
 ## 2026-11-05 - MAIN-BROWSER-TEST-FIXES: three browser checks that failed on clean main
 
 **Agent/package:** Claude Code, `MAIN-BROWSER-TEST-FIXES` (Christian
