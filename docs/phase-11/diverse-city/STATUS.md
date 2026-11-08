@@ -1,5 +1,97 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-01: foundation migration for the reimagined admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-01`. Christian approved starting
+it: "Yes, start it", relayed by the orchestration session. Branch
+`claude/admin-re-01-foundation` from `main` `9890eee`. **Status:**
+`in_progress`. The migration is applied to production, and the PR is open for
+the review bot. Christian gave the go on 2026-11-08 ("You can apply it if you
+can handle that case"), on the condition that a person with no saved name
+still displays properly. That's handled below.
+
+**Completed work:**
+
+- **New migration**
+  `supabase/migrations/20261108120000_admin_reimagined_foundation.sql`. It's
+  additive: every column has a default or is nullable, and there's no grant
+  or policy change.
+  - `onzio.clubs.admin_portal`: `classic` or `reimagined`, default
+    `classic`.
+  - `onzio.clubs.admin_flags`: a JSON object, default `{}`.
+  - `onzio.clubs.time_zone`: an IANA zone, default `America/Los_Angeles`,
+    with a shape check and a 64-character cap.
+  - `onzio.clubs.time_zone_set_at`: null until the time zone is confirmed.
+  - `onzio.club_members.display_name`: optional, 1 to 120 characters after
+    trimming.
+- **Two slug-scoped data updates:** Diverse City gets `America/Chicago`
+  with `time_zone_set_at` set, and Rose City gets `time_zone_set_at` set.
+  This stops the automatic browser set (`ADMIN-RE-02`) from overriding either
+  club.
+- **Regenerated `lib/database.generated.ts`.**
+- **The no-name fallback, `lib/admin-greeting.ts`.** It was pulled forward
+  from `ADMIN-RE-04` because Christian asked for it before applying.
+  - `adminGreeting(displayName)` says "Hi Marco" (first word of the saved
+    name) or "Welcome back" when no name is saved.
+  - `memberLabel(displayName, email)` shows the saved name, or otherwise the
+    sign-in email.
+  - Tested in `lib/__tests__/admin-greeting.test.ts`. The plan's RE-01 and
+    RE-04 entries are updated to match.
+- **New tests:**
+  - `tests/database/admin-reimagined-foundation.test.ts` covers defaults, the
+    accepted values, rejected bad values, the operator-only club columns
+    (permission denied for members), the name limits, and that a member reads
+    only their own name.
+  - `tests/contracts/admin-reimagined-foundation.test.ts` checks that the
+    migration is additive and its only updates are the two slug-scoped ones.
+    It also pins that `lib/club-context.ts`'s tenant selects never include the
+    new columns (the 2026-08-14 lesson).
+
+**Files changed:** the migration, `lib/database.generated.ts`,
+`lib/admin-greeting.ts`, the three test files,
+`docs/admin-portal-redesign-plan.md`, this file and `HANDOFF.md`.
+
+**Verification (local, on the branch):**
+
+- The migration applied to local Supabase with `supabase migration up
+  --local` under `scripts/with-local-db-lock.sh`.
+- `npm run db:types:check`: types match the local schema.
+- `npx tsc --noEmit`: passed.
+- ESLint on the new files: clean.
+- `npm run test:contracts`: 1,540/1,540.
+- Unit and legacy suites: 2,389 passed, 1 skipped.
+- `npm run test:db` with `.env.test` exported: 48 files, 1,001/1,001.
+- `lib/__tests__/admin-greeting.test.ts`: 3/3. `tsc` and ESLint stayed clean
+  after it was added.
+
+**Production (`GATE-MIGRATE` and `GATE-DATA-DC-TZ`, 2026-11-08):**
+
+- `supabase link --project-ref ioalthwsdrlzrubomrow` worked, with no 403.
+- Before: `supabase migration list --linked` showed every `main` migration
+  on Remote, with only `20261108120000` local-only.
+- `supabase db push --linked --dry-run` listed only
+  `20261108120000_admin_reimagined_foundation.sql`.
+- `supabase db push --linked` applied it.
+- After: `migration list --linked` shows `20261108120000` on both Local and
+  Remote.
+- The live rows, read back with `supabase db query --linked`. All three
+  clubs are on `admin_portal = classic` with `admin_flags = {}`.
+  - `diverse-city`: `America/Chicago`, confirmed.
+  - `rose-city`: `America/Los_Angeles`, confirmed.
+  - `lions`: `America/Los_Angeles`, not confirmed (the default).
+  - No member has a `display_name` yet.
+- Smoke check: `https://diversecityfc.com/` returns 200 with no
+  `UNKNOWN_TENANT`. `https://rosecityfutbolclub.com/` returns its "Not found"
+  page, which is expected because the site is paused.
+- No code that reads the new columns is deployed yet, so nothing visible
+  changed.
+
+**Blockers and decisions:** none. The bot reviews the PR. Its migration step
+will find nothing left to apply.
+
+**Exact next step:** the review bot merges the PR. Then start `ADMIN-RE-02`
+(read the admin switch, fail-safe, and set the time zone automatically).
+
 ## 2026-11-08 - ADMIN-RE-00: build plan for the reimagined club admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-00`. Christian approved the plan
