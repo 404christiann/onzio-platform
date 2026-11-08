@@ -5,8 +5,8 @@
 **Agent/package:** Claude Code, `ADMIN-RE-00`. Christian approved the plan
 ("I approve it") and answered its open decisions. Branch
 `claude/admin-reimagined-build-plan` from `main` `ab2e439`. **Status:**
-`in_progress`. The plan is written; the PR isn't opened yet. This is a
-documentation change only: no code, no migration, no production change.
+`in_progress`. PR #93 is open. This is a documentation change only: no
+code, no migration, no production change.
 
 **Completed work:**
 
@@ -40,8 +40,17 @@ admin hostname, current text lengths, the deploy-on-merge behavior) are listed
 in the plan's "What I could not verify" section. They're checked inside each
 package's gates.
 
-**Exact next step:** open the PR. Once it's merged, start `ADMIN-RE-01`,
-the foundation migration, on a fresh branch from `main`.
+**Review round 1 (onzio-bot):** two Medium findings, both fixed.
+
+- **Gate wording now matches the standing review-bot rule.** The bot runs
+  the migration procedure and merges, and merging deploys. The club switches
+  stay human stops.
+- **The public schedule and Next match move to club time in `ADMIN-RE-03`.**
+  Risk 7 and `ADMIN-RE-21` now say the same, and the Next match files are
+  named.
+
+**Exact next step:** merge PR #93, then start `ADMIN-RE-01`, the
+foundation migration, on a fresh branch from `main`.
 
 ## 2026-11-05 - MAIN-BROWSER-TEST-FIXES: three browser checks that failed on clean main
 
