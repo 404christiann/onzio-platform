@@ -1,3 +1,32 @@
+## 2026-11-08 - ADMIN-RE-01 foundation migration for the reimagined admin
+
+- **Status:** `in_progress` on branch `claude/admin-re-01-foundation` from
+  `main` `9890eee`. It's pushed, with no PR, and not applied to production.
+  Christian approved starting it.
+- **What it adds:** the migration
+  `20261108120000_admin_reimagined_foundation.sql` puts four columns on
+  `onzio.clubs`:
+  - `admin_portal`, default `classic`
+  - `admin_flags`
+  - `time_zone`, default Los Angeles
+  - `time_zone_set_at`
+
+  It also adds `onzio.club_members.display_name`. Diverse City is set to
+  Chicago, and both live clubs are marked confirmed. All additive, with no
+  grants or policies.
+- **Verification:**
+  - Local apply passed, and the database types match.
+  - tsc and ESLint are clean.
+  - Contracts: 1,540/1,540.
+  - Unit suites: 2,389 passed, 1 skipped.
+  - Database suite: 1,001/1,001.
+  - Production: the read-only `migration list --linked` matches `main`, and
+    the dry run would push only this migration.
+- **Waiting on Christian:** the go for `GATE-DATA-DC-TZ` and `GATE-MIGRATE`
+  (`supabase db push --linked`). Then the PR.
+- **Exact next step:** apply on Christian's go, confirm with `migration list
+  --linked`, open the PR, then start `ADMIN-RE-02`.
+
 ## 2026-11-08 - ADMIN-RE-00 build plan for the reimagined club admin
 
 - **Status:** `in_progress` on branch `claude/admin-reimagined-build-plan`

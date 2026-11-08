@@ -382,6 +382,7 @@ export type Database = {
         Row: {
           club_id: string
           created_at: string
+          display_name: string | null
           removed_at: string | null
           role: string
           status: string
@@ -391,6 +392,7 @@ export type Database = {
         Insert: {
           club_id: string
           created_at?: string
+          display_name?: string | null
           removed_at?: string | null
           role: string
           status?: string
@@ -400,6 +402,7 @@ export type Database = {
         Update: {
           club_id?: string
           created_at?: string
+          display_name?: string | null
           removed_at?: string | null
           role?: string
           status?: string
@@ -516,6 +519,8 @@ export type Database = {
       clubs: {
         Row: {
           accent_color: string | null
+          admin_flags: Json
+          admin_portal: string
           archived_at: string | null
           created_at: string
           id: string
@@ -529,10 +534,14 @@ export type Database = {
           store_enabled: boolean
           stripe_price_id: string | null
           tier: string
+          time_zone: string
+          time_zone_set_at: string | null
           updated_at: string
         }
         Insert: {
           accent_color?: string | null
+          admin_flags?: Json
+          admin_portal?: string
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -546,10 +555,14 @@ export type Database = {
           store_enabled?: boolean
           stripe_price_id?: string | null
           tier?: string
+          time_zone?: string
+          time_zone_set_at?: string | null
           updated_at?: string
         }
         Update: {
           accent_color?: string | null
+          admin_flags?: Json
+          admin_portal?: string
           archived_at?: string | null
           created_at?: string
           id?: string
@@ -563,6 +576,8 @@ export type Database = {
           store_enabled?: boolean
           stripe_price_id?: string | null
           tier?: string
+          time_zone?: string
+          time_zone_set_at?: string | null
           updated_at?: string
         }
         Relationships: []

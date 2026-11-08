@@ -1,5 +1,78 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-01: foundation migration for the reimagined admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-01`. Christian approved starting
+it: "Yes, start it", relayed by the orchestration session. Branch
+`claude/admin-re-01-foundation` from `main` `9890eee`. **Status:**
+`in_progress`. Built and tested locally, and the branch is pushed. No PR yet,
+and nothing is applied to production. The migration also changes two live
+club rows (`GATE-DATA-DC-TZ`), so it waits for Christian's explicit go.
+
+**Completed work:**
+
+- **New migration**
+  `supabase/migrations/20261108120000_admin_reimagined_foundation.sql`. It's
+  additive: every column has a default or is nullable, and there's no grant
+  or policy change.
+  - `onzio.clubs.admin_portal`: `classic` or `reimagined`, default
+    `classic`.
+  - `onzio.clubs.admin_flags`: a JSON object, default `{}`.
+  - `onzio.clubs.time_zone`: an IANA zone, default `America/Los_Angeles`,
+    with a shape check and a 64-character cap.
+  - `onzio.clubs.time_zone_set_at`: null until the time zone is confirmed.
+  - `onzio.club_members.display_name`: optional, 1 to 120 characters after
+    trimming.
+- **Two slug-scoped data updates:** Diverse City gets `America/Chicago`
+  with `time_zone_set_at` set, and Rose City gets `time_zone_set_at` set.
+  This stops the automatic browser set (`ADMIN-RE-02`) from overriding either
+  club.
+- **Regenerated `lib/database.generated.ts`.**
+- **New tests:**
+  - `tests/database/admin-reimagined-foundation.test.ts` covers defaults, the
+    accepted values, rejected bad values, the operator-only club columns
+    (permission denied for members), the name limits, and that a member reads
+    only their own name.
+  - `tests/contracts/admin-reimagined-foundation.test.ts` checks that the
+    migration is additive and its only updates are the two slug-scoped ones.
+    It also pins that `lib/club-context.ts`'s tenant selects never include the
+    new columns (the 2026-08-14 lesson).
+
+**Files changed:** the migration, `lib/database.generated.ts`, the two test
+files, this file and `HANDOFF.md`.
+
+**Verification (local, on the branch):**
+
+- The migration applied to local Supabase with `supabase migration up
+  --local` under `scripts/with-local-db-lock.sh`.
+- `npm run db:types:check`: types match the local schema.
+- `npx tsc --noEmit`: passed.
+- ESLint on the new files: clean.
+- `npm run test:contracts`: 1,540/1,540.
+- Unit and legacy suites: 2,389 passed, 1 skipped.
+- `npm run test:db` with `.env.test` exported: 48 files, 1,001/1,001.
+
+**Production check (read-only):**
+
+- `supabase link --project-ref ioalthwsdrlzrubomrow` worked, with no 403.
+- `supabase migration list --linked` shows every `main` migration applied on
+  Remote. Only `20261108120000` is local-only.
+- `supabase db push --linked --dry-run` would push only
+  `20261108120000_admin_reimagined_foundation.sql`.
+- Nothing was pushed.
+
+**Blockers and decisions:**
+
+- `GATE-DATA-DC-TZ` and `GATE-MIGRATE` wait for Christian's explicit go.
+- Opening a PR would let the review bot apply the migration and merge it,
+  under `docs/agents/review-bot-supabase.md`. So the PR isn't opened until
+  Christian says go.
+
+**Exact next step:** on Christian's go, run `supabase db push --linked`, then
+`supabase migration list --linked`, which must show `20261108120000` on
+Remote. Open the PR after that, or open the PR and let the bot run the same
+procedure. Then start `ADMIN-RE-02`.
+
 ## 2026-11-08 - ADMIN-RE-00: build plan for the reimagined club admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-00`. Christian approved the plan
