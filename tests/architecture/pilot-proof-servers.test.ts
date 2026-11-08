@@ -59,7 +59,7 @@ function fixture(mode = "normal", config = "export default {};") {
   `);
   put(root, "node_modules/next/dist/cli/next-start.js", `exports.nextStart = async (options, root) => {
     const fs = require("node:fs");
-    fs.mkdirSync("output", {recursive:true}); fs.writeFileSync("output/pid", String(process.pid));
+    fs.mkdirSync("output", {recursive:true}); fs.writeFileSync("output/pid.tmp", String(process.pid)); fs.renameSync("output/pid.tmp", "output/pid");
     const mode = ${JSON.stringify(mode)};
     if (mode === "fail") throw new Error("private-start-failure");
     if (mode === "malformed") process.send({ kind: "ready", secret: "private-ipc" });
@@ -365,6 +365,49 @@ describe("owned proof servers", () => {
     } finally { kill.mockRestore(); }
     expect(injected).toBe(true);
     assertClean(items);
+  }, 15_000);
+  it("keeps waiting while the reaped owned group only holds zombies", async () => {
+    const items = roots();
+    const originalKill = process.kill.bind(process);
+    let targetPid = 0;
+    let zombieProbes = 0;
+    const kill = vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+      if (pid === -targetPid && signal === 0 && zombieProbes < 3) {
+        zombieProbes++;
+        throw Object.assign(new Error("Process group holds only zombies"), { code: "EPERM" });
+      }
+      return originalKill(pid, signal);
+    });
+    try {
+      await expect(withPilotProofServers(items, async () => {
+        targetPid = Number(readFileSync(join(items.changed, "output/pid"), "utf8"));
+        throw new Error("capture failed");
+      })).rejects.toThrow("capture failed");
+    } finally { kill.mockRestore(); }
+    expect(zombieProbes).toBe(3);
+    assertClean(items);
+  }, 15_000);
+  it("stops every owned group before reporting that one could not be controlled", async () => {
+    const items = roots();
+    const originalKill = process.kill.bind(process);
+    let targetPid = 0;
+    let siblings: number[] = [];
+    const kill = vi.spyOn(process, "kill").mockImplementation((pid, signal) => {
+      if (pid === -targetPid) throw Object.assign(new Error("Process group cannot be controlled"), { code: "EIO" });
+      return originalKill(pid, signal);
+    });
+    try {
+      await expect(withPilotProofServers(items, async () => {
+        targetPid = Number(readFileSync(join(items.changed, "output/pid"), "utf8"));
+        siblings = [items.baseline, items.restored].map(root => Number(readFileSync(join(root, "output/pid"), "utf8")));
+        throw new Error("capture failed");
+      })).rejects.toThrow("Could not control owned proof process group");
+      for (const pid of siblings) expect(() => originalKill(pid, 0)).toThrow();
+      expect(existsSync(join(items.changed, ".onzio-pilot-build.lock"))).toBe(true);
+    } finally {
+      kill.mockRestore();
+      if (targetPid > 0) try { originalKill(-targetPid, "SIGKILL"); } catch { /* group already gone */ }
+    }
   }, 15_000);
   it("cleans up on callback failure and escalates TERM to KILL before releasing locks", async () => {
     const items = roots("stubborn");
