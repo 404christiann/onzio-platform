@@ -4,7 +4,7 @@ import { expect, it } from "vitest";
 import { z } from "zod";
 import { type HomepageSaveRequest } from "@/lib/homepage-editor/contract";
 import { CLUB_IDS, USER_IDS } from "../fixtures/entities";
-import { coordinationBinding, coordinationDigests as digests, openCoordinationProof, type CoordinationProof } from "../helpers/site-coordination-proof";
+import { coordinationBinding, coordinationDigests as digests, discardVerifiedCleanJournal, openCoordinationProof, type CoordinationProof } from "../helpers/site-coordination-proof";
 
 const tokens = z.object({ revision: z.string(), designRevision: z.string() }).passthrough();
 async function actor(db: Client, userId: string = USER_IDS.ownerAal2) {
@@ -34,7 +34,7 @@ async function waits(observer: Client, pid: number) {
 }
 async function fixture(action: (proof: CoordinationProof) => Promise<void>) {
   const proof = await openCoordinationProof();
-  try { await action(proof); } finally { await proof.close(); }
+  try { await action(proof); } finally { await proof.close(); await discardVerifiedCleanJournal(proof.recoveryFile); }
 }
 
 it("keeps explicit legacy, missing and authored states distinct and couples the exact projection", async () => {
