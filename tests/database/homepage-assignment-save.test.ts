@@ -67,7 +67,7 @@ async function fingerprint(db: Client, clubId: string) {
     (select to_jsonb(h) from onzio.homepage_hero_content h where club_id=$1) as hero,
     (select to_jsonb(r) from onzio_private.homepage_revisions r where club_id=$1) as revision,
     (select jsonb_agg(to_jsonb(r) order by operation_id) from onzio_private.homepage_save_receipts r where club_id=$1) as receipts,
-    (select jsonb_agg(to_jsonb(a) order by id) from onzio.audit_events a where club_id=$1) as audit`, [clubId])).rows[0];
+    (select count(*)::text||':'||coalesce(max(id),0)::text from onzio.audit_events where club_id=$1) as audit`, [clubId])).rows[0];
 }
 async function otherTokens(db: Client, clubId: string) {
   return (await db.query(`select

@@ -69,7 +69,7 @@ async function fingerprint(id: string = club) {
       (select jsonb_agg(to_jsonb(p) order by id) from onzio.homepage_slideshow_photos p where club_id=$1) as photos,
       (select to_jsonb(r) from onzio_private.homepage_revisions r where club_id=$1) as revision,
       (select jsonb_agg(to_jsonb(r) order by actor_id,operation_id) from onzio_private.homepage_save_receipts r where club_id=$1) as receipts,
-      (select jsonb_agg(to_jsonb(a) order by id) from onzio.audit_events a where club_id=$1) as audit`, [id])).rows[0];
+      (select count(*)::text||':'||coalesce(max(id),0)::text from onzio.audit_events where club_id=$1) as audit`, [id])).rows[0];
   } finally { await db.query("rollback to savepoint observation"); }
 }
 async function denied(payload: unknown, message: string, id: string = club) {

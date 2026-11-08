@@ -1,5 +1,92 @@
 # Diverse City FC Status
 
+## 2026-11-08 - Faster, steadier local database tests, and the Codex runner removed
+
+**Agent/package:** Claude Code. No work-package ID: Christian asked for it
+directly. Branch `agent/test-db-speed` from `main` `3e70cc7`. **Status:**
+`in_progress`. It's built and tested locally, and the PR is open for the
+review bot. There is no migration and no app code change.
+
+**What was slow:** `npm run test:db` took about 26 minutes. Five files
+(contact, about, shop, tryouts, homepage content policy) were about 91% of
+it. Each one's `fingerprint()` helper turned every audit row for the shared
+test club Alpha into JSON on each call. The local database held 57,128 Alpha
+audit rows, so one call took seconds, and the files call it hundreds of
+times. Under load the 15 second test limit tripped, which is why the verify
+script kept marking those files flaky and rerunning them.
+
+**Completed work:**
+
+- The five files and `homepage-assignment-save.test.ts` now snapshot audit
+  rows as `count(*)||':'||max(id)`, the check `programs-content-policy`
+  already used. It still proves no audit row was added or removed. It no
+  longer notices an existing audit row edited in place, and nothing in the
+  database blocks that.
+- Two helpers had the same problem and caused the only other failures:
+  `tests/helpers/site-coordination-proof.ts` (`protectedFingerprint`) and
+  `tests/helpers/academy-coordination-content.ts`
+  (`academyTenantFingerprint`). Both now use a per-club count and highest
+  audit id. `site-coordination` and `site-coordination-full-site` now pass.
+- New guard: `tests/architecture/database-test-audit-snapshots.test.ts`
+  fails if a database test or helper aggregates every audit row again. It
+  catches the old code in all six files. It can't see a query built with a
+  variable table name.
+- Christian asked for `scripts/codex-loop-verify.sh` and its test, then
+  `scripts/codex-loop.sh` and `scripts/codex-loop.skip`, to be removed.
+  `tests/README.md` and `docs/agents/review-bot-contract.md` are updated. The
+  contract now says the PR author runs the relevant suites and lists them in
+  the PR body.
+
+**Files changed:** the six test files above, the two helpers, the new
+architecture test, `tests/README.md`, `docs/agents/review-bot-contract.md`,
+the four deleted scripts, this file and `HANDOFF.md`.
+
+**Verification (all on the local database, under the lock):**
+
+| | Before | After, old data | After, cleaned data |
+|---|---|---|---|
+| Five files | 1,137s, 3 timeouts | 59s and 56s, 444/444 | in the full runs |
+| All of `test:db` | about 26 min | 127s and 102s, 1,004/1,004 | 98s and 103s, 1,004/1,004 |
+
+- Five files before, per file: contact 406s, about 266s, shop 134s, tryouts
+  204s, homepage 119s.
+- One earlier full run, before the two helper fixes, took 295s with 5
+  failures, all in the two `site-coordination` files.
+- Type-check clean, lint clean on changed files, architecture 14 files
+  (424 passed, 1 skipped), `node --test scripts/provision-worktree-env.test.mjs`
+  8/8.
+- Not run: contracts, legacy and browser suites (no app code changed). The
+  old verify script no longer exists, so there is no verify table. The full
+  `test:db` result is the evidence.
+- Local database changes: for the cleaned-data runs I saved all 76,889 audit
+  rows to `~/Downloads/onzio-audit-events-backup-2026-11-08.sql`, deleted the
+  74,541 rows for the three shared test clubs (Alpha 57,128, Bravo 16,797,
+  Charlie 616), ran, then restored them. The counts match. Separately I
+  removed one `pilot` club (with its domain, member, 3 presentation documents,
+  hero content, revision, epoch, audit row and proof schema) that a timed-out
+  run of mine left behind. I stopped ADMIN-RE-03's verify run to free the
+  database lock.
+
+**Blockers or unresolved decisions (follow-ups, not done here):**
+
+- One full `test:db` run adds about 708 Alpha audit rows that nothing cleans
+  up: `registration-rls` 380, `homepage-story-programs-page-content` 82,
+  `program-media` 69, `schema-rls` 38, `registration-form-links` 27,
+  `storage-audit` 23, `diverse-city-query-boundaries` 21,
+  `authenticated-rls` 16, `tryouts-page-content` 14,
+  `diverse-city-admin-public-acceptance` 13, `media-reference-retirement` 10,
+  `club-identity` 7, `diverse-city-domains` 6, `homepage-upload-cleanup` 2.
+  The bulk of the 57,000 came from browser suites and scripts I did not
+  measure. The fix is not small or safe, so it is left.
+- `site-coordination-proof.ts` leaves a temp folder behind after each run
+  (110 under `/var/folders/.../T/onzio-academy-proof-*`).
+- `vercel.json` still lists the `docs/codex-loop-guide` branch. Harmless.
+- Old `HANDOFF.md` and this file's earlier entries still describe the removed
+  scripts. They are history and were left alone.
+
+**Exact next step:** the bot reviews and merges the PR. Then someone decides
+whether to clean up the Alpha rows the listed suites leave behind.
+
 ## 2026-11-08 - ADMIN-RE-02: the admin switch and the automatic time zone
 
 **Agent/package:** Claude Code, `ADMIN-RE-02`. Christian said "Yes, start it".

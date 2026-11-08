@@ -1,3 +1,33 @@
+## 2026-11-08 - Faster, steadier local database tests, and the Codex runner removed
+
+- **Status:** `in_progress` on branch `agent/test-db-speed` from `main`
+  `3e70cc7`, with the PR open. No migration and no app code change.
+- **What was slow:** `npm run test:db` took about 26 minutes. In five
+  content-policy files, `fingerprint()` turned every audit row for the shared
+  test club Alpha (57,128 of them) into JSON on each call, so one call took
+  seconds and the 15 second test limit tripped under load.
+- **What changed:**
+  - Those five files and `homepage-assignment-save` now snapshot audit rows as
+    `count(*)||':'||max(id)`. Two helpers
+    (`site-coordination-proof.ts`, `academy-coordination-content.ts`) got the
+    same fix, which also fixed the `site-coordination` failures.
+  - New guard `tests/architecture/database-test-audit-snapshots.test.ts`
+    rejects an aggregate over every audit row.
+  - Removed `scripts/codex-loop-verify.sh`, its test, `scripts/codex-loop.sh`
+    and `scripts/codex-loop.skip`, at Christian's request. `tests/README.md`
+    and `docs/agents/review-bot-contract.md` are updated.
+- **Verification:**
+  - Five files 1,137s (3 timeouts) to about 58s. All of `test:db` about 26
+    minutes to 102 to 127s with the old data and 98 to 103s with it cleaned,
+    1,004/1,004 each time.
+  - Type-check, lint and the 14 architecture files pass.
+  - The cleaned-data runs used a backup of the audit table, now restored.
+    Details are in `STATUS.md`.
+- **Follow-ups:** about 708 Alpha audit rows per full run are never cleaned
+  up (`registration-rls` is the biggest, 380), and
+  `site-coordination-proof.ts` leaves a temp folder per run.
+- **Exact next step:** the bot reviews and merges.
+
 ## 2026-11-08 - ADMIN-RE-02 the admin switch and the automatic time zone
 
 - **Status:** `in_progress` on branch `claude/admin-re-02-switch` from

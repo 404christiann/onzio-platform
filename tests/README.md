@@ -12,26 +12,15 @@ Use the current requirements and recorded baseline in [HANDOFF.md](../HANDOFF.md
 when investigating a failure. Do not skip, weaken, or broadly mock a contract
 to obtain a passing run.
 
-## Verification script tests
+## Worktree env script tests
 
-`scripts/codex-loop-verify.sh` decides what the review bot treats as evidence, so its failure
-modes are pinned by stub-based tests. They build a throwaway git repository with stubbed
-`npm` and `npx`, so they need neither Supabase nor the real repository. Run them after any
-change to that script or to `verify_gate` in `scripts/codex-loop.sh`:
+`scripts/provision-worktree-env.sh` copies the local env files into a ticket worktree after
+checking they are loopback-only. Its stub-based tests need neither Supabase nor the real
+repository:
 
 ```bash
-node --test scripts/codex-loop-verify.test.mjs scripts/provision-worktree-env.test.mjs
+node --test scripts/provision-worktree-env.test.mjs
 ```
-
-`scripts/provision-worktree-env.sh` (copies the local env files into a ticket worktree after
-checking they are loopback-only) has its own tests in the second file.
-
-The script is built to be fast because ticket #48's run took 68 minutes in the verifier
-alone: a failing check is compared with the base by rerunning only its failing files, and
-the whole-suite run skips the contracts, architecture and database files that already ran
-as their own rows. The `pilot-*` architecture files (about 80% of that suite's time) are
-skipped unless the change touches a path they depend on or `CODEX_LOOP_PILOT_TESTS=1`. The
-tests pin all three behaviors.
 
 ## Configure local database tests
 
