@@ -6,21 +6,26 @@ import { FormEvent, useEffect, useState } from "react";
 import { AdminPage, AdminPageHeader, AdminPanel } from "@/components/admin/AdminPage";
 import { ADMIN_INPUT_CLASS, ADMIN_LABEL_CLASS } from "@/components/admin/form-styles";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { memberLabel } from "@/lib/admin-greeting";
 import { createClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 
-type AdminMember = { userId: string; email: string };
+type AdminMember = { userId: string; email: string; displayName: string | null };
 type OwnerMember = AdminMember & { isYou: boolean };
 
 type MessageTone = "success" | "destructive" | "warning";
 
 type MembershipMessage = { text: string; tone: MessageTone };
 
-/** Two-letter avatar-chip initials derived from an email's local part —
- *  admins are represented only by email, so there's no name to draw from.
- *  Mirrors the split-on-separator pattern AdminAccountMenu.tsx already uses
- *  for the account-menu chip. */
-function emailInitials(email: string | null): string {
+/** Two-letter avatar-chip initials: from the saved name when there is one
+ *  (ADMIN-RE-04), otherwise from the email's local part. Mirrors the
+ *  split-on-separator pattern AdminAccountMenu.tsx already uses for the
+ *  account-menu chip. */
+function memberInitials(email: string | null, displayName?: string | null): string {
+  const name = displayName?.trim();
+  if (name) {
+    return name.split(/\s+/).map((part) => [...part][0]).join("").slice(0, 2).toUpperCase();
+  }
   if (!email) return "?";
   const local = email.split("@")[0] ?? email;
   const initials = local
@@ -35,9 +40,11 @@ function emailInitials(email: string | null): string {
 
 function AvatarChip({
   email,
+  displayName,
   variant,
 }: {
   email: string | null;
+  displayName?: string | null;
   variant: "owner" | "admin";
 }) {
   return (
@@ -50,7 +57,7 @@ function AvatarChip({
           : "bg-muted text-muted-foreground",
       )}
     >
-      {emailInitials(email)}
+      {memberInitials(email, displayName)}
     </span>
   );
 }
@@ -119,6 +126,14 @@ const MEMBERSHIP_ERROR_MESSAGES = new Map<string, string>([
     "This administrator has already been removed. Refresh the page to see the current list.",
   ],
   [
+    "CLUB_MEMBER_REQUIRED",
+    "Only people who can sign in to this club's admin can change names here.",
+  ],
+  [
+    "INVALID_DISPLAY_NAME",
+    "A name needs between 1 and 120 characters. Check it and try again.",
+  ],
+  [
     "MEMBERSHIP_FAILED",
     "Something went wrong and the change didn't go through. Try again, and contact Onzio if it keeps happening.",
   ],
@@ -152,6 +167,8 @@ const MEMBERSHIP_MESSAGE_TONES: Record<string, MessageTone> = {
   MEMBERSHIP_AUDIT_FAILED: "warning",
   MEMBERSHIP_REQUIRED: "destructive",
   MEMBERSHIP_INACTIVE: "destructive",
+  CLUB_MEMBER_REQUIRED: "destructive",
+  INVALID_DISPLAY_NAME: "destructive",
   MEMBERSHIP_FAILED: "warning",
 };
 
@@ -253,6 +270,9 @@ export default function MembersPage() {
   // Every other active owner (decision 0013). Only Onzio adds or removes an
   // owner, so these rows never offer Remove.
   const otherOwners = owners.filter((owner) => !owner.isYou);
+  // A saved name shows instead of the email, with the email underneath; no
+  // name shows the email alone (memberLabel, ADMIN-RE-01).
+  const yourName = owners.find((owner) => owner.isYou)?.displayName ?? null;
   const totalAdminCount = admins.length + otherOwners.length + (showOwnerRow ? 1 : 0);
 
   return (
@@ -299,11 +319,14 @@ export default function MembersPage() {
         {showOwnerRow && (
           <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
             <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
-              <AvatarChip email={ownerEmail} variant="owner" />
+              <AvatarChip email={ownerEmail} displayName={yourName} variant="owner" />
               <div className="min-w-0">
                 <span className="block min-w-0 truncate text-sm">
-                  {ownerEmail ?? "Loading…"}
+                  {ownerEmail ? memberLabel(yourName, ownerEmail) : yourName ?? "Loading…"}
                 </span>
+                {yourName && ownerEmail && (
+                  <span className="block min-w-0 truncate text-xs text-muted-foreground">{ownerEmail}</span>
+                )}
                 <span className="mt-1 inline-block text-xs font-semibold text-primary">
                   You · owner
                 </span>
@@ -317,9 +340,12 @@ export default function MembersPage() {
         {otherOwners.map((owner) => (
           <div key={owner.userId} className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
             <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
-              <AvatarChip email={owner.email} variant="owner" />
+              <AvatarChip email={owner.email} displayName={owner.displayName} variant="owner" />
               <div className="min-w-0">
-                <span className="block min-w-0 truncate text-sm">{owner.email}</span>
+                <span className="block min-w-0 truncate text-sm">{memberLabel(owner.displayName, owner.email)}</span>
+                {owner.displayName && (
+                  <span className="block min-w-0 truncate text-xs text-muted-foreground">{owner.email}</span>
+                )}
                 <span className="mt-1 inline-block text-xs font-semibold text-primary">
                   Owner
                 </span>
@@ -333,9 +359,12 @@ export default function MembersPage() {
         {admins.map((admin) => (
           <div key={admin.userId} className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
             <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
-              <AvatarChip email={admin.email} variant="admin" />
+              <AvatarChip email={admin.email} displayName={admin.displayName} variant="admin" />
               <div className="min-w-0">
-                <span className="block min-w-0 truncate text-sm">{admin.email}</span>
+                <span className="block min-w-0 truncate text-sm">{memberLabel(admin.displayName, admin.email)}</span>
+                {admin.displayName && (
+                  <span className="block min-w-0 truncate text-xs text-muted-foreground">{admin.email}</span>
+                )}
                 <span className="mt-1 inline-block text-xs text-muted-foreground">
                   Administrator
                 </span>
