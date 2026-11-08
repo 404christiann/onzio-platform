@@ -1,3 +1,20 @@
+## 2026-11-08 - ADMIN-RE-00 build plan for the reimagined club admin
+
+- **Status:** `in_progress` on branch `claude/admin-reimagined-build-plan`
+  from `main` `ab2e439`. Documentation only: no code, migration or production
+  change. Christian approved the plan and answered its decisions.
+- **Where the plan is:** at the top of `docs/admin-portal-redesign-plan.md`,
+  as 23 packages (`ADMIN-RE-01` to `ADMIN-RE-23`).
+  - **First slice:** a foundation migration, the per-club switch, club time
+    set automatically from the owner's browser, member names, the new home,
+    and the four big jobs.
+  - **Then:** Rose City is switched on first and Diverse City after.
+  - **Every hosted change is a named gate.** A migration is applied before its
+    PR merges, because merging to `main` may deploy.
+- **Verification:** paths checked at `main`. No tests, because no code
+  changed.
+- **Exact next step:** merge the plan PR, then start `ADMIN-RE-01`.
+
 ## 2026-11-05 - MAIN-BROWSER-TEST-FIXES three browser checks that failed on clean main
 
 - Status: `in_progress` on branch `claude/fix-main-browser-tests` from `main` `deffccc`; PR open, not merged, not deployed; no migration or production change. Christian approved ("Ok, send it"). All three failed on a clean `main` build first. Stats discard (1440px season): a hidden, not-yet-swapped React stream copy (`<div id="S:0" hidden>`) made a strict text match see two "All changes saved"; check scoped to the visible tab panel. About/Logo save (two cases): written for retired Cinematic, Alpha is Academy with no Logo page; cases now publish Clubhouse for Alpha and restore it. Homepage legacy branch: PR #85's Rose City public hold makes the public page a 404 by design; hold list moved to `lib/public-site-hold.ts`, and while the hold stands the test asserts it and keeps its preview checks. No skips or deletions.
