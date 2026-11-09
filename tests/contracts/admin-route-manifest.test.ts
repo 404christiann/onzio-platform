@@ -5,6 +5,7 @@ import {
   ADMIN_NAVIGATION_MANIFEST,
   ADMIN_ROUTE_MANIFEST,
   getAdminGroupForPathname,
+  getAdminHomeJobHref,
   getReimaginedPageTitle,
   getVisibleAdminHomeJobs,
   getVisibleAdminMoreRows,
@@ -436,6 +437,13 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/roster-preview")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/nowhere")).toBe("Club admin");
+  });
+
+  it("gives a job's address for links between job pages (ADMIN-RE-06)", () => {
+    for (const job of ADMIN_HOME_JOBS) {
+      expect(getAdminHomeJobHref(job.id)).toBe(ADMIN_ROUTE_MANIFEST.find((route) => route.id === job.routeId)?.href);
+    }
+    expect(getAdminHomeJobHref("enter-score")).toBe("/admin/score");
   });
 
   it("keeps the Enter a score page out of a classic club's admin (ADMIN-RE-06)", () => {

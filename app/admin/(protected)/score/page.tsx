@@ -2,10 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ScoreEntry } from "@/components/admin/reimagined/ScoreEntry";
 import { readAdminPortal } from "@/lib/admin-portal";
-import {
-  getVisibleAdminHomeJobs,
-  type AdminRouteAccessContext,
-} from "@/lib/admin-route-manifest";
+import { getAdminHomeJobHref } from "@/lib/admin-route-manifest";
 import { loadScorePageData } from "@/lib/admin-score-data";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext, type ClubContext } from "@/lib/club-context";
@@ -48,17 +45,9 @@ export default async function ScorePage() {
   if (portal.portal !== "reimagined") redirect("/admin/schedule");
 
   const canSave = canMutateContent(club);
-  const access: AdminRouteAccessContext = {
-    role: club.role,
-    presentationTemplateKey: club.presentationTemplateKey,
-    isBillingAuthorized: club.role === "owner" && club.lifecycle !== "archived",
-    canMutateContent: canSave,
-    storeEnabled: club.storeEnabled,
-    adminPortal: portal.portal,
-    adminFlags: portal.flags,
-  };
-  const addGameHref =
-    getVisibleAdminHomeJobs(access).find((job) => job.id === "add-game")?.href ?? null;
+  // Add a game changes the website too, so it is offered only while saving is allowed,
+  // as the home hides its tile.
+  const addGameHref = canSave ? getAdminHomeJobHref("add-game") : null;
   const data = await loadScorePageData(supabase, club.id, portal.timeZone);
 
   return (

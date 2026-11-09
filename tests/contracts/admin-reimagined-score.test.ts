@@ -174,7 +174,8 @@ describe("Enter a score page (ADMIN-RE-06)", () => {
   });
 
   it("takes Add a game from the manifest, so it follows that job when its page ships", () => {
-    expect(page).toContain('getVisibleAdminHomeJobs(access).find((job) => job.id === "add-game")?.href');
+    expect(page).toContain('const addGameHref = canSave ? getAdminHomeJobHref("add-game") : null;');
+    expect(page).not.toContain("presentationTemplateKey");
   });
 
   it("uses the shared NumberStepper, 0 to 99, with the admin's own icons", () => {

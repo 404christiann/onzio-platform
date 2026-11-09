@@ -707,6 +707,17 @@ export function getVisibleAdminHomeJobs(
   });
 }
 
+/**
+ * ADMIN-RE-06: where a home job leads, for a link from inside another job's
+ * page ("All scores are in" → Add a game). It follows the job as its page
+ * ships. The caller decides whether to show the link.
+ */
+export function getAdminHomeJobHref(id: AdminHomeJobId): `/admin${string}` {
+  const job = ADMIN_HOME_JOBS.find((candidate) => candidate.id === id);
+  const route = job ? ROUTE_BY_ID.get(job.routeId) : undefined;
+  return route?.href ?? "/admin";
+}
+
 export function getVisibleAdminMoreRows(
   context: AdminRouteAccessContext,
 ): readonly AdminMoreRow[] {
