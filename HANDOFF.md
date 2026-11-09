@@ -16,8 +16,9 @@
 - **Verification:** `test:db` 1,004/1,004 twice, every table's row count
   unchanged by a run; `pilot-proof-servers` 50/50 twice under load. Details are
   in `STATUS.md`.
-- **Not done:** the real browser suites were not run; 91 orphaned uploaded
-  images remain in local storage (needs an OK to delete); the pilot fixtures are
+- **Also done, outside the PR:** the 91 orphaned uploaded images in local
+  storage were removed through the storage API with Christian's OK.
+- **Not done:** the real browser suites were not run; the pilot fixtures are
   still slow to build.
 - **Exact next step:** the bot reviews and merges.
 

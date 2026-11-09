@@ -63,9 +63,11 @@ eight Playwright configs, the two prove scripts, `program-media` and
 
 **Blockers or unresolved decisions:**
 
-- 91 uploaded images under `<Alpha>/programs/` in local storage have no
-  `media_assets` row (junk from earlier `program-media` runs). I did not delete
-  them: removing stored files needs Christian's explicit OK.
+- The 91 uploaded images under `<Alpha>/programs/` in local storage that had no
+  `media_assets` row (junk from earlier `program-media` runs) were removed through
+  the storage API with Christian's OK, after a dry run listed exactly those 91.
+  Nothing else in storage was touched. Three `media_assets` rows from the
+  2026-11-01 seed (ids `44444444-...`) have no file; they were already like that.
 - Real Playwright suites not run (see above).
 - Each `pilot-proof-servers` case still builds three fixtures with real child
   processes, so that file takes 200 to 500 seconds. Building the fixtures once
@@ -74,8 +76,8 @@ eight Playwright configs, the two prove scripts, `program-media` and
   `signalGroup`, but it is guarded by a `ps` check and was not seen failing.
 - `vercel.json` still lists the `docs/codex-loop-guide` branch. Harmless.
 
-**Exact next step:** the bot reviews and merges the PR. Then decide on the 91
-orphaned uploads, and whether to speed up the pilot fixtures.
+**Exact next step:** the bot reviews and merges the PR. Then decide whether to
+speed up the pilot fixtures.
 
 ## 2026-11-08 - ADMIN-RE-04: people's names, and members route hardening
 
