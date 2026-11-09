@@ -84,6 +84,8 @@ async function addOpenSignUpForm() {
 }
 
 async function removeOpenSignUpForm() {
+  // An open form must keep a price, so close it before taking its parts away.
+  await sql("update onzio.registration_forms set status='closed' where club_id=$1 and id=$2", [ALPHA, FIXTURE_FORM]);
   await sql("delete from onzio.registration_price_options where club_id=$1 and form_id=$2", [ALPHA, FIXTURE_FORM]);
   await sql("delete from onzio.registration_form_fields where club_id=$1 and form_id=$2", [ALPHA, FIXTURE_FORM]);
   await sql("delete from onzio.registration_forms where club_id=$1 and id=$2", [ALPHA, FIXTURE_FORM]);

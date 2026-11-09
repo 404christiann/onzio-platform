@@ -93,8 +93,9 @@ the review bot. No migration. Nobody sees it yet: both clubs are still
   long club name on one line with an ellipsis, "‹ Home" and "Team roster" on
   `/admin/roster`, and Edit my website opening the homepage editor in the new
   shell. Screenshots in `test-results/admin-reimagined/`. Every fixture is put
-  back; the global setup restores Alpha's `admin_portal`, and the shared
-  cleanup setup from #100 removes the rows the run added.
+  back; the global setup restores Alpha's `admin_portal` and its time zone
+  fields, and the shared cleanup setup from #100 removes the rows the run
+  added.
 - Full suites (`tsc`, lint, vitest without the database folder, build,
   `test:db` and the new Playwright config under the local database lock) were
   run by hand on the PR head in a clean worktree outside the main checkout;
@@ -107,6 +108,12 @@ the review bot. No migration. Nobody sees it yet: both clubs are still
 **Blockers and decisions:**
 
 - No blocker. No migration, so no `GATE-MIGRATE`.
+- Test leak found, not fixed here: since RE-02, the owner's first admin visit
+  in any browser suite stamps Alpha's `time_zone_set_at` (the automatic time
+  zone), and `tests/database/admin-reimagined-foundation.test.ts` expects it
+  unset, so a `test:db` run after an owner browser run fails that one check.
+  The new reimagined config restores it; the older owner configs
+  (`admin-guided`, `homepage`, `public-page-editors` and others) don't yet.
 - For Christian before the Rose City switch (RE-10): the plan's More list has
   no row for About, Contact or Stats (and Schedule is reached only through the
   two score/game tiles). In the reimagined admin those old pages are reachable
