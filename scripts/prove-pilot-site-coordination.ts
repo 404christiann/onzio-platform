@@ -7,7 +7,7 @@ import { chromium, expect, type BrowserContext, type Request } from "@playwright
 import sharp from "sharp";
 import { z } from "zod";
 import { USER_IDS } from "../tests/fixtures/entities";
-import { openCoordinationProof } from "../tests/helpers/site-coordination-proof";
+import { discardVerifiedCleanJournal, openCoordinationProof } from "../tests/helpers/site-coordination-proof";
 import { createPilotSiteCoordinator, pilotRuntimeContract, type PilotSiteResolution } from "./pilot-site-coordination";
 import { installAcademyProofGuard, proofGet, type AcademyProofNetworkObservations } from "./pilot-proof-network";
 import { observePilotProofPage } from "./pilot-proof-page";
@@ -482,7 +482,7 @@ async function run() {
     }, { hostname: "pilot.localhost" });
   } catch (error) { primaryFailure = { error }; throw error; }
   finally {
-    try { await proof.close(); } catch (cleanupError) {
+    try { await proof.close(); await discardVerifiedCleanJournal(proof.recoveryFile); } catch (cleanupError) {
       if (primaryFailure !== null) throw new AggregateError([primaryFailure.error, cleanupError], "Academy proof and cleanup failed");
       throw cleanupError;
     }

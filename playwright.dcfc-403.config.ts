@@ -4,6 +4,7 @@ const baseURL = process.env.DCFC_403_BASE_URL;
 if (!baseURL) throw new Error("DCFC_403_BASE_URL is required for DCFC-403 browser acceptance.");
 
 export default defineConfig({
+  globalSetup: "./tests/browser/local-test-data-cleanup.global-setup.ts",
   testDir: "./tests/browser",
   testMatch: "diverse-city-local-rollout.spec.ts",
   fullyParallel: false,

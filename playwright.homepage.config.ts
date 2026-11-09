@@ -6,7 +6,7 @@ if (!process.env.HOMEPAGE_STORAGE_STATE) throw new Error("Set HOMEPAGE_STORAGE_S
 
 export default defineConfig({
   // Alpha stands in for Diverse City, whose Shop switch is on.
-  globalSetup: "./tests/browser/alpha-store-enabled.global-setup.ts",
+  globalSetup: ["./tests/browser/alpha-store-enabled.global-setup.ts", "./tests/browser/local-test-data-cleanup.global-setup.ts"],
   outputDir: "test-results/homepage-editor-browser",
   testDir: "./tests/browser", testMatch: "homepage-editor*.spec.ts", workers: 1,
   timeout: 60_000, reporter: "list",

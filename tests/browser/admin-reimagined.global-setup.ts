@@ -4,8 +4,8 @@ import { CLUB_IDS } from "../fixtures/entities";
 /**
  * ADMIN-RE-05: the reimagined admin suites run on local Alpha, which is seeded
  * on the classic admin. Switch it to 'reimagined' for the run, then put the
- * previous value back and remove the audit rows the run's fixtures added for
- * Alpha (the same rule as tests/global-setup/local-audit-cleanup.ts). Loopback only.
+ * previous value back. Rows the run adds, audit rows included, are removed by
+ * local-test-data-cleanup.global-setup.ts, listed after this one. Loopback only.
  */
 const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
 
@@ -31,14 +31,8 @@ async function setAdminPortal(value: string): Promise<string> {
 }
 
 export default async function globalSetup() {
-  const watermark = await withClient(
-    async (db) => (await db.query<{ id: string }>("select coalesce(max(id),0)::text as id from onzio.audit_events")).rows[0].id,
-  );
   const previous = await setAdminPortal("reimagined");
   return async () => {
     await setAdminPortal(previous);
-    await withClient((db) =>
-      db.query("delete from onzio.audit_events where id > $1::bigint and club_id = $2", [watermark, CLUB_IDS.alpha]),
-    );
   };
 }

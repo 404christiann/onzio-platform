@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { chromium, expect, type Request } from "@playwright/test";
 import sharp from "sharp";
-import { openCoordinationProof } from "../tests/helpers/site-coordination-proof";
+import { discardVerifiedCleanJournal, openCoordinationProof } from "../tests/helpers/site-coordination-proof";
 import { academyProofDocuments, type AcademyProofDocumentCase } from "./pilot-academy-documents";
 import { codeSiteParityInputSchema, compareFocusedCodeSiteSnapshots, selectFocusedCodeSiteDocuments, type FocusedCodeSiteSnapshot } from "./code-site-parity-contract";
 import { localPilotProofLogin, type PilotProofStorageState } from "./pilot-proof-login";
@@ -265,7 +265,7 @@ async function run() {
     await proof.assertPreserved(initial);
   } catch (error) { primaryFailure = error; throw error; }
   finally {
-    try { await proof.close(); } catch (cleanupError) {
+    try { await proof.close(); await discardVerifiedCleanJournal(proof.recoveryFile); } catch (cleanupError) {
       if (primaryFailure !== undefined) throw new AggregateError([primaryFailure, cleanupError], "Code site parity and cleanup failed");
       throw cleanupError;
     }

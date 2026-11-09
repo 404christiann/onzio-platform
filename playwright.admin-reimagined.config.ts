@@ -16,7 +16,7 @@ export default defineConfig({
   outputDir: "test-results/admin-reimagined/artifacts",
   testDir: "./tests/browser",
   testMatch: "admin-reimagined*.spec.ts",
-  globalSetup: "./tests/browser/admin-reimagined.global-setup.ts",
+  globalSetup: ["./tests/browser/admin-reimagined.global-setup.ts", "./tests/browser/local-test-data-cleanup.global-setup.ts"],
   workers: 1,
   fullyParallel: false,
   timeout: 60_000,

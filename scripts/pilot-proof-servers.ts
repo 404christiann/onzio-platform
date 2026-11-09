@@ -68,7 +68,11 @@ function ownedServer(root: string, hostname: PilotProofHostname, fail: (error: E
     if (child.pid === undefined) return false;
     try { process.kill(-child.pid, signal); return true; }
     catch (error) {
-      if (error instanceof Error && "code" in error && (error.code === "ESRCH" || error.code === "EPERM" && signal !== 0 && !closed)) return false;
+      const code = error instanceof Error && "code" in error ? error.code : undefined;
+      if (code === "ESRCH") return false;
+      // macOS answers EPERM for a group whose only members are zombies awaiting their reaper.
+      // Nothing live is left to signal, so a probe reports the group present until it clears and the stop deadline fails closed.
+      if (code === "EPERM") return signal === 0;
       throw new Error("Could not control owned proof process group");
     }
   }
@@ -166,7 +170,9 @@ async function withOwnedServers<Roots extends Record<string, string>, T>(
     if (scope) activeScopes.delete(scope);
     controller.abort(new Error("Proof scope closed"));
     try {
-      await Promise.all(children.map(child => child.stop()));
+      const stops = await Promise.allSettled(children.map(child => child.stop()));
+      const unstopped = stops.find(stop => stop.status === "rejected");
+      if (unstopped) throw unstopped.reason;
       for (const release of releases.reverse()) release();
     } finally {
       process.off("SIGINT", abort);

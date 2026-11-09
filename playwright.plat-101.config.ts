@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
+  globalSetup: "./tests/browser/local-test-data-cleanup.global-setup.ts",
   testDir: "./tests/browser",
   testMatch: "platform-auth-local.spec.ts",
   fullyParallel: false,

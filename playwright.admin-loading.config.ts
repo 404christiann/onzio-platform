@@ -11,7 +11,7 @@ if (!process.env.ADMIN_LOADING_STORAGE_STATE) {
 
 export default defineConfig({
   // Alpha stands in for Diverse City, whose Shop switch is on.
-  globalSetup: "./tests/browser/alpha-store-enabled.global-setup.ts",
+  globalSetup: ["./tests/browser/alpha-store-enabled.global-setup.ts", "./tests/browser/local-test-data-cleanup.global-setup.ts"],
   testDir: "./tests/browser",
   testMatch: "admin-loading*.spec.ts",
   fullyParallel: false,
