@@ -47,7 +47,10 @@
     "success": "interface/check-circle",
     "save": "files/save",
     "account": "communication/user-circle",
-    "external-link": "arrows/external-link"
+    "external-link": "arrows/external-link",
+    "mail": "communication/mail",
+    "phone": "communication/phone",
+    "user": "communication/user"
   },
   "weight": "medium",
   "navigationSize": 24

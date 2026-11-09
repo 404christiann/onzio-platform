@@ -132,7 +132,7 @@ for (const width of [390, 1440]) {
       }
     });
 
-    test("three jobs and a quiet Sign-up forms row, four jobs once a form is open", async ({ page }) => {
+    test("three jobs then four once a form is open, with Sign-up forms in More", async ({ page }) => {
       await page.goto("/admin");
       expect(await jobIds(page)).toEqual(["enter-score", "add-game", "edit-website"]);
       const more = main(page).getByRole("region", { name: "More" });
@@ -152,8 +152,9 @@ for (const width of [390, 1440]) {
         await addOpenSignUpForm();
         await page.reload();
         expect(await jobIds(page)).toEqual(["enter-score", "add-game", "see-registrations", "edit-website"]);
-        await expect(main(page).locator('[data-job="see-registrations"]')).toHaveAttribute("href", "/admin/registrations");
-        await expect(more.getByRole("link", { name: "Sign-up forms" })).toHaveCount(0);
+        await expect(main(page).locator('[data-job="see-registrations"]')).toHaveAttribute("href", "/admin/sign-ups");
+        // ADMIN-RE-08: the forms page stays in More now that the tile opens /admin/sign-ups.
+        await expect(more.getByRole("link", { name: "Sign-up forms" })).toHaveAttribute("href", "/admin/registrations");
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/home-four-jobs-${width}.png`, fullPage: true });
       } finally {

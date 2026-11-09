@@ -23,7 +23,7 @@ export type AdminRouteAccessContext = Readonly<{
   adminFlags?: AdminFlags;
   /**
    * A non-archived sign-up form that is open or already has sign-ups. Decides
-   * whether "See registrations" is a big job or a quiet "Sign-up forms" row.
+   * whether "See registrations" is a big job on the home.
    */
   hasLiveSignUps?: boolean;
 }>;
@@ -53,7 +53,8 @@ export type AdminRouteId =
   | "analytics"
   | "branding"
   | "team-access"
-  | "payments";
+  | "payments"
+  | "sign-ups";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -87,6 +88,12 @@ export type AdminRouteDefinition = Readonly<{
   feature?: AdminRouteFeature;
   ownerOnly?: true;
   billingRequired?: true;
+  /**
+   * A page that exists only in the reimagined admin (ADMIN-RE-06 onward). It
+   * never appears in the classic sidebar or search; the page itself sends a
+   * classic club to the old one.
+   */
+  reimaginedOnly?: true;
 }>;
 
 export type AdminVisibleRoute = Readonly<{
@@ -277,6 +284,14 @@ export const ADMIN_ROUTE_MANIFEST = [
     ownerOnly: true,
     billingRequired: true,
   },
+  {
+    id: "sign-ups",
+    label: "Registrations",
+    href: "/admin/sign-ups",
+    iconKey: "registrations",
+    groupId: null,
+    reimaginedOnly: true,
+  },
 ] as const satisfies readonly AdminRouteDefinition[];
 
 export const ADMIN_NAVIGATION_MANIFEST = [
@@ -377,6 +392,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
     "permissions",
   ],
   payments: ["payments", "billing", "subscription", "invoices"],
+  "sign-ups": ["registrations", "sign-ups", "registrants", "players", "guardians", "download list"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
 const ROUTE_BY_ID = new Map<AdminRouteId, AdminRouteDefinition>(
@@ -394,6 +410,7 @@ export function isAdminRouteVisible(
   context: AdminRouteAccessContext,
 ): boolean {
   if (!isProtectedAdminRole(context.role)) return false;
+  if (route.reimaginedOnly && context.adminPortal !== "reimagined") return false;
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
   if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;
@@ -567,7 +584,7 @@ export const ADMIN_HOME_JOBS = [
   {
     id: "see-registrations",
     label: "See registrations",
-    routeId: "registrations",
+    routeId: "sign-ups",
     hue: "green",
     hint: "new-sign-ups",
     needsLiveSignUps: true,
@@ -604,8 +621,6 @@ type AdminMoreRowDefinition = Readonly<{
   id: AdminMoreRowId;
   label: string;
   routeId: AdminRouteId;
-  /** The quiet stand-in for "See registrations" when that is not a big job. */
-  onlyWithoutLiveSignUps?: true;
   /**
    * The way to a page whose big jobs hide while content changes are paused,
    * so the owner can still open it and look.
@@ -642,12 +657,9 @@ export const ADMIN_MORE_ROWS = [
   { id: "how-the-team-is-doing", label: "How the team is doing", routeId: "analytics" },
   { id: "payments-and-plan", label: "Payments and plan", routeId: "payments" },
   { id: "who-can-sign-in", label: "Who can sign in", routeId: "team-access" },
-  {
-    id: "sign-up-forms",
-    label: "Sign-up forms",
-    routeId: "registrations",
-    onlyWithoutLiveSignUps: true,
-  },
+  // ADMIN-RE-08: always here, since See registrations now opens its own
+  // page; building, opening and closing forms stay on the old page.
+  { id: "sign-up-forms", label: "Sign-up forms", routeId: "registrations" },
 ] as const satisfies readonly AdminMoreRowDefinition[];
 
 function isReimagined(context: AdminRouteAccessContext): boolean {
@@ -692,7 +704,6 @@ export function getVisibleAdminMoreRows(
   return ADMIN_MORE_ROWS.flatMap((row: AdminMoreRowDefinition) => {
     const route = routes.get(row.routeId);
     if (!route) return [];
-    if (row.onlyWithoutLiveSignUps && context.hasLiveSignUps) return [];
     if (row.onlyWhileContentPaused && context.canMutateContent) return [];
     return [{ id: row.id, label: row.label, href: route.href, iconKey: route.iconKey }];
   });
