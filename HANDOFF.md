@@ -1,3 +1,23 @@
+## 2026-11-09 — Ticket pages committed and Schedule links merged into the homepage branch
+
+At Christian's request:
+- The Season Ticket Membership and Know Before You Go work was committed as `99544db`. The local
+  `.claude/` folder was left out.
+- `codex/rose-city-schedule-2027` (`fa6ff9b`) was merged as `b8a3e7d`. The only conflicts were the
+  new entries at the top of `HANDOFF.md` and `STATUS.md`; both entries were kept whole.
+
+Verification on `b8a3e7d`:
+- `tsc --noEmit` is clean.
+- Contracts and architecture: 182 files, 1475 tests pass. `lib/__tests__`: 423 tests pass. Database:
+  49 files, 459 tests pass.
+- On port 3197, `/schedule`, `/tickets/season-membership` and `/tickets/know-before-you-go` return
+  200. Schedule Directions open `google.com/maps/dir/?api=1&destination=…`. The local sample YouTube
+  link is a dummy video.
+
+Nothing is pushed or deployed. Migrations `20261104040000` through `20261105070000` (9 in all) are
+applied to the local database only. They must pass the `CLAUDE.md` production migration gate before
+any production deploy.
+
 ## 2026-11-08 — RC2027-SCHEDULE-LINKS: Directions, Watch on YouTube and Sam's final Schedule (local only)
 
 Christian asked for the Schedule to match Sam's final design, with Directions opening Google Maps

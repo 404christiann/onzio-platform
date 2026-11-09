@@ -1,5 +1,23 @@
 # Diverse City FC Status
 
+## 2026-11-09 - Rose City ticket pages committed and Schedule links merged (local only)
+
+**Agent/package:** Claude Code (main session), integration of `RC2027-TICKET-PAGES` and
+`RC2027-SCHEDULE-LINKS`. **Status:** both are on `codex/rose-city-homepage-2027`. Ticket pages:
+`99544db`. Schedule merge: `b8a3e7d`. Nothing is pushed or deployed.
+
+**Verification:**
+- tsc is clean.
+- Contracts and architecture: 1475 tests pass. Unit (`lib/__tests__`): 423 pass. Database: 459 pass.
+- The three pages return 200 on port 3197.
+- Directions link to Google Maps directions.
+
+**Blockers:** none for local work. Still waiting on Sam: MVMNT CULTR logo, Shop detail photos and
+camera icon, original News photo, and a white-text "Watch on YouTube" image (if one exists).
+**Before production:** the migration gate in `CLAUDE.md` for 9 local-only migrations.
+
+**Exact next step:** Christian decides when to push, merge into `main` and go live.
+
 ## 2026-11-08 - Rose City RC2027-SCHEDULE-LINKS (local only)
 
 **Agent/package:** Claude Code, `RC2027-SCHEDULE-LINKS`. **Status:** `in_progress`: implemented and
