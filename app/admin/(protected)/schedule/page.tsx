@@ -1152,7 +1152,7 @@ function MatchForm({
               step="1"
               inputMode="numeric"
               placeholder="e.g. 2"
-              value={form.rose_city_score ?? ""}
+              value={String(form.rose_city_score ?? "")}
               onChange={(e) => setScore("rose_city_score", e.target.value)}
               max={MAX_MATCH_SCORE}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
@@ -1167,7 +1167,7 @@ function MatchForm({
               step="1"
               inputMode="numeric"
               placeholder="e.g. 1"
-              value={form.opponent_score ?? ""}
+              value={String(form.opponent_score ?? "")}
               onChange={(e) => setScore("opponent_score", e.target.value)}
               max={MAX_MATCH_SCORE}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}

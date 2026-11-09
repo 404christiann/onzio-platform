@@ -137,6 +137,11 @@ for (const width of [320, 390, 1440]) {
           await minutes.fill("301");
           await expect(minutes).toHaveValue("300");
           await expect(page.getByRole("button", { name: `Increase ${fixture.names[0]}: minutes`, exact: true })).toBeDisabled();
+          // ADMIN-RE-10a: typing after the starting 0 never leaves "030" in the box.
+          await minutes.fill("0");
+          await minutes.press("End");
+          await minutes.pressSequentially("30");
+          await expect(minutes).toHaveValue("30");
           await minutes.fill(String(fieldValues.mins));
           const starter = page.getByRole("checkbox", { name: `${fixture.names[0]}: started the match`, exact: true });
           await starter.uncheck(); fieldValues.starts = false;

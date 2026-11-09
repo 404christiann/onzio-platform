@@ -111,6 +111,15 @@ for (const width of [390, 1440]) {
 
         const ours = card.getByRole("group", { name: "Alpha FC score" });
         const theirs = card.getByRole("group", { name: `${FIXTURE_OPPONENT} score` });
+        // ADMIN-RE-10a: typing after the starting 0 shows "2", not "02".
+        const typed = ours.getByRole("spinbutton");
+        await expect(typed).toHaveValue("0");
+        await typed.click();
+        await typed.press("End");
+        await typed.pressSequentially("2");
+        await expect(typed).toHaveValue("2");
+        await typed.fill("0");
+        await expect(typed).toHaveValue("0");
         for (let goal = 0; goal < 3; goal += 1) {
           await ours.getByRole("button", { name: "Add a goal for Alpha FC" }).click();
         }

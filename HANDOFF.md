@@ -1,3 +1,15 @@
+## 2026-11-09 - ADMIN-RE-10a number boxes keep no leading zero
+
+- **Status:** `in_progress`, PR open. No migration. First fix from
+  Christian's Rose City walk-through.
+- **Fix:** typing after a 0 left "030" (Match stats) and would leave "02"
+  (Enter a score). Whole-number admin inputs now pass their value as a
+  string. The stats stepper's focus no longer shows as two clipped blue bars.
+- **Verification:** red first (contract 8/8 failing; browser "02" and "030"),
+  then green: full suites, `test:db` 1,020/1,020, `admin-reimagined` 39/39,
+  `admin-guided` 63/63, `admin-loading` 13/13. Details in `STATUS.md`.
+- **Exact next step:** the bot merges. Christian continues the walk-through.
+
 ## 2026-11-09 - ADMIN-RE-10 Rose City on the new admin
 
 - **Status:** `in_progress`. Rose City was switched to `reimagined` in

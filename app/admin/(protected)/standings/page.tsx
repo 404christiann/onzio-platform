@@ -808,7 +808,7 @@ function TableNumberField({
       type="number"
       aria-label={ariaLabel}
       min={allowNegative ? undefined : 0}
-      value={value}
+      value={String(value)}
       onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
         onChange(Number(event.target.value))
       }

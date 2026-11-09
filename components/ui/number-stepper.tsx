@@ -75,7 +75,7 @@ function NumberStepper({
         type="number"
         data-slot="number-stepper-input"
         aria-label={ariaLabel}
-        value={value}
+        value={String(value)}
         min={min}
         max={max}
         step={step}

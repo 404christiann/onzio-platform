@@ -40,6 +40,10 @@
 .stepper button { width:44px; padding:0; border:0; background:transparent; font-size:21px; color:hsl(var(--primary)); }
 .stepper input { width:58px; min-width:0; min-height:44px; padding:4px 2px; border:0; border-left:1px solid hsl(var(--border)); border-right:1px solid hsl(var(--border)); border-radius:0; appearance:textfield; background:transparent; color:hsl(var(--foreground)); font-size:16px; font-weight:600; text-align:center; font-variant-numeric:tabular-nums; }
 .stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button { appearance:none; margin:0; }
+/* ADMIN-RE-10a: .stepper clips overflow, so the default focus outline showed as two blue side bars. */
+.stepper input:focus { outline:none; }
+.stepper:has(input:focus) { border-color:hsl(var(--ring)); box-shadow:0 0 0 3px hsl(var(--ring)/.2); }
+.stepper button:focus-visible { outline:2px solid hsl(var(--ring)); outline-offset:-3px; border-radius:8px; }
 .switchControl { position:relative; display:flex; align-items:center; justify-content:center; width:52px; min-height:44px; flex:none; }
 .switchInput { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
 .switchTrack { position:relative; display:block; width:48px; height:28px; border:1px solid hsl(var(--border)); border-radius:999px; background:hsl(var(--muted)); pointer-events:none; }

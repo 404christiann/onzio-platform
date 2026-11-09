@@ -1347,7 +1347,7 @@ function StatField({
         id={`roster-stat-${field}`}
         type="number"
         min={0}
-        value={stats[field] ?? 0}
+        value={String(stats[field] ?? 0)}
         onChange={(e) => onChange(field, Number(e.target.value))}
         className={ADMIN_INPUT_CLASS}
       />
@@ -1527,7 +1527,7 @@ function PlayerFormFields({
               onChange={(e) => set("name", e.target.value)} className={ADMIN_INPUT_CLASS} />
           </PlayerField>
           <PlayerField id="player-number" label="Jersey number" required>
-            <input id="player-number" type="number" required min={1} value={form.number || ""}
+            <input id="player-number" type="number" required min={1} value={String(form.number || "")}
               onChange={(e) => set("number", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
           </PlayerField>
         </div>
@@ -1563,7 +1563,7 @@ function PlayerFormFields({
               onChange={(e) => set("weight", e.target.value)} className={ADMIN_INPUT_CLASS} />
           </PlayerField>
           <PlayerField id="player-age" label="Age" required>
-            <input id="player-age" type="number" required min={PLAYER_MIN_AGE} max={PLAYER_MAX_AGE} value={form.age || ""}
+            <input id="player-age" type="number" required min={PLAYER_MIN_AGE} max={PLAYER_MAX_AGE} value={String(form.age || "")}
               aria-describedby="player-age-help"
               onChange={(e) => set("age", Number(e.target.value))} className={ADMIN_INPUT_CLASS} />
             <p id="player-age-help" className="mt-1 text-xs text-muted-foreground">
