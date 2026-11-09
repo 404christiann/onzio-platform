@@ -132,7 +132,8 @@ for (const width of [390, 1440]) {
         // The old Games page still changes and removes games.
         await form.getByRole("link", { name: "Change or remove a game" }).click();
         await expect(page).toHaveURL(/\/admin\/schedule$/);
-        await expect(main(page).getByText(`vs ${opponent}`).first()).toBeVisible();
+        // The old page renders a phone list and a laptop list; one of them shows.
+        await expect(main(page).getByText(`vs ${opponent}`).filter({ visible: true }).first()).toBeVisible();
         expect(errors).toEqual([]);
       } finally {
         await removeFixtureGames();
