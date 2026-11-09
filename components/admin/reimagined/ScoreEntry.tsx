@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AdminLoadingDots } from "@/components/admin/AdminLoading";
 import {
   ChevronRight,
   IconAdd,
@@ -188,10 +187,7 @@ function GameCard({
       >
         <span className={styles.saveLabel} aria-live="polite">
           {save === "busy" ? (
-            <>
-              <AdminLoadingDots />
-              Saving…
-            </>
+            "Saving…"
           ) : save === "saved" ? (
             <>
               <IconSuccess className="size-5" aria-hidden="true" />
