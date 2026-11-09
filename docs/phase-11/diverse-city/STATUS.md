@@ -1,5 +1,122 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-05: the new home and the reimagined shell
+
+**Agent/package:** Claude Code, `ADMIN-RE-05`, started by the orchestration
+session. Branch `claude/admin-re-05-home` from `main` `fbf9381` (RE-01 to
+RE-04 merged). **Status:** `in_progress`. Built and tested locally, PR open for
+the review bot. No migration. Nobody sees it yet: both clubs are still
+`classic`, and the switch is `GATE-FLIP-RC` (RE-10).
+
+**Completed work:**
+
+- **`/admin` under `admin_portal = 'reimagined'`:** "<Club name> · Club admin"
+  on one line (long names end in an ellipsis), "Hi <first name>" or "Welcome
+  back" from `adminGreeting`, "What do you want to do?", the big jobs and a
+  More list. Classic clubs get the old dashboard, unchanged.
+- **The jobs** (`ADMIN_HOME_JOBS` in `lib/admin-route-manifest.ts`), opening
+  the old pages until each job ships: Enter a score and Add a game →
+  `/admin/schedule`, See registrations → `/admin/registrations`, Edit my
+  website → `/admin/homepage`. Hints: "1 game needs a score", "12 games need a
+  score", "3 new", with plural rules and thousands separators; no hint for
+  zero or when a count can't be read. Enter a score, Add a game and Edit my
+  website hide while content changes are paused, like the classic quick
+  actions. See registrations is a big job only when the club has a
+  non-archived form that is open or has paid or refunded sign-ups; otherwise
+  three jobs and a quiet "Sign-up forms" row at the end of More.
+- **More** (`ADMIN_MORE_ROWS`), in glossary words: Team roster, This season,
+  League table, Programs, Tryouts, Sponsors, Shop, Your club, How the team is
+  doing, Payments and plan, Who can sign in, Sign-up forms. Rows go through the
+  same route checks as the classic sidebar: Programs and Tryouts only where
+  `codeSiteAdminFor` gives the club those pages (decision 0005), Who can sign
+  in only for owners, Payments and plan only for billing owners. Programs and
+  Tryouts are two rows while they are two pages.
+- **`AdminRouteAccessContext`** gains optional `adminPortal`, `adminFlags` and
+  `hasLiveSignUps`. Missing means classic, no flags, no live form, so existing
+  callers are unchanged and the home shows nothing outside the reimagined admin.
+- **The shell:** `app/admin/(protected)/layout.tsx` renders
+  `ReimaginedShell` for `reimagined` and `AdminShell` for anything else (a
+  failed read is classic). No sidebar. Every page except the home has a slim
+  top bar: "‹ Home", the page title (its More name, so `/admin/roster` says
+  "Team roster"), an actions slot (`useTopBarActions()` / `<TopBarActions>`),
+  and the account menu. The billing notices still show. The shell still
+  provides a closed sidebar context, because the homepage editor calls
+  `useSidebar()` and would otherwise crash.
+- **`lib/admin-home-data.ts`:** games that need a score (active season, both
+  scores empty, kickoff at least two hours past in club time); new sign-ups
+  (paid, `submitted_at` since midnight club time six days ago, current forms
+  only, paged with `.order("id")`); the live-sign-up test; the signed-in
+  member's own `display_name` through `club_members_self_read`. User-scoped
+  client, club-scoped, no names, emails, phones or answers selected.
+- **Loading:** `/admin`'s placeholder follows the portal, so a reimagined club
+  never flashes the classic dashboard skeleton.
+- Icons are the approved set in `components/admin/icons/` (cup, calendar,
+  clipboard-text, edit for the jobs; each More row keeps its page's icon). No
+  new icons.
+
+**Files changed:**
+- `lib/admin-route-manifest.ts`, new `lib/admin-home-data.ts`
+- `app/admin/(protected)/layout.tsx`, `app/admin/(protected)/page.tsx`
+- new `components/admin/reimagined/`: `ReimaginedShell.tsx`, `TopBar.tsx`,
+  `ReimaginedHome.tsx`, `HomeJobs.tsx`, `MoreList.tsx`, `HomeFallback.tsx`,
+  `reimagined.module.css`
+- tests: new `tests/contracts/admin-reimagined-home.test.ts`,
+  `lib/__tests__/admin-home-data.test.ts`,
+  `playwright.admin-reimagined.config.ts`,
+  `tests/browser/admin-reimagined.global-setup.ts`,
+  `tests/browser/admin-reimagined-home.spec.ts`; deliberately updated
+  `tests/contracts/admin-route-manifest.test.ts` (exact locks for the jobs and
+  More rows) and `tests/contracts/admin-portal-switch.test.ts` (RE-02 pinned
+  "classic shell for both values", which RE-05 is meant to change)
+- docs: this file, `HANDOFF.md`
+
+**Verification:** 
+
+- New `lib/__tests__/admin-home-data.test.ts` (29 tests, an in-memory
+  stand-in for the database): unscored games counted two hours after kickoff
+  in Chicago vs Los Angeles at the same instant; half-entered, scored, other
+  season and other club games ignored; no active season is 0, a failed read
+  is unknown (no hint), never 0; the sign-up window opens at midnight club
+  time six days back, on the daylight-saving day; refunds, pending, archived
+  forms and other clubs excluded; 1,284 rows paged 0-499, 500-999, 1000-1499;
+  the live-form test for open, closed-with-paid, closed-with-refunds, draft,
+  archived and no forms; the member's own name only; hint wording 0/1/12/1,284.
+- New `tests/contracts/admin-reimagined-home.test.ts` (14) and the deliberate
+  additions to `tests/contracts/admin-route-manifest.test.ts` (9 new): exact
+  jobs and More rows, classic shows nothing, three vs four jobs, paused
+  content, owner-only and billing rows, `codeSiteAdminFor` for Programs and
+  Tryouts, top bar titles, no PII or service role in the loader, approved
+  icons only, no new template selectors.
+- New browser config `playwright.admin-reimagined.config.ts` on local Alpha at
+  390 and 1440: greeting fallback and first name, three jobs then four with a
+  fixture open form, the score hint at 0/1/12 with fixture games, the worst
+  long club name on one line with an ellipsis, "‹ Home" and "Team roster" on
+  `/admin/roster`, and Edit my website opening the homepage editor in the new
+  shell. Screenshots in `test-results/admin-reimagined/`. Every fixture is put
+  back; the global setup restores Alpha's `admin_portal` and removes the audit
+  rows the run added.
+- Full suites (`tsc`, lint, vitest without the database folder, build,
+  `test:db` and the new Playwright config under the local database lock) were
+  run by hand on the PR head in a clean worktree outside the main checkout;
+  results and the tested commit are in the PR body.
+- Found and fixed while building: the homepage editor calls `useSidebar()`,
+  which throws outside the classic shell, so the reimagined shell provides a
+  closed sidebar context. The template-selector ratchet caught two new
+  `presentationTemplateKey` reads; both were removed rather than allowlisted.
+
+**Blockers and decisions:**
+
+- No blocker. No migration, so no `GATE-MIGRATE`.
+- For Christian before the Rose City switch (RE-10): the plan's More list has
+  no row for About, Contact or Stats (and Schedule is reached only through the
+  two score/game tiles). In the reimagined admin those old pages are reachable
+  only by address until Edit my website covers every page (RE-13) and Enter a
+  score links to Stats (RE-06). Add rows for them, or accept the gap until
+  then?
+
+**Exact next step:** the review bot reviews and merges the PR (it deploys with
+both clubs still `classic`). Then RE-06, RE-07, RE-08 and RE-09 can start.
+
 ## 2026-11-08 - ADMIN-RE-04: people's names, and members route hardening
 
 **Agent/package:** Claude Code, `ADMIN-RE-04`, started by the orchestration

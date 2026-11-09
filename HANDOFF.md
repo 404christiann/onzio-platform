@@ -1,3 +1,32 @@
+## 2026-11-08 - ADMIN-RE-05 the new home and the reimagined shell
+
+- **Status:** `in_progress` on branch `claude/admin-re-05-home` from `main`
+  `fbf9381`, with the PR open. No migration. Nobody sees it until a club is
+  switched to `reimagined` (`GATE-FLIP-RC`, RE-10).
+- **What it adds:**
+  - `/admin` for a reimagined club: "<Club> · Club admin", "Hi <first name>"
+    or "Welcome back", "What do you want to do?", the big jobs with hints
+    ("12 games need a score", "3 new") and a More list in glossary words.
+    Tiles and rows open the old pages until each job ships.
+  - `ADMIN_HOME_JOBS`, `ADMIN_MORE_ROWS`, `getVisibleAdminHomeJobs`,
+    `getVisibleAdminMoreRows` and `getReimaginedPageTitle` in
+    `lib/admin-route-manifest.ts`; `AdminRouteAccessContext` gains optional
+    `adminPortal`, `adminFlags`, `hasLiveSignUps`.
+  - `components/admin/reimagined/` (shell, top bar with "‹ Home" and an
+    actions slot, home, jobs, More list). The layout picks the shell by
+    portal; classic clubs are unchanged.
+  - `lib/admin-home-data.ts`: unscored games (two hours after kickoff, club
+    time), paid sign-ups in the last seven days (club time), the live-form
+    test, and the member's own name. No personal details read.
+- **Verification:** new unit test (29), contract tests (14 new
+  file, 9 added to the manifest test), new browser config at 390 and 1440
+  with screenshots. Full suites run by hand on the PR head outside the main
+  checkout; results are in the PR body.
+- **Open question for Christian (before RE-10):** About, Contact and Stats
+  have no More row in the plan, so in the reimagined admin they are reachable
+  only by address until RE-13 and RE-06. Add rows, or accept the gap?
+- **Exact next step:** the bot merges; then RE-06 to RE-09.
+
 ## 2026-11-08 - ADMIN-RE-04 people's names, and members route hardening
 
 - **Status:** `in_progress` on branch `claude/admin-re-04-names-a3a3ad`,
