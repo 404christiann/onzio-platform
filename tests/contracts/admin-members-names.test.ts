@@ -19,7 +19,9 @@ const mocks = vi.hoisted(() => ({
   listClubAdmins: vi.fn(),
   listClubOwners: vi.fn(),
   removeClubAdmin: vi.fn(),
+  resendClubAdminCode: vi.fn(),
   setMemberDisplayName: vi.fn(),
+  undoRemoveClubAdmin: vi.fn(),
 }));
 
 vi.mock("@/lib/auth-session", () => ({ requireFreshClubSession: mocks.requireFreshClubSession }));
@@ -32,7 +34,9 @@ vi.mock("@/lib/owner-admin-membership", () => ({
   listClubAdmins: mocks.listClubAdmins,
   listClubOwners: mocks.listClubOwners,
   removeClubAdmin: mocks.removeClubAdmin,
+  resendClubAdminCode: mocks.resendClubAdminCode,
   setMemberDisplayName: mocks.setMemberDisplayName,
+  undoRemoveClubAdmin: mocks.undoRemoveClubAdmin,
 }));
 
 const { POST } = await import("@/app/api/admin/members/route");
@@ -180,14 +184,39 @@ describe("normalizeDisplayName matches club_members_display_name_length", () => 
     expect(normalizeDisplayName("A")).toBe("A");
     expect(normalizeDisplayName("x".repeat(120))).toBe("x".repeat(120));
     expect(normalizeDisplayName("x".repeat(121))).toBeNull();
-    expect(normalizeDisplayName("⚽".repeat(120))).toBe("⚽".repeat(120));
-    expect(normalizeDisplayName("😀".repeat(120))).toBe("😀".repeat(120));
-    expect(normalizeDisplayName("😀".repeat(121))).toBeNull();
+    // Characters outside the Basic Multilingual Plane count once each, as in Postgres.
+    expect(normalizeDisplayName("𠀀".repeat(120))).toBe("𠀀".repeat(120));
+    expect(normalizeDisplayName("𠀀".repeat(121))).toBeNull();
+    expect(normalizeDisplayName(`Andrea ${"😀".repeat(113)}`)).toBe(`Andrea ${"😀".repeat(113)}`);
+    expect(normalizeDisplayName(`Andrea ${"😀".repeat(114)}`)).toBeNull();
   });
 
   it("rejects a blank name", () => {
     expect(normalizeDisplayName("")).toBeNull();
     expect(normalizeDisplayName("   \n ")).toBeNull();
+  });
+});
+
+describe("normalizeDisplayName keeps invisible characters out (RE-04 review, Low 1)", () => {
+  it("refuses a name made only of format characters", () => {
+    for (const invisible of ["\u200B", "\u202E", "\u200D", "\u2060", "\uFEFF", "\u200B\u202E \u200B"]) {
+      expect(normalizeDisplayName(invisible)).toBeNull();
+    }
+  });
+
+  it("drops format characters from around and inside a real name", () => {
+    expect(normalizeDisplayName("\u202EAndrea\u200B")).toBe("Andrea");
+    expect(normalizeDisplayName("An\u200Bdrea")).toBe("Andrea");
+    expect(normalizeDisplayName("Andrea \u200B Lopez")).toBe("Andrea Lopez");
+    // Counted after they're dropped, so they can't push a name over or under the limit.
+    expect(normalizeDisplayName(`\u200B${"x".repeat(120)}\u200B`)).toBe("x".repeat(120));
+  });
+
+  it("needs at least one letter or number", () => {
+    for (const noLetters of ["-", "...", "😀", "⚽⚽", "‼"]) expect(normalizeDisplayName(noLetters)).toBeNull();
+    for (const name of ["A", "7", "李", "Zoë", "e\u0301", "O'Brien", "٣", "Ana ⚽"]) {
+      expect(normalizeDisplayName(name)).toBe(name);
+    }
   });
 });
 
