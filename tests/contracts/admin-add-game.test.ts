@@ -108,7 +108,9 @@ describe("adding a game through /api/admin/data", () => {
     expect(form).toContain('fetch("/api/admin/data"');
     expect(form).toContain('table: "matches"');
     expect(form).toContain('operation: "insert"');
-    expect(form).toContain("payload: { season_id: seasonId, date, time, opponent: name, home, venue: place }");
+    expect(form).toMatch(
+      /payload: \{\s*season_id: seasonId,\s*date,\s*time,\s*opponent: name,\s*home,\s*venue: place,/,
+    );
     // Writes never use the browser Supabase client (Server Mutation Boundary).
     expect(form).not.toMatch(/supabase-browser|createClient/);
   });
@@ -152,7 +154,8 @@ describe("Add a game form (ADMIN-RE-07)", () => {
 
   it("reads with the signed-in person's client, scoped to the club, and nothing personal", () => {
     expect(loader).not.toMatch(/service-role|SERVICE_ROLE/);
-    expect(loader.match(/\.eq\("club_id", clubId\)/g)).toHaveLength(3);
+    // ADMIN-RE-07b added three reads (opponents, latest sponsor, Sponsors page).
+    expect(loader.match(/\.eq\("club_id", clubId\)/g)).toHaveLength(6);
     expect(loader).toContain('MATCH_COLUMNS = "id,season_id,date,time,opponent,home,venue"');
     expect(loader).toContain('.select("id,label,active")');
     expect(loader).toContain('.select("venue")');

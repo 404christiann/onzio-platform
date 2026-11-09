@@ -18,9 +18,13 @@ import {
   compareMatches,
   distinctVenues,
   MATCH_COLUMNS,
+  opponentCarry,
+  sponsorPayload,
   toAddGameMatch,
   type AddGameMatch,
+  type AddGameOpponent,
   type AddGameSeason,
+  type AddGameSponsor,
 } from "@/lib/admin-add-game-data";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 import { formatClubDate, formatClubTime } from "@/lib/club-time";
@@ -32,11 +36,16 @@ import styles from "./add-game.module.css";
 // opponent has to be typed. Home, next Saturday 10:00 in club time and the
 // active season come filled in, and the last venues used are one tap away.
 // The save goes through POST /api/admin/data like every other admin write.
+// ADMIN-RE-07b: where the club's website shows match sponsors, "Sponsor?"
+// comes filled in with the latest game's sponsor. A game against an opponent
+// played before quietly keeps that opponent's short name and logo.
 
 /** How many upcoming games "Coming up" lists before linking to the schedule. */
 const COMING_UP_SHOWN = 6;
 /** How long the button keeps saying "Added" before it is ready again. */
 const DONE_MS = 4000;
+/** The "Sponsor?" answer for none. */
+const NO_SPONSOR = "none";
 
 type SaveState = "idle" | "busy" | "done";
 type FieldErrors = Partial<Record<"opponent" | "venue", string>>;
@@ -65,6 +74,9 @@ export function AddGame({
   seasons,
   upcoming: initialUpcoming,
   recentVenues: initialVenues,
+  showSponsors,
+  sponsors,
+  opponents,
   today,
   defaultDate,
   defaultTime,
@@ -73,6 +85,11 @@ export function AddGame({
   seasons: readonly AddGameSeason[];
   upcoming: readonly AddGameMatch[];
   recentVenues: readonly string[];
+  /** Only where the club's website shows match sponsors. */
+  showSponsors: boolean;
+  /** The latest game's sponsor first, when it had one, then the Sponsors page's. */
+  sponsors: readonly AddGameSponsor[];
+  opponents: readonly AddGameOpponent[];
   /** The club's today, "YYYY-MM-DD": a game added for an earlier day is not "Coming up". */
   today: string;
   defaultDate: string;
@@ -86,6 +103,10 @@ export function AddGame({
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(defaultTime);
   const [venue, setVenue] = useState("");
+  // The latest game's sponsor when it had one, otherwise "No sponsor".
+  const [sponsorChoice, setSponsorChoice] = useState(() =>
+    sponsors[0]?.from === "last-game" ? "0" : NO_SPONSOR,
+  );
   const [pickerOpen, setPickerOpen] = useState(false);
   const [save, setSave] = useState<SaveState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +123,7 @@ export function AddGame({
   }, []);
 
   const season = seasons.find((candidate) => candidate.id === seasonId);
+  const sponsor = sponsorChoice === NO_SPONSOR ? null : sponsors[Number(sponsorChoice)] ?? null;
   const comingUp = useMemo(
     () => upcoming.filter((match) => match.seasonId === seasonId && match.date >= today).sort(compareMatches),
     [upcoming, seasonId, today],
@@ -142,7 +164,16 @@ export function AddGame({
           table: "matches",
           operation: "insert",
           columns: MATCH_COLUMNS,
-          payload: { season_id: seasonId, date, time, opponent: name, home, venue: place },
+          payload: {
+            season_id: seasonId,
+            date,
+            time,
+            opponent: name,
+            home,
+            venue: place,
+            ...opponentCarry(opponents, name),
+            ...(showSponsors ? sponsorPayload(sponsor) : {}),
+          },
         }),
       });
       const body = await response.json().catch(() => null);
@@ -389,6 +420,51 @@ export function AddGame({
             ) : null}
           </div>
         </div>
+
+        {showSponsors ? (
+          <div className={styles.row}>
+            {sponsors.length ? (
+              <label htmlFor="add-game-sponsor" className={styles.q}>
+                Sponsor?
+              </label>
+            ) : (
+              <p className={styles.q}>Sponsor?</p>
+            )}
+            <div className={styles.answer}>
+              {sponsors.length ? (
+                <span className={cn(styles.field, styles.pick)} title={sponsor?.name}>
+                  <span className={styles.fieldText}>{sponsor ? sponsor.name : "No sponsor"}</span>
+                  <ChevronDown className={styles.lead} aria-hidden="true" />
+                  <select
+                    id="add-game-sponsor"
+                    className={styles.pickSelect}
+                    value={sponsorChoice}
+                    onChange={(event) => {
+                      touch();
+                      setSponsorChoice(event.target.value);
+                    }}
+                    data-testid="add-game-sponsor"
+                  >
+                    {sponsors.map((option, index) => (
+                      <option key={`${option.from}-${index}`} value={String(index)}>
+                        {option.name}
+                        {option.from === "last-game" ? " (last game)" : ""}
+                      </option>
+                    ))}
+                    <option value={NO_SPONSOR}>No sponsor</option>
+                  </select>
+                </span>
+              ) : (
+                <p className={styles.noSponsor} data-testid="add-game-no-sponsor">
+                  No sponsor.{" "}
+                  <Link href="/admin/sponsors" className={styles.link}>
+                    Add sponsors
+                  </Link>
+                </p>
+              )}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <section className={styles.soon} aria-labelledby="add-game-coming-up">

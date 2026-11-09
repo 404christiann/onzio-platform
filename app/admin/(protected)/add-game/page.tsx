@@ -5,6 +5,7 @@ import { loadAddGameData } from "@/lib/admin-add-game-data";
 import { readAdminPortal } from "@/lib/admin-portal";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
+import { codeSiteAdminFor } from "@/lib/code-site-admin";
 import { clubToday, DEFAULT_KICKOFF_TIME, nextClubSaturday } from "@/lib/club-time";
 import { websiteState } from "@/lib/save-status";
 import { createClient } from "@/lib/supabase-server";
@@ -21,7 +22,10 @@ export default async function AddGamePage() {
   const portal = await readAdminPortal(supabase, club.id);
   if (portal.portal !== "reimagined") redirect("/admin/schedule");
 
-  const data = await loadAddGameData(supabase, club.id, portal.timeZone).catch(() => null);
+  // Match sponsors only where the club's website shows them: the same rule as
+  // the classic Games form (Diverse City's academy pages never do).
+  const showSponsors = codeSiteAdminFor(club)?.schedule.showMatchSponsorFields !== false;
+  const data = await loadAddGameData(supabase, club.id, portal.timeZone, { showSponsors }).catch(() => null);
   if (!data) {
     return (
       <p role="alert" className="mx-auto max-w-[1120px] text-sm text-destructive">
@@ -35,6 +39,9 @@ export default async function AddGamePage() {
       seasons={data.seasons}
       upcoming={data.upcoming}
       recentVenues={data.recentVenues}
+      showSponsors={showSponsors}
+      sponsors={data.sponsors}
+      opponents={data.opponents}
       today={clubToday(portal.timeZone)}
       defaultDate={nextClubSaturday(portal.timeZone)}
       defaultTime={DEFAULT_KICKOFF_TIME}
