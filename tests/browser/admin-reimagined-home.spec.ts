@@ -145,7 +145,7 @@ for (const width of [390, 1440]) {
       // Games and Homepage are rows only while content changes are paused.
       await expect(more.getByRole("link", { name: "Games", exact: true })).toHaveCount(0);
       await expect(more.getByRole("link", { name: "Homepage", exact: true })).toHaveCount(0);
-      await expect(main(page).locator('[data-job="enter-score"]')).toHaveAttribute("href", "/admin/schedule");
+      await expect(main(page).locator('[data-job="enter-score"]')).toHaveAttribute("href", "/admin/score");
       await expect(main(page).locator('[data-job="edit-website"]')).toHaveAttribute("href", "/admin/homepage");
 
       try {

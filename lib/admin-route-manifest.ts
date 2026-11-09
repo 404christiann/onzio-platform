@@ -47,6 +47,7 @@ export type AdminRouteId =
   | "seasons"
   | "roster"
   | "schedule"
+  | "score"
   | "match-stats"
   | "standings"
   | "registrations"
@@ -233,6 +234,14 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: "competition",
   },
   {
+    id: "score",
+    label: "Enter a score",
+    href: "/admin/score",
+    iconKey: "schedule",
+    groupId: "competition",
+    reimaginedOnly: true,
+  },
+  {
     id: "match-stats",
     label: "Stats",
     href: "/admin/stats",
@@ -379,6 +388,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
+  score: ["competition", "score", "result", "enter a score", "matches"],
   "match-stats": ["competition", "stats", "match stats", "season stats", "season totals", "game statistics", "player statistics"],
   standings: ["competition", "standings", "table"],
   registrations: ["registrations", "forms", "registrants"],
@@ -417,6 +427,7 @@ export function isAdminRouteVisible(
   // Only designs that publish a Contact page get the Contact editor; its
   // details are used nowhere else on other designs.
   if (route.id === "contact" && !siteAdmin?.contact.routeVisible) return false;
+  if (route.reimaginedOnly && context.adminPortal !== "reimagined") return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&
@@ -569,7 +580,7 @@ export const ADMIN_HOME_JOBS = [
   {
     id: "enter-score",
     label: "Enter a score",
-    routeId: "schedule",
+    routeId: "score",
     hue: "amber",
     hint: "games-needing-score",
     needsContentMutation: true,

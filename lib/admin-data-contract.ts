@@ -280,7 +280,46 @@ const tryoutsPageMutation = z
   })
   .strict();
 
+// ADMIN-RE-06: matches. Every onzio.matches column except club_id (the route
+// sets the tenant), all optional, so a score-only update from Enter a score and
+// the old /admin/schedule page's full insert and update (it writes through this
+// route via lib/admin-client.ts) both pass, and an unknown column is refused.
+// A score is a whole number from 0 to 99. ADMIN-RE-07 adds the text limits.
+const matchScore = z.number().int().min(0).max(99).nullable().optional();
+const plainDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const nullableText = z.string().nullable().optional();
+
+const matchesMutation = z
+  .object({
+    id: uuid.optional(),
+    season_id: uuid.optional(),
+    date: plainDate.optional(),
+    time: z.string().max(16).optional(),
+    opponent: z.string().optional(),
+    opponent_short_name: nullableText,
+    opponent_logo_url: nullableText,
+    opponent_logo_asset_id: nullableUuid.optional(),
+    competition: nullableText,
+    sponsor_name: nullableText,
+    sponsor_logo_url: nullableText,
+    sponsor_logo_asset_id: nullableUuid.optional(),
+    sponsor_link: nullableText,
+    home: z.boolean().optional(),
+    venue: z.string().optional(),
+    address: nullableText,
+    city: nullableText,
+    state: nullableText,
+    rose_city_score: matchScore,
+    opponent_score: matchScore,
+    attendance: z.number().int().min(0).nullable().optional(),
+    scorers: z.array(jsonValue).max(200).optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+  })
+  .strict();
+
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
+  matches: matchesMutation,
   programs: programMutation,
   program_media: programMediaMutation,
   programs_page_content: programsPageMutation,
