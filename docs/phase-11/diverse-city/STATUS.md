@@ -1,5 +1,67 @@
 # Diverse City FC Status
 
+## 2026-11-09 - ADMIN-RE-07b: Sponsor? on Add a game, opponent reuse
+
+**Agent/package:** Claude Code, `ADMIN-RE-07b`, one of the RE-07 follow-ups
+Christian approved on 2026-11-09, started by the orchestration session.
+Branch `claude/admin-re-07b-sponsor-6430a7` from `main` `0008281`.
+**Status:** `in_progress`, PR open for the review bot. No migration. Nobody
+sees it yet: both clubs are still `classic` (RE-10).
+
+**Completed work:**
+
+- **"Sponsor?" on `/admin/add-game`**, only where the club's website shows
+  match sponsors: `codeSiteAdminFor(club)?.schedule.showMatchSponsorFields
+  !== false`, the classic Games form's rule. Rose City yes, Diverse City no
+  (the loader does not even read sponsors there, and the insert sends no
+  sponsor columns).
+  - Comes filled in with the club's latest game's sponsor (latest by date
+    and time, any season), keeping its link and logo (url and asset).
+  - Can switch to a Sponsors-page sponsor (`site_sponsor_logos`, each name
+    once, no link) or "No sponsor". A Sponsors-page sponsor with the latest
+    game's name is not offered twice.
+  - Nothing to pick: "No sponsor. Add sponsors", linking to `/admin/sponsors`.
+  - No uploads.
+- **Opponent reuse:** a game against an opponent played before (same name
+  ignoring case and outer spaces, any season) gets that opponent's newest
+  short name and newest logo (url and asset), silently. Each is the newest
+  non-blank one, so a game saved without them (the RE-07 form) does not lose
+  them for the club. A short name over 20 is not reused (a new game could not
+  be saved with it).
+- **Sponsors page:** removing or replacing a sponsor logo no longer deletes
+  the file while a game still uses it (`matches.sponsor_logo_url`), because
+  Add a game can now give a game a Sponsors-page logo. If that check fails,
+  the file stays.
+- Tenant rules: all reads use the signed-in person's client and
+  `.eq("club_id", clubId)`; the client never sends `club_id`; no service role.
+
+**Files changed:** `lib/admin-add-game-data.ts`,
+`app/admin/(protected)/add-game/page.tsx`,
+`components/admin/reimagined/AddGame.tsx`,
+`components/admin/reimagined/add-game.module.css`,
+`app/admin/(protected)/sponsors/page.tsx`; new
+`tests/contracts/admin-add-game-sponsor.test.ts`; deliberately updated
+`tests/contracts/admin-add-game.test.ts` (payload shape, six club-scoped
+reads) and `tests/browser/admin-reimagined-add-game.spec.ts` (new sponsor
+test; fixture cleanup uses `ilike` and removes fixture sponsors); this file,
+`HANDOFF.md`.
+
+**Verification:** VERIFICATION_PLACEHOLDER
+
+**Decision 7 length check:** not run. Both Supabase connectors refused
+`execute_sql` on `ioalthwsdrlzrubomrow` ("You do not have permission").
+Not worked around. The exact read-only SQL (counts and max lengths only,
+plus blank opponent/venue and scores over 99) went to the orchestration
+session and the shared notes for Christian to paste into the SQL editor.
+
+**Blockers:** the CHECK migration (or the shortening list) waits for those
+counts.
+
+**Exact next step:** the bot reviews and merges RE-07b. Christian runs the
+length query; then either the CHECK migration PR (seven text limits plus
+0-99 scores on `onzio.matches`, Zod limits extended to edits) or the
+date-and-field list for him to shorten.
+
 ## 2026-11-08 - ADMIN-RE-07: Add a game
 
 **Agent/package:** Claude Code, `ADMIN-RE-07`, started by the orchestration

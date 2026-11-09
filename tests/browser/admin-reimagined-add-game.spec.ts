@@ -55,6 +55,52 @@ async function savedGame(opponent: string): Promise<SavedGame[]> {
   );
 }
 
+const fixtureLogo = (name: string) =>
+  `http://127.0.0.1:54321/storage/v1/object/public/sponsors/match-sponsors/re-07b-${name}.png`;
+const fixtureSponsors = (width: number) => ({
+  sponsorA: `${FIXTURE} Acme Plumbing ${width}`,
+  sponsorB: `${FIXTURE} Riverside Bank ${width}`,
+});
+
+/** Two past games against one opponent; the newer one's short name and logo win. */
+async function seedOpponentHistory(seasonId: string, opponent: string) {
+  await sql(
+    `insert into onzio.matches (club_id, season_id, date, time, opponent, opponent_short_name, opponent_logo_url, home, venue)
+     values ($1,$2,'2020-03-01','10:00',$3,'OLD',$4,true,'Old ground'),
+            ($1,$2,'2021-03-01','10:00',$3,'RIV',$5,false,'River ground')`,
+    [ALPHA, seasonId, opponent, fixtureLogo("old"), fixtureLogo("riverside")],
+  );
+}
+
+/** The club's latest game, with a sponsor and its link, and one Sponsors-page sponsor. */
+async function seedSponsors(seasonId: string, width: number) {
+  const { sponsorA, sponsorB } = fixtureSponsors(width);
+  await sql(
+    `insert into onzio.matches (club_id, season_id, date, time, opponent, home, venue, sponsor_name, sponsor_logo_url, sponsor_link)
+     values ($1,$2,'2099-06-01','10:00',$3,true,'Future ground',$4,$5,'https://acme.example')`,
+    [ALPHA, seasonId, `${FIXTURE} Latest ${width}`, sponsorA, fixtureLogo("acme")],
+  );
+  await sql(
+    "insert into onzio.site_sponsor_logos (club_id, placement, name, logo_url, sort_order) values ($1,'carousel',$2,$3,99)",
+    [ALPHA, sponsorB, fixtureLogo("bank")],
+  );
+}
+
+// Alpha publishes the seeded academy document. With nothing published it is a
+// generic site, which shows match sponsors like Rose City's. Returns the undo.
+const SEEDED_DOCUMENT = "88888888-8888-4888-8888-888888888804";
+async function showMatchSponsorsOnAlpha(): Promise<() => Promise<void>> {
+  const [state] = await sql<{ published_document_id: string | null }>(
+    "select published_document_id from onzio.presentation_state where club_id=$1",
+    [ALPHA],
+  );
+  expect(state.published_document_id).toBe(SEEDED_DOCUMENT);
+  await sql("update onzio.presentation_state set published_document_id=null where club_id=$1", [ALPHA]);
+  return async () => {
+    await sql("update onzio.presentation_state set published_document_id=$2 where club_id=$1", [ALPHA, SEEDED_DOCUMENT]);
+  };
+}
+
 async function alpha() {
   const [club] = await sql<{ slug: string; public_access: "preview" | "live" | "grace" | "suspended"; time_zone: string }>(
     "select slug, public_access, time_zone from onzio.clubs where id=$1",
@@ -215,49 +261,21 @@ for (const width of [390, 1440]) {
       }
     });
 
-    // ADMIN-RE-07b. Alpha is not an academy site, so it shows match sponsors.
-    test("Sponsor? comes filled in, and an opponent played before keeps its short name and logo", async ({ page }) => {
+    // ADMIN-RE-07b. Local Alpha is seeded as the academy site (it stands in
+    // for Diverse City), whose pages never show match sponsors.
+    test("an academy site has no Sponsor?, and an opponent played before keeps its short name and logo", async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       const club = await alpha();
-      const logo = (name: string) => `http://127.0.0.1:54321/storage/v1/object/public/sponsors/match-sponsors/re-07b-${name}.png`;
-      const sponsorA = `${FIXTURE} Acme Plumbing ${width}`;
-      const sponsorB = `${FIXTURE} Riverside Bank ${width}`;
       const known = `${FIXTURE} Riverside ${width}`;
       try {
-        // Nothing to pick yet: "No sponsor" and the way to the Sponsors page.
+        await seedOpponentHistory(club.seasonId, known);
+        // Sponsors exist, and still nothing is asked or carried.
+        await seedSponsors(club.seasonId, width);
         await openAddGame(page);
-        const empty = main(page);
-        await expect(empty.getByTestId("add-game-no-sponsor")).toHaveText("No sponsor. Add sponsors");
-        await expect(empty.getByRole("link", { name: "Add sponsors" })).toHaveAttribute("href", "/admin/sponsors");
-        await page.screenshot({ path: `${SHOTS}/add-game-no-sponsor-${width}.png`, fullPage: true });
-
-        // Two past games against the same opponent (the newer one wins), the
-        // club's latest game with a sponsor, and one Sponsors-page sponsor.
-        await sql(
-          `insert into onzio.matches (club_id, season_id, date, time, opponent, opponent_short_name, opponent_logo_url, home, venue)
-           values ($1,$2,'2020-03-01','10:00',$3,'OLD',$4,true,'Old ground'),
-                  ($1,$2,'2021-03-01','10:00',$3,'RIV',$5,false,'River ground')`,
-          [ALPHA, club.seasonId, known, logo("old"), logo("riverside")],
-        );
-        await sql(
-          `insert into onzio.matches (club_id, season_id, date, time, opponent, home, venue, sponsor_name, sponsor_logo_url, sponsor_link)
-           values ($1,$2,'2099-06-01','10:00',$3,true,'Future ground',$4,$5,'https://acme.example')`,
-          [ALPHA, club.seasonId, `${FIXTURE} Latest ${width}`, sponsorA, logo("acme")],
-        );
-        await sql(
-          "insert into onzio.site_sponsor_logos (club_id, placement, name, logo_url, sort_order) values ($1,'carousel',$2,$3,99)",
-          [ALPHA, sponsorB, logo("bank")],
-        );
-
-        await page.reload();
         const form = main(page);
-        const sponsor = form.getByLabel("Sponsor?");
-        await expect(sponsor).toHaveValue("0");
-        await expect(sponsor.locator("option")).toHaveText([`${sponsorA} (last game)`, sponsorB, "No sponsor"]);
+        await expect(form.getByText("Sponsor?")).toHaveCount(0);
         await expect(form.getByTestId("add-game-no-sponsor")).toHaveCount(0);
-        await expectNoSideScroll(page, width);
-        await page.screenshot({ path: `${SHOTS}/add-game-sponsor-${width}.png`, fullPage: true });
 
         // The same opponent typed in another case with outer spaces.
         const typed = known.toUpperCase();
@@ -268,42 +286,89 @@ for (const width of [390, 1440]) {
         expect(await savedGame(typed)).toEqual([
           {
             opponent_short_name: "RIV",
-            opponent_logo_url: logo("riverside"),
+            opponent_logo_url: fixtureLogo("riverside"),
+            sponsor_name: null,
+            sponsor_logo_url: null,
+            sponsor_link: null,
+          },
+        ]);
+        expect(errors).toEqual([]);
+      } finally {
+        await removeFixtureGames();
+      }
+    });
+
+    test("a site that shows match sponsors asks Sponsor?, filled in with the latest game's", async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      const club = await alpha();
+      const { sponsorA, sponsorB } = fixtureSponsors(width);
+      const restore = await showMatchSponsorsOnAlpha();
+      try {
+        // Nothing to pick yet: "No sponsor" and the way to the Sponsors page.
+        await openAddGame(page);
+        const empty = main(page);
+        await expect(empty.getByTestId("add-game-no-sponsor")).toHaveText("No sponsor. Add sponsors");
+        await expect(empty.getByRole("link", { name: "Add sponsors" })).toHaveAttribute("href", "/admin/sponsors");
+        await expectNoSideScroll(page, width);
+        await page.screenshot({ path: `${SHOTS}/add-game-no-sponsor-${width}.png`, fullPage: true });
+
+        await seedSponsors(club.seasonId, width);
+        await page.reload();
+        const form = main(page);
+        const sponsor = form.getByLabel("Sponsor?");
+        await expect(sponsor).toHaveValue("0");
+        await expect(sponsor.locator("option")).toHaveText([`${sponsorA} (last game)`, sponsorB, "No sponsor"]);
+        await expect(form.getByTestId("add-game-no-sponsor")).toHaveCount(0);
+        await expectNoSideScroll(page, width);
+        await page.screenshot({ path: `${SHOTS}/add-game-sponsor-${width}.png`, fullPage: true });
+
+        // The latest game's sponsor keeps its link.
+        const first = `${FIXTURE} Northgate ${width}`;
+        await form.getByLabel("Who are you playing?").fill(first);
+        await form.getByLabel("Where?").fill("Lincoln Park");
+        await form.getByRole("button", { name: "Add to schedule" }).click();
+        await expect(form.getByTestId("add-game-submit")).toContainText("Added");
+        expect(await savedGame(first)).toEqual([
+          {
+            opponent_short_name: null,
+            opponent_logo_url: null,
             sponsor_name: sponsorA,
-            sponsor_logo_url: logo("acme"),
+            sponsor_logo_url: fixtureLogo("acme"),
             sponsor_link: "https://acme.example",
           },
         ]);
 
-        // A Sponsors-page sponsor has no link; a new opponent gets nothing reused.
+        // A Sponsors-page sponsor has no link.
         await sponsor.selectOption({ label: sponsorB });
-        const newcomer = `${FIXTURE} Newcomer ${width}`;
-        await form.getByLabel("Who are you playing?").fill(newcomer);
+        const second = `${FIXTURE} Eastside ${width}`;
+        await form.getByLabel("Who are you playing?").fill(second);
         await form.getByLabel("Where?").fill("Lincoln Park");
         await form.getByRole("button", { name: "Add to schedule" }).click();
         await expect(form.getByTestId("add-game-submit")).toContainText("Added");
-        expect(await savedGame(newcomer)).toEqual([
+        expect(await savedGame(second)).toEqual([
           {
             opponent_short_name: null,
             opponent_logo_url: null,
             sponsor_name: sponsorB,
-            sponsor_logo_url: logo("bank"),
+            sponsor_logo_url: fixtureLogo("bank"),
             sponsor_link: null,
           },
         ]);
 
         await sponsor.selectOption({ label: "No sponsor" });
-        const unsponsored = `${FIXTURE} Unsponsored ${width}`;
-        await form.getByLabel("Who are you playing?").fill(unsponsored);
+        const third = `${FIXTURE} Westview ${width}`;
+        await form.getByLabel("Who are you playing?").fill(third);
         await form.getByLabel("Where?").fill("Lincoln Park");
         await form.getByRole("button", { name: "Add to schedule" }).click();
         await expect(form.getByTestId("add-game-submit")).toContainText("Added");
-        expect(await savedGame(unsponsored)).toEqual([
+        expect(await savedGame(third)).toEqual([
           { opponent_short_name: null, opponent_logo_url: null, sponsor_name: null, sponsor_logo_url: null, sponsor_link: null },
         ]);
         expect(errors).toEqual([]);
       } finally {
         await removeFixtureGames();
+        await restore();
       }
     });
   });
