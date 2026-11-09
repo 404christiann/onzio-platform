@@ -473,12 +473,6 @@
   flex: none;
 }
 
-.editBar button.back {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
 .editBarRule {
   width: 1px;
   height: 20px;

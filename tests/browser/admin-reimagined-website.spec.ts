@@ -84,7 +84,7 @@ for (const width of [390, 1440]) {
         // The edit bar replaces the shell's top bar on this page.
         await expect(page.getByTestId("admin-top-bar-title")).toHaveCount(0);
         await expect(bar.getByRole("heading", { level: 1, name: "You’re editing your site" })).toHaveCount(1);
-        await expect(bar.getByRole("button", { name: "Home", exact: true })).toBeVisible();
+        await expect(bar.getByRole("link", { name: "Home", exact: true })).toBeVisible();
         const save = bar.getByRole("button", { name: phone ? "Save" : "Save homepage", exact: true });
         await expect(save).toBeDisabled();
         if (!phone) await expect(bar.getByRole("status")).toHaveText("Nothing to save yet");
@@ -146,13 +146,13 @@ for (const width of [390, 1440]) {
         // With nothing changed, Home goes straight back.
         await page.goto("/admin/homepage");
         const bar = page.getByTestId("admin-edit-bar");
-        await bar.getByRole("button", { name: "Home", exact: true }).click();
+        await bar.getByRole("link", { name: "Home", exact: true }).click();
         await expect(page).toHaveURL(/\/admin$/);
 
         await page.goto("/admin/homepage");
         await changeDateLine(page, marker);
         if (phone) await page.getByRole("button", { name: "Done", exact: true }).filter({ visible: true }).click();
-        await bar.getByRole("button", { name: "Home", exact: true }).click();
+        await bar.getByRole("link", { name: "Home", exact: true }).click();
         const ask = page.getByRole("dialog", { name: "Save your changes first?" });
         await expect(ask).toBeVisible();
         await expect(ask.getByRole("button", { name: "Save and continue" })).toBeVisible();
@@ -164,7 +164,7 @@ for (const width of [390, 1440]) {
         await expect(page).toHaveURL(/\/admin\/homepage$/);
         await expect(dateLine(page)).toContainText(marker);
 
-        await bar.getByRole("button", { name: "Home", exact: true }).click();
+        await bar.getByRole("link", { name: "Home", exact: true }).click();
         await ask.getByRole("button", { name: "Leave without saving" }).click();
         await expect(page).toHaveURL(/\/admin$/);
         expect((await homepage(request)).content.hero.eyebrow).toBe(baseline.content.hero.eyebrow);

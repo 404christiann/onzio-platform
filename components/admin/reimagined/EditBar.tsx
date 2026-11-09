@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ChevronLeft, IconEdit, IconSuccess } from "@/components/admin/icons";
 import { TopBarTakeover } from "./TopBar";
 import styles from "./reimagined.module.css";
@@ -8,7 +9,9 @@ import styles from "./reimagined.module.css";
 // cd-desktop, cd-phone). It takes over the shell's top bar: "‹ Home", "You're
 // editing your site", what is not saved yet, and Save, which confirms on itself
 // with the hold-aware saved label. The editor owns saving and leaving; this
-// only shows the state and calls back.
+// only shows the state and calls back. "‹ Home" is a real link to /admin, so
+// a new tab still works; a plain click goes through onHome, which asks first
+// when there are unsaved changes.
 
 export type EditBarState = "clean" | "dirty" | "saving" | "saved";
 
@@ -37,10 +40,18 @@ export function EditBar({
     <TopBarTakeover>
       <div className={styles.editBar} data-testid="admin-edit-bar">
         <div className={styles.editBarLead}>
-          <button type="button" className={styles.back} onClick={onHome}>
+          <Link
+            href="/admin"
+            className={styles.back}
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+              event.preventDefault();
+              onHome();
+            }}
+          >
             <ChevronLeft className="size-5" aria-hidden="true" />
             Home
-          </button>
+          </Link>
           <span className={styles.editBarRule} aria-hidden="true" />
           <IconEdit className={styles.editBarPencil} aria-hidden="true" />
           <h1 className={styles.editBarTitle}>You’re editing your site</h1>
