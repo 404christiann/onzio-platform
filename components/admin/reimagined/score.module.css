@@ -272,7 +272,9 @@
   opacity: 0.5;
 }
 
-.save[data-state="saved"] {
+/* The pointer is still over the button when it confirms; hover must not undo the saved look. */
+.save[data-state="saved"],
+.save[data-state="saved"]:hover:not(:disabled) {
   background: var(--score-won-tint);
   color: var(--score-won);
 }

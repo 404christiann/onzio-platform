@@ -125,6 +125,7 @@ for (const width of [390, 1440]) {
           await held;
           await route.continue();
         });
+        const idleBackground = await save.evaluate((element) => getComputedStyle(element).backgroundColor);
         const response = page.waitForResponse((candidate) => candidate.url().endsWith("/api/admin/data"));
         await save.click();
         const button = card.locator("button[data-state]");
@@ -136,6 +137,10 @@ for (const width of [390, 1440]) {
 
         await expect(button).toHaveText("Saved · on your website");
         await expect(card.getByTestId("score-pill")).toHaveText("Won 3–1");
+        // The pointer is still on the button: the saved look must win over hover.
+        await expect
+          .poll(() => button.evaluate((element) => getComputedStyle(element).backgroundColor))
+          .not.toBe(idleBackground);
         const [row] = await sql<{ rose_city_score: number; opponent_score: number }>(
           "select rose_city_score, opponent_score from onzio.matches where club_id=$1 and id=$2",
           [ALPHA, id],
