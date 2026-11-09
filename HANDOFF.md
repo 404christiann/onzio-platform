@@ -1,3 +1,18 @@
+## 2026-11-08 - ADMIN-RE-05 follow-up: every old page reachable from the new home
+
+- **Status:** `in_progress` on branch `claude/admin-re-05-more-rows` from
+  `main` `29fce5e`, PR open. No migration. Nobody sees it until RE-10.
+- **What it adds:** More rows Player numbers (`/admin/stats`), About page and
+  Contact page (Contact only where the design has one). Games
+  (`/admin/schedule`) and Homepage (`/admin/homepage`) appear in More only
+  while content changes are paused, when the jobs that open them hide. A
+  contract test now checks that every page the classic sidebar shows is
+  reachable from the new home.
+- **Verification:** contract and browser tests updated; full suites on the PR
+  head, listed in the PR body.
+- **Next:** review bot merges. The bot's Low note 2 on #102 (two separate
+  portal reads) is still open.
+
 ## 2026-11-08 - ADMIN-RE-05 the new home and the reimagined shell
 
 - **Status:** `in_progress` on branch `claude/admin-re-05-home` from `main`

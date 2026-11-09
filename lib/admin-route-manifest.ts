@@ -584,9 +584,14 @@ export const ADMIN_HOME_JOBS = [
 export type AdminMoreRowId =
   | "team-roster"
   | "this-season"
+  | "games"
+  | "player-numbers"
   | "league-table"
   | "programs"
   | "tryouts"
+  | "homepage"
+  | "about-page"
+  | "contact-page"
   | "sponsors"
   | "shop"
   | "your-club"
@@ -601,6 +606,11 @@ type AdminMoreRowDefinition = Readonly<{
   routeId: AdminRouteId;
   /** The quiet stand-in for "See registrations" when that is not a big job. */
   onlyWithoutLiveSignUps?: true;
+  /**
+   * The way to a page whose big jobs hide while content changes are paused,
+   * so the owner can still open it and look.
+   */
+  onlyWhileContentPaused?: true;
 }>;
 
 export type AdminMoreRow = Readonly<{
@@ -611,13 +621,21 @@ export type AdminMoreRow = Readonly<{
 }>;
 
 // Programs and Tryouts stay two rows while they are two pages; a club whose
-// website has only one of them sees only that row (decision 0005).
+// website has only one of them sees only that row (decision 0005). Every old
+// page stays reachable from the home: About, Contact and Player numbers until
+// Edit my website and Enter a score cover them (RE-13, RE-06), and Games and
+// Homepage while content changes are paused hide the jobs that open them.
 export const ADMIN_MORE_ROWS = [
   { id: "team-roster", label: "Team roster", routeId: "roster" },
   { id: "this-season", label: "This season", routeId: "seasons" },
+  { id: "games", label: "Games", routeId: "schedule", onlyWhileContentPaused: true },
+  { id: "player-numbers", label: "Player numbers", routeId: "match-stats" },
   { id: "league-table", label: "League table", routeId: "standings" },
   { id: "programs", label: "Programs", routeId: "programs" },
   { id: "tryouts", label: "Tryouts", routeId: "tryouts" },
+  { id: "homepage", label: "Homepage", routeId: "homepage", onlyWhileContentPaused: true },
+  { id: "about-page", label: "About page", routeId: "about" },
+  { id: "contact-page", label: "Contact page", routeId: "contact" },
   { id: "sponsors", label: "Sponsors", routeId: "sponsors" },
   { id: "shop", label: "Shop", routeId: "shop" },
   { id: "your-club", label: "Your club", routeId: "branding" },
@@ -675,6 +693,7 @@ export function getVisibleAdminMoreRows(
     const route = routes.get(row.routeId);
     if (!route) return [];
     if (row.onlyWithoutLiveSignUps && context.hasLiveSignUps) return [];
+    if (row.onlyWhileContentPaused && context.canMutateContent) return [];
     return [{ id: row.id, label: row.label, href: route.href, iconKey: route.iconKey }];
   });
 }

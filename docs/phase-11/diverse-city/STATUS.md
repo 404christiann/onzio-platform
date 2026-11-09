@@ -1,5 +1,62 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-05 follow-up: every old page reachable from the new home
+
+**Agent/package:** Claude Code, `ADMIN-RE-05` follow-up, asked for by
+Christian after #102 merged. Branch `claude/admin-re-05-more-rows` from `main`
+`29fce5e`. **Status:** `in_progress`, PR open for the review bot. No migration.
+Nobody sees it yet: both clubs are still `classic` until `GATE-FLIP-RC` (RE-10).
+
+**Completed work:**
+
+- Christian answered RE-05's open question with yes: the new home's More list
+  now reaches every page the classic sidebar shows.
+- New More rows in glossary words (`ADMIN_MORE_ROWS`): **Player numbers** →
+  `/admin/stats`, **About page** → `/admin/about`, **Contact page** →
+  `/admin/contact`. They follow the classic sidebar's checks, so Contact page
+  shows only where `codeSiteAdminFor` gives the club a Contact page (today the
+  Diverse City design).
+- While content changes are paused, the home hides Enter a score, Add a game
+  and Edit my website. Two rows now take their place in More, only in that
+  state: **Games** → `/admin/schedule` and **Homepage** → `/admin/homepage`
+  (`onlyWhileContentPaused`). This was the review bot's Low note 1 on #102.
+- The top bar titles follow the new names: `/admin/stats` says "Player
+  numbers", `/admin/schedule` "Games", `/admin/about` "About page".
+- Order: Team roster, This season, Games (paused only), Player numbers, League
+  table, Programs, Tryouts, Homepage (paused only), About page, Contact page,
+  Sponsors, Shop, Your club, How the team is doing, Payments and plan, Who can
+  sign in, Sign-up forms (quiet).
+
+**Files changed:** `lib/admin-route-manifest.ts`,
+`tests/contracts/admin-route-manifest.test.ts` (deliberate update of the exact
+More locks), `tests/browser/admin-reimagined-home.spec.ts`, this file,
+`HANDOFF.md`.
+
+**Verification:**
+
+- Contract tests: the exact row lock; paused content shows Games and Homepage
+  and nothing else changes; Contact page follows `codeSiteAdminFor`; new
+  titles; and a new check that, for an owner, a paused club, a club with no
+  live form, a helper and a non-Diverse-City design, every page the classic
+  sidebar shows is reachable from the home's jobs or More rows.
+- Browser (Alpha, 390 and 1440): About page and Player numbers rows open their
+  pages; Games and Homepage are not rows while editing is allowed. The paused
+  state is covered by the contract test only, because pausing Alpha means
+  changing its lifecycle, which the browser suite does not touch.
+- Full suites run by hand on the PR head outside the main checkout; results
+  and the tested commit are in the PR body.
+
+**Blockers and decisions:**
+
+- No blocker. Names chosen from the design glossary: "Player numbers" (the
+  glossary's word for match stats), "Games" (it avoids "match" and "fixture").
+  "About page", "Contact page" and "Homepage" have no glossary entry; they name
+  the website page they edit. Christian can rename any of them.
+- The review bot's Low note 2 on #102 (the layout and the home each read the
+  portal, so they can briefly disagree) is not addressed here.
+
+**Next step:** the review bot reviews and merges. RE-06 to RE-09 can go ahead.
+
 ## 2026-11-08 - ADMIN-RE-05: the new home and the reimagined shell
 
 **Agent/package:** Claude Code, `ADMIN-RE-05`, started by the orchestration
