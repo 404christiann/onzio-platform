@@ -289,10 +289,11 @@ const tryoutsPageMutation = z
 // had none in 20260726000200_phase2_content.sql) and the 0-99 score range
 // apply only when a game is added, so existing longer rows stay editable
 // until decision 7's read-only production length check allows them
-// everywhere, and then database CHECKs.
+// everywhere, and then database CHECKs. A score is a whole number from 0 to
+// 99 on every write (ADMIN-RE-06).
 const plainDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const wallClockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/);
-const matchScore = z.number().int().min(0).nullable();
+const matchScore = z.number().int().min(0).max(99).nullable();
 const nullableString = z.string().nullable().optional();
 const filledText = z.string().trim().min(1);
 
@@ -320,11 +321,12 @@ export const matchesMutation = z
     opponent_score: matchScore.optional(),
     attendance: z.number().int().min(0).nullable().optional(),
     scorers: z.array(jsonValue).max(200).optional(),
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
   })
   .strict();
 
 const limitedText = (maximum: number) => z.string().max(maximum).nullable().optional();
-const newGameScore = z.number().max(99).nullable().optional();
 
 /** The limits a newly added game must meet (insert or upsert). */
 export const newMatchLimits = z.object({
@@ -335,13 +337,12 @@ export const newMatchLimits = z.object({
   address: limitedText(MATCH_TEXT_LIMITS.address),
   city: limitedText(MATCH_TEXT_LIMITS.city),
   state: limitedText(MATCH_TEXT_LIMITS.state),
-  rose_city_score: newGameScore,
-  opponent_score: newGameScore,
 });
 
 const MATCH_INSERT_REQUIRED = ["season_id", "date", "time", "opponent", "venue"] as const;
 
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
+  matches: matchesMutation,
   programs: programMutation,
   program_media: programMediaMutation,
   programs_page_content: programsPageMutation,
@@ -350,7 +351,6 @@ const NEW_DOMAIN_MUTATION_SCHEMAS = {
   contact_page_content: contactPageMutation,
   tryouts: tryoutMutation,
   tryouts_page_content: tryoutsPageMutation,
-  matches: matchesMutation,
 } as const;
 
 const filter = z.object({

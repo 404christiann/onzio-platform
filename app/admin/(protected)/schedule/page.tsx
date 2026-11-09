@@ -112,10 +112,11 @@ function emptyForm(seasonId = ""): FormState {
   };
 }
 
-// ADMIN-RE-07: /api/admin/data holds a newly added game to these limits
-// (lib/admin-data-contract.ts newMatchLimits). Existing games keep saving as
-// they are until decision 7's production length check.
-const NEW_MATCH_MAX_SCORE = 99;
+// ADMIN-RE-07: /api/admin/data holds a newly added game to these text limits
+// (lib/admin-data-contract.ts newMatchLimits); existing games keep saving as
+// they are until decision 7's production length check. Every write caps a
+// score at 99 (ADMIN-RE-06).
+const MAX_MATCH_SCORE = 99;
 const NEW_MATCH_FIELD_LABELS: Record<keyof typeof MATCH_TEXT_LIMITS, string> = {
   opponent: "Opponent name",
   opponent_short_name: "Short name",
@@ -131,11 +132,6 @@ function newMatchTooLong(form: FormState): string | null {
     const value = form[field];
     if (typeof value === "string" && value.length > MATCH_TEXT_LIMITS[field]) {
       return `${NEW_MATCH_FIELD_LABELS[field]} can be at most ${MATCH_TEXT_LIMITS[field]} characters.`;
-    }
-  }
-  for (const score of [form.rose_city_score, form.opponent_score]) {
-    if (score !== null && score > NEW_MATCH_MAX_SCORE) {
-      return `Scores can be at most ${NEW_MATCH_MAX_SCORE}.`;
     }
   }
   return null;
@@ -334,6 +330,9 @@ export default function SchedulePage() {
     if (isNew) {
       const tooLong = newMatchTooLong(form);
       if (tooLong) return tooLong;
+    }
+    if ([form.rose_city_score, form.opponent_score].some((score) => score !== null && score > MAX_MATCH_SCORE)) {
+      return `Scores can be at most ${MAX_MATCH_SCORE}.`;
     }
     const roseCityScore = form.rose_city_score;
     const opponentScore = form.opponent_score;
@@ -1165,7 +1164,7 @@ function MatchForm({
               placeholder="e.g. 2"
               value={form.rose_city_score ?? ""}
               onChange={(e) => setScore("rose_city_score", e.target.value)}
-              max={isNew ? NEW_MATCH_MAX_SCORE : undefined}
+              max={MAX_MATCH_SCORE}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>
@@ -1180,7 +1179,7 @@ function MatchForm({
               placeholder="e.g. 1"
               value={form.opponent_score ?? ""}
               onChange={(e) => setScore("opponent_score", e.target.value)}
-              max={isNew ? NEW_MATCH_MAX_SCORE : undefined}
+              max={MAX_MATCH_SCORE}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>

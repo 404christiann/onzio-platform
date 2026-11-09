@@ -47,6 +47,7 @@ export type AdminRouteId =
   | "seasons"
   | "roster"
   | "schedule"
+  | "score"
   | "match-stats"
   | "standings"
   | "registrations"
@@ -234,6 +235,14 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: "competition",
   },
   {
+    id: "score",
+    label: "Enter a score",
+    href: "/admin/score",
+    iconKey: "schedule",
+    groupId: "competition",
+    reimaginedOnly: true,
+  },
+  {
     id: "match-stats",
     label: "Stats",
     href: "/admin/stats",
@@ -388,6 +397,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
+  score: ["competition", "score", "result", "enter a score", "matches"],
   "match-stats": ["competition", "stats", "match stats", "season stats", "season totals", "game statistics", "player statistics"],
   standings: ["competition", "standings", "table"],
   registrations: ["registrations", "forms", "registrants"],
@@ -579,7 +589,7 @@ export const ADMIN_HOME_JOBS = [
   {
     id: "enter-score",
     label: "Enter a score",
-    routeId: "schedule",
+    routeId: "score",
     hue: "amber",
     hint: "games-needing-score",
     needsContentMutation: true,
@@ -648,12 +658,14 @@ export type AdminMoreRow = Readonly<{
 // Programs and Tryouts stay two rows while they are two pages; a club whose
 // website has only one of them sees only that row (decision 0005). Every old
 // page stays reachable from the home: About, Contact and Player numbers until
-// Edit my website and Enter a score cover them (RE-13, RE-06), and Games and
-// Homepage while content changes are paused hide the jobs that open them.
+// Edit my website and Enter a score cover them (RE-13, RE-06), Games always
+// (ADMIN-RE-07: no job opens the old schedule page any more, and it is still
+// where a game is changed or removed), and Homepage while content changes are
+// paused hide the job that opens it.
 export const ADMIN_MORE_ROWS = [
   { id: "team-roster", label: "Team roster", routeId: "roster" },
   { id: "this-season", label: "This season", routeId: "seasons" },
-  { id: "games", label: "Games", routeId: "schedule", onlyWhileContentPaused: true },
+  { id: "games", label: "Games", routeId: "schedule" },
   { id: "player-numbers", label: "Player numbers", routeId: "match-stats" },
   { id: "league-table", label: "League table", routeId: "standings" },
   { id: "programs", label: "Programs", routeId: "programs" },
@@ -704,6 +716,17 @@ export function getVisibleAdminHomeJobs(
       },
     ];
   });
+}
+
+/**
+ * ADMIN-RE-06: where a home job leads, for a link from inside another job's
+ * page ("All scores are in" → Add a game). It follows the job as its page
+ * ships. The caller decides whether to show the link.
+ */
+export function getAdminHomeJobHref(id: AdminHomeJobId): `/admin${string}` {
+  const job = ADMIN_HOME_JOBS.find((candidate) => candidate.id === id);
+  const route = job ? ROUTE_BY_ID.get(job.routeId) : undefined;
+  return route?.href ?? "/admin";
 }
 
 export function getVisibleAdminMoreRows(

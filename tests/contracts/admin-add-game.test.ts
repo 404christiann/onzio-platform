@@ -86,10 +86,10 @@ describe("adding a game through /api/admin/data", () => {
     expect(insert(rest).success).toBe(false);
   });
 
-  it("keeps a score-only update valid (ADMIN-RE-06), whole numbers from 0, and 0-99 for a new game", () => {
+  it("keeps a score-only update valid (ADMIN-RE-06), whole numbers from 0 to 99 on every write", () => {
     expect(update({ rose_city_score: 3, opponent_score: 0 })).toBe(true);
     expect(update({ rose_city_score: null, opponent_score: null })).toBe(true);
-    expect(update({ rose_city_score: 100 })).toBe(true);
+    expect(update({ rose_city_score: 100 })).toBe(false);
     expect(update({ opponent_score: -1 })).toBe(false);
     expect(update({ opponent_score: 1.5 })).toBe(false);
     expect(insert({ ...GAME, rose_city_score: 99, opponent_score: 0 }).success).toBe(true);
@@ -219,7 +219,7 @@ describe("classic Games page writes", () => {
     address: text(130),
     city: text(90),
     state: text(50),
-    rose_city_score: 120,
+    rose_city_score: 4,
     opponent_score: 3,
   };
 
@@ -251,6 +251,7 @@ describe("classic Games page writes", () => {
       expect(classic).toContain(`maxLength={newMatchLimit("${field}")}`);
     }
     expect(classic).toContain("can be at most ${MATCH_TEXT_LIMITS[field]} characters.");
-    expect(classic).toContain("Scores can be at most ${NEW_MATCH_MAX_SCORE}.");
+    expect(classic).toContain("Scores can be at most ${MAX_MATCH_SCORE}.");
+    expect(classic.match(/max=\{MAX_MATCH_SCORE\}/g)).toHaveLength(2);
   });
 });

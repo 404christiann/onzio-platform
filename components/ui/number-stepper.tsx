@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Minus, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -13,6 +14,12 @@ type NumberStepperProps = {
   disabled?: boolean;
   className?: string;
   "aria-label"?: string;
+  /** Accessible names for the two buttons; default "Decrease value" / "Increase value". */
+  decrementLabel?: string;
+  incrementLabel?: string;
+  /** Glyphs for the two buttons, so a screen can keep one icon set; default lucide. */
+  decrementIcon?: ReactNode;
+  incrementIcon?: ReactNode;
 };
 
 function clamp(v: number, min?: number, max?: number) {
@@ -36,6 +43,10 @@ function NumberStepper({
   disabled,
   className,
   "aria-label": ariaLabel,
+  decrementLabel = "Decrease value",
+  incrementLabel = "Increase value",
+  decrementIcon,
+  incrementIcon,
 }: NumberStepperProps) {
   const atMin = min !== undefined && value <= min;
   const atMax = max !== undefined && value >= max;
@@ -53,12 +64,12 @@ function NumberStepper({
         type="button"
         tabIndex={-1}
         data-slot="number-stepper-decrement"
-        aria-label="Decrease value"
+        aria-label={decrementLabel}
         disabled={disabled || atMin}
         onClick={() => onChange(clamp(value - step, min, max))}
         className="flex size-9 shrink-0 items-center justify-center rounded-l-lg text-muted-foreground outline-none transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
       >
-        <Minus aria-hidden="true" className="size-4" />
+        {decrementIcon ?? <Minus aria-hidden="true" className="size-4" />}
       </button>
       <input
         type="number"
@@ -76,12 +87,12 @@ function NumberStepper({
         type="button"
         tabIndex={-1}
         data-slot="number-stepper-increment"
-        aria-label="Increase value"
+        aria-label={incrementLabel}
         disabled={disabled || atMax}
         onClick={() => onChange(clamp(value + step, min, max))}
         className="flex size-9 shrink-0 items-center justify-center rounded-r-lg text-muted-foreground outline-none transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
       >
-        <Plus aria-hidden="true" className="size-4" />
+        {incrementIcon ?? <Plus aria-hidden="true" className="size-4" />}
       </button>
     </div>
   );

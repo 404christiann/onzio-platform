@@ -1,7 +1,7 @@
 ## 2026-11-08 - ADMIN-RE-07 Add a game
 
 - **Status:** `in_progress` on branch `claude/admin-re-07-add-game-4e0b24`
-  with `main` `aa41f1c` merged in, with the PR open. No migration. Nobody sees it until
+  with `main` `0eaa62d` (RE-06, RE-08) merged in, with the PR open. No migration. Nobody sees it until
   a club is switched to `reimagined` (RE-10).
 - **What it adds:**
   - `/admin/add-game` for reimagined clubs (classic clubs are redirected to
@@ -15,7 +15,9 @@
     types for every `matches` write, the classic Games page included. The
     Zod-only text limits (`lib/match-text-limits.ts`) and scores ≤ 99 apply
     to new games only, so existing longer rows stay editable until the
-    decision 7 length check. The classic add form is capped the same way.
+    decision 7 length check. Scores 0-99 on every write (RE-06). The classic
+    add form is capped the same way.
+  - Games is always a More row now that no job opens the old schedule page.
   - Manifest route `add-game` with the new `reimaginedOnly` flag, and the Add
     a game tile repointed to it.
   - Clock and map pin icons.
@@ -27,6 +29,24 @@
   its test, and in the icon list and its test. RE-06 reuses
   `matchesMutation`.
 - **Exact next step:** the bot merges. Then RE-10 waits for Christian.
+
+## 2026-11-08 - ADMIN-RE-06 Enter a score
+
+- **Status:** `in_progress` on branch `claude/admin-re-06-score-ac068e`,
+  rebased on `main` `aa41f1c`, PR open. No migration. Nobody sees it until
+  RE-10 switches Rose City on.
+- **What it adds:** `/admin/score` for reimagined clubs (classic clubs go to
+  `/admin/schedule`): games needing a score, newest first, with steppers, a
+  Save button that confirms on itself with the hold-aware label
+  (`lib/save-status.ts`), Won/Drew/Lost pills, Earlier results, "All scores
+  are in" with Add a game, and "Who scored?" to Match stats (no game preselect:
+  the stats page has none). Saves go through `/api/admin/data` under a new
+  per-table `matchesMutation` (scores 0 to 99) that also covers the old
+  schedule page. New manifest route `score`; the Enter a score tile opens it.
+- **Verification:** new contract, unit and browser tests (390 and 1440); full
+  suites on the PR head, listed with the tested commit in the PR body.
+- **Next:** the review bot merges; RE-07 lands alongside (RE-08 and RE-09 are
+  merged), then RE-10.
 
 ## 2026-11-09 - Browser suites put Alpha's time zone back
 

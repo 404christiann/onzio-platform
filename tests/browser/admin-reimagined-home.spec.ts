@@ -142,10 +142,10 @@ for (const width of [390, 1440]) {
       await expect(more.getByRole("link", { name: "Payments and plan" })).toHaveAttribute("href", "/admin/payments");
       await expect(more.getByRole("link", { name: "About page" })).toHaveAttribute("href", "/admin/about");
       await expect(more.getByRole("link", { name: "Player numbers" })).toHaveAttribute("href", "/admin/stats");
-      // Games and Homepage are rows only while content changes are paused.
-      await expect(more.getByRole("link", { name: "Games", exact: true })).toHaveCount(0);
+      // Games is always a row (no job opens it); Homepage only while content changes are paused.
+      await expect(more.getByRole("link", { name: "Games", exact: true })).toHaveAttribute("href", "/admin/schedule");
       await expect(more.getByRole("link", { name: "Homepage", exact: true })).toHaveCount(0);
-      await expect(main(page).locator('[data-job="enter-score"]')).toHaveAttribute("href", "/admin/schedule");
+      await expect(main(page).locator('[data-job="enter-score"]')).toHaveAttribute("href", "/admin/score");
       await expect(main(page).locator('[data-job="edit-website"]')).toHaveAttribute("href", "/admin/homepage");
 
       try {
