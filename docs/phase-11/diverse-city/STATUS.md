@@ -48,7 +48,7 @@ test; fixture cleanup uses `ilike` and removes fixture sponsors); this file,
 
 **Verification:** 
 
-- New `tests/contracts/admin-add-game-sponsor.test.ts` (17): opponent
+- New `tests/contracts/admin-add-game-sponsor.test.ts` (16): opponent
   matching ignoring case and outer spaces, newest non-blank short name and
   logo, no over-limit short name, the choice order and de-duplication, "No
   sponsor" as empty columns, every resulting insert accepted by
