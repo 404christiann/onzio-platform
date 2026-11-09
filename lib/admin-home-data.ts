@@ -24,7 +24,7 @@ export type AdminHomeData = {
   hasLiveSignUps: boolean;
 };
 
-type Onzio = ReturnType<SupabaseClient["schema"]>;
+export type Onzio = ReturnType<SupabaseClient["schema"]>;
 
 function shiftPlainDate(date: string, days: number): string {
   const [year, month, day] = date.split("-").map(Number);
@@ -68,7 +68,11 @@ async function countGamesNeedingScore(
   ).length;
 }
 
-async function countNewSignUps(
+/**
+ * Decision 10's count: paid sign-ups since `since` on the given forms. Shared
+ * by the home's "N new" hint and /admin/sign-ups' "N new this week" (ADMIN-RE-08).
+ */
+export async function countNewSignUps(
   onzio: Onzio,
   clubId: string,
   currentFormIds: ReadonlySet<string>,

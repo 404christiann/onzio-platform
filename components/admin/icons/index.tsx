@@ -423,6 +423,31 @@ function Drawing45({ size = 24, ...props }: AdminIconProps) {
   );
 }
 
+function Drawing46({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M2 6V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V6C22 4.89543 21.1046 4 20 4H4C2.89543 4 2 4.89543 2 6ZM4 18L4 9.46455L10.9998 13.5069C11.6187 13.8644 12.3813 13.8644 13.0002 13.5069L20 9.46455V18H4ZM12 11.775L4 7.155V6H20V7.155L12 11.775Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function Drawing47({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M21.0047 21.342C21.6329 20.8043 21.9962 20.02 22 19.1931V16.1795C22 15.3021 21.4281 14.5272 20.5898 14.2685L17.1131 13.1956C16.4856 13.002 15.8031 13.1287 15.2869 13.5346L13.8995 14.6258C13.0354 14.0205 12.2118 13.3319 11.4399 12.5601C10.6681 11.7882 9.97951 10.9646 9.37419 10.1005L10.4654 8.71309C10.8713 8.19694 10.998 7.5144 10.8044 6.88693L9.73153 3.41025C9.47281 2.57186 8.69786 2 7.82046 2H4.8069C3.98001 2.00381 3.19565 2.3671 2.65797 2.99532C2.21357 3.51456 1.96206 4.17697 2.00467 4.85909C2.27326 9.15824 4.04992 13.3803 7.33479 16.6652C10.6197 19.9501 14.8418 21.7267 19.1409 21.9953C19.823 22.0379 20.4854 21.7864 21.0047 21.342ZM7.80217 8.86404C7.257 9.55719 7.23015 10.5256 7.73607 11.2479C8.40782 12.2069 9.17126 13.1198 10.0257 13.9743C10.8802 14.8287 11.7931 15.5922 12.7521 16.2639C13.4744 16.7698 14.4428 16.743 15.136 16.1978L16.5233 15.1067L20 16.1795V19.1872C19.9979 19.4317 19.8901 19.6635 19.7042 19.8226C19.5325 19.9695 19.3695 20.0057 19.2656 19.9992C15.434 19.7598 11.6762 18.1782 8.749 15.251C5.82181 12.3238 4.24016 8.56596 4.00078 4.73438C3.99429 4.63048 4.03046 4.46752 4.17743 4.2958C4.33653 4.10991 4.5683 4.00206 4.81287 4H7.82046L8.89334 7.47667L7.80217 8.86404Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function Drawing48({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7ZM14 7C14 8.10457 13.1046 9 12 9C10.8954 9 10 8.10457 10 7C10 5.89543 10.8954 5 12 5C13.1046 5 14 5.89543 14 7Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M20 17.1666C20 16.7333 19.8642 16.3074 19.5815 15.979C17.7477 13.8488 15.0313 12.5 12 12.5C8.96866 12.5 6.25235 13.8488 4.41847 15.979C4.13576 16.3074 4 16.7333 4 17.1666V19C4 20.1046 4.89543 21 6 21H18C19.1046 21 20 20.1046 20 19V17.1666ZM18 17.2083C16.5313 15.5445 14.3887 14.5 12 14.5C9.61132 14.5 7.46872 15.5445 6 17.2083V19H18V17.2083ZM6.00017 17.1622C6.00017 17.1622 6.00018 17.1622 6.00017 17.1623C6.00016 17.1624 6.00015 17.1625 6.00012 17.1627C6.00014 17.1625 6.00016 17.1623 6.00017 17.1622Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 export const IconDashboard = Drawing0;
 export const IconHomepage = Drawing1;
 export const IconPrograms = Drawing2;
@@ -470,8 +495,13 @@ export const IconSuccess = Drawing40;
 export const IconSave = Drawing41;
 export const IconAccount = Drawing42;
 export const IconExternalLink = Drawing43;
+// ADMIN-RE-07: Add a game (time and venue fields).
 export const IconClock = Drawing44;
 export const IconMapPin = Drawing45;
+// ADMIN-RE-08: the sign-up details panel (parent or guardian, phone, email).
+export const IconMail = Drawing46;
+export const IconPhone = Drawing47;
+export const IconUser = Drawing48;
 
 export const ChevronDown = IconCaretDown;
 export const ChevronDownIcon = IconCaretDown;

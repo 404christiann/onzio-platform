@@ -4,7 +4,7 @@
 
 **Agent/package:** Claude Code, `ADMIN-RE-07`, started by the orchestration
 session alongside RE-06, RE-08 and RE-09. Branch
-`claude/admin-re-07-add-game-4e0b24` from `main` `52fc3c9`. **Status:**
+`claude/admin-re-07-add-game-4e0b24`, with `main` `e4887b2` (RE-08 and RE-09 merged) merged in. **Status:**
 `in_progress`. Built and tested locally, PR open for the review bot. No
 migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 `GATE-FLIP-RC`).
@@ -75,7 +75,7 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
   - extended `lib/__tests__/club-time.test.ts` and
     `tests/contracts/admin-icon-refresh.test.ts`
   - deliberately updated `tests/contracts/admin-route-manifest.test.ts`:
-    19 routes, the tile's new page, reimagined-only visibility, and the
+    20 routes (with RE-08's `sign-ups`), the tile's new page, reimagined-only visibility, and the
     "reaches every page" check now compares against the classic sidebar
 - docs: this file, `HANDOFF.md`
 
@@ -126,11 +126,10 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
   legacy over-limit rows could not be edited. Fixed by applying the limits to
   new games only and capping the classic add form.
 - Shared files with RE-06/08/09:
-  - Whichever merges second keeps both routes in the manifest and both sides
-    of its test (20 routes once RE-06's `score` lands).
+  - RE-08 merged first; both routes and both icon sets are kept (20 routes,
+    21 once RE-06's `score` lands).
   - RE-06 should reuse this `matchesMutation` (scores 0-99 are already in
     it).
-  - RE-08's icons go after Drawing45.
 - A game added here has no sponsor. The old Add form copies the last game's
   sponsor on clubhouse designs. Left as is: the plan's form has no sponsor
   question.
@@ -140,6 +139,121 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 
 **Exact next step:** the review bot reviews and merges. Then RE-10 (switching
 Rose City on) waits for Christian.
+
+## 2026-11-08 - ADMIN-RE-08: See registrations (`/admin/sign-ups`)
+
+**Agent/package:** Claude Code, `ADMIN-RE-08`, started by the orchestration
+session alongside RE-06, RE-07 and RE-09. Branch
+`claude/admin-re-08-sign-ups-38875d`, rebased on `main` `52fc3c9` (#104).
+**Status:** `in_progress`: built and tested locally, PR open for the review
+bot. No migration. Nobody sees it yet: both clubs are still `classic` until
+`GATE-FLIP-RC` (RE-10).
+
+**Completed work:**
+
+- **`/admin/sign-ups`** (design `cd-regs`), reimagined clubs only; a
+  `classic` club is redirected to `/admin/registrations`. Top bar title
+  "Registrations". Heading "N new this week" from RE-05's count (decision 10:
+  paid, current forms, last seven days in club time; `countNewSignUps` is now
+  exported from `lib/admin-home-data.ts` and reused, not rewritten), then
+  "Newest first, from all your registration forms", and All / Paid / Refunded
+  tabs with counts.
+- **One row per person:** name from `answers.player_name` (child) or
+  `answers.registrant_name` (adult), form title, "Paid $120" or "Refunded
+  $40", and the day in club time ("Today", "Yesterday", "3 days ago", "Nov
+  1"). Names wrap to two lines then "…" with the full name on hover; a long
+  form name gives way to "…" but the day always shows. The list shows the
+  newest 100 and says "Download list has everyone" past that.
+- **Details:** beside the list on a laptop, a page of its own on a phone
+  ("‹ Registrations" back), animated with `components/ui/sliding-panel.tsx`.
+  Which person is open is in the address (`?person=`), so Back closes it and
+  Escape closes it on a laptop. Parent or guardian (`guardian_name`,
+  `guardian_phone`, `guardian_email`; an adult's own `registrant_*` under
+  "Contact"), phone and email as tap-to-call / tap-to-email links (an
+  extension is left off the dialled number), payment "$1,250 on Nov 7", Paid
+  or Refunded, refund amount and day, "Card, through Stripe".
+- **Download list** in the top bar (icon only on a phone): the existing
+  per-form export (`/api/admin/registrations/export?formId=`). One form
+  downloads straight away; more than one opens "Which form?" with each form's
+  sign-up count, archived forms marked (decision 9). "Preparing…" →
+  "Downloaded", or "Try again". Disabled with no sign-ups.
+- **Empty state** "No sign-ups yet"; per tab "No refunds" / "No paid
+  sign-ups". A failed read says so instead of showing a wrong list.
+- **The way to the forms:** a "Sign-up forms" row at the foot of the page,
+  and the "Sign-up forms" More row on the home is now always shown (it used
+  to hide while See registrations was a big job, when the tile opened the old
+  page). Form building, open/stop/archive and Stripe Connect stay on
+  `/admin/registrations`.
+- **Reads:** server-side, the signed-in person's own client (RLS
+  `registrations_member_read`), every query `.eq("club_id", …)`. The list
+  selects only the two name keys from `answers`; contact details are read for
+  the one open person only. `status_token_hash` is never selected; counts are
+  paged 500 at a time with `.order("id")`. Nothing is logged.
+- **Manifest:** route `sign-ups` (`reimaginedOnly`, the same field and check
+  as RE-06/07, so classic sidebar search never lists it); the See
+  registrations tile points at it.
+- **Icons:** mail, phone and user from icons.download (medium, outline,
+  round), in `components/admin/icons/assets/communication/`,
+  `approved-selection.json` and `IconMail` / `IconPhone` / `IconUser`
+  (Drawing46-48; RE-07 holds 44-45).
+
+**Files changed:**
+- new `app/admin/(protected)/sign-ups/page.tsx`,
+  `components/admin/reimagined/SignUps.tsx`,
+  `components/admin/reimagined/sign-ups.module.css`,
+  `lib/admin-sign-ups-data.ts`, `lib/admin-sign-ups-format.ts`
+- `lib/admin-route-manifest.ts`, `lib/admin-home-data.ts` (export only)
+- `components/admin/icons/index.tsx`, `approved-selection.json`, three new
+  SVGs
+- tests: new `tests/contracts/admin-reimagined-sign-ups.test.ts`,
+  `tests/browser/admin-reimagined-sign-ups.spec.ts`; deliberately updated
+  `tests/contracts/admin-route-manifest.test.ts` (route count, tile href,
+  Sign-up forms always in More, and the #103 reachability check now compares
+  against the classic sidebar's pages, as its name says),
+  `tests/contracts/admin-icon-refresh.test.ts` (the three icons),
+  `tests/browser/admin-reimagined-home.spec.ts` (tile href, Sign-up forms row)
+- docs: this file, `HANDOFF.md`
+
+**Verification:**
+
+- New contract test (18): every read club-scoped, no `status_token_hash`, no
+  whole rows, no raw `answers` column, contact keys only for the open person,
+  1,284 sign-ups counted in windows 0-499/500-999/1000-1499 ordered by id,
+  "N new" from the home's count (refunds, archived forms, unpaid excluded),
+  tabs, another club's or an unpaid sign-up has no details, adult vs child
+  contact, refund days, error instead of a wrong list, wording (Today /
+  Yesterday / N days ago across midnight in Chicago, "$1,250", "$0",
+  initials for the worst-case names, dial number without the extension), the
+  page's session, club, user-scoped client and classic redirect, no logging.
+- `tests/contracts/registrations-admin-ui.test.ts` unchanged and green: the
+  old page is not touched.
+- Browser, `playwright.admin-reimagined.config.ts` on local Alpha at 390 and
+  1440, under the local database lock: 21/21 (RE-05's 12 and 9 new): empty
+  state, the tile with "3 new" opening the list, the worst fixture's names
+  (Christopher Alexander Montgomery III, Jo, Đặng Thị Ngọc Hân, 王秀英), the
+  long form title, $0 and $1,250, tabs, details as a page on phone and beside
+  the list on laptop with the long guardian name, phone and email, switching
+  person, Escape, the form picker and the downloaded CSV's name and contents,
+  and the classic redirect. Screenshots in `test-results/admin-reimagined/`.
+  Fixture forms and sign-ups are removed in `finally` blocks and before and
+  after the file; Alpha was checked clean afterwards.
+- Full suites on the PR head (tsc, lint, vitest without the database folder,
+  build, `test:db` and the reimagined Playwright config under the lock): see
+  the PR body for results and the tested commit.
+
+**Blockers and decisions:**
+
+- No blocker. No migration, so no `GATE-MIGRATE`.
+- Changed RE-05 behaviour on purpose: "Sign-up forms" is always in More now.
+  Without it, a club with a live form could not reach form building from the
+  home. RE-06 and RE-07 will meet the same #103 reachability check with their
+  own job pages; the shared note in the session notes folder gives them the
+  same one-line fix.
+- The details panel's contact details are the same the old page already
+  shows; reads stay admin-only and user-scoped.
+
+**Exact next step:** the review bot reviews and merges the PR (deploys with
+both clubs still `classic`). Then RE-10 after RE-06 and RE-07 (RE-09 merged as #104).
 
 ## 2026-11-08 - ADMIN-RE-09: Edit my website, step one (the homepage under the edit bar)
 

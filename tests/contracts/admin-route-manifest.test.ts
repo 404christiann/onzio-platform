@@ -42,12 +42,12 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(19);
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(20);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      19,
+      20,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      19,
+      20,
     );
   });
 
@@ -271,13 +271,13 @@ describe("reimagined home jobs and More rows", () => {
     expect(ADMIN_HOME_JOBS).toEqual([
       { id: "enter-score", label: "Enter a score", routeId: "schedule", hue: "amber", hint: "games-needing-score", needsContentMutation: true },
       { id: "add-game", label: "Add a game", routeId: "add-game", hue: "blue", needsContentMutation: true },
-      { id: "see-registrations", label: "See registrations", routeId: "registrations", hue: "green", hint: "new-sign-ups", needsLiveSignUps: true },
+      { id: "see-registrations", label: "See registrations", routeId: "sign-ups", hue: "green", hint: "new-sign-ups", needsLiveSignUps: true },
       { id: "edit-website", label: "Edit my website", routeId: "homepage", hue: "coral", needsContentMutation: true },
     ]);
     expect(getVisibleAdminHomeJobs(REIMAGINED).map((job) => [job.label, job.href])).toEqual([
       ["Enter a score", "/admin/schedule"],
       ["Add a game", "/admin/add-game"],
-      ["See registrations", "/admin/registrations"],
+      ["See registrations", "/admin/sign-ups"],
       ["Edit my website", "/admin/homepage"],
     ]);
   });
@@ -317,6 +317,7 @@ describe("reimagined home jobs and More rows", () => {
       "/admin/analytics",
       "/admin/payments",
       "/admin/members",
+      "/admin/registrations",
     ]);
   });
 
@@ -329,15 +330,16 @@ describe("reimagined home jobs and More rows", () => {
     expect(getVisibleAdminMoreRows({ ...REIMAGINED, role: null })).toEqual([]);
   });
 
-  it("has four jobs with a live sign-up form, otherwise three and a quiet Sign-up forms row", () => {
+  // ADMIN-RE-08 (deliberate update): See registrations opens /admin/sign-ups
+  // now, so Sign-up forms stays in More whether or not a form is live.
+  it("has four jobs with a live sign-up form, otherwise three, and always a Sign-up forms row", () => {
     expect(jobIds(REIMAGINED)).toContain("see-registrations");
-    expect(rowIds(REIMAGINED)).not.toContain("sign-up-forms");
+    expect(rowIds(REIMAGINED).at(-1)).toBe("sign-up-forms");
 
     const quiet = { ...REIMAGINED, hasLiveSignUps: false };
     expect(jobIds(quiet)).toEqual(["enter-score", "add-game", "edit-website"]);
     expect(rowIds(quiet).at(-1)).toBe("sign-up-forms");
     expect(getVisibleAdminMoreRows(quiet).at(-1)).toMatchObject({ label: "Sign-up forms", href: "/admin/registrations" });
-    // Missing means no live form: the quiet row, never a lost page.
     expect(rowIds({ ...REIMAGINED, hasLiveSignUps: undefined })).toContain("sign-up-forms");
   });
 
@@ -363,6 +365,7 @@ describe("reimagined home jobs and More rows", () => {
       "how-the-team-is-doing",
       "payments-and-plan",
       "who-can-sign-in",
+      "sign-up-forms",
     ]);
     expect(getVisibleAdminMoreRows(paused).filter((row) => row.id === "games" || row.id === "homepage")).toEqual([
       { id: "games", label: "Games", href: "/admin/schedule", iconKey: "schedule" },
@@ -384,8 +387,8 @@ describe("reimagined home jobs and More rows", () => {
         ...getVisibleAdminMoreRows(context).map((row) => row.href),
         "/admin",
       ]);
-      // ADMIN-RE-07: the classic sidebar's pages; reimagined-only pages such as
-      // Add a game are jobs, hidden on purpose while content changes are paused.
+      // The classic sidebar's pages; the reimagined-only job pages (ADMIN-RE-06
+      // onward) are reached through their own tiles when those apply.
       const missing = getVisibleAdminRoutes({ ...context, adminPortal: "classic" })
         .map((route) => route.href)
         .filter((href) => !fromHome.has(href));
@@ -423,6 +426,7 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin/branding")).toBe("Your club");
     expect(getReimaginedPageTitle("/admin/members")).toBe("Who can sign in");
     expect(getReimaginedPageTitle("/admin/registrations")).toBe("Sign-up forms");
+    expect(getReimaginedPageTitle("/admin/sign-ups")).toBe("Registrations");
     expect(getReimaginedPageTitle("/admin/schedule")).toBe("Games");
     expect(getReimaginedPageTitle("/admin/stats")).toBe("Player numbers");
     expect(getReimaginedPageTitle("/admin/homepage")).toBe("Homepage");
@@ -435,10 +439,38 @@ describe("reimagined home jobs and More rows", () => {
   });
 });
 
-// ADMIN-RE-07 (deliberate update): the first page that exists only in the
-// reimagined admin. The Add a game tile opens it; the classic sidebar and
-// search never offer it.
-describe("reimagined-only routes", () => {
+// ADMIN-RE-08 (deliberate update): See registrations opens its own page,
+// /admin/sign-ups, which exists only in the reimagined admin.
+describe("the See registrations page route", () => {
+  it("is visible to owners and admins of a reimagined club only, never in the classic sidebar or search", () => {
+    for (const role of ["owner", "admin"] as const) {
+      const reimagined = { ...OWNER_ACCESS, role, adminPortal: "reimagined" as const };
+      expect(visibleIds(reimagined)).toContain("sign-ups");
+      for (const adminPortal of [undefined, "classic"] as const) {
+        expect(visibleIds({ ...reimagined, adminPortal })).not.toContain("sign-ups");
+        expect(navigationIds({ ...reimagined, adminPortal })).not.toContain("sign-ups");
+      }
+    }
+    expect(navigationIds({ ...OWNER_ACCESS, adminPortal: "reimagined" })).not.toContain("sign-ups");
+    expect(ADMIN_ROUTE_MANIFEST.find((route) => route.id === "sign-ups")).toMatchObject({
+      href: "/admin/sign-ups",
+      label: "Registrations",
+      reimaginedOnly: true,
+    });
+  });
+
+  it("keeps the old forms page in More as Sign-up forms, and the tile on the new page", () => {
+    const quiet: AdminRouteAccessContext = { ...OWNER_ACCESS, adminPortal: "reimagined", hasLiveSignUps: false };
+    expect(getVisibleAdminMoreRows(quiet).at(-1)).toMatchObject({ label: "Sign-up forms", href: "/admin/registrations" });
+    expect(getVisibleAdminHomeJobs({ ...quiet, hasLiveSignUps: true }).find((job) => job.id === "see-registrations")?.href).toBe(
+      "/admin/sign-ups",
+    );
+  });
+});
+
+// ADMIN-RE-07 (deliberate update): Add a game opens its own page,
+// /admin/add-game, which exists only in the reimagined admin.
+describe("the Add a game page route", () => {
   const REIMAGINED: AdminRouteAccessContext = { ...OWNER_ACCESS, adminPortal: "reimagined", adminFlags: {} };
 
   it("declares Add a game as a reimagined-only page outside the sidebar groups", () => {
