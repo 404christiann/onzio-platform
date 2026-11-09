@@ -89,7 +89,15 @@ async function deleteUnusedSponsorStorageUrls(urls: string[]): Promise<void> {
       .select("id", { count: "exact", head: true })
       .eq("logo_url", url);
     if (error) throw new Error(error.message);
-    if ((count ?? 0) === 0) unusedUrls.push(url);
+    if ((count ?? 0) > 0) continue;
+    // ADMIN-RE-07b: Add a game can give a game a Sponsors-page logo, so a
+    // logo a game still shows is kept too. When that can't be checked, the
+    // file stays: a leftover file is harmless, a missing logo is not.
+    const games = await supabase
+      .from("matches")
+      .select("id", { count: "exact", head: true })
+      .eq("sponsor_logo_url", url);
+    if (!games.error && (games.count ?? 0) === 0) unusedUrls.push(url);
   }
 
   await deleteSponsorStorageUrls(unusedUrls);

@@ -314,6 +314,27 @@
   gap: 10px;
 }
 
+/* "Sponsor?": a field showing the pick, with the native list over it */
+.pick {
+  position: relative;
+  justify-content: space-between;
+}
+
+.pickSelect {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  cursor: pointer;
+  opacity: 0;
+  font-size: 16px;
+}
+
+.noSponsor {
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
 .venueBox {
   display: grid;
   min-width: 0;

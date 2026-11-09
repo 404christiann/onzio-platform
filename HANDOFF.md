@@ -1,3 +1,20 @@
+## 2026-11-09 - ADMIN-RE-07b Sponsor? on Add a game, opponent reuse
+
+- **Status:** `in_progress` on branch `claude/admin-re-07b-sponsor-6430a7`
+  from `main` `0008281`, PR open. No migration. Nobody sees it until RE-10.
+- **What it adds:** on `/admin/add-game`, a "Sponsor?" question where the
+  club's website shows match sponsors (same rule as the classic Games form:
+  Rose City yes, Diverse City no). Filled in with the latest game's sponsor
+  and its link; switchable to a Sponsors-page sponsor (no link) or "No
+  sponsor"; with nothing to pick, "No sponsor. Add sponsors". A game against
+  an opponent played before quietly keeps that opponent's newest short name
+  and logo. The Sponsors page keeps a logo file a game still uses.
+- **Verification:** contract and browser tests; full suites on the PR head,
+  in the PR body. Details in `STATUS.md`.
+- **Decision 7 length check:** the Supabase connectors were refused; the SQL
+  is with Christian. The CHECK migration waits for the counts.
+- **Exact next step:** the bot merges RE-07b; Christian runs the length query.
+
 ## 2026-11-08 - ADMIN-RE-07 Add a game
 
 - **Status:** `in_progress` on branch `claude/admin-re-07-add-game-4e0b24`
