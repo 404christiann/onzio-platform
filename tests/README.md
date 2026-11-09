@@ -183,7 +183,12 @@ URL. Alpha stands in for Diverse City, so the `admin-loading`, `homepage` and
 `public-page-editors` configs turn Alpha's Shop switch on for their run and
 restore it afterwards (`tests/browser/alpha-store-enabled.global-setup.ts`);
 the seeded Alpha has it off. `public-page-editor-shop-off.spec.ts` turns it
-off again for its own case and restores it. Strip any real email or media provider keys from
+off again for its own case and restores it. The owner's first admin visit confirms
+Alpha's time zone from the browser (ADMIN-RE-02), which the RE-01 database test
+expects unset, so every config that signs the Alpha owner in (these five plus
+`admin-reimagined`, `dcfc-403` and `plat-101`) puts `time_zone` and
+`time_zone_set_at` back when the run ends
+(`tests/browser/alpha-time-zone.global-setup.ts`). Strip any real email or media provider keys from
 the local `.env.local` before a run.
 
 ## Contact section-guide editor
