@@ -132,7 +132,6 @@ bot. No migration. Nobody sees it yet: both clubs are still `classic` until
 
 **Verification:**
 
-VERIFICATION_PLACEHOLDER
 - New contract test (18): every read club-scoped, no `status_token_hash`, no
   whole rows, no raw `answers` column, contact keys only for the open person,
   1,284 sign-ups counted in windows 0-499/500-999/1000-1499 ordered by id,
@@ -161,15 +160,6 @@ VERIFICATION_PLACEHOLDER
 **Blockers and decisions:**
 
 - No blocker. No migration, so no `GATE-MIGRATE`.
-- A game with only one side's score is neither listed to score nor shown in
-  Earlier results, matching the home hint's count. The old schedule page can
-  still fix such a game.
-- Shared with RE-07 and RE-08 (RE-09 is merged): the manifest route count and
-  tile, and `matchesMutation`. The shapes are in the sessions' shared notes
-  (`re-06-shared-shapes.md`); whichever PR merges second keeps both sides.
-
-**Exact next step:** the review bot reviews and merges the PR (it deploys with
-both clubs still `classic`). Then RE-10 once RE-07, RE-08 and RE-09 are in.
 - Changed RE-05 behaviour on purpose: "Sign-up forms" is always in More now.
   Without it, a club with a live form could not reach form building from the
   home. RE-06 and RE-07 will meet the same #103 reachability check with their

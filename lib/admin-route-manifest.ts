@@ -427,7 +427,6 @@ export function isAdminRouteVisible(
   // Only designs that publish a Contact page get the Contact editor; its
   // details are used nowhere else on other designs.
   if (route.id === "contact" && !siteAdmin?.contact.routeVisible) return false;
-  if (route.reimaginedOnly && context.adminPortal !== "reimagined") return false;
   if (route.ownerOnly && context.role !== "owner") return false;
   if (
     route.billingRequired &&
