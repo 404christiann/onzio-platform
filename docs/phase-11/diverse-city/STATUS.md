@@ -55,7 +55,25 @@ screen is not built (it needs RE-05's shell). No migration.
   `tests/database/owner-admin-membership.test.ts`
 - docs: this file, `HANDOFF.md`
 
-**Verification (local):** VERIFY_STATUS
+**Verification (local):**
+
+- `tests/database/owner-admin-membership.test.ts` 9/9 (four new RE-18 cases):
+  last sign-in null until a real email-code sign-in; resend to an active
+  admin only (owner, removed, outsider and other-club targets refused, an
+  admin can't get an owner session), Auth's 429 and
+  `over_email_send_rate_limit` both read as `AUTH_CODE_RATE_LIMITED`, and the
+  real `signInWithOtp` path sends once then hits the 1-minute cooldown; undo
+  at exactly 10 minutes works, 1 ms later is refused, another owner, a
+  legacy removal and another club's removal are refused, a failed audit
+  leaves the removal exactly as it was; a name on add is saved, a
+  zero-width-space name is refused before any identity is created; the
+  rename rollback restores the old name but never overwrites a rename that
+  landed in between. Passed twice in a row.
+- New `tests/contracts/admin-members-sign-in.test.ts` and the extended
+  `admin-members-names.test.ts` (format characters, letter-or-number rule),
+  with `platform-auth` and `admin-platform-fixes-02`: 82/82.
+- Full suites (types, lint, unit and contract tests, build, `test:db`) run
+  by hand on the PR head; the tested commit and results are in the PR body.
 
 **Blockers / decisions:** none blocking. Choices made here and stated in the
 PR: the 10-minute undo window; Undo only for the owner who removed; the name

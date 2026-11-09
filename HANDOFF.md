@@ -13,7 +13,9 @@
     which has no name field, still adds people).
   - `normalizeDisplayName` drops format characters and needs a letter or
     number; the rename rollback only restores its own write.
-- **Verification:** VERIFY_SHORT
+- **Verification:** membership database test 9/9 (4 new), members contract
+  tests 82/82; full suites run by hand on the PR head, results and tested
+  commit in the PR body.
 - **Exact next step:** the bot merges; RE-18's screen uses these, then
   `displayName` becomes required when the old page goes.
 
