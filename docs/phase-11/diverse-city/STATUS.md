@@ -1,5 +1,112 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-06 Enter a score (`/admin/score`)
+
+**Agent/package:** Claude Code, `ADMIN-RE-06`, one of four parallel sessions
+(RE-06 to RE-09) started by the orchestration session. Branch
+`claude/admin-re-06-score-ac068e`, rebased on `main` `aa41f1c`.
+**Status:** `in_progress`, PR open for the review bot. No migration. Nobody
+sees it yet: both clubs are still `classic` until `GATE-FLIP-RC` (RE-10).
+
+**Completed work:**
+
+- New page `/admin/score` (design `cd-score`, `cd-score-desktop`): the games
+  that need a score, newest first (the home hint's rule: active season, no
+  score on either side, two hours after kickoff in club time). Each game has
+  the opponent line ("vs"/"at"), date, time and competition, a pill ("Result
+  missing", then Won/Drew/Lost with the score), one stepper per side (the
+  shared `components/ui/number-stepper.tsx`, 0 to 99) and a Save button that
+  goes "Save score" → "Saving…" → the saved label on itself. A failed save
+  says so under the button.
+- "Earlier results" (the last 10 scored games in the active season, Won green,
+  Lost red), "No earlier results yet" when there are none, and the missing
+  "every score is in" screen from MAP: "All scores are in" with an Add a game
+  button. That button takes the Add a game job's address from the manifest, so
+  it follows RE-07 when that page ships (`getAdminHomeJobHref`), and it shows
+  only while saving is allowed, as the home hides that tile.
+- "Who scored?" links to `/admin/stats?view=match`. Checked
+  `components/admin/stats/CombinedStatsPage.tsx`: it reads only `?view=` and
+  keeps the chosen game in local state, so there is no game preselect to pass
+  and none was added.
+- Saving writes through `POST /api/admin/data` (`table: "matches"`,
+  `operation: "update"`, `id` filter); the route resolves the club from the
+  host and checks the session, role and content lock. Only the match changes;
+  the league table update stays with RE-11b.
+- Hold-aware label (decision 2): `lib/save-status.ts`, in the shape the four
+  sessions agreed. RE-09 merged the identical file first, so this branch uses
+  main's copy and its unit test. Alpha shows "Saved · on your website"; a held club
+  (Rose City) or one that is not public shows "Saved · your website is paused".
+- `lib/admin-data-contract.ts` gains `matchesMutation`: every `onzio.matches`
+  column except `club_id`, all optional, unknown columns refused, scores whole
+  numbers 0 to 99 or null. The old `/admin/schedule` page already writes
+  through this route (via `lib/admin-client.ts`), so its insert and update are
+  covered too; a contract test sends its exact payload. RE-07 adds text limits
+  to the same object.
+- Manifest: new route `score` ("Enter a score", `reimaginedOnly`, kept out of
+  the classic sidebar and its search), and the Enter a score tile points at
+  it. A classic club that opens `/admin/score` is sent to `/admin/schedule`.
+- `NumberStepper` gains optional button labels and glyphs (it had no users),
+  so the score buttons read "Add a goal for Alpha FC" and use the admin's
+  icons.download set instead of lucide.
+
+**Files changed:**
+- new `app/admin/(protected)/score/page.tsx`,
+  `components/admin/reimagined/ScoreEntry.tsx`,
+  `components/admin/reimagined/score.module.css`, `lib/admin-score-data.ts`
+- `lib/admin-data-contract.ts`, `lib/admin-route-manifest.ts`,
+  `components/ui/number-stepper.tsx`
+- tests: new `tests/contracts/admin-reimagined-score.test.ts`,
+  `lib/__tests__/admin-score-data.test.ts`,
+  `tests/browser/admin-reimagined-score.spec.ts`; deliberately updated
+  `tests/contracts/admin-route-manifest.test.ts` (route count 20, the tile's
+  new address, a check that `score` stays out of classic, and the
+  reach-from-home check now compares with the classic admin's pages, since job
+  pages hide with their tile; same line as RE-08) and `tests/browser/admin-reimagined-home.spec.ts` (the
+  tile's address)
+- docs: this file, `HANDOFF.md`
+
+**Verification:**
+
+- Run by hand on the PR head in a clean worktree outside the main checkout,
+  with the database and browser runs under `scripts/with-local-db-lock.sh`:
+  `npx tsc --noEmit`, `npm run lint`, `npx vitest run --exclude
+  "tests/database/**"` (unit, contracts, architecture), `npm run build` with
+  the loopback `SUPABASE_TEST_*` values, `npm run test:db`, and
+  `playwright.admin-reimagined.config.ts` at 390 and 1440. All passed; the
+  counts and the tested commit (equal to the PR head) are in the PR body.
+- The score browser spec seeds a past Alpha game with no score, taps +, holds
+  the save to see "Saving…", checks "Saved · on your website", the "Won 3–1"
+  pill, the stored 3–1, and that the saved look survives the pointer still on
+  the button; after a reload it checks "All scores are in", the Add a game
+  link and Earlier results; then the worst-case names (two lines, no sideways
+  scroll) and the classic redirect. Every fixture is removed in a `finally`.
+  Screenshots in `test-results/admin-reimagined/`.
+- New tests: `tests/contracts/admin-reimagined-score.test.ts` (15: the matches
+  schema, server and tenant rules, words, links),
+  `lib/__tests__/admin-score-data.test.ts` (6); the manifest test gains 2.
+- Found while verifying: the first full run failed three checks. The
+  template-selector ratchet caught the page reading the club's template
+  (removed, not allowlisted, with a new `getAdminHomeJobHref`). The RE-01
+  foundation check failed because Alpha's automatic time-zone stamp had been
+  set by an earlier owner browser run from another config (the known leak in
+  the RE-05 record). Each run now resets it under the lock first. The `pilot-accepted-build-identity` test timed out at 15 s
+  under load and passed on the re-run. The screenshots also showed the saved
+  button turning back to the hover colour under the pointer; fixed, and the
+  spec now checks it.
+
+**Blockers and decisions:**
+
+- No blocker. No migration, so no `GATE-MIGRATE`.
+- A game with only one side's score is neither listed to score nor shown in
+  Earlier results, matching the home hint's count. The old schedule page can
+  still fix such a game.
+- Shared with RE-07 (RE-08 and RE-09 are merged): the manifest route count
+  and tile, and `matchesMutation`. The shapes are in the sessions' shared notes
+  (`re-06-shared-shapes.md`); whichever PR merges second keeps both sides.
+
+**Exact next step:** the review bot reviews and merges the PR (it deploys with
+both clubs still `classic`). Then RE-10 once RE-07 is in.
+
 ## 2026-11-09 - Browser suites put Alpha's time zone back (test leak fix)
 
 **Agent/package:** Claude Code, test-infrastructure fix found during

@@ -1,3 +1,21 @@
+## 2026-11-08 - ADMIN-RE-06 Enter a score
+
+- **Status:** `in_progress` on branch `claude/admin-re-06-score-ac068e`,
+  rebased on `main` `aa41f1c`, PR open. No migration. Nobody sees it until
+  RE-10 switches Rose City on.
+- **What it adds:** `/admin/score` for reimagined clubs (classic clubs go to
+  `/admin/schedule`): games needing a score, newest first, with steppers, a
+  Save button that confirms on itself with the hold-aware label
+  (`lib/save-status.ts`), Won/Drew/Lost pills, Earlier results, "All scores
+  are in" with Add a game, and "Who scored?" to Match stats (no game preselect:
+  the stats page has none). Saves go through `/api/admin/data` under a new
+  per-table `matchesMutation` (scores 0 to 99) that also covers the old
+  schedule page. New manifest route `score`; the Enter a score tile opens it.
+- **Verification:** new contract, unit and browser tests (390 and 1440); full
+  suites on the PR head, listed with the tested commit in the PR body.
+- **Next:** the review bot merges; RE-07 lands alongside (RE-08 and RE-09 are
+  merged), then RE-10.
+
 ## 2026-11-09 - Browser suites put Alpha's time zone back
 
 - **Status:** `in_progress` on branch `claude/restore-alpha-time-zone` from

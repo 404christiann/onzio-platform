@@ -47,6 +47,7 @@ export type AdminRouteId =
   | "seasons"
   | "roster"
   | "schedule"
+  | "score"
   | "match-stats"
   | "standings"
   | "registrations"
@@ -233,6 +234,14 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: "competition",
   },
   {
+    id: "score",
+    label: "Enter a score",
+    href: "/admin/score",
+    iconKey: "schedule",
+    groupId: "competition",
+    reimaginedOnly: true,
+  },
+  {
     id: "match-stats",
     label: "Stats",
     href: "/admin/stats",
@@ -379,6 +388,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   seasons: ["competition", "seasons", "active season"],
   roster: ["competition", "roster", "players", "staff"],
   schedule: ["competition", "schedule", "fixtures", "matches"],
+  score: ["competition", "score", "result", "enter a score", "matches"],
   "match-stats": ["competition", "stats", "match stats", "season stats", "season totals", "game statistics", "player statistics"],
   standings: ["competition", "standings", "table"],
   registrations: ["registrations", "forms", "registrants"],
@@ -569,7 +579,7 @@ export const ADMIN_HOME_JOBS = [
   {
     id: "enter-score",
     label: "Enter a score",
-    routeId: "schedule",
+    routeId: "score",
     hue: "amber",
     hint: "games-needing-score",
     needsContentMutation: true,
@@ -694,6 +704,17 @@ export function getVisibleAdminHomeJobs(
       },
     ];
   });
+}
+
+/**
+ * ADMIN-RE-06: where a home job leads, for a link from inside another job's
+ * page ("All scores are in" → Add a game). It follows the job as its page
+ * ships. The caller decides whether to show the link.
+ */
+export function getAdminHomeJobHref(id: AdminHomeJobId): `/admin${string}` {
+  const job = ADMIN_HOME_JOBS.find((candidate) => candidate.id === id);
+  const route = job ? ROUTE_BY_ID.get(job.routeId) : undefined;
+  return route?.href ?? "/admin";
 }
 
 export function getVisibleAdminMoreRows(

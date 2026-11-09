@@ -5,6 +5,7 @@ import {
   ADMIN_NAVIGATION_MANIFEST,
   ADMIN_ROUTE_MANIFEST,
   getAdminGroupForPathname,
+  getAdminHomeJobHref,
   getReimaginedPageTitle,
   getVisibleAdminHomeJobs,
   getVisibleAdminMoreRows,
@@ -42,12 +43,12 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(19);
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(20);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      19,
+      20,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      19,
+      20,
     );
   });
 
@@ -269,13 +270,13 @@ describe("reimagined home jobs and More rows", () => {
 
   it("locks the four jobs, their glossary labels and the old pages they open until each job ships", () => {
     expect(ADMIN_HOME_JOBS).toEqual([
-      { id: "enter-score", label: "Enter a score", routeId: "schedule", hue: "amber", hint: "games-needing-score", needsContentMutation: true },
+      { id: "enter-score", label: "Enter a score", routeId: "score", hue: "amber", hint: "games-needing-score", needsContentMutation: true },
       { id: "add-game", label: "Add a game", routeId: "schedule", hue: "blue", needsContentMutation: true },
       { id: "see-registrations", label: "See registrations", routeId: "sign-ups", hue: "green", hint: "new-sign-ups", needsLiveSignUps: true },
       { id: "edit-website", label: "Edit my website", routeId: "homepage", hue: "coral", needsContentMutation: true },
     ]);
     expect(getVisibleAdminHomeJobs(REIMAGINED).map((job) => [job.label, job.href])).toEqual([
-      ["Enter a score", "/admin/schedule"],
+      ["Enter a score", "/admin/score"],
       ["Add a game", "/admin/schedule"],
       ["See registrations", "/admin/sign-ups"],
       ["Edit my website", "/admin/homepage"],
@@ -428,6 +429,7 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin/registrations")).toBe("Sign-up forms");
     expect(getReimaginedPageTitle("/admin/sign-ups")).toBe("Registrations");
     expect(getReimaginedPageTitle("/admin/schedule")).toBe("Games");
+    expect(getReimaginedPageTitle("/admin/score")).toBe("Enter a score");
     expect(getReimaginedPageTitle("/admin/stats")).toBe("Player numbers");
     expect(getReimaginedPageTitle("/admin/homepage")).toBe("Homepage");
     expect(getReimaginedPageTitle("/admin/about")).toBe("About page");
@@ -435,6 +437,32 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/roster-preview")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/nowhere")).toBe("Club admin");
+  });
+
+  it("gives a job's address for links between job pages (ADMIN-RE-06)", () => {
+    for (const job of ADMIN_HOME_JOBS) {
+      expect(getAdminHomeJobHref(job.id)).toBe(ADMIN_ROUTE_MANIFEST.find((route) => route.id === job.routeId)?.href);
+    }
+    expect(getAdminHomeJobHref("enter-score")).toBe("/admin/score");
+  });
+
+  it("keeps the Enter a score page out of a classic club's admin (ADMIN-RE-06)", () => {
+    const score = ADMIN_ROUTE_MANIFEST.find((route) => route.id === "score");
+    expect(score).toEqual({
+      id: "score",
+      label: "Enter a score",
+      href: "/admin/score",
+      iconKey: "schedule",
+      groupId: "competition",
+      reimaginedOnly: true,
+    });
+    expect(visibleIds(OWNER_ACCESS)).not.toContain("score");
+    expect(visibleIds({ ...OWNER_ACCESS, adminPortal: "classic" })).not.toContain("score");
+    expect(navigationIds(REIMAGINED)).not.toContain("score");
+    expect(visibleIds(REIMAGINED)).toContain("score");
+    expect(visibleIds(ADMIN_ACCESS)).not.toContain("score");
+    expect(visibleIds({ ...ADMIN_ACCESS, adminPortal: "reimagined" })).toContain("score");
+    expect(visibleIds({ ...REIMAGINED, role: null })).toEqual([]);
   });
 });
 
