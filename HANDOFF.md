@@ -11,13 +11,15 @@
   - "Add to schedule" saves through `/api/admin/data`. The button then shows
     the hold-aware "Added · …" label (`lib/save-status.ts`), and the game
     drops into "Coming up".
-  - `matchesMutation` in `lib/admin-data-contract.ts`: strict, Zod-only text
-    limits (`lib/match-text-limits.ts`), scores 0-99, and required fields on
-    insert.
+  - `matchesMutation` in `lib/admin-data-contract.ts`: strict shape and
+    types for every `matches` write, the classic Games page included. The
+    Zod-only text limits (`lib/match-text-limits.ts`) and scores ≤ 99 apply
+    to new games only, so existing longer rows stay editable until the
+    decision 7 length check. The classic add form is capped the same way.
   - Manifest route `add-game` with the new `reimaginedOnly` flag, and the Add
     a game tile repointed to it.
   - Clock and map pin icons.
-- **Verification:** new contract test (27), club-time (+7),
+- **Verification:** new contract test (38), club-time (+7),
   icon test (+2), manifest test updated on purpose, and a new browser spec at
   390 and 1440 with screenshots. Full suites ran by hand on the PR head
   outside the main checkout; results are in the PR body.

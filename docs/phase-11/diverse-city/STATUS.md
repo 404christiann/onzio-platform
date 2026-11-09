@@ -36,13 +36,21 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 - **Writes** go through `POST /api/admin/data` (`table: "matches"`,
   `operation: "insert"`), never the browser client.
 - **`matchesMutation`** in `lib/admin-data-contract.ts`:
-  - Strict, covering every `matches` column.
-  - Text limits in Zod only (decision 7), from `lib/match-text-limits.ts`:
-    opponent 1-80, short name ≤ 20, venue 1-120, competition ≤ 80,
-    address/city/state ≤ 120/80/40.
-  - Scores are integers 0-99 or null, so RE-06's score-only updates stay
-    valid.
+  - Strict, covering every `matches` column. It applies to every write
+    through `/api/admin/data`, including the classic Games page (via
+    `lib/admin-client.ts`), whose edit form resends every field.
+  - Every write: the right types, a non-blank opponent and venue, and whole
+    scores from 0.
+  - Only a newly added game (insert or upsert, `newMatchLimits`) also meets
+    the text limits in Zod (decision 7, `lib/match-text-limits.ts`):
+    opponent ≤ 80, short name ≤ 20, venue ≤ 120, competition ≤ 80,
+    address/city/state ≤ 120/80/40, scores ≤ 99. Existing longer rows stay
+    editable until the read-only production length check (decision 7, needs
+    Christian).
   - An insert or upsert needs season, date, time, opponent and venue.
+- **Classic Games page:** its add form caps the same fields with
+  `maxLength`, caps scores at 99, and says why before saving ("Opponent name
+  can be at most 80 characters."). Editing a game is unchanged.
 - **Manifest:**
   - New route `add-game` with a new `reimaginedOnly` flag: never in the
     classic sidebar or search.
@@ -56,6 +64,7 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 - new `lib/admin-add-game-data.ts`, `lib/match-text-limits.ts`
   (`lib/save-status.ts` and its test came from RE-09 on `main`)
 - `lib/admin-data-contract.ts`, `lib/admin-route-manifest.ts`,
+  `app/admin/(protected)/schedule/page.tsx` (add-form caps),
   `lib/club-time.ts` (`nextClubSaturday`, `DEFAULT_KICKOFF_TIME`, the
   `weekday-short` date style)
 - `components/admin/icons/index.tsx`, `approved-selection.json`,
@@ -72,8 +81,13 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 
 **Verification:**
 
-- `tests/contracts/admin-add-game.test.ts` (27 tests):
-  - each limit accepted at its maximum and refused one character over;
+- `tests/contracts/admin-add-game.test.ts` (38 tests):
+  - a new game is accepted at each limit and refused one character over, while
+    an existing longer row still saves;
+  - the classic Games page's insert and update payloads are pinned against
+    its `emptyForm()` fields: a classic add passes, an over-limit add is
+    refused, and an edit of a legacy over-limit row with every field resent
+    passes. Its add-form caps and messages are pinned too;
   - a blank opponent or venue refused;
   - an insert missing any required field refused;
   - score-only updates valid, out-of-range scores refused;
@@ -107,6 +121,10 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 **Blockers and decisions:**
 
 - No blocker. No migration, so no `GATE-MIGRATE`.
+- Review bot (Medium, at `05813ea`): the strict schema also governed the
+  classic Games page, so an over-limit classic add returned raw Zod JSON and
+  legacy over-limit rows could not be edited. Fixed by applying the limits to
+  new games only and capping the classic add form.
 - Shared files with RE-06/08/09:
   - Whichever merges second keeps both routes in the manifest and both sides
     of its test (20 routes once RE-06's `score` lands).
