@@ -17,9 +17,15 @@ type AuthCodeDeliveryResult = {
   };
 };
 
-type AddClubAdminOptions = {
+type SendCodeOptions = {
   sendCode?: (email: string) => Promise<AuthCodeDeliveryResult>;
 };
+
+/**
+ * ADMIN-RE-18: how long after Remove an owner can press Undo. Measured from the
+ * row's removed_at, which removeClubAdmin sets.
+ */
+export const REMOVE_UNDO_WINDOW_MS = 10 * 60 * 1_000;
 
 export type ClubOwnerSession = {
   actorId: string;
@@ -173,6 +179,8 @@ async function listActiveMembers(session: ClubOwnerSession, role: "owner" | "adm
         userId: membership.user_id,
         email: identity.data.user?.email ?? "Unavailable",
         displayName: (membership.display_name as string | null) ?? null,
+        // ADMIN-RE-18: "Signed in Tue" / "Hasn't signed in yet" (null).
+        lastSignInAt: identity.data.user?.last_sign_in_at ?? null,
         status: membership.status,
         createdAt: membership.created_at,
       };
@@ -197,13 +205,49 @@ export async function listClubOwners(session: ClubOwnerSession) {
   }));
 }
 
+/**
+ * Emails a sign-in code through Supabase Auth, the one path both "add" and "send
+ * the code again" use, so the Auth cooldown always reads as AUTH_CODE_RATE_LIMITED.
+ */
+async function sendSignInCode(
+  session: ClubOwnerSession,
+  email: string,
+  options?: SendCodeOptions,
+) {
+  const code = options?.sendCode
+    ? await options.sendCode(email)
+    : await session.client.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      });
+  if (code.error) {
+    if (
+      code.error.status === 429 ||
+      code.error.code === "over_email_send_rate_limit"
+    ) {
+      failContract("AUTH_CODE_RATE_LIMITED");
+    }
+    failContract("AUTH_CODE_DELIVERY_FAILED");
+  }
+}
+
+/**
+ * `displayName` is optional for now (decision 0010 wants it required for new
+ * helpers): the old Team access page has no name field, and requiring it would
+ * stop that page adding anyone. RE-18's new screen sends it; make it required
+ * when the old page goes.
+ */
 export async function addClubAdmin(
   session: ClubOwnerSession,
-  rawInput: { email: string; role: "admin" },
-  options?: AddClubAdminOptions,
+  rawInput: { email: string; role: "admin"; displayName?: string },
+  options?: SendCodeOptions,
 ) {
   if (rawInput.role !== "admin") failContract("OWNER_TRANSFER_OPERATOR_REQUIRED");
   const email = emailSchema.parse(rawInput.email);
+  const displayName = rawInput.displayName === undefined
+    ? undefined
+    : normalizeDisplayName(rawInput.displayName);
+  if (displayName === null) failContract("INVALID_DISPLAY_NAME");
   let identity = await findUserByEmail(session.client, email);
   let identityCreated = false;
   if (!identity) {
@@ -221,7 +265,7 @@ export async function addClubAdmin(
   const previous = await session.client
     .schema("onzio")
     .from("club_members")
-    .select("role,status,removed_at")
+    .select("role,status,removed_at,display_name")
     .eq("club_id", session.clubId)
     .eq("user_id", identity.id)
     .maybeSingle();
@@ -248,31 +292,23 @@ export async function addClubAdmin(
           status: "active",
           removed_at: null,
           updated_at: now,
+          // Left out when no name is given, so re-adding someone keeps theirs.
+          ...(displayName === undefined ? {} : { display_name: displayName }),
         },
         { onConflict: "user_id,club_id" },
       );
     if (membership.error) failContract("MEMBERSHIP_MUTATION_FAILED");
     membershipWritten = true;
 
-    const code = options?.sendCode
-      ? await options.sendCode(email)
-      : await session.client.auth.signInWithOtp({
-          email,
-          options: { shouldCreateUser: false },
-        });
-    if (code.error) {
-      if (
-        code.error.status === 429 ||
-        code.error.code === "over_email_send_rate_limit"
-      ) {
-        failContract("AUTH_CODE_RATE_LIMITED");
-      }
-      failContract("AUTH_CODE_DELIVERY_FAILED");
-    }
+    await sendSignInCode(session, email, options);
     await writeOwnerAudit(session, {
       operation: "membership_added",
       userId: identity.id,
-      payload: { role: "admin", recipient_domain: email.split("@")[1] },
+      payload: {
+        role: "admin",
+        recipient_domain: email.split("@")[1],
+        name_given: displayName !== undefined,
+      },
     });
   } catch (error) {
     // Only revert club_members when this call actually wrote it. When the
@@ -349,7 +385,136 @@ export async function removeClubAdmin(
       .eq("user_id", parsedUserId);
     throw error;
   }
-  return { userId: parsedUserId, status: "removed" as const };
+  return {
+    userId: parsedUserId,
+    status: "removed" as const,
+    undoUntil: new Date(Date.parse(removedAt) + REMOVE_UNDO_WINDOW_MS).toISOString(),
+  };
+}
+
+/**
+ * ADMIN-RE-18: Undo for Remove. Puts back an admin this owner removed, within
+ * REMOVE_UNDO_WINDOW_MS of removed_at. Only the owner whose removal it was may
+ * undo it (the latest membership_removed audit for that person must be theirs),
+ * and the re-activation is conditional on the row still being that removal, so a
+ * re-add or a second removal in between makes Undo unavailable. No code is sent:
+ * their sign-in identity never went away.
+ */
+export async function undoRemoveClubAdmin(
+  session: ClubOwnerSession,
+  userId: string,
+  options?: { now?: Date },
+) {
+  const parsedUserId = z.string().uuid().parse(userId);
+  const membership = await session.client
+    .schema("onzio")
+    .from("club_members")
+    .select("role,status,removed_at")
+    .eq("club_id", session.clubId)
+    .eq("user_id", parsedUserId)
+    .maybeSingle();
+  if (membership.error) failContract("MEMBERSHIP_READ_FAILED");
+  if (!membership.data) failContract("MEMBERSHIP_REQUIRED");
+  if (membership.data.role !== "admin") {
+    failContract("OWNER_TRANSFER_OPERATOR_REQUIRED");
+  }
+  if (membership.data.status === "active") failContract("MEMBERSHIP_EXISTS");
+  const removedAt = membership.data.removed_at as string | null;
+  const now = (options?.now ?? new Date()).getTime();
+  if (!removedAt || now - Date.parse(removedAt) > REMOVE_UNDO_WINDOW_MS) {
+    failContract("MEMBERSHIP_UNDO_UNAVAILABLE");
+  }
+
+  const lastRemoval = await session.client
+    .schema("onzio")
+    .from("audit_events")
+    .select("actor_user_id")
+    .eq("club_id", session.clubId)
+    .eq("resource_type", "club_member")
+    .eq("resource_id", parsedUserId)
+    .eq("operation", "membership_removed")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastRemoval.error) failContract("MEMBERSHIP_READ_FAILED");
+  if (lastRemoval.data?.actor_user_id !== session.actorId) {
+    failContract("MEMBERSHIP_UNDO_UNAVAILABLE");
+  }
+
+  const restore = await session.client
+    .schema("onzio")
+    .from("club_members")
+    .update({ status: "active", removed_at: null, updated_at: new Date().toISOString() })
+    .eq("club_id", session.clubId)
+    .eq("user_id", parsedUserId)
+    .eq("role", "admin")
+    .eq("status", "removed")
+    .eq("removed_at", removedAt)
+    .select("user_id");
+  if (restore.error) failContract("MEMBERSHIP_MUTATION_FAILED");
+  if (!restore.data || restore.data.length === 0) {
+    failContract("MEMBERSHIP_UNDO_UNAVAILABLE");
+  }
+
+  try {
+    await writeOwnerAudit(session, {
+      operation: "membership_restored",
+      userId: parsedUserId,
+      payload: { role: "admin", source: "undo" },
+    });
+  } catch (error) {
+    // Put the removal back only while the row is still what this call wrote.
+    const revert = await session.client
+      .schema("onzio")
+      .from("club_members")
+      .update({ status: "removed", removed_at: removedAt, updated_at: new Date().toISOString() })
+      .eq("club_id", session.clubId)
+      .eq("user_id", parsedUserId)
+      .eq("role", "admin")
+      .eq("status", "active");
+    if (revert.error) failContract("MEMBERSHIP_ROLLBACK_FAILED");
+    throw error;
+  }
+  return { userId: parsedUserId, status: "active" as const };
+}
+
+/**
+ * ADMIN-RE-18: "Send the code again". Emails a fresh sign-in code to an active
+ * admin of this club, through the same Supabase Auth path and cooldown as add.
+ * This sends a real email.
+ */
+export async function resendClubAdminCode(
+  session: ClubOwnerSession,
+  userId: string,
+  options?: SendCodeOptions,
+) {
+  const parsedUserId = z.string().uuid().parse(userId);
+  const membership = await session.client
+    .schema("onzio")
+    .from("club_members")
+    .select("role,status")
+    .eq("club_id", session.clubId)
+    .eq("user_id", parsedUserId)
+    .maybeSingle();
+  if (membership.error) failContract("MEMBERSHIP_READ_FAILED");
+  if (!membership.data || membership.data.role !== "admin") {
+    failContract("MEMBERSHIP_REQUIRED");
+  }
+  if (membership.data.status !== "active") failContract("MEMBERSHIP_INACTIVE");
+
+  const identity = await session.client.auth.admin.getUserById(parsedUserId);
+  const email = identity.data.user?.email?.toLowerCase();
+  if (identity.error || !email) failContract("AUTH_IDENTITY_LOOKUP_FAILED");
+
+  await sendSignInCode(session, email, options);
+  // The email has gone by now and can't be recalled; a failed audit still fails
+  // the call so the gap is visible, as in addClubAdmin.
+  await writeOwnerAudit(session, {
+    operation: "membership_code_resent",
+    userId: parsedUserId,
+    payload: { role: "admin" },
+  });
+  return { userId: parsedUserId, codeSent: true as const };
 }
 
 /**
@@ -400,12 +565,16 @@ export async function setMemberDisplayName(
       payload: { self, had_name: previous !== null },
     });
   } catch (error) {
-    await session.client
+    // Restore only while the row still holds the name this call wrote, so a
+    // rename that landed in between is never overwritten.
+    const revert = await session.client
       .schema("onzio")
       .from("club_members")
       .update({ display_name: previous })
       .eq("club_id", session.clubId)
-      .eq("user_id", targetId);
+      .eq("user_id", targetId)
+      .eq("display_name", displayName);
+    if (revert.error) failContract("MEMBERSHIP_ROLLBACK_FAILED");
     throw error;
   }
   return { userId: targetId, displayName };

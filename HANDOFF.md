@@ -26,6 +26,27 @@
   have no More row in the plan, so in the reimagined admin they are reachable
   only by address until RE-13 and RE-06. Add rows, or accept the gap?
 - **Exact next step:** the bot merges; then RE-06 to RE-09.
+## 2026-11-08 - ADMIN-RE-18 server half: who can sign in
+
+- **Status:** `in_progress` on branch `claude/friendly-pasteur-a348b7` from
+  `main` `fbf9381`, PR open. Server side only, pulled forward from after the
+  first slice; the screen waits for RE-05's shell. No migration.
+- **What it adds** (all owner-only, club from host and session):
+  - Members lists carry `lastSignInAt` (null before the first sign-in).
+  - `resend-code`: emails an active admin a fresh code through the same
+    `signInWithOtp` path and 429 cooldown as `add`. Sends a real email.
+  - `undo-remove`: within 10 minutes of `removed_at`, for the owner who
+    removed; `remove` returns `undoUntil`. Audited `membership_restored`.
+  - `add` takes an optional `displayName` (optional while the old page,
+    which has no name field, still adds people).
+  - `normalizeDisplayName` drops format characters and needs a letter or
+    number; the rename rollback only restores its own write.
+- **Verification:** membership database test 9/9 (4 new), members contract
+  tests 82/82; full suites run by hand on the PR head, results and tested
+  commit in the PR body.
+- **Exact next step:** the bot merges; RE-18's screen uses these, then
+  `displayName` becomes required when the old page goes.
+
 ## 2026-11-08 - Local tests leave nothing behind and the pilot proof test stops flaking
 
 - **Status:** `in_progress` on branch `agent/test-junk-final` from `main`
@@ -49,6 +70,7 @@
 - **Not done:** the real browser suites were not run; the pilot fixtures are
   still slow to build.
 - **Exact next step:** the bot reviews and merges.
+
 
 ## 2026-11-08 - ADMIN-RE-04 people's names, and members route hardening
 
