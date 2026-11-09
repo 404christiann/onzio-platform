@@ -363,14 +363,15 @@ describe("reimagined home jobs and More rows", () => {
   });
 
   it("titles each page in the top bar with its More name, otherwise its own name", () => {
-    expect(getReimaginedPageTitle("/admin/roster", REIMAGINED)).toBe("Team roster");
-    expect(getReimaginedPageTitle("/admin/roster/player-1", REIMAGINED)).toBe("Team roster");
-    expect(getReimaginedPageTitle("/admin/branding", REIMAGINED)).toBe("Your club");
-    expect(getReimaginedPageTitle("/admin/members", REIMAGINED)).toBe("Who can sign in");
-    expect(getReimaginedPageTitle("/admin/registrations", REIMAGINED)).toBe("Sign-up forms");
-    expect(getReimaginedPageTitle("/admin/schedule", REIMAGINED)).toBe("Schedule");
-    expect(getReimaginedPageTitle("/admin/stats", REIMAGINED)).toBe("Stats");
-    expect(getReimaginedPageTitle("/admin/members", { ...REIMAGINED, role: "admin" })).toBe("Club admin");
-    expect(getReimaginedPageTitle("/admin/nowhere", REIMAGINED)).toBe("Club admin");
+    expect(getReimaginedPageTitle("/admin/roster")).toBe("Team roster");
+    expect(getReimaginedPageTitle("/admin/roster/player-1")).toBe("Team roster");
+    expect(getReimaginedPageTitle("/admin/branding")).toBe("Your club");
+    expect(getReimaginedPageTitle("/admin/members")).toBe("Who can sign in");
+    expect(getReimaginedPageTitle("/admin/registrations")).toBe("Sign-up forms");
+    expect(getReimaginedPageTitle("/admin/schedule")).toBe("Schedule");
+    expect(getReimaginedPageTitle("/admin/stats")).toBe("Stats");
+    expect(getReimaginedPageTitle("/admin")).toBe("Club admin");
+    expect(getReimaginedPageTitle("/admin/roster-preview")).toBe("Club admin");
+    expect(getReimaginedPageTitle("/admin/nowhere")).toBe("Club admin");
   });
 });

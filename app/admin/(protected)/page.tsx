@@ -28,6 +28,7 @@ import {
   getVisibleAdminMoreRows,
   getVisibleAdminQuickActions,
   type AdminQuickActionId,
+  type AdminRouteAccessContext,
 } from "@/lib/admin-route-manifest";
 import { adminGreeting } from "@/lib/admin-greeting";
 import {
@@ -200,6 +201,13 @@ async function AdminDashboardContent() {
         club.kind === "test" ||
         club.publicAccess === "live" ||
         club.publicAccess === "grace"));
+  const routeAccess: AdminRouteAccessContext = {
+    role: club.role,
+    presentationTemplateKey: club.presentationTemplateKey,
+    isBillingAuthorized,
+    canMutateContent,
+    storeEnabled: club.storeEnabled,
+  };
   const portal = await readAdminPortal(supabase, club.id);
   if (portal.portal === "reimagined") {
     return (
@@ -208,18 +216,11 @@ async function AdminDashboardContent() {
         userId={userId}
         club={club}
         portal={portal}
-        isBillingAuthorized={isBillingAuthorized}
-        canMutateContent={canMutateContent}
+        routeAccess={routeAccess}
       />
     );
   }
-  const quickActions = getVisibleAdminQuickActions({
-    role: club.role,
-    presentationTemplateKey: club.presentationTemplateKey,
-    isBillingAuthorized,
-    canMutateContent,
-    storeEnabled: club.storeEnabled,
-  });
+  const quickActions = getVisibleAdminQuickActions(routeAccess);
   const { timeZone } = portal;
   const data = await loadAdminDashboardData(supabase, club.id, timeZone);
 
@@ -378,26 +379,20 @@ async function ReimaginedHomeContent({
   userId,
   club,
   portal,
-  isBillingAuthorized,
-  canMutateContent,
+  routeAccess,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
   club: ClubContext;
   portal: AdminPortalSettings;
-  isBillingAuthorized: boolean;
-  canMutateContent: boolean;
+  routeAccess: AdminRouteAccessContext;
 }) {
   const [home, displayName] = await Promise.all([
     loadAdminHomeData(supabase, club.id, portal.timeZone),
     readOwnDisplayName(supabase, club.id, userId),
   ]);
-  const access = {
-    role: club.role,
-    presentationTemplateKey: club.presentationTemplateKey,
-    isBillingAuthorized,
-    canMutateContent,
-    storeEnabled: club.storeEnabled,
+  const access: AdminRouteAccessContext = {
+    ...routeAccess,
     adminPortal: portal.portal,
     adminFlags: portal.flags,
     hasLiveSignUps: home.hasLiveSignUps,
@@ -418,7 +413,7 @@ async function ReimaginedHomeContent({
       greeting={adminGreeting(displayName)}
       jobs={jobs}
       moreRows={getVisibleAdminMoreRows(access)}
-      contentPaused={!canMutateContent}
+      contentPaused={!routeAccess.canMutateContent}
     />
   );
 }

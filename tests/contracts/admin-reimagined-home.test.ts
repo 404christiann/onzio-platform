@@ -39,7 +39,8 @@ describe("reimagined home (ADMIN-RE-05)", () => {
     expect(page).toContain("hasLiveSignUps: home.hasLiveSignUps");
     expect(page).toContain("adminPortal: portal.portal");
     expect(page).toContain('club.role === "owner" && club.lifecycle !== "archived"');
-    expect(page).toContain("contentPaused={!canMutateContent}");
+    expect(page).toContain("contentPaused={!routeAccess.canMutateContent}");
+    expect(page).toContain("...routeAccess,");
     expect(page).toContain("adminGreeting(displayName)");
   });
 
@@ -118,7 +119,7 @@ describe("reimagined shell (ADMIN-RE-05)", () => {
     const shell = components["ReimaginedShell.tsx"];
     expect(shell).toContain('const isHome = pathname === "/admin";');
     expect(shell).toContain("home={isHome}");
-    expect(shell).toContain("getReimaginedPageTitle(pathname, accessContext)");
+    expect(shell).toContain("getReimaginedPageTitle(pathname)");
     // The account menu stays reachable; billing notices still show.
     expect(shell).toContain("<AdminAccountMenu");
     expect(shell).toContain('club.publicAccess === "suspended"');
@@ -130,6 +131,12 @@ describe("reimagined shell (ADMIN-RE-05)", () => {
     const shell = components["ReimaginedShell.tsx"];
     expect(shell).toMatch(/<SidebarProvider\s+open=\{false\}\s+onOpenChange=\{KEEP_CLOSED\}/);
     expect(shell).not.toMatch(/<Sidebar[\s>]/);
+  });
+
+  it("asks nothing about the club's template (the selector ratchet)", () => {
+    for (const [name, code] of Object.entries(components)) {
+      expect(code, name).not.toContain("presentationTemplateKey");
+    }
   });
 
   it("never gives the reimagined client shell the service role or tenant-resolution columns", () => {

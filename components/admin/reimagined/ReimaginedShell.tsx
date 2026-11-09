@@ -2,16 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import guided from "@/components/admin/AdminGuided.module.css";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
-import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import {
-  getReimaginedPageTitle,
-  type AdminRouteAccessContext,
-} from "@/lib/admin-route-manifest";
+import { getReimaginedPageTitle } from "@/lib/admin-route-manifest";
 import { createClient } from "@/lib/supabase-browser";
 import { TopBar, TopBarActionsProvider } from "./TopBar";
 import styles from "./reimagined.module.css";
@@ -32,39 +28,10 @@ export function ReimaginedShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const club = useClubContext();
-  const portal = useAdminPortal();
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
-  // The same predicates the home page and the Payments page use.
+  // The same predicate the home page and the Payments page use.
   const isBillingAuthorized = club.role === "owner" && club.lifecycle !== "archived";
-  const canMutateContent =
-    club.lifecycle === "onboarding" ||
-    (club.lifecycle === "active" &&
-      (club.kind === "demo" ||
-        club.kind === "test" ||
-        club.publicAccess === "live" ||
-        club.publicAccess === "grace"));
-
-  const accessContext = useMemo<AdminRouteAccessContext>(
-    () => ({
-      role: club.role,
-      presentationTemplateKey: club.presentationTemplateKey,
-      isBillingAuthorized,
-      canMutateContent,
-      storeEnabled: club.storeEnabled,
-      adminPortal: portal.portal,
-      adminFlags: portal.flags,
-    }),
-    [
-      canMutateContent,
-      club.presentationTemplateKey,
-      club.role,
-      club.storeEnabled,
-      isBillingAuthorized,
-      portal.flags,
-      portal.portal,
-    ],
-  );
 
   useEffect(() => {
     void createClient()
@@ -91,7 +58,7 @@ export function ReimaginedShell({ children }: { children: React.ReactNode }) {
       >
         <TopBar
           home={isHome}
-          title={getReimaginedPageTitle(pathname, accessContext)}
+          title={getReimaginedPageTitle(pathname)}
           account={<AdminAccountMenu email={userEmail} role={club.role} onSignOut={handleSignOut} />}
         />
         <main className={styles.main}>

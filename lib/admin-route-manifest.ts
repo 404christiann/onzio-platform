@@ -682,14 +682,13 @@ export function getVisibleAdminMoreRows(
 /**
  * The reimagined top bar's title for a page: the glossary name from More when
  * the page is one of its rows ("Team roster" for /admin/roster), otherwise the
- * page's own name, otherwise "Club admin".
+ * page's own name, otherwise "Club admin". A title only names the page; each
+ * page still checks who may open it, so this needs no access context.
  */
-export function getReimaginedPageTitle(
-  pathname: string,
-  context: AdminRouteAccessContext,
-): string {
-  const routes = getVisibleAdminRoutes(context);
-  const route = routes.find((candidate) => pathnameMatchesRoute(pathname, candidate.href));
+export function getReimaginedPageTitle(pathname: string): string {
+  const route = ADMIN_ROUTE_MANIFEST.find(
+    (candidate) => candidate.href !== "/admin" && pathnameMatchesRoute(pathname, candidate.href),
+  );
   if (!route) return "Club admin";
   const row = ADMIN_MORE_ROWS.find((candidate) => candidate.routeId === route.id);
   return row?.label ?? route.label;
