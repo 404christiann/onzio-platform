@@ -1,25 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft } from "@/components/admin/icons";
 import styles from "./reimagined.module.css";
 
 // ADMIN-RE-05: the slim bar on every reimagined admin page except the home:
 // "‹ Home", the page's title, and an actions slot a page can fill with
-// <TopBarActions>. On the home it carries only the account menu.
+// <TopBarActions>. On the home it carries only the account menu. A page with its
+// own bar (the website editor's edit bar, ADMIN-RE-09) can take the whole bar
+// over with <TopBarTakeover>.
 
 type TopBarSlot = {
   slot: HTMLElement | null;
   setSlot: (element: HTMLElement | null) => void;
+  takeover: HTMLElement | null;
+  setTakeover: (element: HTMLElement | null) => void;
+  takenOver: boolean;
+  setTakenOver: (takenOver: boolean) => void;
 };
 
-const TopBarSlotContext = createContext<TopBarSlot>({ slot: null, setSlot: () => undefined });
+const NOOP = () => undefined;
+const TopBarSlotContext = createContext<TopBarSlot>({
+  slot: null,
+  setSlot: NOOP,
+  takeover: null,
+  setTakeover: NOOP,
+  takenOver: false,
+  setTakenOver: NOOP,
+});
 
 export function TopBarActionsProvider({ children }: { children: React.ReactNode }) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
-  const value = useMemo(() => ({ slot, setSlot }), [slot]);
+  const [takeover, setTakeover] = useState<HTMLElement | null>(null);
+  const [takenOver, setTakenOver] = useState(false);
+  const value = useMemo(
+    () => ({ slot, setSlot, takeover, setTakeover, takenOver, setTakenOver }),
+    [slot, takeover, takenOver],
+  );
   return <TopBarSlotContext.Provider value={value}>{children}</TopBarSlotContext.Provider>;
 }
 
@@ -34,6 +53,19 @@ export function TopBarActions({ children }: { children: React.ReactNode }) {
   return slot ? createPortal(children, slot) : null;
 }
 
+/**
+ * Replaces the whole top bar (the "‹ Home" link, title, actions and account
+ * menu) with its children while it is mounted. Renders nothing in the classic admin.
+ */
+export function TopBarTakeover({ children }: { children: React.ReactNode }) {
+  const { takeover, setTakenOver } = useContext(TopBarSlotContext);
+  useEffect(() => {
+    setTakenOver(true);
+    return () => setTakenOver(false);
+  }, [setTakenOver]);
+  return takeover ? createPortal(children, takeover) : null;
+}
+
 export function TopBar({
   home,
   title,
@@ -43,7 +75,14 @@ export function TopBar({
   title: string;
   account: React.ReactNode;
 }) {
-  const { setSlot } = useContext(TopBarSlotContext);
+  const { setSlot, setTakeover, takenOver } = useContext(TopBarSlotContext);
+  if (takenOver) {
+    return (
+      <header className={styles.topBar} data-takeover="">
+        <div ref={setTakeover} className={styles.takeover} />
+      </header>
+    );
+  }
   return (
     <header className={styles.topBar} data-home={home || undefined}>
       {home ? (
