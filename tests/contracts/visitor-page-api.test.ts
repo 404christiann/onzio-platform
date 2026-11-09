@@ -75,3 +75,18 @@ it("refuses Foothill Transit content sent as Robinson and Robinson content sent 
   expect((await handleVisitorPageRequest(request({ ...emptyRobinsonContent(), clubId: "foreign" }), "robinson", true)).status).toBe(400);
   expect(mocks.rpc).not.toHaveBeenCalled();
 });
+it.each([
+  ["season-membership", "save_season_membership_editor", "load_season_membership_editor"],
+  ["know-before-you-go", "save_know_before_you_go_editor", "load_know_before_you_go_editor"],
+] as const)("saves %s through its own user-scoped RPC and refuses the other ticket page's content", async (page, save, load) => {
+  const { emptyTicketPageContent } = await import("@/lib/cinematic-ticket-pages-content");
+  const other = page === "season-membership" ? "know-before-you-go" : "season-membership";
+  expect((await handleVisitorPageRequest(request(emptyTicketPageContent(other)), page, true)).status).toBe(400);
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  const response = await handleVisitorPageRequest(request(emptyTicketPageContent(page)), page, true);
+  expect(response.status).toBe(200);
+  expect(mocks.rpc.mock.calls[0][0]).toBe(save);
+  expect(mocks.rpc.mock.calls[0][1].p_club_id).toBe("verified-tenant");
+  await handleVisitorPageRequest(new Request(`http://rose-city.localhost/api/admin/visitor-pages/${page}`), page, false);
+  expect(mocks.rpc.mock.calls[1][0]).toBe(load);
+});

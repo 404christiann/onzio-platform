@@ -820,6 +820,74 @@ export type Database = {
           },
         ]
       }
+      cinematic_ticket_page_images: {
+        Row: {
+          club_id: string
+          media_asset_id: string
+          page: string
+          slot: string
+        }
+        Insert: {
+          club_id: string
+          media_asset_id: string
+          page: string
+          slot: string
+        }
+        Update: {
+          club_id?: string
+          media_asset_id?: string
+          page?: string
+          slot?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_ticket_page_images_club_id_media_asset_id_fkey"
+            columns: ["club_id", "media_asset_id"]
+            isOneToOne: false
+            referencedRelation: "media_assets"
+            referencedColumns: ["club_id", "id"]
+          },
+          {
+            foreignKeyName: "cinematic_ticket_page_images_club_id_page_fkey"
+            columns: ["club_id", "page"]
+            isOneToOne: false
+            referencedRelation: "cinematic_ticket_pages"
+            referencedColumns: ["club_id", "page"]
+          },
+        ]
+      }
+      cinematic_ticket_pages: {
+        Row: {
+          club_id: string
+          content: Json
+          page: string
+          revision: number
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          content: Json
+          page: string
+          revision?: number
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          content?: Json
+          page?: string
+          revision?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cinematic_ticket_pages_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cinematic_tickets_content: {
         Row: {
           banner_media_asset_id: string | null
@@ -3869,6 +3937,10 @@ export type Database = {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
+      load_know_before_you_go_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
       load_program_directory: {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
@@ -3882,6 +3954,10 @@ export type Database = {
         Returns: Json
       }
       load_robinson_editor: {
+        Args: { p_club_id: string; p_operation_id?: string }
+        Returns: Json
+      }
+      load_season_membership_editor: {
         Args: { p_club_id: string; p_operation_id?: string }
         Returns: Json
       }
@@ -3978,6 +4054,10 @@ export type Database = {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }
+      save_know_before_you_go_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
       save_program_directory: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
@@ -3987,6 +4067,10 @@ export type Database = {
         Returns: Json
       }
       save_robinson_editor: {
+        Args: { p_club_id: string; p_request: Json }
+        Returns: Json
+      }
+      save_season_membership_editor: {
         Args: { p_club_id: string; p_request: Json }
         Returns: Json
       }

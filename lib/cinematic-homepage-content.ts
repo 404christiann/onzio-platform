@@ -17,12 +17,17 @@ export const CINEMATIC_NAV_ITEMS = [
     { id: "stadium-parking", label: "Stadium parking", href: "/stadium#parking-lot-no-5" },
     { id: "stadium-guidelines", label: "Stadium guidelines", href: "/stadium/guidelines" },
     { id: "chick-fil-a", label: "Chick-fil-A", href: "/stadium/chick-fil-a" },
-    { id: "know-before-you", label: "Know before you", href: "/stadium/know-before-you" },
+    { id: "know-before-you", label: "Know before you", href: "/tickets/know-before-you-go" },
     { id: "fan-code", label: "Fan code of conduct", href: "/stadium/fan-code" },
     { id: "foothill-transit", label: "Foothill Transit", href: "/stadium/foothill-transit" },
     { id: "media-credentials", label: "Media credentials", href: "/stadium/media-credentials" },
   ] },
-  { id: "tickets", label: "Tickets", href: "/tickets" },
+  // RC2027-TICKET-PAGES: Sam's Season Ticket Membership and Know Before You Go designs both sit under Tickets.
+  { id: "tickets", label: "Tickets", children: [
+    { id: "tickets-page", label: "Tickets", href: "/tickets" },
+    { id: "season-membership", label: "Season ticket membership", href: "/tickets/season-membership" },
+    { id: "know-before-you", label: "Know before you go", href: "/tickets/know-before-you-go" },
+  ] },
   { id: "schedule", label: "Schedule", href: "/schedule" },
   { id: "news", label: "News", children: [
     { id: "injury-report", label: "Injury report", href: "/news/injury-report" },

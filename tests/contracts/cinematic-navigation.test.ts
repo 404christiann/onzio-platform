@@ -53,6 +53,13 @@ describe("cinematic navigation preserves club content", () => {
     fixture.content!.presentation.headerPartner.alt = "Another sponsor";
     expect(render()).not.toContain('src="/images/cinematic/foothill-blue.png"');
   });
+  it("opens Season Ticket Membership and Know Before You Go from a Tickets drop-down, and Stadium's Know before you from the same page", () => {
+    fixture.content!.navigation.labels["season-membership"] = "Season tickets";
+    const html = render();
+    expect(html).toMatch(/Tickets<span[\s\S]*href="\/tickets">Tickets<\/a>[\s\S]*href="\/tickets\/season-membership">Season tickets<\/a>[\s\S]*href="\/tickets\/know-before-you-go">Know before you go<\/a>/);
+    expect(html).toContain('href="/tickets/know-before-you-go">Know before you</a>');
+    expect(html).not.toContain('href="/stadium/know-before-you"');
+  });
   it("normalizes the stock stadium dropdown title without replacing an editor's custom wording", () => {
     fixture.content!.navigation.labels.stadium = "ROBINSON STADIUM";
     expect(render()).toContain('href="/stadium">Robinson Stadium</a>');

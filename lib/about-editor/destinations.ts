@@ -7,8 +7,8 @@ type RouteKey = keyof typeof routeRegistry;
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
 const LABELS: Record<RouteKey, string> = {
-  tickets: "Tickets", stadium: "Stadium", "stadium-parking": "Stadium Parking", "stadium-guidelines": "Stadium Guidelines",
-  "chick-fil-a": "Chick-fil-A", "know-before-you": "Know Before You", "fan-code": "Fan Code of Conduct", "foothill-transit": "Foothill Transit", "media-credentials": "Media Credentials",
+  tickets: "Tickets", "season-membership": "Season Ticket Membership", stadium: "Stadium", "stadium-parking": "Stadium Parking", "stadium-guidelines": "Stadium Guidelines",
+  "chick-fil-a": "Chick-fil-A", "know-before-you": "Know Before You Go", "fan-code": "Fan Code of Conduct", "foothill-transit": "Foothill Transit", "media-credentials": "Media Credentials",
   "injury-report": "Injury Report", "news-page": "News", partnership: "Partnership Opportunities", "national-anthem": "National Anthem Request",
   home: "Home",
   roster: "Roster",

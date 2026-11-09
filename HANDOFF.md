@@ -1,3 +1,47 @@
+## 2026-11-08 — RC2027-TICKET-PAGES implemented locally (uncommitted)
+
+Sam's last two Rose City 2027 pages, Season Ticket Membership and Know Before You Go, are built in
+the shared checkout on `codex/rose-city-homepage-2027`. Nothing is committed, pushed or deployed;
+Christian decides about commits. The full ledger entry (placeholder slots, questions for Sam, files,
+verification) is the 2026-11-08 RC2027-TICKET-PAGES entry in `docs/phase-11/diverse-city/STATUS.md`.
+
+- **Preview:** outer `design-explorations/ticket-pages-2027/` (port 3216). Christian approved both
+  on 2026-11-08 and asked for Member Benefits to stay 3 × 3 on phones.
+- **Public pages (cinematic@2):** `/tickets/season-membership` and `/tickets/know-before-you-go`.
+  TICKETS is now a drop-down (Tickets, Season ticket membership, Know before you go); the Stadium
+  menu's "Know before you" item opens the same page, and the empty `/stadium/know-before-you`
+  placeholder route is gone. The match box comes from Schedule's next home match.
+- **Editors:** `/admin/season-membership` and `/admin/know-before-you-go`, linked from the Homepage
+  editor shortcuts. Every icon, logo and the PlayStation photo is an empty slot the owner fills from
+  admin; empty slots are hidden publicly and labelled in the editor preview. No icons were drawn,
+  searched or reused.
+- **Database:** migrations `20261105060000_cinematic_ticket_pages` (new tables
+  `onzio.cinematic_ticket_pages` and `onzio.cinematic_ticket_page_images`, receipts, Save RPCs,
+  advisory lock 734901340; image identities in a tenant FK table, so reference-safe retirement finds
+  them) and `20261105070000_cinematic_tickets_menu_labels` (allows the two new menu labels), applied
+  to the local rehearsal only via `scripts/apply-rose-city-ticket-pages-migrations-local.ts`. Sam's
+  copy is seeded locally by `scripts/seed-rose-city-ticket-pages-2027-local.ts`.
+- **Verification:** `tsc` and ESLint clean; contract/architecture/unit 230 files, 1,886 tests pass;
+  database 49 files, 459 tests pass. Both routes return 200 on `http://rose-city.localhost:3197`. Owner edits,
+  an image upload and removal, and a tile add/remove were saved and shown publicly in a real browser,
+  then restored to the seed.
+- **Before any hosted release:** the CLAUDE.md migration gate applies to `20261105060000` and
+  `20261105070000` as well as the seven earlier local-only migrations.
+- **Sam's files (2026-11-08, local rehearsal only):** his 22-icon Dropbox folder, the black YouTube
+  logo and the PlayStation 5 photo (as WebP) were uploaded through the two editors: all nine Member
+  Benefit icons, all 15 tiles, the YouTube logo and the prize photo. The tile art box now shows Sam's
+  752 × 350 icon canvas at one column wide, so icons keep his design sizes; the YouTube logo is sized
+  to the design. The ticket banner and the Chronic Tacos logo (empty margins trimmed) followed on
+  2026-11-08, then the "G" badge (cropped from Sam's "General Seating" image); every image slot
+  is filled, and the price colors use Sam's source files. Per Christian: 7 home games (bullet and $14
+  savings), red star decorative, sample match follows Schedule, other copy as designed. The
+  YouTube file was cropped to the logo alone to match Sam's design. "Watch every game live" opens
+  the game-day live stream link from the editor (placeholder `https://www.youtube.com/@RoseCityFC/live`
+  for now); with no link it falls back to the club's YouTube channel from Branding, and with neither
+  it is plain text.
+- **Main's test speed work (PRs #97 and #98):** not on this branch yet. When it is merged in, point
+  main's `tests/global-setup/local-audit-cleanup.ts` at `localPostgresConfig()`; details in STATUS.
+
 ## 2026-11-04 — Robinson Stadium editor merged into the homepage branch
 
 At Christian's request, `codex/rose-city-robinson-editor-2027` (`3b36b7c`) was merged into

@@ -1,5 +1,5 @@
 /** Independent page revisions using the established atomic content Save contract. */
-export type VisitorPageKey = "chick-fil-a" | "stadium" | "robinson";
+export type VisitorPageKey = "chick-fil-a" | "stadium" | "robinson" | "season-membership" | "know-before-you-go";
 export type VisitorPageMedia = { id: string; storage_bucket: string; storage_path: string; width: number; height: number };
 export type VisitorPageSnapshot<T> = {
   revision: string;

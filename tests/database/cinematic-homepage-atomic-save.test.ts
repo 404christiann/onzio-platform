@@ -57,6 +57,12 @@ describe("cinematic@2 atomic homepage", () => {
     await reject(() => db.query(`insert into onzio.presentation_documents(id,club_id,version,schema_version,template_id,template_version,configuration,configuration_digest,created_by)
       values($1,$2,900,1,'cinematic',3,$3,$4,$5)`, [randomUUID(), clubId, JSON.stringify({ schemaVersion: 1, template: { id: "cinematic", version: 3 } }), "a".repeat(64), USER_IDS.ownerAal2]), "presentation_documents_template_version_check");
   });
+  it("accepts renamed labels for the Tickets menu's own pages (RC2027-TICKET-PAGES)", async () => {
+    const revamp = content();
+    revamp.navigation.labels["tickets-page"] = "Single tickets"; revamp.navigation.labels["season-membership"] = "Season tickets";
+    await save(await payload({ revamp }));
+    expect((await load()).content.revamp.navigation.labels).toMatchObject({ "tickets-page": "Single tickets", "season-membership": "Season tickets" });
+  });
   it("saves real editable copy, route labels and ticket visibility with one retry receipt", async () => {
     const revamp = content(); revamp.ticket.visible = false; revamp.navigation.labels["stadium-group"] = "Robinson Stadium";
     const request = await payload({ hero: { intro: "New intro" }, revamp }); const first = await save(request);
