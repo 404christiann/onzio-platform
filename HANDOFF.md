@@ -1,7 +1,7 @@
 ## 2026-11-08 - ADMIN-RE-07 Add a game
 
 - **Status:** `in_progress` on branch `claude/admin-re-07-add-game-4e0b24`
-  with `main` `e4887b2` (RE-08, RE-09) merged in, with the PR open. No migration. Nobody sees it until
+  with `main` `aa41f1c` merged in, with the PR open. No migration. Nobody sees it until
   a club is switched to `reimagined` (RE-10).
 - **What it adds:**
   - `/admin/add-game` for reimagined clubs (classic clubs are redirected to
@@ -27,6 +27,23 @@
   its test, and in the icon list and its test. RE-06 reuses
   `matchesMutation`.
 - **Exact next step:** the bot merges. Then RE-10 waits for Christian.
+
+## 2026-11-09 - Browser suites put Alpha's time zone back
+
+- **Status:** `in_progress` on branch `claude/restore-alpha-time-zone` from
+  `main` `e4887b2`, PR open. No migration and no app code change.
+- **What changed:** new `tests/browser/alpha-time-zone.global-setup.ts` puts
+  local Alpha's `time_zone` and `time_zone_set_at` back after any browser
+  suite that signs the owner into `/admin` (RE-02's automatic time zone
+  stamps it). Wired into `homepage`, `admin-guided`, `admin-loading`,
+  `public-page-editors`, `contact-editor`, `admin-reimagined`, `dcfc-403` and
+  `plat-101`. This fixes the RE-09 note below: running a browser suite before
+  `test:db` no longer fails the RE-01 foundation test, and nobody has to reset
+  Alpha by hand.
+- **Verification:** homepage suite then `test:db` under the lock: Alpha back
+  to null, `test:db` 1,009/1,009. 6 homepage flakes on the first browser run
+  passed on rerun. Details in `STATUS.md`.
+- **Exact next step:** the bot reviews and merges.
 
 ## 2026-11-08 - ADMIN-RE-08 See registrations (`/admin/sign-ups`)
 

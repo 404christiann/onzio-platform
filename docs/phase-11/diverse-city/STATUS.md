@@ -4,7 +4,7 @@
 
 **Agent/package:** Claude Code, `ADMIN-RE-07`, started by the orchestration
 session alongside RE-06, RE-08 and RE-09. Branch
-`claude/admin-re-07-add-game-4e0b24`, with `main` `e4887b2` (RE-08 and RE-09 merged) merged in. **Status:**
+`claude/admin-re-07-add-game-4e0b24`, with `main` `aa41f1c` (RE-08, RE-09 and the browser time zone fix) merged in. **Status:**
 `in_progress`. Built and tested locally, PR open for the review bot. No
 migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 `GATE-FLIP-RC`).
@@ -139,6 +139,62 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 
 **Exact next step:** the review bot reviews and merges. Then RE-10 (switching
 Rose City on) waits for Christian.
+
+## 2026-11-09 - Browser suites put Alpha's time zone back (test leak fix)
+
+**Agent/package:** Claude Code, test-infrastructure fix found during
+`ADMIN-RE-09` (no work-package ID of its own). Branch
+`claude/restore-alpha-time-zone`, on `main` `e4887b2`.
+**Status:** `in_progress`, PR open for the review bot. No migration and no app
+code change.
+
+**Completed work:**
+
+- The leak: any browser suite that signs the Alpha owner into `/admin`
+  triggers RE-02's automatic time zone (`AdminPortalProvider` posts to
+  `/api/admin/club-time-zone`), which stamps local Alpha's
+  `time_zone_set_at`. Only the reimagined config put it back, so `npm run
+  test:db` then failed the RE-01 test "gives every club the classic admin, no
+  flags and the default time zone" for every session sharing the local
+  database.
+- New `tests/browser/alpha-time-zone.global-setup.ts` reads Alpha's
+  `time_zone` and `time_zone_set_at` before the run and writes them back when
+  it ends. It does nothing unless the suite's base URL is loopback or
+  `*.localhost`, and only ever connects to loopback Postgres.
+- Added to the `globalSetup` list of every config that signs the Alpha owner
+  in: `homepage`, `admin-guided`, `admin-loading`, `public-page-editors`,
+  `contact-editor`, `admin-reimagined`, `dcfc-403` and `plat-101`.
+  `dcfc-304` signs in the administrator, not the owner, so it never sets the
+  time zone and is left alone.
+- `tests/browser/admin-reimagined.global-setup.ts` now only switches
+  `admin_portal`; its time-zone restore moved to the shared setup.
+- `tests/README.md` documents it.
+
+**Files changed:** new `tests/browser/alpha-time-zone.global-setup.ts`;
+`tests/browser/admin-reimagined.global-setup.ts`; the eight
+`playwright.*.config.ts` above; `tests/README.md`; this file, `HANDOFF.md`.
+
+**Verification** (code at the PR head, before rebasing onto `e4887b2`, which
+touched no test setup):
+
+- `npx tsc --noEmit`: clean. `npm run build`: passed.
+- Under `set -a; . ./.env.test; set +a; SUPABASE_LOCAL=1
+  ONZIO_DB_LOCK_WAIT=3600 bash scripts/with-local-db-lock.sh`, one lock hold
+  each time, production build at `http://alpha.localhost:3110`:
+  - `playwright.homepage.config.ts`: 57/63 on the first run. The 6 failures
+    were in the editor preview and photos (`hero.heading` not found, no save
+    toast, photos not shown), not the time zone; `--last-failed` passed 6/6.
+  - Alpha read back after the browser run: `America/Los_Angeles`,
+    `time_zone_set_at` null.
+  - `npm run test:db` straight after: 49 files, 1,009/1,009, both times.
+- The teardown itself, under the lock: with Alpha stamped as
+  `America/Chicago` / now, it put back `America/Los_Angeles` / null; with a
+  non-local base URL it did nothing.
+
+**Blockers / decisions:** none. The 6 homepage flakes are older than this
+change and are not addressed here.
+
+**Exact next step:** the review bot reviews and merges.
 
 ## 2026-11-08 - ADMIN-RE-08: See registrations (`/admin/sign-ups`)
 
