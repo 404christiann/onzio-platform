@@ -62,7 +62,6 @@
 .cinematic-site .cinematic-schedule .opponent-title h2{font-size:clamp(22px,2.15vw,31px)}
 .cinematic-site .cinematic-schedule .fixture-venue{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
 .cinematic-site .cinematic-schedule .fixture-venue .fixture-directions{display:inline-flex;gap:4px;min-height:0;font-size:inherit;color:#333}
-.cinematic-site .cinematic-schedule .fixture-venue .fixture-directions svg{color:#35c759}
 .cinematic-site .cinematic-schedule .fixture-league,.cinematic-site .cinematic-schedule .fixture-result,.cinematic-site .cinematic-schedule .fixture-summary,.cinematic-site .cinematic-schedule .fixture-watch{position:relative}
 .cinematic-site .cinematic-schedule .fixture-league:before,.cinematic-site .cinematic-schedule .fixture-result:before,.cinematic-site .cinematic-schedule .fixture-summary:before,.cinematic-site .cinematic-schedule .fixture-watch:before{content:'';position:absolute;left:-7px;top:50%;width:1.5px;height:26px;background:#3a3a3a;transform:translateY(-50%)}
 .cinematic-site .cinematic-schedule .fixture-card[data-next=true] :is(.fixture-league,.fixture-result,.fixture-summary,.fixture-watch):before{background:#d9d9d9}
@@ -93,3 +92,62 @@
  .cinematic-site .cinematic-schedule .fixture-summary a{font-size:14px;color:#333;text-decoration:underline;text-underline-offset:3px}
 }
 
+
+/* RC2027-SCHEDULE-LINKS: Sam's final Schedule. The NEXT tag sits beside the date (the date column grows on that row only;
+   the opponent column absorbs it, so Kickoff and later columns stay aligned), the opponent name sits on the row's
+   middle line with the crest, the venue line hangs below it, and Directions shares the venue's grey. */
+@media(min-width:901px){
+ .cinematic-site .cinematic-schedule .fixture-card[data-next=true]{grid-template-columns:max-content minmax(0,1fr) 118px 58px 112px 118px 168px}
+ .cinematic-site .cinematic-schedule .fixture-date{display:flex;align-items:center;gap:14px}
+ .cinematic-site .cinematic-schedule .next-badge{display:inline-block;margin:0;padding:5px 8px;font-size:15px}
+ .cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-opponent{padding-left:8px}
+ .cinematic-site .cinematic-schedule .fixture-opponent{display:grid;grid-template-columns:62px minmax(0,1fr);column-gap:19px;align-items:center;padding-top:26px}
+ .cinematic-site .cinematic-schedule .fixture-opponent>div:not(.schedule-opponent-crest){display:contents}
+ .cinematic-site .cinematic-schedule .fixture-opponent .schedule-opponent-crest{grid-row:1;grid-column:1}
+ .cinematic-site .cinematic-schedule .opponent-title{grid-row:1;grid-column:2}
+ .cinematic-site .cinematic-schedule .fixture-venue{grid-row:2;grid-column:2}
+}
+@media(max-width:1200px) and (min-width:901px){
+ .cinematic-site .cinematic-schedule .fixture-card[data-next=true]{grid-template-columns:max-content minmax(0,1fr) 96px 44px 88px 96px 132px}
+ .cinematic-site .cinematic-schedule .fixture-date{gap:8px}
+ .cinematic-site .cinematic-schedule .next-badge{font-size:12px;padding:4px 6px}
+ .cinematic-site .cinematic-schedule .fixture-opponent{grid-template-columns:46px minmax(0,1fr);column-gap:12px;padding-top:24px}
+}
+.cinematic-site .cinematic-schedule .fixture-venue .fixture-directions{color:inherit}
+.cinematic-site .cinematic-schedule .fixture-venue .fixture-directions:hover{text-decoration:underline;text-underline-offset:3px}
+@media(min-width:901px){
+ /* The crest is centered on the name line without making that line taller, so the venue sits right under the name. */
+ .cinematic-site .cinematic-schedule .fixture-opponent .schedule-opponent-crest{margin-block:-13px}
+ /* On the NEXT row the venue starts under the crest, which lands where the other rows' venue starts (as in Sam's file). */
+ .cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-venue{grid-column:1/-1}
+}
+@media(max-width:1200px) and (min-width:901px){
+ .cinematic-site .cinematic-schedule .fixture-opponent .schedule-opponent-crest{margin-block:-6px}
+}
+@media(min-width:901px){
+ .cinematic-site .cinematic-schedule .fixture-opponent{padding-top:20px}
+ .cinematic-site .cinematic-schedule .fixture-opponent p.fixture-venue{margin-top:0}
+}
+/* Tablet widths are too narrow for the tag beside the date (Sam drew only the wide layout), so it stays under the date there. */
+@media(max-width:1200px) and (min-width:901px){
+ .cinematic-site .cinematic-schedule .fixture-card[data-next=true]{grid-template-columns:108px minmax(0,1fr) 96px 44px 88px 96px 132px}
+ .cinematic-site .cinematic-schedule .fixture-date{display:block}
+ .cinematic-site .cinematic-schedule .next-badge{display:block;margin-top:8px}
+ .cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-opponent{padding-left:0}
+ .cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-venue{grid-column:2}
+}
+/* Christian, 2026-11-08: the stadium line and Directions always share one line; a long stadium name is shortened with "…"
+   (full name on hover) so Directions stays visible. */
+.cinematic-site .cinematic-schedule .fixture-venue{flex-wrap:nowrap;min-width:0}
+.cinematic-site .cinematic-schedule .fixture-venue-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cinematic-site .cinematic-schedule .fixture-venue .fixture-directions{flex-shrink:0;white-space:nowrap}
+@media(max-width:1200px) and (min-width:901px){.cinematic-site .cinematic-schedule .fixture-venue{font-size:13px;gap:4px 8px}}
+@media(max-width:900px){.cinematic-site .cinematic-schedule .fixture-venue{gap:4px 8px}}
+@media(max-width:1200px) and (min-width:901px){
+ .cinematic-site .cinematic-schedule .fixture-card .fixture-venue{grid-column:1/-1;margin-top:6px}
+}
+@media(max-width:1439px) and (min-width:901px){
+ .cinematic-site .cinematic-schedule .fixture-card .fixture-venue,.cinematic-site .cinematic-schedule .fixture-card[data-next=true] .fixture-venue{grid-column:1/-1}
+}
+/* Sam's green location pin (Dropbox "RCFC Green Location Pin website icon 2027"), replacing the drawn pin. */
+.cinematic-site .cinematic-schedule .fixture-directions .directions-pin{width:auto;height:1.1em;flex-shrink:0;display:block}

@@ -1150,16 +1150,20 @@ function MatchForm({
             />
           </Field>
 
-          <Field id="match-address" label="Street address" optional>
-            <input
-              id="match-address"
-              type="text"
-              placeholder="e.g. 1234 N Broadacre St"
-              value={form.address ?? ""}
-              onChange={(e) => set("address", e.target.value)}
-              className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
-            />
-          </Field>
+          <div>
+            <Field id="match-address" label="Address for directions" optional>
+              <input
+                id="match-address"
+                type="text"
+                placeholder="e.g. 1570 E Colorado Blvd, Pasadena, CA 91106"
+                value={form.address ?? ""}
+                onChange={(e) => set("address", e.target.value)}
+                aria-describedby="match-address-hint"
+                className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
+              />
+            </Field>
+            <p id="match-address-hint" className="mt-1.5 font-body text-xs text-muted-foreground">Visitors tap Directions on the Schedule to get Google Maps directions to this address. Type the full street address with the city. Leave it blank to hide Directions.</p>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
             <Field id="match-city" label="City" optional>

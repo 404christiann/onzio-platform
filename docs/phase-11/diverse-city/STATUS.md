@@ -1,5 +1,42 @@
 # Diverse City FC Status
 
+## 2026-11-08 - Rose City RC2027-SCHEDULE-LINKS (local only)
+
+**Agent/package:** Claude Code, `RC2027-SCHEDULE-LINKS`. **Status:** `in_progress`: implemented and
+verified locally, waiting for Christian's review. Uncommitted on `codex/rose-city-schedule-2027`
+(worktree `implementation/onzio-platform-schedule`). Not pushed, merged or deployed.
+
+**Completed work:**
+
+- Schedule Directions open Google Maps directions to the owner's "Address for directions" in a new
+  tab; none when blank.
+- The "Watch on YouTube" logo opens the owner's existing per-match YouTube link in a new tab; it is
+  not clickable when blank. No new field or migration.
+- The Schedule matches Sam's final design: NEXT beside the date, name on the row's middle line,
+  stadium line just below, grey Directions. The stadium line and Directions stay on one line.
+- Directions uses Sam's green location pin from Dropbox instead of the pin drawn in code.
+- A local dummy YouTube link is applied to two matches for review (removable with
+  `scripts/sample-rose-city-schedule-links-local.ts --remove`).
+
+**Files changed:** `lib/google-maps-directions.ts` (new), `components/cinematic/CinematicSchedule.tsx`,
+`components/cinematic/schedule.css`, `app/admin/(protected)/schedule/page.tsx`,
+`scripts/sample-rose-city-schedule-links-local.ts` (new), `public/rose-city/icons/green-location-pin.png` (new, Sam's pin), `tests/contracts/schedule-directions.test.ts`
+(new), `tests/contracts/match-summary-pages.test.ts`, `HANDOFF.md`, this file.
+
+**Verification:**
+
+- Contract, architecture and unit tests: 227 files, 1,868 tests pass (after the pin swap). Database: 48 files, 432 tests pass (local rehearsal; this branch adds no migration).
+- `tsc` passes; ESLint clean on touched files.
+- Browser checks at eight widths, link clicks and an editor save round trip (see the HANDOFF entry).
+
+**Blockers / decisions:** none blocking. Christian confirmed "EST" in Sam's file is a typo (site
+keeps PT). Question for Sam: a white-text "Watch on" image for the dark row (Dropbox searched; none
+exists, both versions have grey text).
+
+**Exact next step:** Christian reviews `http://rose-city.localhost:3199/schedule` and decides whether
+to commit, keep or remove the dummy YouTube link, and when to merge into
+`codex/rose-city-homepage-2027`.
+
 ## 2026-11-04 - Rose City RC2027-ROBINSON-EDITOR (local only)
 
 **Agent/package:** Claude Code, `RC2027-ROBINSON-EDITOR`. **Status:** `in_progress`: implemented
