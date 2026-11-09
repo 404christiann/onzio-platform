@@ -7,6 +7,7 @@ import guided from "@/components/admin/AdminGuided.module.css";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import {
   getReimaginedPageTitle,
   type AdminRouteAccessContext,
@@ -18,7 +19,14 @@ import styles from "./reimagined.module.css";
 // ADMIN-RE-05: the shell for clubs whose admin_portal is "reimagined". No
 // sidebar: the home is the way around, and every other page has the slim top
 // bar back to it. The old pages render inside it unchanged until their slice
-// replaces them.
+// replaces them. Some of those pages read the sidebar's state (the homepage
+// editor hides its panel while the phone menu is open), so the shell still
+// provides it, always closed: there is no sidebar to open.
+
+const KEEP_CLOSED = () => undefined;
+const SHELL_STYLE = {
+  "--admin-shell-header-height": "calc(56px + var(--admin-safe-area-top))",
+} as React.CSSProperties;
 
 export function ReimaginedShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -74,8 +82,11 @@ export function ReimaginedShell({ children }: { children: React.ReactNode }) {
 
   return (
     <TopBarActionsProvider>
-      <div
-        className={`admin-portal ${guided.portal} ${styles.shell}`}
+      <SidebarProvider
+        open={false}
+        onOpenChange={KEEP_CLOSED}
+        className={`admin-portal ${guided.portal} ${styles.shell} flex-col`}
+        style={SHELL_STYLE}
         data-admin-shell="reimagined"
       >
         <TopBar
@@ -116,7 +127,7 @@ export function ReimaginedShell({ children }: { children: React.ReactNode }) {
           ) : null}
           {children}
         </main>
-      </div>
+      </SidebarProvider>
     </TopBarActionsProvider>
   );
 }

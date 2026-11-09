@@ -201,5 +201,19 @@ for (const width of [390, 1440]) {
       await expect(page).toHaveURL(/\/admin$/);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^(Hi .+|Welcome back)$/);
     });
+
+    test("Edit my website opens the homepage editor inside the new shell", async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await page.goto("/admin");
+      await page.locator('[data-job="edit-website"]').click();
+      await expect(page).toHaveURL(/\/admin\/homepage$/);
+      await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+      // The editor reads the sidebar's state; the shell provides it, always closed.
+      await expect(page.getByLabel("Homepage tools")).toBeVisible();
+      await expect(page.getByText("Click any words, photo or button in the preview to edit it.")).toBeVisible();
+      expect(errors).toEqual([]);
+      await page.screenshot({ path: `${SHOTS}/homepage-editor-${width}.png` });
+    });
   });
 }

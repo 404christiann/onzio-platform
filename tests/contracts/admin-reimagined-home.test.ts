@@ -125,6 +125,13 @@ describe("reimagined shell (ADMIN-RE-05)", () => {
     expect(shell).toContain('club.publicAccess === "grace"');
   });
 
+  it("still provides a closed sidebar context, which the homepage editor reads", () => {
+    expect(source("components/admin/homepage/HomepageEditor.tsx")).toContain("useSidebar()");
+    const shell = components["ReimaginedShell.tsx"];
+    expect(shell).toMatch(/<SidebarProvider\s+open=\{false\}\s+onOpenChange=\{KEEP_CLOSED\}/);
+    expect(shell).not.toMatch(/<Sidebar[\s>]/);
+  });
+
   it("never gives the reimagined client shell the service role or tenant-resolution columns", () => {
     for (const [name, code] of Object.entries(components)) {
       expect(code, name).not.toMatch(/service-role|SERVICE_ROLE/);

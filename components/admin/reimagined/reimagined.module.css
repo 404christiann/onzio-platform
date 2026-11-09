@@ -3,7 +3,6 @@
    hues are fixed, with a darker pair for the dark theme. */
 
 .shell {
-  --admin-shell-header-height: calc(56px + var(--admin-safe-area-top));
   display: flex;
   min-height: 100dvh;
   flex-direction: column;
