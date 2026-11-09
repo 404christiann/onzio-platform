@@ -112,12 +112,10 @@ function emptyForm(seasonId = ""): FormState {
   };
 }
 
-// ADMIN-RE-07: /api/admin/data holds a newly added game to these text limits
-// (lib/admin-data-contract.ts newMatchLimits); existing games keep saving as
-// they are until decision 7's production length check. Every write caps a
-// score at 99 (ADMIN-RE-06).
+// ADMIN-RE-07c: /api/admin/data and the database hold every saved game to
+// these text limits (lib/match-text-limits.ts) and cap a score at 99.
 const MAX_MATCH_SCORE = 99;
-const NEW_MATCH_FIELD_LABELS: Record<keyof typeof MATCH_TEXT_LIMITS, string> = {
+const MATCH_FIELD_LABELS: Record<keyof typeof MATCH_TEXT_LIMITS, string> = {
   opponent: "Opponent name",
   opponent_short_name: "Short name",
   venue: "Venue name",
@@ -127,11 +125,11 @@ const NEW_MATCH_FIELD_LABELS: Record<keyof typeof MATCH_TEXT_LIMITS, string> = {
   state: "State",
 };
 
-function newMatchTooLong(form: FormState): string | null {
+function matchTooLong(form: FormState): string | null {
   for (const field of Object.keys(MATCH_TEXT_LIMITS) as Array<keyof typeof MATCH_TEXT_LIMITS>) {
     const value = form[field];
     if (typeof value === "string" && value.length > MATCH_TEXT_LIMITS[field]) {
-      return `${NEW_MATCH_FIELD_LABELS[field]} can be at most ${MATCH_TEXT_LIMITS[field]} characters.`;
+      return `${MATCH_FIELD_LABELS[field]} can be at most ${MATCH_TEXT_LIMITS[field]} characters.`;
     }
   }
   return null;
@@ -321,16 +319,14 @@ export default function SchedulePage() {
 
   // ── Add ─────────────────────────────────────
 
-  function validate(form: FormState, isNew = false): string | null {
+  function validate(form: FormState): string | null {
     if (!form.season_id) return "Season is required.";
     if (!form.date)     return "Date is required.";
     if (!form.time)     return "Time is required.";
     if (!form.opponent.trim()) return "Opponent is required.";
     if (!form.venue.trim())    return "Venue is required.";
-    if (isNew) {
-      const tooLong = newMatchTooLong(form);
-      if (tooLong) return tooLong;
-    }
+    const tooLong = matchTooLong(form);
+    if (tooLong) return tooLong;
     if ([form.rose_city_score, form.opponent_score].some((score) => score !== null && score > MAX_MATCH_SCORE)) {
       return `Scores can be at most ${MAX_MATCH_SCORE}.`;
     }
@@ -362,7 +358,7 @@ export default function SchedulePage() {
   }
 
   async function handleAdd() {
-    const validationError = validate(addForm, true);
+    const validationError = validate(addForm);
     if (validationError) { setError(validationError); return; }
     setSaving(true);
     setError(null);
@@ -887,7 +883,6 @@ export default function SchedulePage() {
           onChange={panelOnChange}
           seasons={seasons}
           cleanupDraftUploads={!editingId}
-          isNew={!editingId}
         />
       </AdminSidePanel>
     </AdminPage>
@@ -901,17 +896,12 @@ function MatchForm({
   onChange,
   seasons,
   cleanupDraftUploads = false,
-  isNew = false,
 }: {
   form: Omit<Match, "id">;
   onChange: (f: Omit<Match, "id">) => void;
   seasons: DBSeason[];
   cleanupDraftUploads?: boolean;
-  /** A game being added: the new text limits apply (not yet to existing rows). */
-  isNew?: boolean;
 }) {
-  const newMatchLimit = (field: keyof typeof MATCH_TEXT_LIMITS) =>
-    isNew ? MATCH_TEXT_LIMITS[field] : undefined;
   const club = useClubContext();
   // academy@1 renders fixtures through AcademyNextMatch and AcademyFixtureRow,
   // neither of which reads sponsor_name, sponsor_logo_url, or sponsor_link, so
@@ -1021,7 +1011,7 @@ function MatchForm({
               placeholder="e.g. UPSL Premier Division"
               value={form.competition ?? ""}
               onChange={(e) => set("competition", e.target.value)}
-              maxLength={newMatchLimit("competition")}
+              maxLength={MATCH_TEXT_LIMITS.competition}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>
@@ -1037,7 +1027,7 @@ function MatchForm({
               placeholder="e.g. Portland FC"
               value={form.opponent}
               onChange={(e) => set("opponent", e.target.value)}
-              maxLength={newMatchLimit("opponent")}
+              maxLength={MATCH_TEXT_LIMITS.opponent}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
               required
             />
@@ -1055,7 +1045,7 @@ function MatchForm({
               placeholder="e.g. Portland"
               value={form.opponent_short_name ?? ""}
               onChange={(e) => set("opponent_short_name", e.target.value)}
-              maxLength={newMatchLimit("opponent_short_name")}
+              maxLength={MATCH_TEXT_LIMITS.opponent_short_name}
               aria-describedby="match-opponent-short-name-help"
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
@@ -1102,7 +1092,7 @@ function MatchForm({
               placeholder="e.g. Delta Park"
               value={form.venue}
               onChange={(e) => set("venue", e.target.value)}
-              maxLength={newMatchLimit("venue")}
+              maxLength={MATCH_TEXT_LIMITS.venue}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
               required
             />
@@ -1115,7 +1105,7 @@ function MatchForm({
               placeholder="e.g. 1234 N Broadacre St"
               value={form.address ?? ""}
               onChange={(e) => set("address", e.target.value)}
-              maxLength={newMatchLimit("address")}
+              maxLength={MATCH_TEXT_LIMITS.address}
               className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
             />
           </Field>
@@ -1128,7 +1118,7 @@ function MatchForm({
                 placeholder="e.g. Irvine"
                 value={form.city ?? ""}
                 onChange={(e) => set("city", e.target.value)}
-              maxLength={newMatchLimit("city")}
+              maxLength={MATCH_TEXT_LIMITS.city}
                 className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
               />
             </Field>
@@ -1140,7 +1130,7 @@ function MatchForm({
                 placeholder="e.g. CA"
                 value={form.state ?? ""}
                 onChange={(e) => set("state", e.target.value)}
-              maxLength={newMatchLimit("state")}
+              maxLength={MATCH_TEXT_LIMITS.state}
                 className={cn(ADMIN_INPUT_CLASS, "min-h-11")}
               />
             </Field>

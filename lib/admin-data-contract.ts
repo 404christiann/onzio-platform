@@ -285,17 +285,17 @@ const tryoutsPageMutation = z
 // /api/admin/data: the reimagined Add a game page and the classic Games page
 // (app/admin/(protected)/schedule/page.tsx via lib/admin-client.ts), whose
 // edit form resends every field. Every write must have this shape and these
-// types. The new text limits (break-ui gaps: opponent, venue and competition
-// had none in 20260726000200_phase2_content.sql) and the 0-99 score range
-// apply only when a game is added, so existing longer rows stay editable
-// until decision 7's read-only production length check allows them
-// everywhere, and then database CHECKs. A score is a whole number from 0 to
-// 99 on every write (ADMIN-RE-06).
+// types: the text limits (lib/match-text-limits.ts) and whole scores from 0
+// to 99. Decision 7's read-only production check (2026-11-09) found no row
+// over them, so they hold on every write (ADMIN-RE-07c), and the database
+// enforces them too (20261109120000_matches_text_and_score_checks.sql).
 const plainDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const wallClockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/);
 const matchScore = z.number().int().min(0).max(99).nullable();
 const nullableString = z.string().nullable().optional();
-const filledText = z.string().trim().min(1);
+// Length is checked before trimming: the database CHECK measures what is stored.
+const limitedFilledText = (maximum: number) => z.string().max(maximum).trim().min(1);
+const limitedNullableText = (maximum: number) => z.string().max(maximum).nullable().optional();
 
 export const matchesMutation = z
   .object({
@@ -303,20 +303,20 @@ export const matchesMutation = z
     season_id: uuid.optional(),
     date: plainDate.optional(),
     time: wallClockTime.optional(),
-    opponent: filledText.optional(),
-    opponent_short_name: nullableString,
+    opponent: limitedFilledText(MATCH_TEXT_LIMITS.opponent).optional(),
+    opponent_short_name: limitedNullableText(MATCH_TEXT_LIMITS.opponent_short_name),
     opponent_logo_url: nullableString,
     opponent_logo_asset_id: nullableUuid.optional(),
-    competition: nullableString,
+    competition: limitedNullableText(MATCH_TEXT_LIMITS.competition),
     sponsor_name: nullableString,
     sponsor_logo_url: nullableString,
     sponsor_logo_asset_id: nullableUuid.optional(),
     sponsor_link: nullableString,
     home: z.boolean().optional(),
-    venue: filledText.optional(),
-    address: nullableString,
-    city: nullableString,
-    state: nullableString,
+    venue: limitedFilledText(MATCH_TEXT_LIMITS.venue).optional(),
+    address: limitedNullableText(MATCH_TEXT_LIMITS.address),
+    city: limitedNullableText(MATCH_TEXT_LIMITS.city),
+    state: limitedNullableText(MATCH_TEXT_LIMITS.state),
     rose_city_score: matchScore.optional(),
     opponent_score: matchScore.optional(),
     attendance: z.number().int().min(0).nullable().optional(),
@@ -325,19 +325,6 @@ export const matchesMutation = z
     updated_at: z.string().optional(),
   })
   .strict();
-
-const limitedText = (maximum: number) => z.string().max(maximum).nullable().optional();
-
-/** The limits a newly added game must meet (insert or upsert). */
-export const newMatchLimits = z.object({
-  opponent: limitedText(MATCH_TEXT_LIMITS.opponent),
-  opponent_short_name: limitedText(MATCH_TEXT_LIMITS.opponent_short_name),
-  venue: limitedText(MATCH_TEXT_LIMITS.venue),
-  competition: limitedText(MATCH_TEXT_LIMITS.competition),
-  address: limitedText(MATCH_TEXT_LIMITS.address),
-  city: limitedText(MATCH_TEXT_LIMITS.city),
-  state: limitedText(MATCH_TEXT_LIMITS.state),
-});
 
 const MATCH_INSERT_REQUIRED = ["season_id", "date", "time", "opponent", "venue"] as const;
 
@@ -460,16 +447,6 @@ export const adminDataRequestSchema = z
               code: "custom",
               path: ["payload", field],
               message: `Match ${request.operation} requires ${field}`,
-            });
-          }
-        }
-        const limits = newMatchLimits.safeParse(payload);
-        if (!limits.success) {
-          for (const issue of limits.error.issues) {
-            context.addIssue({
-              code: "custom",
-              path: ["payload", ...(Array.isArray(request.payload) ? [index] : []), ...issue.path],
-              message: issue.message,
             });
           }
         }
