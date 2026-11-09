@@ -89,8 +89,14 @@ async function removeOpenSignUpForm() {
   await sql("delete from onzio.registration_forms where club_id=$1 and id=$2", [ALPHA, FIXTURE_FORM]);
 }
 
+// Next streams the home in after its placeholder; for a moment the streamed copy
+// sits in a hidden node outside <main>. Every lookup is scoped to <main>.
+function main(page: Page) {
+  return page.getByRole("main");
+}
+
 async function jobIds(page: Page) {
-  return page.locator("[data-job]").evaluateAll((links) => links.map((link) => link.getAttribute("data-job")));
+  return main(page).locator("[data-job]").evaluateAll((links) => links.map((link) => link.getAttribute("data-job")));
 }
 
 async function expectNoSideScroll(page: Page, width: number) {
@@ -107,16 +113,16 @@ for (const width of [390, 1440]) {
       const previous = await setOwnerName(null);
       try {
         await page.goto("/admin");
-        await expect(page.getByRole("heading", { level: 1, name: "Welcome back" })).toBeVisible();
-        await expect(page.getByText("Alpha FC · Club admin", { exact: true })).toBeVisible();
-        await expect(page.getByText("What do you want to do?", { exact: true })).toBeVisible();
+        await expect(main(page).getByRole("heading", { level: 1, name: "Welcome back" })).toBeVisible();
+        await expect(main(page).getByText("Alpha FC · Club admin", { exact: true })).toBeVisible();
+        await expect(main(page).getByText("What do you want to do?", { exact: true })).toBeVisible();
         // The reimagined shell: no sidebar and no Home link on the home itself.
         await expect(page.getByRole("button", { name: "Open admin navigation" })).toHaveCount(0);
         await expect(page.getByRole("link", { name: "Home", exact: true })).toHaveCount(0);
 
         await setOwnerName("Andrea Lopez-Whitfield");
         await page.reload();
-        await expect(page.getByRole("heading", { level: 1, name: "Hi Andrea" })).toBeVisible();
+        await expect(main(page).getByRole("heading", { level: 1, name: "Hi Andrea" })).toBeVisible();
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/home-${width}.png`, fullPage: true });
       } finally {
@@ -127,19 +133,19 @@ for (const width of [390, 1440]) {
     test("three jobs and a quiet Sign-up forms row, four jobs once a form is open", async ({ page }) => {
       await page.goto("/admin");
       expect(await jobIds(page)).toEqual(["enter-score", "add-game", "edit-website"]);
-      const more = page.getByRole("region", { name: "More" });
+      const more = main(page).getByRole("region", { name: "More" });
       await expect(more.getByRole("link", { name: "Sign-up forms" })).toHaveAttribute("href", "/admin/registrations");
       await expect(more.getByRole("link", { name: "Team roster" })).toHaveAttribute("href", "/admin/roster");
       await expect(more.getByRole("link", { name: "Who can sign in" })).toHaveAttribute("href", "/admin/members");
       await expect(more.getByRole("link", { name: "Payments and plan" })).toHaveAttribute("href", "/admin/payments");
-      await expect(page.locator('[data-job="enter-score"]')).toHaveAttribute("href", "/admin/schedule");
-      await expect(page.locator('[data-job="edit-website"]')).toHaveAttribute("href", "/admin/homepage");
+      await expect(main(page).locator('[data-job="enter-score"]')).toHaveAttribute("href", "/admin/schedule");
+      await expect(main(page).locator('[data-job="edit-website"]')).toHaveAttribute("href", "/admin/homepage");
 
       try {
         await addOpenSignUpForm();
         await page.reload();
         expect(await jobIds(page)).toEqual(["enter-score", "add-game", "see-registrations", "edit-website"]);
-        await expect(page.locator('[data-job="see-registrations"]')).toHaveAttribute("href", "/admin/registrations");
+        await expect(main(page).locator('[data-job="see-registrations"]')).toHaveAttribute("href", "/admin/registrations");
         await expect(more.getByRole("link", { name: "Sign-up forms" })).toHaveCount(0);
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/home-four-jobs-${width}.png`, fullPage: true });
@@ -149,7 +155,7 @@ for (const width of [390, 1440]) {
     });
 
     test("the score hint counts unscored games: none, one, twelve", async ({ page }) => {
-      const tile = page.locator('[data-job="enter-score"]');
+      const tile = main(page).locator('[data-job="enter-score"]');
       try {
         await page.goto("/admin");
         await expect(tile).toHaveText("Enter a score");
@@ -172,9 +178,9 @@ for (const width of [390, 1440]) {
       const previous = await setClubName(WORST_CLUB_NAME);
       try {
         await page.goto("/admin");
-        const name = page.getByTestId("admin-home-club-name");
+        const name = main(page).getByTestId("admin-home-club-name");
         await expect(name).toHaveText(WORST_CLUB_NAME);
-        await expect(page.getByText("· Club admin", { exact: true })).toBeVisible();
+        await expect(main(page).getByText("· Club admin", { exact: true })).toBeVisible();
         const box = await name.evaluate((element) => ({
           clipped: element.scrollWidth > element.clientWidth,
           lines: Math.round(element.getBoundingClientRect().height / parseFloat(getComputedStyle(element).lineHeight)),
@@ -199,14 +205,14 @@ for (const width of [390, 1440]) {
       await page.screenshot({ path: `${SHOTS}/roster-top-bar-${width}.png` });
       await home.click();
       await expect(page).toHaveURL(/\/admin$/);
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^(Hi .+|Welcome back)$/);
+      await expect(main(page).getByRole("heading", { level: 1 })).toHaveText(/^(Hi .+|Welcome back)$/);
     });
 
     test("Edit my website opens the homepage editor inside the new shell", async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       await page.goto("/admin");
-      await page.locator('[data-job="edit-website"]').click();
+      await main(page).locator('[data-job="edit-website"]').click();
       await expect(page).toHaveURL(/\/admin\/homepage$/);
       await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
       // The editor reads the sidebar's state; the shell provides it, always closed.
