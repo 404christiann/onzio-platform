@@ -62,6 +62,8 @@ it("populates its own complete Academy, preserves current content and billing th
   for (const result of cleanup) {
     if (result.status === "rejected" && !failures.includes(result.reason)) failures.push(result.reason);
   }
+  // A failed test whose cleanup still verified clean has nothing left to recover, so do not leave its folder behind.
+  if (failures.length > 0) await discardVerifiedCleanJournal(proof.recoveryFile).catch(() => undefined);
   if (failures.length === 1) throw failures[0];
   if (failures.length > 1) throw new AggregateError(failures, "Full-site regression and cleanup both failed");
   expect(JSON.parse(await readFile(proof.recoveryFile, "utf8")).stage).toBe("verified-clean");

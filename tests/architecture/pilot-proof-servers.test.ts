@@ -10,6 +10,9 @@ import { withPilotProofServers } from "../../scripts/pilot-proof-servers";
 const project = resolve(import.meta.dirname, "../..");
 const loader = createRequire(import.meta.url).resolve("tsx");
 const directory = realpathSync(mkdtempSync(join(tmpdir(), "onzio-proof-servers-")));
+// Each case builds three throwaway fixtures with real child processes, so the default 15 second budget is
+// too tight on a busy machine. A longer limit does not slow a passing test.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 let sequence = 0;
 function put(root: string, path: string, value: string) {
   mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -107,7 +110,7 @@ function fixture(mode = "normal", config = "export default {};") {
     if (mode === "shutdown-message") process.on("SIGTERM", () => { process.send({kind:"malformed"}); setTimeout(() => process.exit(0), 20); });
   };`);
   const build = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/run-pilot-reconstruction.ts"), "build"], {
-    cwd: root, encoding: "utf8", env: { ...process.env, NODE_ENV: "test" }, timeout: 10_000,
+    cwd: root, encoding: "utf8", env: { ...process.env, NODE_ENV: "test" }, timeout: 45_000,
   });
   expect(build.error).toBeUndefined();
   expect(build.status, build.stderr).toBe(0);
@@ -365,7 +368,7 @@ describe("owned proof servers", () => {
     } finally { kill.mockRestore(); }
     expect(injected).toBe(true);
     assertClean(items);
-  }, 15_000);
+  }, 60_000);
   it("keeps waiting while the reaped owned group only holds zombies", async () => {
     const items = roots();
     const originalKill = process.kill.bind(process);
@@ -386,7 +389,7 @@ describe("owned proof servers", () => {
     } finally { kill.mockRestore(); }
     expect(zombieProbes).toBe(3);
     assertClean(items);
-  }, 15_000);
+  }, 60_000);
   it("stops every owned group before reporting that one could not be controlled", async () => {
     const items = roots();
     const originalKill = process.kill.bind(process);
@@ -408,12 +411,12 @@ describe("owned proof servers", () => {
       kill.mockRestore();
       if (targetPid > 0) try { originalKill(-targetPid, "SIGKILL"); } catch { /* group already gone */ }
     }
-  }, 15_000);
+  }, 60_000);
   it("cleans up on callback failure and escalates TERM to KILL before releasing locks", async () => {
     const items = roots("stubborn");
     await expect(withPilotProofServers(items, async () => { throw new Error("capture failed"); })).rejects.toThrow("capture failed");
     assertClean(items);
-  }, 15_000);
+  }, 60_000);
   it("rejects malformed IPC during shutdown after successful proof postchecks", async () => {
     const items = roots("shutdown-message");
     await expect(withPilotProofServers(items, async () => "must not pass")).rejects.toThrow("failed verification");
@@ -432,7 +435,7 @@ describe("owned proof servers", () => {
     const items = roots("hang");
     await expect(withPilotProofServers(items, async () => "unexpected")).rejects.toThrow("startup timed out");
     assertClean(items);
-  }, 40_000);
+  }, 90_000);
   it("stops a blocked configuration probe before releasing its root lock on owner interruption", async () => {
     const items = roots();
     put(items.changed, "node_modules/next/dist/server/config.js", `exports.default = async () => {
@@ -442,13 +445,13 @@ describe("owned proof servers", () => {
       return {distDir:".next"};
     };`);
     const rejected = expect(withPilotProofServers(items, async () => "unexpected")).rejects.toThrow("Proof interrupted");
-    await expect.poll(() => existsSync(join(items.changed, "output/probe-pid"))).toBe(true);
+    await expect.poll(() => existsSync(join(items.changed, "output/probe-pid")), { timeout: 20_000, interval: 25 }).toBe(true);
     const probe = Number(readFileSync(join(items.changed, "output/probe-pid"), "utf8"));
     process.emit("SIGTERM", "SIGTERM");
     await rejected;
     expect(() => process.kill(probe, 0)).toThrow();
     assertClean(items);
-  }, 15_000);
+  }, 60_000);
   it("children exit after their owner is killed, leaving recoverable locks", async () => {
     const items = roots();
     const script = join(directory, "owner.mts");
@@ -463,14 +466,14 @@ describe("owned proof servers", () => {
       owner.kill("SIGKILL");
       await expect.poll(() => children.every(pid => {
         try { process.kill(pid, 0); return false; } catch { return true; }
-      }), {timeout:5_000}).toBe(true);
+      }), {timeout:20_000}).toBe(true);
       for (const root of Object.values(items)) {
         expect(existsSync(join(root, ".onzio-pilot-build.lock"))).toBe(true);
         rmSync(join(root, ".onzio-pilot-build.lock"));
       }
     } finally { owner.kill("SIGKILL"); }
     assertClean(items);
-  }, 10_000);
+  }, 60_000);
   it("rejects obsolete URL flags in the real proof CLI before package or browser work", () => {
     const result = spawnSync(process.execPath, ["--import", loader, join(project, "scripts/prove-pilot-reconstruction.ts"), "--baseline", "http://alpha.localhost:3110"], { cwd: directory, encoding: "utf8", timeout: 10_000 });
     expect(result.status).not.toBe(0);

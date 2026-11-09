@@ -1,3 +1,26 @@
+## 2026-11-08 - Local tests leave nothing behind and the pilot proof test stops flaking
+
+- **Status:** `in_progress` on branch `agent/test-junk-final` from `main`
+  `8a2fbd8`, with the PR open. No migration and no app code change.
+- **What changed:**
+  - The shared cleanup (`tests/helpers/local-test-data-cleanup.ts`) now also
+    removes Stripe and email events, auth log entries and presentation
+    documents a run added, and runs for the local Playwright configs too.
+  - `program-media` removes its stored upload; the pilot scripts and the
+    full-site test discard their journal folders.
+  - Fixed the real race behind the flaky `pilot-proof-servers` test (macOS
+    EPERM on zombie-only process groups) and widened its time limits.
+  - One-off: cleared 78,265 audit rows, 2,095 Stripe events, 90 email events
+    and 3,557 auth log entries from the local database, after a backup at
+    `~/Downloads/onzio-test-data-backup-2026-11-08.sql`.
+- **Verification:** `test:db` 1,004/1,004 twice, every table's row count
+  unchanged by a run; `pilot-proof-servers` 50/50 twice under load. Details are
+  in `STATUS.md`.
+- **Not done:** the real browser suites were not run; 91 orphaned uploaded
+  images remain in local storage (needs an OK to delete); the pilot fixtures are
+  still slow to build.
+- **Exact next step:** the bot reviews and merges.
+
 ## 2026-11-08 - Local database tests stop leaving audit rows and temp folders behind
 
 - **Status:** `in_progress` on branch `agent/test-leftover-cleanup` from

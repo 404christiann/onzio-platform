@@ -9,6 +9,7 @@ if (!process.env.ADMIN_GUIDED_STORAGE_STATE) {
 }
 
 export default defineConfig({
+  globalSetup: "./tests/browser/local-test-data-cleanup.global-setup.ts",
   outputDir: "test-results/admin-guided",
   testDir: "./tests/browser",
   testMatch: "admin-guided*.spec.ts",
