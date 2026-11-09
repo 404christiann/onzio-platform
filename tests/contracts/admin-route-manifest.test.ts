@@ -317,6 +317,7 @@ describe("reimagined home jobs and More rows", () => {
       "/admin/analytics",
       "/admin/payments",
       "/admin/members",
+      "/admin/registrations",
     ]);
   });
 
@@ -329,15 +330,16 @@ describe("reimagined home jobs and More rows", () => {
     expect(getVisibleAdminMoreRows({ ...REIMAGINED, role: null })).toEqual([]);
   });
 
-  it("has four jobs with a live sign-up form, otherwise three and a quiet Sign-up forms row", () => {
+  // ADMIN-RE-08 (deliberate update): See registrations opens /admin/sign-ups
+  // now, so Sign-up forms stays in More whether or not a form is live.
+  it("has four jobs with a live sign-up form, otherwise three, and always a Sign-up forms row", () => {
     expect(jobIds(REIMAGINED)).toContain("see-registrations");
-    expect(rowIds(REIMAGINED)).not.toContain("sign-up-forms");
+    expect(rowIds(REIMAGINED).at(-1)).toBe("sign-up-forms");
 
     const quiet = { ...REIMAGINED, hasLiveSignUps: false };
     expect(jobIds(quiet)).toEqual(["enter-score", "add-game", "edit-website"]);
     expect(rowIds(quiet).at(-1)).toBe("sign-up-forms");
     expect(getVisibleAdminMoreRows(quiet).at(-1)).toMatchObject({ label: "Sign-up forms", href: "/admin/registrations" });
-    // Missing means no live form: the quiet row, never a lost page.
     expect(rowIds({ ...REIMAGINED, hasLiveSignUps: undefined })).toContain("sign-up-forms");
   });
 
@@ -363,6 +365,7 @@ describe("reimagined home jobs and More rows", () => {
       "how-the-team-is-doing",
       "payments-and-plan",
       "who-can-sign-in",
+      "sign-up-forms",
     ]);
     expect(getVisibleAdminMoreRows(paused).filter((row) => row.id === "games" || row.id === "homepage")).toEqual([
       { id: "games", label: "Games", href: "/admin/schedule", iconKey: "schedule" },
@@ -384,7 +387,9 @@ describe("reimagined home jobs and More rows", () => {
         ...getVisibleAdminMoreRows(context).map((row) => row.href),
         "/admin",
       ]);
-      const missing = getVisibleAdminRoutes(context)
+      // The classic sidebar's pages; the reimagined-only job pages (ADMIN-RE-06
+      // onward) are reached through their own tiles when those apply.
+      const missing = getVisibleAdminRoutes({ ...context, adminPortal: "classic" })
         .map((route) => route.href)
         .filter((href) => !fromHome.has(href));
       expect(missing).toEqual([]);
@@ -453,7 +458,7 @@ describe("the See registrations page route", () => {
     });
   });
 
-  it("keeps the old forms page as the quiet Sign-up forms row", () => {
+  it("keeps the old forms page in More as Sign-up forms, and the tile on the new page", () => {
     const quiet: AdminRouteAccessContext = { ...OWNER_ACCESS, adminPortal: "reimagined", hasLiveSignUps: false };
     expect(getVisibleAdminMoreRows(quiet).at(-1)).toMatchObject({ label: "Sign-up forms", href: "/admin/registrations" });
     expect(getVisibleAdminHomeJobs({ ...quiet, hasLiveSignUps: true }).find((job) => job.id === "see-registrations")?.href).toBe(
