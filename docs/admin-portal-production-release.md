@@ -1,3 +1,77 @@
+# Club admin, reimagined: first slice and Rose City switch-on — 2026-11-09
+
+Package: `ADMIN-RE-10` in `docs/admin-portal-redesign-plan.md`. The first slice (RE-01 to RE-09, RE-07b #109, RE-07c #110) was already merged and deployed. This release changes no app code (one out-of-date browser test is updated). It checks the merged code, confirms production runs it, and switches Rose City to the new admin. Christian gave the go for the switch in the RE-10 session ("Go, flip Rose City"). Diverse City stays `classic` until his separate go (`GATE-FLIP-DC`), after the Diverse City owner is told.
+
+## Suites on `main`
+
+Tested revision: `origin/main` `c1c3c9c` (#111), in a clean worktree outside the main checkout. `node_modules` was symlinked, and `.env.test` and a loopback-only `.env.local` were copied with the email, media, Stripe and Vercel bypass keys removed. Every run held `scripts/with-local-db-lock.sh`, with `.env.test` exported. Logs are outside Git.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Types | `npx tsc --noEmit` | PASS |
+| Lint | `npm run lint` | PASS |
+| Whole suite | `npx vitest run --exclude "tests/database/**"` | 211 of 212 files, 2,678 passed, 1 skipped, 1 failed: `pilot-proof-servers.test.ts` "postcheck rejects an owned listener…" timed out at 14.9 s while another session's suites were loading the machine. It passed in the architecture run right after. |
+| Architecture | `npm run test:architecture` | PASS: 14 files, 426 passed, 1 skipped |
+| Build | `npm run build` | PASS |
+| Database | `npm run test:db` | PASS: 50 files, 1,020 passed. Again after the browser runs and at the end: 1,020/1,020, so nothing was left behind. |
+| Browser | `admin-reimagined` | PASS: 39/39 |
+| Browser | `admin-loading`, `homepage`, `public-page-editors`, `contact-editor` | PASS: 13/13, 63/63, 37/37, 6/6 |
+| Browser | `admin-guided` | 59/63 first. Two (Stats match picker, 200% text loading state) passed on the rerun: flaky under load. `admin-guided-members-release.spec.ts` (390 and 1440) was out of date since RE-18 (`undoUntil` in the remove reply) and RE-02 (the owner's automatic time zone save and its audit row). Fixed in this PR's test file: **63/63**. |
+| Browser | `dcfc-403`, `dcfc-304`, `plat-101` | 2, 2 and 1 failed (`plat-101` 7 passed). **Same failures on the pre-RE baseline** `9890eee` (built and run the same way), so not caused by this work: the DCFC specs expect Diverse City's real text on Alpha and a password login (gone since PLAT-101), and `plat-101`'s admin nav scroll check finds the nav exactly as tall as its box (288 = 288). |
+
+Two machine problems on the way, both fixed and neither a code problem. Playwright's Chromium cache (`~/Library/Caches/ms-playwright`) was missing, so the first browser run never launched a browser: reinstalled with `npx playwright install chromium` with Christian's OK, then all runs above. And the colima VM `onzio-local` stopped during the baseline run, under two sessions' load: restarted with `colima start onzio-local`, then the baseline was rerun from the start.
+
+## Production confirmed on `main`
+
+- Vercel production deployment `dpl_9R3GwQMjjZQ3wB2T5r6imE1LmHzP`, READY, built from `main` `c1c3c9cdaeee772a3cf296496e733207c7697fd8` (equals `origin/main`). It serves `rosecityfutbolclub.com` and `diversecityfc.com`. This is also the rollback target if code ever needs to go back. The switch itself needs no deploy.
+- `npx -y supabase@2.122.0 migration list --linked` (ref `ioalthwsdrlzrubomrow`, read-only): 60 migrations on both sides, the newest `20261109120000`, none Local-only and none Remote-only. The branch has 60 migration files.
+
+## `GATE-FLIP-RC`
+
+The script ran from Christian's Mac with only the production URL and service-role key in a temporary file under mode 700, which was deleted right after. Nothing was printed but the club row.
+
+Dry run (read-only), `npx tsx scripts/set-club-admin-portal.ts rose-city --portal=reimagined`:
+
+```json
+{
+  "event": "club.admin_portal_dry_run",
+  "club": { "id": "32ceba0b-4e25-52c2-bb6b-d82fb87637a7", "slug": "rose-city", "name": "Rose City Futbol Club", "kind": "demo", "lifecycle": "active" },
+  "current": { "adminPortal": "classic", "adminFlags": {}, "timeZone": "America/Los_Angeles", "timeZoneSetAt": "2026-11-08T15:19:31.133905+00:00" },
+  "target": { "adminPortal": "reimagined", "adminFlags": {}, "timeZone": "America/Los_Angeles" },
+  "needsUpdate": true
+}
+```
+
+After Christian's go, at 2026-11-09T21:23:06Z, `npx tsx scripts/set-club-admin-portal.ts rose-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow` wrote `admin_portal = 'reimagined'` and its `manual.club_admin_portal_set` audit event, then reconciled:
+
+```json
+{
+  "event": "club.admin_portal_reconciled",
+  "settings": { "admin_portal": "reimagined", "admin_flags": {}, "time_zone": "America/Los_Angeles", "time_zone_set_at": "2026-11-08T15:19:31.133905+00:00" }
+}
+```
+
+Separate read-only readback (the dry run again): `current.adminPortal` `reimagined`, flags `{}`, time zone unchanged, `needsUpdate: false`.
+
+Smoke checks right after: `rosecityfutbolclub.com/admin/login` 200, `diversecityfc.com/` 200, `diversecityfc.com/admin/login` 200, no `UNKNOWN_TENANT` anywhere. `rosecityfutbolclub.com/` returns 404, which is the PR #85 public-site hold, as before.
+
+Only `onzio.clubs.admin_portal` for Rose City and one audit row changed. No migration, deploy, seed, Stripe, DNS, email or environment change.
+
+**Switching back:** `npx tsx scripts/set-club-admin-portal.ts rose-city --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`. It takes effect on the next request, with no deploy, and loses no data.
+
+## Notes for the walk-through
+
+- "Saved · on your website" labels are hold-aware (decision 2): while Rose City's public site is held, the new admin says the change is saved but not yet on the website.
+- The data lists Rose City as `kind = demo`. That doesn't affect the switch.
+- **Christian's first look (2026-11-09):** the home and Edit my website work. On Edit my website he couldn't click the "2024" champions text. That's expected: on Rose City's current (legacy) homepage only the slideshow photos and captions and the video section are editable. The hero and `components/ChampionsBadge.tsx` are fixed in code (`lib/homepage-editor/capabilities.ts`, `heroVariant: "legacy-fixed"`). The 2027 revamp isn't on `main` yet, so the editor shows the old design. **Decision (Christian):** no fix PR for the legacy homepage; editing comes with the revamp (ADMIN-RE-21 and the Rose City 2027 work). Enter a score and Add a game are still to check.
+- The first slice is the home and four jobs: Enter a score, Add a game, Sign-ups, Edit my website (homepage). Older pages open from More with a "‹ Home" bar.
+
+## Exact next step
+
+Christian walks Rose City's admin at `https://rosecityfutbolclub.com/admin` on phone and laptop, entering real games and scores and deleting test rows the same day. Each finding becomes an `ADMIN-RE-10x` fix PR. `GATE-FLIP-DC` waits for his separate go and for telling the Diverse City owner.
+
+---
+
 # Guided admin portal production release — 2026-10-12
 
 PR: [#13](https://github.com/404christiann/onzio-platform/pull/13). Christian explicitly approved merge and separately approved the private production backup export and exact pre-existing branding-bucket migration. All pre-merge prerequisites are satisfied; merge and production verification are the next steps.

@@ -72,8 +72,10 @@ async function blockUnrelated(context: BrowserContext, email: string, userId: ()
     let allowed = local && !url.pathname.startsWith("/api/stripe/");
     if (url.pathname === "/api/stripe/billing-admin" && request.method() === "GET") allowed = local;
     if (allowed && !["GET", "HEAD", "OPTIONS"].includes(request.method())) {
-      const body = request.postDataJSON() as { operation?: string; action?: string; email?: string; userId?: string };
+      const body = request.postDataJSON() as { operation?: string; action?: string; email?: string; userId?: string; timeZone?: unknown };
       allowed = (url.pathname === "/api/admin/data" && body.operation === "select") ||
+        // ADMIN-RE-02: an owner's first admin visit saves the browser's time zone; global setup restores it.
+        (url.pathname === "/api/admin/club-time-zone" && typeof body.timeZone === "string") ||
         (url.pathname === "/api/admin/members" && ((body.action === "add" && body.email === email) || (body.action === "remove" && body.userId === userId()))) ||
         (url.pathname === "/auth/v1/verify" && body.email === email) ||
         (url.pathname === "/auth/v1/token" && url.searchParams.get("grant_type") === "refresh_token");
@@ -156,7 +158,8 @@ for (const width of [390, 1440]) {
       await row.getByRole("button", { name: "Remove", exact: true }).click();
       const removed = await removal;
       expect(removed.status()).toBe(200);
-      expect(await removed.json()).toEqual({ userId: createdUserId, status: "removed" });
+      const removedBody = await removed.json();
+      expect(removedBody).toEqual({ userId: createdUserId, status: "removed", undoUntil: expect.any(String) });
       await expect(page.getByRole("status")).toHaveText("Administrator access removed.");
       await expect(page.getByText(email, { exact: true })).toHaveCount(0);
       await page.reload();
@@ -164,6 +167,8 @@ for (const width of [390, 1440]) {
       const finalMembership = await db.query("select role,status,removed_at from onzio.club_members where club_id=$1 and user_id=$2", [ALPHA, createdUserId]);
       expect(finalMembership.rows[0]).toMatchObject({ role: "admin", status: "removed" });
       expect(finalMembership.rows[0].removed_at).not.toBeNull();
+      // ADMIN-RE-18: the owner can undo a removal for ten minutes.
+      expect(Date.parse(removedBody.undoUntil) - new Date(finalMembership.rows[0].removed_at).getTime()).toBe(10 * 60 * 1_000);
       const audit = await db.query("select operation from onzio.audit_events where club_id=$1 and resource_type='club_member' and resource_id=$2 order by id", [ALPHA, createdUserId]);
       expect(audit.rows).toEqual([{ operation: "membership_added" }, { operation: "membership_removed" }]);
       await admin.reload();
@@ -185,6 +190,9 @@ for (const width of [390, 1440]) {
           const deletion = await service.auth.admin.deleteUser(id, false);
           expect(deletion.error).toBeNull();
         }
+        // ADMIN-RE-02: the owner's first visit audits the automatic time zone; global setup restores the zone itself.
+        await db.query("delete from onzio.audit_events where club_id=$1 and operation='club_time_zone_set' and not (id::text = any($2::text[]))",
+          [ALPHA, original.audit.map(row => String(row.id))]);
         // Actual GoTrue payloads identify login/recovery with actor_id/email;
         // administrative create/delete events identify the target in traits.
         // A new ID alone is never permission to remove an unrelated audit row.

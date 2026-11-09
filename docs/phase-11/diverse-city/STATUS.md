@@ -1,5 +1,90 @@
 # Diverse City FC Status
 
+## 2026-11-09 - ADMIN-RE-10: first-slice acceptance, release record, Rose City switch-on
+
+**Agent/package:** Claude Code, `ADMIN-RE-10`. Branch
+`claude/dazzling-raman-606840` from `main` `c1c3c9c`. **Status:**
+`in_progress`: Rose City switched to the new admin in production after
+Christian's go. His walk-through on phone and laptop is still to come, so
+the package isn't accepted yet. No app code change and no migration.
+
+**Completed work:**
+
+- Full suites on `origin/main` `c1c3c9c` in a clean worktree outside the main
+  checkout, one hold of `scripts/with-local-db-lock.sh` (results below).
+- Production confirmed on `main`: Vercel `dpl_9R3GwQMjjZQ3wB2T5r6imE1LmHzP`
+  READY from `c1c3c9c`; `supabase migration list --linked` 60/60 matched,
+  nothing Local-only or Remote-only (read-only, `npx -y supabase@2.122.0`
+  with the main checkout's `supabase/.temp` link files copied in).
+- `GATE-FLIP-RC`: dry run shown to Christian (`classic` → `reimagined`,
+  flags `{}`, time zone unchanged). On his go ("Go, flip Rose City") at
+  2026-11-09T21:23:06Z:
+  `npx tsx scripts/set-club-admin-portal.ts rose-city --portal=reimagined --execute --confirm-project=ioalthwsdrlzrubomrow`.
+  It reconciled `admin_portal = reimagined`, `admin_flags = {}`,
+  `time_zone = America/Los_Angeles`. A separate read-only dry run read it
+  back with `needsUpdate: false`. Smoke checks: Rose City `/admin/login` 200,
+  Diverse City `/` and `/admin/login` 200, no `UNKNOWN_TENANT`; Rose City `/`
+  404 is the PR #85 hold.
+- Release record in `docs/admin-portal-production-release.md` (newest
+  first), with the exact commands and output.
+
+**Hosted mutations:** one. `onzio.clubs.admin_portal` for `rose-city` set to
+`reimagined`, plus its `manual.club_admin_portal_set` audit event. Undo:
+the same command with `--portal=classic`.
+
+**Files changed:** `docs/admin-portal-production-release.md`, this file,
+`HANDOFF.md`, `tests/browser/admin-guided-members-release.spec.ts` (test
+only: expects RE-18's `undoUntil`, lets the owner's RE-02 time zone save
+through, and removes its audit row afterwards).
+
+**Rose City 2027 revamp (read-only look, Christian asked):** branch
+`codex/rose-city-homepage-2027` (`674c292`) in the Rose City 2027 checkout,
+not pushed. It's 159 commits behind `main` (none of RE-01..RE-09). Merging it
+conflicts in 33 files. Its 21 migrations are dated before `20261109120000`
+and need new timestamps. `matchesMutation` (strict since RE-07) needs its new
+match columns (`replay_video_url`, `summary`, `league_logo_*`). Its new
+admin pages need route-manifest entries. Edit my website needs checking
+against `cinematic@2`. Sent to that session with Christian's OK; it owns the
+merge.
+
+**Verification:**
+
+- Tested `origin/main` `c1c3c9c` in a clean worktree, one lock hold per run.
+- Types, lint, build: pass. Architecture 426 passed, 1 skipped. Whole suite
+  2,678 passed, 1 skipped, 1 timing failure (`pilot-proof-servers`, under
+  load) that passed in the architecture run right after.
+- Database 1,020/1,020, also after the browser runs and at the end.
+- Browser: `admin-reimagined` 39/39, `admin-loading` 13/13, `homepage` 63/63,
+  `public-page-editors` 37/37, `contact-editor` 6/6. `admin-guided` 63/63
+  after fixing `tests/browser/admin-guided-members-release.spec.ts`, which
+  was out of date since RE-18 (`undoUntil`) and RE-02 (automatic time zone
+  request and audit row). Two other `admin-guided` failures passed on rerun
+  (load).
+- `dcfc-403` (2), `dcfc-304` (2), `plat-101` (1) fail the same way on the
+  pre-RE baseline `9890eee`, so they're older than this work and not fixed
+  here.
+- Machine issues: Playwright's Chromium was missing (reinstalled with
+  Christian's OK); colima `onzio-local` stopped once under load (restarted).
+
+**Blockers / decisions:** Auto mode refused two production reads until
+Christian said yes in this session: the dry run (it reads the service-role
+key from `.env.production.local`) and a `supabase db query --linked`. After
+his yes, the dry run, the switch and the readback all ran through the
+script. The key copy was deleted right after.
+
+**Walk-through so far:** home and Edit my website fine. The "2024"
+champions text isn't clickable, which is expected (legacy hero and
+`ChampionsBadge` are fixed in code; only photos, captions and the video
+section edit). Christian decided: no legacy fix, editing comes with the 2027
+revamp, which isn't on `main` yet. Enter a score and Add a game not yet
+checked.
+
+**Exact next step:** Christian walks Rose City's admin
+(`https://rosecityfutbolclub.com/admin`), the home and four jobs on phone
+and laptop, with real games and scores. Each finding becomes an
+`ADMIN-RE-10x` fix PR. `GATE-FLIP-DC` waits for his separate go and for
+telling the Diverse City owner.
+
 ## 2026-11-09 - ADMIN-RE-07c: database checks on game text and scores (decision 7)
 
 **Agent/package:** Claude Code, `ADMIN-RE-07c` (step 3 of the RE-07
