@@ -5,7 +5,8 @@
 **Agent/package:** Claude Code, `ADMIN-RE-07c` (step 3 of the RE-07
 follow-ups Christian approved on 2026-11-09). Branch
 `claude/admin-re-07c-matches-checks` from `main` `a85ce6b`. **Status:**
-`in_progress`, PR open. **Has a migration**, so `GATE-MIGRATE` applies.
+`released` on 2026-11-09: migration applied to production, then merged as
+#110 (`1122f1c`) and deployed. **Has a migration**, so `GATE-MIGRATE` applied.
 It tightens constraints on a populated table, which
 `docs/agents/review-bot-supabase.md` hands to a person: expect the bot to
 label it `blocked` for Christian's go.
@@ -47,11 +48,30 @@ Full suites (tsc, lint, vitest, build, `supabase migration up --local`,
 outside the main checkout; results are in the PR body. The migration is
 applied to the shared local database.
 
-**Blockers:** Christian's go on the constraint tightening; then the bot runs
-`GATE-MIGRATE` (backup, dry run, apply) before merging.
+**Release record (2026-11-09, UTC):** Christian gave the go. The review bot
+stopped before applying: its computer could not reach production Postgres
+and its Vercel token was invalid. At Christian's request ("Yes, run it
+here") Claude Code ran `docs/agents/review-bot-supabase.md` from his Mac with
+Supabase CLI 2.122.0 (`npx supabase@2.122.0`; the Homebrew copy is 2.109.1):
+- Ledger: 59 on both sides, only `20261109120000` Local-only. Rollback
+  target `dpl_FVADQ3ZdEsCD6BMZnk5EgMtinNUt` (`a85ce6b`).
+- Snapshot: clubs 3, verified domains 9, audit_events 707, matches 8 (0 over
+  a limit at 20:29Z). Backup 2214536259 at 11:20:20Z, no dumps (no row
+  change).
+- Dry run listed only the PR's file; applied 20:29:53Z. Verified: ledger 60
+  both sides, second dry run up to date, 9 constraints validated, counts
+  unchanged, generated types differ only by CLI formatting.
+- Merged 20:30:52Z as `1122f1c`, deployed as
+  `dpl_Axe15U5dBuMFzyBZbqmchbKRd2fx`. Smoke: Diverse City `/`, `/programs`,
+  `/roster`, `/shop` 200 on every domain; Rose City `/` 404 (PR #85 hold, by
+  design) and `/admin/login` 200; no `UNKNOWN_TENANT`. Full record in the
+  PR #110 comments.
 
-**Exact next step:** Christian approves; the bot applies and merges. Then
-RE-10 waits for Christian's go.
+**Blockers:** none.
+
+**Exact next step:** RE-10 (full suites, then the Rose City switch-on) waits
+for Christian's go. Note for the bot: its machine needs to reach production
+Postgres and a valid Vercel token before the next migration PR.
 
 ## 2026-11-09 - ADMIN-RE-07b: Sponsor? on Add a game, opponent reuse
 

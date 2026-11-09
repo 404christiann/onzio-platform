@@ -1,16 +1,19 @@
 ## 2026-11-09 - ADMIN-RE-07c database checks on game text and scores
 
-- **Status:** `in_progress` on branch `claude/admin-re-07c-matches-checks`
-  from `main` `a85ce6b`, PR open. **Migration**
-  `20261109120000_matches_text_and_score_checks.sql`, so `GATE-MIGRATE`.
-  It tightens constraints, so the bot hands it to Christian first.
+- **Status:** `released` 2026-11-09. Migration
+  `20261109120000_matches_text_and_score_checks.sql` applied to production
+  at 20:29:53Z, then merged as #110 (`1122f1c`) and deployed
+  (`dpl_Axe15U5dBuMFzyBZbqmchbKRd2fx`); smoke checks passed. The bot could
+  not reach production from its machine, so Claude Code ran the gate from
+  Christian's Mac at his request. Record in `STATUS.md` and the PR comments.
 - **Why it's safe:** Christian's read-only production query (2026-11-09)
   found 0 of 8 games over any limit and no score over 99.
 - **What it adds:** CHECKs on `onzio.matches` for the seven text limits and
   scores ≤ 99; the Zod limits now hold on edits too, and the classic Games
   edit form caps its inputs.
-- **Exact next step:** Christian's go, then the bot backs up, dry-runs,
-  applies and merges. RE-10 after that, on Christian's go.
+- **Exact next step:** RE-10, on Christian's go. The bot's machine needs to
+  reach production Postgres and a valid Vercel token before the next
+  migration PR.
 
 ## 2026-11-09 - ADMIN-RE-07b Sponsor? on Add a game, opponent reuse
 
