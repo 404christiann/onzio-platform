@@ -405,6 +405,24 @@ function Drawing43({ size = 24, ...props }: AdminIconProps) {
   );
 }
 
+function Drawing44({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path d="M12 7.5C11.4477 7.5 11 7.94772 11 8.5V12C11 12.3573 11.1906 12.6874 11.5 12.866L14.9641 14.866C15.0239 14.9005 15.0858 14.9282 15.1488 14.9492C15.5901 15.0963 16.0885 14.9185 16.3301 14.5C16.6063 14.0217 16.4424 13.4101 15.9641 13.134L13 11.4227V8.5C13 7.94772 12.5523 7.5 12 7.5Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function Drawing45({ size = 24, ...props }: AdminIconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 14C14.2091 14 16 12.2091 16 10C16 7.79086 14.2091 6 12 6C9.79086 6 8 7.79086 8 10C8 12.2091 9.79086 14 12 14ZM12 12C13.1046 12 14 11.1046 14 10C14 8.89543 13.1046 8 12 8C10.8954 8 10 8.89543 10 10C10 11.1046 10.8954 12 12 12Z" fill="currentColor" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M21 10C21 14.963 15.7052 20.549 13.238 22.8825C12.5344 23.5479 11.4656 23.5479 10.762 22.8825C8.29483 20.549 3 14.963 3 10C3 5.02944 7.02944 1 12 1C16.9706 1 21 5.02944 21 10ZM19 10C19 11.8435 17.9793 14.0547 16.4111 16.2728C14.9434 18.3488 13.1877 20.1658 12 21.2999C10.8123 20.1658 9.05661 18.3488 7.58891 16.2728C6.02075 14.0547 5 11.8435 5 10C5 6.13401 8.13401 3 12 3C15.866 3 19 6.13401 19 10Z" fill="currentColor" />
+    </svg>
+  );
+}
+
 function Drawing46({ size = 24, ...props }: AdminIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" {...props}>
@@ -477,6 +495,9 @@ export const IconSuccess = Drawing40;
 export const IconSave = Drawing41;
 export const IconAccount = Drawing42;
 export const IconExternalLink = Drawing43;
+// ADMIN-RE-07: Add a game (time and venue fields).
+export const IconClock = Drawing44;
+export const IconMapPin = Drawing45;
 // ADMIN-RE-08: the sign-up details panel (parent or guardian, phone, email).
 export const IconMail = Drawing46;
 export const IconPhone = Drawing47;

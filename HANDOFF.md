@@ -1,3 +1,35 @@
+## 2026-11-08 - ADMIN-RE-07 Add a game
+
+- **Status:** `in_progress` on branch `claude/admin-re-07-add-game-4e0b24`
+  with `main` `0eaa62d` (RE-06, RE-08) merged in, with the PR open. No migration. Nobody sees it until
+  a club is switched to `reimagined` (RE-10).
+- **What it adds:**
+  - `/admin/add-game` for reimagined clubs (classic clubs are redirected to
+    `/admin/schedule`). It asks who, home or away (Home by default), when
+    (calendar picker, next Saturday 10:00 club time) and where ("Last used"
+    chips). It shows the active season pill.
+  - "Add to schedule" saves through `/api/admin/data`. The button then shows
+    the hold-aware "Added · …" label (`lib/save-status.ts`), and the game
+    drops into "Coming up".
+  - `matchesMutation` in `lib/admin-data-contract.ts`: strict shape and
+    types for every `matches` write, the classic Games page included. The
+    Zod-only text limits (`lib/match-text-limits.ts`) and scores ≤ 99 apply
+    to new games only, so existing longer rows stay editable until the
+    decision 7 length check. Scores 0-99 on every write (RE-06). The classic
+    add form is capped the same way.
+  - Games is always a More row now that no job opens the old schedule page.
+  - Manifest route `add-game` with the new `reimaginedOnly` flag, and the Add
+    a game tile repointed to it.
+  - Clock and map pin icons.
+- **Verification:** new contract test (38), club-time (+7),
+  icon test (+2), manifest test updated on purpose, and a new browser spec at
+  390 and 1440 with screenshots. Full suites ran by hand on the PR head
+  outside the main checkout; results are in the PR body.
+- **For the parallel RE-06/08/09 merges:** keep both sides in the manifest and
+  its test, and in the icon list and its test. RE-06 reuses
+  `matchesMutation`.
+- **Exact next step:** the bot merges. Then RE-10 waits for Christian.
+
 ## 2026-11-08 - ADMIN-RE-06 Enter a score
 
 - **Status:** `in_progress` on branch `claude/admin-re-06-score-ac068e`,

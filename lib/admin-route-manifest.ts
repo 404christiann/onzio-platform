@@ -55,7 +55,8 @@ export type AdminRouteId =
   | "branding"
   | "team-access"
   | "payments"
-  | "sign-ups";
+  | "sign-ups"
+  | "add-game";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -301,6 +302,14 @@ export const ADMIN_ROUTE_MANIFEST = [
     groupId: null,
     reimaginedOnly: true,
   },
+  {
+    id: "add-game",
+    label: "Add a game",
+    href: "/admin/add-game",
+    iconKey: "schedule",
+    groupId: null,
+    reimaginedOnly: true,
+  },
 ] as const satisfies readonly AdminRouteDefinition[];
 
 export const ADMIN_NAVIGATION_MANIFEST = [
@@ -403,6 +412,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
   ],
   payments: ["payments", "billing", "subscription", "invoices"],
   "sign-ups": ["registrations", "sign-ups", "registrants", "players", "guardians", "download list"],
+  "add-game": ["schedule", "fixtures", "add a game", "new match"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
 const ROUTE_BY_ID = new Map<AdminRouteId, AdminRouteDefinition>(
@@ -587,7 +597,7 @@ export const ADMIN_HOME_JOBS = [
   {
     id: "add-game",
     label: "Add a game",
-    routeId: "schedule",
+    routeId: "add-game",
     hue: "blue",
     needsContentMutation: true,
   },
@@ -648,12 +658,14 @@ export type AdminMoreRow = Readonly<{
 // Programs and Tryouts stay two rows while they are two pages; a club whose
 // website has only one of them sees only that row (decision 0005). Every old
 // page stays reachable from the home: About, Contact and Player numbers until
-// Edit my website and Enter a score cover them (RE-13, RE-06), and Games and
-// Homepage while content changes are paused hide the jobs that open them.
+// Edit my website and Enter a score cover them (RE-13, RE-06), Games always
+// (ADMIN-RE-07: no job opens the old schedule page any more, and it is still
+// where a game is changed or removed), and Homepage while content changes are
+// paused hide the job that opens it.
 export const ADMIN_MORE_ROWS = [
   { id: "team-roster", label: "Team roster", routeId: "roster" },
   { id: "this-season", label: "This season", routeId: "seasons" },
-  { id: "games", label: "Games", routeId: "schedule", onlyWhileContentPaused: true },
+  { id: "games", label: "Games", routeId: "schedule" },
   { id: "player-numbers", label: "Player numbers", routeId: "match-stats" },
   { id: "league-table", label: "League table", routeId: "standings" },
   { id: "programs", label: "Programs", routeId: "programs" },

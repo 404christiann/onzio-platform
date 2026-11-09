@@ -48,6 +48,8 @@
     "save": "files/save",
     "account": "communication/user-circle",
     "external-link": "arrows/external-link",
+    "clock": "date-and-time/clock",
+    "map-pin": "navigation/map-pin",
     "mail": "communication/mail",
     "phone": "communication/phone",
     "user": "communication/user"
