@@ -1,5 +1,108 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-09: Edit my website, step one (the homepage under the edit bar)
+
+**Agent/package:** Claude Code, `ADMIN-RE-09`, started by the orchestration
+session alongside RE-06, RE-07 and RE-08. Branch
+`claude/admin-re-09-website-d18c37`, rebased onto `main` `902f385`.
+**Status:** `in_progress`. Built and tested locally, PR open for the review
+bot. No migration. Nobody sees it yet: both clubs are still `classic` until
+`GATE-FLIP-RC` (RE-10).
+
+**Completed work:**
+
+- **The edit bar** (new `components/admin/reimagined/EditBar.tsx`), only when
+  `useAdminPortal()` says `reimagined`. On `/admin/homepage` it takes over the
+  shell's top bar: "‹ Home", "You're editing your site" (the page's h1; screen
+  readers only on phones), a status ("Nothing to save yet", then "Not saved
+  yet: Hero", shortened to "Not saved yet" on phones), and Save ("Save
+  homepage", "Save" on phones), which shows "Saving…" and then the saved label
+  on itself.
+- **Saved label (decision 2):** new `lib/save-status.ts` in exactly the shared
+  shape RE-06 and RE-07 use. "Saved · on your website" when the site is live
+  or in grace, "Saved · your website is paused" when it is held (Rose City) or
+  in preview or suspended. The demo's "Saved · live on your site" is replaced
+  by the shared wording so the four jobs read the same.
+- **Tags in the preview:** "Click to change" on hover (and keyboard focus), and
+  "Changed" on every piece that differs from the homepage as it was when the
+  editor opened. The tag stays after Save and goes away if the words are put
+  back (`lib/homepage-editor/changed-pieces.ts`). Drawn by the preview frame,
+  so the public components and their bindings are unchanged.
+- **Phones:** words open in the existing bottom edit sheet; Done lowers it and
+  Save is in the edit bar (the sheet and the bottom tool bar no longer carry a
+  second Save in the reimagined admin).
+- **"‹ Home" with unsaved changes** asks "Save your changes first?" (Save and
+  continue, Keep editing, Leave without saving), through the editor's existing
+  leave dialog and its existing clean-up of unused uploads and browser recovery.
+- **Top bar takeover:** `<TopBarTakeover>` in
+  `components/admin/reimagined/TopBar.tsx` lets a page replace the whole top
+  bar while it is mounted. `TopBarActions` is unchanged.
+- **Classic clubs see the editor exactly as before.** The save pipeline,
+  recovery, bindings and the classic heading, status line and Save buttons are
+  untouched.
+- **Break-ui gap closed:** `hero.eyebrow` (the small heading, the demos' date
+  line) is limited to 120 characters in `lib/homepage-editor/contract.ts`, and
+  the field's `maxLength` follows. **Database finding:** the save function
+  `onzio.save_homepage` (defined in
+  `20261022183955_homepage_content_policy.sql`, not redefined by any later
+  migration) allows the hero eyebrow up to 20 000 characters (the `else 20000`
+  branch), and `onzio.homepage_hero_content` has no check on `eyebrow`. So the
+  database is **looser** than the new limit. No database check was added
+  (decision 7: Zod first, then a gated read-only length query before a CHECK).
+  An existing longer eyebrow still loads; saving the hero then asks to shorten
+  it ("Check the field lengths…"), the same path as every other limit.
+- The Edit my website tile already opens `/admin/homepage`; kept. The route
+  manifest is not touched.
+- Not built (later slices): the page switcher, other pages, tab renames,
+  seasonal sections.
+
+**Files changed:**
+- new `components/admin/reimagined/EditBar.tsx`, `lib/save-status.ts`,
+  `lib/homepage-editor/changed-pieces.ts`
+- `components/admin/homepage/HomepageEditor.tsx`,
+  `components/admin/homepage/HomepagePreviewFrame.tsx`,
+  `components/admin/homepage/HomepageFields.tsx`,
+  `components/admin/reimagined/TopBar.tsx`,
+  `components/admin/reimagined/reimagined.module.css`,
+  `lib/homepage-editor/contract.ts`
+- tests: new `lib/__tests__/save-status.test.ts`,
+  `tests/contracts/admin-reimagined-website.test.ts`,
+  `tests/browser/admin-reimagined-website.spec.ts`; extended
+  `tests/contracts/homepage-editor-save-contract.test.ts` (eyebrow 120)
+- docs: this file, `HANDOFF.md`
+
+**Verification** (tested commit `462e10c`, on `main` `902f385`):
+
+- `npx tsc --noEmit`: clean. `npm run lint`: exit 0 (one existing warning in
+  `app/(public)/sponsors/page.tsx`, not touched here).
+- `npx vitest run --exclude "tests/database/**"`: 207 files, 2,567 passed, 1
+  skipped. New: `lib/__tests__/save-status.test.ts` (7),
+  `tests/contracts/admin-reimagined-website.test.ts` (7), and the eyebrow at
+  120 / 121 in `tests/contracts/homepage-editor-save-contract.test.ts`. (An
+  earlier run with the build in parallel timed out once in
+  `pilot-accepted-build-identity`; alone it passed 35/35, and the final run
+  passed everything.)
+- `npm run build` with the loopback `SUPABASE_TEST_*` values: passed.
+- `npm run test:db` under `scripts/with-local-db-lock.sh`: 49 files, 1,009
+  passed. A first run failed one RE-01 test because an earlier homepage
+  browser run had stamped Alpha's `time_zone_set_at` (see the HANDOFF note);
+  after putting Alpha back to its seeded value, 1,009/1,009.
+- `playwright.admin-reimagined.config.ts` under the lock, production build at
+  `http://alpha.localhost:3110`: 16/16 (the RE-05 home spec and the new
+  `admin-reimagined-website.spec.ts`: change the date line, Save, "Saved · on
+  your website", the public Alpha page shows it; the phone sheet at 390;
+  "Save your changes first?" on "‹ Home", Keep editing and Leave without
+  saving; 1440 and 390). Screenshots in `test-results/admin-reimagined/website-*.png`.
+- `playwright.homepage.config.ts` under the lock: 63/63 (the classic editor).
+
+**Blockers / decisions:** none for this package. The new browser spec runs
+under `playwright.admin-reimagined.config.ts` (it needs Alpha switched to
+`reimagined`, which that config's global setup does; the homepage config does
+not).
+
+**Exact next step:** the review bot reviews and merges. Then RE-10
+(first-slice acceptance and the Rose City switch, which waits for Christian).
+
 ## 2026-11-08 - ADMIN-RE-05 follow-up: every old page reachable from the new home
 
 **Agent/package:** Claude Code, `ADMIN-RE-05` follow-up, asked for by

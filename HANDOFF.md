@@ -1,3 +1,33 @@
+## 2026-11-08 - ADMIN-RE-09 Edit my website, step one: the homepage under the edit bar
+
+- **Status:** `in_progress` on branch `claude/admin-re-09-website-d18c37`,
+  rebased onto `main` `902f385`, PR open. No migration. Nobody sees it until
+  a club is switched to `reimagined` (`GATE-FLIP-RC`, RE-10).
+- **What it adds** (reimagined clubs only; classic clubs see the editor as
+  before):
+  - The edit bar over `/admin/homepage` (`components/admin/reimagined/EditBar.tsx`,
+    via a new `<TopBarTakeover>` in the shell's top bar): "‹ Home", "You're
+    editing your site", "Nothing to save yet" / "Not saved yet: Hero", Save
+    showing "Saving…" then the saved label.
+  - `lib/save-status.ts` (decision 2, the shape RE-06 and RE-07 share):
+    "Saved · on your website", or "Saved · your website is paused" for a held
+    or non-public site.
+  - "Click to change" on hover and "Changed" tags in the preview; on phones
+    the existing edit sheet, with Save only in the edit bar; "‹ Home" asks
+    "Save your changes first?" when there are unsaved changes.
+  - `hero.eyebrow` limited to 120 (was 20 000). The database save function
+    still allows 20 000 and the table has no check, so the database is
+    looser; no CHECK added (decision 7).
+- **Verification:** full suites on the PR head, results and tested commit in
+  the PR body and in `STATUS.md`.
+- **Found while testing (not fixed here):** the homepage browser config signs
+  the owner into `/admin`, and RE-02's automatic time zone then stamps Alpha's
+  `time_zone_set_at`. Only the reimagined config puts it back, so running the
+  homepage config before `test:db` fails the RE-01 foundation test. Fixed
+  locally by hand; the homepage (and other `/admin`) configs' global setup
+  should restore it too.
+- **Exact next step:** the bot reviews and merges; then RE-10.
+
 ## 2026-11-08 - ADMIN-RE-05 follow-up: every old page reachable from the new home
 
 - **Status:** `in_progress` on branch `claude/admin-re-05-more-rows` from

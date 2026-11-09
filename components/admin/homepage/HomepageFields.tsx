@@ -8,6 +8,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { Textarea } from "@/components/ui/textarea";
 import { siteRouteOptionsWithFallback } from "@/lib/site-routes";
 import { useClubContext } from "@/components/ClubContextProvider";
+import { HOMEPAGE_HERO_EYEBROW_MAX } from "@/lib/homepage-editor/contract";
 import type { HomepageDraft, PieceId } from "@/lib/homepage-editor/model";
 import { HOMEPAGE_PIECE_LABELS } from "@/lib/homepage-editor/preview-context";
 
@@ -100,7 +101,7 @@ export default function HomepageFields({ piece, clubName, draft, disabled, chang
     commit(field, value);
   }
   if (piece === "hero.eyebrow") {
-    return <TextField label={HOMEPAGE_PIECE_LABELS[piece]} id="hero-eyebrow" value={draft.hero.eyebrow} disabled={disabled} maxLength={20_000} onChange={(value) => change("hero.eyebrow", value)} />;
+    return <TextField label={HOMEPAGE_PIECE_LABELS[piece]} id="hero-eyebrow" value={draft.hero.eyebrow} disabled={disabled} maxLength={HOMEPAGE_HERO_EYEBROW_MAX} onChange={(value) => change("hero.eyebrow", value)} />;
   }
   if (piece === "hero.heading") {
     return <fieldset className="space-y-3"><legend className="font-body text-sm text-foreground">Main heading</legend><TextField label="Line one" id="hero-headline-line-one" value={draft.hero.headline_line_one} disabled={disabled} maxLength={80} onChange={(value) => change("hero.headline_line_one", value)} /><TextField label="Line two" id="hero-headline-line-two" value={draft.hero.headline_line_two} disabled={disabled} maxLength={80} onChange={(value) => change("hero.headline_line_two", value)} /></fieldset>;

@@ -68,6 +68,13 @@
   flex: 1 1 auto;
 }
 
+.takeover {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-self: stretch;
+}
+
 .actions {
   display: flex;
   flex: none;
@@ -439,4 +446,137 @@
 .skeletonBlock {
   border-radius: 8px;
   background: hsl(var(--muted));
+}
+
+/* ADMIN-RE-09: the edit bar over the homepage editor (design: cd-desktop,
+   cd-phone). It fills the top bar; on phones the title is kept for screen
+   readers only and the status shortens to "Not saved yet". */
+
+.editBar {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.editBarLead,
+.editBarEnd {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.editBarEnd {
+  flex: none;
+}
+
+.editBarRule {
+  width: 1px;
+  height: 20px;
+  flex: none;
+  background: hsl(var(--border));
+}
+
+.editBarPencil {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.editBarTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.editBarStatus {
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
+.editBarStatus[data-dirty] {
+  color: hsl(var(--foreground));
+}
+
+.editBarShort {
+  display: none;
+}
+
+.editBarSave {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid hsl(var(--primary));
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.editBarSave:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.editBarSave[data-state="saving"]:disabled {
+  opacity: 0.8;
+}
+
+.editBarSave[data-state="saved"],
+.editBarSave[data-state="saved"]:disabled {
+  opacity: 1;
+  border-color: hsl(var(--border));
+  background: hsl(var(--card));
+  color: #15803d;
+}
+
+:global([data-admin-theme="dark"]) .editBarSave[data-state="saved"] {
+  color: #86efac;
+}
+
+.editBarSave:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+@media (max-width: 639px) {
+  .editBarRule,
+  .editBarPencil {
+    display: none;
+  }
+
+  .editBarTitle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .editBarLong {
+    display: none;
+  }
+
+  .editBarShort {
+    display: inline;
+  }
+
+  .editBarSave {
+    padding: 0 12px;
+  }
 }
