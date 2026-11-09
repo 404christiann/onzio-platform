@@ -47,7 +47,9 @@
     "success": "interface/check-circle",
     "save": "files/save",
     "account": "communication/user-circle",
-    "external-link": "arrows/external-link"
+    "external-link": "arrows/external-link",
+    "clock": "date-and-time/clock",
+    "map-pin": "navigation/map-pin"
   },
   "weight": "medium",
   "navigationSize": 24

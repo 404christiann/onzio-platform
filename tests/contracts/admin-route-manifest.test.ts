@@ -42,12 +42,12 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(18);
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(19);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      18,
+      19,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      18,
+      19,
     );
   });
 
@@ -270,13 +270,13 @@ describe("reimagined home jobs and More rows", () => {
   it("locks the four jobs, their glossary labels and the old pages they open until each job ships", () => {
     expect(ADMIN_HOME_JOBS).toEqual([
       { id: "enter-score", label: "Enter a score", routeId: "schedule", hue: "amber", hint: "games-needing-score", needsContentMutation: true },
-      { id: "add-game", label: "Add a game", routeId: "schedule", hue: "blue", needsContentMutation: true },
+      { id: "add-game", label: "Add a game", routeId: "add-game", hue: "blue", needsContentMutation: true },
       { id: "see-registrations", label: "See registrations", routeId: "registrations", hue: "green", hint: "new-sign-ups", needsLiveSignUps: true },
       { id: "edit-website", label: "Edit my website", routeId: "homepage", hue: "coral", needsContentMutation: true },
     ]);
     expect(getVisibleAdminHomeJobs(REIMAGINED).map((job) => [job.label, job.href])).toEqual([
       ["Enter a score", "/admin/schedule"],
-      ["Add a game", "/admin/schedule"],
+      ["Add a game", "/admin/add-game"],
       ["See registrations", "/admin/registrations"],
       ["Edit my website", "/admin/homepage"],
     ]);
@@ -384,7 +384,9 @@ describe("reimagined home jobs and More rows", () => {
         ...getVisibleAdminMoreRows(context).map((row) => row.href),
         "/admin",
       ]);
-      const missing = getVisibleAdminRoutes(context)
+      // ADMIN-RE-07: the classic sidebar's pages; reimagined-only pages such as
+      // Add a game are jobs, hidden on purpose while content changes are paused.
+      const missing = getVisibleAdminRoutes({ ...context, adminPortal: "classic" })
         .map((route) => route.href)
         .filter((href) => !fromHome.has(href));
       expect(missing).toEqual([]);
@@ -426,8 +428,38 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin/homepage")).toBe("Homepage");
     expect(getReimaginedPageTitle("/admin/about")).toBe("About page");
     expect(getReimaginedPageTitle("/admin/contact")).toBe("Contact page");
+    expect(getReimaginedPageTitle("/admin/add-game")).toBe("Add a game");
     expect(getReimaginedPageTitle("/admin")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/roster-preview")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/nowhere")).toBe("Club admin");
+  });
+});
+
+// ADMIN-RE-07 (deliberate update): the first page that exists only in the
+// reimagined admin. The Add a game tile opens it; the classic sidebar and
+// search never offer it.
+describe("reimagined-only routes", () => {
+  const REIMAGINED: AdminRouteAccessContext = { ...OWNER_ACCESS, adminPortal: "reimagined", adminFlags: {} };
+
+  it("declares Add a game as a reimagined-only page outside the sidebar groups", () => {
+    expect(ADMIN_ROUTE_MANIFEST.find((route) => route.id === "add-game")).toEqual({
+      id: "add-game",
+      label: "Add a game",
+      href: "/admin/add-game",
+      iconKey: "schedule",
+      groupId: null,
+      reimaginedOnly: true,
+    });
+    expect(JSON.stringify(ADMIN_NAVIGATION_MANIFEST)).not.toContain("add-game");
+  });
+
+  it("is visible only in the reimagined admin, to owners and helpers alike", () => {
+    for (const adminPortal of [undefined, "classic"] as const) {
+      expect(visibleIds({ ...OWNER_ACCESS, adminPortal })).not.toContain("add-game");
+    }
+    expect(visibleIds(REIMAGINED)).toContain("add-game");
+    expect(visibleIds({ ...REIMAGINED, role: "admin", isBillingAuthorized: false })).toContain("add-game");
+    expect(visibleIds({ ...REIMAGINED, role: null })).toEqual([]);
+    expect(navigationIds(REIMAGINED)).not.toContain("add-game");
   });
 });

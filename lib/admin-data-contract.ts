@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isAllowedPublicHref } from "@/lib/public-link";
+import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 import {
   isValidPublicEmail,
   isValidPublicPhone,
@@ -280,6 +281,45 @@ const tryoutsPageMutation = z
   })
   .strict();
 
+// ADMIN-RE-07: every column of onzio.matches a club admin writes through
+// /api/admin/data. Text limits are the break-ui gaps (opponent, venue and
+// competition had none in 20260726000200_phase2_content.sql); they live in
+// Zod only until decision 7's read-only production length check allows
+// database CHECKs. Scores are the ADMIN-RE-06 stepper range.
+const plainDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const wallClockTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/);
+const matchScore = z.number().int().min(0).max(99).nullable();
+const nullableText = (maximum: number) => z.string().max(maximum).nullable().optional();
+
+export const matchesMutation = z
+  .object({
+    id: uuid.optional(),
+    season_id: uuid.optional(),
+    date: plainDate.optional(),
+    time: wallClockTime.optional(),
+    opponent: z.string().trim().min(1).max(MATCH_TEXT_LIMITS.opponent).optional(),
+    opponent_short_name: nullableText(MATCH_TEXT_LIMITS.opponent_short_name),
+    opponent_logo_url: z.string().max(2_048).nullable().optional(),
+    opponent_logo_asset_id: nullableUuid.optional(),
+    competition: nullableText(MATCH_TEXT_LIMITS.competition),
+    sponsor_name: nullableText(120),
+    sponsor_logo_url: z.string().max(2_048).nullable().optional(),
+    sponsor_logo_asset_id: nullableUuid.optional(),
+    sponsor_link: z.string().max(2_048).nullable().optional(),
+    home: z.boolean().optional(),
+    venue: z.string().trim().min(1).max(MATCH_TEXT_LIMITS.venue).optional(),
+    address: nullableText(MATCH_TEXT_LIMITS.address),
+    city: nullableText(MATCH_TEXT_LIMITS.city),
+    state: nullableText(MATCH_TEXT_LIMITS.state),
+    rose_city_score: matchScore.optional(),
+    opponent_score: matchScore.optional(),
+    attendance: z.number().int().min(0).nullable().optional(),
+    scorers: z.array(jsonValue).max(200).optional(),
+  })
+  .strict();
+
+const MATCH_INSERT_REQUIRED = ["season_id", "date", "time", "opponent", "venue"] as const;
+
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
   programs: programMutation,
   program_media: programMediaMutation,
@@ -289,6 +329,7 @@ const NEW_DOMAIN_MUTATION_SCHEMAS = {
   contact_page_content: contactPageMutation,
   tryouts: tryoutMutation,
   tryouts_page_content: tryoutsPageMutation,
+  matches: matchesMutation,
 } as const;
 
 const filter = z.object({
@@ -383,6 +424,21 @@ export const adminDataRequestSchema = z
               code: "custom",
               path: ["payload", field],
               message: `Program ${request.operation} requires ${field}`,
+            });
+          }
+        }
+      }
+
+      if (
+        request.table === "matches" &&
+        (request.operation === "insert" || request.operation === "upsert")
+      ) {
+        for (const field of MATCH_INSERT_REQUIRED) {
+          if (!(field in payload)) {
+            context.addIssue({
+              code: "custom",
+              path: ["payload", field],
+              message: `Match ${request.operation} requires ${field}`,
             });
           }
         }

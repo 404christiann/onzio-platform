@@ -53,7 +53,8 @@ export type AdminRouteId =
   | "analytics"
   | "branding"
   | "team-access"
-  | "payments";
+  | "payments"
+  | "add-game";
 
 export type AdminRouteIconKey =
   | "dashboard"
@@ -87,6 +88,12 @@ export type AdminRouteDefinition = Readonly<{
   feature?: AdminRouteFeature;
   ownerOnly?: true;
   billingRequired?: true;
+  /**
+   * A page that exists only in the reimagined admin (ADMIN-RE-06 onward). It
+   * never appears in the classic sidebar or search; the page itself sends a
+   * classic club to the old one.
+   */
+  reimaginedOnly?: true;
 }>;
 
 export type AdminVisibleRoute = Readonly<{
@@ -277,6 +284,14 @@ export const ADMIN_ROUTE_MANIFEST = [
     ownerOnly: true,
     billingRequired: true,
   },
+  {
+    id: "add-game",
+    label: "Add a game",
+    href: "/admin/add-game",
+    iconKey: "schedule",
+    groupId: null,
+    reimaginedOnly: true,
+  },
 ] as const satisfies readonly AdminRouteDefinition[];
 
 export const ADMIN_NAVIGATION_MANIFEST = [
@@ -377,6 +392,7 @@ const ADMIN_ROUTE_SEARCH_KEYWORDS = {
     "permissions",
   ],
   payments: ["payments", "billing", "subscription", "invoices"],
+  "add-game": ["schedule", "fixtures", "add a game", "new match"],
 } as const satisfies Record<AdminRouteId, readonly string[]>;
 
 const ROUTE_BY_ID = new Map<AdminRouteId, AdminRouteDefinition>(
@@ -394,6 +410,7 @@ export function isAdminRouteVisible(
   context: AdminRouteAccessContext,
 ): boolean {
   if (!isProtectedAdminRole(context.role)) return false;
+  if (route.reimaginedOnly && context.adminPortal !== "reimagined") return false;
   const siteAdmin = codeSiteAdminFor(context);
   if (route.id === "programs" && !siteAdmin?.programs.routeVisible) return false;
   if (route.id === "tryouts" && !siteAdmin?.tryouts.routeVisible) return false;
@@ -560,7 +577,7 @@ export const ADMIN_HOME_JOBS = [
   {
     id: "add-game",
     label: "Add a game",
-    routeId: "schedule",
+    routeId: "add-game",
     hue: "blue",
     needsContentMutation: true,
   },

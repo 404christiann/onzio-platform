@@ -8,6 +8,7 @@ import {
   formatClubTime,
   isKickoffPast,
   isValidTimeZone,
+  nextClubSaturday,
   parseKickoffTime,
 } from "../club-time";
 
@@ -137,5 +138,40 @@ describe("formatClubDate and formatClubTime", () => {
     expect(formatClubTime("12:00")).toBe("12:00 PM");
     expect(formatClubTime("TBD")).toBe("");
     expect(formatClubTime(null)).toBe("");
+  });
+});
+
+// ADMIN-RE-07: a new game defaults to the next Saturday at 10:00, club time.
+describe("nextClubSaturday", () => {
+  it("is the coming Saturday midweek", () => {
+    expect(nextClubSaturday("America/Los_Angeles", new Date("2026-11-11T20:00:00Z"))).toBe("2026-11-14");
+  });
+
+  it("is a week away when today is Saturday", () => {
+    expect(nextClubSaturday("America/Los_Angeles", new Date("2026-11-14T18:00:00Z"))).toBe("2026-11-21");
+  });
+
+  it("is six days away on a Sunday", () => {
+    expect(nextClubSaturday("America/Chicago", new Date("2026-11-08T18:00:00Z"))).toBe("2026-11-14");
+  });
+
+  it("reads today in the club's zone, not the server's", () => {
+    // 06:00 UTC on Saturday is still Friday night in Los Angeles but already Saturday in Chicago.
+    const now = new Date("2026-11-14T06:00:00Z");
+    expect(nextClubSaturday("America/Los_Angeles", now)).toBe("2026-11-14");
+    expect(nextClubSaturday("America/Chicago", now)).toBe("2026-11-21");
+  });
+
+  it("crosses the month and the year", () => {
+    expect(nextClubSaturday("America/Chicago", new Date("2026-12-28T18:00:00Z"))).toBe("2027-01-02");
+  });
+
+  it("prints in the picker's short form", () => {
+    expect(formatClubDate("2026-11-14", "weekday-short")).toBe("Sat, Nov 14");
+  });
+
+  it("falls back to the default zone for an invalid one", () => {
+    const now = new Date("2026-11-14T06:00:00Z");
+    expect(nextClubSaturday("Mars/Phobos", now)).toBe(nextClubSaturday(DEFAULT_CLUB_TIME_ZONE, now));
   });
 });

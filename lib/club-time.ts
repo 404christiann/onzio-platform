@@ -113,10 +113,11 @@ export function isKickoffPast(
   return kickoff.getTime() + graceMinutes * 60_000 <= now.getTime();
 }
 
-export type ClubDateStyle = "short" | "weekday-day" | "weekday-day-month" | "month-year" | "long";
+export type ClubDateStyle = "short" | "weekday-short" | "weekday-day" | "weekday-day-month" | "month-year" | "long";
 
 const PLAIN_DATE_FORMATS: Record<ClubDateStyle, Intl.DateTimeFormatOptions> = {
   short: { month: "short", day: "numeric" },
+  "weekday-short": { weekday: "short", month: "short", day: "numeric" },
   "weekday-day": { weekday: "short", day: "2-digit" },
   "weekday-day-month": { weekday: "short", day: "2-digit", month: "short" },
   "month-year": { month: "long", year: "numeric" },
@@ -127,7 +128,7 @@ const plainDateFormatters = new Map<ClubDateStyle, Intl.DateTimeFormat>();
 
 /**
  * A stored plain date for people to read, never shifted a day:
- *  short "Dec 31" · weekday-day "Sat 14" · weekday-day-month "Sat 14 Mar" ·
+ *  short "Dec 31" · weekday-short "Sat, Nov 14" · weekday-day "Sat 14" · weekday-day-month "Sat 14 Mar" ·
  *  month-year "March 2026" · long "March 14, 2026". Null for an unreadable date.
  */
 export function formatClubDate(date: string, style: ClubDateStyle = "short"): string | null {
@@ -154,4 +155,20 @@ export function formatClubTime(time: string | null | undefined): string {
   const { hours, minutes } = parseKickoffTime(value);
   const suffix = hours >= 12 ? "PM" : "AM";
   return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
+
+/** ADMIN-RE-07: the time a new game defaults to, as the club's wall clock. */
+export const DEFAULT_KICKOFF_TIME = "10:00";
+
+/**
+ * The next Saturday in the club's own calendar, as "YYYY-MM-DD": the default
+ * day for a new game. On a Saturday it is the one a week away, so the form
+ * never suggests a game that may already be under way or over.
+ */
+export function nextClubSaturday(timeZone: string, now: Date = new Date()): string {
+  const [year, month, day] = clubToday(timeZone, now).split("-").map(Number);
+  const today = new Date(Date.UTC(year, month - 1, day));
+  const daysAhead = ((6 - today.getUTCDay() + 7) % 7) || 7;
+  today.setUTCDate(today.getUTCDate() + daysAhead);
+  return today.toISOString().slice(0, 10);
 }
