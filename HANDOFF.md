@@ -1,3 +1,31 @@
+## 2026-11-08 - ADMIN-RE-07 Add a game
+
+- **Status:** `in_progress` on branch `claude/admin-re-07-add-game-4e0b24`
+  from `main` `902f385`, with the PR open. No migration. Nobody sees it until
+  a club is switched to `reimagined` (RE-10).
+- **What it adds:**
+  - `/admin/add-game` for reimagined clubs (classic clubs are redirected to
+    `/admin/schedule`). It asks who, home or away (Home by default), when
+    (calendar picker, next Saturday 10:00 club time) and where ("Last used"
+    chips). It shows the active season pill.
+  - "Add to schedule" saves through `/api/admin/data`. The button then shows
+    the hold-aware "Added · …" label (`lib/save-status.ts`), and the game
+    drops into "Coming up".
+  - `matchesMutation` in `lib/admin-data-contract.ts`: strict, Zod-only text
+    limits (`lib/match-text-limits.ts`), scores 0-99, and required fields on
+    insert.
+  - Manifest route `add-game` with the new `reimaginedOnly` flag, and the Add
+    a game tile repointed to it.
+  - Clock and map pin icons.
+- **Verification:** new contract test (27), club-time (+7), save-status (4),
+  icon test (+2), manifest test updated on purpose, and a new browser spec at
+  390 and 1440 with screenshots. Full suites ran by hand on the PR head
+  outside the main checkout; results are in the PR body.
+- **For the parallel RE-06/08/09 merges:** keep both sides in the manifest and
+  its test, and in the icon list and its test. RE-06 reuses
+  `matchesMutation`.
+- **Exact next step:** the bot merges. Then RE-10 waits for Christian.
+
 ## 2026-11-08 - ADMIN-RE-09 Edit my website, step one: the homepage under the edit bar
 
 - **Status:** `in_progress` on branch `claude/admin-re-09-website-d18c37`,

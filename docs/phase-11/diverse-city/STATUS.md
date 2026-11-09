@@ -1,5 +1,131 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-07: Add a game
+
+**Agent/package:** Claude Code, `ADMIN-RE-07`, started by the orchestration
+session alongside RE-06, RE-08 and RE-09. Branch
+`claude/admin-re-07-add-game-4e0b24` from `main` `902f385`. **Status:**
+`in_progress`. Built and tested locally, PR open for the review bot. No
+migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
+`GATE-FLIP-RC`).
+
+**Completed work:**
+
+- **`/admin/add-game`** (design `cd-game`), reimagined clubs only. A classic
+  club is redirected to `/admin/schedule`.
+- **Plain questions:**
+  - "Who are you playing?" (required).
+  - "Home or away?" (Home by default).
+  - "When?": a date picker on `components/ui/calendar.tsx` showing the short
+    form ("Sat, Nov 14"), plus a time. Default: the next Saturday at 10:00 in
+    club time (`nextClubSaturday`, `DEFAULT_KICKOFF_TIME`). On a Saturday, the
+    default is the following Saturday.
+  - "Where?": the venue, with up to three "Last used" chips from the club's
+    recent distinct venues.
+  - No "League game?" (decision 4).
+- **Season and saving:**
+  - The active season shows as a pill. It becomes a quiet switcher only when
+    the club has more than one season.
+  - With no season at all, the page says to start one first.
+  - "Add to schedule" → "Adding…" → "Added · on your website", or "Added ·
+    your website is paused" when the site is held or not public (decision 2,
+    new `lib/save-status.ts`).
+  - The game drops into "Coming up" (the next six, plus the new game if it is
+    further out). The empty state is "No games yet".
+  - Under the list, "Change or remove a game" opens the old Games page.
+- **Writes** go through `POST /api/admin/data` (`table: "matches"`,
+  `operation: "insert"`), never the browser client.
+- **`matchesMutation`** in `lib/admin-data-contract.ts`:
+  - Strict, covering every `matches` column.
+  - Text limits in Zod only (decision 7), from `lib/match-text-limits.ts`:
+    opponent 1-80, short name ≤ 20, venue 1-120, competition ≤ 80,
+    address/city/state ≤ 120/80/40.
+  - Scores are integers 0-99 or null, so RE-06's score-only updates stay
+    valid.
+  - An insert or upsert needs season, date, time, opponent and venue.
+- **Manifest:**
+  - New route `add-game` with a new `reimaginedOnly` flag: never in the
+    classic sidebar or search.
+  - The Add a game tile now opens `/admin/add-game`.
+- **Icons:** clock and map pin (icons.download medium/outline/round), added to
+  `approved-selection.json` as `IconClock` and `IconMapPin`.
+
+**Files changed:**
+- new `app/admin/(protected)/add-game/page.tsx`,
+  `components/admin/reimagined/AddGame.tsx`, `add-game.module.css`
+- new `lib/admin-add-game-data.ts`, `lib/match-text-limits.ts`,
+  `lib/save-status.ts`
+- `lib/admin-data-contract.ts`, `lib/admin-route-manifest.ts`,
+  `lib/club-time.ts` (`nextClubSaturday`, `DEFAULT_KICKOFF_TIME`, the
+  `weekday-short` date style)
+- `components/admin/icons/index.tsx`, `approved-selection.json`,
+  `assets/date-and-time/clock.svg`, `assets/navigation/map-pin.svg`
+- tests:
+  - new `tests/contracts/admin-add-game.test.ts`,
+    `lib/__tests__/save-status.test.ts`,
+    `tests/browser/admin-reimagined-add-game.spec.ts`
+  - extended `lib/__tests__/club-time.test.ts` and
+    `tests/contracts/admin-icon-refresh.test.ts`
+  - deliberately updated `tests/contracts/admin-route-manifest.test.ts`:
+    19 routes, the tile's new page, reimagined-only visibility, and the
+    "reaches every page" check now compares against the classic sidebar
+- docs: this file, `HANDOFF.md`
+
+**Verification:**
+
+- `tests/contracts/admin-add-game.test.ts` (27 tests):
+  - each limit accepted at its maximum and refused one character over;
+  - a blank opponent or venue refused;
+  - an insert missing any required field refused;
+  - score-only updates valid, out-of-range scores refused;
+  - a bad date or time, an unknown column (`league_game`) and `club_id`
+    refused;
+  - the form's exact payload, the defaults and the classic redirect;
+  - the loader is club-scoped with no personal columns;
+  - "Last used" de-duplication and "Coming up" order.
+- `club-time` (7 new): next Saturday midweek, on a Saturday, on a Sunday,
+  across month and year, a Friday night in Los Angeles that is already
+  Saturday in Chicago, an invalid zone, and the short form.
+- `save-status` (4): live, grace, preview, suspended, held, and both verbs.
+- Icons: each new icon draws exactly its asset and is in the approved
+  selection.
+- Browser (`playwright.admin-reimagined.config.ts`, local Alpha, 390 and
+  1440):
+  - Add a game from the home tile; check the defaults and "No games yet".
+  - Submit empty, which asks for the opponent. Then add a game and see the
+    added label, the game in Coming up, its venue as a chip, and the row in
+    the database. "Change or remove a game" opens the old Games page with the
+    game in it.
+  - The worst-fixture opponent and venue: titles at most two lines then
+    clamped, meta lines and long chips on one line with "…", no sideways
+    scroll.
+  - Fixture games are removed in `finally`. Screenshots are in
+    `test-results/admin-reimagined/`.
+- Full suites (`tsc`, lint, vitest without the database folder, build,
+  `test:db` and the admin-reimagined Playwright config under the local
+  database lock) ran on the PR head in a worktree outside the main checkout.
+  Results and the tested commit are in the PR body.
+
+**Blockers and decisions:**
+
+- No blocker. No migration, so no `GATE-MIGRATE`.
+- Shared files with RE-06/08/09:
+  - Whichever merges second keeps both routes in the manifest and both sides
+    of its test (20 routes once RE-06's `score` lands).
+  - RE-06 should reuse this `matchesMutation` (scores 0-99 are already in
+    it).
+  - RE-08's icons go after Drawing45.
+  - `lib/save-status.ts` matches the agreed shape exactly.
+- A game added here has no sponsor. The old Add form copies the last game's
+  sponsor on clubhouse designs. Left as is: the plan's form has no sponsor
+  question.
+- Once RE-06 repoints Enter a score, the old Games page is reached from the
+  "Change or remove a game" link here (and from More while content is
+  paused).
+
+**Exact next step:** the review bot reviews and merges. Then RE-10 (switching
+Rose City on) waits for Christian.
+
 ## 2026-11-08 - ADMIN-RE-09: Edit my website, step one (the homepage under the edit bar)
 
 **Agent/package:** Claude Code, `ADMIN-RE-09`, started by the orchestration
