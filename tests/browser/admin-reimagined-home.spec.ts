@@ -217,9 +217,17 @@ for (const width of [390, 1440]) {
       await main(page).locator('[data-job="edit-website"]').click();
       await expect(page).toHaveURL(/\/admin\/homepage$/);
       await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
-      // The editor reads the sidebar's state; the shell provides it, always closed.
-      await expect(page.getByLabel("Homepage tools")).toBeVisible();
-      await expect(page.getByText("Click any words, photo or button in the preview to edit it.")).toBeVisible();
+      await expect(main(page).locator(".hp-editor")).toBeVisible();
+      await expect(main(page).getByText("We could not load your homepage.")).toHaveCount(0);
+      // The editor hides its tools while the sidebar's phone menu is open; the
+      // shell provides that state, always closed, so they are never hidden by it.
+      const tools = main(page).getByLabel("Homepage tools");
+      await expect(tools).not.toHaveAttribute("hidden", /.*/);
+      // On phones the editor shows its tools in a bottom bar instead (by design).
+      if (width === 1440) {
+        await expect(tools).toBeVisible();
+        await expect(tools.getByText("Click any words, photo or button in the preview to edit it.")).toBeVisible();
+      }
       expect(errors).toEqual([]);
       await page.screenshot({ path: `${SHOTS}/homepage-editor-${width}.png` });
     });
