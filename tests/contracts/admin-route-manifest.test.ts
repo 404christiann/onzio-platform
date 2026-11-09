@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADMIN_HOME_JOBS,
+  ADMIN_MORE_ROWS,
   ADMIN_NAVIGATION_MANIFEST,
   ADMIN_ROUTE_MANIFEST,
   getAdminGroupForPathname,
+  getReimaginedPageTitle,
+  getVisibleAdminHomeJobs,
+  getVisibleAdminMoreRows,
   getVisibleAdminNavigation,
   getVisibleAdminQuickActions,
   getVisibleAdminRoutes,
@@ -245,5 +250,128 @@ describe("strict admin route manifest", () => {
     expect(
       getAdminGroupForPathname("/admin/roster-preview", OWNER_ACCESS),
     ).toBeNull();
+  });
+});
+
+// ADMIN-RE-05 (deliberate update): the reimagined home's jobs and More rows
+// are part of the manifest now, locked here as exact arrays like the sidebar.
+describe("reimagined home jobs and More rows", () => {
+  const REIMAGINED: AdminRouteAccessContext = {
+    ...OWNER_ACCESS,
+    adminPortal: "reimagined",
+    adminFlags: {},
+    hasLiveSignUps: true,
+  };
+  const jobIds = (context: AdminRouteAccessContext) =>
+    getVisibleAdminHomeJobs(context).map((job) => job.id);
+  const rowIds = (context: AdminRouteAccessContext) =>
+    getVisibleAdminMoreRows(context).map((row) => row.id);
+
+  it("locks the four jobs, their glossary labels and the old pages they open until each job ships", () => {
+    expect(ADMIN_HOME_JOBS).toEqual([
+      { id: "enter-score", label: "Enter a score", routeId: "schedule", hue: "amber", hint: "games-needing-score", needsContentMutation: true },
+      { id: "add-game", label: "Add a game", routeId: "schedule", hue: "blue", needsContentMutation: true },
+      { id: "see-registrations", label: "See registrations", routeId: "registrations", hue: "green", hint: "new-sign-ups", needsLiveSignUps: true },
+      { id: "edit-website", label: "Edit my website", routeId: "homepage", hue: "coral", needsContentMutation: true },
+    ]);
+    expect(getVisibleAdminHomeJobs(REIMAGINED).map((job) => [job.label, job.href])).toEqual([
+      ["Enter a score", "/admin/schedule"],
+      ["Add a game", "/admin/schedule"],
+      ["See registrations", "/admin/registrations"],
+      ["Edit my website", "/admin/homepage"],
+    ]);
+  });
+
+  it("locks the More rows in glossary words and order", () => {
+    expect(ADMIN_MORE_ROWS.map((row) => [row.label, row.routeId])).toEqual([
+      ["Team roster", "roster"],
+      ["This season", "seasons"],
+      ["League table", "standings"],
+      ["Programs", "programs"],
+      ["Tryouts", "tryouts"],
+      ["Sponsors", "sponsors"],
+      ["Shop", "shop"],
+      ["Your club", "branding"],
+      ["How the team is doing", "analytics"],
+      ["Payments and plan", "payments"],
+      ["Who can sign in", "team-access"],
+      ["Sign-up forms", "registrations"],
+    ]);
+    expect(getVisibleAdminMoreRows(REIMAGINED).map((row) => row.href)).toEqual([
+      "/admin/roster",
+      "/admin/seasons",
+      "/admin/standings",
+      "/admin/programs",
+      "/admin/tryouts",
+      "/admin/sponsors",
+      "/admin/shop",
+      "/admin/branding",
+      "/admin/analytics",
+      "/admin/payments",
+      "/admin/members",
+    ]);
+  });
+
+  it("shows nothing from the home outside the reimagined admin", () => {
+    for (const adminPortal of [undefined, "classic"] as const) {
+      expect(getVisibleAdminHomeJobs({ ...REIMAGINED, adminPortal })).toEqual([]);
+      expect(getVisibleAdminMoreRows({ ...REIMAGINED, adminPortal })).toEqual([]);
+    }
+    expect(getVisibleAdminHomeJobs({ ...REIMAGINED, role: null })).toEqual([]);
+    expect(getVisibleAdminMoreRows({ ...REIMAGINED, role: null })).toEqual([]);
+  });
+
+  it("has four jobs with a live sign-up form, otherwise three and a quiet Sign-up forms row", () => {
+    expect(jobIds(REIMAGINED)).toContain("see-registrations");
+    expect(rowIds(REIMAGINED)).not.toContain("sign-up-forms");
+
+    const quiet = { ...REIMAGINED, hasLiveSignUps: false };
+    expect(jobIds(quiet)).toEqual(["enter-score", "add-game", "edit-website"]);
+    expect(rowIds(quiet).at(-1)).toBe("sign-up-forms");
+    expect(getVisibleAdminMoreRows(quiet).at(-1)).toMatchObject({ label: "Sign-up forms", href: "/admin/registrations" });
+    // Missing means no live form: the quiet row, never a lost page.
+    expect(rowIds({ ...REIMAGINED, hasLiveSignUps: undefined })).toContain("sign-up-forms");
+  });
+
+  it("hides the jobs that change the website while content changes are paused", () => {
+    const paused = { ...REIMAGINED, canMutateContent: false };
+    expect(jobIds(paused)).toEqual(["see-registrations"]);
+    expect(rowIds(paused)).toEqual(rowIds(REIMAGINED));
+  });
+
+  it("hides owner-only rows from helpers and Payments without billing access", () => {
+    const helper = { ...REIMAGINED, role: "admin" as const, isBillingAuthorized: false };
+    expect(rowIds(helper)).not.toContain("who-can-sign-in");
+    expect(rowIds(helper)).not.toContain("payments-and-plan");
+    expect(jobIds(helper)).toEqual(jobIds(REIMAGINED));
+    expect(rowIds({ ...REIMAGINED, isBillingAuthorized: false })).not.toContain("payments-and-plan");
+    expect(rowIds({ ...REIMAGINED, isBillingAuthorized: false })).toContain("who-can-sign-in");
+  });
+
+  it("follows codeSiteAdminFor: Programs and Tryouts rows only where the website has those pages", () => {
+    expect(rowIds(REIMAGINED)).toEqual(expect.arrayContaining(["programs", "tryouts"]));
+    for (const presentationTemplateKey of ["clubhouse@1", null, "future-template@1"] as const) {
+      const ids = rowIds({ ...REIMAGINED, presentationTemplateKey });
+      expect(ids).not.toContain("programs");
+      expect(ids).not.toContain("tryouts");
+      expect(ids).toContain("team-roster");
+    }
+  });
+
+  it("keeps Shop for the store-off club, as the classic admin does", () => {
+    expect(rowIds({ ...REIMAGINED, storeEnabled: false })).toContain("shop");
+  });
+
+  it("titles each page in the top bar with its More name, otherwise its own name", () => {
+    expect(getReimaginedPageTitle("/admin/roster")).toBe("Team roster");
+    expect(getReimaginedPageTitle("/admin/roster/player-1")).toBe("Team roster");
+    expect(getReimaginedPageTitle("/admin/branding")).toBe("Your club");
+    expect(getReimaginedPageTitle("/admin/members")).toBe("Who can sign in");
+    expect(getReimaginedPageTitle("/admin/registrations")).toBe("Sign-up forms");
+    expect(getReimaginedPageTitle("/admin/schedule")).toBe("Schedule");
+    expect(getReimaginedPageTitle("/admin/stats")).toBe("Stats");
+    expect(getReimaginedPageTitle("/admin")).toBe("Club admin");
+    expect(getReimaginedPageTitle("/admin/roster-preview")).toBe("Club admin");
+    expect(getReimaginedPageTitle("/admin/nowhere")).toBe("Club admin");
   });
 });

@@ -70,11 +70,14 @@ describe("the admin reads the switch fail-safe", () => {
     expect(read("lib/club-context.ts")).not.toMatch(/admin_portal|admin_flags|time_zone/);
   });
 
-  it("wraps the existing shell, so the classic admin still renders for both values", () => {
+  // ADMIN-RE-05 changed this on purpose: RE-02 rendered the classic shell for
+  // both values; now "reimagined" gets the reimagined shell and anything else,
+  // including a failed read, keeps the classic one.
+  it("picks the shell by portal inside the provider, classic unless the read says reimagined", () => {
     const layout = read("app/admin/(protected)/layout.tsx");
     expect(layout).toContain("const portal = await readAdminPortal(supabase, club.id);");
     expect(layout).toMatch(
-      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>\s*<AdminShell>\{children\}<\/AdminShell>\s*<\/AdminPortalProvider>/,
+      /<AdminPortalProvider settings=\{portal\} isOwner=\{club\.role === "owner"\}>[\s\S]*\{portal\.portal === "reimagined" \? \(\s*<ReimaginedShell>\{children\}<\/ReimaginedShell>\s*\) : \(\s*<AdminShell>\{children\}<\/AdminShell>\s*\)\}\s*<\/AdminPortalProvider>/,
     );
   });
 });

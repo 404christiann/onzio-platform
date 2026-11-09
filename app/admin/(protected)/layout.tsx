@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import AdminShell from "@/components/AdminShell";
 import { AdminPortalProvider } from "@/components/admin/AdminPortalProvider";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
+import { ReimaginedShell } from "@/components/admin/reimagined/ReimaginedShell";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { readAdminPortal } from "@/lib/admin-portal";
 import {
@@ -64,7 +65,12 @@ export default async function ProtectedLayout({
   return (
     <AdminThemeProvider initialTheme={initialTheme}>
       <AdminPortalProvider settings={portal} isOwner={club.role === "owner"}>
-        <AdminShell>{children}</AdminShell>
+        {/* ADMIN-RE-05: the club's admin_portal picks the shell; classic on any doubt. */}
+        {portal.portal === "reimagined" ? (
+          <ReimaginedShell>{children}</ReimaginedShell>
+        ) : (
+          <AdminShell>{children}</AdminShell>
+        )}
       </AdminPortalProvider>
     </AdminThemeProvider>
   );

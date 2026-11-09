@@ -22,11 +22,27 @@ import {
 import guided from "@/components/admin/AdminGuided.module.css";
 import { REGISTRATION_MIX_COLORS } from "@/lib/admin-dashboard-mix";
 import { requireFreshClubSession } from "@/lib/auth-session";
-import { getClubContext } from "@/lib/club-context";
+import { getClubContext, type ClubContext } from "@/lib/club-context";
 import {
+  getVisibleAdminHomeJobs,
+  getVisibleAdminMoreRows,
   getVisibleAdminQuickActions,
   type AdminQuickActionId,
+  type AdminRouteAccessContext,
 } from "@/lib/admin-route-manifest";
+import { adminGreeting } from "@/lib/admin-greeting";
+import {
+  gamesNeedingScoreHint,
+  loadAdminHomeData,
+  newSignUpsHint,
+  readOwnDisplayName,
+} from "@/lib/admin-home-data";
+import { HomeFallback } from "@/components/admin/reimagined/HomeFallback";
+import {
+  ReimaginedHome,
+  ReimaginedHomeSkeleton,
+} from "@/components/admin/reimagined/ReimaginedHome";
+import type { AdminPortalSettings } from "@/lib/admin-portal";
 import { createClient } from "@/lib/supabase-server";
 
 const ACTION_ICONS: Record<AdminQuickActionId, AdminIconComponent> = {
@@ -67,7 +83,9 @@ function formatTime(time: string | null) {
  */
 export default function AdminDashboard() {
   return (
-    <Suspense fallback={<DashboardSkeleton />}>
+    <Suspense
+      fallback={<HomeFallback classic={<DashboardSkeleton />} reimagined={<ReimaginedHomeSkeleton />} />}
+    >
       <AdminDashboardContent />
     </Suspense>
   );
@@ -183,14 +201,27 @@ async function AdminDashboardContent() {
         club.kind === "test" ||
         club.publicAccess === "live" ||
         club.publicAccess === "grace"));
-  const quickActions = getVisibleAdminQuickActions({
+  const routeAccess: AdminRouteAccessContext = {
     role: club.role,
     presentationTemplateKey: club.presentationTemplateKey,
     isBillingAuthorized,
     canMutateContent,
     storeEnabled: club.storeEnabled,
-  });
-  const { timeZone } = await readAdminPortal(supabase, club.id);
+  };
+  const portal = await readAdminPortal(supabase, club.id);
+  if (portal.portal === "reimagined") {
+    return (
+      <ReimaginedHomeContent
+        supabase={supabase}
+        userId={userId}
+        club={club}
+        portal={portal}
+        routeAccess={routeAccess}
+      />
+    );
+  }
+  const quickActions = getVisibleAdminQuickActions(routeAccess);
+  const { timeZone } = portal;
   const data = await loadAdminDashboardData(supabase, club.id, timeZone);
 
   return (
@@ -338,6 +369,52 @@ async function AdminDashboardContent() {
         )}
       </DashboardPanel>
     </AdminPage>
+  );
+}
+
+// ADMIN-RE-05: the reimagined home. Same session, club and capability checks
+// as the classic dashboard above; reads stay server-side and user-scoped.
+async function ReimaginedHomeContent({
+  supabase,
+  userId,
+  club,
+  portal,
+  routeAccess,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  club: ClubContext;
+  portal: AdminPortalSettings;
+  routeAccess: AdminRouteAccessContext;
+}) {
+  const [home, displayName] = await Promise.all([
+    loadAdminHomeData(supabase, club.id, portal.timeZone),
+    readOwnDisplayName(supabase, club.id, userId),
+  ]);
+  const access: AdminRouteAccessContext = {
+    ...routeAccess,
+    adminPortal: portal.portal,
+    adminFlags: portal.flags,
+    hasLiveSignUps: home.hasLiveSignUps,
+  };
+  const jobs = getVisibleAdminHomeJobs(access).map((job) => ({
+    ...job,
+    hintText:
+      job.hint === "games-needing-score"
+        ? gamesNeedingScoreHint(home.gamesNeedingScore)
+        : job.hint === "new-sign-ups"
+          ? newSignUpsHint(home.newSignUps)
+          : null,
+  }));
+
+  return (
+    <ReimaginedHome
+      clubName={club.name}
+      greeting={adminGreeting(displayName)}
+      jobs={jobs}
+      moreRows={getVisibleAdminMoreRows(access)}
+      contentPaused={!routeAccess.canMutateContent}
+    />
   );
 }
 
