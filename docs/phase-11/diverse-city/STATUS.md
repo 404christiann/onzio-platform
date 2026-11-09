@@ -46,7 +46,28 @@ reads) and `tests/browser/admin-reimagined-add-game.spec.ts` (new sponsor
 test; fixture cleanup uses `ilike` and removes fixture sponsors); this file,
 `HANDOFF.md`.
 
-**Verification:** VERIFICATION_PLACEHOLDER
+**Verification:** 
+
+- New `tests/contracts/admin-add-game-sponsor.test.ts` (17): opponent
+  matching ignoring case and outer spaces, newest non-blank short name and
+  logo, no over-limit short name, the choice order and de-duplication, "No
+  sponsor" as empty columns, every resulting insert accepted by
+  `adminDataRequestSchema` without `club_id`, the show rule, the empty state,
+  no uploads, six club-scoped reads, and the Sponsors-page guard.
+- `tests/browser/admin-reimagined-add-game.spec.ts`, two new cases at 390
+  and 1440. Local Alpha is seeded as the academy site (Diverse City's
+  stand-in), so: (1) as seeded, no "Sponsor?" even with sponsors present,
+  and a game against a known opponent typed in another case gets its newest
+  short name and logo and no sponsor; (2) with Alpha's academy document
+  briefly unpublished (a generic site, like Rose City's) and put back in
+  `finally`: "No sponsor. Add sponsors", then pre-filled with the latest
+  game's sponsor and link, a Sponsors-page sponsor saved without a link, and
+  "No sponsor" saved empty. Fixture games and sponsors are removed in
+  `finally`. Screenshots `add-game-{no-sponsor,sponsor}-{390,1440}.png` in
+  `test-results/admin-reimagined/`.
+- Full suites (tsc, lint, vitest, build, `test:db` and the admin-reimagined
+  Playwright under `scripts/with-local-db-lock.sh`) ran on the PR head in a
+  clean worktree outside the main checkout; results are in the PR body.
 
 **Decision 7 length check:** not run. Both Supabase connectors refused
 `execute_sql` on `ioalthwsdrlzrubomrow` ("You do not have permission").
