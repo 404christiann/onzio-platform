@@ -1,0 +1,634 @@
+/* ADMIN-RE-08: "See registrations" (design: cd-regs). Colors come from the
+   admin theme tokens; green is the See registrations job's own hue. Names wrap
+   to two lines then end in "…" with the full value on hover (MAP, break-ui). */
+
+.page {
+  --signups-green: #187a43;
+  --signups-green-tint: #d6f1df;
+  margin: 0 auto;
+  max-width: 1120px;
+}
+
+:global([data-admin-theme="dark"]) .page {
+  --signups-green: #7ddca1;
+  --signups-green-tint: #123a24;
+}
+
+.listPage {
+  min-width: 0;
+}
+
+.h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 32px;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+.tabs {
+  display: flex;
+  gap: 20px;
+  margin-top: 16px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.tab {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: hsl(var(--muted-foreground));
+}
+
+.tab:hover {
+  color: hsl(var(--foreground));
+}
+
+.tab[aria-current="page"] {
+  border-bottom-color: hsl(var(--foreground));
+  color: hsl(var(--foreground));
+}
+
+.tab:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.tabCount {
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: hsl(var(--muted));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground));
+}
+
+.list {
+  display: grid;
+  margin: 12px 0 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  list-style: none;
+}
+
+.list > li + li {
+  border-top: 1px solid hsl(var(--border));
+}
+
+.row {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  color: hsl(var(--card-foreground));
+}
+
+.row:hover {
+  background: hsl(var(--accent));
+}
+
+.row[aria-current="true"] {
+  background: hsl(var(--accent));
+  box-shadow: inset 3px 0 0 var(--signups-green);
+}
+
+.row:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+
+.avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+}
+
+.avatar[data-size="panel"] {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+}
+
+.rowText {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 2px;
+}
+
+.rowName {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+/* The form name gives way to "…"; the day always shows. */
+.rowSub {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.rowForm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowWhen {
+  flex: none;
+  white-space: pre;
+}
+
+.badge {
+  flex: none;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge[data-status="paid"] {
+  background: var(--signups-green-tint);
+  color: var(--signups-green);
+}
+
+.badge[data-status="refunded"] {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.empty {
+  margin: 12px 0 0;
+  border: 1px dashed hsl(var(--border));
+  border-radius: 16px;
+  padding: 28px 16px;
+  text-align: center;
+  font-size: 15px;
+  line-height: 22px;
+  color: hsl(var(--muted-foreground));
+}
+
+.more {
+  margin: 10px 4px 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.notice {
+  margin: 16px 0 0;
+  border: 1px solid hsl(var(--destructive) / 0.3);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: hsl(var(--destructive) / 0.08);
+  font-size: 14px;
+  color: hsl(var(--destructive));
+}
+
+.formsLink {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  border-radius: 16px;
+  padding: 8px 14px 8px 8px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+  color: hsl(var(--card-foreground));
+}
+
+.formsLink:hover {
+  background: hsl(var(--accent));
+}
+
+.formsLink:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.formsIcon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+.formsText {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.formsLabel {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.formsHint {
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.formsGo {
+  flex: none;
+  color: hsl(var(--muted-foreground) / 0.6);
+}
+
+/* The details: a page of its own on a phone */
+
+.panel {
+  min-width: 0;
+}
+
+.page[data-detail-open] > .listPage {
+  display: none;
+}
+
+.panelBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -8px 0 8px;
+}
+
+.panelBack {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 2px;
+  margin-left: -6px;
+  border-radius: 10px;
+  padding: 0 10px 0 4px;
+  font-size: 15px;
+  font-weight: 500;
+  color: hsl(var(--primary));
+}
+
+.panelBack:hover {
+  background: hsl(var(--accent));
+}
+
+.panelClose {
+  display: none;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  color: hsl(var(--muted-foreground));
+}
+
+.panelClose:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+}
+
+.panelBack:focus-visible,
+.panelClose:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.panelSlide {
+  min-width: 0;
+}
+
+/* 1px of room so the cards' outlines are not clipped by the sliding panel. */
+.panelBody {
+  display: grid;
+  gap: 20px;
+  padding: 1px;
+}
+
+.who {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.whoText {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.whoName {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 26px;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  outline: none;
+}
+
+.whoForm {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  color: hsl(var(--muted-foreground));
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: hsl(var(--card));
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+.sectionLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.lineIcon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: hsl(var(--muted-foreground));
+}
+
+.lineMain {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.lineLink {
+  min-width: 0;
+  color: hsl(var(--primary));
+  overflow-wrap: anywhere;
+}
+
+.lineLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.lineMissing {
+  color: hsl(var(--muted-foreground));
+}
+
+.lineSub {
+  margin: 0 0 0 26px;
+  font-size: 13px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.skeleton {
+  display: block;
+  height: 14px;
+  border-radius: 6px;
+  background: hsl(var(--muted));
+}
+
+/* Download list, in the top bar */
+
+.download {
+  display: inline-flex;
+  min-height: 40px;
+  min-width: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 0 10px;
+  background: hsl(var(--card));
+  box-shadow: inset 0 0 0 1px hsl(var(--border));
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: hsl(var(--foreground));
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.download:hover:not(:disabled) {
+  background: hsl(var(--accent));
+}
+
+.download:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.download[data-state="done"] {
+  background: var(--signups-green-tint, #d6f1df);
+  box-shadow: none;
+  color: var(--signups-green, #187a43);
+}
+
+.download:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* On a phone the button keeps its icon; the words come back from 640px. */
+.downloadText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.picker {
+  width: min(320px, calc(100vw - 32px));
+  padding: 8px;
+}
+
+.pickerTitle {
+  margin: 4px 8px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+}
+
+.pickerList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pickerItem {
+  display: grid;
+  width: 100%;
+  min-height: 44px;
+  gap: 1px;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: left;
+}
+
+.pickerItem:hover,
+.pickerItem:focus-visible {
+  background: hsl(var(--accent));
+  outline: none;
+}
+
+.pickerName {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.pickerMeta {
+  font-size: 12px;
+  line-height: 16px;
+  color: hsl(var(--muted-foreground));
+}
+
+@media (min-width: 640px) {
+  .downloadText {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+
+  .download {
+    padding: 0 14px;
+  }
+
+  .h1 {
+    font-size: 30px;
+    line-height: 38px;
+  }
+
+  .sub {
+    font-size: 16px;
+  }
+
+  .row {
+    padding: 12px 16px;
+  }
+}
+
+/* The details beside the list on a laptop */
+
+@media (min-width: 768px) {
+  .page[data-detail-open] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 24px;
+  }
+
+  .page[data-detail-open] > .listPage {
+    display: block;
+  }
+
+  .panel {
+    position: sticky;
+    top: calc(56px + var(--admin-safe-area-top, 0px) + 16px);
+    max-height: calc(100dvh - 56px - var(--admin-safe-area-top, 0px) - 32px);
+    overflow-y: auto;
+    border-radius: 18px;
+    padding: 12px 16px 18px;
+    background: hsl(var(--background));
+    box-shadow: 0 0 0 1px hsl(var(--border)), 0 16px 32px -24px rgb(15 20 40 / 0.35);
+  }
+
+  .panelBar {
+    justify-content: flex-end;
+    margin: 0 -6px 4px 0;
+  }
+
+  .panelBack {
+    display: none;
+  }
+
+  .panelClose {
+    display: grid;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page[data-detail-open] {
+    grid-template-columns: minmax(0, 1fr) 380px;
+  }
+}

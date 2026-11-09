@@ -3,12 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ChevronDown, Handshake } from "lucide-react";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import { buildSync } from "esbuild";
 
 // The repository keeps Next's JSX-preserve setting. Compile only these real
 // components for SSR without changing the shared Vitest or application config.
 const compiled = buildSync({
-  stdin: { contents: 'export { NativeSelect } from "./components/ui/native-select"; export { IconCaretDown, IconDashboard, IconSponsors } from "./components/admin/icons";', resolveDir: process.cwd() },
+  stdin: { contents: 'export { NativeSelect } from "./components/ui/native-select"; export { IconCaretDown, IconDashboard, IconSponsors, IconMail, IconPhone, IconUser } from "./components/admin/icons";', resolveDir: process.cwd() },
   bundle: true,
   write: false,
   format: "cjs",
@@ -18,7 +19,7 @@ const compiled = buildSync({
 }).outputFiles[0].text;
 const compiledModule = { exports: {} as Record<string, Parameters<typeof createElement>[0]> };
 new Function("require", "module", "exports", compiled)(createRequire(import.meta.url), compiledModule, compiledModule.exports);
-const { NativeSelect, IconCaretDown, IconDashboard, IconSponsors } = compiledModule.exports;
+const { NativeSelect, IconCaretDown, IconDashboard, IconSponsors, IconMail, IconPhone, IconUser } = compiledModule.exports;
 
 const render = (component: Parameters<typeof createElement>[0], props = {}) =>
   renderToStaticMarkup(createElement(component, props));
@@ -56,5 +57,33 @@ describe("admin icon consumer isolation", () => {
     expect(markup).toContain('aria-hidden="true"');
     expect(markup).toContain('fill="currentColor"');
     expect(markup).not.toContain('fill="black"');
+  });
+});
+
+// ADMIN-RE-08: mail, phone and user for the sign-up details panel, fetched from
+// icons.download (medium, outline, round) like the rest of the approved set.
+describe("sign-up details icons", () => {
+  const selection = JSON.parse(readFileSync("components/admin/icons/approved-selection.json", "utf8")) as {
+    selections: Record<string, string>;
+    weight: string;
+  };
+
+  it.each([
+    ["mail", () => IconMail],
+    ["phone", () => IconPhone],
+    ["user", () => IconUser],
+  ] as const)("approves %s and draws exactly the shipped asset in the theme color", (key, icon) => {
+    expect(selection.weight).toBe("medium");
+    expect(selection.selections[key]).toBe(`communication/${key}`);
+    const asset = readFileSync(`components/admin/icons/assets/communication/${key}.svg`, "utf8");
+    const assetPaths = [...asset.matchAll(/ d="([^"]+)"/g)].map((match) => match[1]);
+    expect(assetPaths.length).toBeGreaterThan(0);
+
+    const markup = render(icon(), { size: 16, className: "text-muted-foreground" });
+    expect([...markup.matchAll(/ d="([^"]+)"/g)].map((match) => match[1])).toEqual(assetPaths);
+    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).toContain('fill="currentColor"');
+    expect(markup).not.toContain('fill="black"');
+    expect(markup).toContain('width="16" height="16"');
   });
 });

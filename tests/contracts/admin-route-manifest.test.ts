@@ -42,12 +42,12 @@ function navigationIds(context: AdminRouteAccessContext) {
 
 describe("strict admin route manifest", () => {
   it("declares each protected destination exactly once", () => {
-    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(18);
+    expect(ADMIN_ROUTE_MANIFEST).toHaveLength(19);
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.id)).size).toBe(
-      18,
+      19,
     );
     expect(new Set(ADMIN_ROUTE_MANIFEST.map((route) => route.href)).size).toBe(
-      18,
+      19,
     );
   });
 
@@ -271,13 +271,13 @@ describe("reimagined home jobs and More rows", () => {
     expect(ADMIN_HOME_JOBS).toEqual([
       { id: "enter-score", label: "Enter a score", routeId: "schedule", hue: "amber", hint: "games-needing-score", needsContentMutation: true },
       { id: "add-game", label: "Add a game", routeId: "schedule", hue: "blue", needsContentMutation: true },
-      { id: "see-registrations", label: "See registrations", routeId: "registrations", hue: "green", hint: "new-sign-ups", needsLiveSignUps: true },
+      { id: "see-registrations", label: "See registrations", routeId: "sign-ups", hue: "green", hint: "new-sign-ups", needsLiveSignUps: true },
       { id: "edit-website", label: "Edit my website", routeId: "homepage", hue: "coral", needsContentMutation: true },
     ]);
     expect(getVisibleAdminHomeJobs(REIMAGINED).map((job) => [job.label, job.href])).toEqual([
       ["Enter a score", "/admin/schedule"],
       ["Add a game", "/admin/schedule"],
-      ["See registrations", "/admin/registrations"],
+      ["See registrations", "/admin/sign-ups"],
       ["Edit my website", "/admin/homepage"],
     ]);
   });
@@ -421,6 +421,7 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin/branding")).toBe("Your club");
     expect(getReimaginedPageTitle("/admin/members")).toBe("Who can sign in");
     expect(getReimaginedPageTitle("/admin/registrations")).toBe("Sign-up forms");
+    expect(getReimaginedPageTitle("/admin/sign-ups")).toBe("Registrations");
     expect(getReimaginedPageTitle("/admin/schedule")).toBe("Games");
     expect(getReimaginedPageTitle("/admin/stats")).toBe("Player numbers");
     expect(getReimaginedPageTitle("/admin/homepage")).toBe("Homepage");
@@ -429,5 +430,34 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/roster-preview")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/nowhere")).toBe("Club admin");
+  });
+});
+
+// ADMIN-RE-08 (deliberate update): See registrations opens its own page,
+// /admin/sign-ups, which exists only in the reimagined admin.
+describe("the See registrations page route", () => {
+  it("is visible to owners and admins of a reimagined club only, never in the classic sidebar or search", () => {
+    for (const role of ["owner", "admin"] as const) {
+      const reimagined = { ...OWNER_ACCESS, role, adminPortal: "reimagined" as const };
+      expect(visibleIds(reimagined)).toContain("sign-ups");
+      for (const adminPortal of [undefined, "classic"] as const) {
+        expect(visibleIds({ ...reimagined, adminPortal })).not.toContain("sign-ups");
+        expect(navigationIds({ ...reimagined, adminPortal })).not.toContain("sign-ups");
+      }
+    }
+    expect(navigationIds({ ...OWNER_ACCESS, adminPortal: "reimagined" })).not.toContain("sign-ups");
+    expect(ADMIN_ROUTE_MANIFEST.find((route) => route.id === "sign-ups")).toMatchObject({
+      href: "/admin/sign-ups",
+      label: "Registrations",
+      reimaginedOnly: true,
+    });
+  });
+
+  it("keeps the old forms page as the quiet Sign-up forms row", () => {
+    const quiet: AdminRouteAccessContext = { ...OWNER_ACCESS, adminPortal: "reimagined", hasLiveSignUps: false };
+    expect(getVisibleAdminMoreRows(quiet).at(-1)).toMatchObject({ label: "Sign-up forms", href: "/admin/registrations" });
+    expect(getVisibleAdminHomeJobs({ ...quiet, hasLiveSignUps: true }).find((job) => job.id === "see-registrations")?.href).toBe(
+      "/admin/sign-ups",
+    );
   });
 });

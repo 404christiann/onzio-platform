@@ -152,7 +152,7 @@ for (const width of [390, 1440]) {
         await addOpenSignUpForm();
         await page.reload();
         expect(await jobIds(page)).toEqual(["enter-score", "add-game", "see-registrations", "edit-website"]);
-        await expect(main(page).locator('[data-job="see-registrations"]')).toHaveAttribute("href", "/admin/registrations");
+        await expect(main(page).locator('[data-job="see-registrations"]')).toHaveAttribute("href", "/admin/sign-ups");
         await expect(more.getByRole("link", { name: "Sign-up forms" })).toHaveCount(0);
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/home-four-jobs-${width}.png`, fullPage: true });
