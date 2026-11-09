@@ -1,3 +1,29 @@
+## 2026-11-08 - ADMIN-RE-08 See registrations (`/admin/sign-ups`)
+
+- **Status:** `in_progress` on branch `claude/admin-re-08-sign-ups-38875d`,
+  rebased on `main` `52fc3c9`, PR open. No migration. Nobody sees it until a
+  club is switched to `reimagined` (`GATE-FLIP-RC`, RE-10).
+- **What it adds:**
+  - `/admin/sign-ups` for reimagined clubs (classic ones go to
+    `/admin/registrations`): "N new this week" (RE-05's count), All / Paid /
+    Refunded with counts, one row per person (name, form, amount, day in club
+    time), details beside the list on a laptop or as a page on a phone
+    (parent or guardian, or an adult's own details; payment; "Card, through
+    Stripe"), Download list per form with a "Which form?" picker, "No
+    sign-ups yet".
+  - Reads in `lib/admin-sign-ups-data.ts`: user-scoped, club-scoped, never
+    `status_token_hash`, counts paged by id, contact details for the open
+    person only.
+  - Manifest route `sign-ups` (`reimaginedOnly`); the tile points at it.
+    "Sign-up forms" is now always in More (form building stays on the old
+    page).
+  - Icons mail, phone, user (icons.download, approved list and test).
+- **Verification:** new contract test (18), manifest and icon tests updated
+  on purpose, browser config 21/21 at 390 and 1440 with screenshots. Full
+  suites on the PR head; results and tested commit in the PR body.
+- **Exact next step:** the bot merges; RE-10 waits on RE-06, RE-07 and
+  Christian's go.
+
 ## 2026-11-08 - ADMIN-RE-09 Edit my website, step one: the homepage under the edit bar
 
 - **Status:** `in_progress` on branch `claude/admin-re-09-website-d18c37`,
