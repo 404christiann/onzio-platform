@@ -164,8 +164,8 @@ VERIFICATION_PLACEHOLDER
 - A game with only one side's score is neither listed to score nor shown in
   Earlier results, matching the home hint's count. The old schedule page can
   still fix such a game.
-- Shared with RE-07/08/09: the manifest route count and tile, `matchesMutation`
-  and `lib/save-status.ts`. The shapes are in the sessions' shared notes
+- Shared with RE-07 and RE-08 (RE-09 is merged): the manifest route count and
+  tile, and `matchesMutation`. The shapes are in the sessions' shared notes
   (`re-06-shared-shapes.md`); whichever PR merges second keeps both sides.
 
 **Exact next step:** the review bot reviews and merges the PR (it deploys with
