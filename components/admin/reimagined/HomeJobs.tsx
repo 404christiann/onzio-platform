@@ -22,7 +22,7 @@ export type HomeJobTile = AdminHomeJob & { hintText: string | null };
 
 export function HomeJobs({ jobs }: { jobs: readonly HomeJobTile[] }) {
   return (
-    <ul className={styles.jobs} aria-label="Jobs">
+    <ul className={styles.jobs} aria-label="Jobs" data-count={jobs.length}>
       {jobs.map((job) => {
         const Icon = JOB_ICONS[job.id];
         return (

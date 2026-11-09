@@ -382,6 +382,11 @@
     margin-top: 24px;
   }
 
+  /* Three jobs (no live sign-up form) fill the row instead of leaving a gap. */
+  .jobs[data-count="3"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .job {
     min-height: 148px;
     gap: 20px;
