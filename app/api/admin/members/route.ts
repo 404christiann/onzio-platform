@@ -10,7 +10,9 @@ import {
   listClubAdmins,
   listClubOwners,
   removeClubAdmin,
+  resendClubAdminCode,
   setMemberDisplayName,
+  undoRemoveClubAdmin,
 } from "@/lib/owner-admin-membership";
 import { createClient } from "@/lib/supabase-server";
 
@@ -19,9 +21,20 @@ import { createClient } from "@/lib/supabase-server";
 // (no userId, or their own); only an owner may name someone else, which
 // setMemberDisplayName enforces. The name's own rules live in
 // normalizeDisplayName, which matches the database check.
+// ADMIN-RE-18, all owner-only: `add` takes an optional displayName (optional
+// while the old Team access page, which has no name field, still adds people);
+// `resend-code` emails an active admin a fresh sign-in code (a real email, same
+// Auth cooldown as add); `undo-remove` puts back an admin this owner removed
+// within REMOVE_UNDO_WINDOW_MS.
 const requestSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("add"), email: z.string().trim().email().max(254) }),
+  z.object({
+    action: z.literal("add"),
+    email: z.string().trim().email().max(254),
+    displayName: z.string().max(1_000).optional(),
+  }),
   z.object({ action: z.literal("remove"), userId: z.string().uuid() }),
+  z.object({ action: z.literal("resend-code"), userId: z.string().uuid() }),
+  z.object({ action: z.literal("undo-remove"), userId: z.string().uuid() }),
   z.object({
     action: z.literal("set-name"),
     userId: z.string().uuid().optional(),
@@ -63,7 +76,11 @@ function failure(error: unknown) {
       ? 429
       : code === "INVALID_DISPLAY_NAME"
         ? 400
-        : 403;
+        : code === "MEMBERSHIP_UNDO_UNAVAILABLE"
+          ? 409
+          : code === "MEMBERSHIP_ROLLBACK_FAILED"
+            ? 500
+            : 403;
   return NextResponse.json({ error: code }, { status });
 }
 
@@ -96,10 +113,20 @@ export async function POST(request: Request) {
       return NextResponse.json(result);
     }
     const session = await ownerSession(request);
-    const result = input.action === "add"
-      ? await addClubAdmin(session, { email: input.email, role: "admin" })
-      : await removeClubAdmin(session, input.userId);
-    return NextResponse.json(result);
+    switch (input.action) {
+      case "add":
+        return NextResponse.json(await addClubAdmin(session, {
+          email: input.email,
+          role: "admin",
+          displayName: input.displayName,
+        }));
+      case "remove":
+        return NextResponse.json(await removeClubAdmin(session, input.userId));
+      case "resend-code":
+        return NextResponse.json(await resendClubAdminCode(session, input.userId));
+      case "undo-remove":
+        return NextResponse.json(await undoRemoveClubAdmin(session, input.userId));
+    }
   } catch (error) {
     return failure(error);
   }

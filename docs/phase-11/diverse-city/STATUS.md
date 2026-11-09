@@ -1,5 +1,91 @@
 # Diverse City FC Status
 
+## 2026-11-08 - ADMIN-RE-18 (server half): who can sign in
+
+**Agent/package:** Claude Code, `ADMIN-RE-18` server side only, started by the
+admin-re-04-names session. The plan places RE-18 after the first slice; its
+server half is pulled forward so the screen is quick later (a deliberate
+reorder for speed; starting this session was Christian's go). Branch
+`claude/friendly-pasteur-a348b7` from `main` `fbf9381`. **Status:**
+`in_progress`: built and tested locally, PR open for the review bot. The new
+screen is not built (it needs RE-05's shell). No migration.
+
+**Completed work:**
+
+- **Last sign-in:** the owners and admins lists from `GET /api/admin/members`
+  now carry `lastSignInAt` from `auth.users.last_sign_in_at`, null for
+  someone who has never signed in, so the screen can say "Signed in Tue" or
+  "Hasn't signed in yet". Read with the service role inside
+  `lib/owner-admin-membership.ts` only.
+- **Send the code again:** `POST` action `resend-code { userId }`, owner only,
+  for an active admin of this club. Uses the same `signInWithOtp` path as
+  `add` (now one shared `sendSignInCode`), so the Auth cooldown is still
+  `AUTH_CODE_RATE_LIMITED` / 429. **It sends a real email** to that admin.
+  Audited as `membership_code_resent` with only `{ role: "admin" }`.
+  Owners, removed admins, outsiders and other clubs' admins are refused.
+- **Remove with Undo:** `remove` now also returns `undoUntil`. New action
+  `undo-remove { userId }`, owner only: puts back an admin within
+  **10 minutes of `removed_at`** (`REMOVE_UNDO_WINDOW_MS`), only for the
+  owner whose removal it was (the latest `membership_removed` audit for that
+  person must be theirs), and only while the row is still that removal. The
+  name is kept, no code is sent. Audited as `membership_restored`
+  `{ role: "admin", source: "undo" }`; if the audit fails the removal is put
+  back exactly. Too late or not yours: `MEMBERSHIP_UNDO_UNAVAILABLE` (409).
+- **Name on add (decision 0010):** `add` takes an optional `displayName`,
+  checked with `normalizeDisplayName` before anything is created. Optional,
+  not required, because the old Team access page has no name field and
+  requiring it would stop that page adding anyone. Make it required when the
+  old page goes. Re-adding without a name keeps the old one. The audit says
+  `name_given`, never the name.
+- **RE-04 review follow-ups:** `normalizeDisplayName` drops format
+  characters (`\p{Cf}`: zero-width space, right-to-left override, joiners)
+  and needs at least one letter or number, so an invisible or emoji-only
+  name is refused (Low 1). The `setMemberDisplayName` audit-failure rollback
+  now restores only while the row still holds the name it just wrote, and
+  reports `MEMBERSHIP_ROLLBACK_FAILED` (500) if the restore itself fails
+  (Low 2).
+- **Old page** `app/admin/(protected)/members/page.tsx`: unchanged; it still
+  adds and removes as before.
+
+**Files changed:**
+- `app/api/admin/members/route.ts`, `lib/owner-admin-membership.ts`,
+  `lib/admin-greeting.ts`
+- tests: new `tests/contracts/admin-members-sign-in.test.ts`, extended
+  `tests/contracts/admin-members-names.test.ts` and
+  `tests/database/owner-admin-membership.test.ts`
+- docs: this file, `HANDOFF.md`
+
+**Verification (local):**
+
+- `tests/database/owner-admin-membership.test.ts` 9/9 (four new RE-18 cases):
+  last sign-in null until a real email-code sign-in; resend to an active
+  admin only (owner, removed, outsider and other-club targets refused, an
+  admin can't get an owner session), Auth's 429 and
+  `over_email_send_rate_limit` both read as `AUTH_CODE_RATE_LIMITED`, and the
+  real `signInWithOtp` path sends once then hits the 1-minute cooldown; undo
+  at exactly 10 minutes works, 1 ms later is refused, another owner, a
+  legacy removal and another club's removal are refused, a failed audit
+  leaves the removal exactly as it was; a name on add is saved, a
+  zero-width-space name is refused before any identity is created; the
+  rename rollback restores the old name but never overwrites a rename that
+  landed in between. Passed twice in a row.
+- New `tests/contracts/admin-members-sign-in.test.ts` and the extended
+  `admin-members-names.test.ts` (format characters, letter-or-number rule),
+  with `platform-auth` and `admin-platform-fixes-02`: 82/82.
+- Full suites (types, lint, unit and contract tests, build, `test:db`) run
+  by hand on the PR head; the tested commit and results are in the PR body.
+
+**Blockers / decisions:** none blocking. Choices made here and stated in the
+PR: the 10-minute undo window; Undo only for the owner who removed; the name
+on add optional while the old page lives; a resend audit that fails still
+fails the call after the email has gone (same as `add`).
+
+**Exact next step:** the review bot reviews and merges. Then RE-18's screen
+(`cd-signin-final`) on RE-05's shell uses `lastSignInAt`, `resend-code`,
+`undo-remove` + `undoUntil`, and sends `displayName` on add; once the old
+page is retired, make `displayName` required on `add`. At release, say that
+"Send the code again" emails the admin.
+
 ## 2026-11-08 - Local tests leave nothing behind and the pilot proof test stops flaking
 
 **Agent/package:** Claude Code. No work-package ID: Christian asked for the
@@ -78,6 +164,7 @@ eight Playwright configs, the two prove scripts, `program-media` and
 
 **Exact next step:** the bot reviews and merges the PR. Then decide whether to
 speed up the pilot fixtures.
+
 
 ## 2026-11-08 - ADMIN-RE-04: people's names, and members route hardening
 
