@@ -8,13 +8,10 @@ import OpponentCrest from "@/components/OpponentCrest";
 import { nextScheduleFixture, orderedSchedule, scheduleDate, scheduleKickoff, SCHEDULE_PAGE_SIZE } from "@/lib/cinematic-schedule";
 import { outcomeForFixture } from "@/lib/editorial-fixtures";
 import { youtubeWatchUrl } from "@/lib/youtube-embed";
+import { googleMapsDirectionsUrl } from "@/lib/google-maps-directions";
 import "./schedule.css";
 
 export type CinematicScheduleData = { fixtures: Fixture[]; seasonLabel: string; timeZone: string };
-
-function Pin() {
-  return <svg width="14" height="17" viewBox="0 0 13 16" aria-hidden="true"><path fill="currentColor" d="M6.5 0A6.5 6.5 0 0 0 0 6.5C0 10 6.5 16 6.5 16S13 10 13 6.5A6.5 6.5 0 0 0 6.5 0m0 9a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5" /></svg>;
-}
 
 export default function CinematicSchedule({ schedule, initialNow }: { schedule: CinematicScheduleData; initialNow?: Date }) {
   const [now, setNow] = useState(() => initialNow ?? new Date());
@@ -51,13 +48,15 @@ export default function CinematicSchedule({ schedule, initialNow }: { schedule: 
           const played = fixture.roseCityScore != null && fixture.opponentScore != null;
           // One optional YouTube link per match: the stream before kickoff, the replay afterwards.
           const video = youtubeWatchUrl(fixture.replayVideoUrl);
+          const directions = googleMapsDirectionsUrl(fixture.address);
+          const venueLine = [fixture.venue, [fixture.city, fixture.state].filter(Boolean).join(", ")].filter(Boolean).join(" - ");
           return <li key={fixture.id ?? `${fixture.date}-${fixture.time}-${name}`} className="fixture-item" data-fixture-id={fixture.id}>
             <span className="fixture-number" aria-hidden="true">{index + 1}</span>
             <article tabIndex={-1} className="fixture-card" data-next={isNext} aria-label={`${name}, ${scheduleDate(fixture.date)}`}>
               <div className="fixture-date"><time dateTime={fixture.date}>{scheduleDate(fixture.date)}</time>{isNext && <span className="next-badge">Next</span>}</div>
               <div className="fixture-opponent">
                 <OpponentCrest name={name} logoUrl={fixture.opponentLogoUrl} size={62} variant={isNext ? "dark" : "light"} className="schedule-opponent-crest" />
-                <div><div className="opponent-title"><h2>{name}</h2><span className="home-away">{fixture.home ? "Home" : "Away"}</span></div><p className="fixture-venue">{[fixture.venue, [fixture.city, fixture.state].filter(Boolean).join(", ")].filter(Boolean).join(" - ")}{fixture.address && <a className="fixture-directions" href={`https://maps.google.com/?q=${encodeURIComponent(fixture.address)}`} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${fixture.venue}`}><Pin />Directions</a>}</p></div>
+                <div><div className="opponent-title"><h2>{name}</h2><span className="home-away">{fixture.home ? "Home" : "Away"}</span></div><p className="fixture-venue"><span className="fixture-venue-name" title={venueLine}>{venueLine}</span>{directions && <a className="fixture-directions" href={directions} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${fixture.venue} (opens Google Maps in a new tab)`}><NativeImage className="directions-pin" src="/rose-city/icons/green-location-pin.png" alt="" width={14} height={16} hideOnError />Directions</a>}</p></div>
               </div>
               <div className="fixture-kickoff"><span className="mobile-label">Kickoff</span>{scheduleKickoff(fixture.time, schedule.timeZone)}</div>
               <div className="fixture-league">{fixture.leagueLogoUrl

@@ -50,7 +50,7 @@ describe("Schedule Summary and Rewatch columns", () => {
   });
 
   it("puts Directions under the venue", () => {
-    expect(schedule()).toMatch(/class="fixture-venue">Robinson Stadium - Pasadena, CA<a class="fixture-directions"/);
+    expect(schedule()).toMatch(/class="fixture-venue"><span class="fixture-venue-name"[^>]*>Robinson Stadium - Pasadena, CA<\/span><a class="fixture-directions"/);
   });
 });
 

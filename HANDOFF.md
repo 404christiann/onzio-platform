@@ -1,3 +1,71 @@
+## 2026-11-08 — RC2027-SCHEDULE-LINKS: Directions, Watch on YouTube and Sam's final Schedule (local only)
+
+Christian asked for the Schedule to match Sam's final design, with Directions opening Google Maps
+routed to the address entered in `/admin`, and the YouTube logo opening the link entered in
+`/admin`. He approved the plan and the three test seams. Built in the worktree
+`implementation/onzio-platform-schedule`, branch `codex/rose-city-schedule-2027` from `c547226`.
+Uncommitted; nothing pushed, merged or deployed.
+
+Findings first: Sam's Dropbox file is byte-identical to the Oct 30 Schedule already archived in outer
+`assets/originals/schedule-2027/`, which Match Summary built from. Both owner fields already existed:
+`matches.address` and the one YouTube link `matches.replay_video_url`. So there is **no migration**
+and no new column; the YouTube field was reused, not duplicated.
+
+What changed:
+
+- **Directions:** `lib/google-maps-directions.ts` builds Google's documented directions link
+  (`https://www.google.com/maps/dir/?api=1&destination=<encoded address>`). It replaces the old
+  `maps.google.com/?q=` search link on the cinematic Schedule. It opens in a new tab. A blank address
+  shows no Directions link.
+- **Watch on YouTube:** unchanged behavior, now covered by tests: Sam's logo links to the owner's
+  link in a new tab, before and after kickoff. Only HTTPS YouTube video links are accepted (existing
+  rule in the editor, the admin route and the database). Blank keeps the approved grey "Replay /
+  Stream coming soon" text, not clickable.
+- **Schedule editor:** "Street address" is now "Address for directions", with a hint that it powers
+  the Directions link (`aria-describedby`).
+- **Look (`components/cinematic/schedule.css`, appended block):** the NEXT tag sits beside the date
+  from 1201px up (under it on tablets); the opponent name sits on the row's middle line with the crest
+  and the stadium line just below it; Directions uses the stadium line's grey.
+- **One line (Christian's follow-up):** the stadium name and Directions always share one line. A long
+  name is shortened with "…" (full name on hover). Below 1440px the stadium line starts under the
+  crest, which gives it room.
+- **Dummy link (Christian asked):** `scripts/sample-rose-city-schedule-links-local.ts --apply` put
+  YouTube's public "Me at the zoo" clip on the latest played and the next local match;
+  `--remove` restores them exactly. **It is still applied** on the shared local rehearsal so
+  Christian can see the working logo.
+
+Tests (test-first, at the agreed seams): `tests/contracts/schedule-directions.test.ts` (link
+maker, Schedule render, editor label). `match-summary-pages.test.ts` reads the new venue `<span>`.
+
+Verification:
+
+- Contract, architecture and unit tests: 227 files, 1,867 tests pass. Database: 48 files, 432 tests pass (local rehearsal; this branch adds no migration).
+- `tsc --noEmit` passes; ESLint is clean on every touched file.
+- Headless Chromium on the worktree's server (`rose-city.localhost:3199`) at 1920, 1440, 1280, 1024,
+  920, 768, 390 and 320px: no horizontal overflow, and the stadium line and Directions on one line in
+  every row.
+- Browser pane: every Directions link is the Google directions link with `target=_blank`; clicking
+  Directions and the logo each tried to open a new tab to google.com / youtube.com (the pane blocks
+  tabs from automated clicks). No console errors.
+- Editor, signed in as the local seed owner: the new label and hint show; changing a match's address
+  and saving changed the public Directions link immediately. The address was then restored.
+
+Answered: Christian confirmed the "7:45PM EST" in Sam's file is a typo; the site keeps showing PT.
+
+Question for Sam: his "Watch on YouTube" image has "Watch on" in light grey; on the dark NEXT row his
+mockup shows it white. Sam's Dropbox (`RCFC Website icon's 2027/`) was searched on 2026-11-08: it
+holds only `RCFC YouTube website icon white 2027.png` and `... black 2027.png`, and both have grey
+"Watch on" (the site's `watch-on-youtube-*.png` are crops of them). No white-text version exists yet.
+- **Pin (Christian, after the Dropbox search):** Directions now uses Sam's green pin from the same
+  folder (`RCFC Green Location Pin website icon 2027.png`, identical to outer
+  `assets/originals/icons-2027/green-location-pin.png`), resized to 86x96 like the other icons as
+  `public/rose-city/icons/green-location-pin.png`. It replaces the pin drawn in code. Decorative
+  (`alt=""`), hidden if it fails to load. After the swap: contract, architecture and unit tests 227
+  files / 1,868 tests pass, `tsc` and ESLint pass, and the one-line check still holds at every width.
+
+Follow-ups, not done: the other site designs (`FixtureRow`, `AcademyFixtureRow`,
+`ClubhouseSchedulePage`) still use the old `maps.google.com/?q=` search link.
+
 ## 2026-11-08 — RC2027-TICKET-PAGES implemented locally (uncommitted)
 
 Sam's last two Rose City 2027 pages, Season Ticket Membership and Know Before You Go, are built in
