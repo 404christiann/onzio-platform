@@ -286,9 +286,14 @@ describe("reimagined home jobs and More rows", () => {
     expect(ADMIN_MORE_ROWS.map((row) => [row.label, row.routeId])).toEqual([
       ["Team roster", "roster"],
       ["This season", "seasons"],
+      ["Games", "schedule"],
+      ["Player numbers", "match-stats"],
       ["League table", "standings"],
       ["Programs", "programs"],
       ["Tryouts", "tryouts"],
+      ["Homepage", "homepage"],
+      ["About page", "about"],
+      ["Contact page", "contact"],
       ["Sponsors", "sponsors"],
       ["Shop", "shop"],
       ["Your club", "branding"],
@@ -300,9 +305,12 @@ describe("reimagined home jobs and More rows", () => {
     expect(getVisibleAdminMoreRows(REIMAGINED).map((row) => row.href)).toEqual([
       "/admin/roster",
       "/admin/seasons",
+      "/admin/stats",
       "/admin/standings",
       "/admin/programs",
       "/admin/tryouts",
+      "/admin/about",
+      "/admin/contact",
       "/admin/sponsors",
       "/admin/shop",
       "/admin/branding",
@@ -333,10 +341,54 @@ describe("reimagined home jobs and More rows", () => {
     expect(rowIds({ ...REIMAGINED, hasLiveSignUps: undefined })).toContain("sign-up-forms");
   });
 
-  it("hides the jobs that change the website while content changes are paused", () => {
+  it("hides the jobs that change the website while content changes are paused, and keeps their pages in More", () => {
     const paused = { ...REIMAGINED, canMutateContent: false };
     expect(jobIds(paused)).toEqual(["see-registrations"]);
-    expect(rowIds(paused)).toEqual(rowIds(REIMAGINED));
+    expect(rowIds(REIMAGINED)).not.toContain("games");
+    expect(rowIds(REIMAGINED)).not.toContain("homepage");
+    expect(rowIds(paused)).toEqual([
+      "team-roster",
+      "this-season",
+      "games",
+      "player-numbers",
+      "league-table",
+      "programs",
+      "tryouts",
+      "homepage",
+      "about-page",
+      "contact-page",
+      "sponsors",
+      "shop",
+      "your-club",
+      "how-the-team-is-doing",
+      "payments-and-plan",
+      "who-can-sign-in",
+    ]);
+    expect(getVisibleAdminMoreRows(paused).filter((row) => row.id === "games" || row.id === "homepage")).toEqual([
+      { id: "games", label: "Games", href: "/admin/schedule", iconKey: "schedule" },
+      { id: "homepage", label: "Homepage", href: "/admin/homepage", iconKey: "homepage" },
+    ]);
+  });
+
+  it("reaches every page the classic sidebar shows, whatever the club's state", () => {
+    const states: AdminRouteAccessContext[] = [
+      REIMAGINED,
+      { ...REIMAGINED, canMutateContent: false },
+      { ...REIMAGINED, hasLiveSignUps: false },
+      { ...REIMAGINED, role: "admin", isBillingAuthorized: false },
+      { ...REIMAGINED, presentationTemplateKey: "clubhouse@1" },
+    ];
+    for (const context of states) {
+      const fromHome = new Set([
+        ...getVisibleAdminHomeJobs(context).map((job) => job.href),
+        ...getVisibleAdminMoreRows(context).map((row) => row.href),
+        "/admin",
+      ]);
+      const missing = getVisibleAdminRoutes(context)
+        .map((route) => route.href)
+        .filter((href) => !fromHome.has(href));
+      expect(missing).toEqual([]);
+    }
   });
 
   it("hides owner-only rows from helpers and Payments without billing access", () => {
@@ -348,13 +400,14 @@ describe("reimagined home jobs and More rows", () => {
     expect(rowIds({ ...REIMAGINED, isBillingAuthorized: false })).toContain("who-can-sign-in");
   });
 
-  it("follows codeSiteAdminFor: Programs and Tryouts rows only where the website has those pages", () => {
-    expect(rowIds(REIMAGINED)).toEqual(expect.arrayContaining(["programs", "tryouts"]));
+  it("follows codeSiteAdminFor: Programs, Tryouts and Contact page rows only where the website has those pages", () => {
+    expect(rowIds(REIMAGINED)).toEqual(expect.arrayContaining(["programs", "tryouts", "contact-page"]));
     for (const presentationTemplateKey of ["clubhouse@1", null, "future-template@1"] as const) {
       const ids = rowIds({ ...REIMAGINED, presentationTemplateKey });
       expect(ids).not.toContain("programs");
       expect(ids).not.toContain("tryouts");
-      expect(ids).toContain("team-roster");
+      expect(ids).not.toContain("contact-page");
+      expect(ids).toEqual(expect.arrayContaining(["team-roster", "about-page", "player-numbers"]));
     }
   });
 
@@ -368,8 +421,11 @@ describe("reimagined home jobs and More rows", () => {
     expect(getReimaginedPageTitle("/admin/branding")).toBe("Your club");
     expect(getReimaginedPageTitle("/admin/members")).toBe("Who can sign in");
     expect(getReimaginedPageTitle("/admin/registrations")).toBe("Sign-up forms");
-    expect(getReimaginedPageTitle("/admin/schedule")).toBe("Schedule");
-    expect(getReimaginedPageTitle("/admin/stats")).toBe("Stats");
+    expect(getReimaginedPageTitle("/admin/schedule")).toBe("Games");
+    expect(getReimaginedPageTitle("/admin/stats")).toBe("Player numbers");
+    expect(getReimaginedPageTitle("/admin/homepage")).toBe("Homepage");
+    expect(getReimaginedPageTitle("/admin/about")).toBe("About page");
+    expect(getReimaginedPageTitle("/admin/contact")).toBe("Contact page");
     expect(getReimaginedPageTitle("/admin")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/roster-preview")).toBe("Club admin");
     expect(getReimaginedPageTitle("/admin/nowhere")).toBe("Club admin");
