@@ -1,3 +1,4 @@
+import type { AdminFlags, AdminPortal } from "@/lib/admin-portal";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 export type AdminRole = "owner" | "admin";
@@ -12,6 +13,19 @@ export type AdminRouteAccessContext = Readonly<{
    * the admin keeps Shop so owners can prepare kits under the Shop-off banner.
    */
   storeEnabled: boolean;
+  /**
+   * ADMIN-RE-05: which admin the club sees (onzio.clubs.admin_portal, read
+   * fail-safe by lib/admin-portal.ts). Missing means classic: the home jobs and
+   * More rows exist only in the reimagined admin.
+   */
+  adminPortal?: AdminPortal;
+  /** Per-slice switches (onzio.clubs.admin_flags) for later ADMIN-RE slices. */
+  adminFlags?: AdminFlags;
+  /**
+   * A non-archived sign-up form that is open or already has sign-ups. Decides
+   * whether "See registrations" is a big job or a quiet "Sign-up forms" row.
+   */
+  hasLiveSignUps?: boolean;
 }>;
 
 export type AdminRouteGroupId =
@@ -494,4 +508,189 @@ export function getAdminGroupForPathname(
     pathnameMatchesRoute(pathname, candidate.href),
   );
   return route?.groupId ?? null;
+}
+
+// ADMIN-RE-05: the reimagined home. Its big jobs and its More list are built
+// from this manifest (decision 0005), so a club sees only the sections its
+// website has, and owner-only or billing rows follow the same route checks as
+// the classic sidebar. Labels are the glossary's words. Until each job's own
+// page ships, the tiles and rows open the existing pages.
+
+export type AdminHomeJobId =
+  | "enter-score"
+  | "add-game"
+  | "see-registrations"
+  | "edit-website";
+
+/** Which count the home puts under a tile ("12 games need a score", "3 new"). */
+export type AdminHomeHintKey = "games-needing-score" | "new-sign-ups";
+
+/** Each job keeps its own color, so owners find it by color and shape. */
+export type AdminHomeJobHue = "amber" | "blue" | "green" | "coral";
+
+type AdminHomeJobDefinition = Readonly<{
+  id: AdminHomeJobId;
+  label: string;
+  routeId: AdminRouteId;
+  hue: AdminHomeJobHue;
+  hint?: AdminHomeHintKey;
+  /** Hidden while content changes are paused, like the classic quick actions. */
+  needsContentMutation?: true;
+  /** A big job only while the club has a live sign-up form. */
+  needsLiveSignUps?: true;
+}>;
+
+export type AdminHomeJob = Readonly<{
+  id: AdminHomeJobId;
+  label: string;
+  href: `/admin${string}`;
+  hue: AdminHomeJobHue;
+  hint?: AdminHomeHintKey;
+}>;
+
+export const ADMIN_HOME_JOBS = [
+  {
+    id: "enter-score",
+    label: "Enter a score",
+    routeId: "schedule",
+    hue: "amber",
+    hint: "games-needing-score",
+    needsContentMutation: true,
+  },
+  {
+    id: "add-game",
+    label: "Add a game",
+    routeId: "schedule",
+    hue: "blue",
+    needsContentMutation: true,
+  },
+  {
+    id: "see-registrations",
+    label: "See registrations",
+    routeId: "registrations",
+    hue: "green",
+    hint: "new-sign-ups",
+    needsLiveSignUps: true,
+  },
+  {
+    id: "edit-website",
+    label: "Edit my website",
+    routeId: "homepage",
+    hue: "coral",
+    needsContentMutation: true,
+  },
+] as const satisfies readonly AdminHomeJobDefinition[];
+
+export type AdminMoreRowId =
+  | "team-roster"
+  | "this-season"
+  | "league-table"
+  | "programs"
+  | "tryouts"
+  | "sponsors"
+  | "shop"
+  | "your-club"
+  | "how-the-team-is-doing"
+  | "payments-and-plan"
+  | "who-can-sign-in"
+  | "sign-up-forms";
+
+type AdminMoreRowDefinition = Readonly<{
+  id: AdminMoreRowId;
+  label: string;
+  routeId: AdminRouteId;
+  /** The quiet stand-in for "See registrations" when that is not a big job. */
+  onlyWithoutLiveSignUps?: true;
+}>;
+
+export type AdminMoreRow = Readonly<{
+  id: AdminMoreRowId;
+  label: string;
+  href: `/admin${string}`;
+  iconKey: AdminRouteIconKey;
+}>;
+
+// Programs and Tryouts stay two rows while they are two pages; a club whose
+// website has only one of them sees only that row (decision 0005).
+export const ADMIN_MORE_ROWS = [
+  { id: "team-roster", label: "Team roster", routeId: "roster" },
+  { id: "this-season", label: "This season", routeId: "seasons" },
+  { id: "league-table", label: "League table", routeId: "standings" },
+  { id: "programs", label: "Programs", routeId: "programs" },
+  { id: "tryouts", label: "Tryouts", routeId: "tryouts" },
+  { id: "sponsors", label: "Sponsors", routeId: "sponsors" },
+  { id: "shop", label: "Shop", routeId: "shop" },
+  { id: "your-club", label: "Your club", routeId: "branding" },
+  { id: "how-the-team-is-doing", label: "How the team is doing", routeId: "analytics" },
+  { id: "payments-and-plan", label: "Payments and plan", routeId: "payments" },
+  { id: "who-can-sign-in", label: "Who can sign in", routeId: "team-access" },
+  {
+    id: "sign-up-forms",
+    label: "Sign-up forms",
+    routeId: "registrations",
+    onlyWithoutLiveSignUps: true,
+  },
+] as const satisfies readonly AdminMoreRowDefinition[];
+
+function isReimagined(context: AdminRouteAccessContext): boolean {
+  return context.adminPortal === "reimagined";
+}
+
+function visibleRouteMap(context: AdminRouteAccessContext) {
+  return new Map(
+    ADMIN_ROUTE_MANIFEST.filter((route) => isAdminRouteVisible(route, context)).map(
+      (route) => [route.id, route as AdminRouteDefinition],
+    ),
+  );
+}
+
+export function getVisibleAdminHomeJobs(
+  context: AdminRouteAccessContext,
+): readonly AdminHomeJob[] {
+  if (!isReimagined(context)) return [];
+  const routes = visibleRouteMap(context);
+  return ADMIN_HOME_JOBS.flatMap((job: AdminHomeJobDefinition) => {
+    const route = routes.get(job.routeId);
+    if (!route) return [];
+    if (job.needsContentMutation && !context.canMutateContent) return [];
+    if (job.needsLiveSignUps && !context.hasLiveSignUps) return [];
+    return [
+      {
+        id: job.id,
+        label: job.label,
+        href: route.href,
+        hue: job.hue,
+        ...(job.hint ? { hint: job.hint } : {}),
+      },
+    ];
+  });
+}
+
+export function getVisibleAdminMoreRows(
+  context: AdminRouteAccessContext,
+): readonly AdminMoreRow[] {
+  if (!isReimagined(context)) return [];
+  const routes = visibleRouteMap(context);
+  return ADMIN_MORE_ROWS.flatMap((row: AdminMoreRowDefinition) => {
+    const route = routes.get(row.routeId);
+    if (!route) return [];
+    if (row.onlyWithoutLiveSignUps && context.hasLiveSignUps) return [];
+    return [{ id: row.id, label: row.label, href: route.href, iconKey: route.iconKey }];
+  });
+}
+
+/**
+ * The reimagined top bar's title for a page: the glossary name from More when
+ * the page is one of its rows ("Team roster" for /admin/roster), otherwise the
+ * page's own name, otherwise "Club admin".
+ */
+export function getReimaginedPageTitle(
+  pathname: string,
+  context: AdminRouteAccessContext,
+): string {
+  const routes = getVisibleAdminRoutes(context);
+  const route = routes.find((candidate) => pathnameMatchesRoute(pathname, candidate.href));
+  if (!route) return "Club admin";
+  const row = ADMIN_MORE_ROWS.find((candidate) => candidate.routeId === route.id);
+  return row?.label ?? route.label;
 }
