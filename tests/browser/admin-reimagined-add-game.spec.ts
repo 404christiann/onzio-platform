@@ -98,6 +98,9 @@ for (const width of [390, 1440]) {
         await expect(form.getByRole("radio", { name: "Away" })).toHaveAttribute("aria-checked", "false");
         await expect(form.getByRole("button", { name: /^Date, / })).toHaveText(formatClubDate(saturday, "weekday-short")!);
         await expect(form.getByLabel("Time")).toHaveValue("10:00");
+        // The time box has room for "10:00 AM"; nothing is cut off.
+        const time = await form.getByLabel("Time").evaluate((input) => input.scrollWidth <= input.clientWidth);
+        expect(time).toBe(true);
         await expect(form.getByText("League game?")).toHaveCount(0);
         await page.screenshot({ path: `${SHOTS}/add-game-empty-${width}.png`, fullPage: true });
 

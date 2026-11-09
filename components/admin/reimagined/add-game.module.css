@@ -300,8 +300,9 @@
   outline-offset: 1px;
 }
 
+/* Room for "10:00 AM" beside the browser's own clock button */
 .when {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 9.5rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 11.5rem);
   gap: 8px;
 }
 
