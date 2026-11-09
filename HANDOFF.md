@@ -1,7 +1,7 @@
 ## 2026-11-08 - ADMIN-RE-07 Add a game
 
 - **Status:** `in_progress` on branch `claude/admin-re-07-add-game-4e0b24`
-  from `main` `902f385`, with the PR open. No migration. Nobody sees it until
+  from `main` `52fc3c9`, with the PR open. No migration. Nobody sees it until
   a club is switched to `reimagined` (RE-10).
 - **What it adds:**
   - `/admin/add-game` for reimagined clubs (classic clubs are redirected to
@@ -17,7 +17,7 @@
   - Manifest route `add-game` with the new `reimaginedOnly` flag, and the Add
     a game tile repointed to it.
   - Clock and map pin icons.
-- **Verification:** new contract test (27), club-time (+7), save-status (4),
+- **Verification:** new contract test (27), club-time (+7),
   icon test (+2), manifest test updated on purpose, and a new browser spec at
   390 and 1440 with screenshots. Full suites ran by hand on the PR head
   outside the main checkout; results are in the PR body.

@@ -4,7 +4,7 @@
 
 **Agent/package:** Claude Code, `ADMIN-RE-07`, started by the orchestration
 session alongside RE-06, RE-08 and RE-09. Branch
-`claude/admin-re-07-add-game-4e0b24` from `main` `902f385`. **Status:**
+`claude/admin-re-07-add-game-4e0b24` from `main` `52fc3c9`. **Status:**
 `in_progress`. Built and tested locally, PR open for the review bot. No
 migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 `GATE-FLIP-RC`).
@@ -29,7 +29,7 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
   - With no season at all, the page says to start one first.
   - "Add to schedule" → "Adding…" → "Added · on your website", or "Added ·
     your website is paused" when the site is held or not public (decision 2,
-    new `lib/save-status.ts`).
+    `lib/save-status.ts`, identical to the copy RE-09 merged first).
   - The game drops into "Coming up" (the next six, plus the new game if it is
     further out). The empty state is "No games yet".
   - Under the list, "Change or remove a game" opens the old Games page.
@@ -53,8 +53,8 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 **Files changed:**
 - new `app/admin/(protected)/add-game/page.tsx`,
   `components/admin/reimagined/AddGame.tsx`, `add-game.module.css`
-- new `lib/admin-add-game-data.ts`, `lib/match-text-limits.ts`,
-  `lib/save-status.ts`
+- new `lib/admin-add-game-data.ts`, `lib/match-text-limits.ts`
+  (`lib/save-status.ts` and its test came from RE-09 on `main`)
 - `lib/admin-data-contract.ts`, `lib/admin-route-manifest.ts`,
   `lib/club-time.ts` (`nextClubSaturday`, `DEFAULT_KICKOFF_TIME`, the
   `weekday-short` date style)
@@ -62,7 +62,6 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
   `assets/date-and-time/clock.svg`, `assets/navigation/map-pin.svg`
 - tests:
   - new `tests/contracts/admin-add-game.test.ts`,
-    `lib/__tests__/save-status.test.ts`,
     `tests/browser/admin-reimagined-add-game.spec.ts`
   - extended `lib/__tests__/club-time.test.ts` and
     `tests/contracts/admin-icon-refresh.test.ts`
@@ -86,7 +85,6 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
 - `club-time` (7 new): next Saturday midweek, on a Saturday, on a Sunday,
   across month and year, a Friday night in Los Angeles that is already
   Saturday in Chicago, an invalid zone, and the short form.
-- `save-status` (4): live, grace, preview, suspended, held, and both verbs.
 - Icons: each new icon draws exactly its asset and is in the approved
   selection.
 - Browser (`playwright.admin-reimagined.config.ts`, local Alpha, 390 and
@@ -115,7 +113,6 @@ migration. Nobody sees it yet: both clubs are still `classic` (RE-10 is
   - RE-06 should reuse this `matchesMutation` (scores 0-99 are already in
     it).
   - RE-08's icons go after Drawing45.
-  - `lib/save-status.ts` matches the agreed shape exactly.
 - A game added here has no sponsor. The old Add form copies the last game's
   sponsor on clubhouse designs. Left as is: the plan's form has no sponsor
   question.
