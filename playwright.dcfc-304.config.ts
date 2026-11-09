@@ -7,6 +7,7 @@ if (!baseURL) {
 }
 
 export default defineConfig({
+  globalSetup: "./tests/browser/local-test-data-cleanup.global-setup.ts",
   testDir: "./tests/browser",
   testMatch: "diverse-city-admin-public.spec.ts",
   fullyParallel: false,

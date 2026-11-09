@@ -9,6 +9,7 @@ if (!process.env.PAGE_EDITOR_STORAGE_STATE) {
 }
 
 export default defineConfig({
+  globalSetup: "./tests/browser/local-test-data-cleanup.global-setup.ts",
   outputDir: "test-results/contact-editor",
   testDir: "./tests/browser",
   testMatch: "public-page-contact-review.spec.ts",

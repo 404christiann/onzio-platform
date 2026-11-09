@@ -1,5 +1,84 @@
 # Diverse City FC Status
 
+## 2026-11-08 - Local tests leave nothing behind and the pilot proof test stops flaking
+
+**Agent/package:** Claude Code. No work-package ID: Christian asked for the
+remaining cleanup ("it should be clean, fast and very reliable"). Branch
+`agent/test-junk-final` from `main` `8a2fbd8`. **Status:** `in_progress`. It's
+built and tested locally, and the PR is open for the review bot. There is no
+migration and no app code change.
+
+**Completed work:**
+
+- **Cleanup widened.** `tests/helpers/local-test-data-cleanup.ts` (was
+  `tests/global-setup/local-audit-cleanup.ts`) now also removes what a run
+  added to Stripe events, email delivery events, Supabase auth log entries,
+  and presentation documents and publications (their immutability triggers
+  are switched off for one rolled-back-on-error transaction, and nothing still
+  published or referenced is removed). Only rows created after the run started.
+- **Browser suites.** `tests/browser/local-test-data-cleanup.global-setup.ts`
+  runs the same cleanup for the local Playwright configs (`admin-guided`,
+  `admin-loading`, `contact-editor`, `dcfc-304`, `dcfc-403`, `homepage`,
+  `plat-101`, `public-page-editors`). It skips unless the base URL is loopback
+  or `*.localhost`. `roster` and `site-media` can target a hosted app and are
+  not wired. I did NOT run the real browser suites (they need a production
+  build, auth state and a loopback-only env file). Proof: all eight configs
+  still list their tests, and a throwaway spec that added an audit row and a
+  Stripe event through a wired config had both removed.
+- **Stored uploads.** `program-media.test.ts` now removes the file it uploads.
+- **Temp folders.** `prove-pilot-site-coordination.ts` and
+  `prove-code-site-parity.ts` discard their journal folder once verified-clean,
+  and the full-site coordination test discards it even when the test fails.
+- **Flaky pilot test, root cause** (found by a delegated agent, reviewed):
+  `scripts/pilot-proof-servers.ts` `signalGroup` treated macOS's EPERM for a
+  zombie-only process group as fatal, so one failed stop skipped stopping the
+  siblings and releasing the locks; cleanup now settles every stop first. A
+  fixture also wrote `output/pid` non-atomically, so an empty file read as pid 0
+  (the test's own group) and looked like a live orphan. Two regression tests
+  added. Side by side under load: 14 of 20 runs failed before, 0 of 20 after.
+- **Time limits only** in `tests/architecture/pilot-proof-servers.test.ts`:
+  per-test limits to 60 or 90s, fixture build to 45s, child-process waits to
+  20s. No assertion changed.
+- **One-off data clearing (local database).** Backed up first to
+  `~/Downloads/onzio-test-data-backup-2026-11-08.sql`, then deleted 78,265 audit
+  rows for Alpha, Bravo and Charlie, 2,095 Stripe events, 90 email delivery
+  events and 3,557 auth log entries.
+
+**Files changed:** the helper and its two entry points, `vitest.config.ts`, the
+eight Playwright configs, the two prove scripts, `program-media` and
+`site-coordination-full-site` tests, `scripts/pilot-proof-servers.ts`,
+`pilot-proof-servers.test.ts`, `tests/README.md`, this file and `HANDOFF.md`.
+
+**Verification (local database, under the lock):**
+
+- `test:db` twice on the final tree: 49/49 files, 1,004/1,004 tests, 181s and
+  153s (the machine was busy). The row count of every table in the `onzio`,
+  `onzio_private`, `public`, `storage` and `auth` schemas is identical before and
+  after each run. Temp proof folders: 0.
+- `pilot-proof-servers.test.ts` twice under 8 busy loops (load up to 30): 50/50
+  both times.
+- Type-check and lint clean. Architecture: 15 of 16 files passed in the
+  earlier full run; the 16th (`pilot-proof-servers`) failed twice on its old
+  time limits and then passed under the stress runs above.
+
+**Blockers or unresolved decisions:**
+
+- The 91 uploaded images under `<Alpha>/programs/` in local storage that had no
+  `media_assets` row (junk from earlier `program-media` runs) were removed through
+  the storage API with Christian's OK, after a dry run listed exactly those 91.
+  Nothing else in storage was touched. Three `media_assets` rows from the
+  2026-11-01 seed (ids `44444444-...`) have no file; they were already like that.
+- Real Playwright suites not run (see above).
+- Each `pilot-proof-servers` case still builds three fixtures with real child
+  processes, so that file takes 200 to 500 seconds. Building the fixtures once
+  per file would make it far faster. Not done (bigger change to those tests).
+- `scripts/pilot-reconstruction-next.ts` has the same EPERM check as the fixed
+  `signalGroup`, but it is guarded by a `ps` check and was not seen failing.
+- `vercel.json` still lists the `docs/codex-loop-guide` branch. Harmless.
+
+**Exact next step:** the bot reviews and merges the PR. Then decide whether to
+speed up the pilot fixtures.
+
 ## 2026-11-08 - ADMIN-RE-04: people's names, and members route hardening
 
 **Agent/package:** Claude Code, `ADMIN-RE-04`, started by the orchestration

@@ -24,11 +24,19 @@ node --test scripts/provision-worktree-env.test.mjs
 
 ## Leftover local test data
 
-A `test:db` run removes the audit rows it adds for the shared test clubs when it ends
-(`tests/global-setup/local-audit-cleanup.ts`), so the local database no longer grows from it.
-Older leftovers stay. They no longer slow the suites, but you can clear them from the local
-database with `delete from onzio.audit_events where club_id in (<Alpha, Bravo, Charlie ids from
-tests/fixtures/entities.ts>)`. Never run that against a hosted database.
+A local `test:db` run and the local browser suites remove what they add to the shared database when
+they end (`tests/helpers/local-test-data-cleanup.ts`, wired in as a vitest `globalSetup` and as a
+Playwright `globalSetup` in the configs that run against `*.localhost`): audit rows for the shared
+test clubs, Stripe and email delivery events, Supabase auth log entries, and presentation documents
+and publications. Only rows created after the run started are removed. The `roster` and `site-media`
+configs can point at a hosted app, so they are not wired in. Stored uploads are not cleaned
+automatically: a test that uploads a file must remove it itself (`program-media.test.ts` does).
+
+`tests/architecture/database-test-audit-snapshots.test.ts` rejects database test snapshots that
+aggregate every audit row. Use `count(*)||':'||max(id)`.
+
+To clear older leftovers by hand, run against the local database only (never a hosted one):
+`delete from onzio.audit_events where club_id in (<Alpha, Bravo, Charlie ids from tests/fixtures/entities.ts>)`.
 
 ## Configure local database tests
 
