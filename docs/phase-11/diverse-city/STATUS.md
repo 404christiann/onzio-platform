@@ -1,5 +1,52 @@
 # Diverse City FC Status
 
+## 2026-11-09 - ADMIN-RE-10a: number boxes keep no leading zero, stepper focus ring
+
+**Agent/package:** Claude Code, `ADMIN-RE-10a`, the first fix from
+Christian's Rose City walk-through. Branch
+`claude/admin-re-10a-number-inputs` from `main` `2c445bb`. **Status:**
+`in_progress`, PR open for the review bot. No migration.
+
+**Finding (Christian, screenshot):** Match stats, Minutes played: typing 30
+after the starting 0 showed "030", and the stepper's focus showed as two blue
+bars beside the number.
+
+**Cause:** React compares a number input's text with a numeric `value`
+loosely (`"030" == 30`), so it never rewrites the text. `.stepper` clips
+overflow, so the focus outline lost its top and bottom.
+
+**Completed work:**
+
+- Every whole-number admin input passes its value as a string:
+  `components/ui/number-stepper.tsx` (the new admin's Enter a score),
+  `components/admin/StatInput.tsx`, `components/admin/stats/StatsWorkspace.tsx`
+  (match and season stats), the standings table, roster stats and player
+  number and age, and the classic Games score boxes. The About logo icon
+  scale is decimal and left alone (a string value would stop "1." mid-typing).
+- `stats-workspace.module.css`: typing focus rings the whole stepper; button
+  focus is drawn inside it.
+
+**Files changed:** the seven files above; new
+`tests/contracts/admin-number-inputs.test.ts`;
+`tests/browser/admin-guided-stats-workspace.spec.ts` and
+`tests/browser/admin-reimagined-score.spec.ts` (type after the 0); this file,
+`HANDOFF.md`.
+
+**Verification** (clean worktree outside the main checkout, under
+`scripts/with-local-db-lock.sh`):
+
+- Red first. The contract test failed 8/8 on `main`'s code. With `main`'s app
+  code and the new browser checks, the score check received "02" and the
+  stats check "030".
+- On the fix: contract 8/8; `tsc` and lint clean; whole suite 213 files,
+  2,687 passed, 1 skipped; architecture 426 passed, 1 skipped; build passes;
+  `test:db` 1,020/1,020 before and after the browser runs; browser
+  `admin-reimagined` 39/39, `admin-guided` 63/63, `admin-loading` 13/13.
+
+**Exact next step:** the bot reviews and merges. Christian keeps walking
+Enter a score and Add a game on Rose City; each finding is another
+`ADMIN-RE-10x` PR.
+
 ## 2026-11-09 - ADMIN-RE-10: first-slice acceptance, release record, Rose City switch-on
 
 **Agent/package:** Claude Code, `ADMIN-RE-10`. Branch
