@@ -1,3 +1,23 @@
+## 2026-11-09 - ADMIN-RE-10 Rose City on the new admin
+
+- **Status:** `in_progress`. Rose City was switched to `reimagined` in
+  production at 21:23Z on Christian's go, and read back. Christian's
+  walk-through is next. Diverse City stays `classic`.
+- **Production:** Vercel `dpl_9R3GwQMjjZQ3wB2T5r6imE1LmHzP` from `main`
+  `c1c3c9c`; migrations 60/60 matched.
+- **Suites on `main`:** types, lint, build, architecture, database 1,020/1,020 and the
+  new admin's browser suite 39/39 pass. `admin-guided` 63/63 after updating
+  one out-of-date test (RE-18 Undo, RE-02 time zone). `dcfc-403`, `dcfc-304`
+  and `plat-101` failures are older than RE (same on `9890eee`).
+- **Undo:** `npx tsx scripts/set-club-admin-portal.ts rose-city
+  --portal=classic --execute --confirm-project=ioalthwsdrlzrubomrow`, no
+  deploy.
+- **Record:** `docs/admin-portal-production-release.md` (commands and
+  output), `STATUS.md`.
+- **Exact next step:** Christian walks `https://rosecityfutbolclub.com/admin`
+  on phone and laptop. Findings become `ADMIN-RE-10x` PRs.
+  `GATE-FLIP-DC` waits for his go and for telling the Diverse City owner.
+
 ## 2026-11-09 - ADMIN-RE-07c database checks on game text and scores
 
 - **Status:** `released` 2026-11-09. Migration
