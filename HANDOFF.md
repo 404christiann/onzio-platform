@@ -1,6 +1,20 @@
+## 2026-11-09 - ADMIN-RE-07c database checks on game text and scores
+
+- **Status:** `in_progress` on branch `claude/admin-re-07c-matches-checks`
+  from `main` `a85ce6b`, PR open. **Migration**
+  `20261109120000_matches_text_and_score_checks.sql`, so `GATE-MIGRATE`.
+  It tightens constraints, so the bot hands it to Christian first.
+- **Why it's safe:** Christian's read-only production query (2026-11-09)
+  found 0 of 8 games over any limit and no score over 99.
+- **What it adds:** CHECKs on `onzio.matches` for the seven text limits and
+  scores ≤ 99; the Zod limits now hold on edits too, and the classic Games
+  edit form caps its inputs.
+- **Exact next step:** Christian's go, then the bot backs up, dry-runs,
+  applies and merges. RE-10 after that, on Christian's go.
+
 ## 2026-11-09 - ADMIN-RE-07b Sponsor? on Add a game, opponent reuse
 
-- **Status:** `in_progress` on branch `claude/admin-re-07b-sponsor-6430a7`
+- **Status:** merged as #109. Was `in_progress` on branch `claude/admin-re-07b-sponsor-6430a7`
   from `main` `0008281`, PR open. No migration. Nobody sees it until RE-10.
 - **What it adds:** on `/admin/add-game`, a "Sponsor?" question where the
   club's website shows match sponsors (same rule as the classic Games form:
@@ -11,9 +25,10 @@
   and logo. The Sponsors page keeps a logo file a game still uses.
 - **Verification:** contract and browser tests; full suites on the PR head,
   in the PR body. Details in `STATUS.md`.
-- **Decision 7 length check:** the Supabase connectors were refused; the SQL
-  is with Christian. The CHECK migration waits for the counts.
-- **Exact next step:** the bot merges RE-07b; Christian runs the length query.
+- **Decision 7 length check:** the Supabase connectors were refused, so
+  Christian ran the SQL himself on 2026-11-09: 0 of 8 games over any limit.
+- **Done:** merged as #109 (`a85ce6b`). The CHECK migration is ADMIN-RE-07c
+  (entry above).
 
 ## 2026-11-08 - ADMIN-RE-07 Add a game
 

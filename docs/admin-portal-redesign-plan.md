@@ -193,7 +193,10 @@ The new admin gets built in ten small steps before anyone sees it, then switched
 5. **The public schedule and Next match switch to club time in RE-03.**
 6. **No BoardUI.**
 7. **Text limits:** Zod first, then database checks after a gated, read-only
-   length query.
+   length query. As built (2026-11-09): the query found no
+   `matches` row over a limit (8 rows); ADMIN-RE-07c adds the CHECKs and holds
+   the Zod limits on edits too. `league_standings.team_name` and
+   `site_sponsor_logos.name` were not checked; they belong to RE-11b and RE-15.
 8. **Plan approved.** It lives in `docs/admin-portal-redesign-plan.md` in the
    platform repo.
 9. **"Download list":** one form at a time, picked from a list.

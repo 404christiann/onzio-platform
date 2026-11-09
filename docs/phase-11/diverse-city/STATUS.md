@@ -1,5 +1,58 @@
 # Diverse City FC Status
 
+## 2026-11-09 - ADMIN-RE-07c: database checks on game text and scores (decision 7)
+
+**Agent/package:** Claude Code, `ADMIN-RE-07c` (step 3 of the RE-07
+follow-ups Christian approved on 2026-11-09). Branch
+`claude/admin-re-07c-matches-checks` from `main` `a85ce6b`. **Status:**
+`in_progress`, PR open. **Has a migration**, so `GATE-MIGRATE` applies.
+It tightens constraints on a populated table, which
+`docs/agents/review-bot-supabase.md` hands to a person: expect the bot to
+label it `blocked` for Christian's go.
+
+**Decision 7 length check:** Christian ran the read-only query in the
+production SQL editor on 2026-11-09 (the Supabase connectors had refused it).
+8 `onzio.matches` rows; **0 over any limit**, 0 blank opponents or venues,
+0 scores over 99. Longest: opponent 16, short name none, venue 25,
+competition 29, address 42, city 6, state 2; top score 5.
+
+**Completed work:**
+
+- Migration `20261109120000_matches_text_and_score_checks.sql`: nine CHECKs
+  on `onzio.matches`: opponent ≤ 80, short name ≤ 20, venue ≤ 120,
+  competition ≤ 80, address ≤ 120, city ≤ 80, state ≤ 40 (characters), and
+  each score ≤ 99 (the existing ≥ 0 checks stay). Null passes. No grant,
+  policy, default or row change. Non-blank opponent/venue checks were left
+  out: Zod already requires them, and `venue` defaults to `''`.
+- `matchesMutation` (`lib/admin-data-contract.ts`) holds the text limits on
+  every write, not only inserts (`newMatchLimits` removed). Length is checked
+  before trimming, as the database measures it.
+- Classic Games page: the edit form now caps its inputs and explains the
+  limits too (the `isNew` switch is gone).
+- `lib/club-context.ts` untouched.
+
+**Files changed:** new migration; new
+`tests/database/matches-text-and-score-checks.test.ts`;
+`lib/admin-data-contract.ts`, `lib/match-text-limits.ts`,
+`app/admin/(protected)/schedule/page.tsx`; deliberately updated
+`tests/contracts/admin-add-game.test.ts` (edits are held to the limits now);
+`docs/admin-portal-redesign-plan.md` (decision 7 note); this file,
+`HANDOFF.md`.
+
+**Verification:** new database test (each limit at the edge and one over,
+in characters; scores 0, 99, null, 100 and -1). Contracts 1,726/1,726.
+Full suites (tsc, lint, vitest, build, `supabase migration up --local`,
+`db:types:check`, `test:db` and the admin-reimagined Playwright under
+`scripts/with-local-db-lock.sh`) ran on the PR head in a clean worktree
+outside the main checkout; results are in the PR body. The migration is
+applied to the shared local database.
+
+**Blockers:** Christian's go on the constraint tightening; then the bot runs
+`GATE-MIGRATE` (backup, dry run, apply) before merging.
+
+**Exact next step:** Christian approves; the bot applies and merges. Then
+RE-10 waits for Christian's go.
+
 ## 2026-11-09 - ADMIN-RE-07b: Sponsor? on Add a game, opponent reuse
 
 **Agent/package:** Claude Code, `ADMIN-RE-07b`, one of the RE-07 follow-ups

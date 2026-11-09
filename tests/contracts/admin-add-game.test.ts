@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { adminDataRequestSchema, matchesMutation, newMatchLimits } from "@/lib/admin-data-contract";
+import { adminDataRequestSchema, matchesMutation } from "@/lib/admin-data-contract";
 import { compareMatches, distinctVenues, RECENT_VENUE_LIMIT, toAddGameMatch } from "@/lib/admin-add-game-data";
 import { DEFAULT_KICKOFF_TIME } from "@/lib/club-time";
 import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";
 
-// ADMIN-RE-07: "Add a game". Pins the text limits (decision 7: Zod only), the
-// insert the form sends through /api/admin/data, the defaults, and where the
-// page may run.
+// ADMIN-RE-07: "Add a game". Pins the text limits (on every write since
+// ADMIN-RE-07c, decision 7), the insert the form sends through
+// /api/admin/data, the defaults, and where the page may run.
 
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 const page = source("app/admin/(protected)/add-game/page.tsx");
@@ -36,7 +36,7 @@ const update = (payload: Record<string, unknown>) =>
     filters: [{ kind: "eq", column: "id", value: SEASON }],
   }).success;
 
-describe("matches text limits for a new game (decision 7, Zod only)", () => {
+describe("matches text limits on every write (decision 7)", () => {
   it("are the numbers the plan names", () => {
     expect(MATCH_TEXT_LIMITS).toEqual({
       opponent: 80,
@@ -56,10 +56,16 @@ describe("matches text limits for a new game (decision 7, Zod only)", () => {
     expect(tooLong.error?.issues.map((issue) => issue.path.join("."))).toContain(`payload.${field}`);
   });
 
-  it.each(Object.entries(MATCH_TEXT_LIMITS))("still saves an existing game whose %s is longer than %i", (field, limit) => {
-    // Until decision 7's production length check, rows saved before the
-    // limits stay editable: the classic edit form resends every field.
-    expect(update({ [field]: text(limit + 40) })).toBe(true);
+  it.each(Object.entries(MATCH_TEXT_LIMITS))("edits a game with %s at %i characters and refuses one more", (field, limit) => {
+    // ADMIN-RE-07c: production had no longer rows (2026-11-09), so edits are
+    // held to the limits too, like the database CHECKs.
+    expect(update({ [field]: text(limit) })).toBe(true);
+    expect(update({ [field]: text(limit + 1) })).toBe(false);
+  });
+
+  it("measures the length before trimming, as the database does", () => {
+    expect(update({ opponent: `${text(80)} ` })).toBe(false);
+    expect(update({ venue: ` ${text(119)}` })).toBe(true);
   });
 
   it("needs an opponent and a venue with something in them", () => {
@@ -239,19 +245,19 @@ describe("classic Games page writes", () => {
     expect(insert({ ...CLASSIC_FIELDS, ...ASSET_IDS, rose_city_score: 100, opponent_score: 0 }).success).toBe(false);
   });
 
-  it("saves an edit of a game stored before the limits, every field resent", () => {
-    expect(update({ ...LEGACY_ROW, ...ASSET_IDS })).toBe(true);
-    expect(matchesMutation.safeParse(LEGACY_ROW).success).toBe(true);
-    expect(newMatchLimits.safeParse(LEGACY_ROW).success).toBe(false);
+  it("saves an edit with every field resent, and refuses one over the limits (ADMIN-RE-07c)", () => {
+    expect(update({ ...CLASSIC_FIELDS, ...ASSET_IDS, time: "18:00:00", rose_city_score: 4, opponent_score: 3 })).toBe(true);
+    expect(update({ ...LEGACY_ROW, ...ASSET_IDS })).toBe(false);
+    expect(matchesMutation.safeParse(LEGACY_ROW).success).toBe(false);
   });
 
-  it("caps its add form at the same limits and explains them before saving", () => {
+  it("caps its add and edit forms at the same limits and explains them before saving", () => {
     expect(classic).toContain('import { MATCH_TEXT_LIMITS } from "@/lib/match-text-limits";');
-    expect(classic).toContain("const validationError = validate(addForm, true);");
+    expect(classic).toContain("const validationError = validate(addForm);");
     expect(classic).toContain("const validationError = validate(editForm);");
-    expect(classic).toContain("isNew={!editingId}");
+    expect(classic).not.toMatch(/isNew|newMatchLimit/);
     for (const field of Object.keys(MATCH_TEXT_LIMITS)) {
-      expect(classic).toContain(`maxLength={newMatchLimit("${field}")}`);
+      expect(classic).toContain(`maxLength={MATCH_TEXT_LIMITS.${field}}`);
     }
     expect(classic).toContain("can be at most ${MATCH_TEXT_LIMITS[field]} characters.");
     expect(classic).toContain("Scores can be at most ${MAX_MATCH_SCORE}.");
