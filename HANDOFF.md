@@ -10,11 +10,12 @@
   after a stored save (cause not found, never reproduced in 300 direct
   probes); and a focus race when the editor focused the words box one frame
   after a click.
-- **What changed:** the editor focuses the clicked section's field and never
-  takes focus from a field already in use. The test clears the words before
-  and after, waits for the words box to settle, checks the stored row, allows
-  the save 20 s, and asks the public page again at most once (noted in the
-  report when it does).
+- **What changed:** the editor puts the cursor in the clicked section's first
+  field once that section is drawn, and never takes it from a field already in
+  use. The test clears the words before and after, waits for the words box
+  and the cursor to settle, checks the stored row, allows the save 20 s, and
+  requires the public page to show the words on its first render (no reload:
+  review-bot M1 on #131). The one stale public render is an open item.
 - **Verification:** 40 runs in a row green at 1440 (both portals) on the PR
   head; full suites in the PR body. Details in `STATUS.md`.
 - **Exact next step:** bot review and merge.

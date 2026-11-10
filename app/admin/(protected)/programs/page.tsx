@@ -441,6 +441,23 @@ export default function AdminProgramsPage() {
     setPageView("manage");
   }
 
+  // ADMIN-RE-12a: after a click on the page's heading or closing band, the
+  // words box takes the cursor once React has drawn the clicked section, in
+  // that section's first field, and never away from a field already in use.
+  // An effect (not a frame timer) so the field is certain to exist.
+  const [wordsFocus, setWordsFocus] = useState<{ section: PageCopySection; request: number } | null>(null);
+  useEffect(() => {
+    if (!wordsFocus) return;
+    const panel = pageCopyPanel.current;
+    const field = panel?.querySelector<HTMLElement>(
+      `[data-page-copy-section="${wordsFocus.section}"] input, [data-page-copy-section="${wordsFocus.section}"] textarea`,
+    );
+    if (!panel || !field) return;
+    setWordsFocus(null);
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!panel.contains(document.activeElement)) field.focus({ preventScroll: true });
+  }, [wordsFocus, activePageCopySection]);
+
   function selectCanvasSection(section: string) {
     setSelectedSection(section);
     if (section === "Registration band") selectTab("registration");
@@ -452,19 +469,7 @@ export default function AdminProgramsPage() {
     // takes the cursor.
     if (!hidesPageCopyEditor && (section === "Page heading" || section === "Closing band")) {
       setSelectedSection(null);
-      const words = section === "Page heading" ? "pageHeader" : "closingBand";
-      requestAnimationFrame(() => {
-        const panel = pageCopyPanel.current;
-        if (!panel) return;
-        panel.scrollIntoView({ behavior: "smooth", block: "start" });
-        // The first field of the section that was clicked, never one of the
-        // section sliding out; and never away from a field the person is
-        // already typing in (this runs a frame after the click).
-        if (panel.contains(document.activeElement)) return;
-        panel
-          .querySelector<HTMLElement>(`[data-page-copy-section="${words}"] input, [data-page-copy-section="${words}"] textarea`)
-          ?.focus({ preventScroll: true });
-      });
+      setWordsFocus({ section: section === "Page heading" ? "pageHeader" : "closingBand", request: Date.now() });
     }
   }
 

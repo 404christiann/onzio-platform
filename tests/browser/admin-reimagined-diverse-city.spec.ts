@@ -146,6 +146,9 @@ for (const width of [390, 1440]) {
           // header: one section on screen, and it is the page header's.
           await expect(main.locator("[data-page-copy-section]")).toHaveCount(1);
           await expect(main.locator('[data-page-copy-section="pageHeader"]')).toBeVisible();
+          // The cursor lands in the clicked section's first field (Eyebrow),
+          // and only then does the test type, so nothing moves focus mid-fill.
+          await expect(main.locator('[data-page-copy-section="pageHeader"] input').first()).toBeFocused();
           const headline = main.getByLabel("Headline line 1");
           await expect(headline).toBeVisible();
           await expect(main.getByText("This wording is managed by Onzio")).toHaveCount(0);
@@ -168,16 +171,11 @@ for (const width of [390, 1440]) {
             ))[0]?.h)
             .toBe(HEADLINE);
 
-          // One run in 40 (2026-11-10) rendered the default words 7 ms after
-          // the row above was stored; 300 direct write-then-fetch probes never
-          // did. Ask again at most once, and say so in the report when it happens.
+          // The first render of the public page must show it. With the stored
+          // row proved above, a failure here means the site served old words
+          // after a save (seen once in 40 runs on 2026-11-10, cause unknown).
           await page.goto("/programs");
-          const publicHeading = page.getByRole("heading", { level: 1 });
-          if (!(await publicHeading.textContent({ timeout: 20_000 }))?.includes(HEADLINE)) {
-            test.info().annotations.push({ type: "public-page-reloaded", description: "First render showed the default words." });
-            await page.reload();
-          }
-          await expect(publicHeading).toContainText(HEADLINE);
+          await expect(page.getByRole("heading", { level: 1 })).toContainText(HEADLINE, { timeout: 20_000 });
         } finally {
           await sql("delete from onzio.programs_page_content where club_id=$1", [ALPHA]);
           await setPortal("reimagined");

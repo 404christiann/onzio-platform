@@ -33,33 +33,39 @@ the field held the headline right after typing.
 
 **Completed work:**
 
-- `app/admin/(protected)/programs/page.tsx`: the delayed focus after a click on
-  the page targets the clicked section's first field
-  (`data-page-copy-section`), and does nothing if a field in the words box
-  already has focus.
+- `app/admin/(protected)/programs/page.tsx`: after a click on the page's
+  heading or closing band, the words box takes the cursor in an effect that
+  runs once React has drawn the clicked section (no frame timer). The cursor
+  goes to that section's first field (`data-page-copy-section`), and never
+  away from a field in the words box that already has focus.
 - `tests/browser/admin-reimagined-diverse-city.spec.ts`:
   - clears the stored words before it starts, as well as after;
-  - waits until the words box shows only the page header section before
-    typing;
+  - waits until the words box shows only the page header section and the
+    cursor is in its first field, then types;
   - checks the typed value;
   - waits up to 20 s for "Page copy saved", the same as the page's first load;
-  - checks the stored row in the database before opening the public page;
-  - asks the public page again at most once. When it does, it adds a
-    `public-page-reloaded` note to the report, so the unexplained case stays
-    visible.
+  - checks the stored row in the database;
+  - then requires the public page to show the headline on its first render.
+    With the stored row proved, a failure there points straight at a stale
+    public page. Review-bot M1 on #131: an earlier version allowed one
+    reload, which could hide a real bug, so it was taken out.
 
 **Verification:**
 
 - On the unchanged test, two runs of 20 at 1440 (40 tests each, both portals)
   gave 1 failure and then 2 failures, the causes described above.
-- On the changed test and editor: 40 of 40 green at 1440 (`--repeat-each=20`,
-  both portals), after a fresh `supabase db reset --local` on this branch.
+- The first version of the fix (with the one-reload allowance) went 40 of 40
+  twice. The final version (no reload, focus by effect) is run 20 times at
+  1440 in both portals on the PR head; that count is in the PR body.
 - tsc, lint on the changed files, vitest without `tests/database`, `npm run
   build`, and the `admin-reimagined` and `admin-guided` browser configs. The
   results, with the commit they ran on, are in the PR body.
 
-**Blockers:** none. The cause of the one stale public page is unknown and
-recorded above.
+**Blockers:** none. **Open item:** the one public `/programs` render that
+showed the standard words 7 ms after a stored save (2026-11-10) is
+unexplained. The test now fails on it with a clear cause if it happens again;
+then check how `/programs` reads `fetchProgramsPageContent`
+(`lib/queries.ts`).
 
 **Exact next step:** bot review and merge (no gate).
 
