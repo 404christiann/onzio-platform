@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { IconRoster, IconSearch, Plus } from "@/components/admin/icons";
+import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   formatPlayerNumber,
@@ -113,16 +114,21 @@ export function RosterHeading({
 }
 
 function PlayerAvatar({ player }: { player: RosterViewPlayer }) {
-  const [failed, setFailed] = useState(false);
-  const hasPhoto = !isRosterPlaceholderLogo(player.photo_url) && !failed;
+  const hasPhoto = !isRosterPlaceholderLogo(player.photo_url);
+  const initials = playerInitials(player.name);
   return (
     <span className={styles.avatar} style={{ ["--avatar-hue" as string]: avatarHue(player.id) }} aria-hidden="true">
       {hasPhoto ? (
-        // Native rendering, like every roster photo: no runtime optimizer.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={player.photo_url} alt="" className={styles.avatarImage} onError={() => setFailed(true)} />
+        // Native rendering through the shared resilient image: no runtime
+        // optimizer, and a photo that will not load falls back to initials.
+        <ResilientNativeImage
+          src={player.photo_url}
+          alt={player.name}
+          className={styles.avatarImage}
+          fallback={<>{initials}</>}
+        />
       ) : (
-        playerInitials(player.name)
+        initials
       )}
     </span>
   );
