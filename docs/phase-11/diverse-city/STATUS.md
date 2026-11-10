@@ -1,5 +1,80 @@
 # Diverse City FC Status
 
+## 2026-11-10 - ADMIN-RE-11c-1: season totals add up from player numbers (migration)
+
+**Agent/package:** Claude Code, `ADMIN-RE-11c` part 1 of 2 (11c-1 migration, no new
+screens; 11c-2 the "Who played and scored?" step, no migration). Branch
+`claude/admin-re-11c-totals` from `main` `8fa59263`.
+**Status:** `in_progress`, PR open. Migration `20261110160000_season_totals_add_up.sql`
+needs `GATE-MIGRATE` before the merge; Christian approves it himself. Nothing added to
+the tenant select in `lib/club-context.ts`. No hosted action, no new dependency.
+
+**Decision 0001, as built:** a player's season totals are the sum of their saved
+player numbers for the season's games plus a hand-entered adjustment.
+
+- New tables `onzio.player_season_adjustments` / `onzio.goalkeeper_season_adjustments`
+  (one row per player and season, keyed to the season's totals row, cascade with it;
+  RLS, grants, audit and `updated_at` triggers like the other roster tables).
+- New views `onzio.player_season_totals` / `onzio.goalkeeper_season_totals`
+  (`security_invoker`): every totals row, games added up plus the adjustment, never
+  below 0, plus `games_played`. Same column names as the totals tables.
+- `played` on `player_match_stats` / `goalkeeper_match_stats` (group 1 decision 7): any
+  number above 0 sets it (trigger); it can be set on its own. Backfilled true where
+  anything was entered. The public match log (and the new admin's player page, which
+  reuses it) lists games with `played`, not games with minutes above 0.
+- The typed numbers in `*_season_stats` are not changed. Their rows still say who is in
+  a season; the app no longer reads their numbers. Kept until the slice is accepted on
+  both clubs (plan risk 5), and old code between `GATE-MIGRATE` and the deploy keeps
+  showing the right totals.
+
+**Christian's decision (2026-11-10, "Keep today's numbers"):** adjustments may be
+negative. The migration sets each adjustment to typed − games, so every total visitors
+see stays exactly as it is; no test rows deleted. Limits: an adjustment's minutes
+within ±9,999 (largest typed season minutes on production: 990), every other number
+within ±999 (database CHECK and Zod). A save that would take a total below 0 is refused
+(`SEASON_TOTAL_BELOW_ZERO`, trigger); the views never show a total below 0.
+
+**Production check (read-only, Christian, 2026-11-10):** 7 player-seasons had a typed
+number below what their games give (Diverse City 2, Rose City 5); 83 of 92 saved
+player-number rows were all-zero "Save all" rows and only the 9 rows with minutes had
+any number, so the public match log shows the same games before and after.
+
+**Who reads totals now:** public roster (`fetchRoster`), the Seasons hub and its delete
+check, the new admin's analytics (and so the player page's chart), the classic Season
+stats page, the classic roster's per-player panel and the classic Seasons page's delete
+check (otherwise a season whose totals were typed after this change would look empty).
+
+**Who writes adjustments:** the classic Season stats page and the classic roster's
+per-player panel. They still show totals and let the owner type one; the save keeps
+typed − the season's match stats (read at save time) as the adjustment, and gives a
+player shown for the season their season row first, as before.
+
+**Files changed:** `supabase/migrations/20261110160000_season_totals_add_up.sql` (new),
+`lib/database.generated.ts`, `lib/season-totals.ts` (new), `lib/season-totals-save.ts`
+(new), `lib/admin-data-contract.ts` (totals views read-only, adjustment schemas),
+`lib/queries.ts`, `lib/admin-seasons-data.ts`, `lib/admin-analytics-data.ts`,
+`lib/operator/purge-club.ts`, `components/admin/reimagined/SeasonsHub.tsx`,
+`components/admin/stats/SeasonStatsEditor.tsx`, `components/admin/ClassicSeasonsPage.tsx`,
+`app/admin/(protected)/roster/page.tsx`,
+`scripts/import-rose-city-local.ts` (local import keeps the export's typed totals),
+`tests/database/season-totals-add-up.test.ts` (new),
+`tests/contracts/season-totals-add-up.test.ts` (new), `tests/helpers/season-adjustments.ts`
+(new), `tests/helpers/academy-coordination-content.ts`,
+`tests/contracts/admin-reimagined-{seasons,analytics}.test.ts`,
+`lib/__tests__/queries.test.ts`, `tests/browser/admin-guided-{management,stats-workspace,stats-discard}.spec.ts`,
+`tests/browser/admin-loading-stats.spec.ts`,
+`tests/browser/admin-reimagined-{players,analytics}.spec.ts`, this file, `HANDOFF.md`.
+
+**Verification:** see the PR body (results table with the tested commit). The database
+test replays the migration on production-shaped rows and pins that a typed total below
+what the games give stays the same.
+
+**Blockers/decisions:** `GATE-MIGRATE` (Christian). Not done here: the old Match stats
+page leaves `played` set when every number of a row is put back to 0 (it never sends
+`played`); the new step in 11c-2 sets it explicitly.
+
+**Next step:** clear the review bot, then `GATE-MIGRATE` and merge; then 11c-2.
+
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so

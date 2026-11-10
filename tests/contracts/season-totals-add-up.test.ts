@@ -29,6 +29,7 @@ describe("who reads season totals", () => {
       "lib/admin-analytics-data.ts",
       "components/admin/reimagined/SeasonsHub.tsx",
       "components/admin/stats/SeasonStatsEditor.tsx",
+      "components/admin/ClassicSeasonsPage.tsx",
       "app/admin/(protected)/roster/page.tsx",
     ]) {
       const file = source(path);
