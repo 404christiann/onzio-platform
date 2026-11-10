@@ -207,8 +207,9 @@ for (const width of [390, 1440]) {
       const home = page.getByRole("link", { name: "Home", exact: true });
       await expect(home).toBeVisible();
       await expect(page.getByTestId("admin-top-bar-title")).toHaveText("Team roster");
-      // The old roster page still works inside the new shell.
-      await expect(page.getByRole("button", { name: "Add player", exact: true })).toBeVisible();
+      // ADMIN-RE-17: the roster is the new Team roster page inside the new shell.
+      await expect(page.getByRole("heading", { level: 1, name: /Your players/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Add a player" }).first()).toBeVisible();
       await expectNoSideScroll(page, width);
       await page.screenshot({ path: `${SHOTS}/roster-top-bar-${width}.png` });
       await home.click();

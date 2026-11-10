@@ -14,6 +14,22 @@
 - **Exact next step:** the bot merges. RE-11b (league table per season) and
   RE-11c are migrations and go through the production migration gate one at a
   time.
+## 2026-11-09 - ADMIN-RE-17 Team roster
+
+- **Status:** `in_progress`, PR open. No migration. Nobody sees it until a
+  club is on `reimagined` (Rose City is).
+- **What it adds:** under the new admin, `/admin/roster` shows players as cards
+  under Goalkeepers, Defenders, Midfielders and Forwards, with a small pitch
+  that jumps to a position on a laptop and four tabs pinned under the top bar
+  on a phone. Long, non-Latin and unbreakable names clamp to two lines; a
+  missing photo is initials, a missing number a dash; hidden players are dimmed
+  and tagged. The classic roster page is unchanged for classic clubs.
+- **Not changed:** every write, the edit panel and its fields, Staff (it keeps
+  its own list under a Players/Staff switch).
+- **Verification:** contract, unit and browser tests (390 and 1440), and full
+  suites on the PR head; the table and tested commit are in the PR body.
+  Details in `STATUS.md`.
+- **Exact next step:** the bot merges. Christian opens Team roster on Rose City.
 
 ## 2026-11-09 - ADMIN-RE-10a number boxes keep no leading zero
 
