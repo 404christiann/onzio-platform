@@ -33,6 +33,8 @@ no new dependency, no hosted action.
   next day). The Games tab starts RE-19's season read alongside its own. A
   club with no forwards or midfielders sees its first two other positions in
   the Players card instead of an empty card.
+- The bot's carried-over Low: Enter a score (`lib/admin-score-data.ts`) now
+  uses the same `gameNeedsScore`, so it no longer lists an untimed game today.
 
 **Files changed:** `app/admin/(protected)/games/players/[playerId]/page.tsx`
 (new), `app/admin/(protected)/games/page.tsx`,
