@@ -811,3 +811,78 @@
   flex: none;
   color: var(--frame-faint);
 }
+
+/* ---------- Sign out with unsaved changes ---------- */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgb(10 12 18 / 0.42);
+  transition: opacity 200ms ease;
+}
+
+.backdrop[data-starting-style],
+.backdrop[data-ending-style] {
+  opacity: 0;
+}
+
+.alert {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 71;
+  display: flex;
+  width: min(400px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 20px;
+  padding: 20px;
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  box-shadow: 0 12px 32px -12px rgb(15 20 40 / 0.28), 0 0 0 1px hsl(var(--border));
+  transform: translate(-50%, -50%);
+  transition:
+    opacity 200ms var(--frame-ease),
+    transform 200ms var(--frame-ease);
+}
+
+.alert[data-starting-style],
+.alert[data-ending-style] {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.96);
+}
+
+.alert[data-ending-style] {
+  transition-duration: 150ms;
+}
+
+.alertTitle {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.alertText {
+  font-size: 14px;
+  color: hsl(var(--muted-foreground));
+}
+
+.alertButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert,
+  .backdrop {
+    transition-property: opacity;
+  }
+
+  .alert[data-starting-style],
+  .alert[data-ending-style] {
+    transform: translate(-50%, -50%);
+  }
+}

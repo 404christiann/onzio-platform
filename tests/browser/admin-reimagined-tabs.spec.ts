@@ -119,6 +119,9 @@ for (const width of [390, 1440]) {
         await expect(main(page).getByTestId("admin-tab-status")).toHaveText("Your website is live");
         await expect(main(page).getByRole("link", { name: "Edit my website" })).toHaveAttribute("href", "/admin/homepage");
         await expect(main(page).getByTestId("admin-view-website")).toHaveAttribute("target", "_blank");
+        // ADMIN-RE-24b: the included monthly card, with no made-up numbers.
+        await expect(main(page).getByTestId("website-numbers")).toContainText("No visit numbers yet");
+        await expect(main(page).getByTestId("website-numbers")).toContainText("Sponsor Insights");
         await page.screenshot({ path: `${SHOTS}/tabs-website-${width}-${theme}.png`, fullPage: true });
 
         await tabs(page).locator('[data-tab="club"]').click();
@@ -222,6 +225,10 @@ test.describe("a held club without programs, with Sponsor Insights", () => {
         await page.setViewportSize({ width, height: 844 });
         await page.goto(`${RC}/admin`);
         expect(await tabLabels(page)).toEqual(["home", "games", "website", "insights", "club"]);
+        // ADMIN-RE-24b: held, so the home's website card says so instead of numbers.
+        await expect(main(page).getByTestId("glance-visits")).toContainText("Not live yet");
+        await expect(main(page).getByTestId("glance-visits")).toHaveAttribute("href", "/admin/insights");
+        await page.screenshot({ path: `${SHOTS}/home-held-${width}-${theme}.png`, fullPage: true });
 
         await page.goto(`${RC}/admin/games`);
         const games = main(page).getByRole("region", { name: "Pages" });
@@ -229,6 +236,8 @@ test.describe("a held club without programs, with Sponsor Insights", () => {
 
         await page.goto(`${RC}/admin/website`);
         await expect(main(page).getByTestId("admin-tab-status")).toHaveText("Not live yet");
+        // Its numbers belong to the Insights tab.
+        await expect(main(page).getByTestId("website-numbers")).toHaveCount(0);
 
         await page.goto(`${RC}/admin/insights`);
         await expect(main(page).getByRole("heading", { level: 1, name: "Sponsor Insights" })).toBeVisible();

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { readAdminPortal, type AdminPortalSettings } from "@/lib/admin-portal";
 import { loadAdminHomeData, type AdminHomeData } from "@/lib/admin-home-data";
@@ -24,6 +25,16 @@ export function canMutateClubContent(club: ClubContext): boolean {
         club.publicAccess === "grace"))
   );
 }
+
+/**
+ * The home's counts (games needing a score, new sign-ups, live forms), read
+ * once per request: the layout's red dots, a tab page and the home share it.
+ * Same user-scoped client as everywhere else.
+ */
+export const readAdminHomeCounts = cache(
+  async (clubId: string, timeZone: string): Promise<AdminHomeData> =>
+    loadAdminHomeData(await createClient(), clubId, timeZone),
+);
 
 /** The access context the manifest and the tabs read, for a reimagined or classic club. */
 export function adminAccessFor(
@@ -70,7 +81,7 @@ export async function loadAdminTabPage(tab: AdminTabId): Promise<AdminTabPageCon
   }
   const portal = await readAdminPortal(supabase, club.id);
   if (portal.portal !== "reimagined") redirect("/admin");
-  const home = await loadAdminHomeData(supabase, club.id, portal.timeZone);
+  const home = await readAdminHomeCounts(club.id, portal.timeZone);
   const access = adminAccessFor(club, portal, home.hasLiveSignUps);
   if (!getVisibleAdminTabs(access).some((candidate) => candidate.id === tab)) redirect("/admin");
   return { supabase, club, portal, home, access };

@@ -1,8 +1,9 @@
 import { IconEdit, IconExternalLink } from "@/components/admin/icons";
+import { WebsiteNumbers } from "@/components/admin/reimagined/Glance";
 import { TabPage, type TabButton } from "@/components/admin/reimagined/TabPage";
 import { getVisibleAdminHomeJobs } from "@/lib/admin-route-manifest";
 import { loadAdminTabPage } from "@/lib/admin-tab-page";
-import { getAdminTab, getAdminTabPages, websiteTabStatus } from "@/lib/admin-tabs";
+import { getAdminTab, getAdminTabPages, getVisibleAdminTabs, websiteTabStatus } from "@/lib/admin-tabs";
 import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 import { websiteState } from "@/lib/save-status";
 
@@ -34,6 +35,9 @@ export default async function WebsiteTabPage() {
       pill={websiteTabStatus(state)}
       buttons={buttons}
       pages={getAdminTabPages("website", access)}
-    />
+    >
+      {/* ADMIN-RE-24b: clubs with Sponsor Insights see their numbers on its own tab. */}
+      {getVisibleAdminTabs(access).some((tab) => tab.id === "insights") ? null : <WebsiteNumbers held={state === "held"} />}
+    </TabPage>
   );
 }

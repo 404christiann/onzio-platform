@@ -197,6 +197,14 @@ for (const width of [390, 1440]) {
         await expect(ask).toContainText("1 change is not saved yet.");
         await ask.getByRole("button", { name: "Keep editing" }).click();
         await expect(page).toHaveURL(/\/admin\/your-club$/);
+        // ADMIN-RE-24b: Sign out asks first while something is not saved.
+        await page.getByTestId(width === 390 ? "admin-account-top" : "admin-account-side").click();
+        await page.getByRole("menu").getByRole("menuitem", { name: "Sign out" }).click();
+        const signOut = page.getByTestId("sign-out-unsaved");
+        await expect(signOut).toContainText("Sign out without saving?");
+        await signOut.getByRole("button", { name: "Keep editing" }).click();
+        await expect(signOut).toBeHidden();
+        await expect(page).toHaveURL(/\/admin\/your-club$/);
         // ADMIN-RE-24: on a laptop the sidebar's tabs ask first too.
         const sideHome = page.getByRole("navigation", { name: "Club admin" }).locator('[data-tab="home"]');
         if (await sideHome.isVisible()) {

@@ -7,8 +7,7 @@ import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { ReimaginedShell } from "@/components/admin/reimagined/ReimaginedShell";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { readAdminPortal } from "@/lib/admin-portal";
-import { loadAdminHomeData } from "@/lib/admin-home-data";
-import { adminAccessFor } from "@/lib/admin-tab-page";
+import { adminAccessFor, readAdminHomeCounts } from "@/lib/admin-tab-page";
 import { getAdminTabDots, getAdminTabTargets, getVisibleAdminTabs } from "@/lib/admin-tabs";
 import {
   ADMIN_THEME_COOKIE_NAME,
@@ -69,7 +68,7 @@ export default async function ProtectedLayout({
   // needs you. Counts are read fail-safe: a failed read shows no dot.
   let shell: React.ComponentProps<typeof ReimaginedShell> | null = null;
   if (portal.portal === "reimagined") {
-    const needs = await loadAdminHomeData(supabase, club.id, portal.timeZone).catch(() => null);
+    const needs = await readAdminHomeCounts(club.id, portal.timeZone).catch(() => null);
     const access = adminAccessFor(club, portal, needs?.hasLiveSignUps ?? false);
     const tabs = getVisibleAdminTabs(access);
     shell = {
