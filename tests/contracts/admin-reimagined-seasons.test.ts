@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { adminDataRequestSchema } from "@/lib/admin-data-contract";
+import { getAdminRouteHref } from "@/lib/admin-route-manifest";
 import { SEASON_NAME_MAX } from "@/lib/season-label";
 
 // ADMIN-RE-11a: This season hub and season names. The name and hub rules are
@@ -46,11 +47,21 @@ describe("where the hub runs", () => {
     expect(page).toContain("canChange={canMutateContent}");
   });
 
-  it("links the cards only to pages this club has (the route manifest decides)", () => {
-    expect(page).toContain("getVisibleAdminRoutes(routeAccess)");
-    expect(page).toContain('hrefOf("standings")');
-    expect(page).toContain('hrefOf("season-stats")');
-    expect(page).toContain('hrefOf("schedule")');
+  it("links the cards to the manifest's paths, for pages every owner and administrator has", () => {
+    expect(page).toContain('getAdminRouteHref("standings")');
+    expect(page).toContain('${getAdminRouteHref("match-stats")}?view=season');
+    expect(page).toContain('getAdminRouteHref("schedule")');
+    // None of those depends on the club's template (lib/admin-route-manifest.ts).
+    expect(getAdminRouteHref("standings")).toBe("/admin/standings");
+    expect(getAdminRouteHref("match-stats")).toBe("/admin/stats");
+    expect(source("app/admin/(protected)/season-stats/page.tsx")).toContain('redirect("/admin/stats?view=season")');
+    expect(getAdminRouteHref("schedule")).toBe("/admin/schedule");
+    expect(page).not.toContain("presentationTemplateKey");
+  });
+
+  it("is for owners and administrators only", () => {
+    expect(page).toContain('club.role !== "owner" && club.role !== "admin"');
+    expect(page).toContain("/admin/login?error=not_authorized");
   });
 
   it("words the saved state by whether the website is live or paused (decision 2)", () => {

@@ -1,8 +1,9 @@
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import ClassicSeasonsPage from "@/components/admin/ClassicSeasonsPage";
 import { SeasonsHub } from "@/components/admin/reimagined/SeasonsHub";
 import { readAdminPortal } from "@/lib/admin-portal";
-import { getVisibleAdminRoutes, type AdminRouteAccessContext } from "@/lib/admin-route-manifest";
+import { getAdminRouteHref } from "@/lib/admin-route-manifest";
 import { loadSeasonsHub } from "@/lib/admin-seasons-data";
 import { requireFreshClubSession } from "@/lib/auth-session";
 import { getClubContext } from "@/lib/club-context";
@@ -28,6 +29,9 @@ export default async function SeasonsPage({
   const { userId } = await requireFreshClubSession(supabase);
   const requestHeaders = await headers();
   const club = await getClubContext({ hostname: requestHeaders.get("host") ?? "", userId });
+  if (club.role !== "owner" && club.role !== "admin") {
+    redirect("/admin/login?error=not_authorized");
+  }
   const portal = await readAdminPortal(supabase, club.id);
   if (portal.portal !== "reimagined") return <ClassicSeasonsPage />;
 
@@ -39,17 +43,6 @@ export default async function SeasonsPage({
         club.kind === "test" ||
         club.publicAccess === "live" ||
         club.publicAccess === "grace"));
-  const routeAccess: AdminRouteAccessContext = {
-    role: club.role,
-    presentationTemplateKey: club.presentationTemplateKey,
-    isBillingAuthorized: club.role === "owner" && club.lifecycle !== "archived",
-    canMutateContent,
-    storeEnabled: club.storeEnabled,
-    adminPortal: portal.portal,
-    adminFlags: portal.flags,
-  };
-  const routes = getVisibleAdminRoutes(routeAccess);
-  const hrefOf = (id: string) => routes.find((route) => route.id === id)?.href ?? null;
 
   const params = await searchParams;
   const asked = typeof params.season === "string" ? params.season : undefined;
@@ -67,7 +60,12 @@ export default async function SeasonsPage({
       data={data}
       canChange={canMutateContent}
       savedText={savedLabel(websiteState(club))}
-      links={{ league: hrefOf("standings"), totals: hrefOf("season-stats"), games: hrefOf("schedule") }}
+      links={{
+        league: getAdminRouteHref("standings"),
+        // The combined stats page, on its season view (/admin/season-stats redirects there).
+        totals: `${getAdminRouteHref("match-stats")}?view=season`,
+        games: getAdminRouteHref("schedule"),
+      }}
     />
   );
 }
