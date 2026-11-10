@@ -26,6 +26,13 @@ no new dependency, no hosted action.
   never shows; one day's games are ordered by real kickoff time ("9:00 AM"
   before "10:00 AM"); a game today with no time yet stays the next game all
   day; and a comment says why a failed photo tidy-up keeps the editor open.
+- From the bot's review of #129: a game today with no kickoff time is the
+  next game and never also "missing a score". One shared rule,
+  `gameNeedsScore` in `lib/admin-home-data.ts`, now drives the home's count,
+  its Needs you row and the player page's row (an untimed game counts from the
+  next day). The Games tab starts RE-19's season read alongside its own. A
+  club with no forwards or midfielders sees its first two other positions in
+  the Players card instead of an empty card.
 
 **Files changed:** `app/admin/(protected)/games/players/[playerId]/page.tsx`
 (new), `app/admin/(protected)/games/page.tsx`,

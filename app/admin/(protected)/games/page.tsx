@@ -16,8 +16,12 @@ export const dynamic = "force-dynamic";
 
 export default async function GamesTabPage() {
   const { access, home, supabase, club, portal } = await loadAdminTabPage("games");
-  const team = await loadTeamAnalytics(supabase, club.id);
-  const board = await loadHomeBoard(supabase, club.id, portal.timeZone, undefined, { team, signUps: false });
+  // One RE-19 season read, shared, running alongside the board's own reads.
+  const teamRead = loadTeamAnalytics(supabase, club.id);
+  const [team, board] = await Promise.all([
+    teamRead,
+    loadHomeBoard(supabase, club.id, portal.timeZone, undefined, { team: teamRead, signUps: false }),
+  ]);
   const jobs = getVisibleAdminHomeJobs(access);
   const buttons: TabButton[] = jobs.flatMap((job): TabButton[] =>
     job.id === "enter-score"

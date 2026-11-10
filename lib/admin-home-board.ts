@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadTeamAnalytics, type TeamAnalyticsData } from "@/lib/admin-analytics-data";
 import type { ResultGame, SeasonRecord } from "@/lib/admin-analytics-view";
-import { SCORE_GRACE_MINUTES, newSignUpsSince } from "@/lib/admin-home-data";
+import { gameNeedsScore, newSignUpsSince } from "@/lib/admin-home-data";
 import { clubToday, formatClubDate, formatClubTime, isKickoffPast, parseKickoffTime } from "@/lib/club-time";
 
 // ADMIN-RE-24b: what the new home shows beyond the job counts (design:
@@ -82,9 +82,8 @@ export function pickBoardGames(
     return hours * 60 + minutes;
   };
   const ordered = [...rows].sort((a, b) => a.date.localeCompare(b.date) || kickoff(a) - kickoff(b));
-  const missing = ordered.find(
-    (row) => unscored(row) && row.date <= today && isKickoffPast(row.date, row.time, timeZone, SCORE_GRACE_MINUTES, now),
-  );
+  // The same rule as the home's count, so the row names the game that was counted.
+  const missing = ordered.find((row) => unscored(row) && gameNeedsScore(row.date, row.time, timeZone, now));
   // A game today with no time yet ("TBD") is still to come all day.
   const stillToCome = (row: MatchRow) =>
     row.date > today || (row.date === today && (!formatClubTime(row.time) || !isKickoffPast(row.date, row.time, timeZone, 0, now)));
@@ -123,8 +122,8 @@ export async function loadHomeBoard(
   timeZone: string,
   now: Date = new Date(),
   options: {
-    /** RE-19's season read when the caller already has it (the Games tab). */
-    team?: TeamAnalyticsData;
+    /** RE-19's season read when the caller also needs it (the Games tab); may still be loading. */
+    team?: TeamAnalyticsData | Promise<TeamAnalyticsData>;
     /** False where the forms behind new sign-ups are not shown (the Games tab). */
     signUps?: boolean;
   } = {},

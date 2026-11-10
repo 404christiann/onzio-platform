@@ -6,15 +6,17 @@ import styles from "./home.module.css";
 
 // ADMIN-RE-24d: the Games tab's Players card, under the season's results
 // (design: admin-plain-search-two-clubs.html). Forwards, then midfielders, a
-// few each, then "See all N players" on How the team is doing. Each row opens
-// that player's page.
+// few each, then "See all N players" on How the team is doing. A club with
+// neither shows its first two other positions instead, so the card is never
+// empty while it has players. Each row opens that player's page.
 
-const SHOWN = ["Forward", "Midfielder"] as const;
+const PREFERRED = ["Forward", "Midfielder", "Defender", "Goalkeeper"] as const;
 const PER_GROUP = 4;
-const GROUP_WORDS = { Forward: "Forwards", Midfielder: "Midfielders" } as const;
+const GROUP_WORDS = { Forward: "Forwards", Midfielder: "Midfielders", Defender: "Defenders", Goalkeeper: "Goalkeepers" } as const;
 
 export function PlayersList({ groups, allHref, rosterHref }: { groups: readonly PositionGroup[]; allHref: string; rosterHref: string }) {
   const total = groups.reduce((sum, group) => sum + group.players.length, 0);
+  const shown = PREFERRED.filter((position) => groups.some((group) => group.position === position && group.players.length)).slice(0, 2);
   return (
     <section aria-labelledby="games-players" className={`${styles.wide} ${styles.vars}`}>
       <h2 id="games-players" className={styles.label}>
@@ -34,7 +36,7 @@ export function PlayersList({ groups, allHref, rosterHref }: { groups: readonly 
           </div>
         ) : (
           <>
-            {SHOWN.map((position) => {
+            {shown.map((position) => {
               const group = groups.find((candidate) => candidate.position === position);
               if (!group?.players.length) return null;
               return (

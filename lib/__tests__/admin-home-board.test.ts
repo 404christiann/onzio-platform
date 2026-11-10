@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { gameNeedsScore } from "@/lib/admin-home-data";
 import {
   gameLine,
   needsSummary,
@@ -108,7 +109,30 @@ describe("pickBoardGames, same day and no time (bot Low on #125)", () => {
       game({ id: "nine", date: "2026-11-14", time: "9:00 AM" }),
     ];
     expect(pickBoardGames(rows, CHICAGO, NOW).nextGame?.id).toBe("nine");
-    expect(pickBoardGames([game({ id: "tbd", date: "2026-11-10", time: "TBD" })], CHICAGO, NOW).nextGame?.id).toBe("tbd");
-    expect(pickBoardGames([game({ id: "none", date: "2026-11-10", time: null })], CHICAGO, NOW).nextGame?.id).toBe("none");
+    // Untimed today: the next game, and never also "missing a score" (bot Medium on #129).
+    expect(pickBoardGames([game({ id: "tbd", date: "2026-11-10", time: "TBD" })], CHICAGO, NOW)).toEqual({
+      missingScore: null,
+      nextGame: expect.objectContaining({ id: "tbd" }),
+    });
+    expect(pickBoardGames([game({ id: "none", date: "2026-11-10", time: null })], CHICAGO, NOW)).toEqual({
+      missingScore: null,
+      nextGame: expect.objectContaining({ id: "none" }),
+    });
+    // Untimed yesterday: played, so it needs its score and is not the next game.
+    expect(pickBoardGames([game({ id: "past", date: "2026-11-09", time: "TBD" })], CHICAGO, NOW)).toEqual({
+      missingScore: expect.objectContaining({ id: "past" }),
+      nextGame: null,
+    });
+  });
+});
+
+describe("gameNeedsScore: the one rule for the home's count, its row and the player page", () => {
+  it("counts a game two hours after kickoff, an untimed game only from the next day", () => {
+    expect(gameNeedsScore("2026-11-10", "09:30", CHICAGO, NOW)).toBe(true);
+    expect(gameNeedsScore("2026-11-10", "11:00", CHICAGO, NOW)).toBe(false);
+    expect(gameNeedsScore("2026-11-10", "TBD", CHICAGO, NOW)).toBe(false);
+    expect(gameNeedsScore("2026-11-10", null, CHICAGO, NOW)).toBe(false);
+    expect(gameNeedsScore("2026-11-09", null, CHICAGO, NOW)).toBe(true);
+    expect(gameNeedsScore("2026-11-11", "09:00", CHICAGO, NOW)).toBe(false);
   });
 });
