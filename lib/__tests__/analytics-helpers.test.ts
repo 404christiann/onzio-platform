@@ -172,7 +172,7 @@ describe('coerceRating', () => {
 // buildFieldRadarData
 // Derives normalised radar values (0–100) from season aggregate
 // stats relative to position peers.  Extracted from the inline
-// useMemo in analytics/page.tsx so it can be tested.
+// useMemo in the classic analytics page so it can be tested.
 // ─────────────────────────────────────────────────────────────
 
 describe('buildFieldRadarData', () => {

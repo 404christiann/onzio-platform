@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const source = readFileSync(
-  resolve(process.cwd(), "app/admin/(protected)/analytics/page.tsx"),
+  resolve(process.cwd(), "components/admin/ClassicAnalyticsPage.tsx"),
   "utf8",
 );
 
