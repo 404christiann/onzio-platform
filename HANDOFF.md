@@ -1,3 +1,17 @@
+## 2026-11-10 - ADMIN-RE-24c Search on the new admin
+
+- **Status:** `in_progress`. Last PR of `ADMIN-RE-24`. **New dependency:
+  `cmdk` 1.1.1.** No migration, no hosted action.
+- **What it adds:** search with cmdk inside a Base UI Dialog: the sidebar box
+  and ⌘K on a laptop, the magnifier on a phone. Every job, tab page, page,
+  player and upcoming game the person can open, from the manifest; plain
+  word-start matching instead of cmdk's fuzzy filter.
+- **Verification:** contract and browser tests (390 and 1440, light and dark,
+  and a helper); full suites on the PR head are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** the bot merges. Christian walks the new home and tabs
+  on Rose City.
+
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
 
 - **Status:** `in_progress`, PR open. PR 24d of `ADMIN-RE-24` (built before 24c so

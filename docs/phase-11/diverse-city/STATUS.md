@@ -1,5 +1,47 @@
 # Diverse City FC Status
 
+## 2026-11-10 - ADMIN-RE-24c: search on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24c (last of four; built
+after 24d so players open their pages). Branch `claude/admin-re-24c-search`,
+on top of 24d. **Status:** `in_progress`. **One new dependency: `cmdk`
+1.1.1** (exact; the lock gains only cmdk and its own Radix packages). No
+migration, no hosted action.
+
+**Completed work:**
+
+- Search (design `admin-plain-search-two-clubs.html`): cmdk inside a Base UI
+  Dialog with `modal="trap-focus"`. A box at the top of the sidebar and ⌘K /
+  Ctrl+K on a laptop (a centered panel); the magnifier by the avatar on a phone
+  (full screen, Cancel). No animation; the query resets on close.
+- It lists every job, tab page and page the person can open (built from the
+  route manifest after its visibility rules, each page with its tab as a
+  hint), the club's players (opening their page under Games) and the next five
+  games (opening the Games page). Hidden pages never reach the browser.
+- cmdk's fuzzy filter is replaced by `plainFilter`: the start of a name, then
+  the start of any word, then anywhere; other words only weakly. "sam" finds
+  Sam Okafor and not "Sign-up forms".
+
+**Files changed:** `lib/admin-search.ts` (new), `lib/admin-tab-page.ts`
+(`readSearchExtras`), `app/admin/(protected)/layout.tsx`,
+`components/admin/reimagined/AdminSearch.tsx` (new),
+`components/admin/reimagined/search.module.css` (new),
+`components/admin/reimagined/ReimaginedShell.tsx`, `package.json`,
+`package-lock.json`, `tests/contracts/admin-search.test.ts` (new),
+`tests/contracts/{admin-portal-switch,admin-reimagined-home}.test.ts`,
+`tests/browser/admin-reimagined-search.spec.ts` (new), this file,
+`HANDOFF.md`. The classic admin's `AdminRouteSearch` is unchanged.
+
+**Verification:** contract tests (ranking, "sam", visibility for helpers and
+other clubs, the dialog and filter wiring, server-built list) and browser
+tests at 390 and 1440, light and dark, plus a helper. Full suites on the PR
+head, with the tested commit, are in the PR body.
+
+**Blockers / decisions:** none new.
+
+**Exact next step:** open the PR once 24d is merged. Then ADMIN-RE-24 is
+built; Christian walks it on Rose City.
+
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so
