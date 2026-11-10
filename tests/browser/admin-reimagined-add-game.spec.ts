@@ -101,6 +101,33 @@ async function showMatchSponsorsOnAlpha(): Promise<() => Promise<void>> {
   };
 }
 
+
+// Add a game's optional "Which competition?" (follow-up to ADMIN-RE-22). Local
+// Alpha is the academy site, which shows a game's own competition on its Next
+// Match card, so it asks; a generic site (nothing published) does not.
+const UNBROKEN_COMPETITION = "C".repeat(80);
+const NON_LATIN_COMPETITION = "春季联赛杯 — Лига чемпионов — دوري الربيع";
+const EMOJI_COMPETITION = "⚽🏆 Spring Cup 🏆⚽";
+
+async function savedCompetitions(opponent: string) {
+  const rows = await sql<{ competition: string | null }>(
+    "select competition from onzio.matches where club_id=$1 and opponent=$2",
+    [ALPHA, opponent],
+  );
+  return rows.map((row) => row.competition);
+}
+
+/** Past games, the first competition on the newest date, so they become "Last used" chips in this order. */
+async function seedCompetitions(seasonId: string, width: number, competitions: string[]) {
+  for (const [index, competition] of competitions.entries()) {
+    await sql(
+      `insert into onzio.matches (club_id, season_id, date, time, opponent, home, venue, competition)
+       values ($1,$2,$3::date,'10:00',$4,true,'Old ground',$5)`,
+      [ALPHA, seasonId, `2021-0${competitions.length - index}-01`, `${FIXTURE} Past ${index} ${width}`, competition],
+    );
+  }
+}
+
 async function alpha() {
   const [club] = await sql<{ slug: string; public_access: "preview" | "live" | "grace" | "suspended"; time_zone: string }>(
     "select slug, public_access, time_zone from onzio.clubs where id=$1",
@@ -185,7 +212,7 @@ for (const width of [390, 1440]) {
         await expect(comingUp.getByText(`10:00 AM · ${venue}`, { exact: true })).toBeVisible();
         await expect(form.getByText("No games yet", { exact: true })).toHaveCount(0);
         // The venue becomes a "Last used" chip, and the form is ready for the next game.
-        await expect(form.getByRole("group", { name: "Last used" }).getByRole("button", { name: venue })).toBeVisible();
+        await expect(form.getByRole("group", { name: "Last used", exact: true }).getByRole("button", { name: venue })).toBeVisible();
         await expect(form.getByLabel("Who are you playing?")).toHaveValue("");
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/add-game-added-${width}.png`, fullPage: true });
@@ -219,7 +246,7 @@ for (const width of [390, 1440]) {
         );
         await openAddGame(page);
         const form = main(page);
-        const chips = form.getByRole("group", { name: "Last used" });
+        const chips = form.getByRole("group", { name: "Last used", exact: true });
         await chips.getByRole("button", { name: WORST_AWAY_VENUE }).click();
         await expect(form.getByLabel("Where?")).toHaveValue(WORST_AWAY_VENUE);
 
@@ -296,6 +323,153 @@ for (const width of [390, 1440]) {
         expect(errors).toEqual([]);
       } finally {
         await removeFixtureGames();
+      }
+    });
+
+    test("asks an optional Which competition?, saves blank as nothing, and keeps Last used fresh", async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      const posts: string[] = [];
+      page.on("request", (request) => {
+        if (request.url().endsWith("/api/admin/data") && request.method() === "POST") posts.push(request.postData() ?? "");
+      });
+      const club = await alpha();
+      const blank = `${FIXTURE} Blank ${width}`;
+      const typed = `${FIXTURE} Typed ${width}`;
+      const tapped = `${FIXTURE} Tapped ${width}`;
+      try {
+        await openAddGame(page);
+        const form = main(page);
+        const question = form.getByLabel("Which competition?");
+        // No competition used yet: the box, its help, and no chips.
+        await expect(question).toHaveValue("");
+        await expect(question).toHaveAttribute("maxlength", "80");
+        await expect(form.getByText("Shows on your homepage next-game card. Leave it blank to show none.")).toBeVisible();
+        await expect(form.getByRole("group", { name: "Last used competitions" })).toHaveCount(0);
+        await expectNoSideScroll(page, width);
+        await page.screenshot({ path: `${SHOTS}/add-game-competition-none-${width}.png`, fullPage: true });
+
+        // Left blank: it saves nothing (null, not an empty string).
+        await form.getByLabel("Who are you playing?").fill(blank);
+        await form.getByLabel("Where?").fill("Lincoln Park");
+        await form.getByRole("button", { name: "Add to schedule" }).click();
+        await expect(form.getByTestId("add-game-submit")).toContainText("Added");
+        expect(await savedCompetitions(blank)).toEqual([null]);
+        await expect(form.getByRole("group", { name: "Last used competitions" })).toHaveCount(0);
+
+        // Typed (with outer spaces): saved trimmed, becomes a chip, and the box clears.
+        await question.fill("  Spring League ");
+        await form.getByLabel("Who are you playing?").fill(typed);
+        await form.getByLabel("Where?").fill("Lincoln Park");
+        await form.getByRole("button", { name: "Add to schedule" }).click();
+        await expect(form.getByTestId("add-game-submit")).toContainText("Added");
+        expect(await savedCompetitions(typed)).toEqual(["Spring League"]);
+        await expect(question).toHaveValue("");
+        const chips = form.getByRole("group", { name: "Last used competitions" });
+        await expect(chips.getByRole("button")).toHaveText(["Spring League"]);
+        await page.screenshot({ path: `${SHOTS}/add-game-competition-one-${width}.png`, fullPage: true });
+
+        // A chip fills the box; the next game is saved with it, and it is not listed twice.
+        await chips.getByRole("button", { name: "Spring League" }).click();
+        await expect(question).toHaveValue("Spring League");
+        await expect(chips.getByRole("button", { name: "Spring League" })).toHaveAttribute("aria-pressed", "true");
+        await form.getByLabel("Who are you playing?").fill(tapped);
+        await form.getByLabel("Where?").fill("Lincoln Park");
+        await form.getByRole("button", { name: "Add to schedule" }).click();
+        await expect(form.getByTestId("add-game-submit")).toContainText("Added");
+        expect(await savedCompetitions(tapped)).toEqual(["Spring League"]);
+        await expect(chips.getByRole("button")).toHaveText(["Spring League"]);
+
+        // The save carries competition only because this site shows it.
+        expect(posts).toHaveLength(3);
+        expect(posts.map((body) => JSON.parse(body).payload.competition)).toEqual([null, "Spring League", "Spring League"]);
+        expect(club.seasonId).toBeTruthy();
+        expect(errors).toEqual([]);
+      } finally {
+        await removeFixtureGames();
+      }
+    });
+
+    test("the worst-case competition: 80 unbroken characters, non-Latin, emoji, and only the last three chips", async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      const club = await alpha();
+      try {
+        // Four past competitions, newest first: unbroken, non-Latin, emoji, then an older one that is dropped (three chips at most).
+        await seedCompetitions(club.seasonId, width, [UNBROKEN_COMPETITION, NON_LATIN_COMPETITION, EMOJI_COMPETITION, "Oldest Cup"]);
+        await openAddGame(page);
+        const form = main(page);
+        const chips = form.getByRole("group", { name: "Last used competitions" });
+        await expect(chips.getByRole("button")).toHaveText([UNBROKEN_COMPETITION, NON_LATIN_COMPETITION, EMOJI_COMPETITION]);
+        await expect(chips.getByRole("button", { name: "Oldest Cup" })).toHaveCount(0);
+
+        // Each chip is one line, cut with "…" when it is too long; the full text is on hover.
+        const unbroken = chips.getByRole("button", { name: UNBROKEN_COMPETITION });
+        await expect(unbroken).toHaveAttribute("title", UNBROKEN_COMPETITION);
+        const unbrokenBox = await measure(unbroken.locator("span"));
+        expect(unbrokenBox.lines).toBe(1);
+        expect(unbrokenBox.cutAcross).toBe(true);
+        for (const text of [NON_LATIN_COMPETITION, EMOJI_COMPETITION]) {
+          expect((await measure(chips.getByRole("button", { name: text }).locator("span"))).lines).toBe(1);
+        }
+        await expectNoSideScroll(page, width);
+        await page.screenshot({ path: `${SHOTS}/add-game-competition-worst-chips-${width}.png`, fullPage: true });
+
+        // Typing is capped at 80; the 80 unbroken characters stay inside the box.
+        const question = form.getByLabel("Which competition?");
+        await question.fill("D".repeat(120));
+        await expect(question).toHaveValue("D".repeat(80));
+        await chips.getByRole("button", { name: UNBROKEN_COMPETITION }).click();
+        await expect(question).toHaveValue(UNBROKEN_COMPETITION);
+        expect(await question.evaluate((input) => input.getBoundingClientRect().right <= document.documentElement.clientWidth)).toBe(true);
+        await expectNoSideScroll(page, width);
+        await page.screenshot({ path: `${SHOTS}/add-game-competition-worst-${width}.png`, fullPage: true });
+
+        // The unbroken, non-Latin and emoji answers each save whole.
+        for (const [index, competition] of [UNBROKEN_COMPETITION, NON_LATIN_COMPETITION, EMOJI_COMPETITION].entries()) {
+          const opponent = `${FIXTURE} Worst ${index} ${width}`;
+          await question.fill(competition);
+          await form.getByLabel("Who are you playing?").fill(opponent);
+          await form.getByLabel("Where?").fill("Lincoln Park");
+          await form.getByRole("button", { name: "Add to schedule" }).click();
+          await expect(form.getByTestId("add-game-submit")).toContainText("Added");
+          expect(await savedCompetitions(opponent)).toEqual([competition]);
+          await expect(question).toHaveValue("");
+        }
+        expect(errors).toEqual([]);
+      } finally {
+        await removeFixtureGames();
+      }
+    });
+
+    test("a site that does not show a game's competition never asks, and sends none", async ({ page }) => {
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      const posts: string[] = [];
+      page.on("request", (request) => {
+        if (request.url().endsWith("/api/admin/data") && request.method() === "POST") posts.push(request.postData() ?? "");
+      });
+      const club = await alpha();
+      const opponent = `${FIXTURE} NoCompetition ${width}`;
+      // With nothing published Alpha is a generic site, like Rose City's.
+      const restore = await showMatchSponsorsOnAlpha();
+      try {
+        await seedCompetitions(club.seasonId, width, ["Spring League"]);
+        await openAddGame(page);
+        const form = main(page);
+        await expect(form.getByText("Which competition?")).toHaveCount(0);
+        await expect(form.getByRole("group", { name: "Last used competitions" })).toHaveCount(0);
+        await form.getByLabel("Who are you playing?").fill(opponent);
+        await form.getByLabel("Where?").fill("Lincoln Park");
+        await form.getByRole("button", { name: "Add to schedule" }).click();
+        await expect(form.getByTestId("add-game-submit")).toContainText("Added");
+        expect(posts).toHaveLength(1);
+        expect(JSON.parse(posts[0]).payload).not.toHaveProperty("competition");
+        expect(await savedCompetitions(opponent)).toEqual([null]);
+        expect(errors).toEqual([]);
+      } finally {
+        await removeFixtureGames();
+        await restore();
       }
     });
 

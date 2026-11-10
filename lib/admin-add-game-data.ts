@@ -43,6 +43,8 @@ export type AddGameData = {
   upcoming: AddGameMatch[];
   /** The club's recent distinct venues, newest first: the "Last used" chips. */
   recentVenues: string[];
+  /** The club's recent distinct competitions, newest first. Empty where the site never shows a competition. */
+  recentCompetitions: string[];
   /** The latest game's sponsor first (pre-filled), then the Sponsors page's. Empty where match sponsors are hidden. */
   sponsors: AddGameSponsor[];
   /** One entry per opponent the club has played with a short name or logo to reuse. */
@@ -51,7 +53,9 @@ export type AddGameData = {
 
 /** How many "Last used" chips the form offers. */
 export const RECENT_VENUE_LIMIT = 3;
-/** Recent games read to find distinct venues. */
+/** How many "Last used" competition chips the form offers. */
+export const RECENT_COMPETITION_LIMIT = 3;
+/** Recent games read to find distinct venues (and competitions). */
 const RECENT_VENUE_SCAN = 50;
 /** Upcoming games read for "Coming up". */
 export const UPCOMING_LIMIT = 200;
@@ -96,12 +100,26 @@ export function distinctVenues(venues: ReadonlyArray<string | null>, limit = REC
   return result;
 }
 
+/** Distinct, non-blank competitions in the order given, at most three (ADMIN-RE-24 follow-up). */
+export function distinctCompetitions(
+  competitions: ReadonlyArray<string | null>,
+  limit = RECENT_COMPETITION_LIMIT,
+): string[] {
+  return distinctVenues(competitions, limit);
+}
+
+/** The competition column a new game is saved with: blank is null, never an empty string. */
+export function competitionPayload(competition: string): { competition: string | null } {
+  const text = competition.trim();
+  return { competition: text ? text : null };
+}
+
 /** Soonest first: by date, then kickoff time. */
 export function compareMatches(a: AddGameMatch, b: AddGameMatch): number {
   return a.date === b.date ? a.time.localeCompare(b.time) : a.date.localeCompare(b.date);
 }
 
-export const MATCH_COLUMNS = "id,season_id,date,time,opponent,home,venue";
+export const MATCH_COLUMNS = "id,season_id,date,time,opponent,home,venue,competition";
 
 /** The same name whatever the case or outer spaces. */
 function nameKey(name: string): string {
@@ -246,6 +264,21 @@ async function readOpponentRows(supabase: SupabaseClient, clubId: string): Promi
   return rows;
 }
 
+/** Newest games first, so the newest distinct competitions lead. */
+async function readRecentCompetitions(supabase: SupabaseClient, clubId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .schema("onzio")
+    .from("matches")
+    .select("competition")
+    .eq("club_id", clubId)
+    .neq("competition", "")
+    .order("date", { ascending: false })
+    .order("time", { ascending: false })
+    .limit(RECENT_VENUE_SCAN);
+  if (error) throw error;
+  return distinctCompetitions(((data ?? []) as Array<{ competition: string | null }>).map((row) => row.competition));
+}
+
 async function readSponsors(supabase: SupabaseClient, clubId: string): Promise<AddGameSponsor[]> {
   const onzio = supabase.schema("onzio");
   const [latest, logos] = await Promise.all([
@@ -275,10 +308,10 @@ export async function loadAddGameData(
   supabase: SupabaseClient,
   clubId: string,
   timeZone: string,
-  { showSponsors, now = new Date() }: { showSponsors: boolean; now?: Date },
+  { showSponsors, showCompetition = false, now = new Date() }: { showSponsors: boolean; showCompetition?: boolean; now?: Date },
 ): Promise<AddGameData> {
   const onzio = supabase.schema("onzio");
-  const [seasons, upcoming, recent, opponents, sponsors] = await Promise.all([
+  const [seasons, upcoming, recent, opponents, sponsors, recentCompetitions] = await Promise.all([
     onzio
       .from("seasons")
       .select("id,label,active")
@@ -304,6 +337,7 @@ export async function loadAddGameData(
     // Side reads: when they fail the form still works, it just reuses nothing.
     readOpponentRows(supabase, clubId).then(rememberOpponents, () => []),
     showSponsors ? readSponsors(supabase, clubId).catch(() => []) : Promise.resolve([]),
+    showCompetition ? readRecentCompetitions(supabase, clubId).catch(() => []) : Promise.resolve([]),
   ]);
   if (seasons.error) throw seasons.error;
 
@@ -314,6 +348,7 @@ export async function loadAddGameData(
     recentVenues: recent.error
       ? []
       : distinctVenues(((recent.data ?? []) as Array<{ venue: string | null }>).map((row) => row.venue)),
+    recentCompetitions,
     sponsors,
     opponents,
   };
