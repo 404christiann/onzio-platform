@@ -19,6 +19,20 @@
 - **Exact next step:** the bot merges. Christian opens Who can sign in on Rose
   City.
 
+## 2026-11-09 - ADMIN-RE-14 Your club
+
+- **Status:** `in_progress` on branch `claude/admin-re-14-your-club-7788b6`
+  from `main` `600f5e7`, PR open. No migration. Nothing hosted touched.
+- **What it adds:** `/admin/your-club` for reimagined clubs (classic ones go to
+  `/admin/branding`): logo with "Fit your logo", email, phone, hours (200),
+  area, five social pages (2,048 each), footer line (160), live footer and
+  Contact previews, one Save. Only the cards the club's website has are shown
+  (Rose City-style sites: logo and social pages). The Your club More row now
+  opens it. Zod added for `site_social_links` and `site_branding` writes.
+- **Verification:** unit, contract and browser tests (390 and 1440); full
+  suites on the PR head in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot merges. RE-13 later points website pages here.
+
 ## 2026-11-10 - ADMIN-RE-11a follow-up: the bot's Low notes on #116
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
@@ -45,6 +59,7 @@
 - **Exact next step:** the bot merges. RE-11b (league table per season) and
   RE-11c are migrations and go through the production migration gate one at a
   time.
+
 ## 2026-11-09 - ADMIN-RE-20 Payments and plan
 
 - **Status:** `in_progress`, PR open. No migration, no Stripe change, no new
@@ -310,6 +325,7 @@
   have no More row in the plan, so in the reimagined admin they are reachable
   only by address until RE-13 and RE-06. Add rows, or accept the gap?
 - **Exact next step:** the bot merges; then RE-06 to RE-09.
+
 ## 2026-11-08 - ADMIN-RE-18 server half: who can sign in
 
 - **Status:** `in_progress` on branch `claude/friendly-pasteur-a348b7` from

@@ -334,6 +334,65 @@ for (const width of [390, 1440]) {
   });
 }
 
+test.describe("remove and Undo, with the answers given by the test", () => {
+  test("Undo that fails once stays on screen and works the second time; a later toast does not push it away; a double click sends one request", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const people = [
+      helper(1, { displayName: "Sam Okafor", email: "sam@alpha.example" }),
+      helper(2, { displayName: "Dana Ruiz", email: "dana@alpha.example", lastSignInAt: null }),
+    ];
+    let admins = [...people];
+    const posts: Array<Record<string, unknown>> = [];
+    let undoAttempts = 0;
+    await page.route("**/api/admin/members", async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ owners: [owner()], admins }) });
+        return;
+      }
+      const body = route.request().postDataJSON() as { action: string; userId: string };
+      posts.push(body);
+      if (body.action === "remove") {
+        admins = admins.filter((admin) => admin.userId !== body.userId);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ userId: body.userId, status: "removed", undoUntil: new Date(Date.now() + 600_000).toISOString() }) });
+      } else if (body.action === "undo-remove") {
+        undoAttempts += 1;
+        if (undoAttempts === 1) {
+          await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "MEMBERSHIP_MUTATION_FAILED" }) });
+          return;
+        }
+        admins = [...people];
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ userId: body.userId, status: "active" }) });
+      } else {
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ userId: body.userId, codeSent: true }) });
+      }
+    });
+    await openPage(page);
+
+    await rowFor(page, "Sam Okafor").getByTestId("sign-in-menu").click();
+    await page.getByRole("menuitem", { name: "Remove access" }).dblclick();
+    const undoToast = page.getByTestId("sign-in-toast").filter({ hasText: "Sam can’t sign in any more" });
+    await expect(undoToast).toBeVisible();
+    expect(posts.filter((post) => post.action === "remove")).toHaveLength(1);
+
+    // Three more toasts later, Sam's Undo is still there.
+    for (let index = 0; index < 3; index += 1) {
+      const resend = rowFor(page, "Dana Ruiz").getByTestId("sign-in-resend");
+      if (await resend.count()) await resend.click();
+      else break;
+    }
+    await expect(undoToast).toBeVisible();
+
+    await undoToast.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByTestId("sign-in-notice")).toContainText("Nothing changed");
+    await expect(undoToast).toBeVisible();
+    await undoToast.getByRole("button", { name: "Undo" }).click();
+    await expect(rowFor(page, "Sam Okafor")).toBeVisible();
+    await expect(undoToast).toHaveCount(0);
+    expect(undoAttempts).toBe(2);
+  });
+});
+
 test.describe("dark theme", () => {
   test("the list, the menu and a message read in the dark admin theme", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });

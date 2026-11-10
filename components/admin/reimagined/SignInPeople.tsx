@@ -53,6 +53,15 @@ type CallResult = { ok: true; body: Record<string, unknown> } | { ok: false; cod
 /** One code a minute is all Supabase Auth allows; a row says "Code sent" for that long. */
 const CODE_COOLDOWN_MS = 60_000;
 const SENT_TOAST_MS = 6_000;
+/** Undo answers a retry cannot change. */
+const FINAL_UNDO_CODES = new Set([
+  "MEMBERSHIP_UNDO_UNAVAILABLE",
+  "MEMBERSHIP_EXISTS",
+  "MEMBERSHIP_REQUIRED",
+  "MEMBERSHIP_INACTIVE",
+  "OWNER_REQUIRED",
+  "OWNER_TRANSFER_OPERATOR_REQUIRED",
+]);
 const NAME_TOAST_MS = 4_000;
 
 async function read(response: Response): Promise<CallResult> {
@@ -515,6 +524,14 @@ export function SignInPeople() {
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const nextToast = useRef(1);
   const mounted = useRef(true);
+  // A second click before the screen has re-rendered must not send a second request.
+  const inFlight = useRef(new Set<string>());
+
+  function begin(userId: string): boolean {
+    if (inFlight.current.has(userId)) return false;
+    inFlight.current.add(userId);
+    return true;
+  }
 
   useEffect(() => {
     mounted.current = true;
@@ -558,7 +575,13 @@ export function SignInPeople() {
 
   function say(text: string, undo?: Toast["undo"], ms?: number) {
     const id = nextToast.current++;
-    setToasts((current) => [...current.slice(-2), { id, text, undo }]);
+    // An Undo toast is never pushed out by a newer one while the server's window
+    // is open; of the plain ones only the latest stays.
+    setToasts((current) => {
+      const plain = current.filter((toast) => !toast.undo);
+      const older = plain.slice(0, Math.max(0, plain.length - 1));
+      return [...current.filter((toast) => toast.undo || !older.includes(toast)), { id, text, undo }];
+    });
     if (ms !== undefined) later(() => dismiss(id), ms);
     return id;
   }
@@ -589,10 +612,11 @@ export function SignInPeople() {
   }
 
   async function resend(person: SignInPerson) {
-    if (busy.has(person.userId) || sentAt.has(person.userId)) return;
+    if (sentAt.has(person.userId) || !begin(person.userId)) return;
     setNotice(null);
     mark("busy", person.userId, true);
     const result = await postMembers({ action: "resend-code", userId: person.userId });
+    inFlight.current.delete(person.userId);
     if (!mounted.current) return;
     mark("busy", person.userId, false);
     if (!result.ok) return fail(result.code, "resend", firstNameOf(person.displayName, person.email));
@@ -601,10 +625,11 @@ export function SignInPeople() {
   }
 
   async function remove(person: SignInPerson) {
-    if (busy.has(person.userId)) return;
+    if (!begin(person.userId)) return;
     setNotice(null);
     mark("busy", person.userId, true);
     const result = await postMembers({ action: "remove", userId: person.userId });
+    inFlight.current.delete(person.userId);
     if (!mounted.current) return;
     mark("busy", person.userId, false);
     const who = firstNameOf(person.displayName, person.email);
@@ -625,17 +650,23 @@ export function SignInPeople() {
   }
 
   async function undo(toast: Toast) {
-    if (!toast.undo || busy.has(toast.undo.userId)) return;
+    if (!toast.undo || !begin(toast.undo.userId)) return;
     const { userId, label } = toast.undo;
     setNotice(null);
     mark("busy", userId, true);
     const result = await postMembers({ action: "undo-remove", userId });
+    inFlight.current.delete(userId);
     if (!mounted.current) return;
     mark("busy", userId, false);
+    if (!result.ok) {
+      // A hiccup keeps Undo on screen so it can be pressed again; an answer that
+      // will not change on a retry (too late, already back) takes the toast away.
+      if (FINAL_UNDO_CODES.has(result.code ?? "")) dismiss(toast.id);
+      return fail(result.code, "undo", label);
+    }
     dismiss(toast.id);
-    if (!result.ok) return fail(result.code, "undo", label);
-    await refresh();
-    say(`${label} can sign in again`, undefined, NAME_TOAST_MS);
+    if (await refresh()) say(`${label} can sign in again`, undefined, NAME_TOAST_MS);
+    else setNotice({ text: `${label} can sign in again. Refresh the page to see them in the list.`, tone: "warning" });
   }
 
   async function submitDialog(
