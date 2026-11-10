@@ -162,9 +162,10 @@ describe("Add a game form (ADMIN-RE-07)", () => {
 
   it("reads with the signed-in person's client, scoped to the club, and nothing personal", () => {
     expect(loader).not.toMatch(/service-role|SERVICE_ROLE/);
-    // ADMIN-RE-07b added three reads (opponents, latest sponsor, Sponsors page).
-    expect(loader.match(/\.eq\("club_id", clubId\)/g)).toHaveLength(6);
-    expect(loader).toContain('MATCH_COLUMNS = "id,season_id,date,time,opponent,home,venue"');
+    // ADMIN-RE-07b added three reads (opponents, latest sponsor, Sponsors page);
+    // the competition follow-up added one more (recent competitions).
+    expect(loader.match(/\.eq\("club_id", clubId\)/g)).toHaveLength(7);
+    expect(loader).toContain('MATCH_COLUMNS = "id,season_id,date,time,opponent,home,venue,competition"');
     expect(loader).toContain('.select("id,label,active")');
     expect(loader).toContain('.select("venue")');
   });

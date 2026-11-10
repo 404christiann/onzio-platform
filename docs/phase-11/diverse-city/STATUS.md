@@ -1,5 +1,44 @@
 # Diverse City FC Status
 
+## 2026-11-10 - Add a game asks "Which competition?" (Diverse City only)
+
+**Agent/package:** Claude Code, follow-up to `ADMIN-RE-22` (no new package ID).
+Branch `claude/add-game-competition` from `main` `1572f01e`.
+**Status:** `in_progress`, draft PR open. UI only: no migration, no new
+dependency, no hosted action, nothing added to the tenant select in
+`lib/club-context.ts`.
+
+**Completed work:**
+
+- `/admin/add-game` asks an optional "Which competition?" (a text box capped at
+  `MATCH_TEXT_LIMITS.competition`, 80) with a one-line note on where it shows,
+  and "Last used" chips of the club's last three distinct competitions, newest
+  first (blank, case and outer spaces ignored). It is shown only where
+  `codeSiteAdminFor(club)?.schedule.competitionShowsOnNextMatch === true`:
+  today only Diverse City. Rose City's form is unchanged.
+- The save is the existing `POST /api/admin/data` insert. `competition` is in
+  `MATCH_COLUMNS` and in the payload only when the question is shown; blank
+  (or only spaces) saves `null`. After "Added" the box clears and the chips
+  take the new competition.
+- The chips share one small `RecentChips` component with the "Where?" chips.
+  The two groups are named "Last used" (venue) and "Last used competitions".
+- The recent competitions are read only where the question shows, with the
+  signed-in person's client, scoped to the club.
+
+**Left out on purpose:** setting a competition on a game that already exists
+(old Games page); showing the competition in "Coming up".
+
+**Files changed:** `lib/admin-add-game-data.ts`,
+`components/admin/reimagined/AddGame.tsx`, `app/admin/(protected)/add-game/page.tsx`,
+`tests/contracts/admin-add-game-competition.test.ts` (new),
+`tests/contracts/admin-add-game{,-sponsor}.test.ts`,
+`tests/browser/admin-reimagined-add-game.spec.ts`,
+`docs/admin-portal-redesign-plan.md` (RE-22 line), this file, `HANDOFF.md`.
+`components/sites/*/site-definition.ts` and `lib/code-site-admin.ts` are not
+touched.
+
+**Verification:** see the PR body (results table with the tested commit).
+
 ## 2026-11-10 - ADMIN-RE-24b: the new home on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24b of four. Branch

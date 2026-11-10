@@ -164,7 +164,7 @@ describe("Add a game form (ADMIN-RE-07b)", () => {
   it("asks Sponsor? only where the club's website shows match sponsors, the classic form's rule", () => {
     expect(diverseCitySite.admin.schedule.showMatchSponsorFields).toBe(false);
     expect(page).toContain("const showSponsors = codeSiteAdminFor(club)?.schedule.showMatchSponsorFields !== false;");
-    expect(page).toContain("loadAddGameData(supabase, club.id, portal.timeZone, { showSponsors })");
+    expect(page).toContain("loadAddGameData(supabase, club.id, portal.timeZone, { showSponsors, showCompetition })");
     expect(page).toContain("showSponsors={showSponsors}");
     expect(loader).toContain("showSponsors ? readSponsors(supabase, clubId).catch(() => []) : Promise.resolve([])");
     expect(form).toContain("{showSponsors ? (");
@@ -190,8 +190,8 @@ describe("Add a game form (ADMIN-RE-07b)", () => {
 
   it("reads with the signed-in person's client, every read scoped to the club", () => {
     expect(loader).not.toMatch(/service-role|SERVICE_ROLE|createAdminClient/);
-    expect(loader.match(/\.eq\("club_id", clubId\)/g)).toHaveLength(6);
-    expect(loader.match(/\.from\("/g)).toHaveLength(6);
+    expect(loader.match(/\.eq\("club_id", clubId\)/g)).toHaveLength(7);
+    expect(loader.match(/\.from\("/g)).toHaveLength(7);
     expect(loader).toContain('.select("opponent,opponent_short_name,opponent_logo_url,opponent_logo_asset_id")');
     expect(loader).toContain('.select("sponsor_name,sponsor_logo_url,sponsor_logo_asset_id,sponsor_link")');
     expect(loader).toContain('.select("name,logo_url,media_asset_id")');
