@@ -164,7 +164,8 @@ for (const width of [390, 1440]) {
         // The time box has room for "10:00 AM"; nothing is cut off.
         const time = await form.getByLabel("Time").evaluate((input) => input.scrollWidth <= input.clientWidth);
         expect(time).toBe(true);
-        await expect(form.getByText("League game?")).toHaveCount(0);
+        // ADMIN-RE-11b (decision 4): "League game?" is asked, Yes by default.
+        await expect(form.getByTestId("add-game-league").getByRole("radio", { name: "Yes" })).toHaveAttribute("aria-checked", "true");
         await page.screenshot({ path: `${SHOTS}/add-game-empty-${width}.png`, fullPage: true });
 
         // Nothing typed: the opponent is the one question that has to be answered.
@@ -189,11 +190,11 @@ for (const width of [390, 1440]) {
         await expectNoSideScroll(page, width);
         await page.screenshot({ path: `${SHOTS}/add-game-added-${width}.png`, fullPage: true });
 
-        const rows = await sql<{ date: string; time: string; home: boolean; venue: string; season_id: string }>(
-          "select to_char(date, 'YYYY-MM-DD') as date, time::text as time, home, venue, season_id from onzio.matches where club_id=$1 and opponent=$2",
+        const rows = await sql<{ date: string; time: string; home: boolean; league_game: boolean; venue: string; season_id: string }>(
+          "select to_char(date, 'YYYY-MM-DD') as date, time::text as time, home, league_game, venue, season_id from onzio.matches where club_id=$1 and opponent=$2",
           [ALPHA, opponent],
         );
-        expect(rows).toEqual([{ date: saturday, time: "10:00:00", home: true, venue, season_id: club.seasonId }]);
+        expect(rows).toEqual([{ date: saturday, time: "10:00:00", home: true, league_game: true, venue, season_id: club.seasonId }]);
 
         // The old Games page still changes and removes games.
         await form.getByRole("link", { name: "Change or remove a game" }).click();

@@ -106,7 +106,9 @@ describe("adding a game through /api/admin/data", () => {
     expect(insert({ ...GAME, date: "Nov 14" }).success).toBe(false);
     expect(insert({ ...GAME, time: "25:00" }).success).toBe(false);
     expect(insert({ ...GAME, time: "10:00:00" }).success).toBe(true);
-    expect(insert({ ...GAME, league_game: true }).success).toBe(false);
+    // ADMIN-RE-11b (decision 4): league_game is a column now, true or false and nothing else.
+    expect(insert({ ...GAME, league_game: false }).success).toBe(true);
+    expect(insert({ ...GAME, league_game: "no" }).success).toBe(false);
     expect(insert({ ...GAME, club_id: SEASON }).success).toBe(false);
   });
 
@@ -115,7 +117,7 @@ describe("adding a game through /api/admin/data", () => {
     expect(form).toContain('table: "matches"');
     expect(form).toContain('operation: "insert"');
     expect(form).toMatch(
-      /payload: \{\s*season_id: seasonId,\s*date,\s*time,\s*opponent: name,\s*home,\s*venue: place,/,
+      /payload: \{\s*season_id: seasonId,\s*date,\s*time,\s*opponent: name,\s*home,\s*league_game: leagueGame,\s*venue: place,/,
     );
     // Writes never use the browser Supabase client (Server Mutation Boundary).
     expect(form).not.toMatch(/supabase-browser|createClient/);
@@ -132,11 +134,11 @@ describe("Add a game form (ADMIN-RE-07)", () => {
     expect(form).toContain("seasons.find((season) => season.active) ?? seasons[0]");
   });
 
-  it("asks the plain questions and not \"League game?\" (decision 4)", () => {
-    for (const question of ["Who are you playing?", "Home or away?", "When?", "Where?", "Last used", "Coming up", "No games yet", "Add to schedule"]) {
+  it("asks the plain questions, with \"League game?\" now that the column exists (decision 4, ADMIN-RE-11b)", () => {
+    for (const question of ["Who are you playing?", "Home or away?", "League game?", "When?", "Where?", "Last used", "Coming up", "No games yet", "Add to schedule"]) {
       expect(form).toContain(question);
     }
-    expect(form).not.toMatch(/League game/i);
+    expect(form).toContain("const [leagueGame, setLeagueGame] = useState(true);");
     expect(form).toContain('from "@/components/ui/calendar"');
     expect(form).toContain('formatClubDate(date, "weekday-short")');
   });

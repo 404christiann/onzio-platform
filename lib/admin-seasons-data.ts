@@ -130,11 +130,30 @@ export function deleteVerdict(season: HubSeason, counts: DeleteCounts): DeleteVe
   return { deletable: true };
 }
 
-/** Our place in the league table and our points; null when there is no table or our team is not in it. */
-export function leagueSummary(rows: readonly { is_club: boolean; points: number }[]): LeagueSummary | null {
-  const index = rows.findIndex((row) => row.is_club);
+type LeagueSummaryRow = {
+  is_club: boolean;
+  points: number;
+  goal_difference?: number;
+  wins?: number;
+  sort_order?: number;
+};
+
+/**
+ * Our place in the league table and our points; null when there is no table or our team is not in it.
+ * The place is ranked the way the public table ranks (points, goal difference, wins, then the typed
+ * order), because our row now moves on its own when a score is saved and the typed order does not.
+ */
+export function leagueSummary(rows: readonly LeagueSummaryRow[]): LeagueSummary | null {
+  const ranked = [...rows].sort(
+    (a, b) =>
+      b.points - a.points ||
+      (b.goal_difference ?? 0) - (a.goal_difference ?? 0) ||
+      (b.wins ?? 0) - (a.wins ?? 0) ||
+      (a.sort_order ?? 0) - (b.sort_order ?? 0),
+  );
+  const index = ranked.findIndex((row) => row.is_club);
   if (index < 0) return null;
-  return { rank: index + 1, of: rows.length, points: rows[index].points };
+  return { rank: index + 1, of: ranked.length, points: ranked[index].points };
 }
 
 const FIELD_STAT_COLUMNS =
@@ -173,8 +192,9 @@ export async function loadSeasonsHub(
     const [league, total, played, field, keepers] = await Promise.all([
       onzio
         .from("league_standings")
-        .select("is_club,points,sort_order")
+        .select("is_club,points,goal_difference,wins,played,sort_order")
         .eq("club_id", clubId)
+        .eq("season_id", viewed.id)
         .order("sort_order", { ascending: true }),
       onzio.from("matches").select("id", { count: "exact", head: true }).eq("club_id", clubId).eq("season_id", viewed.id),
       onzio
@@ -195,14 +215,18 @@ export async function loadSeasonsHub(
       ...((field.data ?? []) as unknown as Record<string, unknown>[]),
       ...((keepers.data ?? []) as unknown as Record<string, unknown>[]),
     ];
+    const tableRows = (league.data ?? []) as (LeagueSummaryRow & { played: number })[];
     const counts: DeleteCounts = {
       matches: total.count ?? 0,
-      rowsWithNumbers: statRows.filter(statRowHasNumbers).length,
+      // A league table counts too once any team has a number in it: a copied table at zero does not.
+      rowsWithNumbers:
+        statRows.filter(statRowHasNumbers).length +
+        tableRows.filter((row) => row.played > 0 || row.points > 0).length,
       statRows: statRows.length,
     };
     return {
       ...base,
-      league: leagueSummary((league.data ?? []) as { is_club: boolean; points: number }[]),
+      league: leagueSummary(tableRows),
       players: counts.statRows,
       gamesPlayed: played.count ?? 0,
       gamesTotal: counts.matches,
