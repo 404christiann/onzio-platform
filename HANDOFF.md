@@ -1,3 +1,16 @@
+## 2026-11-10 - ADMIN-RE-24d Players in the Games tab
+
+- **Status:** `in_progress`. PR 24d of `ADMIN-RE-24` (built before 24c so
+  search can link to players). UI only: no migration, no new dependency, no
+  hosted action.
+- **What it adds:** a Players card on the Games tab and a page per player
+  (`/admin/games/players/<id>`, "‹ Games"): chips to switch players in the
+  same position, a game still missing its score with Enter score, and RE-19's
+  own chart and recent games, reused through a shared `usePlayerLog`.
+- **Verification:** contract and browser tests (390 and 1440, light and dark);
+  full suites on the PR head are in the PR body. Details in `STATUS.md`.
+- **Exact next step:** the bot merges. Then 24c, search.
+
 ## 2026-11-10 - ADMIN-RE-24b The new home on the new admin
 
 - **Status:** `in_progress`, PR open. PR 24b of `ADMIN-RE-24` (24a, #124, is

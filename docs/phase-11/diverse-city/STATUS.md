@@ -1,5 +1,46 @@
 # Diverse City FC Status
 
+## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
+
+**Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24d (built before 24c so
+search can link to player pages). Branch `claude/admin-re-24d-players`, on top
+of 24b. **Status:** `in_progress`. UI only: no migration, no new dependency,
+no hosted action.
+
+**Completed work:**
+
+- Games tab, under the season's results: a Players card (forwards, then
+  midfielders, four each, "See all N players" to How the team is doing), each
+  row opening that player's page.
+- `/admin/games/players/<id>` (under the Games tab, "‹ Games", the player's
+  name in the page bar): heading with number, position and season, chips that
+  link to each teammate in the same position, a game still missing its score
+  with Enter score, then RE-19's own six-corner chart and recent games with
+  minutes bars. A player who is not in the shown season is a 404.
+- Reuse, not rebuild: RE-19's `PlayerDetail` and the on-demand
+  `fetchPlayerMatchLog` read, now behind a shared `usePlayerLog` hook that
+  RE-19's own player picker uses too. The Games tab reads RE-19's season once
+  and shares it with the home board.
+
+**Files changed:** `app/admin/(protected)/games/players/[playerId]/page.tsx`
+(new), `app/admin/(protected)/games/page.tsx`,
+`components/admin/reimagined/{PlayerPage,PlayersList}.tsx` (new),
+`components/admin/reimagined/{TeamAnalytics,TopBar}.tsx`
+(`usePlayerLog`, `AnalyticsScope`, `TopBarTitle`),
+`components/admin/reimagined/home.module.css`, `lib/admin-home-board.ts`,
+`tests/contracts/admin-tabs.test.ts`,
+`tests/browser/admin-reimagined-players.spec.ts` (new), this file,
+`HANDOFF.md`.
+
+**Verification:** contract tests (route checks, reuse of RE-19's pieces,
+current tab) and browser tests at 390 and 1440, light and dark, on a fixture
+season with four players, three results and one game missing its score. Full
+suites on the PR head, with the tested commit, are in the PR body.
+
+**Blockers / decisions:** none new.
+
+**Exact next step:** open the PR once 24b is merged, then 24c (search).
+
 ## 2026-11-10 - ADMIN-RE-24b: the new home on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24b of four. Branch

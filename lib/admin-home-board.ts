@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { loadTeamAnalytics } from "@/lib/admin-analytics-data";
+import { loadTeamAnalytics, type TeamAnalyticsData } from "@/lib/admin-analytics-data";
 import type { ResultGame, SeasonRecord } from "@/lib/admin-analytics-view";
 import { SCORE_GRACE_MINUTES, newSignUpsSince } from "@/lib/admin-home-data";
 import { clubToday, formatClubDate, formatClubTime, isKickoffPast } from "@/lib/club-time";
@@ -115,11 +115,13 @@ export async function loadHomeBoard(
   clubId: string,
   timeZone: string,
   now: Date = new Date(),
+  /** RE-19's season read when the caller already has it (the Games tab). */
+  team?: TeamAnalyticsData,
 ): Promise<HomeBoard> {
   const [games, forms, analytics] = await Promise.allSettled([
     readSeasonGames(supabase, clubId),
     readNewSignUpForms(supabase, clubId, timeZone, now),
-    loadTeamAnalytics(supabase, clubId),
+    team ?? loadTeamAnalytics(supabase, clubId),
   ]);
   const rows = games.status === "fulfilled" ? games.value : null;
   const picked = rows ? pickBoardGames(rows, timeZone, now) : null;
@@ -200,4 +202,19 @@ export function resultBars(games: readonly ResultGame[]): { id: string; up: numb
     down: game.them / most,
     label: `${game.us}–${game.them} ${game.opponent}`,
   }));
+}
+
+/** The oldest game still missing a score, for the player page's "Enter score" row. */
+export async function readMissingScoreGame(
+  supabase: SupabaseClient,
+  clubId: string,
+  timeZone: string,
+  now: Date = new Date(),
+): Promise<BoardGame | null> {
+  try {
+    const rows = await readSeasonGames(supabase, clubId);
+    return rows ? pickBoardGames(rows, timeZone, now).missingScore : null;
+  } catch {
+    return null;
+  }
 }
