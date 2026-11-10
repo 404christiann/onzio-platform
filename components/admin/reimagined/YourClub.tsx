@@ -19,7 +19,7 @@ import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { Spinner } from "@/components/ui/spinner";
 import { createClient } from "@/lib/admin-client";
 import type { YourClubData } from "@/lib/admin-your-club-data";
-import { CLUB_LOGO_BUCKET, clubLogoUrl } from "@/lib/club-branding";
+import { CLUB_LOGO_BUCKET, clubLogoUrl, resolveFooterTagline } from "@/lib/club-branding";
 import type { SiteSocialPlatform } from "@/lib/db-types";
 import {
   GRAPHIC_UPLOAD_ACCEPT,
@@ -32,8 +32,8 @@ import {
   YOUR_CLUB_LIMITS,
   changeSummary,
   counterLabel,
-  normalizeSocialInput,
-  socialDisplay,
+  draftFromSaved,
+  effectiveSocialHref,
   validateYourClub,
   type YourClubDraft,
   type YourClubField,
@@ -57,16 +57,6 @@ const DONE_MS = 4000;
 
 type SaveState = "idle" | "busy" | "done";
 type Errors = Partial<Record<YourClubField | "logo", string>>;
-
-/** The draft's social fields show an address without its scheme, as typed in the design. */
-function toDraft(saved: YourClubDraft): YourClubDraft {
-  return {
-    ...saved,
-    social: Object.fromEntries(
-      SOCIAL_PLATFORMS.map((platform) => [platform.id, socialDisplay(saved.social[platform.id])]),
-    ) as Record<SiteSocialPlatform, string>,
-  };
-}
 
 function plural(count: number): string {
   return `${count.toLocaleString("en-US")} ${count === 1 ? "change" : "changes"}`;
@@ -139,7 +129,7 @@ function Editor({
   const router = useRouter();
   const { setClubLogoPath, refreshClubBranding } = useClubBranding();
   const [saved, setSaved] = useState<YourClubDraft>(data.saved);
-  const [draft, setDraft] = useState<YourClubDraft>(() => toDraft(data.saved));
+  const [draft, setDraft] = useState<YourClubDraft>(() => draftFromSaved(data.saved));
   const [logoUrl, setLogoUrl] = useState(data.logoUrl);
   const [pendingLogo, setPendingLogo] = useState<{ file: File; url: string } | null>(null);
   const [fitting, setFitting] = useState<File | null>(null);
@@ -302,7 +292,7 @@ function Editor({
         return {
           id,
           label: platform.label,
-          href: normalizeSocialInput(draft.social[id]),
+          href: effectiveSocialHref(saved.social[id], draft.social[id]),
           icon: platform.icon,
           sort_order: SOCIAL_PLATFORMS.indexOf(platform),
           updated_at: now,
@@ -367,7 +357,7 @@ function Editor({
   const reachFilled = [draft.email, draft.phone].some((value) => value.trim() !== "");
   // The footer shows a page once its field holds a web address.
   const lit = SOCIAL_PLATFORMS.filter((platform) =>
-    /^https?:\/\/\S+$/i.test(normalizeSocialInput(draft.social[platform.id])),
+    /^https?:\/\/\S+$/i.test(effectiveSocialHref(saved.social[platform.id], draft.social[platform.id])),
   );
 
   return (
@@ -607,8 +597,9 @@ function Editor({
                 {clubName}
               </span>
             </span>
-            {shown.footerLine && draft.footerLine.trim() ? (
-              <span className={styles.footerLine}>{draft.footerLine}</span>
+            {shown.footerLine ? (
+              // A cleared line puts the template's standard wording back, as on the website.
+              <span className={styles.footerLine}>{resolveFooterTagline(draft.footerLine)}</span>
             ) : null}
             {shown.reach && reachFilled ? (
               <span className={styles.footerRows}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { AdminModal } from "@/components/admin/AdminModal";
 import ResilientNativeImage from "@/components/ResilientNativeImage";
 import { cropGeometry, MAX_LOGO_ZOOM, MIN_LOGO_ZOOM } from "@/lib/your-club";
@@ -64,7 +64,7 @@ export function FitLogo({
   onUseAsIs: () => void;
   onCancel: () => void;
 }) {
-  const url = useMemo(() => URL.createObjectURL(file), [file]);
+  const [url, setUrl] = useState<string | null>(null);
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
   const [failed, setFailed] = useState(false);
   const [zoom, setZoom] = useState(MIN_LOGO_ZOOM);
@@ -74,6 +74,10 @@ export function FitLogo({
   const drag = useRef<{ x: number; y: number; from: { x: number; y: number } } | null>(null);
 
   useEffect(() => {
+    // Made and let go in the same effect, so React's double run in development
+    // never loads an address that was already revoked.
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
     let cancelled = false;
     const image = new window.Image();
     image.onload = () => {
@@ -84,12 +88,12 @@ export function FitLogo({
     image.onerror = () => {
       if (!cancelled) setFailed(true);
     };
-    image.src = url;
+    image.src = objectUrl;
     return () => {
       cancelled = true;
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(objectUrl);
     };
-  }, [url]);
+  }, [file]);
 
   const geometry = cropGeometry({
     naturalWidth: natural?.width ?? 0,
@@ -206,7 +210,7 @@ export function FitLogo({
             onKeyDown={onKeyDown}
             data-testid="fit-logo-frame"
           >
-            {natural ? <Picture url={url} size={FRAME} geometry={geometry} className={styles.fitImage} /> : null}
+            {natural && url ? <Picture url={url} size={FRAME} geometry={geometry} className={styles.fitImage} /> : null}
           </div>
           <label className={styles.fitZoom}>
             <span>Zoom</span>
@@ -228,7 +232,7 @@ export function FitLogo({
                   data-round={preview.round || undefined}
                   style={{ width: preview.size, height: preview.size }}
                 >
-                  {natural ? <Picture url={url} size={preview.size} geometry={geometry} className={styles.fitImage} /> : null}
+                  {natural && url ? <Picture url={url} size={preview.size} geometry={geometry} className={styles.fitImage} /> : null}
                 </span>
                 <span className={styles.fitPreviewLabel}>{preview.label}</span>
               </li>

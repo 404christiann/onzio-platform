@@ -6,6 +6,8 @@ import {
   changeSummary,
   cropGeometry,
   counterLabel,
+  draftFromSaved,
+  effectiveSocialHref,
   normalizeSocialInput,
   socialDisplay,
   validateYourClub,
@@ -199,5 +201,49 @@ describe("cropGeometry (Fit your logo)", () => {
     const g = cropGeometry({ naturalWidth: 0, naturalHeight: 0, frame: FRAME, zoom: 1, offsetX: 0, offsetY: 0 });
     expect(g.drawWidth).toBe(0);
     expect(Number.isFinite(g.drawX)).toBe(true);
+  });
+});
+
+// The review bot's Medium on #117: a saved address that is not a lower-case
+// https:// one with no port must not load as an unsaved change.
+describe("a saved page that is shown and not touched is not a change", () => {
+  const SAVED_ADDRESSES = [
+    "https://instagram.com/club",
+    "http://instagram.com/club",
+    "HTTPS://Instagram.com/club",
+    "https://instagram.com:443/club",
+    "mailto:club@example.com",
+    "/local/path",
+  ];
+
+  for (const address of SAVED_ADDRESSES) {
+    it(`${address} loads clean and stays as saved`, () => {
+      const saved: YourClubDraft = { ...BASE, social: { ...EMPTY_SOCIAL, instagram: address } };
+      const draft = draftFromSaved(saved);
+      const summary = changeSummary(saved, draft, SHOWN, false);
+      expect(summary).toMatchObject({ social: [], count: 0 });
+      // Nothing about it blocks a Save of something else.
+      expect(effectiveSocialHref(saved.social.instagram, draft.social.instagram)).toBe(address);
+    });
+  }
+
+  it("shows a saved address without its scheme", () => {
+    const saved: YourClubDraft = { ...BASE, social: { ...EMPTY_SOCIAL, facebook: "http://facebook.com/a" } };
+    expect(draftFromSaved(saved).social.facebook).toBe("facebook.com/a");
+  });
+
+  it("still sees a real edit, and an edit back to what was saved", () => {
+    const saved: YourClubDraft = { ...BASE, social: { ...EMPTY_SOCIAL, instagram: "http://instagram.com/club" } };
+    const edited = { ...draftFromSaved(saved), social: { ...EMPTY_SOCIAL, instagram: "instagram.com/other" } };
+    expect(changeSummary(saved, edited, SHOWN, false).social).toEqual(["instagram"]);
+    expect(effectiveSocialHref(saved.social.instagram, "instagram.com/other")).toBe("https://instagram.com/other");
+    const back = { ...edited, social: { ...EMPTY_SOCIAL, instagram: "instagram.com/club" } };
+    expect(changeSummary(saved, back, SHOWN, false).social).toEqual([]);
+  });
+
+  it("treats a cleared saved page as a change and an untouched blank as none", () => {
+    const saved: YourClubDraft = { ...BASE, social: { ...EMPTY_SOCIAL, instagram: "https://instagram.com/club" } };
+    expect(changeSummary(saved, { ...draftFromSaved(saved), social: { ...EMPTY_SOCIAL } }, SHOWN, false).social).toEqual(["instagram"]);
+    expect(changeSummary(BASE, draftFromSaved(BASE), SHOWN, false).count).toBe(0);
   });
 });

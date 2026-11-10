@@ -332,6 +332,49 @@ for (const width of [390, 1440]) {
       }
     });
 
+    test("a saved http:// or port address loads clean, and a cleared footer line previews the standard wording", async ({ page }) => {
+      const before = await snapshot();
+      try {
+        await sql("delete from onzio.site_social_links where club_id=$1 and id in ('instagram','facebook')", [ALPHA]);
+        await sql(
+          `insert into onzio.site_social_links (club_id, id, label, href, icon, sort_order)
+           values ($1,'instagram','Instagram','http://instagram.com/re14fixture','/images/logo/instagramLogo.svg',0),
+                  ($1,'facebook','Facebook','https://facebook.com:443/re14fixture','/images/logo/facebookLogo.svg',1)`,
+          [ALPHA],
+        );
+        await openYourClub(page);
+        const form = main(page);
+        await expect(form.getByRole("textbox", { name: "Instagram", exact: true })).toHaveValue("instagram.com/re14fixture");
+        await expect(form.getByRole("textbox", { name: "Facebook", exact: true })).toHaveValue("facebook.com:443/re14fixture");
+        // Nothing was touched, so nothing is unsaved, and Save has nothing to do.
+        await expect(page.getByTestId("your-club-status")).toContainText("Nothing to save yet");
+        await expect(await saveButton(page)).toBeDisabled();
+        const footer = page.getByTestId("your-club-footer-social");
+        await expect(footer.locator('[data-platform="instagram"]')).toBeVisible();
+        await expect(footer.locator('[data-platform="facebook"]')).toBeVisible();
+
+        // Saving something else leaves both addresses exactly as they were.
+        await form.getByRole("textbox", { name: "Hours", exact: true }).fill("Always open");
+        await expect(page.getByTestId("your-club-status")).toContainText(/1 change not saved yet|Not saved yet/);
+        await (await saveButton(page)).click();
+        await expect(page.getByTestId("your-club-save")).toContainText(/Saved/);
+        const rows = await sql<{ id: string; href: string }>(
+          "select id, href from onzio.site_social_links where club_id=$1 and id in ('instagram','facebook') order by id",
+          [ALPHA],
+        );
+        expect(rows).toEqual([
+          { id: "facebook", href: "https://facebook.com:443/re14fixture" },
+          { id: "instagram", href: "http://instagram.com/re14fixture" },
+        ]);
+
+        // A cleared footer line puts the standard wording back, on the website and in the preview.
+        await form.getByRole("textbox", { name: "Footer line", exact: true }).fill("");
+        await expect(page.getByTestId("your-club-footer-preview")).toContainText("One Club. One Community.");
+      } finally {
+        await restore(before);
+      }
+    });
+
     test("a club still on the classic admin is sent to Branding", async ({ page }) => {
       const previous = await setPortal("classic");
       try {

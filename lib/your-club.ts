@@ -72,6 +72,28 @@ export function socialDisplay(href: string): string {
   return href.replace(/^https?:\/\//i, "");
 }
 
+/**
+ * What a social page really holds, given what is saved and what the field shows. A field left
+ * as it was loaded (the saved address without its scheme) means the saved value, whatever its
+ * scheme, case or port; only a field the owner changed is cleaned up into an https:// address.
+ * Without this, an old "http://" address would load as an unsaved change and be rewritten.
+ */
+export function effectiveSocialHref(saved: string, typed: string): string {
+  const current = saved.trim();
+  const shown = typed.trim();
+  return shown === socialDisplay(current) ? current : normalizeSocialInput(shown);
+}
+
+/** The page's fields as first shown: social addresses without their scheme, as typed in the design. */
+export function draftFromSaved(saved: YourClubDraft): YourClubDraft {
+  return {
+    ...saved,
+    social: Object.fromEntries(
+      SOCIAL_PLATFORMS.map((platform) => [platform.id, socialDisplay(saved.social[platform.id].trim())]),
+    ) as Record<SiteSocialPlatform, string>,
+  };
+}
+
 export function counterLabel(value: string, limit: number): string {
   return `${value.length.toLocaleString("en-US")}/${limit.toLocaleString("en-US")}`;
 }
@@ -141,7 +163,8 @@ export function changeSummary(
       differs(saved.hours, draft.hours) ||
       differs(saved.area, draft.area));
   const social = SOCIAL_PLATFORMS.filter(
-    (platform) => normalizeSocialInput(saved.social[platform.id]) !== normalizeSocialInput(draft.social[platform.id]),
+    (platform) =>
+      effectiveSocialHref(saved.social[platform.id], draft.social[platform.id]) !== saved.social[platform.id].trim(),
   ).map((platform) => platform.id);
   return {
     logo: logoChanged,
