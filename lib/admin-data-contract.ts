@@ -7,6 +7,7 @@ import {
 } from "@/lib/contact-admin";
 import { FOOTER_TAGLINE_LIMIT } from "@/lib/club-branding";
 import { YOUR_CLUB_LIMITS } from "@/lib/your-club";
+import { SPONSOR_NAME_LIMIT, SPONSOR_WEBSITE_LIMIT } from "@/lib/sponsor-content";
 
 export const ADMIN_TABLE_FEATURES = {
   about_page_content: "about",
@@ -382,6 +383,39 @@ const leagueStandingsMutation = z
   })
   .passthrough();
 
+// ADMIN-RE-15 (decision 0007): one row per sponsor, with a Homepage and a
+// Footer switch and an optional website. Both admin portals write through
+// here: the one-list page and the classic Sponsors page. The ceilings mirror
+// the database CHECKs (20261110150000_sponsors_one_list.sql): a name of 1 to
+// 60 characters, counted as the database counts them, and a website that is
+// an http(s) address of at most 2,048. `placement` is the old shape, accepted
+// so a page loaded before the deploy can still save.
+const sponsorName = z
+  .string()
+  .refine((value) => Array.from(value).length <= SPONSOR_NAME_LIMIT, {
+    message: `Sponsor names stop at ${SPONSOR_NAME_LIMIT} characters`,
+  })
+  .refine((value) => value.trim() !== "", { message: "Give this sponsor a name" });
+const sponsorWebsite = z
+  .string()
+  .max(SPONSOR_WEBSITE_LIMIT)
+  .regex(/^https?:\/\/\S+$/i, { message: "Their website must be an http or https address" })
+  .nullable();
+const siteSponsorLogoMutation = z
+  .object({
+    id: uuid.optional(),
+    placement: z.enum(["carousel", "footer"]).nullable().optional(),
+    name: sponsorName.optional(),
+    logo_url: z.string().min(1).max(2_048).optional(),
+    media_asset_id: nullableUuid.optional(),
+    sort_order: z.number().int().min(0).max(10_000).optional(),
+    show_on_homepage: z.boolean().optional(),
+    show_in_footer: z.boolean().optional(),
+    website_url: sponsorWebsite.optional(),
+    created_at: z.string().max(40).optional(),
+  })
+  .strict();
+
 const MATCH_INSERT_REQUIRED = ["season_id", "date", "time", "opponent", "venue"] as const;
 
 const NEW_DOMAIN_MUTATION_SCHEMAS = {
@@ -395,6 +429,7 @@ const NEW_DOMAIN_MUTATION_SCHEMAS = {
   contact_page_content: contactPageMutation,
   site_branding: siteBrandingMutation,
   site_social_links: siteSocialLinkMutation,
+  site_sponsor_logos: siteSponsorLogoMutation,
   tryouts: tryoutMutation,
   tryouts_page_content: tryoutsPageMutation,
 } as const;
@@ -491,6 +526,21 @@ export const adminDataRequestSchema = z
               code: "custom",
               path: ["payload", field],
               message: `Program ${request.operation} requires ${field}`,
+            });
+          }
+        }
+      }
+
+      if (
+        request.table === "site_sponsor_logos" &&
+        (request.operation === "insert" || request.operation === "upsert")
+      ) {
+        for (const field of ["name", "logo_url"] as const) {
+          if (!(field in payload)) {
+            context.addIssue({
+              code: "custom",
+              path: ["payload", field],
+              message: `Sponsor ${request.operation} requires ${field}`,
             });
           }
         }
