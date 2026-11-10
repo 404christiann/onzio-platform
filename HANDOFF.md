@@ -16,8 +16,10 @@
   and the cursor to settle, checks the stored row, allows the save 20 s, and
   requires the public page to show the words on its first render (no reload:
   review-bot M1 on #131). The one stale public render is an open item.
-- **Verification:** 40 runs in a row green at 1440 (both portals) on the PR
-  head; full suites in the PR body. Details in `STATUS.md`.
+- **Verification:** the first version of the fix went 40 of 40 at 1440,
+  twice. The final version is repeated 20 times per portal at both 390 and
+  1440, and the full suites run, on the PR head. The counts and the tested
+  commit are in the PR body. Details in `STATUS.md`.
 - **Exact next step:** bot review and merge.
 
 ## 2026-11-10 - ADMIN-RE-24d Players in the Games tab

@@ -55,8 +55,10 @@ the field held the headline right after typing.
 - On the unchanged test, two runs of 20 at 1440 (40 tests each, both portals)
   gave 1 failure and then 2 failures, the causes described above.
 - The first version of the fix (with the one-reload allowance) went 40 of 40
-  twice. The final version (no reload, focus by effect) is run 20 times at
-  1440 in both portals on the PR head; that count is in the PR body.
+  at 1440, twice. The final version (no reload, focus by effect, the cursor
+  checked before typing) is repeated 20 times per portal at both 390 and 1440
+  on the PR head. Those counts, and the commit they ran on, are in the PR
+  body (review-bot M1 on `fd77598`).
 - tsc, lint on the changed files, vitest without `tests/database`, `npm run
   build`, and the `admin-reimagined` and `admin-guided` browser configs. The
   results, with the commit they ran on, are in the PR body.

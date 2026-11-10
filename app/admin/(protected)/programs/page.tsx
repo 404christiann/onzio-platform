@@ -445,9 +445,16 @@ export default function AdminProgramsPage() {
   // words box takes the cursor once React has drawn the clicked section, in
   // that section's first field, and never away from a field already in use.
   // An effect (not a frame timer) so the field is certain to exist.
-  const [wordsFocus, setWordsFocus] = useState<{ section: PageCopySection; request: number } | null>(null);
+  // A new object per click, so a second click on the same section asks again.
+  const [wordsFocus, setWordsFocus] = useState<{ section: PageCopySection } | null>(null);
   useEffect(() => {
     if (!wordsFocus) return;
+    // Drop a request the person has moved on from (another section chosen, or
+    // the words box gone), so it never takes the cursor later.
+    if (hidesPageCopyEditor || wordsFocus.section !== activePageCopySection) {
+      setWordsFocus(null);
+      return;
+    }
     const panel = pageCopyPanel.current;
     const field = panel?.querySelector<HTMLElement>(
       `[data-page-copy-section="${wordsFocus.section}"] input, [data-page-copy-section="${wordsFocus.section}"] textarea`,
@@ -456,7 +463,7 @@ export default function AdminProgramsPage() {
     setWordsFocus(null);
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
     if (!panel.contains(document.activeElement)) field.focus({ preventScroll: true });
-  }, [wordsFocus, activePageCopySection]);
+  }, [wordsFocus, activePageCopySection, hidesPageCopyEditor]);
 
   function selectCanvasSection(section: string) {
     setSelectedSection(section);
@@ -469,7 +476,7 @@ export default function AdminProgramsPage() {
     // takes the cursor.
     if (!hidesPageCopyEditor && (section === "Page heading" || section === "Closing band")) {
       setSelectedSection(null);
-      setWordsFocus({ section: section === "Page heading" ? "pageHeader" : "closingBand", request: Date.now() });
+      setWordsFocus({ section: section === "Page heading" ? "pageHeader" : "closingBand" });
     }
   }
 
