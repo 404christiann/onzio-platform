@@ -67,6 +67,73 @@ price row is absent in screenshots; the words are unit tested); Safari.
 **Exact next step:** the bot reviews and merges. Later, when Rose City has a
 real subscription, Christian opens Payments and plan there on phone and laptop.
 
+## 2026-11-09 - ADMIN-RE-17: Team roster on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-17`. Branch
+`claude/admin-re-17-roster-81cd6a` from `main` `600f5e7`. **Status:**
+`in_progress`, PR open for the review bot. No schema change, no migration. No
+hosted action: nothing run against production, no club switch changed.
+
+**What it does:** `/admin/roster` under a club on `reimagined` shows the
+players as cards under four position headings (design:
+`cd-roster-final-cascade`). A laptop has a small pitch beside the list; its
+four zones jump to a position and the page lands there, the cards dealing in
+row by row. A phone has four tabs pinned under the top bar (Keepers, Defense,
+Midfield, Forwards). Names clamp to two lines and break an unbreakable one (the
+phone clamp from the design's break-ui list). A club still on `classic` gets
+the page it has today, unchanged.
+
+**Completed work:**
+
+- New `components/admin/reimagined/RosterBoard.tsx` and `roster.module.css`
+  (presentation only), and `lib/admin-roster-view.ts` (grouping, counts,
+  the "N hidden from your website" line, initials that never split an emoji or
+  a Chinese character). `app/admin/(protected)/roster/page.tsx` picks the board
+  from `useAdminPortal()`. Loading, saving, the edit panel and every write are
+  the classic page's own code, still through `lib/admin-client.ts`.
+- The home's "Team roster" row and the top bar title were already in the
+  manifest, so the shell's menu needed no change.
+- Hidden players stay in the list, dimmed with a "Hidden" tag, so an owner can
+  still find one to show again; the rail counts only players on the website.
+- A position with nobody in it says so and offers "Add one", which opens the
+  form with that position chosen.
+
+**Differences from the design, on purpose:**
+
+- The edit form is the existing side panel (a full page on a phone), with all
+  its required fields. The design's short form has only name, number and
+  position, but the page asks for nationality, hometown, height, weight and age
+  today, and dropping them needs Christian's call.
+- A search box ("Find a player") stays, because a 60-player squad needs it.
+- Staff has no design. It keeps its own list and panel under a Players/Staff
+  switch and the same title row.
+- The panel sits on the right edge, not beside the card.
+
+**Files changed:** `app/admin/(protected)/roster/page.tsx`,
+`components/admin/reimagined/RosterBoard.tsx`,
+`components/admin/reimagined/roster.module.css`, `lib/admin-roster-view.ts`,
+`lib/__tests__/admin-roster-view.test.ts`,
+`tests/contracts/admin-reimagined-roster.test.ts`,
+`tests/browser/admin-reimagined-roster.spec.ts`, this file, `HANDOFF.md`.
+
+**Verification:** by hand, outside the main checkout, with the shared lock
+`scripts/with-local-db-lock.sh`. The results table and the tested revision are
+in the PR body. Break-ui cases in the browser spec (answered in the browser, so
+no database row): 64 players, 59 shown and 5 hidden; 120-character, unbreakable,
+Chinese, Russian and emoji names; no photo, a broken photo, no number, no
+hometown; zero players; one player; a search with no match; dark theme.
+
+**Found along the way:** `html` has `scroll-behavior: smooth`, so a jump with
+the default `scrollIntoView` glided and the rail read the wrong position; the
+jump now asks for `behavior: "instant"`.
+
+**Not verified:** a real phone (iOS Safari); the design's exact card width (the
+laptop shows four cards across at 1440, the design three); Rose City's real
+roster.
+
+**Exact next step:** the bot reviews and merges. Christian looks at Team roster
+on Rose City after the merge.
+
 ## 2026-11-09 - ADMIN-RE-10a: number boxes keep no leading zero, stepper focus ring
 
 **Agent/package:** Claude Code, `ADMIN-RE-10a`, the first fix from

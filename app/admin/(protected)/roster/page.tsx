@@ -11,6 +11,12 @@ import {
 /* eslint-disable @next/next/no-img-element */
 
 import { useClubContext, useClubId } from "@/components/ClubContextProvider";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import {
+  RosterBoard,
+  RosterHeading,
+  RosterSwitch,
+} from "@/components/admin/reimagined/RosterBoard";
 import { codeSiteAdminFor } from "@/lib/code-site-admin";
 
 import { useCallback, useEffect, useMemo, useState, useRef, useId } from "react";
@@ -127,6 +133,9 @@ async function uploadPhoto(file: File, bucket: string, folder: string): Promise<
 
 type RosterTab = "players" | "staff";
 
+/** What the reimagined page hands each tab: the Players/Staff switch and Add. */
+type RosterChrome = { switcher: React.ReactNode; onAdd: () => void };
+
 const ROSTER_TAB_ORDER: RosterTab[] = ["players", "staff"];
 
 export default function RosterPage() {
@@ -153,6 +162,32 @@ export default function RosterPage() {
       [tab]: current[tab] + 1,
     }));
   };
+
+  // ADMIN-RE-17: a club on the reimagined admin sees the players as cards under
+  // position headings with a jump rail; the loading, saving and editing below
+  // are the same for both admins. A club still on the classic admin keeps the
+  // page it has always had.
+  const reimagined = useAdminPortal().portal === "reimagined";
+  if (reimagined) {
+    const chrome: RosterChrome = {
+      switcher: <RosterSwitch tab={tab} onSelect={selectTab} />,
+      onAdd: requestAdd,
+    };
+    return (
+      <div
+        id={`roster-${tab}-panel`}
+        role="tabpanel"
+        aria-labelledby={`roster-${tab}-tab`}
+        className="mx-auto max-w-[1120px]"
+      >
+        {tab === "players" ? (
+          <PlayersTab addRequest={addRequests.players} chrome={chrome} />
+        ) : (
+          <StaffTab addRequest={addRequests.staff} chrome={chrome} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <AdminPage className="max-w-4xl">
@@ -237,7 +272,7 @@ export default function RosterPage() {
 type StatusFilter = "all" | "active" | "inactive";
 type PositionFilter = "All" | Position;
 
-function PlayersTab({ addRequest }: { addRequest: number }) {
+function PlayersTab({ addRequest, chrome }: { addRequest: number; chrome?: RosterChrome }) {
   const clubId = useClubId();
   const [players, setPlayers]     = useState<Player[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -367,11 +402,12 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
     return sorted.findIndex((p) => p.id === key);
   }
 
-  const openAddPanel = useCallback(() => {
+  // `position` is only passed from an empty position on the reimagined board.
+  const openAddPanel = useCallback((position?: Position) => {
     setPanelDirection(1);
     setEditingId(null);
     setConfirmingDeactivation(false);
-    setAddForm(emptyPlayer());
+    setAddForm(position ? { ...emptyPlayer(), position } : emptyPlayer());
     setAddPhoto(null);
     setError(null);
     setAddOpen(true);
@@ -525,6 +561,20 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
   return (
     <div>
       <AdminSaveFeedback saving={saving} saved={saved} />
+      {chrome ? (
+        <RosterBoard
+          players={players}
+          loading={loading}
+          error={panelOpen ? null : error}
+          editingId={editingId}
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          onAdd={(position) => (position ? openAddPanel(position) : chrome.onAdd())}
+          onOpen={openEditPanel}
+          switcher={chrome.switcher}
+        />
+      ) : (
+      <>
       {/* Toolbar */}
       <AdminPageToolbar className="mb-6 flex-col items-stretch gap-4 sm:flex-col sm:items-stretch sm:justify-start">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -625,6 +675,8 @@ function PlayersTab({ addRequest }: { addRequest: number }) {
             );
           })}
         </div>
+      )}
+      </>
       )}
 
       <AdminSidePanel
@@ -839,7 +891,7 @@ function PlayerPositionGroup({
 
 // ── Staff tab ─────────────────────────────────
 
-function StaffTab({ addRequest }: { addRequest: number }) {
+function StaffTab({ addRequest, chrome }: { addRequest: number; chrome?: RosterChrome }) {
   const { clubLogoUrl } = useClubBranding();
   const [staff, setStaff]         = useState<Staff[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -1021,6 +1073,26 @@ function StaffTab({ addRequest }: { addRequest: number }) {
   return (
     <div>
       <AdminSaveFeedback saving={saving} saved={saved} />
+      {chrome ? (
+        // ADMIN-RE-17: the design shows players only, so Staff keeps its own
+        // list and panel under the new title row.
+        <div className="mb-6">
+          <RosterHeading
+            title="Your staff"
+            count={staff.filter((s) => s.active).length}
+            summary={
+              staff.length === 0
+                ? "No staff yet"
+                : staff.some((s) => !s.active)
+                  ? `${staff.filter((s) => !s.active).length} hidden from your website`
+                  : "Everyone is on your website"
+            }
+            addLabel="Add staff"
+            onAdd={chrome.onAdd}
+          />
+          <div className="mt-4">{chrome.switcher}</div>
+        </div>
+      ) : null}
       {/* Toolbar */}
       <AdminPageToolbar className="mb-6 flex-col items-stretch gap-4 sm:flex-col sm:items-stretch sm:justify-start">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
