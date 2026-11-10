@@ -44,8 +44,10 @@ describe("1. Standings title", () => {
   it("saves a blank title as blank and says where the title appears", () => {
     const page = source("app/admin/(protected)/standings/page.tsx");
     expect(page).not.toContain("DEFAULT_STANDINGS_SETTINGS.title");
-    expect(page).toContain("Next Match card");
-    expect(diverseCitySite.admin.standings.titleShowsOnNextMatch).toBe(true);
+    // ADMIN-RE-22: Next Match takes its competition from the game, so the
+    // Standings title no longer claims to be shown there.
+    expect(page).not.toContain("Next Match card");
+    expect(diverseCitySite.admin.standings).not.toHaveProperty("titleShowsOnNextMatch");
   });
 });
 

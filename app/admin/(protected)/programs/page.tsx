@@ -266,6 +266,7 @@ export default function AdminProgramsPage() {
     });
   }, []);
   const galleryInput = useRef<HTMLInputElement>(null);
+  const pageCopyPanel = useRef<HTMLDivElement>(null);
   // Gallery images live in their own table (onzio.program_media), so they are
   // loaded and saved alongside — not inside — the program row.
   const [gallery, setGallery] = useState<ProgramMediaDraft[]>([]);
@@ -446,6 +447,18 @@ export default function AdminProgramsPage() {
     else if (section === "Program hero" || section === "Program details" || section === "Program focus") selectTab("content");
     else if (section === "Page heading") selectPageCopySection("pageHeader");
     else if (section === "Closing band") selectPageCopySection("closingBand");
+    // ADMIN-RE-22: where the club edits its own Programs words, a click on the
+    // page opens those words (no "managed by Onzio" note), and the words box
+    // takes the cursor.
+    if (!hidesPageCopyEditor && (section === "Page heading" || section === "Closing band")) {
+      setSelectedSection(null);
+      requestAnimationFrame(() => {
+        const panel = pageCopyPanel.current;
+        if (!panel) return;
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+        panel.querySelector<HTMLElement>("input, textarea")?.focus({ preventScroll: true });
+      });
+    }
   }
 
   function startCreate() {
@@ -1046,7 +1059,8 @@ export default function AdminProgramsPage() {
             onChange={(id) => selectPageCopySection(id as PageCopySection)}
           />
 
-          <AdminPanel className="self-start p-4 sm:p-5">
+          <div ref={pageCopyPanel} className="min-w-0 scroll-mt-24 self-start">
+          <AdminPanel className="p-4 sm:p-5">
             <div className="mb-5">
               <h2 className="font-body text-sm font-semibold normal-case tracking-normal text-foreground">
                 Programs page copy
@@ -1215,6 +1229,7 @@ export default function AdminProgramsPage() {
               )}
             </div>
           </AdminPanel>
+          </div>
         </div>
       )}
 
@@ -1292,7 +1307,7 @@ export default function AdminProgramsPage() {
         <ProgramsWorkspaceSkeleton label="Loading programs" />
       ) : pageView === "directory" ? (
         <div className="program-editor-canvas-wrap">
-          <div className="program-editor-canvas-heading"><div><h2>All programs</h2><p>Tap a program card to edit that public page.</p></div><span>Page copy managed by Onzio</span></div>
+          <div className="program-editor-canvas-heading"><div><h2>All programs</h2><p>Tap a program card to edit that public page.</p></div><span>{hidesPageCopyEditor ? "Page copy managed by Onzio" : "Click a heading or paragraph to change its words"}</span></div>
           {managementDirty && <div className="program-editor-directory-save"><p>Program order or visibility has not been saved yet.</p><button type="button" onClick={() => void saveManagement()} disabled={managementSaving || Boolean(managementConflict)}>{managementSaving ? "Saving…" : unconfirmedManagement ? "Confirm save" : "Save page"}</button></div>}
           {managementError && <p className="mb-3 text-sm text-destructive" role="alert">{managementError}</p>}
           <ProgramCanvasFrame path="/programs" onSelect={selectCanvasSection} onProgramLink={(slug) => { const found = programs.find((program) => program.slug === slug); if (found) selectProgram(found); }}>

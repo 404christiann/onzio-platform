@@ -506,9 +506,7 @@ export default function AdminStandingsPage() {
                   className={ADMIN_INPUT_CLASS}
                 />
                 <span id="standings-title-help" className="mt-1 block font-body text-xs text-muted-foreground">
-                  {standingsPolicy?.titleShowsOnNextMatch
-                    ? "Usually your league name. It also shows as the competition on your homepage Next Match card. Leave it blank to show no title."
-                    : "Usually your league name. Leave it blank to show no title."}
+                  Usually your league name. Leave it blank to show no title.
                 </span>
               </label>
               <label className="block">
