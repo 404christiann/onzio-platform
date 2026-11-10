@@ -280,12 +280,21 @@ export type DBClubLogoPageContent = {
 
 export type SponsorLogoPlacement = "carousel" | "footer";
 
+/**
+ * One sponsor (ADMIN-RE-15, decision 0007): one row with a Homepage and a
+ * Footer switch and an optional website. `placement` is the old one-row-per-
+ * place shape, kept nullable until both clubs accept the one-list page.
+ */
 export type DBSiteSponsorLogo = {
   id: string;
-  placement: SponsorLogoPlacement;
+  placement: SponsorLogoPlacement | null;
   name: string;
   logo_url: string;
+  media_asset_id?: string | null;
   sort_order: number;
+  show_on_homepage: boolean;
+  show_in_footer: boolean;
+  website_url: string | null;
   created_at: string;
 };
 

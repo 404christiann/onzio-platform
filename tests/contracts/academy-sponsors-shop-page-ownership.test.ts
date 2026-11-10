@@ -44,6 +44,9 @@ describe("Academy Sponsors and Shop page ownership", () => {
       name: "Local partner",
       logo_url: "/partner.png",
       sort_order: 0,
+      show_on_homepage: true,
+      show_in_footer: false,
+      website_url: null,
       created_at: "2026-11-02T00:00:00Z",
     }];
     const html = renderToStaticMarkup(createElement(SponsorCarousel, { sponsors: logos, compact: true }));

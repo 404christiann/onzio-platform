@@ -11,6 +11,7 @@ import { DEFAULT_SITE_SOCIAL_LINKS } from "@/lib/social-links";
 import { useClubContext } from "@/components/ClubContextProvider";
 import { withoutShopLinks } from "@/lib/store-visibility";
 import { imageDeliveryProps } from "@/lib/image-delivery";
+import SponsorLink from "@/components/SponsorLink";
 import AcademyFooter, { type FooterOverrides } from "@/components/sites/diverse-city/Footer";
 import { codeSiteFor } from "@/lib/code-site";
 
@@ -172,7 +173,12 @@ function TemplateFooter({ overrides }: { overrides?: FooterOverrides }) {
         </p>
         <div className="flex items-center justify-center flex-wrap gap-8 md:gap-12">
           {partners.map((partner) => (
-            <div key={partner.id} className="relative h-12 w-32 opacity-100 md:h-14 md:w-36">
+            <SponsorLink
+              key={partner.id}
+              href={partner.website_url}
+              name={partner.name}
+              className="relative block h-12 w-32 opacity-100 md:h-14 md:w-36"
+            >
               <Image
                 src={partner.logo_url}
                 alt={partner.name}
@@ -180,7 +186,7 @@ function TemplateFooter({ overrides }: { overrides?: FooterOverrides }) {
                 className="object-contain"
                 {...imageDeliveryProps("sponsor-logo")}
               />
-            </div>
+            </SponsorLink>
           ))}
         </div>
       </div>

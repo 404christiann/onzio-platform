@@ -21,25 +21,33 @@ import FileUpload from "@/components/admin/FileUpload";
 import {
   GRAPHIC_UPLOAD_ACCEPT,
   GRAPHIC_UPLOAD_TYPES_LABEL,
-  isGraphicUploadType,
 } from "@/lib/media-upload-types";
+import {
+  deleteSponsorStorageUrls,
+  deleteUnusedSponsorStorageUrls,
+  uploadSponsorLogo,
+} from "@/lib/sponsor-storage";
 import SponsorCarousel from "@/components/SponsorCarousel";
 import {
   SlidingPanel,
   type SlidingPanelDirection,
 } from "@/components/ui/sliding-panel";
 import type { DBSiteSponsorLogo, SponsorLogoPlacement } from "@/lib/db-types";
-import { fetchSiteSponsorLogos } from "@/lib/queries";
+import { fetchSponsorList } from "@/lib/queries";
 import {
   canAddSponsorLogo,
   diffSponsorLogos,
   MAX_CAROUSEL_SPONSORS,
   MAX_FOOTER_SPONSORS,
+  SPONSOR_NAME_LIMIT,
   sponsorLimitForPlacement,
-  sponsorStoragePathFromPublicUrl,
+  sponsorNameFromFile,
+  sponsorsForPlacement,
   type DraftSponsorLogo,
 } from "@/lib/sponsor-content";
 import { createClient } from "@/lib/admin-client";
+import { useAdminPortal } from "@/components/admin/AdminPortalProvider";
+import { Sponsors } from "@/components/admin/reimagined/Sponsors";
 
 const PLACEMENT_ORDER: SponsorLogoPlacement[] = ["carousel", "footer"];
 
@@ -53,56 +61,6 @@ const PLACEMENT_LABELS: Record<SponsorLogoPlacement, string> = {
 const inputClass =
   "w-full rounded-lg border border-input bg-background px-3 py-2.5 font-body text-sm text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-async function uploadSponsorLogo(file: File, placement: SponsorLogoPlacement): Promise<string> {
-  // The media server accepts only PNG or WebP for sponsor logos; say so here
-  // instead of letting a JPG fail after upload.
-  if (!isGraphicUploadType(file.type)) {
-    throw new Error(`${file.name} is not a ${GRAPHIC_UPLOAD_TYPES_LABEL} image. Sponsor logos must be ${GRAPHIC_UPLOAD_TYPES_LABEL}.`);
-  }
-  const supabase = createClient();
-  const extension = file.name.split(".").pop() ?? "png";
-  const path = `site-sponsors/${placement}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-  const { error } = await supabase.storage.from("sponsors").upload(path, file);
-  if (error) throw new Error(error.message);
-  const { data } = supabase.storage.from("sponsors").getPublicUrl(path);
-  return data.publicUrl;
-}
-
-async function deleteSponsorStorageUrls(urls: string[]): Promise<void> {
-  const paths = urls
-    .map(sponsorStoragePathFromPublicUrl)
-    .filter((path): path is string => Boolean(path));
-  if (paths.length === 0) return;
-
-  const supabase = createClient();
-  const { error } = await supabase.storage.from("sponsors").remove(paths);
-  if (error) throw new Error(error.message);
-}
-
-async function deleteUnusedSponsorStorageUrls(urls: string[]): Promise<void> {
-  const supabase = createClient();
-  const unusedUrls: string[] = [];
-
-  for (const url of urls) {
-    const { count, error } = await supabase
-      .from("site_sponsor_logos")
-      .select("id", { count: "exact", head: true })
-      .eq("logo_url", url);
-    if (error) throw new Error(error.message);
-    if ((count ?? 0) > 0) continue;
-    // ADMIN-RE-07b: Add a game can give a game a Sponsors-page logo, so a
-    // logo a game still shows is kept too. When that can't be checked, the
-    // file stays: a leftover file is harmless, a missing logo is not.
-    const games = await supabase
-      .from("matches")
-      .select("id", { count: "exact", head: true })
-      .eq("sponsor_logo_url", url);
-    if (!games.error && (games.count ?? 0) === 0) unusedUrls.push(url);
-  }
-
-  await deleteSponsorStorageUrls(unusedUrls);
-}
-
 function toDraft(logos: DBSiteSponsorLogo[]): DraftSponsorLogo[] {
   return logos.map((logo) => ({
     id: logo.id,
@@ -111,7 +69,15 @@ function toDraft(logos: DBSiteSponsorLogo[]): DraftSponsorLogo[] {
   }));
 }
 
+// ADMIN-RE-15: a club on the new admin gets the one-list page (design
+// cd-sponsors-final, decision 0007); a classic club keeps this page, which edits
+// the same rows one place at a time.
 export default function AdminSponsorsPage() {
+  const { portal } = useAdminPortal();
+  return portal === "reimagined" ? <Sponsors /> : <ClassicSponsorsPage />;
+}
+
+function ClassicSponsorsPage() {
   const club = useClubContext();
   const clubId = club.id;
   // academy@1's footer deliberately renders no sponsor strip (DCFC-D132 — it
@@ -140,7 +106,8 @@ export default function AdminSponsorsPage() {
       return next;
     });
   };
-  const [originalLogos, setOriginalLogos] = useState<DBSiteSponsorLogo[]>([]);
+  // The club's whole sponsor list (ADMIN-RE-15); each tab edits the logos its place shows.
+  const [allLogos, setAllLogos] = useState<DBSiteSponsorLogo[]>([]);
   const [draftLogos, setDraftLogos] = useState<DraftSponsorLogo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -154,10 +121,10 @@ export default function AdminSponsorsPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetchSiteSponsorLogos(placement, clubId)
+    fetchSponsorList(clubId)
       .then((logos) => {
-        setOriginalLogos(logos);
-        setDraftLogos(toDraft(logos));
+        setAllLogos(logos);
+        setDraftLogos(toDraft(sponsorsForPlacement(placement, logos)));
         setDirty(false);
       })
       .catch((loadError: unknown) => {
@@ -217,7 +184,7 @@ export default function AdminSponsorsPage() {
       for (const file of selected) {
         uploaded.push({
           id: null,
-          name: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
+          name: sponsorNameFromFile(file.name),
           logo_url: await uploadSponsorLogo(file, placement),
         });
       }
@@ -247,7 +214,7 @@ export default function AdminSponsorsPage() {
             ? {
                 ...logo,
                 logo_url: nextUrl,
-                name: logo.name.trim() || file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "),
+                name: logo.name.trim() || sponsorNameFromFile(file.name),
               }
             : logo,
         ),
@@ -275,7 +242,7 @@ export default function AdminSponsorsPage() {
       const supabase = createClient();
       const { toDelete, toInsert, toUpdate } = diffSponsorLogos(
         placement,
-        originalLogos,
+        allLogos,
         draftLogos,
       );
 
@@ -290,7 +257,7 @@ export default function AdminSponsorsPage() {
       for (const update of toUpdate) {
         const { error: updateError } = await supabase
           .from("site_sponsor_logos")
-          .update({ name: update.name, logo_url: update.logo_url, sort_order: update.sort_order })
+          .update(update.changes)
           .eq("id", update.id);
         if (updateError) throw new Error(updateError.message);
       }
@@ -304,8 +271,8 @@ export default function AdminSponsorsPage() {
 
       const replacedLogoUrls = toUpdate
         .map((update) => {
-          const originalLogo = originalLogos.find((logo) => logo.id === update.id);
-          return originalLogo && originalLogo.logo_url !== update.logo_url
+          const originalLogo = allLogos.find((logo) => logo.id === update.id);
+          return originalLogo && update.changes.logo_url !== undefined && originalLogo.logo_url !== update.changes.logo_url
             ? originalLogo.logo_url
             : null;
         })
@@ -316,9 +283,9 @@ export default function AdminSponsorsPage() {
         ...replacedLogoUrls,
       ]);
 
-      const fresh = await fetchSiteSponsorLogos(placement, clubId);
-      setOriginalLogos(fresh);
-      setDraftLogos(toDraft(fresh));
+      const fresh = await fetchSponsorList(clubId);
+      setAllLogos(fresh);
+      setDraftLogos(toDraft(sponsorsForPlacement(placement, fresh)));
       setDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -337,6 +304,9 @@ export default function AdminSponsorsPage() {
     name: logo.name.trim() || `Sponsor ${index + 1}`,
     logo_url: logo.logo_url,
     sort_order: index,
+    show_on_homepage: placement === "carousel",
+    show_in_footer: placement === "footer",
+    website_url: null,
     created_at: "",
   }));
 
@@ -460,6 +430,7 @@ export default function AdminSponsorsPage() {
                     value={logo.name}
                     onChange={(event) => setLogoName(index, event.target.value)}
                     placeholder={`Sponsor ${index + 1} name`}
+                    maxLength={SPONSOR_NAME_LIMIT}
                     aria-invalid={missingName || undefined}
                     className={`mt-2 ${inputClass}`}
                   />

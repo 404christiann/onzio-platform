@@ -55,6 +55,124 @@ suites on the PR head, with the tested commit, are in the PR body.
 
 **Exact next step:** the bot merges 24d. Then 24c (search).
 
+## 2026-11-10 - ADMIN-RE-15: Sponsors, one list
+
+**Agent/package:** Claude Code, `ADMIN-RE-15`. Branch
+`claude/infallible-kowalevski-82abdc` from `main` `1572f01e`. **Status:**
+`in_progress`, PR open for the review bot. **Carries a migration**
+(`20261110150000_sponsors_one_list.sql`, sorted after `main`'s newest,
+`20261110090000`, and the Rose City 2027 branch's `20261109210000`). It merges
+rows on a live table, so it needs `GATE-MIGRATE` with Christian's explicit OK,
+run from his Mac, before the merge. No change to `lib/club-context.ts`.
+
+**Completed work:**
+
+- Migration: `site_sponsor_logos` gains `show_on_homepage` and
+  `show_in_footer` (boolean, not null, default false, filled from
+  `placement`) and `website_url` (null or an http(s) address of at most 2,048
+  characters). Rows for the same logo file (same club and `media_asset_id`)
+  become one: the homepage row stays, with the switches of all of them; the
+  others are deleted. One order per club that keeps both places' orders
+  (Christian's go after the bot's M1 on #128): the homepage strip's order, with
+  each footer-only logo slotted in right after the logo it followed in the
+  footer. Only where the two places listed shared logos in opposite order does
+  the footer follow the homepage and those logos move. It is worked out before
+  the merge, while both places' positions exist. Who would see a move today:
+  nobody (Diverse City's academy footer shows no sponsors,
+  `components/sites/diverse-city/Footer.tsx`; Rose City's public site is held,
+  `lib/public-site-hold.ts`; its generic footer would show sponsors once live).
+  A second read-only check counts the footer logos that would move, per club,
+  for Christian before the gate. `name` gets CHECKs of 60 characters
+  and not blank; the migration stops (rolls back whole) if a name is longer or
+  blank instead of cutting it. `placement` stays, nullable, unread by the new
+  code, until both clubs accept the page (plan, risk 5); a row inserted with a
+  `placement` and neither switch gets the switch for that place, so code
+  deployed before the migration keeps adding visible logos. That helper is a
+  `security invoker` trigger function with `set search_path = ''`; no definer
+  function was added.
+- Public reads: the homepage strip, footer and Sponsors pages read each place
+  from its switch. A sponsor with a website is a link (new tab, `rel="noopener
+  noreferrer sponsored"`); one without is not tappable (group 3, decision 4).
+  Nobody has a website at merge.
+- The new admin (`reimagined`): `/admin/sponsors` on the Website tab is the
+  one-list page (design `cd-sponsors-final`): each sponsor once, its logo on
+  the homepage strip's dark band, name (60), "Their website" (shown as its
+  domain until edited), Homepage and Footer switches with "Homepage N of 10 ·
+  Footer N of 6" (a full place greys the switch; a new card says "Footer is
+  full (6 of 6)"), Move left / Move right / Replace logo / Remove in the ⋯
+  menu, one Save with the hold-aware saved words, "‹ Website" asks first with
+  unsaved changes, and "This logo may look blurry. Ask them for a bigger one."
+  when the strip would draw a logo more than 1.5 times up (never blocks
+  saving). The Footer switch shows only where the club's footer shows sponsors,
+  read from the site definition (`codeSiteAdminFor(club)?.sponsors.showFooterPlacement`),
+  not a template check: Diverse City-style sites have none.
+- The classic admin (Diverse City): same address, same page; it now edits the
+  one list one place at a time. Removing a logo from a place turns that switch
+  off, and deletes the row only when no other place shows it; reorder keeps the
+  other place's logos where they are; names stop at 60.
+- Writes: a strict Zod schema for `site_sponsor_logos` in
+  `lib/admin-data-contract.ts` (name 1–60 characters counted as the database
+  counts them, website http(s) ≤ 2,048, the switches, and the old `placement`
+  for a page loaded before the deploy).
+
+**Production check (read-only, counts only):** written before the migration
+and sent to the orchestrator for Christian
+(`side-session-notes/.../re-15-production-check.md`): per club, rows per place,
+duplicate `media_asset_id` groups, same-place duplicates, names that differ in
+a merge, names over 60 or blank, places over their limits. Results
+(Christian, 2026-11-10): no place over its limit, no name over 60 (longest 39)
+or blank, no position clashes, no same-place repeats, no name or link conflicts
+in a merge. Rose City merges 5 pairs (12 rows become 7), Diverse City 1 pair (4
+become 3). Lions has 3 rows without a file record, 2 of them sharing a logo
+link; decided here: rows without a file record are left alone (not merged by
+link), because Lions' import gave several different sponsors one placeholder
+link. A database test pins it.
+
+**Files changed:** `supabase/migrations/20261110150000_sponsors_one_list.sql`;
+`lib/database.generated.ts` (regenerated), `lib/db-types.ts`,
+`lib/sponsor-content.ts`, new `lib/sponsor-storage.ts`, `lib/queries.ts`,
+`lib/admin-data-contract.ts`, `lib/admin-add-game-data.ts`;
+`app/admin/(protected)/sponsors/page.tsx`; new
+`components/admin/reimagined/Sponsors.tsx` and `sponsors.module.css`, new
+`components/SponsorLink.tsx`, `components/SponsorCarousel.tsx`,
+`components/Footer.tsx`, `components/sites/diverse-city/AcademySponsorsPage.tsx`;
+new `tests/database/sponsors-one-list.test.ts`,
+`tests/contracts/admin-reimagined-sponsors.test.ts`,
+`tests/browser/admin-reimagined-sponsors.spec.ts`; updated
+`lib/__tests__/sponsor-content.test.ts`,
+`tests/contracts/academy-sponsors-shop-page-ownership.test.ts`,
+`tests/contracts/admin-reimagined-league.test.ts` (RE-11b's "newest migration"
+pin now expects this one after it); this file, `HANDOFF.md`.
+
+**Rollback (before any sponsor is saved with both switches from the new
+page):** drop the trigger and its function, the two name checks and the website
+check, then the three columns, and `alter column placement set not null`.
+Merged rows do not split back; restore them from the backup taken before
+`GATE-MIGRATE`. Code rolled back past this PR reads `placement` again, so rows
+the new page added (placement null) would not show until then.
+
+**Verification:** database tests (18, including the migration replayed on
+rows shaped like today's: a logo in both places merges, Bravo's copy of a file
+never merges with Alpha's, two footer rows for one file merge into the first,
+long or blank names stop it), unit and contract tests, and a browser spec at
+390 and 1440, light and dark: the one-list page on an academy site (no Footer
+switch) and on the generic site (Footer switch, full footer greyed), the worst
+case (60-character names, a 2,000-character website, Japanese, a missing logo
+file), the leave dialog, and the classic page on the same rows. Full suites on
+the PR head, with the tested commit, are in the PR body. Not verified:
+production data beyond Christian's counts, real Safari, a screen reader.
+Found and fixed in the browser run: the leave dialog sat under Base UI's inert
+layer (its buttons could not be clicked); the preview left a gap for a logo
+file that failed to load (it now shows the name).
+
+**Blockers / decisions:** `GATE-MIGRATE` needs Christian's explicit OK and
+runs from his Mac. Decided here: rows without a file record are not merged by
+link (see the production check above).
+
+**Exact next step:** the bot reviews; then `GATE-MIGRATE` from Christian's
+Mac (expect Rose City 12 sponsor rows to become 7, Diverse City 4 to become 3,
+Lions unchanged at 6), then merge.
+
 ## 2026-11-10 - Add a game asks "Which competition?" (Diverse City only)
 
 **Agent/package:** Claude Code, follow-up to `ADMIN-RE-22` (no new package ID).

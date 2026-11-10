@@ -11,6 +11,35 @@
   full suites on the PR head are in the PR body. Details in `STATUS.md`.
 - **Exact next step:** the bot merges. Then 24c, search.
 
+## 2026-11-10 - ADMIN-RE-15 Sponsors, one list
+
+- **Status:** `in_progress`, PR open. **Carries a migration**
+  (`20261110150000_sponsors_one_list.sql`) that merges rows, so it needs
+  `GATE-MIGRATE` with Christian's explicit OK, from his Mac, before the merge.
+  No change to `lib/club-context.ts`.
+- **What it adds:** each sponsor is one row with Homepage and Footer switches
+  and an optional website; a logo uploaded twice (once per place) becomes one
+  row. On the new admin, `/admin/sponsors` is the one-list page (design
+  `cd-sponsors-final`): limits 10 and 6 with the full place greyed, Move left /
+  right in the ⋯ menu, "Their website", the blurry-logo note, one Save. The
+  Footer switch shows only where the club's footer shows sponsors (from the
+  site definition). Diverse City's classic Sponsors page keeps working on the
+  same rows. Sponsors with a website are links on the public site (nobody has
+  one at merge). Names stop at 60 (database CHECK).
+- **Visitors see at merge:** the same logos in the same order in both places.
+  The one exception: if the homepage and footer listed two shared logos in
+  opposite order, the footer follows the homepage. Christian's read-only order
+  check counts those before the gate. Nobody would see it today: Diverse City's
+  academy footer shows no sponsors and Rose City's site is held.
+- **Production counts (Christian, 2026-11-10):** all clean. At the gate Rose
+  City's 12 sponsor rows become 7 and Diverse City's 4 become 3; Lions stays at
+  6 (rows without a file record are never merged by link, decided here).
+- **Verification:** database, unit, contract and browser tests; full suites on
+  the PR head, with the tested commit, are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** bot review, then `GATE-MIGRATE` from Christian's Mac,
+  then merge.
+
 ## 2026-11-10 - Add a game asks "Which competition?" (Diverse City only)
 
 - **Status:** `in_progress`, draft PR open (Christian decides when it is ready).
