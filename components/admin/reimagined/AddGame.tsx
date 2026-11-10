@@ -16,6 +16,8 @@ import { Popover, PopoverContent, PopoverPositioner, PopoverTrigger } from "@/co
 import { Spinner } from "@/components/ui/spinner";
 import {
   compareMatches,
+  competitionPayload,
+  distinctCompetitions,
   distinctVenues,
   MATCH_COLUMNS,
   opponentCarry,
@@ -39,6 +41,9 @@ import styles from "./add-game.module.css";
 // ADMIN-RE-07b: where the club's website shows match sponsors, "Sponsor?"
 // comes filled in with the latest game's sponsor. A game against an opponent
 // played before quietly keeps that opponent's short name and logo.
+// Competition follow-up: where the club's website shows a game's own competition
+// (Diverse City's Next Match card), "Which competition?" is asked, optional,
+// with the last few used one tap away. Blank saves nothing.
 
 /** How many upcoming games "Coming up" lists before linking to the schedule. */
 const COMING_UP_SHOWN = 6;
@@ -74,6 +79,8 @@ export function AddGame({
   seasons,
   upcoming: initialUpcoming,
   recentVenues: initialVenues,
+  showCompetition,
+  recentCompetitions: initialCompetitions,
   showSponsors,
   sponsors,
   opponents,
@@ -85,6 +92,10 @@ export function AddGame({
   seasons: readonly AddGameSeason[];
   upcoming: readonly AddGameMatch[];
   recentVenues: readonly string[];
+  /** Only where the club's website shows a game's own competition. */
+  showCompetition: boolean;
+  /** The club's last competitions, newest first (at most three). */
+  recentCompetitions: readonly string[];
   /** Only where the club's website shows match sponsors. */
   showSponsors: boolean;
   /** The latest game's sponsor first, when it had one, then the Sponsors page's. */
@@ -105,6 +116,7 @@ export function AddGame({
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState(defaultTime);
   const [venue, setVenue] = useState("");
+  const [competition, setCompetition] = useState("");
   // The latest game's sponsor when it had one, otherwise "No sponsor".
   const [sponsorChoice, setSponsorChoice] = useState(() =>
     sponsors[0]?.from === "last-game" ? "0" : NO_SPONSOR,
@@ -115,6 +127,7 @@ export function AddGame({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [upcoming, setUpcoming] = useState<AddGameMatch[]>(() => [...initialUpcoming]);
   const [venues, setVenues] = useState<string[]>(() => [...initialVenues]);
+  const [competitions, setCompetitions] = useState<string[]>(() => [...initialCompetitions]);
   const [freshId, setFreshId] = useState<string | null>(null);
   const opponentRef = useRef<HTMLInputElement>(null);
   const venueRef = useRef<HTMLInputElement>(null);
@@ -174,6 +187,7 @@ export function AddGame({
             home,
             league_game: leagueGame,
             venue: place,
+            ...(showCompetition ? competitionPayload(competition) : {}),
             ...opponentCarry(opponents, name),
             ...(showSponsors ? sponsorPayload(sponsor) : {}),
           },
@@ -186,6 +200,11 @@ export function AddGame({
       const added = toAddGameMatch(row);
       setUpcoming((current) => [...current, added]);
       setVenues((current) => distinctVenues([added.venue, ...current]));
+      if (showCompetition) {
+        const saved = typeof row.competition === "string" ? row.competition : null;
+        setCompetitions((current) => distinctCompetitions([saved, ...current]));
+        setCompetition("");
+      }
       setFreshId(added.id);
       setOpponent("");
       setVenue("");
@@ -423,31 +442,53 @@ export function AddGame({
                 </p>
               ) : null}
             </span>
-            {venues.length ? (
-              <div className={styles.chips} role="group" aria-label="Last used">
-                <span className={styles.chipsLabel} aria-hidden="true">
-                  Last used
-                </span>
-                {venues.map((place) => (
-                  <button
-                    key={place}
-                    type="button"
-                    className={styles.chip}
-                    aria-pressed={venue.trim() === place}
-                    title={place}
-                    onClick={() => {
-                      touch();
-                      setVenue(place);
-                      setFieldErrors(({ venue: _gone, ...rest }) => rest);
-                    }}
-                  >
-                    <span className={styles.chipText}>{place}</span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
+            <RecentChips
+              label="Last used"
+              items={venues}
+              value={venue}
+              onPick={(place) => {
+                touch();
+                setVenue(place);
+                setFieldErrors(({ venue: _gone, ...rest }) => rest);
+              }}
+            />
           </div>
         </div>
+
+        {showCompetition ? (
+          <div className={styles.row}>
+            <label htmlFor="add-game-competition" className={styles.q}>
+              Which competition?
+            </label>
+            <div className={cn(styles.answer, styles.where)}>
+              <input
+                id="add-game-competition"
+                className={styles.field}
+                value={competition}
+                onChange={(event) => {
+                  touch();
+                  setCompetition(event.target.value);
+                }}
+                placeholder="Optional, like League or Cup"
+                maxLength={MATCH_TEXT_LIMITS.competition}
+                autoComplete="off"
+                title={competition || undefined}
+                data-testid="add-game-competition"
+              />
+              <p className={styles.noSponsor}>Shows on your homepage next-game card. Leave it blank to show none.</p>
+              <RecentChips
+                label="Last used"
+                groupLabel="Last used competitions"
+                items={competitions}
+                value={competition}
+                onPick={(name) => {
+                  touch();
+                  setCompetition(name);
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
 
         {showSponsors ? (
           <div className={styles.row}>
@@ -516,6 +557,42 @@ export function AddGame({
         </Link>
       </section>
     </form>
+  );
+}
+
+/** "Last used" answers one tap away; a long one is cut with "…", the full text on hover. */
+function RecentChips({
+  label,
+  groupLabel = label,
+  items,
+  value,
+  onPick,
+}: {
+  label: string;
+  groupLabel?: string;
+  items: readonly string[];
+  value: string;
+  onPick: (item: string) => void;
+}) {
+  if (!items.length) return null;
+  return (
+    <div className={styles.chips} role="group" aria-label={groupLabel}>
+      <span className={styles.chipsLabel} aria-hidden="true">
+        {label}
+      </span>
+      {items.map((item) => (
+        <button
+          key={item}
+          type="button"
+          className={styles.chip}
+          aria-pressed={value.trim() === item}
+          title={item}
+          onClick={() => onPick(item)}
+        >
+          <span className={styles.chipText}>{item}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 

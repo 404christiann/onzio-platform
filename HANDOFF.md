@@ -1,3 +1,26 @@
+## 2026-11-10 - Add a game asks "Which competition?" (Diverse City only)
+
+- **Status:** `in_progress`, draft PR open (Christian decides when it is ready).
+  Follow-up to ADMIN-RE-22. UI only: no migration, no new dependency, no
+  hosted action.
+- **What it adds:** the new admin's Add a game (`/admin/add-game`) has an
+  optional "Which competition?" box where the club's site definition says the
+  competition shows (`schedule.competitionShowsOnNextMatch`, true only for
+  Diverse City's `academy@1`; read through `lib/code-site-admin.ts`, never by
+  template key). It takes up to 80 characters and offers the last three
+  competitions the club used as "Last used" chips, newest first. Blank saves
+  nothing (`null`). Rose City's form does not change.
+- **Visitors see:** nothing changes until an owner fills in a competition on a
+  new game; then the homepage Next Match card shows that line (RE-22).
+- **Not done:** nothing sets a competition on a game that was already added;
+  that stays in the old Games page. Diverse City is still on the classic
+  admin; this only matters once it is switched.
+- **Verification:** unit and contract tests, a browser spec at 390 and 1440
+  (including the worst-case text); full suites and the tested commit are in
+  the PR body. Details in `STATUS.md`.
+- **Exact next step:** Christian reviews the draft PR and marks it ready (or
+  not).
+
 ## 2026-11-10 - ADMIN-RE-24b The new home on the new admin
 
 - **Status:** `in_progress`, PR open. PR 24b of `ADMIN-RE-24` (24a, #124, is
