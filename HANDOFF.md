@@ -1,3 +1,24 @@
+## 2026-11-10 - ADMIN-RE-18 Who can sign in (the screen)
+
+- **Status:** `in_progress`, PR open. UI only: no migration, no change to the
+  members route from #101. Rose City is already on the new admin, so merging
+  shows it there. **The screen sends email** ("Send the code again", "Send
+  sign-in code" in Add someone): say so in the release record.
+- **What it adds:** `/admin/members` is "Who can sign in" for a `reimagined`
+  club (a `classic` club keeps Team access): every owner, helpers with their
+  names, "Signed in Tue" or "Hasn't signed in yet" with "Send the code again",
+  Add someone (name required), "Add a name" for a person without one, and
+  Remove in one tap with an Undo for the server's ten-minute window. A rate
+  limit says "wait a minute"; an administrator who opens the address sees why
+  they cannot change it.
+- **Left out:** renaming someone who has a name; Undo after a page reload.
+- **Verification:** unit, contract and browser tests (390 and 1440), plus one
+  end-to-end run on the local stack (real codes to local Mailpit only); full
+  suites on the PR head, with the tested commit, are in the PR body. Details in
+  `STATUS.md`.
+- **Exact next step:** the bot merges. Christian opens Who can sign in on Rose
+  City.
+
 ## 2026-11-10 - ADMIN-RE-11a follow-up: the bot's Low notes on #116
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.
