@@ -3,8 +3,9 @@
 ## 2026-11-10 - ADMIN-RE-24c: search on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24`, PR 24c (last of four; built
-after 24d so players open their pages). Branch `claude/admin-re-24c-search`,
-on top of 24d. **Status:** `in_progress`. **One new dependency: `cmdk`
+after 24d so players open their pages). Branch
+`claude/admin-re-24c-search-v2` from `main` `8fa5926` (24d #129 merged).
+**Status:** `in_progress`, PR open for the review bot. **One new dependency: `cmdk`
 1.1.1** (exact; the lock gains only cmdk and its own Radix packages). No
 migration, no hosted action.
 
@@ -39,8 +40,8 @@ head, with the tested commit, are in the PR body.
 
 **Blockers / decisions:** none new.
 
-**Exact next step:** open the PR once 24d is merged. Then ADMIN-RE-24 is
-built; Christian walks it on Rose City.
+**Exact next step:** the bot merges 24c. Then ADMIN-RE-24 is built;
+Christian walks it on Rose City.
 
 ## 2026-11-10 - ADMIN-RE-24d: players in the Games tab
 

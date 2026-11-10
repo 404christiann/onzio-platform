@@ -1,6 +1,6 @@
 ## 2026-11-10 - ADMIN-RE-24c Search on the new admin
 
-- **Status:** `in_progress`. Last PR of `ADMIN-RE-24`. **New dependency:
+- **Status:** `in_progress`, PR open. Last PR of `ADMIN-RE-24`. **New dependency:
   `cmdk` 1.1.1.** No migration, no hosted action.
 - **What it adds:** search with cmdk inside a Base UI Dialog: the sidebar box
   and ⌘K on a laptop, the magnifier on a phone. Every job, tab page, page,
