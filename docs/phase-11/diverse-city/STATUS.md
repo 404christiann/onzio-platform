@@ -1,5 +1,68 @@
 # Diverse City FC Status
 
+## 2026-11-10 - ADMIN-RE-12a: the Programs words browser test, made steady
+
+**Agent/package:** Claude Code, `ADMIN-RE-12a` (the first of three RE-12
+PRs; 12b is the sign-up state migration, 12c the "Programs and tryouts" page).
+Branch `claude/admin-re-12a-programs-words-test` from `main` `706620ef`.
+**Status:** `in_progress`, PR open for the review bot. Test and one editor
+focus fix only: no migration, no change to `lib/club-context.ts`, no hosted
+action.
+
+**What was wrong:** RE-22's "Programs page words are editable on the page"
+browser test at 1440 failed now and then. Two runs of 20 (40 tests each, both
+portals) on the unchanged test reproduced it three times, with two separate
+causes. Neither one is the editor losing what was typed. In every failed run
+the field held the headline right after typing.
+
+- **A slow save.** On a busy machine the page's first reads took 2.2 s and the
+  save took longer than the test's 5 s wait for "Page copy saved". The test
+  failed and its clean-up deleted the row. Then the slow save landed and wrote
+  the headline back. So the next run opened with the headline already stored,
+  typing it changed nothing, and Save stayed disabled until the 60 s timeout.
+- **The public page once showed the standard words 7 ms after the save.** The
+  trace shows the save answered with the headline stored before `/programs`
+  was requested, and the page rendered the defaults. 300 direct write-then-fetch
+  probes against the same build (with and without the owner's sign-in) never
+  reproduced it. Cause not found.
+- **A focus race in the editor, fixed.** A click on the page's heading focused
+  the first field of the words box one frame later. That field is "Eyebrow",
+  and during the panel switch it can even be the outgoing section's first
+  field. The late focus could land between Playwright focusing "Headline line
+  1" and typing into it.
+
+**Completed work:**
+
+- `app/admin/(protected)/programs/page.tsx`: the delayed focus after a click on
+  the page targets the clicked section's first field
+  (`data-page-copy-section`), and does nothing if a field in the words box
+  already has focus.
+- `tests/browser/admin-reimagined-diverse-city.spec.ts`:
+  - clears the stored words before it starts, as well as after;
+  - waits until the words box shows only the page header section before
+    typing;
+  - checks the typed value;
+  - waits up to 20 s for "Page copy saved", the same as the page's first load;
+  - checks the stored row in the database before opening the public page;
+  - asks the public page again at most once. When it does, it adds a
+    `public-page-reloaded` note to the report, so the unexplained case stays
+    visible.
+
+**Verification:**
+
+- On the unchanged test, two runs of 20 at 1440 (40 tests each, both portals)
+  gave 1 failure and then 2 failures, the causes described above.
+- On the changed test and editor: 40 of 40 green at 1440 (`--repeat-each=20`,
+  both portals), after a fresh `supabase db reset --local` on this branch.
+- tsc, lint on the changed files, vitest without `tests/database`, `npm run
+  build`, and the `admin-reimagined` and `admin-guided` browser configs. The
+  results, with the commit they ran on, are in the PR body.
+
+**Blockers:** none. The cause of the one stale public page is unknown and
+recorded above.
+
+**Exact next step:** bot review and merge (no gate).
+
 ## 2026-11-10 - ADMIN-RE-15: Sponsors, one list
 
 **Agent/package:** Claude Code, `ADMIN-RE-15`. Branch

@@ -452,11 +452,18 @@ export default function AdminProgramsPage() {
     // takes the cursor.
     if (!hidesPageCopyEditor && (section === "Page heading" || section === "Closing band")) {
       setSelectedSection(null);
+      const words = section === "Page heading" ? "pageHeader" : "closingBand";
       requestAnimationFrame(() => {
         const panel = pageCopyPanel.current;
         if (!panel) return;
         panel.scrollIntoView({ behavior: "smooth", block: "start" });
-        panel.querySelector<HTMLElement>("input, textarea")?.focus({ preventScroll: true });
+        // The first field of the section that was clicked, never one of the
+        // section sliding out; and never away from a field the person is
+        // already typing in (this runs a frame after the click).
+        if (panel.contains(document.activeElement)) return;
+        panel
+          .querySelector<HTMLElement>(`[data-page-copy-section="${words}"] input, [data-page-copy-section="${words}"] textarea`)
+          ?.focus({ preventScroll: true });
       });
     }
   }
@@ -1082,7 +1089,7 @@ export default function AdminProgramsPage() {
 
             <SlidingPanel activeKey={activePageCopySection} direction={pageCopyDirection}>
               {activePageCopySection === "homepageBand" && (
-                <div>
+                <div data-page-copy-section="homepageBand">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <FormField label="Eyebrow" error={pageCopyFieldError("pathwayEyebrow")}>
                       <input
@@ -1119,7 +1126,7 @@ export default function AdminProgramsPage() {
               )}
 
               {activePageCopySection === "pageHeader" && (
-                <div>
+                <div data-page-copy-section="pageHeader">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <FormField label="Eyebrow" error={pageCopyFieldError("heroEyebrow")}>
                       <input
@@ -1166,7 +1173,7 @@ export default function AdminProgramsPage() {
               )}
 
               {activePageCopySection === "closingBand" && (
-                <div>
+                <div data-page-copy-section="closingBand">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <FormField label="Heading line 1" error={pageCopyFieldError("closingHeadingLineOne")}>
                       <input
