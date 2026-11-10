@@ -17,8 +17,10 @@ import AcademyLeagueStandingsTable from "@/components/sites/diverse-city/Academy
 import type {
   DBLeagueStandingRow,
   DBLeagueStandingsSettings,
+  DBSeason,
 } from "@/lib/db-types";
-import { fetchLeagueStandings } from "@/lib/queries";
+import { LEAGUE_TEAM_NAME_LIMIT } from "@/lib/admin-data-contract";
+import { fetchLeagueStandings, fetchSeasons } from "@/lib/queries";
 import {
   DEFAULT_STANDINGS_SETTINGS,
   normalizeStandingsRows,
@@ -88,6 +90,10 @@ export default function AdminStandingsPage() {
   const standingsPolicy = codeSiteAdminFor(club)?.standings;
   const [settings, setSettings] =
     useState<DBLeagueStandingsSettings>(DEFAULT_STANDINGS_SETTINGS);
+  // ADMIN-RE-11b: every season has its own table. Opens on the season the website shows.
+  const [seasons, setSeasons] = useState<DBSeason[]>([]);
+  const [seasonId, setSeasonId] = useState<string | null>(null);
+  const [seasonsLoaded, setSeasonsLoaded] = useState(false);
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [originalRows, setOriginalRows] = useState<DBLeagueStandingRow[]>([]);
   const [pendingDeleteUrls, setPendingDeleteUrls] = useState<string[]>([]);
@@ -103,10 +109,29 @@ export default function AdminStandingsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    fetchSeasons(clubId)
+      .then((list) => {
+        if (cancelled) return;
+        setSeasons(list);
+        setSeasonId((list.find((season) => season.active) ?? list[0])?.id ?? null);
+        setSeasonsLoaded(true);
+      })
+      .catch((loadError: unknown) => {
+        if (cancelled) return;
+        setLoadFailed(true);
+        setLoading(false);
+        setError(loadError instanceof Error ? loadError.message : "Failed to load standings");
+      });
+    return () => { cancelled = true; };
+  }, [clubId]);
+
+  useEffect(() => {
+    if (!seasonsLoaded) return;
+    let cancelled = false;
     setLoading(true);
     setLoadFailed(false);
     setError(null);
-    fetchLeagueStandings(clubId, { strict: true })
+    fetchLeagueStandings(clubId, { strict: true, seasonId: seasonId ?? undefined })
       .then((content) => {
         if (cancelled) return;
         setSettings(content.settings);
@@ -125,7 +150,7 @@ export default function AdminStandingsPage() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [clubId]);
+  }, [clubId, seasonId, seasonsLoaded]);
 
   function markDirty() {
     setDirty(true);
@@ -229,7 +254,7 @@ export default function AdminStandingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const fresh = await fetchLeagueStandings(clubId, { strict: true });
+      const fresh = await fetchLeagueStandings(clubId, { strict: true, seasonId: seasonId ?? undefined });
       setSettings(fresh.settings);
       setRows(fresh.rows.map((row) => ({ ...row })));
       setOriginalRows(fresh.rows);
@@ -246,6 +271,10 @@ export default function AdminStandingsPage() {
 
   async function handleSave() {
     if (loading || loadFailed || saving || uploading || !dirty) return;
+    if (!seasonId) {
+      setError("Add a season on the Seasons page before adding a league table.");
+      return;
+    }
     setSaving(true);
     setError(null);
     setSaved(false);
@@ -265,6 +294,7 @@ export default function AdminStandingsPage() {
         .filter((row) => row.team_name.trim())
         .map((row, index) => ({
           id: isPersistedRow(row) ? row.id : null,
+          season_id: seasonId,
           team_name: row.team_name.trim(),
           team_abbreviation:
             row.team_abbreviation?.trim().toUpperCase() ||
@@ -330,7 +360,7 @@ export default function AdminStandingsPage() {
 
       let fresh: Awaited<ReturnType<typeof fetchLeagueStandings>>;
       try {
-        fresh = await fetchLeagueStandings(clubId, { strict: true });
+        fresh = await fetchLeagueStandings(clubId, { strict: true, seasonId: seasonId ?? undefined });
       } catch {
         // The writes committed. Recover with a read before allowing another
         // mutation, so temporary row IDs cannot cause duplicate inserts.
@@ -436,6 +466,32 @@ export default function AdminStandingsPage() {
         >
           {loading ? "Loading…" : "Retry loading"}
         </button>
+      )}
+
+      {seasons.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="standings-season">
+          <label htmlFor="standings-season-select" className="font-body text-sm font-semibold text-foreground">
+            Season
+          </label>
+          <select
+            id="standings-season-select"
+            value={seasonId ?? ""}
+            onChange={(event) => setSeasonId(event.target.value)}
+            disabled={loading || saving || dirty || seasons.length < 2}
+            className="min-h-11 rounded-xl border border-input bg-card px-3 font-body text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          >
+            {seasons.map((season) => (
+              <option key={season.id} value={season.id}>
+                {season.label}{season.active ? " · on your website" : ""}
+              </option>
+            ))}
+          </select>
+          <span className="font-body text-xs text-muted-foreground">
+            {dirty
+              ? "Save your changes to switch season."
+              : "Your website shows the table of the season it shows. Your team\u2019s numbers update when you save a score."}
+          </span>
+        </div>
       )}
 
       {loading ? (
@@ -617,6 +673,7 @@ export default function AdminStandingsPage() {
                         <div className="flex items-center gap-2">
                           <input
                             value={row.team_name}
+                            maxLength={LEAGUE_TEAM_NAME_LIMIT}
                             onChange={(event) => updateRow(row.id, "team_name", event.target.value)}
                             placeholder="Team name"
                             aria-label="Team name"

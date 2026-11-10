@@ -85,6 +85,8 @@ export type DBMatch = {
   rose_city_score: number | null;
   opponent_score: number | null;
   season_id: string | null;
+  /** False for friendlies and cups; absent on rows read before ADMIN-RE-11b. */
+  league_game?: boolean;
   // Lions E1 (onzio.matches.attendance/scorers). Nullable/defaulted so every
   // pre-E1 row still parses; scorers is jsonb and defaults to `[]`.
   attendance: number | null;
@@ -334,6 +336,8 @@ export type DBLeagueStandingsSettings = {
 
 export type DBLeagueStandingRow = {
   id: string;
+  /** The season this table row belongs to (ADMIN-RE-11b). */
+  season_id?: string;
   team_name: string;
   team_abbreviation: string | null;
   logo_url: string | null;

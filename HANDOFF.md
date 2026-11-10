@@ -1,3 +1,20 @@
+## 2026-11-10 - ADMIN-RE-11b League table per season, our row updates itself
+
+- **Status:** `in_progress`, PR open. **Carries a migration:
+  `GATE-MIGRATE` first, then merge.** Nothing applied to production.
+- **What it adds:** each season has its own league table (starting a season
+  copies the teams at zero); saving, editing or clearing a score updates our
+  row (played, won, drawn, lost, goal difference, points) on its own, for every
+  write path; friendlies marked "League game? No" stay out. The Standings page
+  has a season picker; the public site shows the shown season's table.
+- **One visible effect on live data:** our row is worked out from the saved
+  games, so the first score saved in a season replaces numbers typed on it.
+  Christian's read-only production check shows whether any club has typed
+  numbers ahead of its saved games.
+- **Verification:** database tests (25 new), contract and unit tests, a browser
+  spec at 390 and 1440; full suites and the tested commit are in the PR body.
+- **Exact next step:** Christian sends the production check; the bot runs
+  `GATE-MIGRATE` and merges. RE-11c is next.
 ## 2026-11-09 - ADMIN-RE-11a This season hub and season names
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no hosted action.

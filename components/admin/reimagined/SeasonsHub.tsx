@@ -228,7 +228,7 @@ export function SeasonsHub({
     setProblem(null);
     setStatus(null);
     // Look again just before deleting: a game or a number may have arrived since the page loaded.
-    const [matches, field, keepers] = await Promise.all([
+    const [matches, field, keepers, table] = await Promise.all([
       adminData({
         table: "matches", operation: "select", columns: "id", count: "exact", head: true,
         filters: [{ kind: "eq", column: "season_id", value: season.id }],
@@ -243,8 +243,13 @@ export function SeasonsHub({
         columns: "player_id,season_id,goals_against,saves,clean_sheets,starts,yellow,red,mins",
         filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: 1000,
       }),
+      // The season's league table goes with it, so a table with numbers in it is not empty (ADMIN-RE-11b).
+      adminData({
+        table: "league_standings", operation: "select", columns: "played,points",
+        filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: 1000,
+      }),
     ]);
-    if (!matches.ok || !field.ok || !keepers.ok) {
+    if (!matches.ok || !field.ok || !keepers.ok || !table.ok) {
       setProblem(`${season.label} was not deleted. ${CONNECTION}`);
       setBusy(null);
       return;
@@ -255,7 +260,9 @@ export function SeasonsHub({
     ];
     const verdict = deleteVerdict(season, {
       matches: matches.count ?? 0,
-      rowsWithNumbers: rows.filter(statRowHasNumbers).length,
+      rowsWithNumbers:
+        rows.filter(statRowHasNumbers).length +
+        ((table.data ?? []) as { played: number; points: number }[]).filter((row) => row.played > 0 || row.points > 0).length,
       statRows: rows.length,
     });
     if (!verdict.deletable) {
@@ -373,7 +380,7 @@ export function SeasonsHub({
                   ? `You’re ${ordinal(data.league.rank)} of ${numbers.format(data.league.of)} · ${numbers.format(data.league.points)} ${noun(data.league.points, "point", "points")}`
                   : "No league table yet"
               }
-              note="One table for every season"
+              note="Each season has its own table"
               button="Update the table"
               href={links.league}
             />
@@ -520,6 +527,7 @@ export function SeasonsHub({
         </div>
         <ul className={styles.ticks}>
           <li><span className={styles.tick}><IconCheck className="size-3.5" aria-hidden="true" /></span>Player totals start at zero for every active player</li>
+          {first ? null : <li><span className={styles.tick}><IconCheck className="size-3.5" aria-hidden="true" /></span>The league table starts at zero with the same teams</li>}
           {shown ? <li><span className={styles.tick}><IconCheck className="size-3.5" aria-hidden="true" /></span><span className={styles.tickText}>{shown.label} is kept and can still be corrected</span></li> : null}
         </ul>
         <div className={styles.actions}>

@@ -81,7 +81,7 @@ describe("what the hub reads", () => {
 
   it("selects no personal detail and no media", () => {
     expect(loader).not.toMatch(/email|phone|guardian|answers|status_token/i);
-    expect(loader).toContain('.select("is_club,points,sort_order")');
+    expect(loader).toContain('.select("is_club,points,goal_difference,wins,played,sort_order")');
   });
 
   it("never adds columns to tenant resolution", () => {
@@ -174,9 +174,9 @@ describe("the page's words", () => {
     }
   });
 
-  it("does not promise a league table copy the platform does not make yet (RE-11b)", () => {
-    expect(hub).not.toMatch(/fresh league table/i);
-    expect(hub).toContain("One table for every season");
+  it("says each season has its own table now that the platform keeps one per season (RE-11b)", () => {
+    expect(hub).not.toContain("One table for every season");
+    expect(hub).toContain("Each season has its own table");
   });
 
   it("shows a name counter that goes red past the limit instead of silently cutting the name", () => {
@@ -199,8 +199,10 @@ describe("the page's words", () => {
   });
 });
 
-describe("no schema change", () => {
-  it("adds no migration and no generated type", () => {
+describe("tenant resolution", () => {
+  it("leaves lib/club-context.ts alone (the 2026-08-14 outage)", () => {
+    // 11a added no migration. Later packages do (ADMIN-RE-11b), so only the
+    // tenant-resolution file stays pinned here.
     let changed: string[] = [];
     try {
       changed = execFileSync("git", ["diff", "--name-only", "origin/main...HEAD"], { cwd: process.cwd(), encoding: "utf8" })
@@ -209,8 +211,6 @@ describe("no schema change", () => {
     } catch {
       return; // no origin/main to compare with here
     }
-    expect(changed.filter((file) => file.startsWith("supabase/migrations/"))).toEqual([]);
-    expect(changed).not.toContain("lib/database.generated.ts");
     expect(changed).not.toContain("lib/club-context.ts");
   });
 });
