@@ -40,7 +40,7 @@ import {
   type YourClubShown,
 } from "@/lib/your-club";
 import { FitLogo } from "./FitLogo";
-import { TopBarTakeover } from "./TopBar";
+import { isPlainClick, TopBarTakeover, useLeaveGuard, useTabBack } from "./TopBar";
 import barStyles from "./reimagined.module.css";
 import styles from "./your-club.module.css";
 
@@ -136,7 +136,9 @@ function Editor({
   const [save, setSave] = useState<SaveState>("idle");
   const [errors, setErrors] = useState<Errors>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [leaving, setLeaving] = useState(false);
+  // Where the person wanted to go when they had unsaved changes (ADMIN-RE-24: back or a tab).
+  const [leaving, setLeaving] = useState<string | null>(null);
+  const back = useTabBack();
   const fileInput = useRef<HTMLInputElement>(null);
   const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** A logo already uploaded by a Save that then failed later: a retry reuses it. */
@@ -348,10 +350,11 @@ function Editor({
     return true;
   }
 
-  function goHome() {
-    if (dirty && !busy) setLeaving(true);
-    else router.push("/admin");
+  function goBack() {
+    if (dirty && !busy) setLeaving(back.href);
+    else router.push(back.href);
   }
+  useLeaveGuard(dirty && !busy ? (href: string) => setLeaving(href) : null);
 
   const previewLogo = pendingLogo?.url ?? logoUrl;
   const reachFilled = [draft.email, draft.phone].some((value) => value.trim() !== "");
@@ -366,16 +369,16 @@ function Editor({
         <div className={barStyles.editBar} data-testid="your-club-bar">
           <div className={barStyles.editBarLead}>
             <Link
-              href="/admin"
+              href={back.href}
               className={barStyles.back}
               onClick={(event) => {
-                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+                if (!isPlainClick(event)) return;
                 event.preventDefault();
-                goHome();
+                goBack();
               }}
             >
               <ChevronLeft className="size-5" aria-hidden="true" />
-              Home
+              {back.label}
             </Link>
             <span className={barStyles.editBarRule} aria-hidden="true" />
             <IconBranding className={barStyles.editBarPencil} aria-hidden="true" />
@@ -652,8 +655,8 @@ function Editor({
       {fitting ? <FitLogo file={fitting} onUse={keepLogo} onUseAsIs={() => keepLogo(fitting)} onCancel={cancelFit} /> : null}
 
       <AdminModal
-        open={leaving}
-        onClose={() => setLeaving(false)}
+        open={leaving !== null}
+        onClose={() => setLeaving(null)}
         className={styles.leaveDialog}
         backdropClassName={styles.fitBackdrop}
         aria-labelledby="yc-leave-title"
@@ -671,16 +674,17 @@ function Editor({
             disabled={busy}
             onClick={async () => {
               const ok = await saveAll();
-              setLeaving(false);
-              if (ok) router.push("/admin");
+              const to = leaving;
+              setLeaving(null);
+              if (ok && to) router.push(to);
             }}
           >
             Save and continue
           </button>
-          <button type="button" className={styles.secondary} onClick={() => setLeaving(false)}>
+          <button type="button" className={styles.secondary} onClick={() => setLeaving(null)}>
             Keep editing
           </button>
-          <button type="button" className={styles.secondary} onClick={() => router.push("/admin")}>
+          <button type="button" className={styles.secondary} onClick={() => router.push(leaving ?? back.href)}>
             Leave without saving
           </button>
         </div>

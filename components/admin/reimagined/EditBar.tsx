@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { ChevronLeft, IconEdit, IconSuccess } from "@/components/admin/icons";
-import { TopBarTakeover } from "./TopBar";
+import { isPlainClick, TopBarTakeover, useTabBack } from "./TopBar";
 import styles from "./reimagined.module.css";
 
 // ADMIN-RE-09: the reimagined edit bar over the homepage editor (design:
-// cd-desktop, cd-phone). It takes over the shell's top bar: "‹ Home", "You're
-// editing your site", what is not saved yet, and Save, which confirms on itself
-// with the hold-aware saved label. The editor owns saving and leaving; this
-// only shows the state and calls back. "‹ Home" is a real link to /admin, so
-// a new tab still works; a plain click goes through onHome, which asks first
-// when there are unsaved changes.
+// cd-desktop, cd-phone). It takes over the shell's page bar: "‹ Website" (the
+// tab it sits under, ADMIN-RE-24), "You're editing your site", what is not
+// saved yet, and Save, which confirms on itself with the hold-aware saved
+// label. The editor owns saving and leaving; this only shows the state and
+// calls back. The back link is a real link, so a new tab still works; a plain
+// click goes through onHome, which asks first when there are unsaved changes.
 
 export type EditBarState = "clean" | "dirty" | "saving" | "saved";
 
@@ -29,8 +29,9 @@ export function EditBar({
   savedText: string;
   saveDisabled: boolean;
   onSave: () => void;
-  onHome: () => void;
+  onHome: (href: string) => void;
 }) {
+  const back = useTabBack();
   const status = unsaved.length
     ? { long: `Not saved yet: ${unsaved.join(", ")}`, short: "Not saved yet" }
     : state === "saved"
@@ -41,16 +42,16 @@ export function EditBar({
       <div className={styles.editBar} data-testid="admin-edit-bar">
         <div className={styles.editBarLead}>
           <Link
-            href="/admin"
+            href={back.href}
             className={styles.back}
             onClick={(event) => {
-              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+              if (!isPlainClick(event)) return;
               event.preventDefault();
-              onHome();
+              onHome(back.href);
             }}
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
-            Home
+            {back.label}
           </Link>
           <span className={styles.editBarRule} aria-hidden="true" />
           <IconEdit className={styles.editBarPencil} aria-hidden="true" />

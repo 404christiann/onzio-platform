@@ -339,8 +339,9 @@ for (const width of [390, 1440]) {
       await expectNoSideScroll(page, width);
     });
 
-    test("the home's Team roster row opens it", async ({ page }) => {
-      await page.goto("/admin");
+    // ADMIN-RE-24: Team roster sits on the Programs tab's page for a programs club like Alpha.
+    test("the Programs tab's Team roster row opens it", async ({ page }) => {
+      await page.goto("/admin/programs-and-sign-ups");
       await main(page).getByRole("link", { name: /Team roster/ }).click();
       await expect(page).toHaveURL(/\/admin\/roster$/);
       await expect(main(page).getByRole("heading", { level: 1, name: /Your players/ })).toBeVisible();

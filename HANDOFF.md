@@ -19,6 +19,29 @@
   the Standings page and a database guard stops a stale save from undoing them.
 - **Exact next step:** the bot runs `GATE-MIGRATE` (Christian's machine, the bot
   cannot reach production) and merges. RE-11c is next.
+## 2026-11-10 - ADMIN-RE-24a The five tabs (frame) on the new admin
+
+- **Status:** `in_progress`, PR open. New package `ADMIN-RE-24` (in
+  `docs/admin-portal-redesign-plan.md`): it **replaces the RE-05 shell and More
+  list** with the design Christian picked on 2026-11-10. PR 24a of four (24b
+  home, 24c search with cmdk, 24d players in Games). UI only: no migration, no
+  new dependency yet, no hosted action. Rose City is on the new admin, so
+  merging shows it there; Diverse City stays classic.
+- **What it adds:** five tabs that follow the club (bottom bar on a phone,
+  sidebar from 760px; Programs only for clubs with programs or tryouts, Insights
+  only with `admin_flags.sponsor_insights`), tab pages with a status pill, main
+  buttons and their pages, "‹ <tab>" on every other page, red dots on Games and
+  Programs, an avatar menu (View website, light/dark, Sign out), and Insights'
+  held state ("Your website isn't live yet"). Pages with unsaved changes ask
+  before a tab leaves them.
+- **Open:** the app has no website-visit data, so no numbers are shown anywhere
+  (counting visits needs a table: a later package). Rose City sees Insights only
+  after Onzio sets its `sponsor_insights` flag with the operator script.
+- **Verification:** contract and browser tests (390 and 1440, light and dark);
+  full suites on the PR head, with the tested commit, are in the PR body.
+  Details in `STATUS.md`.
+- **Exact next step:** the bot merges. Then 24b, the home.
+
 ## 2026-11-10 - ADMIN-RE-18 Who can sign in (the screen)
 
 - **Status:** `in_progress`, PR open. UI only: no migration, no change to the

@@ -50,3 +50,40 @@ describe("admin mobile navigation", () => {
     expect(source).toContain('aria-label="Admin navigation"');
   });
 });
+
+// ADMIN-RE-24: the reimagined admin has no drawer. On a phone its tabs are a
+// bottom bar; from 760px they are a sidebar.
+describe("reimagined admin tabs on a phone and a laptop", () => {
+  const shell = readFileSync(resolve(process.cwd(), "components/admin/reimagined/ReimaginedShell.tsx"), "utf8");
+  const css = readFileSync(resolve(process.cwd(), "components/admin/reimagined/frame.module.css"), "utf8");
+  const rule = (selector: string) => {
+    const at = css.indexOf(`${selector} {`);
+    expect(at, selector).toBeGreaterThan(-1);
+    return css.slice(at, css.indexOf("}", at));
+  };
+
+  it("pins the tab bar to the bottom, clear of the home indicator, and keeps content above it", () => {
+    expect(rule(".tabBar")).toContain("position: fixed;");
+    expect(rule(".tabBar")).toContain("bottom: 0;");
+    expect(rule(".tabBar")).toContain("var(--admin-safe-area-bottom");
+    expect(rule(".main")).toContain("var(--frame-tabbar)");
+    expect(rule(".barLink")).toContain("min-height: 48px;");
+  });
+
+  it("swaps the tab bar for a sticky full-height sidebar from 760px", () => {
+    const laptop = css.slice(css.indexOf("@media (min-width: 760px)"));
+    expect(laptop).toMatch(/\.top,\s*\.tabBar \{\s*display: none;/);
+    expect(laptop).toMatch(/\.side \{[^}]*position: sticky;[^}]*height: 100dvh;/);
+  });
+
+  it("hovers only with a fine pointer and drops the press scale for reduced motion", () => {
+    expect(css).toContain("@media (hover: hover) and (pointer: fine)");
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\.press:active \{\s*transform: none;/);
+    expect(rule(".press:active")).toContain("transform: scale(0.97);");
+  });
+
+  it("labels both tab lists the same, since only one shows at a time", () => {
+    expect(shell.match(/<nav aria-label="Club admin"/g)).toHaveLength(2);
+    expect(shell).not.toContain("document.body.style.overflow");
+  });
+});

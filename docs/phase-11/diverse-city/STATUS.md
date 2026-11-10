@@ -87,6 +87,98 @@ check above), dark theme, the public site in a browser.
 
 **Exact next step:** the bot runs `GATE-MIGRATE` and merges (the production check
 is back and safe: one shown season per club, no duplicate order, longest name 27). RE-11c is the next migration.
+## 2026-11-10 - ADMIN-RE-24a: the five tabs (frame) on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-24` (new package, recorded in
+`docs/admin-portal-redesign-plan.md`; it **replaces the RE-05 shell and More
+list**), PR 24a of four. Branch `claude/admin-re-24a-frame` from `main`
+`6201eeb`. **Status:** `in_progress`, PR open for the review bot. UI only: no
+migration, no schema change, no new dependency in this PR (cmdk comes with
+24c), no hosted action. Rose City is already on `reimagined`, so merging shows
+it there; Diverse City stays on `classic` and sees nothing new.
+
+**Completed work:**
+
+- Design picked by Christian 2026-11-10 (`admin-plain-search-two-clubs.html`,
+  source `prototypes/plain-search/src/clubs.tsx`). Five tabs that follow the
+  club: a bottom tab bar on a phone, a sidebar from 760px. Real links with
+  `aria-current`; a red dot on Games when a score is missing and on Programs
+  when there are new sign-ups (never Home); counts read fail-safe in the
+  layout (a failed read shows no dot).
+- Tabs per club (`lib/admin-tabs.ts`): a club with programs or tryouts on its
+  website gets Home · Games · Programs · Website · Club (roster under
+  Programs); any other club Home · Games · Website · Club (roster under Games,
+  sign-up forms under Club), plus Insights when `admin_flags.sponsor_insights`
+  is true. Every page in the manifest sits under one tab, by its group unless a
+  rule names it, so the Rose City 2027 pages land under Website untouched.
+- Tab pages `/admin/games`, `/admin/programs-and-sign-ups`, `/admin/website`,
+  `/admin/club`, `/admin/insights`: heading, status pill ("1 game needs a
+  score", "3 new sign-ups this week", "Not live yet" / "Your website is
+  live"), main buttons from the home jobs, then the tab's pages. A classic
+  club, or a club without that tab, is sent to `/admin`.
+- Insights waiting state: "Your website isn't live yet" while the site is held
+  (Rose City), "No visit numbers yet" otherwise, and the list of what it will
+  show. No zeros anywhere.
+- Every other page keeps a sticky page bar with "‹ <tab>" (was "‹ Home"), its
+  title and the actions slot. The homepage editor's and Your club's own bars
+  say "‹ Website" / "‹ Club". While those pages have unsaved changes, a tab or
+  sidebar link asks first (`useLeaveGuard`). The phone tab bar hides while an
+  editor's own bar is up, so it never covers the editor's bottom tools.
+- Account menu on the avatar (Base UI Menu): View website, Dark mode / Light
+  mode, Sign out. Grows from its trigger, 150ms in / 100ms out.
+- The home loses the More list (its pages are on the tabs); the rest of the
+  home is rebuilt in 24b. Icons: icons.download medium outline, solid for the
+  selected tab (globe, settings and six solid glyphs added to
+  `approved-selection.json`).
+
+**Left out on purpose (later PRs or decisions):** search (24c), the new home
+(24b), players in Games (24d), "Your name" in the account menu, the Club tab's
+plan pill and sign-in list, Diverse City's monthly website card. Visit numbers
+have no data source in the app; see blockers.
+
+**Files changed:** `lib/admin-tabs.ts` (new), `lib/admin-tab-page.ts` (new),
+`app/admin/(protected)/layout.tsx`, `app/admin/(protected)/page.tsx`,
+`app/admin/(protected)/{games,programs-and-sign-ups,website,club,insights}/page.tsx`
+(new), `components/admin/reimagined/{ReimaginedShell,TopBar,EditBar,YourClub,ReimaginedHome,MoreList}.tsx`,
+`components/admin/reimagined/{AccountMenu,TabPage,InsightsWaiting}.tsx` (new),
+`components/admin/reimagined/tabIcons.ts` (new),
+`components/admin/reimagined/frame.module.css` (new),
+`components/admin/reimagined/reimagined.module.css` (old shell and More rules
+removed), `components/admin/homepage/HomepageEditor.tsx` (leave guard, back
+link), `components/admin/icons/{index.tsx,approved-selection.json}` and eight
+SVGs under `assets/`, `tests/contracts/admin-tabs.test.ts` (new),
+`tests/contracts/{admin-reimagined-home,admin-portal-switch,admin-mobile-navigation}.test.ts`,
+`tests/browser/admin-reimagined-tabs.spec.ts` (new),
+`tests/browser/admin-reimagined-{home,website,your-club}.spec.ts`,
+`docs/admin-portal-redesign-plan.md`, this file, `HANDOFF.md`.
+`lib/admin-route-manifest.ts` and `lib/club-context.ts` are untouched.
+
+**Verification:** contract tests for the tabs (`tests/contracts/admin-tabs.test.ts`:
+tabs per club, every page under exactly one tab for owner, helper and paused
+clubs, current-tab matching, dots, pill words, tab-page checks, icons), the
+updated home, switch and mobile-navigation contracts, and browser tests at 390
+and 1440 in light and dark (`tests/browser/admin-reimagined-tabs.spec.ts`:
+Alpha as a programs club, Alpha renamed `rose-city` with no design and the
+Insights flag as the held Rose City stand-in, and Alpha back on `classic`).
+Full suites on the PR head, with the tested commit, are in the PR body. Not
+verified: production (nothing hosted touched), a real iPhone's safe areas.
+
+**Blockers / decisions:**
+
+- Visit numbers: the app has no website-visit data (only `@vercel/analytics`,
+  which it cannot read). Counting visits needs a new table, so it is not in
+  this build; the cards say "Not live yet" (held) or "No visit numbers yet".
+- The Insights tab is gated by `admin_flags.sponsor_insights`. Rose City sees
+  it only after Onzio runs `scripts/set-club-admin-portal.ts rose-city
+  --on=sponsor_insights` on production (an operator action, not done here).
+- Overlap: the unpushed `codex/rose-city-2027-on-main` edits
+  `components/admin/reimagined/MoreList.tsx` (icon map, kept in place here) and
+  `components/admin/icons/index.tsx` (this PR's drawings are named
+  `DrawingTab0`–`7` so they cannot clash).
+
+**Exact next step:** the bot reviews and merges 24a. Then 24b (the home) from
+the merged `main`.
+
 ## 2026-11-10 - ADMIN-RE-18 (screen): Who can sign in on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-18` (the screen; the server half is
