@@ -12,6 +12,8 @@ import { clubToday } from "../../lib/club-time";
 const ALPHA = CLUB_IDS.alpha;
 const OPPONENT = "RE-11b fixture opponent";
 const OTHER_SEASON = "RE-11b spring";
+// 60 characters with no space to break on: the longest name the box takes.
+const LONG_NAME = "Wellington".repeat(6);
 const SHOTS = "test-results/admin-reimagined";
 const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
 
@@ -41,7 +43,7 @@ async function seedTable(): Promise<string> {
     `insert into onzio.league_standings (club_id, season_id, team_name, team_abbreviation, is_club, sort_order, played, wins, draws, losses, goal_difference, points)
      values ($1,$2,'Alpha FC','ALP',true,0,0,0,0,0,0,0),
             ($1,$2,'Rivals FC','RIV',false,1,4,3,0,1,5,9),
-            ($1,$2,'A very long team name that goes on and on and on and on and on to 60',null,false,2,4,1,1,2,-2,4)`,
+            ($1,$2,'${LONG_NAME}',null,false,2,4,1,1,2,-2,4)`,
     [ALPHA, seasonId],
   );
   return seasonId;
@@ -63,8 +65,8 @@ async function cleanup() {
   await sql("delete from onzio.matches where club_id=$1 and opponent=$2", [ALPHA, OPPONENT]);
   await sql("delete from onzio.seasons where club_id=$1 and label=$2", [ALPHA, OTHER_SEASON]);
   await sql(
-    "delete from onzio.league_standings where club_id=$1 and team_name in ('Alpha FC','Rivals FC') or team_name like 'A very long team name%'",
-    [ALPHA],
+    "delete from onzio.league_standings where club_id=$1 and (team_name in ('Alpha FC','Rivals FC') or team_name = $2)",
+    [ALPHA, LONG_NAME],
   );
 }
 
@@ -135,7 +137,7 @@ for (const width of [390, 1440]) {
       expect(copied.map((row) => [row.team_name, row.played, row.points])).toEqual([
         ["Alpha FC", 0, 0],
         ["Rivals FC", 0, 0],
-        ["A very long team name that goes on and on and on and on and on to 60", 0, 0],
+        [LONG_NAME, 0, 0],
       ]);
 
       await page.goto("/admin/standings");
