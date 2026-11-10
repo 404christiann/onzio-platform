@@ -118,6 +118,9 @@ describe("the migration", () => {
     expect(sql).toContain("add column show_in_footer boolean not null default false");
     expect(sql).toContain("add column website_url text");
     expect(sql).toContain("partition by l.club_id, l.media_asset_id");
+    // Christian's check (2026-11-10): rows without a file record are not merged by link.
+    expect(sql).toContain("where l.media_asset_id is not null");
+    expect(sql).not.toMatch(/partition by [^)]*logo_url/);
     expect(sql).toContain("site_sponsor_logos_name_length");
     expect(sql).toContain("check (char_length(name) <= 60)");
     expect(sql).toContain("alter column placement drop not null");

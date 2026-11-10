@@ -12,7 +12,12 @@
 --      of at most 2,048 characters. Nobody has one at merge.
 --   3. Rows for the same logo file (same club and media_asset_id) become one:
 --      the homepage row stays, with both switches; the others are deleted.
---      Its name is the homepage row's name.
+--      Its name is the homepage row's name. Rows without a media_asset_id
+--      are left as they are, even when two share a logo link: a shared link
+--      without a file record does not show it is the same sponsor (Lions'
+--      import wrote one placeholder link for several sponsors). Christian's
+--      read-only check (2026-11-10): Rose City 5 pairs (12 rows to 7),
+--      Diverse City 1 pair (4 to 3), Lions none (one link pair left alone).
 --   4. One order per club: the homepage strip's order first, then the logos
 --      that were only in the footer, in the footer's order.
 --   5. name: at most 60 characters and not blank (break-ui gap; decision 7).

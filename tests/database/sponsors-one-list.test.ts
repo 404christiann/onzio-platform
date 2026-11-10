@@ -236,6 +236,22 @@ describe("the migration on rows that were there before it", () => {
     expect(await sponsors(ALPHA)).toEqual([{ name: "First", show_on_homepage: false, show_in_footer: true, sort_order: 0 }]);
   });
 
+  it("leaves rows without a file record alone, even when two share a logo link", async () => {
+    await stepBack();
+    // Lions' import gave several sponsors one placeholder link and no file record.
+    await db.query(
+      `insert into onzio.site_sponsor_logos (club_id,placement,name,logo_url,sort_order)
+       values ($1,'carousel','Highbank Credit Union','',0), ($1,'footer','Midwest Supply','',0), ($1,'footer','Franklinton Works','/f.png',1)`,
+      [ALPHA],
+    );
+    await db.query(readFileSync(MIGRATION, "utf8"));
+    expect(await sponsors(ALPHA)).toEqual([
+      { name: "Highbank Credit Union", show_on_homepage: true, show_in_footer: false, sort_order: 0 },
+      { name: "Midwest Supply", show_on_homepage: false, show_in_footer: true, sort_order: 1 },
+      { name: "Franklinton Works", show_on_homepage: false, show_in_footer: true, sort_order: 2 },
+    ]);
+  });
+
   it("stops when a name is over 60 characters", async () => {
     await stepBack();
     await legacy(ALPHA, "carousel", "x".repeat(61), 0, null);

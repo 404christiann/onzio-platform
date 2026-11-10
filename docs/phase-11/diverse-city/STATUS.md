@@ -55,7 +55,14 @@ run from his Mac, before the merge. No change to `lib/club-context.ts`.
 and sent to the orchestrator for Christian
 (`side-session-notes/.../re-15-production-check.md`): per club, rows per place,
 duplicate `media_asset_id` groups, same-place duplicates, names that differ in
-a merge, names over 60 or blank, places over their limits. Results: PENDING.
+a merge, names over 60 or blank, places over their limits. Results
+(Christian, 2026-11-10): no place over its limit, no name over 60 (longest 39)
+or blank, no position clashes, no same-place repeats, no name or link conflicts
+in a merge. Rose City merges 5 pairs (12 rows become 7), Diverse City 1 pair (4
+become 3). Lions has 3 rows without a file record, 2 of them sharing a logo
+link; decided here: rows without a file record are left alone (not merged by
+link), because Lions' import gave several different sponsors one placeholder
+link. A database test pins it.
 
 **Files changed:** `supabase/migrations/20261110150000_sponsors_one_list.sql`;
 `lib/database.generated.ts` (regenerated), `lib/db-types.ts`,
@@ -89,16 +96,18 @@ switch) and on the generic site (Footer switch, full footer greyed), the worst
 case (60-character names, a 2,000-character website, Japanese, a missing logo
 file), the leave dialog, and the classic page on the same rows. Full suites on
 the PR head, with the tested commit, are in the PR body. Not verified:
-production data (the counts are pending), real Safari, a screen reader.
+production data beyond Christian's counts, real Safari, a screen reader.
 Found and fixed in the browser run: the leave dialog sat under Base UI's inert
 layer (its buttons could not be clicked); the preview left a gap for a logo
 file that failed to load (it now shows the name).
 
-**Blockers / decisions:** the production counts; `GATE-MIGRATE` needs
-Christian's explicit OK and runs from his Mac.
+**Blockers / decisions:** `GATE-MIGRATE` needs Christian's explicit OK and
+runs from his Mac. Decided here: rows without a file record are not merged by
+link (see the production check above).
 
-**Exact next step:** Christian runs the counts check; I adjust the backfill if
-needed; the bot reviews; then `GATE-MIGRATE` from Christian's Mac, then merge.
+**Exact next step:** the bot reviews; then `GATE-MIGRATE` from Christian's
+Mac (expect Rose City 12 sponsor rows to become 7, Diverse City 4 to become 3,
+Lions unchanged at 6), then merge.
 
 ## 2026-11-10 - ADMIN-RE-24b: the new home on the new admin
 

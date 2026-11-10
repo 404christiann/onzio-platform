@@ -14,13 +14,14 @@
   same rows. Sponsors with a website are links on the public site (nobody has
   one at merge). Names stop at 60 (database CHECK).
 - **Visitors see at merge:** the same logos in the same order.
-- **Open:** Christian's read-only counts check (sent to the orchestrator);
-  the backfill may change once its numbers are back.
+- **Production counts (Christian, 2026-11-10):** all clean. At the gate Rose
+  City's 12 sponsor rows become 7 and Diverse City's 4 become 3; Lions stays at
+  6 (rows without a file record are never merged by link, decided here).
 - **Verification:** database, unit, contract and browser tests; full suites on
   the PR head, with the tested commit, are in the PR body. Details in
   `STATUS.md`.
-- **Exact next step:** counts back, bot review, then `GATE-MIGRATE` from
-  Christian's Mac, then merge.
+- **Exact next step:** bot review, then `GATE-MIGRATE` from Christian's Mac,
+  then merge.
 
 ## 2026-11-10 - ADMIN-RE-24b The new home on the new admin
 
