@@ -4,8 +4,12 @@ import { Suspense } from "react";
 import { AdminSkeletonRegion } from "@/components/admin/AdminSkeletonRegion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentStatusCard } from "@/components/admin/payments/PaymentStatusCard";
+import { PaymentsPlan } from "@/components/admin/reimagined/PaymentsPlan";
 import { AdminPage, AdminPageHeader } from "@/components/admin/AdminPage";
+import { buildPaymentsView } from "@/lib/admin-payments-view";
+import { readAdminPortal } from "@/lib/admin-portal";
 import { getClubContext } from "@/lib/club-context";
+import { PUBLIC_SITE_HOLD_SLUGS } from "@/lib/public-site-hold";
 import { getConfiguredStripePriceLabel } from "@/lib/stripe-price";
 import { createClient } from "@/lib/supabase-server";
 import {
@@ -81,6 +85,27 @@ async function PaymentsPageContent() {
     : null;
   const uiState = resolvePaymentsUiState(mirrorRow);
   const priceLabel = await getConfiguredStripePriceLabel(club.stripePriceId);
+
+  // ADMIN-RE-20: a club on the reimagined admin gets the new page (design:
+  // cd-payments). Same data, same Stripe portal and checkout calls; classic on any doubt.
+  const portal = await readAdminPortal(supabase, club.id);
+  if (portal.portal === "reimagined") {
+    return (
+      <PaymentsPlan
+        clubName={club.name}
+        view={buildPaymentsView({
+          uiState,
+          priceLabel,
+          clubName: club.name,
+          clubKind: club.kind,
+          domain: club.primaryDomain,
+          publicAccess: club.publicAccess,
+          held: PUBLIC_SITE_HOLD_SLUGS.has(club.slug),
+          timeZone: portal.timeZone,
+        })}
+      />
+    );
+  }
 
   return (
     <AdminPage className="max-w-4xl">
