@@ -3,11 +3,31 @@
 ## 2026-11-10 - ADMIN-RE-11b: League table per season, our row updates itself
 
 **Agent/package:** Claude Code, `ADMIN-RE-11b`. Branch
-`claude/admin-re-11b-league` from `main` `f44051e`. **Status:** `in_progress`,
-PR open for the review bot. **Carries a migration and needs `GATE-MIGRATE`**
+`claude/admin-re-11b-league` from `main` `f44051e`. **Status:** `released`
+2026-11-10 (PR #120, merge `d665c655`). **Carried a migration**
 (`20261110090000_league_table_per_season.sql`, sorted after the Rose City 2027
-branch's last one, `20261109210000`). Nothing was applied to production or any
-hosted project. No change to `lib/club-context.ts`.
+branch's last one, `20261109210000`), applied to production before the merge.
+No change to `lib/club-context.ts`.
+
+**Release record:** Christian applied the migration from his Mac
+(`supabase db push --linked --skip-vault`, CLI 2.122.0) after the bot cleared
+both Mediums at `6343286`, following `docs/agents/review-bot-supabase.md`. Before:
+the ledger had only this migration pending; a completed physical backup from the
+same day with no later audited writes (no extra dump); the dry run listed only
+this migration. After: the ledger matches and a second dry run says up to date;
+the migration has its history row and its triggers exist; no table row without
+a season; row counts unchanged apart from the audit events the backfill wrote;
+every existing season typed (`standings_from_scores` false); every club's own
+row unchanged; the generated types differ from the live schema only in
+generator formatting. I merged #120 pinned to head `75358950` (main with RE-24a
+merged in and a browser spec fix, after the bot's review of `6343286`; no
+migration or application change of this PR in those commits). Deploy READY;
+smoke checks passed: every verified production domain returns 200 after the
+`diversecityfc.com` to `www` redirect with no `UNKNOWN_TENANT`, Diverse City
+`/programs`, `/roster` and `/shop` return 200, and Rose City's admin sign-in
+returns 200. `onzio-platform.vercel.app/` returns 404, consistent with the
+public-site hold; I did not confirm which club it belongs to. Rollback target
+for code was the previous production deployment.
 
 **Completed work:**
 
@@ -85,8 +105,9 @@ ignores them.
 the tested commit, are in the PR body. Not verified: production data (see the
 check above), dark theme, the public site in a browser.
 
-**Exact next step:** the bot runs `GATE-MIGRATE` and merges (the production check
-is back and safe: one shown season per club, no duplicate order, longest name 27). RE-11c is the next migration.
+**Exact next step:** RE-11c. Turning an existing season on for automatic rows is
+a separate data change after Christian's call (`update onzio.seasons set
+standings_from_scores = true where id = ...`). RE-11c is the next migration.
 ## 2026-11-10 - ADMIN-RE-24a: the five tabs (frame) on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-24` (new package, recorded in
