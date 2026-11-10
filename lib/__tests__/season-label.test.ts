@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   firstSeasonAfterNothing,
+  yearsForSeasonName,
   newestSeasonFirst,
   nextSeasonAfter,
   SEASON_NAME_MAX,
@@ -136,5 +137,35 @@ describe("seasonNameProblemText", () => {
   it("explains an empty name and a long one", () => {
     expect(seasonNameProblemText("empty", "")).toBe("Give the season a name.");
     expect(seasonNameProblemText("too-long", "x".repeat(41))).toBe("Use 40 characters or fewer.");
+  });
+});
+
+describe("yearsForSeasonName: the years saved with a name typed over the suggestion", () => {
+  const suggested = { startYear: 2026, endYear: 2026 };
+
+  it("keeps the suggestion's years when the name says nothing about years", () => {
+    expect(yearsForSeasonName("Fall Showcase", suggested)).toEqual(suggested);
+    expect(yearsForSeasonName("Winter league", suggested)).toEqual(suggested);
+    expect(yearsForSeasonName("", suggested)).toEqual(suggested);
+  });
+
+  it("follows a Spring or Fall name's year", () => {
+    expect(yearsForSeasonName("Fall 2025", suggested)).toEqual({ startYear: 2025, endYear: 2025 });
+    expect(yearsForSeasonName("  spring 2030 ", suggested)).toEqual({ startYear: 2030, endYear: 2030 });
+  });
+
+  it("follows a plain year and a split season", () => {
+    expect(yearsForSeasonName("2028", suggested)).toEqual({ startYear: 2028, endYear: 2028 });
+    expect(yearsForSeasonName("2025–26", suggested)).toEqual({ startYear: 2025, endYear: 2026 });
+    expect(yearsForSeasonName("2025-26", suggested)).toEqual({ startYear: 2025, endYear: 2026 });
+    expect(yearsForSeasonName("2099–2100", suggested)).toEqual({ startYear: 2099, endYear: 2100 });
+  });
+
+  it("falls back when the years would not be accepted by the database", () => {
+    // 2000 to 2200, and the end year at most two after the start (20260726000200_phase2_content.sql)
+    expect(yearsForSeasonName("Fall 1999", suggested)).toEqual(suggested);
+    expect(yearsForSeasonName("Fall 2201", suggested)).toEqual(suggested);
+    expect(yearsForSeasonName("2025–31", suggested)).toEqual(suggested);
+    expect(yearsForSeasonName("2026–25", suggested)).toEqual(suggested);
   });
 });
