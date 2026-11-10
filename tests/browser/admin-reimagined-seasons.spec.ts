@@ -12,6 +12,8 @@ import { savedLabel, websiteState } from "../../lib/save-status";
 
 const ALPHA = CLUB_IDS.alpha;
 const FIXTURE = "RE-11a fixture";
+// A name typed over the suggestion that carries its own year (the spec removes it).
+const TYPED_NAME = "Fall 2025";
 const SHOTS = "test-results/admin-reimagined";
 const config = { host: "127.0.0.1", port: 54322, user: "postgres", password: "postgres", database: "postgres" };
 
@@ -50,8 +52,8 @@ async function original(): Promise<SeasonRow> {
 /** Takes every fixture season away; with `keep`, switches that season (Alpha's own) back on. */
 async function removeFixtureSeasons(keep?: string) {
   const fixtures = await sql<{ id: string }>(
-    "select id from onzio.seasons where club_id=$1 and (label like $2 or label like $3)",
-    [ALPHA, `${FIXTURE}%`, `%${FIXTURE}%`],
+    "select id from onzio.seasons where club_id=$1 and (label like $2 or label like $3 or label = $4)",
+    [ALPHA, `${FIXTURE}%`, `%${FIXTURE}%`, TYPED_NAME],
   );
   const ids = fixtures.map((row) => row.id);
   if (ids.length) {
@@ -275,6 +277,27 @@ for (const width of [390, 1440]) {
           `${mine} has games or player numbers now, so it was kept.`,
         );
         expect((await seasons()).map((season) => season.label)).toContain(mine);
+      } finally {
+        await removeFixtureSeasons(first.id);
+      }
+    });
+
+    test("saves the years the typed name says, not the suggestion's", async ({ page }) => {
+      const first = await original();
+      try {
+        await openHub(page);
+        await main(page).getByRole("button", { name: "Start next season" }).click();
+        const dialog = page.getByRole("dialog", { name: "Start next season?" });
+        // The suggestion follows 2026 ("2027"); the typed name is a year earlier.
+        await expect(dialog.getByLabel("Season name")).toHaveValue(String(first.start_year + 1));
+        await dialog.getByLabel("Season name").fill(TYPED_NAME);
+        await dialog.getByRole("button", { name: "Start season" }).click();
+        await expect(page.getByRole("dialog", { name: `Show ${TYPED_NAME} on your website now?` })).toBeVisible();
+        const [made] = await sql<{ start_year: number; end_year: number; active: boolean }>(
+          "select start_year, end_year, active from onzio.seasons where club_id=$1 and label=$2",
+          [ALPHA, TYPED_NAME],
+        );
+        expect(made).toEqual({ start_year: 2025, end_year: 2025, active: false });
       } finally {
         await removeFixtureSeasons(first.id);
       }

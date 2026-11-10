@@ -44,6 +44,16 @@ stays on the old Branding page until its own switch.
 - JPG copy gap (PR #88): verified, not redone. `tests/contracts/admin-platform-fixes-02.test.ts`
   section 3 passes and the old Branding page has no JPG/JPEG wording.
 
+- Review bot Medium on #117, fixed: a saved `http://`, upper-case-scheme or
+  port social address no longer loads as an unsaved change or gets rewritten
+  to `https://` on an unrelated Save (`effectiveSocialHref`,
+  `draftFromSaved` in `lib/your-club.ts`; unit and browser round-trip tests).
+  Two Lows too: a cleared footer line previews the standard wording the
+  website prints, and the Fit your logo preview address is made and revoked
+  in one effect. Left as a follow-up: tie `club_logo_path` to the finalized
+  asset in the strict `site_branding` schema (the old Branding page also
+  trusts the string).
+
 **Differences from the design, on purpose:** the footer preview card sits
 above the questions on a phone but is not pinned there; "Live" shows the
 website's state (Live or Paused) rather than lighting up only after Save; the
@@ -80,6 +90,42 @@ in); Safari. Nothing was run against production.
 "Your club" on Rose City (logo and social pages) in his walk-through; every
 finding is an `ADMIN-RE-10x` or follow-up PR. RE-13 adds the "These come from
 Your club" shortcuts on the website pages.
+
+## 2026-11-10 - ADMIN-RE-11a follow-up: the review bot's Low notes on #116
+
+**Agent/package:** Claude Code, `ADMIN-RE-11a` (follow-up). Branch
+`claude/admin-re-11a-followup` from `main` `f44051e`. **Status:**
+`in_progress`, PR open for the review bot. UI only: no migration, no hosted
+action.
+
+**Completed work (the three Low notes the bot posted on #116):**
+
+- **Years follow the typed name.** "Start next season" saved the suggestion's
+  years whatever was typed, so "Fall 2025" typed over a 2026 suggestion was
+  stored as 2026. New `yearsForSeasonName` (`lib/season-label.ts`): a Spring or
+  Fall name takes its year, "2028" takes 2028, "2025–26" takes 2025 to 2026; a
+  name with no years, or years the database refuses (2000 to 2200, end at most
+  two after the start), keeps the suggestion's years.
+- **Classic Seasons page order.** It sorted by `start_year` only, so with
+  "Spring 2026" and "Fall 2026" "Create Next Season" could suggest a name that
+  exists. It now sorts with `newestSeasonFirst`, as the hub does.
+- **Delete reads.** A stat read that came back at its 1,000-row cap may have
+  missed rows, so the season is now kept (fails closed). The three delete
+  requests are still separate: making them atomic needs a database function,
+  which is a migration, so it is not done here. A game that lands in between
+  is still blocked by the `matches` foreign key.
+
+**Files changed:** `lib/season-label.ts`,
+`components/admin/reimagined/SeasonsHub.tsx`,
+`components/admin/ClassicSeasonsPage.tsx`; tests
+`lib/__tests__/season-label.test.ts`,
+`tests/contracts/admin-reimagined-seasons.test.ts`,
+`tests/browser/admin-reimagined-seasons.spec.ts`; this file, `HANDOFF.md`.
+
+**Verification:** red first (7 tests failing before the fixes). Full suites on
+the PR head, with the tested commit, are in the PR body.
+
+**Exact next step:** the bot reviews and merges.
 
 ## 2026-11-09 - ADMIN-RE-11a: This season hub and season names
 
