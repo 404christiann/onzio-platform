@@ -226,11 +226,11 @@ export default function AdminProgramsPage() {
   // create code path (and lib/slugify.ts) intact for every other template, and
   // for this club should it ever be re-enabled.
   const hidesProgramCreation = programsPolicy ? !programsPolicy.allowCreation : false;
-  // Diverse City's pathway band, /programs header, and closing band keep their
-  // standard wording; the copy editor is Onzio-managed for this rollout. If
-  // nothing is ever saved the public pages fall back to their placeholder copy
-  // by design, so hiding the editor is purely subtractive. Every other template
-  // keeps the editor.
+  // The words editor (the pathway band, the /programs header, and the closing
+  // band) is on wherever a club's site definition says so: Diverse City's is on
+  // as of ADMIN-RE-22. A club with the editor off keeps the standard wording
+  // (if nothing is ever saved the public pages fall back to their placeholder
+  // copy by design), so hiding it is purely subtractive.
   const hidesPageCopyEditor = programsPolicy ? !programsPolicy.showPageCopyEditor : false;
   const [programs, setPrograms] = useState<ProgramDraft[]>([]);
   const [registrationForms, setRegistrationForms] = useState<RegistrationFormOption[]>([]);

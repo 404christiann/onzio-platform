@@ -79,8 +79,9 @@ async function shot(page: Page, name: string, width: number) {
   await page.setViewportSize({ width, height: 900 });
 }
 
+// ADMIN-RE-24: Your club is on the Club tab's page (it was a More row).
 async function openYourClub(page: Page) {
-  await page.goto("/admin");
+  await page.goto("/admin/club");
   await main(page).locator('a[href="/admin/your-club"]').click();
   await expect(page).toHaveURL(/\/admin\/your-club$/);
   await expect(main(page).getByRole("heading", { level: 1, name: "Your club" })).toBeVisible();
@@ -122,7 +123,7 @@ for (const width of [390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
     });
 
-    test("opens from More, shows every card on an academy site, and saves everything at once", async ({ page }) => {
+    test("opens from the Club tab, shows every card on an academy site, and saves everything at once", async ({ page }) => {
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       const before = await snapshot();
@@ -180,36 +181,44 @@ for (const width of [390, 1440]) {
       }
     });
 
-    test("Home asks first when something is not saved, and a clear page leaves without asking", async ({ page }) => {
+    test("‹ Club asks first when something is not saved, and a clear page leaves without asking", async ({ page }) => {
       const before = await snapshot();
       try {
         await openYourClub(page);
-        // Nothing changed: Home just goes.
-        await page.getByTestId("your-club-bar").getByRole("link", { name: "Home" }).click();
-        await expect(page).toHaveURL(/\/admin$/);
+        // Nothing changed: ‹ Club (ADMIN-RE-24: its tab) just goes.
+        await page.getByTestId("your-club-bar").getByRole("link", { name: "Club", exact: true }).click();
+        await expect(page).toHaveURL(/\/admin\/club$/);
 
         await openYourClub(page);
         await main(page).getByRole("textbox", { name: "Hours", exact: true }).fill("Always open");
-        await page.getByTestId("your-club-bar").getByRole("link", { name: "Home" }).click();
+        await page.getByTestId("your-club-bar").getByRole("link", { name: "Club", exact: true }).click();
         const ask = page.getByRole("dialog", { name: "Save your changes first?" });
         await expect(ask).toBeVisible();
         await expect(ask).toContainText("1 change is not saved yet.");
         await ask.getByRole("button", { name: "Keep editing" }).click();
         await expect(page).toHaveURL(/\/admin\/your-club$/);
+        // ADMIN-RE-24: on a laptop the sidebar's tabs ask first too.
+        const sideHome = page.getByRole("navigation", { name: "Club admin" }).locator('[data-tab="home"]');
+        if (await sideHome.isVisible()) {
+          await sideHome.click();
+          await expect(ask).toBeVisible();
+          await ask.getByRole("button", { name: "Keep editing" }).click();
+          await expect(page).toHaveURL(/\/admin\/your-club$/);
+        }
         await expect(main(page).getByRole("textbox", { name: "Hours", exact: true })).toHaveValue("Always open");
 
-        await page.getByTestId("your-club-bar").getByRole("link", { name: "Home" }).click();
+        await page.getByTestId("your-club-bar").getByRole("link", { name: "Club", exact: true }).click();
         await page.getByRole("dialog", { name: "Save your changes first?" }).getByRole("button", { name: "Leave without saving" }).click();
-        await expect(page).toHaveURL(/\/admin$/);
+        await expect(page).toHaveURL(/\/admin\/club$/);
         const contact = await sql<{ hours: string }>("select hours from onzio.contact_profile where club_id=$1", [ALPHA]);
         expect(contact.every((row) => row.hours !== "Always open")).toBe(true);
 
-        // Save and continue saves, then goes Home.
+        // Save and continue saves, then goes back to Club.
         await openYourClub(page);
         await main(page).getByRole("textbox", { name: "Hours", exact: true }).fill("Always open");
-        await page.getByTestId("your-club-bar").getByRole("link", { name: "Home" }).click();
+        await page.getByTestId("your-club-bar").getByRole("link", { name: "Club", exact: true }).click();
         await page.getByRole("dialog", { name: "Save your changes first?" }).getByRole("button", { name: "Save and continue" }).click();
-        await expect(page).toHaveURL(/\/admin$/);
+        await expect(page).toHaveURL(/\/admin\/club$/);
         const after = await sql<{ hours: string }>("select hours from onzio.contact_profile where club_id=$1", [ALPHA]);
         expect(after).toEqual([{ hours: "Always open" }]);
       } finally {

@@ -52,8 +52,19 @@
     "map-pin": "navigation/map-pin",
     "mail": "communication/mail",
     "phone": "communication/phone",
-    "user": "communication/user"
+    "user": "communication/user",
+    "globe": "navigation/globe",
+    "settings": "interface/settings"
   },
   "weight": "medium",
-  "navigationSize": 24
+  "navigationSize": 24,
+  "selectedTabFill": "solid",
+  "selectedTabs": {
+    "home": "navigation/house",
+    "games": "education/cup",
+    "programs": "navigation/layers",
+    "website": "navigation/globe",
+    "insights": "commerce/chart",
+    "club": "interface/settings"
+  }
 }
