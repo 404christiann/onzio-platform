@@ -214,15 +214,21 @@ function billingErrorMessage(code: unknown, fallback: string) {
 
 /** Calls a billing route with fetch and navigates to the returned Stripe URL,
  *  so a failure shows a friendly message here instead of the browser landing
- *  on the route's raw JSON error body. */
-function BillingActionForm({
+ *  on the route's raw JSON error body. The reimagined Payments page (ADMIN-RE-20)
+ *  reuses this form as is: `className` and `messageClassName` only restyle it, and
+ *  `children` may be a function that learns whether the request is in flight. */
+export function BillingActionForm({
   endpoint,
   fallbackMessage,
   children,
+  className = "mt-6",
+  messageClassName = "mt-3 font-body text-sm text-destructive",
 }: {
   endpoint: "/api/stripe/portal" | "/api/stripe/checkout";
   fallbackMessage: string;
-  children: React.ReactNode;
+  children: React.ReactNode | ((state: { pending: boolean }) => React.ReactNode);
+  className?: string;
+  messageClassName?: string;
 }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -251,12 +257,12 @@ function BillingActionForm({
   }
 
   return (
-    <form onSubmit={submit} className="mt-6">
+    <form onSubmit={submit} className={className}>
       <fieldset disabled={pending} className="contents">
-        {children}
+        {typeof children === "function" ? children({ pending }) : children}
       </fieldset>
       {message && (
-        <p role="alert" className="mt-3 font-body text-sm text-destructive">
+        <p role="alert" className={messageClassName}>
           {message}
         </p>
       )}
@@ -264,11 +270,17 @@ function BillingActionForm({
   );
 }
 
+/** Same owner-facing fallback sentences the classic card uses, shared so the
+ *  two pages can never disagree about what went wrong. */
+export const PORTAL_FALLBACK_MESSAGE = `We couldn't open the billing portal. Try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`;
+export const CHECKOUT_FALLBACK_MESSAGE = `We couldn't start checkout. Nothing was charged — try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`;
+export { SUPPORT_EMAIL };
+
 function PortalForm({ children }: { children: React.ReactNode }) {
   return (
     <BillingActionForm
       endpoint="/api/stripe/portal"
-      fallbackMessage={`We couldn't open the billing portal. Try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
+      fallbackMessage={PORTAL_FALLBACK_MESSAGE}
     >
       {children}
     </BillingActionForm>
@@ -310,7 +322,7 @@ export function PaymentStatusCard({
               </p>
               <BillingActionForm
                 endpoint="/api/stripe/checkout"
-                fallbackMessage={`We couldn't start checkout. Nothing was charged — try again in a minute, or contact Onzio at ${SUPPORT_EMAIL}.`}
+                fallbackMessage={CHECKOUT_FALLBACK_MESSAGE}
               >
                 <Button type="submit" size="lg" className="min-h-11 h-auto whitespace-normal break-words rounded-xl px-4 py-2 text-sm font-semibold leading-snug w-full sm:px-6 sm:w-auto">
                   Start subscription

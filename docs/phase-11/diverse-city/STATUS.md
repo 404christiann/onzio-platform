@@ -81,6 +81,73 @@ in); Safari. Nothing was run against production.
 finding is an `ADMIN-RE-10x` or follow-up PR. RE-13 adds the "These come from
 Your club" shortcuts on the website pages.
 
+## 2026-11-09 - ADMIN-RE-20: Payments and plan on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-20`. Branch
+`claude/admin-re-20-payments-9b2278` from `main` `600f5e7`. **Status:**
+`in_progress`, PR open for the review bot. UI only: no migration, no Stripe
+change, no new environment variable, no Stripe API call added. Nobody sees it
+until a club is on `reimagined` (Rose City is; its owner is Christian).
+
+**Completed work:**
+
+- `/admin/payments` for a club on `reimagined` shows the new page (design
+  `cd-payments`, `cd-payments-desktop`): a status card that says whether
+  billing is fine or what the one thing to fix is, with one button; then the
+  plan and price, "Your website" (Live, Still live, Paused, Not live yet), a
+  "Registration money" link to Sign-up forms, and "Past invoices". The
+  top bar already read "Payments and plan" from the shell's More list, so the
+  menu needed no change.
+- Every state the classic card handles has words: not started (customer: "Your
+  plan hasn't started" with Start plan; demo or test club: "No plan needed"),
+  active ("You're all set", next payment and price), ending ("Your plan ends
+  Dec 1"), card failed ("Your card didn't work", Update card), overdue in the
+  grace period (days left bar, last day, Update card) and ended ("Your plan has
+  ended", Open billing). Dates are short and in the club's time zone, the
+  year appears only when it is not this year, "$49.00/mo" reads "$49 a month",
+  and a held website (Rose City) says "Paused" whatever the plan says.
+- The buttons are the classic card's own `BillingActionForm` (now exported,
+  with optional style props): same `POST /api/stripe/portal` and
+  `/api/stripe/checkout`, same friendly message for every error code. A
+  contract test pins that the new files have no Stripe client, env var or
+  write, and only those two endpoints.
+- Owner-only is unchanged (the page still redirects anyone else to
+  `owner_required`, and the More row is owner-only). A club on `classic` keeps
+  the classic page and card untouched.
+
+**Left out on purpose:**
+
+- The design's "Registration money" card shows Card payments and Payouts
+  On/Off. That status comes from a live Stripe read that also writes the
+  Connect row (`/api/stripe/connect`), so it is a link to Sign-up forms
+  instead, where the owner sets it up today.
+- The design's "Fix it by Nov 12" date for a failed card: the state has no
+  such date, so the page doesn't invent one.
+- The warning strip on the home under the greeting is a change to the home
+  (RE-05's files), not to this page. The shell's existing billing banner
+  still points owners to Payments.
+
+**Files changed:** `app/admin/(protected)/payments/page.tsx`,
+`components/admin/payments/PaymentStatusCard.tsx` (exports only),
+new `components/admin/reimagined/PaymentsPlan.tsx` and `payments.module.css`,
+new `lib/admin-payments-view.ts`, new
+`tests/contracts/admin-reimagined-payments.test.ts` and
+`tests/browser/admin-reimagined-payments.spec.ts`; this file, `HANDOFF.md`.
+
+**Verification:** see the PR body for the table with the tested commit.
+Written first: `lib/admin-payments-view.ts` and the contract test (red on the
+missing modules, then green). Browser: 23 checks at 390 and 1440 wide, a
+screenshot of every state, a dark-theme pass, a worst-case club name, the two
+billing buttons (answered by the test, never by Stripe), the classic fallback,
+and a helper who cannot see or open the page.
+
+**Not verified:** the real Stripe portal and checkout round trip (no Stripe key
+in the local run, by design); a real price (local Stripe has none, so the
+price row is absent in screenshots; the words are unit tested); Safari.
+
+**Exact next step:** the bot reviews and merges. Later, when Rose City has a
+real subscription, Christian opens Payments and plan there on phone and laptop.
+
 ## 2026-11-09 - ADMIN-RE-17: Team roster on the new admin
 
 **Agent/package:** Claude Code, `ADMIN-RE-17`. Branch
