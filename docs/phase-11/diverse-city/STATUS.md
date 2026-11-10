@@ -254,6 +254,88 @@ in); Safari. Nothing was run against production.
 finding is an `ADMIN-RE-10x` or follow-up PR. RE-13 adds the "These come from
 Your club" shortcuts on the website pages.
 
+## 2026-11-09 - ADMIN-RE-19: How the team is doing on the new admin
+
+**Agent/package:** Claude Code, `ADMIN-RE-19`. Branch
+`claude/admin-re-19-charts-20a6b4` from `main` `f44051e`, merged with `main`
+`a6d820b`. **Status:** `in_progress`, PR open for the review bot. UI only: no
+migration, no change to `lib/club-context.ts`, no hosted action. The page only
+reads.
+
+**Completed work:**
+
+- `/admin/analytics` is "How the team is doing" for a club on `reimagined`
+  (design: `cd-analytics-a` and `cd-analytics-b`). A club still on `classic`
+  gets the old page, unchanged (moved whole to
+  `components/admin/ClassicAnalyticsPage.tsx`). The More row and the top bar
+  title already existed on `main`, so the manifest is untouched.
+- The season, game by game: the record as a sentence, "Unbeaten in the last N
+  games" from three games on, one column per game (score pill, magenta scored
+  bar above the line, gray let-in bar below, a W, D or L letter, month under the
+  first game of each month). The last 12 games on a laptop, the last 6 on a
+  phone, and "All N games" opens every game as a plain table. One game opens
+  who scored and who set them up (an inline card on a laptop, a sheet on a
+  phone; close button, Escape, focus goes back to the game).
+- One player at a time: players grouped by position (chips on a laptop, a list
+  that opens the player on a phone, with "Players" to go back). A six-corner
+  shape in magenta (goals, assists, fouls won, tackles, minutes, starts; four
+  corners for a keeper), each corner a word and the real number, reaching the
+  edge where the player is the team's best of their position. Recent games in
+  words with a minutes bar. The page opens on the team's top scorer.
+- The shape and the bars are plain SVG and CSS. No chart library was added;
+  Chart.js stays on the classic page. Nothing is told by color alone: every
+  game has its score and a letter, every corner its label and number, the shape
+  has a text name for a screen reader, and the season is also a table. The
+  chart color has a dark-theme pair; motion only runs when the browser has not
+  asked for less.
+- `MatchLogRow` in `lib/queries.ts` gained two optional fields (`saves`,
+  `goalsAgainst`, keepers only) so a keeper's game reads "5 saves, 1 let in".
+  The classic page's reads are unchanged.
+
+**Left out on purpose:**
+
+- "2nd in the league table" under the record. The league table has no season
+  until RE-11b, so the rank would be wrong the day that lands.
+- A season switcher. The page reads the season the website shows. With no
+  season shown it says so and links to This season.
+- The scored/let-in axis words use normal text color with a swatch (the chart
+  color is for marks, not text), and a W, D or L letter was added under each
+  column. Both differ from the design frames on purpose.
+
+**Files changed:** new `lib/admin-analytics-view.ts`,
+`lib/admin-analytics-data.ts`, `components/admin/reimagined/TeamAnalytics.tsx`,
+`components/admin/reimagined/analytics.module.css`; `app/admin/(protected)/analytics/page.tsx`
+(now a server page); `components/admin/ClassicAnalyticsPage.tsx` (moved);
+`lib/queries.ts` (two optional fields); new `lib/__tests__/admin-analytics-view.test.ts`,
+`lib/__tests__/admin-analytics-data.test.ts`,
+`tests/contracts/admin-reimagined-analytics.test.ts`,
+`tests/browser/admin-reimagined-analytics.spec.ts`;
+`tests/contracts/admin-analytics-theme.test.ts` and
+`lib/__tests__/analytics-helpers.test.ts` (read the moved classic page, same
+assertions); this file, `HANDOFF.md`.
+
+**Verification:** the unit tests were written with the code, not before it, so
+red-first was not observed. Break-ui worst cases run in the browser spec at 390
+and 1440: 38 games, the highest scores the data allows (99-0, 12-11), a 62-character
+opponent, Cyrillic and Japanese opponents, a 31-character name, a Chinese name,
+an emoji name, a player with no minutes, 300 minutes, 1,204 assists, one game,
+no scored game, no players, no season shown. Screenshots are in
+`test-results/admin-reimagined/analytics-*.png`; looking at them caught three
+fixes (the shape's top label touching the chips, the phone's "Last game" title
+when the list is open, and an emoji drawn as an initial). Full suites on the PR
+head, with the tested commit, are in the PR body.
+
+**Not verified:** nothing was run against production or any hosted project.
+Rose City is already on `reimagined`, so merging shows this page on its live
+admin; it only reads, so it writes nothing. Dark theme was not checked by eye.
+`next lint` and `npm run build` fail inside this worktree because the parent
+folder's `.eslintrc.json` loads a second copy of the Next ESLint plugin; the
+build was run with `--no-lint` and the changed files were linted with
+`--no-eslintrc -c .eslintrc.json`.
+
+**Exact next step:** the bot reviews and merges. Christian opens "How the team is
+doing" on Rose City once there are scores and player numbers for the season.
+
 ## 2026-11-10 - ADMIN-RE-11a follow-up: the review bot's Low notes on #116
 
 **Agent/package:** Claude Code, `ADMIN-RE-11a` (follow-up). Branch
