@@ -26,6 +26,7 @@ import {
   SEASON_NAME_MAX,
   seasonNameProblem,
   seasonNameProblemText,
+  yearsForSeasonName,
 } from "@/lib/season-label";
 import styles from "./seasons.module.css";
 
@@ -55,6 +56,8 @@ const ordinal = (n: number) => `${n}${[, "st", "nd", "rd"][(n % 100 >> 3) ^ 1 &&
 
 /** Players get a totals row at zero in a new season, a batch at a time. */
 const SEED_BATCH = 200;
+/** The most stat rows one read returns. A read that hits it may have missed rows, so the season is kept. */
+const STAT_READ_LIMIT = 1000;
 const ZERO_FIELD = {
   goals: 0, assists: 0, tackles: 0, starts: 0, yellow: 0, red: 0, mins: 0, offsides: 0, fouls: 0, fouls_suffered: 0,
 };
@@ -141,11 +144,13 @@ export function SeasonsHub({
     setProblem(null);
     setStatus(null);
     const label = name.trim();
+    // The years follow the name: "Fall 2025" typed over a 2026 suggestion is 2025.
+    const years = yearsForSeasonName(label, suggestion);
     const season = await adminData({
       table: "seasons",
       operation: "insert",
       columns: "id,label",
-      payload: { label, start_year: suggestion.startYear, end_year: suggestion.endYear, active: false },
+      payload: { label, start_year: years.startYear, end_year: years.endYear, active: false },
       single: "single",
     });
     const row = season.ok ? (season.data as { id?: unknown; label?: unknown } | null) : null;
@@ -236,17 +241,17 @@ export function SeasonsHub({
       adminData({
         table: "player_season_stats", operation: "select",
         columns: "player_id,season_id,goals,assists,tackles,offsides,fouls,fouls_suffered,starts,yellow,red,mins",
-        filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: 1000,
+        filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: STAT_READ_LIMIT,
       }),
       adminData({
         table: "goalkeeper_season_stats", operation: "select",
         columns: "player_id,season_id,goals_against,saves,clean_sheets,starts,yellow,red,mins",
-        filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: 1000,
+        filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: STAT_READ_LIMIT,
       }),
       // The season's league table goes with it, so a table with numbers in it is not empty (ADMIN-RE-11b).
       adminData({
         table: "league_standings", operation: "select", columns: "played,points",
-        filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: 1000,
+        filters: [{ kind: "eq", column: "season_id", value: season.id }], limit: STAT_READ_LIMIT,
       }),
     ]);
     if (!matches.ok || !field.ok || !keepers.ok || !table.ok) {
@@ -254,15 +259,19 @@ export function SeasonsHub({
       setBusy(null);
       return;
     }
-    const rows = [
-      ...((field.data ?? []) as Record<string, unknown>[]),
-      ...((keepers.data ?? []) as Record<string, unknown>[]),
-    ];
+    const fieldRows = (field.data ?? []) as Record<string, unknown>[];
+    const keeperRows = (keepers.data ?? []) as Record<string, unknown>[];
+    // A read that came back full may have more rows behind it that were never looked at.
+    const tableRows = (table.data ?? []) as { played: number; points: number }[];
+    const capped =
+      fieldRows.length >= STAT_READ_LIMIT || keeperRows.length >= STAT_READ_LIMIT || tableRows.length >= STAT_READ_LIMIT;
+    const rows = [...fieldRows, ...keeperRows];
     const verdict = deleteVerdict(season, {
       matches: matches.count ?? 0,
       rowsWithNumbers:
         rows.filter(statRowHasNumbers).length +
-        ((table.data ?? []) as { played: number; points: number }[]).filter((row) => row.played > 0 || row.points > 0).length,
+        tableRows.filter((row) => row.played > 0 || row.points > 0).length +
+        (capped ? 1 : 0),
       statRows: rows.length,
     });
     if (!verdict.deletable) {

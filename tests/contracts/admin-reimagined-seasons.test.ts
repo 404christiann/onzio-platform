@@ -214,3 +214,24 @@ describe("tenant resolution", () => {
     expect(changed).not.toContain("lib/club-context.ts");
   });
 });
+
+describe("follow-up to the review of #116", () => {
+  it("saves the years the typed name says, not always the suggestion's", () => {
+    const start = hub.slice(hub.indexOf("async function startSeason"), hub.indexOf("async function switchTo"));
+    expect(start).toContain("yearsForSeasonName(label, suggestion)");
+    expect(start).toContain("start_year: years.startYear");
+    expect(start).toContain("end_year: years.endYear");
+    expect(start).not.toContain("start_year: suggestion.startYear");
+  });
+
+  it("orders the classic page's seasons newest first, with Fall ahead of Spring of one year", () => {
+    expect(classic).toContain("newestSeasonFirst");
+    expect(classic).toMatch(/rows\.sort\(|\.sort\(newestSeasonFirst/);
+  });
+
+  it("refuses to delete when a stat read hit its row cap, since it cannot tell the rest are empty", () => {
+    const body = hub.slice(hub.indexOf("async function deleteViewed"), hub.indexOf("const viewingPast"));
+    expect(body).toContain("STAT_READ_LIMIT");
+    expect(body).toMatch(/length >= STAT_READ_LIMIT/);
+  });
+});
